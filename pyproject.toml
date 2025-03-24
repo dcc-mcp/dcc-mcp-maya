@@ -1,0 +1,164 @@
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+name = "dcc-mcp-maya"
+version = "0.0.1"
+description = "Maya adapter for MCP (Model Context Protocol)"
+authors = ["Long Hao <hal.long@outlook.com>"]
+readme = "README.md"
+packages = [{include = "dcc_mcp_maya", from = "src"}]
+license = "MIT"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+
+[tool.poetry.dependencies]
+python = ">=3.7,<4.0"
+dcc-mcp-rpyc = "^0.2.0"
+rpyc = ">=6.0.0,<7.0.0"
+
+[tool.poetry.urls]
+Homepage = "https://github.com/loonghao/dcc-mcp-maya"
+Issues = "https://github.com/loonghao/dcc-mcp-maya/issues"
+
+
+[tool.poetry.plugins."dcc_mcp.adapters"]
+maya = "dcc_mcp_maya.adapter:MayaMCPAdapter"
+
+[tool.commitizen]
+name = "cz_conventional_commits"
+version = "0.0.1"
+tag_format = "$version"
+version_files = [
+    "pyproject.toml:version",
+    "src/dcc_mcp_maya/__version__.py",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+
+[tool.coverage.run]
+source = ["dcc_mcp_maya"]
+branch = true
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if __name__ == .__main__.:",
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+]
+
+[tool.mypy]
+python_version = "3.7"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+ignore_missing_imports = true
+disable_error_code = ["type-arg", "misc", "no-any-return"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py37"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E", # pycodestyle
+    "F", # pyflakes
+    "D", # pydocstyle
+    "UP", # pyupgrade
+    "RUF", # ruff-specific rules
+]
+ignore = ["D203", "D213", "ARG001", "D107", "D105", "D102", "F811", "I001"]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]
+"tests/*.py" = ["ARG001", "F401", "F811", "D107", "D105", "D102", "E501", "I001"]
+"nox_actions/*.py" = ["D100", "D103", "D104", "E402"]
+"noxfile.py" = ["D100", "E402", "D401", "D400"]
+"examples/*.py" = ["D401", "D415", "RUF013", "E722", "D400"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+[tool.isort]
+# Enforce import section headers.
+import_heading_future = "Import future modules"
+import_heading_stdlib = "Import built-in modules"
+import_heading_thirdparty = "Import third-party modules"
+import_heading_firstparty = "Import local modules"
+
+profile = "black"
+line_length = 120
+force_sort_within_sections = true
+force_single_line = true
+sections = ["FUTURE", "STDLIB", "THIRDPARTY", "FIRSTPARTY", "LOCALFOLDER"]
+known_first_party = ["dcc_mcp_maya"]
+
+[tool.nox]
+sessions = ["lint", "pytest"]
+python = ["3.7", "3.8", "3.9", "3.10", "3.11", "3.12", "3.13"]
+reuse_venv = true
+
+[tool.nox.session.lint]
+deps = ["ruff", "mypy", "isort"]
+commands = [
+    "mypy --install-types --non-interactive",
+    "ruff check .",
+    "ruff format --check .",
+    "isort --check-only .",
+    "mypy src/dcc_mcp_maya --strict"
+]
+
+[tool.nox.session.lint_fix]
+deps = ["ruff", "mypy", "isort"]
+commands = [
+    "ruff check --fix .",
+    "ruff format .",
+    "isort ."
+]
+
+[tool.nox.session.pytest]
+deps = ["pytest", "pytest-cov"]
+commands = [
+    "pytest tests/ --cov=dcc_mcp_maya --cov-report=xml:coverage.xml --cov-report=term-missing"
+]
+
+[tool.semantic_release]
+version_variable = [
+    "src/dcc_mcp_maya/__version__.py:__version__",
+    "pyproject.toml:version"
+]
+branch = "main"
+upload_to_pypi = false
+upload_to_release = true
+build_command = "pip install poetry && poetry build"

@@ -1,0 +1,196 @@
+name: Build and Release
+
+# Permissions needed for this workflow
+permissions:
+  contents: write    # For creating releases
+  pull-requests: write  # For commenting on PRs
+  id-token: write   # For PyPI trusted publishing
+
+on:
+  push:
+    tags: 
+      - '[0-9]+.[0-9]+.[0-9]+*'
+    branches: [ main ]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.github/*.md'
+      - '.github/ISSUE_TEMPLATE/**'
+      - 'LICENSE*'
+      - '.readthedocs.yml'
+      - 'CITATION.cff'
+      - 'CODE_OF_CONDUCT.md'
+      - 'CONTRIBUTING.md'
+      - '**.rst'
+      - '.hound.yml'
+      - '.gitignore'
+      - '.gitmodules'
+      - '.coveragerc'
+      - 'codecov.yml'
+      - '.flake8'
+      - '.pylintrc'
+      - 'renovate.json'
+  release:
+    types: [published]
+  pull_request:
+    branches: [ main ]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.github/*.md'
+      - '.github/ISSUE_TEMPLATE/**'
+      - 'LICENSE*'
+      - '.readthedocs.yml'
+      - 'CITATION.cff'
+      - 'CODE_OF_CONDUCT.md'
+      - 'CONTRIBUTING.md'
+      - '**.rst'
+      - '.hound.yml'
+      - '.gitignore'
+      - '.gitmodules'
+      - '.coveragerc'
+      - 'codecov.yml'
+      - '.flake8'
+      - '.pylintrc'
+      - 'renovate.json'
+  workflow_dispatch:
+    inputs:
+      fast-mode:
+        description: 'Skip building wheels and only run tests'
+        required: false
+        default: false
+        type: boolean
+      python-version:
+        description: 'Python version to use for testing'
+        required: false
+        default: '3.10'
+        type: string
+      os:
+        description: 'OS to run tests on'
+        required: false
+        default: 'ubuntu-latest'
+        type: choice
+        options:
+          - ubuntu-latest
+          - windows-latest
+          - macos-latest
+
+jobs:
+  # Build and test the package
+  build-and-test:
+    name: Build and test on ${{ matrix.os }} with Python ${{ matrix.python-version }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ['3.7', '3.9', '3.11']
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+          cache-dependency-path: |
+            **/pyproject.toml
+            **/requirements*.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install poetry build
+          poetry install --with dev
+
+      - name: Lint with ruff
+        run: |
+          poetry run ruff check .
+
+      - name: Test with pytest
+        run: |
+          poetry run pytest tests/
+
+      - name: Build package
+        run: |
+          poetry build
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-${{ matrix.os }}-${{ matrix.python-version }}
+          path: dist/
+          if-no-files-found: error
+
+  # Release to PyPI
+  release-to-pypi:
+    name: Release
+    needs: [build-and-test]
+    if: github.event_name == 'release' || (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/'))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+    
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+      
+      # Download all artifacts
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      
+      # List all artifacts
+      - name: List all artifacts
+        run: find dist -type f | sort
+      
+      # Generate release notes from changelog
+      - name: Generate Release Notes
+        if: startsWith(github.ref, 'refs/tags/')
+        id: release-notes
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          # No need to remove 'v' prefix as we're using numeric versioning
+          
+          # Try to find the version in CHANGELOG.md
+          if [ -f CHANGELOG.md ]; then
+            CHANGES=$(grep -A 100 "## \[$VERSION\]" CHANGELOG.md | grep -B 100 -m 2 "^## " | grep -v "^## \[$VERSION\]" | grep -v "^## " | sed '/^$/d')
+          else
+            CHANGES="No changelog found for version $VERSION"
+          fi
+          
+          # Load template and replace variables
+          TEMPLATE=$(cat .github/release-template.md)
+          TEMPLATE="${TEMPLATE//\$RELEASE_VERSION/$VERSION}"
+          TEMPLATE="${TEMPLATE//\$CHANGES/$CHANGES}"
+          
+          # Create a temporary file for the release notes
+          echo "$TEMPLATE" > release-notes.md
+        shell: bash
+      
+      # Update release notes
+      - name: Update Release Notes
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          body_path: release-notes.md
+          files: dist/*
+          fail_on_unmatched_files: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      # Publish to PyPI
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
