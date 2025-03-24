@@ -1,0 +1,25 @@
+# EditorConfig is awesome: https://EditorConfig.org
+
+# top-most EditorConfig file
+root = true
+
+# Unix-style newlines with a newline ending every file
+[*]
+end_of_line = lf
+insert_final_newline = true
+charset = utf-8
+trim_trailing_whitespace = true
+
+# 4 space indentation for Python files
+[*.py]
+indent_style = space
+indent_size = 4
+
+# 2 space indentation for YAML, JSON, and markdown files
+[*.{yml,yaml,json,md,rst}]
+indent_style = space
+indent_size = 2
+
+# Tab indentation for Makefile
+[Makefile]
+indent_style = tab

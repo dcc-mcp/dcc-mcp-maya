@@ -1,0 +1,99 @@
+- name: "bug"
+  color: "d73a4a"
+  description: "Something isn't working"
+
+- name: "documentation"
+  color: "0075ca"
+  description: "Improvements or additions to documentation"
+
+- name: "duplicate"
+  color: "cfd3d7"
+  description: "This issue or pull request already exists"
+
+- name: "enhancement"
+  color: "a2eeef"
+  description: "New feature or request"
+
+- name: "good first issue"
+  color: "7057ff"
+  description: "Good for newcomers"
+
+- name: "help wanted"
+  color: "008672"
+  description: "Extra attention is needed"
+
+- name: "invalid"
+  color: "e4e669"
+  description: "This doesn't seem right"
+
+- name: "question"
+  color: "d876e3"
+  description: "Further information is requested"
+
+- name: "wontfix"
+  color: "ffffff"
+  description: "This will not be worked on"
+
+- name: "dependencies"
+  color: "0366d6"
+  description: "Pull requests that update a dependency file"
+
+- name: "python"
+  color: "2b67c6"
+  description: "Pull requests that update Python code"
+
+- name: "github-actions"
+  color: "000000"
+  description: "Pull requests that update GitHub Actions code"
+
+- name: "security"
+  color: "ee0701"
+  description: "Security related issues or changes"
+
+- name: "performance"
+  color: "16c60c"
+  description: "Performance improvements"
+
+- name: "testing"
+  color: "fbca04"
+  description: "Testing related changes"
+
+- name: "ci"
+  color: "0e8a16"
+  description: "Changes to CI configuration files and scripts"
+
+- name: "feature"
+  color: "a2eeef"
+  description: "New feature or request"
+
+- name: "fix"
+  color: "d73a4a"
+  description: "Bug fix"
+
+- name: "maintenance"
+  color: "c5def5"
+  description: "Repository maintenance"
+
+- name: "docs"
+  color: "0075ca"
+  description: "Documentation only changes"
+
+- name: "major"
+  color: "b60205"
+  description: "Major version bump"
+
+- name: "minor"
+  color: "fbca04"
+  description: "Minor version bump"
+
+- name: "patch"
+  color: "0e8a16"
+  description: "Patch version bump"
+
+- name: "pinned"
+  color: "c2e0c6"
+  description: "Pinned for later review"
+
+- name: "work-in-progress"
+  color: "c5def5"
+  description: "Work in progress"

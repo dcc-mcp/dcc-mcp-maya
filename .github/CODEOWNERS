@@ -1,0 +1,18 @@
+# These owners will be the default owners for everything in the repo.
+# Unless a later match takes precedence, they will be requested for
+# review when someone opens a pull request.
+* @yourusername
+
+# Order is important; the last matching pattern takes the most precedence.
+
+# Core code
+/src/ @yourusername
+
+# Tests
+/tests/ @yourusername
+
+# Documentation
+/docs/ @yourusername
+
+# CI/CD workflows
+/.github/workflows/ @yourusername

@@ -1,22 +1,51 @@
 # Byte-compiled / optimized / DLL files
+__pycache__/
 *.py[cod]
+*$py.class
 
-# PyCharm project files
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+
+# Unit test / coverage reports
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.pytest_cache/
+pytest_cache
+
+# Environments
+.env
+.venv
+.zip
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# mypy
+.mypy_cache/
+
+# ruff
+.ruff_cache/
+
+# nox
+.nox/
+
+# Poetry
+poetry.lock
+
+# IDE files
 .idea/
-
-# Vim / Notepad++ temp files
+.vscode/
+*.swp
 *~
 
-# Coverage output
-.coverage
+# Jupyter Notebook
+.ipynb_checkpoints
 
-# Documentation build folders.
-docs/_*
-docs/src/*
-target/*
-/venv/
-/run_pycharm.bat
-/.nox/
-/build/
-/coverage.xml
-/.zip/
+# macOS
+.DS_Store
