@@ -1,0 +1,68 @@
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+name = "dcc-mcp-maya"
+version = "0.1.0"
+description = "Maya plugin and adapter for the DCC Model Context Protocol (MCP) ecosystem"
+authors = ["Long Hao <hal.long@outlook.com>"]
+readme = "README.md"
+packages = [{include = "dcc_mcp_maya", from = "src"}]
+license = "MIT"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+]
+
+[tool.poetry.dependencies]
+python = ">=3.7,<4.0"
+dcc-mcp-core = ">=0.12.0,<1.0.0"
+dcc-mcp-ipc = ">=2.0.0,<3.0.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = ">=7.0"
+pytest-cov = ">=4.0"
+ruff = ">=0.8.0"
+nox = ">=2024.0.0"
+
+[tool.poetry.urls]
+Homepage = "https://github.com/loonghao/dcc-mcp-maya"
+Issues = "https://github.com/loonghao/dcc-mcp-maya/issues"
+
+[tool.poetry.plugins."dcc_mcp.adapters"]
+maya = "dcc_mcp_maya.adapter:MayaAdapter"
+
+[tool.commitizen]
+name = "cz_conventional_commits"
+version = "0.1.0"
+tag_format = "$version"
+version_files = [
+    "pyproject.toml:version",
+    "src/dcc_mcp_maya/__version__.py",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+
+[tool.coverage.run]
+source = ["dcc_mcp_maya"]
+branch = true
+
+[tool.ruff]
+line-length = 120
+target-version = "py37"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W"]
+ignore = ["E501"]
