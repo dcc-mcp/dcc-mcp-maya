@@ -38,6 +38,7 @@ dev = [
     "ruff>=0.8.0",
     "hatchling",
     "build",
+    "tomli; python_version < '3.11'",  # tomllib backport for Python < 3.11
 ]
 
 [project.urls]
@@ -47,7 +48,7 @@ Issues = "https://github.com/loonghao/dcc-mcp-maya/issues"
 Changelog = "https://github.com/loonghao/dcc-mcp-maya/releases"
 
 [project.entry-points."dcc_mcp.adapters"]
-maya = "dcc_mcp_maya:MayaAdapter"
+maya = "dcc_mcp_maya:MayaMcpServer"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/dcc_mcp_maya"]
@@ -80,8 +81,8 @@ line-length = 120
 target-version = "py37"
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "W", "UP"]
-ignore = ["E501", "UP007"]
+select = ["E", "F", "I", "W"]
+ignore = ["E501"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["dcc_mcp_maya"]
