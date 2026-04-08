@@ -1,163 +1,200 @@
-"""Primitive creation actions for Maya MCP."""
+"""Maya polygon primitive creation and transform actions."""
+
+# Import future modules
+from __future__ import annotations
 
 # Import built-in modules
 import logging
 
-# Import third-party modules
-from dcc_mcp_core import ActionResultModel
-
 logger = logging.getLogger(__name__)
 
 
-def create_sphere(radius: float = 1.0, name: str = "") -> ActionResultModel:
+def create_sphere(radius: float = 1.0, name: str | None = None) -> dict:
     """Create a polygon sphere.
 
     Args:
-        radius: Sphere radius (default 1.0).
+        radius: Sphere radius. Default: 1.0.
         name: Optional name for the created object.
 
     Returns:
-        ActionResultModel with the created object name.
-
+        ActionResultModel dict with ``context.object_name``.
     """
-    import maya.cmds as cmds
+    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
+
     try:
-        kwargs: dict = {"radius": radius}
-        if name:
-            kwargs["name"] = name
+        import maya.cmds as cmds  # noqa: PLC0415
+
+        kwargs = {"radius": radius, "subdivisionsAxis": 20, "subdivisionsHeight": 20}
         result = cmds.polySphere(**kwargs)
-        return ActionResultModel(
-            success=True,
-            message="Sphere created",
-            context={"transform": result[0], "shape": result[1]},
-        )
-    except Exception as e:
-        return ActionResultModel(success=False, message=str(e), error=str(e))
+        obj = result[0]
+        if name:
+            obj = cmds.rename(obj, name)
+        return success_result(
+            f"Created sphere: {obj}",
+            object_name=obj,
+            radius=radius,
+        ).to_dict()
+    except ImportError:
+        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+    except Exception as exc:
+        logger.exception("create_sphere failed")
+        return error_result("Failed to create sphere", str(exc)).to_dict()
 
 
-def create_cube(width: float = 1.0, height: float = 1.0, depth: float = 1.0, name: str = "") -> ActionResultModel:
+def create_cube(
+    width: float = 1.0,
+    height: float = 1.0,
+    depth: float = 1.0,
+    name: str | None = None,
+) -> dict:
     """Create a polygon cube.
 
     Args:
-        width: Cube width (default 1.0).
-        height: Cube height (default 1.0).
-        depth: Cube depth (default 1.0).
+        width: Cube width. Default: 1.0.
+        height: Cube height. Default: 1.0.
+        depth: Cube depth. Default: 1.0.
         name: Optional name for the created object.
 
     Returns:
-        ActionResultModel with the created object name.
-
+        ActionResultModel dict with ``context.object_name``.
     """
-    import maya.cmds as cmds
+    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
+
     try:
-        kwargs: dict = {"width": width, "height": height, "depth": depth}
+        import maya.cmds as cmds  # noqa: PLC0415
+
+        result = cmds.polyCube(width=width, height=height, depth=depth)
+        obj = result[0]
         if name:
-            kwargs["name"] = name
-        result = cmds.polyCube(**kwargs)
-        return ActionResultModel(
-            success=True,
-            message="Cube created",
-            context={"transform": result[0], "shape": result[1]},
-        )
-    except Exception as e:
-        return ActionResultModel(success=False, message=str(e), error=str(e))
+            obj = cmds.rename(obj, name)
+        return success_result(
+            f"Created cube: {obj}",
+            object_name=obj,
+            width=width,
+            height=height,
+            depth=depth,
+        ).to_dict()
+    except ImportError:
+        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+    except Exception as exc:
+        logger.exception("create_cube failed")
+        return error_result("Failed to create cube", str(exc)).to_dict()
 
 
-def create_cylinder(radius: float = 1.0, height: float = 2.0, name: str = "") -> ActionResultModel:
+def create_cylinder(
+    radius: float = 1.0,
+    height: float = 2.0,
+    name: str | None = None,
+) -> dict:
     """Create a polygon cylinder.
 
     Args:
-        radius: Cylinder radius (default 1.0).
-        height: Cylinder height (default 2.0).
+        radius: Cylinder radius. Default: 1.0.
+        height: Cylinder height. Default: 2.0.
         name: Optional name for the created object.
 
     Returns:
-        ActionResultModel with the created object name.
-
+        ActionResultModel dict with ``context.object_name``.
     """
-    import maya.cmds as cmds
+    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
+
     try:
-        kwargs: dict = {"radius": radius, "height": height}
+        import maya.cmds as cmds  # noqa: PLC0415
+
+        result = cmds.polyCylinder(radius=radius, height=height, subdivisionsAxis=20)
+        obj = result[0]
         if name:
-            kwargs["name"] = name
-        result = cmds.polyCylinder(**kwargs)
-        return ActionResultModel(
-            success=True,
-            message="Cylinder created",
-            context={"transform": result[0], "shape": result[1]},
-        )
-    except Exception as e:
-        return ActionResultModel(success=False, message=str(e), error=str(e))
+            obj = cmds.rename(obj, name)
+        return success_result(
+            f"Created cylinder: {obj}",
+            object_name=obj,
+            radius=radius,
+            height=height,
+        ).to_dict()
+    except ImportError:
+        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+    except Exception as exc:
+        logger.exception("create_cylinder failed")
+        return error_result("Failed to create cylinder", str(exc)).to_dict()
 
 
-def delete_objects(objects: list) -> ActionResultModel:
+def delete_objects(objects: list[str]) -> dict:
     """Delete objects from the Maya scene.
 
     Args:
         objects: List of object names to delete.
 
     Returns:
-        ActionResultModel indicating success.
-
+        ActionResultModel dict.
     """
-    import maya.cmds as cmds
+    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
+
     try:
+        import maya.cmds as cmds  # noqa: PLC0415
+
         if not objects:
-            return ActionResultModel(success=True, message="No objects to delete")
-        cmds.delete(objects)
-        return ActionResultModel(
-            success=True,
-            message=f"Deleted {len(objects)} objects",
-            context={"deleted": objects},
-        )
-    except Exception as e:
-        return ActionResultModel(success=False, message=str(e), error=str(e))
+            return success_result("No objects to delete").to_dict()
+        existing = cmds.ls(objects) or []
+        if existing:
+            cmds.delete(existing)
+        return success_result(
+            f"Deleted {len(existing)} objects",
+            deleted=existing,
+            requested=objects,
+        ).to_dict()
+    except ImportError:
+        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+    except Exception as exc:
+        logger.exception("delete_objects failed")
+        return error_result("Failed to delete objects", str(exc)).to_dict()
 
 
 def set_transform(
     object_name: str,
-    translate: tuple = None,
-    rotate: tuple = None,
-    scale: tuple = None,
-) -> ActionResultModel:
-    """Set transform attributes on a Maya object.
+    translate: list[float] | None = None,
+    rotate: list[float] | None = None,
+    scale: list[float] | None = None,
+) -> dict:
+    """Set the translate/rotate/scale of an object.
 
     Args:
         object_name: Name of the object to transform.
-        translate: (x, y, z) translation values.
-        rotate: (x, y, z) rotation values in degrees.
-        scale: (x, y, z) scale values.
+        translate: [tx, ty, tz] in scene units.  None = no change.
+        rotate: [rx, ry, rz] in degrees.  None = no change.
+        scale: [sx, sy, sz].  None = no change.
 
     Returns:
-        ActionResultModel indicating success.
-
+        ActionResultModel dict with applied transform values.
     """
-    import maya.cmds as cmds
+    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
+
     try:
-        if translate is not None:
+        import maya.cmds as cmds  # noqa: PLC0415
+
+        if not cmds.objExists(object_name):
+            return error_result(
+                f"Object not found: {object_name}",
+                f"'{object_name}' does not exist in the scene",
+            ).to_dict()
+
+        applied: dict = {}
+        if translate is not None and len(translate) == 3:
             cmds.setAttr(f"{object_name}.translate", *translate, type="double3")
-        if rotate is not None:
+            applied["translate"] = translate
+        if rotate is not None and len(rotate) == 3:
             cmds.setAttr(f"{object_name}.rotate", *rotate, type="double3")
-        if scale is not None:
+            applied["rotate"] = rotate
+        if scale is not None and len(scale) == 3:
             cmds.setAttr(f"{object_name}.scale", *scale, type="double3")
-        return ActionResultModel(
-            success=True,
-            message=f"Transform set on '{object_name}'",
-            context={"object": object_name},
-        )
-    except Exception as e:
-        return ActionResultModel(success=False, message=str(e), error=str(e))
+            applied["scale"] = scale
 
-
-def register_actions(registry) -> None:
-    """Register all primitive actions with the given ActionRegistry.
-
-    Args:
-        registry: ActionRegistry instance from dcc-mcp-core.
-
-    """
-    for func in [create_sphere, create_cube, create_cylinder, delete_objects, set_transform]:
-        try:
-            registry.register(func.__name__, func)
-        except Exception as e:
-            logger.warning(f"Failed to register action '{func.__name__}': {e}")
+        return success_result(
+            f"Transform applied to {object_name}",
+            object_name=object_name,
+            **applied,
+        ).to_dict()
+    except ImportError:
+        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+    except Exception as exc:
+        logger.exception("set_transform failed")
+        return error_result(f"Failed to set transform on {object_name}", str(exc)).to_dict()

@@ -1,3 +1,1 @@
-"""Version information for dcc-mcp-maya."""
-
-__version__ = "0.1.0"
+__version__ = "0.2.0"

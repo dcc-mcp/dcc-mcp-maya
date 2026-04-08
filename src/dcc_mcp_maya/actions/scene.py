@@ -1,165 +1,197 @@
-"""Scene management actions for Maya MCP."""
+"""Maya scene management actions."""
+
+# Import future modules
+from __future__ import annotations
 
 # Import built-in modules
 import logging
-import os
-
-# Import third-party modules
-from dcc_mcp_core import ActionResultModel
 
 logger = logging.getLogger(__name__)
 
 
-def new_scene(force: bool = False) -> ActionResultModel:
+def new_scene(force: bool = False) -> dict:
     """Create a new Maya scene.
 
     Args:
         force: If True, discard unsaved changes without prompting.
 
     Returns:
-        ActionResultModel indicating success or failure.
-
+        ActionResultModel dict.
     """
-    import maya.cmds as cmds
+    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
+
     try:
+        import maya.cmds as cmds  # noqa: PLC0415
+
         cmds.file(new=True, force=force)
-        return ActionResultModel(success=True, message="New scene created")
-    except Exception as e:
-        return ActionResultModel(success=False, message=str(e), error=str(e))
+        return success_result("New scene created").to_dict()
+    except ImportError:
+        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+    except Exception as exc:
+        logger.exception("new_scene failed")
+        return error_result("Failed to create new scene", str(exc)).to_dict()
 
 
-def save_scene(file_path: str = "", file_type: str = "mayaBinary") -> ActionResultModel:
+def save_scene(file_path: str | None = None, file_type: str = "mayaBinary") -> dict:
     """Save the current Maya scene.
 
     Args:
-        file_path: Path to save. If empty, saves to the current scene path.
-        file_type: Maya file type ("mayaBinary" or "mayaAscii").
+        file_path: Destination path.  If None, saves to the current file path.
+        file_type: ``"mayaBinary"`` (default) or ``"mayaAscii"``.
 
     Returns:
-        ActionResultModel with the saved file path.
-
+        ActionResultModel dict.
     """
-    import maya.cmds as cmds
+    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
+
     try:
+        import maya.cmds as cmds  # noqa: PLC0415
+
         if file_path:
-            saved_path = cmds.file(rename=file_path)
-            cmds.file(save=True, type=file_type)
-        else:
-            saved_path = cmds.file(save=True, type=file_type)
-        return ActionResultModel(
-            success=True,
-            message=f"Scene saved to {saved_path}",
-            context={"path": saved_path},
-        )
-    except Exception as e:
-        return ActionResultModel(success=False, message=str(e), error=str(e))
+            cmds.file(rename=file_path)
+        saved = cmds.file(save=True, type=file_type)
+        return success_result(
+            f"Scene saved to {saved}",
+            file_path=saved,
+        ).to_dict()
+    except ImportError:
+        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+    except Exception as exc:
+        logger.exception("save_scene failed")
+        return error_result("Failed to save scene", str(exc)).to_dict()
 
 
-def open_scene(file_path: str, force: bool = False) -> ActionResultModel:
+def open_scene(file_path: str, force: bool = False) -> dict:
     """Open a Maya scene file.
 
     Args:
-        file_path: Path to the .ma or .mb file.
+        file_path: Path to the .ma / .mb file.
         force: If True, discard unsaved changes without prompting.
 
     Returns:
-        ActionResultModel indicating success or failure.
-
+        ActionResultModel dict.
     """
-    import maya.cmds as cmds
+    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
+
     try:
-        if not os.path.exists(file_path):
-            return ActionResultModel(
-                success=False,
-                message=f"File not found: {file_path}",
-                error="FileNotFoundError",
-            )
+        import maya.cmds as cmds  # noqa: PLC0415
+
         cmds.file(file_path, open=True, force=force)
-        return ActionResultModel(
-            success=True,
-            message=f"Opened scene: {file_path}",
-            context={"path": file_path},
-        )
-    except Exception as e:
-        return ActionResultModel(success=False, message=str(e), error=str(e))
+        return success_result(
+            f"Opened scene: {file_path}",
+            file_path=file_path,
+        ).to_dict()
+    except ImportError:
+        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+    except Exception as exc:
+        logger.exception("open_scene failed")
+        return error_result(f"Failed to open {file_path}", str(exc)).to_dict()
 
 
-def list_objects(object_type: str = "", dag: bool = True) -> ActionResultModel:
+def list_objects(object_type: str | None = None, dag: bool = True) -> dict:
     """List objects in the current Maya scene.
 
     Args:
-        object_type: Optional Maya object type filter (e.g. "mesh", "camera").
-        dag: If True, only list DAG nodes.
+        object_type: Optional Maya type filter (e.g. ``"mesh"``, ``"transform"``).
+        dag: If True, only return DAG nodes.
 
     Returns:
-        ActionResultModel with list of object names.
-
+        ActionResultModel dict with ``context.objects`` list.
     """
-    import maya.cmds as cmds
+    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
+
     try:
-        kwargs: dict = {"dag": dag}
+        import maya.cmds as cmds  # noqa: PLC0415
+
+        kwargs = {"dag": dag}
         if object_type:
             kwargs["type"] = object_type
         objects = cmds.ls(**kwargs) or []
-        return ActionResultModel(
-            success=True,
-            message=f"Found {len(objects)} objects",
-            context={"objects": objects, "count": len(objects)},
-        )
-    except Exception as e:
-        return ActionResultModel(success=False, message=str(e), error=str(e))
+        return success_result(
+            f"Found {len(objects)} objects",
+            objects=objects,
+            count=len(objects),
+        ).to_dict()
+    except ImportError:
+        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+    except Exception as exc:
+        logger.exception("list_objects failed")
+        return error_result("Failed to list objects", str(exc)).to_dict()
 
 
-def get_selection() -> ActionResultModel:
-    """Get the current selection in Maya.
+def get_selection() -> dict:
+    """Return the current Maya selection.
 
     Returns:
-        ActionResultModel with selected object names.
-
+        ActionResultModel dict with ``context.selection`` list.
     """
-    import maya.cmds as cmds
+    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
+
     try:
+        import maya.cmds as cmds  # noqa: PLC0415
+
         selection = cmds.ls(selection=True) or []
-        return ActionResultModel(
-            success=True,
-            message=f"Selection has {len(selection)} items",
-            context={"selection": selection},
-        )
-    except Exception as e:
-        return ActionResultModel(success=False, message=str(e), error=str(e))
+        return success_result(
+            f"{len(selection)} objects selected",
+            selection=selection,
+            count=len(selection),
+        ).to_dict()
+    except ImportError:
+        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+    except Exception as exc:
+        logger.exception("get_selection failed")
+        return error_result("Failed to get selection", str(exc)).to_dict()
 
 
-def set_selection(objects: list) -> ActionResultModel:
-    """Set the selection in Maya.
+def set_selection(objects: list[str]) -> dict:
+    """Set the active Maya selection.
 
     Args:
         objects: List of object names to select.
 
     Returns:
-        ActionResultModel indicating success.
-
+        ActionResultModel dict.
     """
-    import maya.cmds as cmds
+    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
+
     try:
+        import maya.cmds as cmds  # noqa: PLC0415
+
         cmds.select(objects, replace=True)
-        return ActionResultModel(
-            success=True,
-            message=f"Selected {len(objects)} objects",
-            context={"selection": objects},
-        )
-    except Exception as e:
-        return ActionResultModel(success=False, message=str(e), error=str(e))
+        return success_result(
+            f"Selected {len(objects)} objects",
+            selection=objects,
+        ).to_dict()
+    except ImportError:
+        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+    except Exception as exc:
+        logger.exception("set_selection failed")
+        return error_result("Failed to set selection", str(exc)).to_dict()
 
 
-def register_actions(registry) -> None:
-    """Register all scene actions with the given ActionRegistry.
+def get_session_info() -> dict:
+    """Return Maya version, scene path, and basic stats.
 
-    Args:
-        registry: ActionRegistry instance from dcc-mcp-core.
-
+    Returns:
+        ActionResultModel dict with version, scene, fps information.
     """
-    for func in [new_scene, save_scene, open_scene, list_objects, get_selection, set_selection]:
-        try:
-            registry.register(func.__name__, func)
-        except Exception as e:
-            logger.warning(f"Failed to register action '{func.__name__}': {e}")
+    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
+
+    try:
+        import maya.cmds as cmds  # noqa: PLC0415
+
+        info = {
+            "maya_version": cmds.about(version=True),
+            "api_version": cmds.about(apiVersion=True),
+            "scene_file": cmds.file(query=True, sceneName=True) or "<unsaved>",
+            "scene_modified": cmds.file(query=True, modified=True),
+            "fps": cmds.currentUnit(query=True, time=True),
+            "up_axis": cmds.upAxis(query=True, axis=True),
+            "object_count": len(cmds.ls(dag=True) or []),
+        }
+        return success_result("Maya session info", **info).to_dict()
+    except ImportError:
+        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+    except Exception as exc:
+        logger.exception("get_session_info failed")
+        return error_result("Failed to get session info", str(exc)).to_dict()
