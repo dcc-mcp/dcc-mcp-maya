@@ -53,9 +53,8 @@ maya = "dcc_mcp_maya:MayaMcpServer"
 [tool.hatch.build.targets.wheel]
 packages = ["src/dcc_mcp_maya"]
 
-[tool.hatch.version]
-path = "src/dcc_mcp_maya/__version__.py"
-pattern = "^__version__ = ['\"](?P<version>[^'\"]+)['\"]"
+# Version is managed by release-please — do not edit manually.
+# release-please updates both pyproject.toml [project].version and __version__.py
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
