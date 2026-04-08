@@ -28,7 +28,7 @@ from __future__ import annotations
 # Import built-in modules
 import logging
 import threading
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Optional
 
 if TYPE_CHECKING:
     pass
@@ -184,14 +184,14 @@ class MayaMcpServer:
         return self._handle is not None
 
     @property
-    def mcp_url(self) -> str | None:
+    def mcp_url(self) -> Optional[str]:
         """The MCP endpoint URL, or ``None`` if not running."""
         return self._handle.mcp_url() if self._handle else None
 
 
 # ── module-level singleton helpers ────────────────────────────────────────────
 
-_server_instance: MayaMcpServer | None = None
+_server_instance: Optional[MayaMcpServer] = None
 _lock = threading.Lock()
 
 
