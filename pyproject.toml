@@ -1,0 +1,87 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "dcc-mcp-maya"
+version = "0.2.0"
+description = "Maya plugin for the DCC Model Context Protocol (MCP) ecosystem — embeds a Streamable HTTP MCP server directly inside Maya"
+authors = [{ name = "Long Hao", email = "hal.long@outlook.com" }]
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.7"
+keywords = ["maya", "mcp", "dcc", "ai", "llm", "model-context-protocol"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Multimedia :: Graphics :: 3D Modeling",
+]
+
+dependencies = [
+    "dcc-mcp-core>=0.12.7,<1.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "pytest-mock>=3.0",
+    "ruff>=0.8.0",
+    "hatchling",
+    "build",
+]
+
+[project.urls]
+Homepage = "https://github.com/loonghao/dcc-mcp-maya"
+Repository = "https://github.com/loonghao/dcc-mcp-maya"
+Issues = "https://github.com/loonghao/dcc-mcp-maya/issues"
+Changelog = "https://github.com/loonghao/dcc-mcp-maya/releases"
+
+[project.entry-points."dcc_mcp.adapters"]
+maya = "dcc_mcp_maya:MayaAdapter"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/dcc_mcp_maya"]
+
+[tool.hatch.version]
+path = "src/dcc_mcp_maya/__version__.py"
+pattern = "^__version__ = ['\"](?P<version>[^'\"]+)['\"]"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
+
+[tool.coverage.run]
+source = ["dcc_mcp_maya"]
+branch = true
+omit = ["tests/*"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+]
+
+[tool.ruff]
+line-length = 120
+target-version = "py37"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W", "UP"]
+ignore = ["E501", "UP007"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["dcc_mcp_maya"]
