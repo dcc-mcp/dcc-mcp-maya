@@ -5,6 +5,7 @@ from __future__ import annotations
 
 # Import built-in modules
 import logging
+from typing import List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +33,7 @@ def new_scene(force: bool = False) -> dict:
         return error_result("Failed to create new scene", str(exc)).to_dict()
 
 
-def save_scene(file_path: str | None = None, file_type: str = "mayaBinary") -> dict:
+def save_scene(file_path: Optional[str] = None, file_type: str = "mayaBinary") -> dict:
     """Save the current Maya scene.
 
     Args:
@@ -88,7 +89,7 @@ def open_scene(file_path: str, force: bool = False) -> dict:
         return error_result(f"Failed to open {file_path}", str(exc)).to_dict()
 
 
-def list_objects(object_type: str | None = None, dag: bool = True) -> dict:
+def list_objects(object_type: Optional[str] = None, dag: bool = True) -> dict:
     """List objects in the current Maya scene.
 
     Args:
@@ -143,7 +144,7 @@ def get_selection() -> dict:
         return error_result("Failed to get selection", str(exc)).to_dict()
 
 
-def set_selection(objects: list[str]) -> dict:
+def set_selection(objects: List[str]) -> dict:
     """Set the active Maya selection.
 
     Args:

@@ -66,16 +66,20 @@ jobs:
           python-version: "3.12"
 
       - name: Install build tools
-        run: pip install hatchling build
+        run: pip install hatchling build tomli
 
       - name: Read version from pyproject.toml
         id: version
         run: |
           python -c "
-          import tomllib, pathlib
-          d = tomllib.loads(pathlib.Path('pyproject.toml').read_text())
+          try:
+              import tomllib
+          except ImportError:
+              import tomli as tomllib
+          import pathlib
+          d = tomllib.loads(pathlib.Path('pyproject.toml').read_bytes())
           print('version=' + d['project']['version'])
-          " >> $GITHUB_OUTPUT
+          " >> \$GITHUB_OUTPUT
 
       - name: Build wheel and sdist
         run: python -m build

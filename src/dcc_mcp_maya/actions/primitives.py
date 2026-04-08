@@ -5,11 +5,12 @@ from __future__ import annotations
 
 # Import built-in modules
 import logging
+from typing import List, Optional
 
 logger = logging.getLogger(__name__)
 
 
-def create_sphere(radius: float = 1.0, name: str | None = None) -> dict:
+def create_sphere(radius: float = 1.0, name: Optional[str] = None) -> dict:
     """Create a polygon sphere.
 
     Args:
@@ -45,7 +46,7 @@ def create_cube(
     width: float = 1.0,
     height: float = 1.0,
     depth: float = 1.0,
-    name: str | None = None,
+    name: Optional[str] = None,
 ) -> dict:
     """Create a polygon cube.
 
@@ -84,7 +85,7 @@ def create_cube(
 def create_cylinder(
     radius: float = 1.0,
     height: float = 2.0,
-    name: str | None = None,
+    name: Optional[str] = None,
 ) -> dict:
     """Create a polygon cylinder.
 
@@ -118,7 +119,7 @@ def create_cylinder(
         return error_result("Failed to create cylinder", str(exc)).to_dict()
 
 
-def delete_objects(objects: list[str]) -> dict:
+def delete_objects(objects: List[str]) -> dict:
     """Delete objects from the Maya scene.
 
     Args:
@@ -151,9 +152,9 @@ def delete_objects(objects: list[str]) -> dict:
 
 def set_transform(
     object_name: str,
-    translate: list[float] | None = None,
-    rotate: list[float] | None = None,
-    scale: list[float] | None = None,
+    translate: Optional[List[float]] = None,
+    rotate: Optional[List[float]] = None,
+    scale: Optional[List[float]] = None,
 ) -> dict:
     """Set the translate/rotate/scale of an object.
 
