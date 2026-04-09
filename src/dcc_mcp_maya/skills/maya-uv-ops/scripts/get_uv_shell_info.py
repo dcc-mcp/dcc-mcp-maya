@@ -48,7 +48,7 @@ def get_uv_shell_info(object_name: str, uv_set: Optional[str] = None) -> dict:
         shell_ids = cmds.polyEvaluate(object_name, uvShellsIds=True) or []
 
         # Build shell groups: shell_id -> list of UV component indices
-        shell_map = {}  # type: Dict[int, List[int]]
+        shell_map = {}
         for i, sid in enumerate(shell_ids):
             shell_map.setdefault(int(sid), []).append(i)
 

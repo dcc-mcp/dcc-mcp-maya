@@ -50,13 +50,14 @@ jobs:
           print('Python version:', cmds.about(pythonVersion=True))
           "
 
-      - name: Install package
+      - name: Install package into mayapy
         run: |
-          python -m pip install --upgrade pip
-          pip install -e ".[dev]"
+          # Install into mayapy's site-packages so E2E tests can import dcc_mcp_maya
+          mayapy -m pip install --upgrade pip
+          mayapy -m pip install -e ".[dev]"
 
       - name: Run unit tests (no Maya required)
-        run: pytest tests/ -v --tb=short -m "not e2e"
+        run: mayapy -m pytest tests/ -v --tb=short -m "not e2e"
 
       - name: Run E2E tests (Maya standalone)
         run: |
@@ -68,8 +69,7 @@ jobs:
           # Run e2e tests via pytest inside mayapy
           result = subprocess.run(
               [sys.executable, '-m', 'pytest', 'tests/', '-v', '--tb=short', '-m', 'e2e'],
-              env={**os.environ, 'PYTHONPATH': 'src'},
+              env=dict(os.environ),
           )
           sys.exit(result.returncode)
           "
-        continue-on-error: true  # E2E tests are best-effort until test suite matures

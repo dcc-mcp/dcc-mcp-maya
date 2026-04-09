@@ -5,7 +5,6 @@ from __future__ import annotations
 
 # Import built-in modules
 import json
-import os
 import sys
 import urllib.request
 from unittest.mock import MagicMock, patch
