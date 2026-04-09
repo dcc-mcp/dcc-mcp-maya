@@ -51,7 +51,7 @@ def bake_textures(
         ).to_dict()
 
     if not objects:
-        return error_result("No objects specified for baking").to_dict()
+        return error_result("No objects specified for baking", "objects list must not be empty").to_dict()
 
     if resolution < 1:
         return error_result(
