@@ -5,7 +5,7 @@ Starts a standards-compliant MCP server (2025-03-26 spec) inside Maya using
 tools that any compatible MCP host (Claude Desktop, OpenClaw, Cursor …) can
 call directly.
 
-Skills SOP (v0.12.10+)
+Skills SOP (v0.12.12+)
 -----------------------
 Actions are discovered and loaded using ``McpHttpServer``'s built-in
 SkillCatalog API rather than manually calling ``scan_and_load`` and
@@ -27,8 +27,9 @@ Search path resolution (highest → lowest priority):
 
 1. ``extra_skill_paths`` supplied by the caller
 2. Built-in skills shipped with this package  (``src/dcc_mcp_maya/skills/``)
-3. ``DCC_MCP_SKILL_PATHS`` environment variable (via ``get_skill_paths_from_env``)
-4. Platform default  (``dcc_mcp_core.get_skills_dir()``)
+3. ``DCC_MCP_MAYA_SKILL_PATHS`` environment variable (Maya-specific, via ``get_app_skill_paths_from_env``)
+4. ``DCC_MCP_SKILL_PATHS`` environment variable (global fallback)
+5. Platform default  (``dcc_mcp_core.get_skills_dir()``)
 
 Architecture::
 
@@ -75,16 +76,21 @@ def _collect_skill_search_paths(extra_paths: Optional[List[str]] = None) -> List
     Priority (highest first):
     1. ``extra_paths`` supplied by the caller
     2. Built-in skills directory (``src/dcc_mcp_maya/skills/``)
-    3. ``DCC_MCP_SKILL_PATHS`` env var paths (via ``get_skill_paths_from_env``)
-    4. Platform default skills dir (``get_skills_dir()``)
+    3. ``DCC_MCP_MAYA_SKILL_PATHS`` — Maya-specific env var (v0.12.12+)
+    4. ``DCC_MCP_SKILL_PATHS`` — global fallback env var
+    5. Platform default skills dir (``get_skills_dir()``)
     """
-    from dcc_mcp_core import get_skill_paths_from_env, get_skills_dir  # noqa: PLC0415
+    from dcc_mcp_core import get_app_skill_paths_from_env, get_skill_paths_from_env, get_skills_dir  # noqa: PLC0415
 
     paths: List[str] = list(extra_paths or [])
 
     if _BUILTIN_SKILLS_DIR.is_dir():
         paths.append(str(_BUILTIN_SKILLS_DIR))
 
+    # Per-app env var: DCC_MCP_MAYA_SKILL_PATHS (highest priority among env vars)
+    paths.extend(get_app_skill_paths_from_env("maya"))
+
+    # Global fallback env var: DCC_MCP_SKILL_PATHS
     paths.extend(get_skill_paths_from_env())
 
     default_dir = get_skills_dir()
@@ -198,7 +204,8 @@ class MayaMcpServer:
 
         - ``extra_skill_paths`` supplied by the caller
         - Built-in ``skills/`` directory shipped with this package
-        - ``DCC_MCP_SKILL_PATHS`` environment variable
+        - ``DCC_MCP_MAYA_SKILL_PATHS`` environment variable (Maya-specific)
+        - ``DCC_MCP_SKILL_PATHS`` environment variable (global fallback)
         - Platform default skills directory
 
         Args:
@@ -292,7 +299,8 @@ def start_server(
 
     Skills are discovered via the dcc-mcp-core SkillCatalog API from:
     - Built-in ``skills/`` directory in this package
-    - ``DCC_MCP_SKILL_PATHS`` environment variable
+    - ``DCC_MCP_MAYA_SKILL_PATHS`` environment variable (Maya-specific, v0.12.12+)
+    - ``DCC_MCP_SKILL_PATHS`` environment variable (global fallback)
     - ``extra_skill_paths`` argument
 
     Args:
