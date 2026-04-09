@@ -74,22 +74,65 @@ The server starts automatically when the plugin loads.
 
 ## Available MCP Tools
 
-| Tool | Category | Description |
-|------|----------|-------------|
-| `get_session_info` | scene | Maya version, scene path, object count |
-| `new_scene` | scene | Create a new scene |
-| `save_scene` | scene | Save scene to disk |
-| `open_scene` | scene | Open a scene file |
-| `list_objects` | scene | List DAG objects |
-| `get_selection` | scene | Get current selection |
-| `set_selection` | scene | Set active selection |
-| `create_sphere` | geometry | Create polygon sphere |
-| `create_cube` | geometry | Create polygon cube |
-| `create_cylinder` | geometry | Create polygon cylinder |
-| `delete_objects` | geometry | Delete objects |
-| `set_transform` | geometry | Set translate/rotate/scale |
-| `execute_mel` | scripting | Execute a MEL script |
-| `execute_python` | scripting | Execute Python inside Maya |
+### Scene (7 tools)
+
+| Tool | Description |
+|------|-------------|
+| `get_session_info` | Maya version, scene path, FPS, object count |
+| `new_scene` | Create a new scene |
+| `save_scene` | Save scene to disk |
+| `open_scene` | Open a scene file |
+| `list_objects` | List DAG objects (optional type filter) |
+| `get_selection` | Get current selection |
+| `set_selection` | Set active selection |
+
+### Geometry (8 tools)
+
+| Tool | Description |
+|------|-------------|
+| `create_sphere` | Create polygon sphere |
+| `create_cube` | Create polygon cube |
+| `create_cylinder` | Create polygon cylinder |
+| `create_plane` | Create polygon plane |
+| `delete_objects` | Delete objects from the scene |
+| `set_transform` | Set translate/rotate/scale |
+| `get_transform` | Query translate/rotate/scale |
+| `rename_object` | Rename an object |
+
+### Material (4 tools)
+
+| Tool | Description |
+|------|-------------|
+| `create_material` | Create Lambert/Blinn/Phong/Arnold material |
+| `assign_material` | Assign material to objects |
+| `set_material_attribute` | Set material color, roughness, etc. |
+| `list_materials` | List all scene materials |
+
+### Animation (5 tools)
+
+| Tool | Description |
+|------|-------------|
+| `set_keyframe` | Set keyframe on object attributes |
+| `get_keyframes` | Get keyframe times for object/attribute |
+| `set_timeline` | Set playback timeline range |
+| `get_current_time` | Get current frame number |
+| `set_current_time` | Set current frame number |
+
+### Render (4 tools)
+
+| Tool | Description |
+|------|-------------|
+| `set_render_settings` | Set resolution, frame range, renderer |
+| `capture_viewport` | Capture viewport as base64-encoded PNG |
+| `import_file` | Import FBX/OBJ/Alembic/Maya file |
+| `export_selection` | Export selection to FBX/OBJ/Alembic |
+
+### Scripting (2 tools)
+
+| Tool | Description |
+|------|-------------|
+| `execute_mel` | Execute a MEL script |
+| `execute_python` | Execute Python inside Maya |
 
 ## Claude Desktop Integration
 

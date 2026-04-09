@@ -38,7 +38,7 @@ import maya.utils
 logger = logging.getLogger(__name__)
 
 VENDOR = "dcc-mcp"
-VERSION = "0.2.0"
+VERSION = "0.3.0"
 
 # ── module-level server handle ────────────────────────────────────────────────
 _handle = None

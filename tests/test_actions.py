@@ -233,7 +233,7 @@ class TestRegisterAll:
         from dcc_mcp_maya.actions import register_all
 
         reg = ActionRegistry()
-        register_all(reg)
+        summary = register_all(reg)
         actions = reg.list_actions()
         names = {a["name"] for a in actions}
         assert "create_sphere" in names
@@ -241,3 +241,49 @@ class TestRegisterAll:
         assert "execute_python" in names
         assert "get_session_info" in names
         assert len(actions) >= 14
+        # register_all now returns a summary dict {module: count}
+        assert isinstance(summary, dict)
+        assert sum(summary.values()) >= 14
+
+    def test_register_all_summary_covers_core_modules(self):
+        _reload_actions()
+        from dcc_mcp_core import ActionRegistry
+
+        from dcc_mcp_maya.actions import register_all
+
+        reg = ActionRegistry()
+        summary = register_all(reg)
+        assert "scene" in summary
+        assert "primitives" in summary
+        assert "scripting" in summary
+
+
+class TestDiscoverActionModules:
+    def test_discovers_all_modules(self):
+        _reload_actions()
+        from dcc_mcp_maya.actions import discover_action_modules
+
+        results = discover_action_modules()
+        assert len(results) >= 3
+        mod_names = {name for name, _ in results}
+        assert "scene" in mod_names
+        assert "primitives" in mod_names
+        assert "scripting" in mod_names
+
+    def test_discovered_actions_are_lists(self):
+        _reload_actions()
+        from dcc_mcp_maya.actions import discover_action_modules
+
+        for mod_name, actions in discover_action_modules():
+            assert isinstance(actions, list), f"{mod_name}._ACTIONS must be a list"
+            for entry in actions:
+                assert len(entry) == 4, f"{mod_name}: each _ACTIONS entry must be a 4-tuple"
+
+    def test_total_action_count(self):
+        _reload_actions()
+        from dcc_mcp_maya.actions import discover_action_modules
+
+        results = discover_action_modules()
+        total = sum(len(a) for _, a in results)
+        # At minimum the original 14 core actions must be present
+        assert total >= 14

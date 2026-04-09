@@ -74,7 +74,7 @@ class MayaMcpServer:
         self,
         port: int = 8765,
         server_name: str = "maya-mcp",
-        server_version: str = "0.2.0",
+        server_version: str = "0.3.0",
         enable_main_thread_executor: bool = True,
     ) -> None:
         from dcc_mcp_core import ActionRegistry, McpHttpConfig, McpHttpServer  # noqa: PLC0415

@@ -9,6 +9,12 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+
+
+_ACTIONS = [
+    ('execute_mel', 'Execute a MEL script', 'scripting', ['mel', 'script', 'execute']),
+    ('execute_python', 'Execute Python inside Maya', 'scripting', ['python', 'script', 'execute']),
+]
 def execute_mel(script: str) -> dict:
     """Execute a MEL script inside Maya.
 
