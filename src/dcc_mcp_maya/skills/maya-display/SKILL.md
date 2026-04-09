@@ -4,6 +4,9 @@ description: "Maya display layers and viewport shading mode management"
 dcc: maya
 version: "1.0.0"
 tags: [maya, display, layer, visibility]
+license: "MIT"
+allowed-tools: ["Bash", "Read"]
+depends: []
 ---
 
 # maya-display

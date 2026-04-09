@@ -1,4 +1,4 @@
-"""Set the render globals (resolution, frame range, renderer)."""
+"""Set Maya render settings."""
 
 # Import future modules
 from __future__ import annotations
@@ -11,36 +11,42 @@ logger = logging.getLogger(__name__)
 
 
 def set_render_settings(
-    width: int = 1920,
-    height: int = 1080,
+    width: Optional[int] = None,
+    height: Optional[int] = None,
     start_frame: Optional[float] = None,
     end_frame: Optional[float] = None,
     renderer: Optional[str] = None,
+    image_format: Optional[str] = None,
+    output_path: Optional[str] = None,
 ) -> dict:
-    """Set the render globals (resolution, frame range, renderer).
+    """Set Maya render settings.
 
     Args:
-        width: Render width in pixels.  Default: 1920.
-        height: Render height in pixels.  Default: 1080.
-        start_frame: Start frame for batch rendering.  If None, left unchanged.
-        end_frame: End frame for batch rendering.  If None, left unchanged.
-        renderer: Renderer name (e.g. ``"arnold"``, ``"vray"``, ``"mayaSoftware"``).
-            If None, left unchanged.
+        width: Render width in pixels.
+        height: Render height in pixels.
+        start_frame: Animation start frame.
+        end_frame: Animation end frame.
+        renderer: Render engine name (e.g. ``"mayaSoftware"``, ``"mayaHardware2"``,
+            ``"arnold"``, ``"vray"``).
+        image_format: Image format string (e.g. ``"png"``, ``"exr"``, ``"jpg"``).
+        output_path: Output directory path for rendered images.
 
     Returns:
-        ActionResultModel dict with applied render settings.
+        ActionResultModel dict with applied settings.
     """
     from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        cmds.setAttr("defaultResolution.width", width)
-        cmds.setAttr("defaultResolution.height", height)
-        cmds.setAttr("defaultResolution.deviceAspectRatio", float(width) / float(height))
+        applied = {}
 
-        applied = {"width": width, "height": height}
-
+        if width is not None:
+            cmds.setAttr("defaultResolution.width", width)
+            applied["width"] = width
+        if height is not None:
+            cmds.setAttr("defaultResolution.height", height)
+            applied["height"] = height
         if start_frame is not None:
             cmds.setAttr("defaultRenderGlobals.startFrame", start_frame)
             applied["start_frame"] = start_frame
@@ -50,14 +56,31 @@ def set_render_settings(
         if renderer is not None:
             cmds.setAttr("defaultRenderGlobals.currentRenderer", renderer, type="string")
             applied["renderer"] = renderer
+        if image_format is not None:
+            # Format code mapping for mayaSoftware
+            _fmt_map = {"gif": 0, "soft": 1, "rla": 2, "tiff": 3, "sgi": 5,
+                        "jpg": 8, "jpeg": 8, "eps": 9, "iff": 10, "png": 32,
+                        "maya16iff": 13, "exr": 40, "tga": 19, "bmp": 20}
+            fmt_code = _fmt_map.get(image_format.lower(), 32)
+            cmds.setAttr("defaultRenderGlobals.imageFormat", fmt_code)
+            applied["image_format"] = image_format
+        if output_path is not None:
+            cmds.setAttr("defaultRenderGlobals.imageFilePrefix", output_path, type="string")
+            applied["output_path"] = output_path
 
-        return success_result("Render settings applied ({}x{})".format(width, height), **applied).to_dict()
+        if not applied:
+            return error_result("No settings provided", "Specify at least one render setting to update").to_dict()
+
+        return success_result(
+            "Updated render settings: {}".format(", ".join(applied.keys())),
+            prompt="Use render_frame or playblast to render with the new settings.",
+            **applied
+        ).to_dict()
     except ImportError:
         return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
     except Exception as exc:
         logger.exception("set_render_settings failed")
         return error_result("Failed to set render settings", str(exc)).to_dict()
-
 
 
 def main(**kwargs):
@@ -66,5 +89,5 @@ def main(**kwargs):
 
 if __name__ == "__main__":
     import json
-    result = set_render_settings()
+    result = set_render_settings(width=1920, height=1080, renderer="mayaHardware2")
     print(json.dumps(result))
