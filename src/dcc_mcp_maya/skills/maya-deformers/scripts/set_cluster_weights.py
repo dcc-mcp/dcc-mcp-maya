@@ -1,0 +1,95 @@
+"""Set per-vertex weights on a cluster deformer."""
+
+# Import future modules
+from __future__ import annotations
+
+# Import built-in modules
+import logging
+from typing import List, Optional
+
+logger = logging.getLogger(__name__)
+
+
+def set_cluster_weights(
+    cluster_node: str,
+    mesh: str,
+    weights: List[float],
+    vertex_indices: Optional[List[int]] = None,
+    normalize: bool = True,
+) -> dict:
+    """Set per-vertex weights on a cluster deformer.
+
+    Args:
+        cluster_node: Name of the cluster deformer node (not the handle).
+        mesh: Name of the mesh whose vertex weights to set.
+        weights: Weight values, one per vertex in *vertex_indices* (or per
+            all vertices if *vertex_indices* is ``None``).
+        vertex_indices: Specific vertex indices to update.  If ``None``,
+            *weights* must cover all vertices in order.
+        normalize: When ``True``, clamp weights to ``[0, 1]`` before setting.
+
+    Returns:
+        ActionResultModel dict with ``context.vertex_count``.
+    """
+    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
+
+    if not weights:
+        return error_result(
+            "No weights provided",
+            "Supply at least one weight value",
+        ).to_dict()
+
+    try:
+        import maya.cmds as cmds  # noqa: PLC0415
+
+        if not cmds.objExists(cluster_node):
+            return error_result(
+                "Cluster node not found: {}".format(cluster_node),
+                "'{}' does not exist".format(cluster_node),
+            ).to_dict()
+        if not cmds.objExists(mesh):
+            return error_result(
+                "Mesh not found: {}".format(mesh),
+                "'{}' does not exist".format(mesh),
+            ).to_dict()
+
+        vertex_count = cmds.polyEvaluate(mesh, vertex=True)
+
+        if vertex_indices is None:
+            if len(weights) != vertex_count:
+                return error_result(
+                    "Weight count mismatch",
+                    "Expected {} weights, got {}".format(vertex_count, len(weights)),
+                ).to_dict()
+            vertex_indices = list(range(vertex_count))
+
+        if normalize:
+            weights = [max(0.0, min(1.0, float(w))) for w in weights]
+
+        for idx, w in zip(vertex_indices, weights):
+            vtx = "{}.vtx[{}]".format(mesh, idx)
+            cmds.percent(cluster_node, vtx, value=w)
+
+        return success_result(
+            "Set cluster weights on {} vertices of '{}'".format(len(vertex_indices), mesh),
+            cluster_node=cluster_node,
+            mesh=mesh,
+            vertex_count=len(vertex_indices),
+            normalize=normalize,
+        ).to_dict()
+    except ImportError:
+        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+    except Exception as exc:
+        logger.exception("set_cluster_weights failed")
+        return error_result("Failed to set cluster weights", str(exc)).to_dict()
+
+
+def main(**kwargs):
+    return set_cluster_weights(**kwargs)
+
+
+if __name__ == "__main__":
+    import json
+
+    result = set_cluster_weights()
+    print(json.dumps(result))
