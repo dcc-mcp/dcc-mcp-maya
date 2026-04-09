@@ -4,6 +4,9 @@ description: "Maya scene management — create, open, save, list, select and man
 dcc: maya
 version: "1.0.0"
 tags: [maya, scene, hierarchy]
+license: "MIT"
+allowed-tools: ["Bash", "Read"]
+depends: []
 ---
 
 # maya-scene

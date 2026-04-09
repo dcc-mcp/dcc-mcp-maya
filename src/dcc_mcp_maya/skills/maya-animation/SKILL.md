@@ -4,6 +4,9 @@ description: "Maya animation keyframes, timeline, curves and simulation baking"
 dcc: maya
 version: "1.0.0"
 tags: [maya, animation, keyframe, timeline]
+license: "MIT"
+allowed-tools: ["Bash", "Read"]
+depends: []
 ---
 
 # maya-animation

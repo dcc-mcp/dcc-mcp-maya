@@ -4,4 +4,7 @@ description: "Maya polygon mesh operations — subdivision, cleanup, boolean, UV
 dcc: maya
 version: "1.0.0"
 tags: [maya, mesh, polygon, geometry, topology]
+license: "MIT"
+allowed-tools: ["Bash", "Read"]
+depends: []
 ---

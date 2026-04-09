@@ -4,6 +4,9 @@ description: "Maya namespace operations — assign, rename and delete namespaces
 dcc: maya
 version: "1.0.0"
 tags: [maya, namespace, scene, utility]
+license: "MIT"
+allowed-tools: ["Bash", "Read"]
+depends: []
 ---
 
 # maya-namespaces

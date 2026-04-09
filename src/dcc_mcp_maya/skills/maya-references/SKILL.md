@@ -4,6 +4,9 @@ description: "Maya file references and namespace management"
 dcc: maya
 version: "1.0.0"
 tags: [maya, reference, namespace, scene]
+license: "MIT"
+allowed-tools: ["Bash", "Read"]
+depends: []
 ---
 
 # maya-references

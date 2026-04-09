@@ -4,6 +4,9 @@ description: "Maya utility nodes and scene statistics"
 dcc: maya
 version: "1.0.0"
 tags: [maya, utility, node, scene]
+license: "MIT"
+allowed-tools: ["Bash", "Read"]
+depends: []
 ---
 
 # maya-utility

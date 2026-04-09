@@ -4,6 +4,9 @@ description: "Maya scene utilities — pivot, alignment, annotation, color overr
 dcc: maya
 version: "1.0.0"
 tags: [maya, scene, utility, display, viewport]
+license: "MIT"
+allowed-tools: ["Bash", "Read"]
+depends: []
 ---
 
 # maya-scene-utils

@@ -4,6 +4,9 @@ description: "Maya polygon primitive creation and basic transform operations"
 dcc: maya
 version: "1.0.0"
 tags: [maya, geometry, primitives, create]
+license: "MIT"
+allowed-tools: ["Bash", "Read"]
+depends: []
 ---
 
 # maya-primitives
