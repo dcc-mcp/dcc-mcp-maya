@@ -1,4 +1,4 @@
-"""Create a new Maya camera."""
+"""Create a Maya camera."""
 
 # Import future modules
 from __future__ import annotations
@@ -19,53 +19,37 @@ def create_camera(
     """Create a new Maya camera.
 
     Args:
-        name: Optional transform name for the new camera.
-        focal_length: Camera focal length in mm.  Default: 35.0.
-        position: World-space position ``[x, y, z]``.  Default: origin.
-        rotation: Euler rotation ``[rx, ry, rz]`` in degrees.  Default: none.
+        name: Optional name for the camera transform node.
+        focal_length: Focal length in mm.  Default 35.
+        position: Optional ``[x, y, z]`` world-space position.
+        rotation: Optional ``[rx, ry, rz]`` rotation in degrees.
 
     Returns:
-        ActionResultModel dict with ``context.camera_name`` (transform) and
-        ``context.camera_shape``.
+        ActionResultModel dict with ``context.transform`` and ``context.shape``.
     """
     from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        result = cmds.camera()
+        result = cmds.camera(focalLength=focal_length)
         transform = result[0]
         shape = result[1]
 
         if name:
             transform = cmds.rename(transform, name)
-            # Shape is renamed automatically
-            shapes = cmds.listRelatives(transform, shapes=True) or []
-            shape = shapes[0] if shapes else shape
+            shape = cmds.listRelatives(transform, shapes=True, fullPath=False)[0]
 
-        cmds.setAttr("{}.focalLength".format(shape), focal_length)
-
-        if position and len(position) >= 3:
-            cmds.setAttr(
-                "{}.translate".format(transform),
-                position[0],
-                position[1],
-                position[2],
-                type="double3",
-            )
-        if rotation and len(rotation) >= 3:
-            cmds.setAttr(
-                "{}.rotate".format(transform),
-                rotation[0],
-                rotation[1],
-                rotation[2],
-                type="double3",
-            )
+        if position and len(position) == 3:
+            cmds.move(position[0], position[1], position[2], transform)
+        if rotation and len(rotation) == 3:
+            cmds.rotate(rotation[0], rotation[1], rotation[2], transform)
 
         return success_result(
             "Created camera '{}'".format(transform),
-            camera_name=transform,
-            camera_shape=shape,
+            prompt="Use set_camera_attribute to change focal length, clipping planes, or film gate.",
+            transform=transform,
+            shape=shape,
             focal_length=focal_length,
         ).to_dict()
     except ImportError:
@@ -73,7 +57,6 @@ def create_camera(
     except Exception as exc:
         logger.exception("create_camera failed")
         return error_result("Failed to create camera", str(exc)).to_dict()
-
 
 
 def main(**kwargs):
