@@ -40,12 +40,12 @@ def execute_mel(script: str) -> dict:
         return error_result("MEL execution failed", str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return execute_mel(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = execute_mel()
     print(json.dumps(result))

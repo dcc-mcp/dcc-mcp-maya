@@ -56,12 +56,12 @@ def list_cameras(include_default: bool = True) -> dict:
         return error_result("Failed to list cameras", str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return list_cameras(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = list_cameras()
     print(json.dumps(result))

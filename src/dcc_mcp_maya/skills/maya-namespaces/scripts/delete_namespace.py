@@ -70,12 +70,12 @@ def delete_namespace(
         return error_result("Failed to delete namespace '{}'".format(namespace), str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return delete_namespace(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = delete_namespace()
     print(json.dumps(result))

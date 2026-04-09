@@ -36,12 +36,12 @@ def set_selection(objects: List[str]) -> dict:
         return error_result("Failed to set selection", str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return set_selection(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = set_selection()
     print(json.dumps(result))

@@ -69,12 +69,12 @@ def rename_namespace(
         return error_result("Failed to rename namespace '{}' to '{}'".format(old_name, new_name), str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return rename_namespace(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = rename_namespace()
     print(json.dumps(result))

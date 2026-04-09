@@ -112,12 +112,12 @@ def bake_textures(
         return error_result("Failed to bake textures", str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return bake_textures(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = bake_textures()
     print(json.dumps(result))

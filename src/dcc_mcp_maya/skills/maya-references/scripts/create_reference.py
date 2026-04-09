@@ -69,12 +69,12 @@ def create_reference(
         return error_result("Failed to reference file '{}'".format(file_path), str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return create_reference(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = create_reference()
     print(json.dumps(result))

@@ -53,12 +53,12 @@ def unload_reference(reference_node: str) -> dict:
         return error_result("Failed to unload reference '{}'".format(reference_node), str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return unload_reference(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = unload_reference()
     print(json.dumps(result))

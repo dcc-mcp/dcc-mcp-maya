@@ -59,12 +59,12 @@ def lock_object(object_name: str, lock: bool = True) -> dict:
         return error_result("Failed to {} '{}'".format("lock" if lock else "unlock", object_name), str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return lock_object(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = lock_object()
     print(json.dumps(result))

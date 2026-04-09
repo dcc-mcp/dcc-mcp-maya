@@ -98,12 +98,12 @@ def set_joint_limit(
         return error_result("Failed to set joint limit on {}".format(joint_name), str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return set_joint_limit(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = set_joint_limit()
     print(json.dumps(result))

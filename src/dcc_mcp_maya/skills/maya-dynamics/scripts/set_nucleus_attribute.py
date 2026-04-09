@@ -85,12 +85,12 @@ def set_nucleus_attribute(
         return error_result("Failed to set attribute on nucleus '{}'".format(nucleus), str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return set_nucleus_attribute(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = set_nucleus_attribute()
     print(json.dumps(result))

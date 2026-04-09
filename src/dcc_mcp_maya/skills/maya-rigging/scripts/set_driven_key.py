@@ -106,12 +106,12 @@ def set_driven_key(
         return error_result("Failed to set driven key", str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return set_driven_key(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = set_driven_key()
     print(json.dumps(result))

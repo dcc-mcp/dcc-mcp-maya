@@ -80,12 +80,12 @@ def create_annotation(
         return error_result("Failed to create annotation on '{}'".format(object_name), str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return create_annotation(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = create_annotation()
     print(json.dumps(result))

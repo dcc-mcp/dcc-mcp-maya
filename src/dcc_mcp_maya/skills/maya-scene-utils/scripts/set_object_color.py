@@ -69,12 +69,12 @@ def set_object_color(
         return error_result("Failed to set object color on '{}'".format(object_name), str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return set_object_color(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = set_object_color()
     print(json.dumps(result))

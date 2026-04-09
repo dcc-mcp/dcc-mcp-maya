@@ -82,12 +82,12 @@ def mirror_joints(
         return error_result("Failed to mirror joints from {}".format(joint_name), str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return mirror_joints(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = mirror_joints()
     print(json.dumps(result))

@@ -72,12 +72,12 @@ def delete_display_layer(
         return error_result("Failed to delete display layer '{}'".format(layer_name), str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return delete_display_layer(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = delete_display_layer()
     print(json.dumps(result))

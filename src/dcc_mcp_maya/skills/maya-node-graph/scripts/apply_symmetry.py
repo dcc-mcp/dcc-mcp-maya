@@ -77,12 +77,12 @@ def apply_symmetry(
         return error_result("Failed to apply symmetry on {}".format(object_name), str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return apply_symmetry(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = apply_symmetry()
     print(json.dumps(result))

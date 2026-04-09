@@ -9,9 +9,14 @@ import logging
 logger = logging.getLogger(__name__)
 
 _CONSTRAINT_NODE_TYPES = [
-    "parentConstraint", "pointConstraint", "orientConstraint",
-    "scaleConstraint", "aimConstraint", "geometryConstraint",
-    "normalConstraint", "tangentConstraint",
+    "parentConstraint",
+    "pointConstraint",
+    "orientConstraint",
+    "scaleConstraint",
+    "aimConstraint",
+    "geometryConstraint",
+    "normalConstraint",
+    "tangentConstraint",
 ]
 
 
@@ -45,14 +50,14 @@ def list_constraints(target: str) -> dict:
                 if node in seen:
                     continue
                 seen.add(node)
-                sources = cmds.listConnections(
-                    node, source=True, destination=False, type="transform"
-                ) or []
-                constraints.append({
-                    "node": node,
-                    "type": ctype,
-                    "sources": list(set(sources) - {target}),
-                })
+                sources = cmds.listConnections(node, source=True, destination=False, type="transform") or []
+                constraints.append(
+                    {
+                        "node": node,
+                        "type": ctype,
+                        "sources": list(set(sources) - {target}),
+                    }
+                )
 
         return success_result(
             "Found {} constraint(s) on '{}'".format(len(constraints), target),
@@ -74,5 +79,6 @@ def main(**kwargs):
 
 if __name__ == "__main__":
     import json
+
     result = list_constraints("pCube1")
     print(json.dumps(result))

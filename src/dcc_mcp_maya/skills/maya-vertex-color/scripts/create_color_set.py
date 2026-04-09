@@ -64,12 +64,12 @@ def create_color_set(
         return error_result("Failed to create color set", str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return create_color_set(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = create_color_set()
     print(json.dumps(result))

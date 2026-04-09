@@ -69,12 +69,12 @@ def create_cluster(
         return error_result("Failed to create cluster deformer", str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return create_cluster(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = create_cluster()
     print(json.dumps(result))

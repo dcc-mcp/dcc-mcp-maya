@@ -47,12 +47,12 @@ def export_selection(
         return error_result("Failed to export selection", str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return export_selection(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = export_selection()
     print(json.dumps(result))

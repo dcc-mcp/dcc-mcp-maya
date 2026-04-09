@@ -61,12 +61,12 @@ def list_sets(include_internal: bool = False) -> dict:
         return error_result("Failed to list object sets", str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return list_sets(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = list_sets()
     print(json.dumps(result))

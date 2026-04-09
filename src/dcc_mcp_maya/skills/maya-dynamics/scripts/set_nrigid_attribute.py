@@ -94,12 +94,12 @@ def set_nrigid_attribute(
         ).to_dict()
 
 
-
 def main(**kwargs):
     return set_nrigid_attribute(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = set_nrigid_attribute()
     print(json.dumps(result))

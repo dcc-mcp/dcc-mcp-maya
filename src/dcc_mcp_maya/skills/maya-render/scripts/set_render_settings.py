@@ -58,9 +58,22 @@ def set_render_settings(
             applied["renderer"] = renderer
         if image_format is not None:
             # Format code mapping for mayaSoftware
-            _fmt_map = {"gif": 0, "soft": 1, "rla": 2, "tiff": 3, "sgi": 5,
-                        "jpg": 8, "jpeg": 8, "eps": 9, "iff": 10, "png": 32,
-                        "maya16iff": 13, "exr": 40, "tga": 19, "bmp": 20}
+            _fmt_map = {
+                "gif": 0,
+                "soft": 1,
+                "rla": 2,
+                "tiff": 3,
+                "sgi": 5,
+                "jpg": 8,
+                "jpeg": 8,
+                "eps": 9,
+                "iff": 10,
+                "png": 32,
+                "maya16iff": 13,
+                "exr": 40,
+                "tga": 19,
+                "bmp": 20,
+            }
             fmt_code = _fmt_map.get(image_format.lower(), 32)
             cmds.setAttr("defaultRenderGlobals.imageFormat", fmt_code)
             applied["image_format"] = image_format
@@ -74,7 +87,7 @@ def set_render_settings(
         return success_result(
             "Updated render settings: {}".format(", ".join(applied.keys())),
             prompt="Use render_frame or playblast to render with the new settings.",
-            **applied
+            **applied,
         ).to_dict()
     except ImportError:
         return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
@@ -89,5 +102,6 @@ def main(**kwargs):
 
 if __name__ == "__main__":
     import json
+
     result = set_render_settings(width=1920, height=1080, renderer="mayaHardware2")
     print(json.dumps(result))

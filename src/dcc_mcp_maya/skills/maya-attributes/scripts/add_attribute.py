@@ -10,9 +10,18 @@ from typing import Optional
 logger = logging.getLogger(__name__)
 
 _VALID_TYPES = {
-    "float", "double", "long", "short", "bool", "string",
-    "float3", "double3", "long3", "short3",
-    "enum", "message",
+    "float",
+    "double",
+    "long",
+    "short",
+    "bool",
+    "string",
+    "float3",
+    "double3",
+    "long3",
+    "short3",
+    "enum",
+    "message",
 }
 
 
@@ -92,5 +101,6 @@ def main(**kwargs):
 
 if __name__ == "__main__":
     import json
+
     result = add_attribute("pSphere1", "myFloat", "float", 0.0)
     print(json.dumps(result))

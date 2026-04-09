@@ -54,12 +54,12 @@ def get_keyframes(
         return error_result("Failed to get keyframes for {}".format(object_name), str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return get_keyframes(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = get_keyframes()
     print(json.dumps(result))

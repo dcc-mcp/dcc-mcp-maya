@@ -59,12 +59,12 @@ def set_timeline(
         return error_result("Failed to set timeline", str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return set_timeline(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = set_timeline()
     print(json.dumps(result))

@@ -63,12 +63,12 @@ def set_render_layer(
         ).to_dict()
 
 
-
 def main(**kwargs):
     return set_render_layer(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = set_render_layer()
     print(json.dumps(result))

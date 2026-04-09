@@ -80,12 +80,12 @@ def list_connections(
         return error_result("Failed to list connections on {}".format(object_name), str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return list_connections(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = list_connections()
     print(json.dumps(result))

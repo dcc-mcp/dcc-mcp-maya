@@ -75,12 +75,12 @@ def set_namespace(
         return error_result("Failed to set namespace for '{}'".format(object_name), str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return set_namespace(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = set_namespace()
     print(json.dumps(result))

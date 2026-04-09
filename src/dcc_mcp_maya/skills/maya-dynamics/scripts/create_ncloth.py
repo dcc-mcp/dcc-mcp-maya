@@ -98,12 +98,12 @@ def create_ncloth(
         return error_result("Failed to create nCloth on '{}'".format(mesh), str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return create_ncloth(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = create_ncloth()
     print(json.dumps(result))

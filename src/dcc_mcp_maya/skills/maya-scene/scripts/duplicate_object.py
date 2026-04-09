@@ -54,12 +54,12 @@ def duplicate_object(
         return error_result("Failed to duplicate '{}'".format(object_name), str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return duplicate_object(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = duplicate_object()
     print(json.dumps(result))

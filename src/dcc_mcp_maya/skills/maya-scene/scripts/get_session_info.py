@@ -37,12 +37,12 @@ def get_session_info() -> dict:
         return error_result("Failed to get session info", str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return get_session_info(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = get_session_info()
     print(json.dumps(result))

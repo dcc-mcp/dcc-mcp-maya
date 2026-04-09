@@ -54,12 +54,12 @@ def list_references() -> dict:
         return error_result("Failed to list references", str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return list_references(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = list_references()
     print(json.dumps(result))

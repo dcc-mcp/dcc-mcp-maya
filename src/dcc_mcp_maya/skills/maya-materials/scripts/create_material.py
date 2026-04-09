@@ -50,12 +50,12 @@ def create_material(
         return error_result("Failed to create material", str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return create_material(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = create_material()
     print(json.dumps(result))

@@ -68,12 +68,12 @@ def normalize_uvs(
         return error_result("Failed to normalize UVs on '{}'".format(object_name), str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return normalize_uvs(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = normalize_uvs()
     print(json.dumps(result))

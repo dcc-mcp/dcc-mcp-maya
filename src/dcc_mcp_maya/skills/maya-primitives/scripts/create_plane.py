@@ -47,12 +47,12 @@ def create_plane(
         return error_result("Failed to create plane", str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return create_plane(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = create_plane()
     print(json.dumps(result))

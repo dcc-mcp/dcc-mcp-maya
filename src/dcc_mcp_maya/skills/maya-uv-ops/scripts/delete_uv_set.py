@@ -49,12 +49,12 @@ def delete_uv_set(object_name: str, uv_set_name: str) -> dict:
         return error_result("Failed to delete UV set", str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return delete_uv_set(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = delete_uv_set()
     print(json.dumps(result))

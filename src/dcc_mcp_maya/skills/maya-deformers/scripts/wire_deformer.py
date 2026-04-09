@@ -83,12 +83,12 @@ def wire_deformer(
         return error_result("Failed to create wire deformer", str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return wire_deformer(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = wire_deformer()
     print(json.dumps(result))

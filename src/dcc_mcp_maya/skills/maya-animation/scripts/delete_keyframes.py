@@ -67,12 +67,12 @@ def delete_keyframes(
         return error_result("Failed to delete keyframes from {}".format(object_name), str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return delete_keyframes(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = delete_keyframes()
     print(json.dumps(result))

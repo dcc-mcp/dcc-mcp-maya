@@ -68,12 +68,12 @@ def apply_subdivision(
         return error_result("Failed to apply subdivision", str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return apply_subdivision(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = apply_subdivision()
     print(json.dumps(result))

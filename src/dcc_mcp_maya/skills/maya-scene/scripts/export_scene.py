@@ -43,12 +43,12 @@ def export_scene(file_path: str, file_type: str = "mayaBinary") -> dict:
         return error_result("Failed to export scene to '{}'".format(file_path), str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return export_scene(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = export_scene()
     print(json.dumps(result))

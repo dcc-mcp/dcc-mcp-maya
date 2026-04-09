@@ -86,12 +86,12 @@ def set_color_management(
         return error_result("Failed to set color management", str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return set_color_management(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = set_color_management()
     print(json.dumps(result))

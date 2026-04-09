@@ -10,9 +10,14 @@ from typing import Optional
 logger = logging.getLogger(__name__)
 
 _CONSTRAINT_NODE_TYPES = [
-    "parentConstraint", "pointConstraint", "orientConstraint",
-    "scaleConstraint", "aimConstraint", "geometryConstraint",
-    "normalConstraint", "tangentConstraint",
+    "parentConstraint",
+    "pointConstraint",
+    "orientConstraint",
+    "scaleConstraint",
+    "aimConstraint",
+    "geometryConstraint",
+    "normalConstraint",
+    "tangentConstraint",
 ]
 
 
@@ -77,5 +82,6 @@ def main(**kwargs):
 
 if __name__ == "__main__":
     import json
+
     result = remove_constraint("pCube1")
     print(json.dumps(result))

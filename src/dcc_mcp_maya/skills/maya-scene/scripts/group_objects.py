@@ -56,12 +56,12 @@ def group_objects(objects: List[str], group_name: Optional[str] = None, world: b
         return error_result("Failed to group objects", str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return group_objects(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = group_objects()
     print(json.dumps(result))

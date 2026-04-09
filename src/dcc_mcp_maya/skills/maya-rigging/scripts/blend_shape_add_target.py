@@ -83,12 +83,12 @@ def blend_shape_add_target(
         return error_result("Failed to add blend shape target", str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return blend_shape_add_target(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = blend_shape_add_target()
     print(json.dumps(result))

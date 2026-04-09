@@ -32,12 +32,12 @@ def new_scene(force: bool = False) -> dict:
         return error_result("Failed to create new scene", str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return new_scene(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = new_scene()
     print(json.dumps(result))

@@ -9,12 +9,19 @@ import logging
 logger = logging.getLogger(__name__)
 
 _LIGHT_SHAPE_TYPES = [
-    "directionalLight", "pointLight", "spotLight",
-    "areaLight", "ambientLight", "volumeLight",
+    "directionalLight",
+    "pointLight",
+    "spotLight",
+    "areaLight",
+    "ambientLight",
+    "volumeLight",
     # Arnold
-    "aiAreaLight", "aiSkyDomeLight", "aiMeshLight",
+    "aiAreaLight",
+    "aiSkyDomeLight",
+    "aiMeshLight",
     # VRay
-    "VRayLightSphereShape", "VRayLightDomeShape",
+    "VRayLightSphereShape",
+    "VRayLightDomeShape",
 ]
 
 
@@ -40,12 +47,14 @@ def list_lights() -> dict:
                 intensity = cmds.getAttr("{}.intensity".format(shape))
             except Exception:
                 intensity = None
-            lights.append({
-                "transform": transform,
-                "shape": shape,
-                "type": ltype,
-                "intensity": intensity,
-            })
+            lights.append(
+                {
+                    "transform": transform,
+                    "shape": shape,
+                    "type": ltype,
+                    "intensity": intensity,
+                }
+            )
 
         return success_result(
             "Found {} light(s) in the scene".format(len(lights)),
@@ -66,5 +75,6 @@ def main(**kwargs):
 
 if __name__ == "__main__":
     import json
+
     result = list_lights()
     print(json.dumps(result))

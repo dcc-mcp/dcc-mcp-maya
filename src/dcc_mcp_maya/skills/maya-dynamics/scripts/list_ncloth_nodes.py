@@ -72,12 +72,12 @@ def list_ncloth_nodes() -> dict:
         return error_result("Failed to list nCloth nodes", str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return list_ncloth_nodes(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = list_ncloth_nodes()
     print(json.dumps(result))

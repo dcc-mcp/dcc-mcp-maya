@@ -51,12 +51,12 @@ def delete_light(light_name: str) -> dict:
         return error_result("Failed to delete light", str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return delete_light(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = delete_light()
     print(json.dumps(result))

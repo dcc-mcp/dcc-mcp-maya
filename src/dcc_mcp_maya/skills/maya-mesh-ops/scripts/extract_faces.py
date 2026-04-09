@@ -82,12 +82,12 @@ def extract_faces(
         return error_result("Failed to extract faces from '{}'".format(object_name), str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return extract_faces(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = extract_faces()
     print(json.dumps(result))

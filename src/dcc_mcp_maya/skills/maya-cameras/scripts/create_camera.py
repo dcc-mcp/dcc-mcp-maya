@@ -65,5 +65,6 @@ def main(**kwargs):
 
 if __name__ == "__main__":
     import json
+
     result = create_camera()
     print(json.dumps(result))

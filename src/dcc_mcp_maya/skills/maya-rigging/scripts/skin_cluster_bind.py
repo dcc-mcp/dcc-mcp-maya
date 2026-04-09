@@ -86,12 +86,12 @@ def skin_cluster_bind(
         return error_result("Failed to bind skin cluster on {}".format(mesh), str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return skin_cluster_bind(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = skin_cluster_bind()
     print(json.dumps(result))

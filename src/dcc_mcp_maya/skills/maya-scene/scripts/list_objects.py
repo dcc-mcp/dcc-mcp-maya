@@ -41,12 +41,12 @@ def list_objects(object_type: Optional[str] = None, dag: bool = True) -> dict:
         return error_result("Failed to list objects", str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return list_objects(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = list_objects()
     print(json.dumps(result))

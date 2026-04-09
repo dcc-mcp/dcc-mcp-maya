@@ -51,12 +51,12 @@ def delete_expression(
         return error_result("Failed to delete expression {}".format(expression_name), str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return delete_expression(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = delete_expression()
     print(json.dumps(result))

@@ -62,12 +62,12 @@ def assign_material(material_name: str, objects: List[str]) -> dict:
         return error_result("Failed to assign material", str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return assign_material(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = assign_material()
     print(json.dumps(result))

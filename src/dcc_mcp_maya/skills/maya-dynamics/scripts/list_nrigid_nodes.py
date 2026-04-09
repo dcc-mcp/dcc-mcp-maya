@@ -69,12 +69,12 @@ def list_nrigid_nodes():
         return error_result("Failed to list nRigid nodes", str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return list_nrigid_nodes(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = list_nrigid_nodes()
     print(json.dumps(result))

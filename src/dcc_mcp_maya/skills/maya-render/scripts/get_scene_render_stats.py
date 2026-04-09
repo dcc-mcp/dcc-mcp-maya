@@ -68,12 +68,12 @@ def get_scene_render_stats() -> dict:
         return error_result("Failed to query scene render stats", str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return get_scene_render_stats(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = get_scene_render_stats()
     print(json.dumps(result))

@@ -73,12 +73,12 @@ def create_curve(
         return error_result("Failed to create curve", str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return create_curve(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = create_curve()
     print(json.dumps(result))

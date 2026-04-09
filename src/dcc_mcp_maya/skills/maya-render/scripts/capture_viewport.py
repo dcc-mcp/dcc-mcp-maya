@@ -80,12 +80,12 @@ def capture_viewport(
         return error_result("Failed to capture viewport", str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return capture_viewport(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = capture_viewport()
     print(json.dumps(result))

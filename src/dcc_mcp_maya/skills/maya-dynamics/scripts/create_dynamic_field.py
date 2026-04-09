@@ -102,12 +102,12 @@ def create_dynamic_field(
         return error_result("Failed to create dynamic field", str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return create_dynamic_field(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = create_dynamic_field()
     print(json.dumps(result))

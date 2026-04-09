@@ -60,12 +60,12 @@ def parent_object(child: str, parent: Optional[str] = None, world: bool = False)
         return error_result("Failed to parent '{}'".format(child), str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return parent_object(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = parent_object()
     print(json.dumps(result))

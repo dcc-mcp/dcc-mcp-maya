@@ -43,12 +43,12 @@ def center_pivot(object_name: str) -> dict:
         return error_result("Failed to center pivot on '{}'".format(object_name), str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return center_pivot(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = center_pivot()
     print(json.dumps(result))

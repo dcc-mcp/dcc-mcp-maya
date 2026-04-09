@@ -80,12 +80,12 @@ def list_animation_curves(
         return error_result("Failed to list animation curves for '{}'".format(object_name), str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return list_animation_curves(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = list_animation_curves()
     print(json.dumps(result))

@@ -57,12 +57,12 @@ def get_uv_info(object_name: str, uv_set: Optional[str] = None) -> dict:
         return error_result("Failed to get UV info", str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return get_uv_info(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = get_uv_info()
     print(json.dumps(result))

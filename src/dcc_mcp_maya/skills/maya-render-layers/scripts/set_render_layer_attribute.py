@@ -68,12 +68,12 @@ def set_render_layer_attribute(
         return error_result("Failed to set attribute '{}.{}'".format(layer_name, attribute), str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return set_render_layer_attribute(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = set_render_layer_attribute()
     print(json.dumps(result))

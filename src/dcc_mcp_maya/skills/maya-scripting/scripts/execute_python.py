@@ -50,12 +50,12 @@ def execute_python(code: str) -> dict:
         return error_result("Python execution failed", str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return execute_python(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = execute_python()
     print(json.dumps(result))

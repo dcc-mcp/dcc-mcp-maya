@@ -81,12 +81,12 @@ def import_animation_curves(
         return error_result("Failed to import animation curves from '{}'".format(file_path), str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return import_animation_curves(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = import_animation_curves()
     print(json.dumps(result))

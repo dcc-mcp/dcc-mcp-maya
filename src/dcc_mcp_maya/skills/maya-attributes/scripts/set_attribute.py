@@ -68,5 +68,6 @@ def main(**kwargs):
 
 if __name__ == "__main__":
     import json
+
     result = set_attribute("pSphere1", "translateX", 5.0)
     print(json.dumps(result))

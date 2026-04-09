@@ -47,12 +47,12 @@ def list_namespaces(root_only: bool = False) -> dict:
         return error_result("Failed to list namespaces", str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return list_namespaces(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = list_namespaces()
     print(json.dumps(result))

@@ -50,12 +50,12 @@ def create_locator(name: Optional[str] = None, position: Optional[List[float]] =
         return error_result("Failed to create locator", str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return create_locator(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = create_locator()
     print(json.dumps(result))

@@ -63,5 +63,6 @@ def main(**kwargs):
 
 if __name__ == "__main__":
     import json
+
     result = list_attributes("pSphere1", keyable_only=True)
     print(json.dumps(result))

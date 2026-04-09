@@ -62,12 +62,12 @@ def create_render_layer(
         return error_result("Failed to create render layer '{}'".format(name), str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return create_render_layer(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = create_render_layer()
     print(json.dumps(result))

@@ -66,12 +66,12 @@ def set_frame_rate(fps: str = "film") -> dict:
         return error_result("Failed to set frame rate to '{}'".format(fps), str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return set_frame_rate(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = set_frame_rate()
     print(json.dumps(result))

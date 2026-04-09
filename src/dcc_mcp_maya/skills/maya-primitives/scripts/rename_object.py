@@ -43,12 +43,12 @@ def rename_object(object_name: str, new_name: str) -> dict:
         return error_result("Failed to rename {}".format(object_name), str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return rename_object(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = rename_object()
     print(json.dumps(result))

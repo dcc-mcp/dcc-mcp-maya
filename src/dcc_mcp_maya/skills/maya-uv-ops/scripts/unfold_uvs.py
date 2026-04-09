@@ -68,12 +68,12 @@ def unfold_uvs(
         return error_result("Failed to unfold UVs on '{}'".format(object_name), str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return unfold_uvs(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = unfold_uvs()
     print(json.dumps(result))

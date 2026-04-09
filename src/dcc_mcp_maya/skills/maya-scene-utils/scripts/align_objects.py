@@ -136,12 +136,12 @@ def align_objects(
         return error_result("Failed to align objects", str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return align_objects(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = align_objects()
     print(json.dumps(result))

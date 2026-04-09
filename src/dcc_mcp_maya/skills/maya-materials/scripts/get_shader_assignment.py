@@ -66,12 +66,12 @@ def get_shader_assignment(object_name: str) -> dict:
         return error_result("Failed to get shader assignment for '{}'".format(object_name), str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return get_shader_assignment(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = get_shader_assignment()
     print(json.dumps(result))

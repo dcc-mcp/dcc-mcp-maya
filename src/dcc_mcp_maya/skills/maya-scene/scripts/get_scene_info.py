@@ -58,12 +58,12 @@ def get_scene_info(include_transforms: bool = True) -> dict:
         return error_result("Failed to get scene info", str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return get_scene_info(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = get_scene_info()
     print(json.dumps(result))

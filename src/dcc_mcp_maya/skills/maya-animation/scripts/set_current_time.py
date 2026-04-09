@@ -35,12 +35,12 @@ def set_current_time(frame: float) -> dict:
         return error_result("Failed to set current time", str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return set_current_time(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = set_current_time()
     print(json.dumps(result))

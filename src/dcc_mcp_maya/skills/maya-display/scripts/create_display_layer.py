@@ -65,5 +65,6 @@ def main(**kwargs):
 
 if __name__ == "__main__":
     import json
+
     result = create_display_layer()
     print(json.dumps(result))

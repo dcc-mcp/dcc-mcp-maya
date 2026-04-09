@@ -53,12 +53,12 @@ def remove_vertex_colors(object_name: str, color_set: Optional[str] = None) -> d
         return error_result("Failed to remove vertex colors", str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return remove_vertex_colors(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = remove_vertex_colors()
     print(json.dumps(result))

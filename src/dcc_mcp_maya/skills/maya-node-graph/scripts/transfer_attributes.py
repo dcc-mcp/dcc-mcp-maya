@@ -96,12 +96,12 @@ def transfer_attributes(
         ).to_dict()
 
 
-
 def main(**kwargs):
     return transfer_attributes(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = transfer_attributes()
     print(json.dumps(result))

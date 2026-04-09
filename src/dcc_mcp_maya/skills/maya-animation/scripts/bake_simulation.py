@@ -77,12 +77,12 @@ def bake_simulation(
         return error_result("Failed to bake simulation", str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return bake_simulation(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = bake_simulation()
     print(json.dumps(result))

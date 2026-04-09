@@ -90,12 +90,12 @@ def mirror_mesh(
         return error_result("Failed to mirror mesh '{}'".format(object_name), str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return mirror_mesh(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = mirror_mesh()
     print(json.dumps(result))

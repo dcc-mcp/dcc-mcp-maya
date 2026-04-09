@@ -44,12 +44,12 @@ def set_visibility(object_name: str, visible: bool) -> dict:
         return error_result("Failed to set visibility on '{}'".format(object_name), str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return set_visibility(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = set_visibility()
     print(json.dumps(result))

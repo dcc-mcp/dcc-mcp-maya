@@ -53,12 +53,12 @@ def create_uv_set(object_name: str, uv_set_name: str, copy_from: Optional[str] =
         return error_result("Failed to create UV set", str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return create_uv_set(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = create_uv_set()
     print(json.dumps(result))

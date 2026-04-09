@@ -84,12 +84,12 @@ def set_cluster_weights(
         return error_result("Failed to set cluster weights", str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return set_cluster_weights(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = set_cluster_weights()
     print(json.dumps(result))

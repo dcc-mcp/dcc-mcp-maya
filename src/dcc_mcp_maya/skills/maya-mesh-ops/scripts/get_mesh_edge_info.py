@@ -98,12 +98,12 @@ def get_mesh_edge_info(
         return error_result("Failed to get edge info", str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return get_mesh_edge_info(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = get_mesh_edge_info()
     print(json.dumps(result))

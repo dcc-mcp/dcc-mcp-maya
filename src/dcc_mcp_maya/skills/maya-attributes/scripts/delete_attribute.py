@@ -65,5 +65,6 @@ def main(**kwargs):
 
 if __name__ == "__main__":
     import json
+
     result = delete_attribute("pSphere1", "myFloat")
     print(json.dumps(result))

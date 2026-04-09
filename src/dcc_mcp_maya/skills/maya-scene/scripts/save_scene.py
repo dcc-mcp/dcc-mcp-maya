@@ -39,12 +39,12 @@ def save_scene(file_path: Optional[str] = None, file_type: str = "mayaBinary") -
         return error_result("Failed to save scene", str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return save_scene(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = save_scene()
     print(json.dumps(result))

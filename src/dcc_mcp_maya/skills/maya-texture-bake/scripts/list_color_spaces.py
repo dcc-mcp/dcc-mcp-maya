@@ -54,12 +54,12 @@ def list_color_spaces() -> dict:
         return error_result("Failed to list color spaces", str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return list_color_spaces(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = list_color_spaces()
     print(json.dumps(result))

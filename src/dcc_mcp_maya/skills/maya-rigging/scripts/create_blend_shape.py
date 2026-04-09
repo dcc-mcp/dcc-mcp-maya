@@ -70,12 +70,12 @@ def create_blend_shape(
         return error_result("Failed to create blend shape on {}".format(base_mesh), str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return create_blend_shape(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = create_blend_shape()
     print(json.dumps(result))

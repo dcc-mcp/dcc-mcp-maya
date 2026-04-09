@@ -26,11 +26,13 @@ def list_display_layers() -> dict:
         for layer in raw:
             vis = bool(cmds.getAttr("{}.visibility".format(layer)))
             members = cmds.editDisplayLayerMembers(layer, query=True, fullNames=True) or []
-            layers.append({
-                "name": layer,
-                "visibility": vis,
-                "members": list(members),
-            })
+            layers.append(
+                {
+                    "name": layer,
+                    "visibility": vis,
+                    "members": list(members),
+                }
+            )
 
         return success_result(
             "Found {} display layer(s)".format(len(layers)),
@@ -51,5 +53,6 @@ def main(**kwargs):
 
 if __name__ == "__main__":
     import json
+
     result = list_display_layers()
     print(json.dumps(result))

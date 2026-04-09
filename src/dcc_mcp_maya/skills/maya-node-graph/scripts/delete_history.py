@@ -48,12 +48,12 @@ def delete_history(
         return error_result("Failed to delete history for {}".format(object_name), str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return delete_history(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = delete_history()
     print(json.dumps(result))

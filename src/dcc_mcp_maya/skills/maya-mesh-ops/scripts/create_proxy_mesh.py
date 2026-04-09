@@ -94,12 +94,12 @@ def create_proxy_mesh(
         return error_result("Failed to create proxy mesh from '{}'".format(object_name), str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return create_proxy_mesh(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = create_proxy_mesh()
     print(json.dumps(result))

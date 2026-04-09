@@ -53,12 +53,12 @@ def merge_vertices(
         return error_result("Failed to merge vertices", str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return merge_vertices(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = merge_vertices()
     print(json.dumps(result))

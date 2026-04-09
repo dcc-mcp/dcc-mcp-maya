@@ -58,12 +58,12 @@ def create_set(
         return error_result("Failed to create set '{}'".format(name), str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return create_set(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = create_set()
     print(json.dumps(result))

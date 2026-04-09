@@ -56,12 +56,12 @@ def create_utility_node(
         return error_result("Failed to create utility node of type '{}'".format(node_type), str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return create_utility_node(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = create_utility_node()
     print(json.dumps(result))

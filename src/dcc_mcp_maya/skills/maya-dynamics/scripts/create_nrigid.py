@@ -96,12 +96,12 @@ def create_nrigid(
         return error_result("Failed to create nRigid on '{}'".format(mesh), str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return create_nrigid(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = create_nrigid()
     print(json.dumps(result))

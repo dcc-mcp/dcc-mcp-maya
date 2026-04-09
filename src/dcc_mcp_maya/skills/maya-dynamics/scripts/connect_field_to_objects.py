@@ -80,12 +80,12 @@ def connect_field_to_objects(
         return error_result("Failed to connect field '{}' to objects".format(field_node), str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return connect_field_to_objects(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = connect_field_to_objects()
     print(json.dumps(result))

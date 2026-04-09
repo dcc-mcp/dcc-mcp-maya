@@ -71,12 +71,12 @@ def get_vertex_color(
         return error_result("Failed to get vertex color", str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return get_vertex_color(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = get_vertex_color()
     print(json.dumps(result))

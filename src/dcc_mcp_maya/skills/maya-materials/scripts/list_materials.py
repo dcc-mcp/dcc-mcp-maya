@@ -54,12 +54,12 @@ def list_materials(shader_type: Optional[str] = None) -> dict:
         return error_result("Failed to list materials", str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return list_materials(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = list_materials()
     print(json.dumps(result))

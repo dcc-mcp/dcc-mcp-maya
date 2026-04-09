@@ -61,12 +61,12 @@ def list_history(
         return error_result("Failed to list history for {}".format(object_name), str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return list_history(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = list_history()
     print(json.dumps(result))

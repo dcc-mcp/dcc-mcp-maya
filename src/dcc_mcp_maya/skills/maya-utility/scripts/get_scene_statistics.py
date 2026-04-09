@@ -89,12 +89,12 @@ def get_scene_statistics() -> dict:
         return error_result("Failed to get scene statistics", str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return get_scene_statistics(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = get_scene_statistics()
     print(json.dumps(result))

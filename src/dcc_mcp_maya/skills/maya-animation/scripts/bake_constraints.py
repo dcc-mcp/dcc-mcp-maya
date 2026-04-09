@@ -102,12 +102,12 @@ def bake_constraints(
         return error_result("Failed to bake constraints", str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return bake_constraints(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = bake_constraints()
     print(json.dumps(result))

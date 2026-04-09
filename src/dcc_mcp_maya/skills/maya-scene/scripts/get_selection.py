@@ -33,12 +33,12 @@ def get_selection() -> dict:
         return error_result("Failed to get selection", str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return get_selection(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = get_selection()
     print(json.dumps(result))

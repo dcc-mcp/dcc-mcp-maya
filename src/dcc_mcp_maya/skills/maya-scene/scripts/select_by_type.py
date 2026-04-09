@@ -43,12 +43,12 @@ def select_by_type(object_type: str) -> dict:
         return error_result("Failed to select by type '{}'".format(object_type), str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return select_by_type(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = select_by_type()
     print(json.dumps(result))

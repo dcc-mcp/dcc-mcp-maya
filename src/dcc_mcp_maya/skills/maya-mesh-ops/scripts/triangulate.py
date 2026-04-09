@@ -46,12 +46,12 @@ def triangulate(object_name: str) -> dict:
         return error_result("Failed to triangulate", str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return triangulate(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = triangulate()
     print(json.dumps(result))

@@ -73,12 +73,12 @@ def remove_reference(
         return error_result("Failed to remove reference '{}'".format(reference_node), str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return remove_reference(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = remove_reference()
     print(json.dumps(result))

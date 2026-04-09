@@ -60,12 +60,12 @@ def list_render_layers(include_default: bool = True) -> dict:
         return error_result("Failed to list render layers", str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return list_render_layers(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = list_render_layers()
     print(json.dumps(result))

@@ -83,12 +83,12 @@ def create_ik_handle(
         return error_result("Failed to create IK handle", str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return create_ik_handle(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = create_ik_handle()
     print(json.dumps(result))

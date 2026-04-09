@@ -84,12 +84,12 @@ def project_uvs(
         return error_result("Failed to project UVs", str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return project_uvs(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = project_uvs()
     print(json.dumps(result))

@@ -61,12 +61,12 @@ def connect_attr(
         ).to_dict()
 
 
-
 def main(**kwargs):
     return connect_attr(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = connect_attr()
     print(json.dumps(result))

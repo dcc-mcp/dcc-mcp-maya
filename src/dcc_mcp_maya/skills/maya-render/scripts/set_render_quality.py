@@ -96,12 +96,12 @@ def set_render_quality(preset: str = "medium") -> dict:
         return error_result("Failed to set render quality preset '{}'".format(preset), str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return set_render_quality(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = set_render_quality()
     print(json.dumps(result))

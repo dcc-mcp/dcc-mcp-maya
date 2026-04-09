@@ -62,5 +62,6 @@ def main(**kwargs):
 
 if __name__ == "__main__":
     import json
+
     result = set_active_camera("persp")
     print(json.dumps(result))

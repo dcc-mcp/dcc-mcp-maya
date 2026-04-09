@@ -92,12 +92,12 @@ def create_expression(
         return error_result("Failed to create expression", str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return create_expression(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = create_expression()
     print(json.dumps(result))

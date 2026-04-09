@@ -50,12 +50,12 @@ def create_cube(
         return error_result("Failed to create cube", str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return create_cube(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = create_cube()
     print(json.dumps(result))

@@ -64,12 +64,12 @@ def copy_uvs(
         return error_result("Failed to copy UVs", str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return copy_uvs(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = copy_uvs()
     print(json.dumps(result))

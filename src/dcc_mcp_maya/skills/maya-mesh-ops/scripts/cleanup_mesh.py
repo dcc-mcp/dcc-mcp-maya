@@ -57,12 +57,12 @@ def cleanup_mesh(
         return error_result("Failed to clean mesh", str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return cleanup_mesh(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = cleanup_mesh()
     print(json.dumps(result))

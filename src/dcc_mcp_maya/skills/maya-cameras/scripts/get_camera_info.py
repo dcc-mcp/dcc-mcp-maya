@@ -59,7 +59,7 @@ def get_camera_info(camera_name: str) -> dict:
         return success_result(
             "Camera info for '{}'".format(cam_node),
             prompt="Use set_camera_attribute to modify focal length or clipping planes.",
-            **info
+            **info,
         ).to_dict()
     except ImportError:
         return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
@@ -74,5 +74,6 @@ def main(**kwargs):
 
 if __name__ == "__main__":
     import json
+
     result = get_camera_info("persp")
     print(json.dumps(result))

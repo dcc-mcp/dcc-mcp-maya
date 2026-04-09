@@ -41,12 +41,12 @@ def delete_objects(objects: List[str]) -> dict:
         return error_result("Failed to delete objects", str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return delete_objects(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = delete_objects()
     print(json.dumps(result))

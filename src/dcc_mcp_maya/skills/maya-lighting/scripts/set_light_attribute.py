@@ -78,5 +78,6 @@ def main(**kwargs):
 
 if __name__ == "__main__":
     import json
+
     result = set_light_attribute("pointLight1", "intensity", 3.0)
     print(json.dumps(result))

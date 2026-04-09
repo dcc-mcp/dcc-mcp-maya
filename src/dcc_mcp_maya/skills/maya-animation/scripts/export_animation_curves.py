@@ -98,12 +98,12 @@ def export_animation_curves(
         return error_result("Failed to export animation curves for '{}'".format(object_name), str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return export_animation_curves(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = export_animation_curves()
     print(json.dumps(result))

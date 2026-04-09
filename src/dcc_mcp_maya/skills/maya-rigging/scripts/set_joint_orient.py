@@ -70,12 +70,12 @@ def set_joint_orient(
         return error_result("Failed to set joint orient on {}".format(joint_name), str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return set_joint_orient(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = set_joint_orient()
     print(json.dumps(result))

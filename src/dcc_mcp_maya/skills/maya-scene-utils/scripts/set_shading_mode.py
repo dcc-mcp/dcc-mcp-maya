@@ -94,12 +94,12 @@ def set_shading_mode(
         return error_result("Failed to set shading mode", str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return set_shading_mode(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = set_shading_mode()
     print(json.dumps(result))

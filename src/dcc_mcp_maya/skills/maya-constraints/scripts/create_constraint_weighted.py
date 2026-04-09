@@ -77,9 +77,7 @@ def create_constraint_weighted(
         source_weights = list(zip(sources, effective_weights))
 
         return success_result(
-            "Created weighted {} constraint on '{}' with {} sources".format(
-                constraint_type, target, len(sources)
-            ),
+            "Created weighted {} constraint on '{}' with {} sources".format(constraint_type, target, len(sources)),
             prompt="Use list_constraints to inspect the result or remove_constraint to undo.",
             constraint_node=constraint_node,
             constraint_type=constraint_type,
@@ -99,5 +97,6 @@ def main(**kwargs):
 
 if __name__ == "__main__":
     import json
+
     result = create_constraint_weighted("parent", ["pSphere1", "pCube1"], "pCylinder1", [0.7, 0.3])
     print(json.dumps(result))

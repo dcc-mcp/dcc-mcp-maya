@@ -79,12 +79,12 @@ def create_polygon_text(
         return error_result("Failed to create polygon text '{}'".format(text), str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return create_polygon_text(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = create_polygon_text()
     print(json.dumps(result))

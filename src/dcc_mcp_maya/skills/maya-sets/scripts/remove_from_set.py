@@ -69,12 +69,12 @@ def remove_from_set(
         return error_result("Failed to remove objects from set '{}'".format(set_name), str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return remove_from_set(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = remove_from_set()
     print(json.dumps(result))

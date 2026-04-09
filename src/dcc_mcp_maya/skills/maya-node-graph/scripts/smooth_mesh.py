@@ -89,12 +89,12 @@ def smooth_mesh(
         return error_result("Failed to smooth mesh {}".format(object_name), str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return smooth_mesh(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = smooth_mesh()
     print(json.dumps(result))

@@ -65,12 +65,12 @@ def add_to_set(
         return error_result("Failed to add objects to set '{}'".format(set_name), str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return add_to_set(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = add_to_set()
     print(json.dumps(result))

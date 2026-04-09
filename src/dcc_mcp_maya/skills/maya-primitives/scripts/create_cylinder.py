@@ -47,12 +47,12 @@ def create_cylinder(
         return error_result("Failed to create cylinder", str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return create_cylinder(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = create_cylinder()
     print(json.dumps(result))

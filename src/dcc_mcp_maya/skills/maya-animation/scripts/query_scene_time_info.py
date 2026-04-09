@@ -48,12 +48,12 @@ def query_scene_time_info() -> dict:
         return error_result("Failed to query scene time info", str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return query_scene_time_info(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = query_scene_time_info()
     print(json.dumps(result))

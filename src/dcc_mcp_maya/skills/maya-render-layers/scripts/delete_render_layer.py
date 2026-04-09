@@ -63,12 +63,12 @@ def delete_render_layer(layer_name: str) -> dict:
         return error_result("Failed to delete render layer '{}'".format(layer_name), str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return delete_render_layer(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = delete_render_layer()
     print(json.dumps(result))

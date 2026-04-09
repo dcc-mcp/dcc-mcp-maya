@@ -63,12 +63,12 @@ def set_keyframe(
         return error_result("Failed to set keyframe on {}".format(object_name), str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return set_keyframe(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = set_keyframe()
     print(json.dumps(result))

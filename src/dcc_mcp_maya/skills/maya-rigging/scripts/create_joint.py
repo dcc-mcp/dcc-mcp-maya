@@ -76,12 +76,12 @@ def create_joint(
         return error_result("Failed to create joint", str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return create_joint(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = create_joint()
     print(json.dumps(result))

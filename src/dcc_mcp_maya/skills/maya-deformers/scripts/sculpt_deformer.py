@@ -87,12 +87,12 @@ def sculpt_deformer(
         return error_result("Failed to create sculpt deformer", str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return sculpt_deformer(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = sculpt_deformer()
     print(json.dumps(result))

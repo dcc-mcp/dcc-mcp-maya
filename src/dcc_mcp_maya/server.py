@@ -218,11 +218,13 @@ class MayaMcpServer:
         loaded = 0
         failed = 0
         for summary in self._server.list_skills():
+            # SkillSummary object (v0.12.10+) or dict (older versions)
+            skill_name = summary.name if hasattr(summary, "name") else summary["name"]
             try:
-                self._server.load_skill(summary.name)
+                self._server.load_skill(skill_name)
                 loaded += 1
             except Exception as exc:
-                logger.warning("Failed to load skill %r: %s", summary.name, exc)
+                logger.warning("Failed to load skill %r: %s", skill_name, exc)
                 failed += 1
 
         logger.info(

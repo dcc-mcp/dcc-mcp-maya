@@ -76,12 +76,12 @@ def set_ik_fk_blend(
         return error_result("Failed to set IK/FK blend on '{}'".format(ik_handle), str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return set_ik_fk_blend(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = set_ik_fk_blend()
     print(json.dumps(result))

@@ -68,12 +68,12 @@ def combine_meshes(
         return error_result("Failed to combine meshes", str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return combine_meshes(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = combine_meshes()
     print(json.dumps(result))

@@ -97,12 +97,12 @@ def assign_deformer(
         return error_result("Failed to assign deformer to {}".format(object_name), str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return assign_deformer(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = assign_deformer()
     print(json.dumps(result))

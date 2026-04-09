@@ -61,12 +61,12 @@ def set_transform(
         return error_result(f"Failed to set transform on {object_name}", str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return set_transform(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = set_transform()
     print(json.dumps(result))

@@ -42,12 +42,12 @@ def create_sphere(radius: float = 1.0, name: Optional[str] = None) -> dict:
         return error_result("Failed to create sphere", str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return create_sphere(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = create_sphere()
     print(json.dumps(result))

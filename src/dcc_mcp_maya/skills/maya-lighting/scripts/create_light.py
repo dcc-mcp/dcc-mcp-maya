@@ -92,5 +92,6 @@ def main(**kwargs):
 
 if __name__ == "__main__":
     import json
+
     result = create_light("point", "myLight", intensity=2.0, color=[1.0, 0.9, 0.8])
     print(json.dumps(result))

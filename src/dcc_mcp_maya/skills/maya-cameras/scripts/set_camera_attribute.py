@@ -70,5 +70,6 @@ def main(**kwargs):
 
 if __name__ == "__main__":
     import json
+
     result = set_camera_attribute("camera1", "focalLength", 50.0)
     print(json.dumps(result))

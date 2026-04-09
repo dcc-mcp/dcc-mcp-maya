@@ -44,12 +44,12 @@ def freeze_transforms(object_name: str) -> dict:
         return error_result("Failed to freeze transforms on '{}'".format(object_name), str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return freeze_transforms(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = freeze_transforms()
     print(json.dumps(result))

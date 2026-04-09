@@ -84,12 +84,12 @@ def set_pivot(
         return error_result("Failed to set pivot on '{}'".format(object_name), str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return set_pivot(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = set_pivot()
     print(json.dumps(result))

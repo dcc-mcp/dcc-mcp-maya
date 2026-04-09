@@ -58,12 +58,12 @@ def reload_reference(reference_node: str) -> dict:
         return error_result("Failed to reload reference '{}'".format(reference_node), str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return reload_reference(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = reload_reference()
     print(json.dumps(result))

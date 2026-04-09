@@ -54,12 +54,12 @@ def import_file(
         return error_result("Failed to import file: {}".format(file_path), str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return import_file(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = import_file()
     print(json.dumps(result))

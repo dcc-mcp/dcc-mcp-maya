@@ -32,12 +32,12 @@ def get_current_time() -> dict:
         return error_result("Failed to get current time", str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return get_current_time(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = get_current_time()
     print(json.dumps(result))

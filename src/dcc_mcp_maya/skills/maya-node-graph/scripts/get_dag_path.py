@@ -61,12 +61,12 @@ def get_dag_path(
         return error_result("Failed to get DAG path for {}".format(object_name), str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return get_dag_path(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = get_dag_path()
     print(json.dumps(result))

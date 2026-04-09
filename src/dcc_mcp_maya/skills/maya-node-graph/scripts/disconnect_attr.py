@@ -65,12 +65,12 @@ def disconnect_attr(
         ).to_dict()
 
 
-
 def main(**kwargs):
     return disconnect_attr(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = disconnect_attr()
     print(json.dumps(result))

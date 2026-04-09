@@ -36,12 +36,12 @@ def open_scene(file_path: str, force: bool = False) -> dict:
         return error_result(f"Failed to open {file_path}", str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return open_scene(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = open_scene()
     print(json.dumps(result))

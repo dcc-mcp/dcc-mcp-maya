@@ -83,5 +83,6 @@ def main(**kwargs):
 
 if __name__ == "__main__":
     import json
+
     result = add_constraint("parent", "pSphere1", "pCube1")
     print(json.dumps(result))

@@ -57,12 +57,12 @@ def set_material_attribute(
         return error_result("Failed to set material attribute", str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return set_material_attribute(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = set_material_attribute()
     print(json.dumps(result))

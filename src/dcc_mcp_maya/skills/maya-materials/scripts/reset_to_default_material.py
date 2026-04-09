@@ -49,12 +49,12 @@ def reset_to_default_material(object_name: str) -> dict:
         return error_result("Failed to reset material for '{}'".format(object_name), str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return reset_to_default_material(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = reset_to_default_material()
     print(json.dumps(result))

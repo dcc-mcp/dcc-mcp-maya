@@ -89,12 +89,12 @@ def create_nucleus(
         return error_result("Failed to create nucleus solver", str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return create_nucleus(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = create_nucleus()
     print(json.dumps(result))

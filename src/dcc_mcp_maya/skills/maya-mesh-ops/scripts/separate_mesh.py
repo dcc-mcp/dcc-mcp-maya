@@ -73,12 +73,12 @@ def separate_mesh(
         return error_result("Failed to separate mesh '{}'".format(object_name), str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return separate_mesh(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = separate_mesh()
     print(json.dumps(result))

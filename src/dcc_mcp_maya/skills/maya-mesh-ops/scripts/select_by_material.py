@@ -86,12 +86,12 @@ def select_by_material(material_name: str) -> dict:
         return error_result("Failed to select by material", str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return select_by_material(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = select_by_material()
     print(json.dumps(result))

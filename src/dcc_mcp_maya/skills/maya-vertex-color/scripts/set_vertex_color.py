@@ -73,12 +73,12 @@ def set_vertex_color(
         return error_result("Failed to set vertex color", str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return set_vertex_color(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = set_vertex_color()
     print(json.dumps(result))

@@ -59,12 +59,12 @@ def list_shading_groups() -> dict:
         return error_result("Failed to list shading groups", str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return list_shading_groups(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = list_shading_groups()
     print(json.dumps(result))

@@ -83,12 +83,12 @@ def get_material_connections(material_name: str) -> dict:
         return error_result("Failed to get connections for material '{}'".format(material_name), str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return get_material_connections(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = get_material_connections()
     print(json.dumps(result))

@@ -46,12 +46,12 @@ def get_transform(object_name: str) -> dict:
         return error_result("Failed to get transform of {}".format(object_name), str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return get_transform(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = get_transform()
     print(json.dumps(result))

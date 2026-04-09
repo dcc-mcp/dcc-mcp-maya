@@ -83,12 +83,12 @@ def create_lattice(
         return error_result("Failed to create FFD lattice", str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return create_lattice(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = create_lattice()
     print(json.dumps(result))

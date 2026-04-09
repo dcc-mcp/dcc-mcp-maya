@@ -69,12 +69,12 @@ def list_expressions(
         return error_result("Failed to list expressions", str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return list_expressions(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = list_expressions()
     print(json.dumps(result))

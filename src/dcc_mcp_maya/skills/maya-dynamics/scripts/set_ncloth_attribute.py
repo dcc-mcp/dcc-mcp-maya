@@ -88,12 +88,12 @@ def set_ncloth_attribute(
         return error_result("Failed to set attribute on nCloth '{}'".format(ncloth_node), str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return set_ncloth_attribute(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = set_ncloth_attribute()
     print(json.dumps(result))
