@@ -79,9 +79,10 @@ class TestMayaMcpServerApi:
         server.register_builtin_actions()
         actions = server.registry.list_actions()
         names = [a["name"] for a in actions]
-        assert "create_sphere" in names
-        assert "execute_mel" in names
-        assert "get_session_info" in names
+        # Skills SOP: action names follow {skill_name}__{script_stem}
+        assert "maya_primitives__create_sphere" in names
+        assert "maya_scripting__execute_mel" in names
+        assert "maya_scene__get_session_info" in names
 
     def test_mcp_url_none_when_not_running(self):
         srv_mod = _import_server()
@@ -143,10 +144,11 @@ class TestMayaMcpServerHttp:
         )
         assert code == 200
         names = {t["name"] for t in body["result"]["tools"]}
-        assert "create_sphere" in names
-        assert "execute_mel" in names
-        assert "list_objects" in names
-        assert "get_session_info" in names
+        # Skills SOP: action names follow {skill_name}__{script_stem}
+        assert "maya_primitives__create_sphere" in names
+        assert "maya_scripting__execute_mel" in names
+        assert "maya_scene__list_objects" in names
+        assert "maya_scene__get_session_info" in names
 
     def test_tools_call_dispatches_action(self, running_server):
         _, handle = running_server

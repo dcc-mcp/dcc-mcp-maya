@@ -79,3 +79,9 @@ def execute_python(code: str) -> dict:
     except Exception as exc:
         logger.exception("execute_python failed")
         return error_result("Python execution failed", str(exc)).to_dict()
+
+
+_ACTIONS = [
+    ("execute_mel", "Execute a MEL script", "scripting", ["mel", "script", "execute"]),
+    ("execute_python", "Execute Python inside Maya", "scripting", ["python", "script", "execute"]),
+]
