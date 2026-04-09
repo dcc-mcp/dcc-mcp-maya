@@ -13,14 +13,17 @@ _SUPPORTED_SHADERS = ("lambert", "blinn", "phong", "phongE", "aiStandardSurface"
 
 
 def create_material(
-    shader_type: str = "lambert",
+    material_type: str = "lambert",
+    shader_type: Optional[str] = None,
     name: Optional[str] = None,
 ) -> dict:
     """Create a Maya shading material.
 
     Args:
-        shader_type: Shader node type.  Supported: ``lambert``, ``blinn``,
-            ``phong``, ``phongE``, ``aiStandardSurface``.  Default: ``lambert``.
+        material_type: Shader node type (preferred param name).  Supported:
+            ``lambert``, ``blinn``, ``phong``, ``phongE``, ``aiStandardSurface``.
+            Default: ``lambert``.
+        shader_type: Alias for ``material_type`` (legacy).
         name: Optional name for the created material.
 
     Returns:
@@ -32,7 +35,9 @@ def create_material(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        mat = cmds.shadingNode(shader_type, asShader=True)
+        # shader_type is legacy alias for material_type
+        resolved_type = shader_type if shader_type is not None else material_type
+        mat = cmds.shadingNode(resolved_type, asShader=True)
         if name:
             mat = cmds.rename(mat, name)
         sg = cmds.sets(renderable=True, noSurfaceShader=True, empty=True, name="{}_SG".format(mat))
@@ -40,7 +45,7 @@ def create_material(
         return success_result(
             "Created material: {}".format(mat),
             material_name=mat,
-            shader_type=shader_type,
+            material_type=resolved_type,
             shading_group=sg,
         ).to_dict()
     except ImportError:
