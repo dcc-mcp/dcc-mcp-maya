@@ -33,7 +33,10 @@ def delete_light(light_name: str) -> dict:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(light_name):
-            return error_result("Light not found: {}".format(light_name)).to_dict()
+            return error_result(
+                "Light not found: {}".format(light_name),
+                "'{}' does not exist in the scene".format(light_name),
+            ).to_dict()
 
         node_type = cmds.objectType(light_name)
         # If it's a shape, delete its transform
