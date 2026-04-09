@@ -10,11 +10,11 @@ from typing import List
 logger = logging.getLogger(__name__)
 
 
-def delete_objects(objects: List[str]) -> dict:
+def delete_objects(object_names: List[str]) -> dict:
     """Delete objects from the Maya scene.
 
     Args:
-        objects: List of object names to delete.
+        object_names: List of object names to delete.
 
     Returns:
         ActionResultModel dict.
@@ -24,15 +24,15 @@ def delete_objects(objects: List[str]) -> dict:
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not objects:
+        if not object_names:
             return success_result("No objects to delete").to_dict()
-        existing = cmds.ls(objects) or []
+        existing = cmds.ls(object_names) or []
         if existing:
             cmds.delete(existing)
         return success_result(
             f"Deleted {len(existing)} objects",
             deleted=existing,
-            requested=objects,
+            requested=object_names,
         ).to_dict()
     except ImportError:
         return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
