@@ -45,9 +45,10 @@ jobs:
           mayapy -c "
           import maya.standalone
           maya.standalone.initialize()
+          import sys
           from maya import cmds
           print('Maya version:', cmds.about(version=True))
-          print('Python version:', cmds.about(pythonVersion=True))
+          print('Python version:', sys.version)
           "
 
       - name: Install package into mayapy
