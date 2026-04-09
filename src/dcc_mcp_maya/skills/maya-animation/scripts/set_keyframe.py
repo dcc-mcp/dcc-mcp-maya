@@ -12,6 +12,7 @@ logger = logging.getLogger(__name__)
 
 def set_keyframe(
     object_name: str,
+    attribute: Optional[str] = None,
     attributes: Optional[List[str]] = None,
     time: Optional[float] = None,
     value: Optional[float] = None,
@@ -20,11 +21,13 @@ def set_keyframe(
 
     Args:
         object_name: Name of the object to keyframe.
-        attributes: List of attribute names to key (e.g. ``["tx", "ty", "tz"]``).
-            If None, keys all keyable attributes.
+        attribute: Single attribute name to key (e.g. ``"translateX"``).  Takes
+            priority over ``attributes`` when both are provided.
+        attributes: List of attribute names to key.  Ignored when ``attribute``
+            is set.
         time: Frame number.  Defaults to current time.
-        value: Explicit value to set before keying.  Only valid when a single
-            attribute is provided.
+        value: Explicit value to set before keying.  Only valid for a single
+            attribute.
 
     Returns:
         ActionResultModel dict with ``context.keyframe_count``.
@@ -40,13 +43,15 @@ def set_keyframe(
                 "'{}' does not exist in the scene".format(object_name),
             ).to_dict()
 
-        kwargs = {}  # type: Dict
+        kwargs = {}
+        # Normalise: single `attribute` string takes priority over `attributes` list
+        attr_list = [attribute] if attribute else (attributes or [])
         if time is not None:
             kwargs["time"] = time
-        if attributes:
-            kwargs["attribute"] = attributes
-            if value is not None and len(attributes) == 1:
-                cmds.setAttr("{}.{}".format(object_name, attributes[0]), value)
+        if attr_list:
+            kwargs["attribute"] = attr_list
+            if value is not None and len(attr_list) == 1:
+                cmds.setAttr("{}.{}".format(object_name, attr_list[0]), value)
 
         count = cmds.setKeyframe(object_name, **kwargs)
         return success_result(
@@ -54,7 +59,7 @@ def set_keyframe(
             object_name=object_name,
             keyframe_count=count,
             time=time,
-            attributes=attributes,
+            attributes=attr_list,
         ).to_dict()
     except ImportError:
         return error_result("Maya not available", "maya.cmds could not be imported").to_dict()

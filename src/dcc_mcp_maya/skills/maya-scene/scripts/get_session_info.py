@@ -5,6 +5,7 @@ from __future__ import annotations
 
 # Import built-in modules
 import logging
+import sys
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +24,7 @@ def get_session_info() -> dict:
         info = {
             "maya_version": cmds.about(version=True),
             "api_version": cmds.about(apiVersion=True),
+            "python_version": sys.version,
             "scene_file": cmds.file(query=True, sceneName=True) or "<unsaved>",
             "scene_modified": cmds.file(query=True, modified=True),
             "fps": cmds.currentUnit(query=True, time=True),
