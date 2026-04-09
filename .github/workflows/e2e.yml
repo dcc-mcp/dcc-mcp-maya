@@ -1,0 +1,75 @@
+name: E2E (mayapy)
+
+# End-to-end tests that run inside a real Maya standalone interpreter.
+# Uses the tahv/mayapy Docker image which ships /usr/autodesk/maya/bin/mayapy
+# and exposes it as both `mayapy` and `python` on PATH.
+#
+# References:
+#   https://hub.docker.com/r/tahv/mayapy
+#   https://github.com/tahv/docker-mayapy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  e2e:
+    name: E2E mayapy ${{ matrix.maya-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Map Maya version -> Python version (for reference in logs only)
+        include:
+          - maya-version: "2025"
+            python-version: "3.11"
+          - maya-version: "2024"
+            python-version: "3.10"
+          - maya-version: "2023"
+            python-version: "3.9"
+          - maya-version: "2022"
+            python-version: "3.7"
+
+    container:
+      image: tahv/mayapy:${{ matrix.maya-version }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify Maya standalone
+        run: |
+          mayapy -c "
+          import maya.standalone
+          maya.standalone.initialize()
+          from maya import cmds
+          print('Maya version:', cmds.about(version=True))
+          print('Python version:', cmds.about(pythonVersion=True))
+          "
+
+      - name: Install package
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Run unit tests (no Maya required)
+        run: pytest tests/ -v --tb=short -m "not e2e"
+
+      - name: Run E2E tests (Maya standalone)
+        run: |
+          mayapy -c "
+          import maya.standalone
+          maya.standalone.initialize()
+
+          import sys, subprocess, os
+          # Run e2e tests via pytest inside mayapy
+          result = subprocess.run(
+              [sys.executable, '-m', 'pytest', 'tests/', '-v', '--tb=short', '-m', 'e2e'],
+              env={**os.environ, 'PYTHONPATH': 'src'},
+          )
+          sys.exit(result.returncode)
+          "
+        continue-on-error: true  # E2E tests are best-effort until test suite matures

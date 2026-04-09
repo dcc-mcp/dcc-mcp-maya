@@ -43,7 +43,17 @@ def _import_server():
     for mod in list(sys.modules):
         if "dcc_mcp_maya" in mod:
             del sys.modules[mod]
-    return importlib.import_module("dcc_mcp_maya.server")
+    srv = importlib.import_module("dcc_mcp_maya.server")
+    return srv
+
+
+def _builtin_skills_dir():
+    """Return the built-in skills directory, resolving it from the package."""
+    from pathlib import Path
+
+    import dcc_mcp_maya
+
+    return str(Path(dcc_mcp_maya.__file__).parent / "skills")
 
 
 # ── MayaMcpServer unit tests ──────────────────────────────────────────────────
@@ -76,12 +86,14 @@ class TestMayaMcpServerApi:
         """register_builtin_actions populates the registry."""
         srv_mod = _import_server()
         server = srv_mod.MayaMcpServer(port=0, enable_main_thread_executor=False)
-        server.register_builtin_actions()
+        # Pass explicit skills path to ensure discovery regardless of install mode
+        server.register_builtin_actions(extra_skill_paths=[_builtin_skills_dir()])
         actions = server.registry.list_actions()
         names = [a["name"] for a in actions]
-        assert "create_sphere" in names
-        assert "execute_mel" in names
-        assert "get_session_info" in names
+        # Skills SOP: action names follow {skill_name}__{script_stem}
+        assert "maya_primitives__create_sphere" in names
+        assert "maya_scripting__execute_mel" in names
+        assert "maya_scene__get_session_info" in names
 
     def test_mcp_url_none_when_not_running(self):
         srv_mod = _import_server()
@@ -96,7 +108,8 @@ class TestMayaMcpServerHttp:
     def running_server(self):
         srv_mod = _import_server()
         server = srv_mod.MayaMcpServer(port=0, enable_main_thread_executor=False)
-        server.register_builtin_actions()
+        # Pass explicit skills path to ensure discovery regardless of install mode
+        server.register_builtin_actions(extra_skill_paths=[_builtin_skills_dir()])
         handle = server.start()
         yield server, handle
         server.stop()
@@ -143,10 +156,11 @@ class TestMayaMcpServerHttp:
         )
         assert code == 200
         names = {t["name"] for t in body["result"]["tools"]}
-        assert "create_sphere" in names
-        assert "execute_mel" in names
-        assert "list_objects" in names
-        assert "get_session_info" in names
+        # Skills SOP: action names follow {skill_name}__{script_stem}
+        assert "maya_primitives__create_sphere" in names
+        assert "maya_scripting__execute_mel" in names
+        assert "maya_scene__list_objects" in names
+        assert "maya_scene__get_session_info" in names
 
     def test_tools_call_dispatches_action(self, running_server):
         _, handle = running_server

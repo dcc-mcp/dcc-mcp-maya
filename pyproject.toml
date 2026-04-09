@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "dcc-mcp-maya"
-version = "0.2.0"
+version = "0.3.0"
 description = "Maya plugin for the DCC Model Context Protocol (MCP) ecosystem — embeds a Streamable HTTP MCP server directly inside Maya"
 authors = [{ name = "Long Hao", email = "hal.long@outlook.com" }]
 readme = "README.md"
@@ -27,7 +27,7 @@ classifiers = [
 ]
 
 dependencies = [
-    "dcc-mcp-core>=0.12.7,<1.0.0",
+    "dcc-mcp-core>=0.12.10,<1.0.0",
 ]
 
 [project.optional-dependencies]
@@ -62,6 +62,9 @@ python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
 addopts = "-v --tb=short"
+markers = [
+    "e2e: end-to-end tests that require a real Maya standalone interpreter (tahv/mayapy)",
+]
 
 [tool.coverage.run]
 source = ["dcc_mcp_maya"]

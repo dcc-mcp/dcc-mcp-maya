@@ -1,0 +1,80 @@
+"""Reference an external Maya file into the current scene."""
+
+# Import future modules
+from __future__ import annotations
+
+# Import built-in modules
+import logging
+from typing import Optional
+
+logger = logging.getLogger(__name__)
+
+
+def create_reference(
+    file_path: str,
+    namespace: Optional[str] = None,
+    group_reference: bool = False,
+) -> dict:
+    """Reference an external Maya file into the current scene.
+
+    Args:
+        file_path: Absolute path to the Maya file to reference (.ma, .mb).
+        namespace: Namespace string to use.  When omitted Maya derives one from
+            the filename.  Use ``":"`` for the root namespace (not recommended).
+        group_reference: If True, place the referenced nodes inside a new
+            transform group node.  Default: False.
+
+    Returns:
+        ActionResultModel dict with ``context.reference_node``,
+        ``context.namespace``, and ``context.file_path``.
+    """
+    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
+
+    try:
+        import maya.cmds as cmds  # noqa: PLC0415
+
+        if not file_path or not file_path.strip():
+            return error_result("Invalid file path", "file_path must not be empty").to_dict()
+
+        kwargs = {
+            "reference": True,
+            "groupReference": group_reference,
+            "mergeNamespacesOnClash": False,
+            "returnNewNodes": False,
+        }
+        if namespace is not None:
+            kwargs["namespace"] = namespace
+        else:
+            kwargs["defaultNamespace"] = False
+
+        # cmds.file returns the reference node name
+        ref_node = cmds.file(file_path, **kwargs)
+
+        # Resolve actual namespace used
+        try:
+            resolved_ns = cmds.referenceQuery(ref_node, namespace=True, shortName=True)
+        except Exception:
+            resolved_ns = namespace or ""
+
+        return success_result(
+            "Referenced '{}' as '{}'".format(file_path, resolved_ns),
+            reference_node=ref_node,
+            namespace=resolved_ns,
+            file_path=file_path,
+        ).to_dict()
+    except ImportError:
+        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+    except Exception as exc:
+        logger.exception("create_reference failed")
+        return error_result("Failed to reference file '{}'".format(file_path), str(exc)).to_dict()
+
+
+def main(**kwargs):
+    return create_reference(**kwargs)
+
+
+if __name__ == "__main__":
+    import json
+
+    result = create_reference()
+    print(json.dumps(result))
