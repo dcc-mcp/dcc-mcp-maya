@@ -9,113 +9,88 @@ from typing import List, Optional
 
 logger = logging.getLogger(__name__)
 
+_CONSTRAINT_TYPES = {
+    "parent": "parentConstraint",
+    "point": "pointConstraint",
+    "orient": "orientConstraint",
+    "scale": "scaleConstraint",
+    "aim": "aimConstraint",
+}
+
 
 def create_constraint_weighted(
+    constraint_type: str,
     sources: List[str],
     target: str,
     weights: Optional[List[float]] = None,
-    constraint_type: str = "parent",
     maintain_offset: bool = True,
-    name: Optional[str] = None,
 ) -> dict:
     """Create a weighted multi-source constraint.
 
-    Applies a single constraint node driven by multiple source objects, each
-    with an individual weight value.  Supported types are the same as
-    ``add_constraint``: ``"parent"``, ``"point"``, ``"orient"``,
-    ``"scale"``, ``"aim"``.
-
     Args:
-        sources: List of driver object names (at least one required).
-        target: Name of the object to be constrained.
-        weights: Per-source weight values (0.0 – 1.0).  If None or shorter
-            than ``sources``, missing weights default to 1.0.
-        constraint_type: One of ``"parent"``, ``"point"``, ``"orient"``,
-            ``"scale"``, ``"aim"``.  Default: ``"parent"``.
-        maintain_offset: Preserve the current offset.  Default: True.
-        name: Optional name for the constraint node.
+        constraint_type: One of ``parent``, ``point``, ``orient``, ``scale``, ``aim``.
+        sources: List of driver (source) object names.  At least two required
+            for a weighted constraint.
+        target: Name of the driven (target) object.
+        weights: Optional weight per source.  Defaults to 1.0 for each source.
+        maintain_offset: Preserve current offsets.
 
     Returns:
-        ActionResultModel dict with ``context.constraint_name``,
-        ``context.sources``, ``context.weights_applied``.
+        ActionResultModel dict with ``context.constraint_node`` and
+        ``context.source_weights``.
     """
     from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
-    _VALID_TYPES = ("parent", "point", "orient", "scale", "aim")
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not sources:
-            return error_result("No sources provided", "Provide at least one source object").to_dict()
-
-        if constraint_type not in _VALID_TYPES:
+        if constraint_type not in _CONSTRAINT_TYPES:
             return error_result(
-                "Invalid constraint type: {}".format(constraint_type),
-                "constraint_type must be one of {}".format(_VALID_TYPES),
+                "Unknown constraint type: {}".format(constraint_type),
+                "Supported types: {}".format(", ".join(sorted(_CONSTRAINT_TYPES))),
             ).to_dict()
 
-        if not cmds.objExists(target):
-            return error_result(
-                "Target not found: {}".format(target),
-                "'{}' does not exist".format(target),
-            ).to_dict()
+        if len(sources) < 1:
+            return error_result("No sources provided", "At least one source object is required").to_dict()
 
-        for src in sources:
-            if not cmds.objExists(src):
+        for obj in sources + [target]:
+            if not cmds.objExists(obj):
                 return error_result(
-                    "Source not found: {}".format(src),
-                    "'{}' does not exist".format(src),
+                    "Object not found: {}".format(obj),
+                    "'{}' does not exist".format(obj),
                 ).to_dict()
 
-        # Normalise weights list
-        w_list = list(weights) if weights else []
-        while len(w_list) < len(sources):
-            w_list.append(1.0)
+        effective_weights = weights if weights and len(weights) == len(sources) else [1.0] * len(sources)
 
-        _CONSTRAINT_CMDS = {
-            "parent": cmds.parentConstraint,
-            "point": cmds.pointConstraint,
-            "orient": cmds.orientConstraint,
-            "scale": cmds.scaleConstraint,
-            "aim": cmds.aimConstraint,
-        }
-        fn = _CONSTRAINT_CMDS[constraint_type]
+        cmd_fn = getattr(cmds, _CONSTRAINT_TYPES[constraint_type])
 
-        kwargs = {"maintainOffset": maintain_offset, "weight": w_list[0]}
-        if name:
-            kwargs["name"] = name
-
-        # Create constraint with first source and initial weight
-        result = fn(sources[0], target, **kwargs)
-        constraint_name = result[0] if result else (name or "{}_{}1".format(target, constraint_type))
+        # Create constraint with first source
+        result = cmd_fn(sources[0], target, maintainOffset=maintain_offset, weight=effective_weights[0])
+        constraint_node = result[0] if result else ""
 
         # Add remaining sources with their weights
-        for src, w in zip(sources[1:], w_list[1:]):
-            fn(src, target, edit=True, weight=w)
+        for i, src in enumerate(sources[1:], 1):
+            cmd_fn(src, target, edit=True, weight=effective_weights[i])
+            # Add the source — re-call with add=True to include it
+            cmd_fn(src, target, maintainOffset=maintain_offset, weight=effective_weights[i])
 
-        # Set individual weights via constraint weight attributes
-        for i, w in enumerate(w_list):
-            w_attr = "{}W{}".format(sources[i], i)
-            full_attr = "{}.{}".format(constraint_name, w_attr)
-            if cmds.objExists(full_attr):
-                cmds.setAttr(full_attr, w)
+        source_weights = list(zip(sources, effective_weights))
 
         return success_result(
-            "Created weighted {} constraint on '{}' from {} sources".format(constraint_type, target, len(sources)),
-            constraint_name=constraint_name,
+            "Created weighted {} constraint on '{}' with {} sources".format(
+                constraint_type, target, len(sources)
+            ),
+            prompt="Use list_constraints to inspect the result or remove_constraint to undo.",
+            constraint_node=constraint_node,
             constraint_type=constraint_type,
-            sources=sources,
             target=target,
-            weights_applied=w_list[: len(sources)],
-            maintain_offset=maintain_offset,
+            source_weights=[{"source": s, "weight": w} for s, w in source_weights],
         ).to_dict()
     except ImportError:
         return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
     except Exception as exc:
         logger.exception("create_constraint_weighted failed")
-        return error_result("Failed to create weighted {} constraint".format(constraint_type), str(exc)).to_dict()
-
+        return error_result("Failed to create weighted constraint", str(exc)).to_dict()
 
 
 def main(**kwargs):
@@ -124,5 +99,5 @@ def main(**kwargs):
 
 if __name__ == "__main__":
     import json
-    result = create_constraint_weighted()
+    result = create_constraint_weighted("parent", ["pSphere1", "pCube1"], "pCylinder1", [0.7, 0.3])
     print(json.dumps(result))

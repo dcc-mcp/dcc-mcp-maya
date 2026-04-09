@@ -4,11 +4,15 @@ description: "Maya node attribute get/set and custom attribute management"
 dcc: maya
 version: "1.0.0"
 tags: [maya, attribute, node, utility]
+license: "MIT"
+allowed-tools: ["Bash", "Read"]
+depends: []
 ---
 
 # maya-attributes
 
-Maya attributes skill. Provides actions for getting and setting attribute values, and managing custom attributes on Maya nodes.
+Maya attributes skill. Provides actions for getting and setting attribute values,
+and managing custom attributes on Maya nodes.
 
 ## Scripts
 

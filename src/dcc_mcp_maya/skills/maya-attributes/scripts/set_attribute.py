@@ -5,78 +5,53 @@ from __future__ import annotations
 
 # Import built-in modules
 import logging
-from typing import Any
 
 logger = logging.getLogger(__name__)
 
 
-def set_attribute(
-    object_name: str,
-    attribute: str,
-    value: Any,
-    force: bool = False,
-) -> dict:
+def set_attribute(node_name: str, attribute: str, value: object) -> dict:
     """Set the value of an attribute on a Maya node.
 
-    Supports scalar (int/float/bool), string, and vector (list of 3 floats)
-    attributes.  For locked attributes the call will fail unless *force* is
-    True.
+    Handles scalar, boolean, string, and simple vector values.
 
     Args:
-        object_name: Name of the Maya node.
+        node_name: Name of the Maya node.
         attribute: Attribute name (e.g. ``"translateX"``, ``"visibility"``).
-        value: New value.  Pass a list of 3 floats for compound (vector)
-            attributes such as ``"translate"`` or ``"color"``.
-        force: If True, temporarily unlock the attribute before setting.
-            Default: False.
+        value: New value.  Strings are set with ``setAttr -type "string"``.
 
     Returns:
-        ActionResultModel dict with ``context.object_name``,
-        ``context.attribute``, ``context.value``.
+        ActionResultModel dict with ``context.node_name``, ``context.attribute``,
+        and ``context.value``.
     """
     from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(object_name):
+        if not cmds.objExists(node_name):
             return error_result(
-                "Object not found: {}".format(object_name),
-                "'{}' does not exist in the scene".format(object_name),
+                "Node not found: {}".format(node_name),
+                "'{}' does not exist".format(node_name),
             ).to_dict()
 
-        full_attr = "{}.{}".format(object_name, attribute)
+        full_attr = "{}.{}".format(node_name, attribute)
         if not cmds.objExists(full_attr):
             return error_result(
                 "Attribute not found: {}".format(full_attr),
-                "The attribute '{}' does not exist on node '{}'".format(attribute, object_name),
+                "'{}.{}' does not exist on this node".format(node_name, attribute),
             ).to_dict()
 
-        # Check lock state
-        is_locked = cmds.getAttr(full_attr, lock=True)
-        if is_locked:
-            if not force:
-                return error_result(
-                    "Attribute is locked: {}".format(full_attr),
-                    "Use force=True to unlock and set the attribute",
-                ).to_dict()
-            cmds.setAttr(full_attr, lock=False)
-
-        # Set value — handle compound (vector) vs scalar vs string
-        if isinstance(value, (list, tuple)):
-            cmds.setAttr(full_attr, *value)
-        elif isinstance(value, str):
+        if isinstance(value, str):
             cmds.setAttr(full_attr, value, type="string")
+        elif isinstance(value, (list, tuple)):
+            cmds.setAttr(full_attr, *value)
         else:
             cmds.setAttr(full_attr, value)
 
-        # Re-lock if it was locked and force was used
-        if is_locked and force:
-            cmds.setAttr(full_attr, lock=True)
-
         return success_result(
-            "Set {}.{} = {}".format(object_name, attribute, value),
-            object_name=object_name,
+            "Set {}.{} = {}".format(node_name, attribute, value),
+            prompt="Use get_attribute to verify the new value.",
+            node_name=node_name,
             attribute=attribute,
             value=value,
         ).to_dict()
@@ -84,11 +59,7 @@ def set_attribute(
         return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
     except Exception as exc:
         logger.exception("set_attribute failed")
-        return error_result(
-            "Failed to set attribute {}.{} = {}".format(object_name, attribute, value),
-            str(exc),
-        ).to_dict()
-
+        return error_result("Failed to set attribute", str(exc)).to_dict()
 
 
 def main(**kwargs):
@@ -97,5 +68,5 @@ def main(**kwargs):
 
 if __name__ == "__main__":
     import json
-    result = set_attribute()
+    result = set_attribute("pSphere1", "translateX", 5.0)
     print(json.dumps(result))

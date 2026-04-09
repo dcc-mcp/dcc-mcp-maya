@@ -4,11 +4,15 @@ description: "Maya constraints — parent, point, orient, scale, aim and weighte
 dcc: maya
 version: "1.0.0"
 tags: [maya, constraint, rigging]
+license: "MIT"
+allowed-tools: ["Bash", "Read"]
+depends: []
 ---
 
 # maya-constraints
 
-Maya constraints skill. Provides actions for adding, removing, listing, and creating weighted constraints on Maya objects.
+Maya constraints skill. Provides actions for adding, removing, listing, and
+creating weighted constraints on Maya objects.
 
 ## Scripts
 

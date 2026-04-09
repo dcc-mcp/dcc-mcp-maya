@@ -4,13 +4,48 @@
 from __future__ import annotations
 
 # Import built-in modules
-import base64
 import logging
-import os
-import tempfile
-from typing import Optional
 
 logger = logging.getLogger(__name__)
+
+_RENDER_QUALITY_PRESETS = {
+    "low": {
+        "edgeAntiAliasing": 0,
+        "shadingSamples": 1,
+        "maxShadingSamples": 4,
+        "visibilitySamples": 1,
+        "maxVisibilitySamples": 4,
+        "volumeSamples": 1,
+        "particleSamples": 1,
+        "useMultiPixelFilter": False,
+        "pixelFilterWidthX": 2.2,
+        "pixelFilterWidthY": 2.2,
+    },
+    "medium": {
+        "edgeAntiAliasing": 1,
+        "shadingSamples": 2,
+        "maxShadingSamples": 8,
+        "visibilitySamples": 1,
+        "maxVisibilitySamples": 4,
+        "volumeSamples": 1,
+        "particleSamples": 1,
+        "useMultiPixelFilter": True,
+        "pixelFilterWidthX": 2.2,
+        "pixelFilterWidthY": 2.2,
+    },
+    "high": {
+        "edgeAntiAliasing": 3,
+        "shadingSamples": 4,
+        "maxShadingSamples": 16,
+        "visibilitySamples": 2,
+        "maxVisibilitySamples": 8,
+        "volumeSamples": 2,
+        "particleSamples": 2,
+        "useMultiPixelFilter": True,
+        "pixelFilterWidthX": 2.2,
+        "pixelFilterWidthY": 2.2,
+    },
+}
 
 
 def set_render_quality(preset: str = "medium") -> dict:

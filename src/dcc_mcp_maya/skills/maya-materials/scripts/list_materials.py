@@ -5,7 +5,7 @@ from __future__ import annotations
 
 # Import built-in modules
 import logging
-from typing import Any, List, Optional
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 

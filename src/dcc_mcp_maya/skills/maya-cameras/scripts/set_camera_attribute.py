@@ -1,33 +1,27 @@
-"""Set an attribute on a camera shape or transform."""
+"""Set an attribute on a Maya camera."""
 
 # Import future modules
 from __future__ import annotations
 
 # Import built-in modules
 import logging
-from typing import List, Optional
 
 logger = logging.getLogger(__name__)
 
 
-def set_camera_attribute(
-    camera_name: str,
-    attribute: str,
-    value: object,
-) -> dict:
-    """Set an attribute on a camera shape or transform.
+def set_camera_attribute(camera_name: str, attribute: str, value: object) -> dict:
+    """Set an attribute on a Maya camera node.
 
-    Common camera shape attributes: ``"focalLength"``, ``"nearClipPlane"``,
-    ``"farClipPlane"``, ``"horizontalFieldOfView"``, ``"verticalFieldOfView"``,
-    ``"renderable"``, ``"filmFit"``.
+    Common attributes: ``focalLength``, ``nearClipPlane``, ``farClipPlane``,
+    ``horizontalFilmAperture``, ``verticalFilmAperture``, ``fStop``.
 
     Args:
-        camera_name: Transform or shape name of the camera.
-        attribute: Attribute name.
-        value: New value.
+        camera_name: Name of the camera transform or shape node.
+        attribute: Attribute name (camelCase Maya attribute).
+        value: Value to set.
 
     Returns:
-        ActionResultModel dict.
+        ActionResultModel dict with ``context.camera_name`` and ``context.attribute``.
     """
     from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
@@ -35,27 +29,31 @@ def set_camera_attribute(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(camera_name):
-            return error_result("Camera not found: {}".format(camera_name)).to_dict()
+            return error_result(
+                "Camera not found: {}".format(camera_name),
+                "'{}' does not exist".format(camera_name),
+            ).to_dict()
 
-        shapes = cmds.listRelatives(camera_name, shapes=True) or []
-        shape = shapes[0] if shapes else camera_name
-
-        full_attr = "{}.{}".format(shape, attribute)
-        if not cmds.objExists(full_attr):
-            full_attr = "{}.{}".format(camera_name, attribute)
-        if not cmds.objExists(full_attr):
-            return error_result("Attribute '{}' not found on camera '{}'".format(attribute, camera_name)).to_dict()
-
-        if isinstance(value, str):
-            cmds.setAttr(full_attr, value, type="string")
-        elif isinstance(value, (list, tuple)) and len(value) == 3:
-            cmds.setAttr(full_attr, value[0], value[1], value[2], type="double3")
+        # Resolve shape node if transform was supplied
+        node_type = cmds.objectType(camera_name)
+        if node_type == "transform":
+            shapes = cmds.listRelatives(camera_name, shapes=True, type="camera") or []
+            if not shapes:
+                return error_result(
+                    "No camera shape under '{}'".format(camera_name),
+                    "Transform has no camera shape",
+                ).to_dict()
+            cam_node = shapes[0]
         else:
-            cmds.setAttr(full_attr, value)
+            cam_node = camera_name
+
+        full_attr = "{}.{}".format(cam_node, attribute)
+        cmds.setAttr(full_attr, value)
 
         return success_result(
-            "Set {}.{} = {}".format(camera_name, attribute, value),
-            camera_name=camera_name,
+            "Set {}.{} = {}".format(cam_node, attribute, value),
+            prompt="Use get_camera_info to verify the updated camera settings.",
+            camera_name=cam_node,
             attribute=attribute,
             value=value,
         ).to_dict()
@@ -66,12 +64,11 @@ def set_camera_attribute(
         return error_result("Failed to set camera attribute", str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return set_camera_attribute(**kwargs)
 
 
 if __name__ == "__main__":
     import json
-    result = set_camera_attribute()
+    result = set_camera_attribute("camera1", "focalLength", 50.0)
     print(json.dumps(result))

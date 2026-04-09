@@ -5,57 +5,49 @@ from __future__ import annotations
 
 # Import built-in modules
 import logging
-from typing import Any
 
 logger = logging.getLogger(__name__)
 
 
-def get_attribute(
-    object_name: str,
-    attribute: str,
-) -> dict:
+def get_attribute(node_name: str, attribute: str) -> dict:
     """Get the value of an attribute on a Maya node.
 
-    Supports numeric, string, boolean, and compound (vector/matrix) attributes.
-
     Args:
-        object_name: Name of the Maya node.
-        attribute: Attribute name (e.g. ``"translateX"``, ``"visibility"``,
-            ``"color"``).
+        node_name: Name of the Maya node.
+        attribute: Attribute name (e.g. ``"translateX"``, ``"visibility"``).
 
     Returns:
-        ActionResultModel dict with ``context.value`` containing the attribute
-        value.
+        ActionResultModel dict with ``context.value``.
     """
     from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(object_name):
+        if not cmds.objExists(node_name):
             return error_result(
-                "Object not found: {}".format(object_name),
-                "'{}' does not exist in the scene".format(object_name),
+                "Node not found: {}".format(node_name),
+                "'{}' does not exist".format(node_name),
             ).to_dict()
 
-        full_attr = "{}.{}".format(object_name, attribute)
+        full_attr = "{}.{}".format(node_name, attribute)
         if not cmds.objExists(full_attr):
             return error_result(
                 "Attribute not found: {}".format(full_attr),
-                "The attribute '{}' does not exist on node '{}'".format(attribute, object_name),
+                "'{}.{}' does not exist on this node".format(node_name, attribute),
             ).to_dict()
 
         raw = cmds.getAttr(full_attr)
-
-        # Normalise compound results (list of tuples → flat list)
-        if isinstance(raw, list) and raw and isinstance(raw[0], tuple):
+        # Flatten single-element tuples returned for compound attrs
+        if isinstance(raw, list) and len(raw) == 1 and isinstance(raw[0], tuple):
             value = list(raw[0])
         else:
             value = raw
 
         return success_result(
-            "Got {}.{} = {}".format(object_name, attribute, value),
-            object_name=object_name,
+            "{}.{} = {}".format(node_name, attribute, value),
+            prompt="Use set_attribute to change the value.",
+            node_name=node_name,
             attribute=attribute,
             value=value,
         ).to_dict()
@@ -63,11 +55,7 @@ def get_attribute(
         return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
     except Exception as exc:
         logger.exception("get_attribute failed")
-        return error_result(
-            "Failed to get attribute {}.{}".format(object_name, attribute),
-            str(exc),
-        ).to_dict()
-
+        return error_result("Failed to get attribute", str(exc)).to_dict()
 
 
 def main(**kwargs):
@@ -76,5 +64,5 @@ def main(**kwargs):
 
 if __name__ == "__main__":
     import json
-    result = get_attribute()
+    result = get_attribute("pSphere1", "translateX")
     print(json.dumps(result))

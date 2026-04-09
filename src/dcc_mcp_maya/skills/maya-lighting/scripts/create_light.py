@@ -1,4 +1,4 @@
-"""Create a Maya light of the specified type."""
+"""Create a Maya light."""
 
 # Import future modules
 from __future__ import annotations
@@ -9,11 +9,10 @@ from typing import List, Optional
 
 logger = logging.getLogger(__name__)
 
-# Supported Maya light types and their corresponding command/node names
-_LIGHT_TYPE_MAP = {
+_LIGHT_TYPES = {
+    "directional": "directionalLight",
     "point": "pointLight",
     "spot": "spotLight",
-    "directional": "directionalLight",
     "area": "areaLight",
     "ambient": "ambientLight",
 }
@@ -25,65 +24,60 @@ def create_light(
     intensity: float = 1.0,
     color: Optional[List[float]] = None,
     position: Optional[List[float]] = None,
+    rotation: Optional[List[float]] = None,
 ) -> dict:
     """Create a Maya light of the specified type.
 
     Args:
-        light_type: One of ``"point"``, ``"spot"``, ``"directional"``,
-            ``"area"``, ``"ambient"``.  Default: ``"point"``.
+        light_type: One of ``directional``, ``point``, ``spot``, ``area``,
+            ``ambient``.
         name: Optional name for the light transform node.
-        intensity: Initial light intensity.  Default: 1.0.
-        color: RGB colour as ``[r, g, b]`` in 0-1 range.  Default: white.
-        position: World-space position ``[x, y, z]``.  Default: [0, 0, 0].
+        intensity: Light intensity.  Default 1.0.
+        color: Optional RGB color as ``[r, g, b]`` in 0–1 range.
+        position: Optional ``[x, y, z]`` world-space position.
+        rotation: Optional ``[rx, ry, rz]`` rotation in degrees.
 
     Returns:
-        ActionResultModel dict with ``context.light_name`` and
-        ``context.light_shape``.
+        ActionResultModel dict with ``context.transform`` and ``context.shape``.
     """
     from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
-    lt = light_type.lower()
-    if lt not in _LIGHT_TYPE_MAP:
-        return error_result(
-            "Unsupported light type: {}".format(light_type),
-            "Supported types: {}".format(", ".join(sorted(_LIGHT_TYPE_MAP))),
-        ).to_dict()
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        create_cmd = getattr(cmds, _LIGHT_TYPE_MAP[lt])
-        kwargs = {}
+        if light_type not in _LIGHT_TYPES:
+            return error_result(
+                "Unknown light type: {}".format(light_type),
+                "Supported types: {}".format(", ".join(sorted(_LIGHT_TYPES))),
+            ).to_dict()
+
+        cmd_fn = getattr(cmds, _LIGHT_TYPES[light_type])
+        shape = cmd_fn(intensity=intensity)
+        shapes = cmds.listRelatives(shape, parent=True) or [shape]
+        transform = shapes[0]
+
         if name:
-            kwargs["name"] = name
-        shape = create_cmd(**kwargs)
-        # For directional/area/ambient cmds return shape; for point/spot they
-        # return a list [shape, transform] or just the shape depending on version.
-        if isinstance(shape, (list, tuple)):
-            shape = shape[0]
+            transform = cmds.rename(transform, name)
+            all_shapes = cmds.listRelatives(transform, shapes=True, fullPath=False) or []
+            shape = all_shapes[0] if all_shapes else shape
 
-        # Find the transform parent of the shape
-        transform = cmds.listRelatives(shape, parent=True)
-        transform = transform[0] if transform else shape
+        if color and len(color) == 3:
+            cmds.setAttr("{}.colorR".format(shape), color[0])
+            cmds.setAttr("{}.colorG".format(shape), color[1])
+            cmds.setAttr("{}.colorB".format(shape), color[2])
 
-        # Apply intensity
-        cmds.setAttr("{}.intensity".format(shape), intensity)
-
-        # Apply colour
-        r, g, b = (color[0], color[1], color[2]) if color and len(color) >= 3 else (1.0, 1.0, 1.0)
-        cmds.setAttr("{}.color".format(shape), r, g, b, type="double3")
-
-        # Apply position
-        if position and len(position) >= 3:
-            cmds.setAttr("{}.translate".format(transform), position[0], position[1], position[2], type="double3")
+        if position and len(position) == 3:
+            cmds.move(position[0], position[1], position[2], transform)
+        if rotation and len(rotation) == 3:
+            cmds.rotate(rotation[0], rotation[1], rotation[2], transform)
 
         return success_result(
-            "Created {} light '{}'".format(lt, transform),
-            light_name=transform,
-            light_shape=shape,
-            light_type=lt,
+            "Created {} light '{}'".format(light_type, transform),
+            prompt="Use set_light_attribute to adjust intensity, color, or shadows.",
+            transform=transform,
+            shape=shape,
+            light_type=light_type,
             intensity=intensity,
-            color=[r, g, b],
         ).to_dict()
     except ImportError:
         return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
@@ -92,12 +86,11 @@ def create_light(
         return error_result("Failed to create light", str(exc)).to_dict()
 
 
-
 def main(**kwargs):
     return create_light(**kwargs)
 
 
 if __name__ == "__main__":
     import json
-    result = create_light()
+    result = create_light("point", "myLight", intensity=2.0, color=[1.0, 0.9, 0.8])
     print(json.dumps(result))
