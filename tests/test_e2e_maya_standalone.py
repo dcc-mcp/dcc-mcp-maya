@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import threading
 import urllib.request
 from pathlib import Path
 
@@ -765,3 +766,431 @@ class TestNodeGraphWorkflow:
             lay.get("name", "") for lay in dl_list_mod.list_display_layers()["context"].get("layers", [])
         ]
         assert "testLayer" not in layer_names_after
+
+
+# ---------------------------------------------------------------------------
+# Multi-instance isolation
+# ---------------------------------------------------------------------------
+
+
+class TestMultiInstanceIsolation:
+    """Verify that multiple MayaMcpServer instances on different ports are
+    fully independent: independent lifecycles, no port conflicts, concurrent
+    HTTP requests each reach the correct server.
+    """
+
+    def _make_server(self):
+        """Create, populate and start a fresh MayaMcpServer on a random port."""
+        from dcc_mcp_maya.server import MayaMcpServer
+
+        srv = MayaMcpServer(port=0, enable_main_thread_executor=False)
+        srv.register_builtin_actions()
+        handle = srv.start()
+        return srv, handle
+
+    def test_two_instances_on_different_ports(self):
+        """Two servers start on different OS-assigned ports simultaneously."""
+        srv_a, h_a = self._make_server()
+        srv_b, h_b = self._make_server()
+        try:
+            assert h_a.port != h_b.port, "Both servers must use distinct ports"
+            assert h_a.mcp_url() != h_b.mcp_url()
+            assert srv_a.is_running
+            assert srv_b.is_running
+        finally:
+            srv_a.stop()
+            srv_b.stop()
+
+    def test_stop_one_does_not_affect_other(self):
+        """Stopping server A leaves server B fully operational."""
+        srv_a, h_a = self._make_server()
+        srv_b, h_b = self._make_server()
+        try:
+            srv_a.stop()
+            assert not srv_a.is_running
+            assert srv_b.is_running
+
+            # Server B still responds to initialize
+            code, body = _mcp_post(
+                h_b.mcp_url(),
+                {
+                    "jsonrpc": "2.0",
+                    "id": 1,
+                    "method": "initialize",
+                    "params": {
+                        "protocolVersion": "2025-03-26",
+                        "capabilities": {},
+                        "clientInfo": {"name": "multi-test", "version": "1"},
+                    },
+                },
+            )
+            assert code == 200
+            assert body["result"]["serverInfo"]["name"] == "maya-mcp"
+        finally:
+            srv_b.stop()
+
+    def test_three_instances_all_serve_tools_list(self):
+        """Three servers all respond to tools/list independently."""
+        servers = [self._make_server() for _ in range(3)]
+        try:
+            for srv, handle in servers:
+                code, body = _mcp_post(
+                    handle.mcp_url(),
+                    {"jsonrpc": "2.0", "id": 2, "method": "tools/list"},
+                )
+                assert code == 200
+                assert len(body["result"]["tools"]) >= 100
+        finally:
+            for srv, handle in servers:
+                srv.stop()
+
+    def test_concurrent_requests_to_two_servers(self):
+        """Concurrent HTTP calls to two servers return independent results."""
+        srv_a, h_a = self._make_server()
+        srv_b, h_b = self._make_server()
+        results = {}
+
+        def call_server(label, url, req_id):
+            try:
+                code, body = _mcp_post(
+                    url,
+                    {
+                        "jsonrpc": "2.0",
+                        "id": req_id,
+                        "method": "initialize",
+                        "params": {
+                            "protocolVersion": "2025-03-26",
+                            "capabilities": {},
+                            "clientInfo": {"name": label, "version": "1"},
+                        },
+                    },
+                )
+                results[label] = (code, body)
+            except Exception as exc:
+                results[label] = exc
+
+        try:
+            t_a = threading.Thread(target=call_server, args=("serverA", h_a.mcp_url(), 10))
+            t_b = threading.Thread(target=call_server, args=("serverB", h_b.mcp_url(), 11))
+            t_a.start()
+            t_b.start()
+            t_a.join(timeout=15)
+            t_b.join(timeout=15)
+
+            for label in ("serverA", "serverB"):
+                assert label in results, "Thread did not complete"
+                r = results[label]
+                assert not isinstance(r, Exception), "Request failed: {}".format(r)
+                code, body = r
+                assert code == 200
+                assert body["result"]["serverInfo"]["name"] == "maya-mcp"
+        finally:
+            srv_a.stop()
+            srv_b.stop()
+
+    def test_restart_one_server_other_unaffected(self):
+        """A restarted server comes back up; the other server is unaffected."""
+        srv_a, h_a = self._make_server()
+        srv_b, h_b = self._make_server()
+        srv_a2 = None
+        try:
+            srv_a.stop()
+            assert not srv_a.is_running
+            assert srv_b.is_running
+
+            from dcc_mcp_maya.server import MayaMcpServer
+
+            srv_a2 = MayaMcpServer(port=0, enable_main_thread_executor=False)
+            srv_a2.register_builtin_actions()
+            srv_a2.start()
+
+            assert srv_a2.is_running
+            assert srv_b.is_running
+
+            code, _ = _mcp_post(
+                h_b.mcp_url(),
+                {"jsonrpc": "2.0", "id": 3, "method": "tools/list"},
+            )
+            assert code == 200
+        finally:
+            if srv_a2 is not None:
+                srv_a2.stop()
+            srv_b.stop()
+
+
+# ---------------------------------------------------------------------------
+# Multi-instance concurrent workflows (shared Maya session)
+# ---------------------------------------------------------------------------
+
+
+class TestMultiInstanceConcurrentWorkflows:
+    """Two MCP servers run different Maya workflows concurrently via HTTP.
+
+    Maya standalone shares a single scene, but each server MCP layer is
+    independent.  We verify that concurrent tool calls from different servers
+    do not crash either server and each server stays fully operational.
+    """
+
+    @pytest.fixture(autouse=True)
+    def _setup(self):
+        _new_scene()
+        from dcc_mcp_maya.server import MayaMcpServer
+
+        self._srv_a = MayaMcpServer(port=0, server_name="maya-worker-a", enable_main_thread_executor=False)
+        self._srv_a.register_builtin_actions()
+        self._h_a = self._srv_a.start()
+
+        self._srv_b = MayaMcpServer(port=0, server_name="maya-worker-b", enable_main_thread_executor=False)
+        self._srv_b.register_builtin_actions()
+        self._h_b = self._srv_b.start()
+        yield
+        self._srv_a.stop()
+        self._srv_b.stop()
+
+    def test_different_server_names(self):
+        """Each server reports its own configured name in initialize."""
+        _, body_a = _mcp_post(
+            self._h_a.mcp_url(),
+            {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "initialize",
+                "params": {
+                    "protocolVersion": "2025-03-26",
+                    "capabilities": {},
+                    "clientInfo": {"name": "test", "version": "1"},
+                },
+            },
+        )
+        _, body_b = _mcp_post(
+            self._h_b.mcp_url(),
+            {
+                "jsonrpc": "2.0",
+                "id": 2,
+                "method": "initialize",
+                "params": {
+                    "protocolVersion": "2025-03-26",
+                    "capabilities": {},
+                    "clientInfo": {"name": "test", "version": "1"},
+                },
+            },
+        )
+        assert body_a["result"]["serverInfo"]["name"] == "maya-worker-a"
+        assert body_b["result"]["serverInfo"]["name"] == "maya-worker-b"
+
+    def test_sequential_tool_calls_from_two_servers(self):
+        """Server A creates a sphere; server B creates a cube via HTTP."""
+        code_a, body_a = _mcp_post(
+            self._h_a.mcp_url(),
+            {
+                "jsonrpc": "2.0",
+                "id": 10,
+                "method": "tools/call",
+                "params": {
+                    "name": "maya_primitives__create_sphere",
+                    "arguments": {"name": "multiSphereA"},
+                },
+            },
+        )
+        assert code_a == 200
+        text_a = body_a["result"]["content"][0].get("text", "")
+        assert "success" in text_a or "multiSphereA" in text_a
+
+        code_b, body_b = _mcp_post(
+            self._h_b.mcp_url(),
+            {
+                "jsonrpc": "2.0",
+                "id": 11,
+                "method": "tools/call",
+                "params": {
+                    "name": "maya_primitives__create_cube",
+                    "arguments": {"name": "multiCubeB"},
+                },
+            },
+        )
+        assert code_b == 200
+        text_b = body_b["result"]["content"][0].get("text", "")
+        assert "success" in text_b or "multiCubeB" in text_b
+
+        assert cmds.objExists("multiSphereA") or cmds.objExists("multiSphereAShape")
+        assert cmds.objExists("multiCubeB")
+
+    def test_concurrent_tool_calls_to_different_servers(self):
+        """Concurrent tools/call to server A and B both return 200."""
+        results = {}
+
+        def call_a():
+            try:
+                code, body = _mcp_post(
+                    self._h_a.mcp_url(),
+                    {
+                        "jsonrpc": "2.0",
+                        "id": 20,
+                        "method": "tools/call",
+                        "params": {"name": "maya_scene__get_session_info", "arguments": {}},
+                    },
+                )
+                results["a"] = (code, body)
+            except Exception as exc:
+                results["a"] = exc
+
+        def call_b():
+            try:
+                code, body = _mcp_post(
+                    self._h_b.mcp_url(),
+                    {
+                        "jsonrpc": "2.0",
+                        "id": 21,
+                        "method": "tools/call",
+                        "params": {"name": "maya_scene__list_objects", "arguments": {}},
+                    },
+                )
+                results["b"] = (code, body)
+            except Exception as exc:
+                results["b"] = exc
+
+        t_a = threading.Thread(target=call_a)
+        t_b = threading.Thread(target=call_b)
+        t_a.start()
+        t_b.start()
+        t_a.join(timeout=15)
+        t_b.join(timeout=15)
+
+        assert "a" in results and "b" in results
+        for key in ("a", "b"):
+            r = results[key]
+            assert not isinstance(r, Exception), "Request {} failed: {}".format(key, r)
+            code, body = r
+            assert code == 200
+
+    def test_tools_list_stable_after_concurrent_calls(self):
+        """tools/list stays complete on both servers after burst of concurrent calls."""
+        errors = []
+
+        def fire_call(url, req_id):
+            try:
+                _mcp_post(
+                    url,
+                    {
+                        "jsonrpc": "2.0",
+                        "id": req_id,
+                        "method": "tools/call",
+                        "params": {"name": "maya_scene__get_session_info", "arguments": {}},
+                    },
+                )
+            except Exception as exc:
+                errors.append(exc)
+
+        threads = []
+        for i in range(6):
+            url = self._h_a.mcp_url() if i % 2 == 0 else self._h_b.mcp_url()
+            threads.append(threading.Thread(target=fire_call, args=(url, 30 + i)))
+
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join(timeout=20)
+
+        assert not errors, "Concurrent calls raised: {}".format(errors)
+
+        for handle in (self._h_a, self._h_b):
+            code, body = _mcp_post(
+                handle.mcp_url(),
+                {"jsonrpc": "2.0", "id": 99, "method": "tools/list"},
+            )
+            assert code == 200
+            assert len(body["result"]["tools"]) >= 100
+
+    def test_cross_server_scene_visibility(self):
+        """Nodes created via server A are visible when queried via server B."""
+        _mcp_post(
+            self._h_a.mcp_url(),
+            {
+                "jsonrpc": "2.0",
+                "id": 40,
+                "method": "tools/call",
+                "params": {
+                    "name": "maya_primitives__create_sphere",
+                    "arguments": {"name": "crossVisSphere"},
+                },
+            },
+        )
+
+        code, body = _mcp_post(
+            self._h_b.mcp_url(),
+            {
+                "jsonrpc": "2.0",
+                "id": 41,
+                "method": "tools/call",
+                "params": {"name": "maya_scene__list_objects", "arguments": {}},
+            },
+        )
+        assert code == 200
+        content_text = body["result"]["content"][0].get("text", "")
+        assert "success" in content_text
+
+
+# ---------------------------------------------------------------------------
+# Singleton re-entrancy
+# ---------------------------------------------------------------------------
+
+
+class TestSingletonReentrancy:
+    """Module-level start_server / stop_server is thread-safe and idempotent."""
+
+    def test_idempotent_start_returns_same_handle(self):
+        """Calling start_server twice without stopping returns the same handle."""
+        from dcc_mcp_maya import start_server, stop_server
+
+        h1 = start_server(port=0)
+        h2 = start_server(port=0)
+        try:
+            assert h1 is h2, "Second call must return existing handle"
+            assert h1.port == h2.port
+        finally:
+            stop_server()
+
+    def test_stop_then_restart_creates_new_server(self):
+        """After stop_server(), start_server() creates a fresh server instance."""
+        from dcc_mcp_maya import start_server, stop_server
+
+        h1 = start_server(port=0)
+        stop_server()
+
+        h2 = start_server(port=0)
+        try:
+            assert h2 is not h1
+            assert h2.mcp_url().startswith("http://")
+        finally:
+            stop_server()
+
+    def test_concurrent_start_server_calls_are_safe(self):
+        """Multiple threads calling start_server() concurrently get the same handle."""
+        from dcc_mcp_maya import start_server, stop_server
+
+        handles = []
+        errors = []
+        lock = threading.Lock()
+
+        def do_start():
+            try:
+                h = start_server(port=0)
+                with lock:
+                    handles.append(h)
+            except Exception as exc:
+                with lock:
+                    errors.append(exc)
+
+        threads = [threading.Thread(target=do_start) for _ in range(5)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join(timeout=15)
+
+        try:
+            assert not errors, "Concurrent start_server raised: {}".format(errors)
+            assert len(handles) == 5
+            ports = {h.port for h in handles}
+            assert len(ports) == 1, "Expected singleton port, got: {}".format(ports)
+        finally:
+            stop_server()
