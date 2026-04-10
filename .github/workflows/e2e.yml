@@ -60,7 +60,7 @@ jobs:
       - name: Setup Node.js for mcporter
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "24"
 
       - name: Run unit tests (no Maya required)
         run: mayapy -m pytest tests/ -v --tb=short -m "not e2e"
