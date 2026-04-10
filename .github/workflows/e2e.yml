@@ -124,21 +124,25 @@ jobs:
           # List Maya tools via mcporter
           npx --yes mcporter list \
             --http-url http://127.0.0.1:7891/mcp \
-            --name maya-ci
+            --name maya-ci \
+            --allow-http
 
           # Call get_session_info tool
           npx mcporter call \
             --http-url http://127.0.0.1:7891/mcp \
+            --allow-http \
             "maya-ci.maya_scene__get_session_info()"
 
           # Call create_sphere tool
           npx mcporter call \
             --http-url http://127.0.0.1:7891/mcp \
+            --allow-http \
             "maya-ci.maya_primitives__create_sphere(radius=2.0, name='mcporterSphere')"
 
           # Call execute_python tool
           npx mcporter call \
             --http-url http://127.0.0.1:7891/mcp \
+            --allow-http \
             "maya-ci.maya_scripting__execute_python(code=\"import maya.cmds as cmds; cmds.polyCube(n='mcporterCube')\")"
 
           kill $SERVER_PID 2>/dev/null || true
