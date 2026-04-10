@@ -58,7 +58,7 @@ jobs:
           mayapy -m pip install -e ".[dev]"
 
       - name: Setup Node.js for mcporter
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: "24"
 
