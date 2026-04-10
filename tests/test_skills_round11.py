@@ -74,6 +74,7 @@ def _teardown(patches):
 # create_sphere
 # ===========================================================================
 
+
 class TestCreateSphere:
     def test_default_creates_sphere(self):
         patches, mock_cmds = _setup_maya()
@@ -131,6 +132,7 @@ class TestCreateSphere:
 # ===========================================================================
 # create_cube
 # ===========================================================================
+
 
 class TestCreateCube:
     def test_default(self):
@@ -192,6 +194,7 @@ class TestCreateCube:
 # create_cylinder
 # ===========================================================================
 
+
 class TestCreateCylinder:
     def test_default(self):
         patches, mock_cmds = _setup_maya()
@@ -239,6 +242,7 @@ class TestCreateCylinder:
 # create_plane
 # ===========================================================================
 
+
 class TestCreatePlane:
     def test_default(self):
         patches, mock_cmds = _setup_maya()
@@ -284,6 +288,7 @@ class TestCreatePlane:
 # ===========================================================================
 # delete_objects
 # ===========================================================================
+
 
 class TestDeleteObjects:
     def test_delete_existing(self):
@@ -345,6 +350,7 @@ class TestDeleteObjects:
 # get_transform
 # ===========================================================================
 
+
 class TestGetTransform:
     def test_success(self):
         patches, mock_cmds = _setup_maya()
@@ -398,6 +404,7 @@ class TestGetTransform:
 # set_transform
 # ===========================================================================
 
+
 class TestSetTransform:
     def test_set_translate(self):
         patches, mock_cmds = _setup_maya()
@@ -407,9 +414,7 @@ class TestSetTransform:
         finally:
             _teardown(patches)
         assert result["success"] is True
-        mock_cmds.setAttr.assert_any_call(
-            "pSphere1.translate", 1.0, 2.0, 3.0, type="double3"
-        )
+        mock_cmds.setAttr.assert_any_call("pSphere1.translate", 1.0, 2.0, 3.0, type="double3")
 
     def test_set_rotate(self):
         patches, mock_cmds = _setup_maya()
@@ -419,9 +424,7 @@ class TestSetTransform:
         finally:
             _teardown(patches)
         assert result["success"] is True
-        mock_cmds.setAttr.assert_any_call(
-            "pCube1.rotate", 45.0, 0.0, 0.0, type="double3"
-        )
+        mock_cmds.setAttr.assert_any_call("pCube1.rotate", 45.0, 0.0, 0.0, type="double3")
 
     def test_set_scale(self):
         patches, mock_cmds = _setup_maya()
@@ -431,9 +434,7 @@ class TestSetTransform:
         finally:
             _teardown(patches)
         assert result["success"] is True
-        mock_cmds.setAttr.assert_any_call(
-            "pCube1.scale", 2.0, 2.0, 2.0, type="double3"
-        )
+        mock_cmds.setAttr.assert_any_call("pCube1.scale", 2.0, 2.0, 2.0, type="double3")
 
     def test_object_not_found(self):
         patches, mock_cmds = _setup_maya()
@@ -482,6 +483,7 @@ class TestSetTransform:
 # ===========================================================================
 # rename_object
 # ===========================================================================
+
 
 class TestRenameObject:
     def test_basic_rename(self):

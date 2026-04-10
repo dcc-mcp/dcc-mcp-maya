@@ -1,4 +1,5 @@
 """Invert the current selection within its context."""
+
 from dcc_mcp_core import error_result, success_result
 
 

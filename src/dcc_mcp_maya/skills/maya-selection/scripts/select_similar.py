@@ -1,4 +1,5 @@
 """Select objects with similar topology or material."""
+
 from dcc_mcp_core import error_result, success_result
 
 _CRITERIA = ("topology", "material", "type", "name_prefix")
@@ -68,6 +69,7 @@ def run(params):
                         similar.append(parent)
 
         elif criteria == "material":
+
             def _get_material(obj):
                 shapes = cmds.listRelatives(obj, shapes=True, noIntermediate=True) or []
                 for shape in shapes:

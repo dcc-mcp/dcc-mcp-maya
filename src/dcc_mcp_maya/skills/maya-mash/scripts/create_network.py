@@ -1,4 +1,5 @@
 """Create a MASH network for an object."""
+
 from dcc_mcp_core import error_result, success_result
 
 

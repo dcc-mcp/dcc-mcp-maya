@@ -1,4 +1,5 @@
 """Set an attribute on an XGen description or modifier."""
+
 from dcc_mcp_core import error_result, success_result
 
 
