@@ -36,13 +36,13 @@ def copy_uvs(
 
         for name in (source, target):
             if not cmds.objExists(name):
-                return error_result("Object not found: {}".format(name)).to_dict()
+                return error_result("Object not found: {}".format(name), "'{}' does not exist".format(name)).to_dict()
 
         kwargs = {
             "transferUVs": 1,
             "sampleSpace": 4,  # UV space
             "ch": False,
-        }  # type: Dict
+        }
         if source_uv_set:
             kwargs["sourceUvSet"] = source_uv_set
         if target_uv_set:
