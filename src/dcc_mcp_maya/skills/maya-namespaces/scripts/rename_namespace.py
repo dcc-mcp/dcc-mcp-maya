@@ -8,65 +8,66 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# Built-in namespaces that must never be modified
-_PROTECTED_NS = frozenset({"UI", "shared", ":"})
-
 
 def rename_namespace(
     old_name: str,
     new_name: str,
 ) -> dict:
-    """Rename an existing Maya namespace.
+    """Rename a namespace.
+
+    All objects within the namespace retain their membership; only the namespace
+    identifier changes.
 
     Args:
-        old_name: Current namespace name (without leading ``":"``).
-        new_name: Desired new namespace name (without leading ``":"``).
+        old_name: Current namespace name (relative, without leading ``:``)
+            or full path (e.g. ``":char_hero"``).
+        new_name: Target namespace name (relative).
 
     Returns:
-        ActionResultModel dict with ``context.old_name``,
-        ``context.new_name``.
+        ActionResultModel dict with ``old_name``, ``new_name``.
     """
     from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        old_ns = old_name.strip(":")
-        new_ns = new_name.strip(":")
+        old_rel = old_name.lstrip(":")
+        new_rel = new_name.lstrip(":")
 
-        if not old_ns:
-            return error_result("Cannot rename root namespace", "old_name must not be empty or ':'").to_dict()
-
-        if old_ns in _PROTECTED_NS:
+        _PROTECTED = {"UI", "shared"}
+        if not old_rel:
+            return error_result("Namespace name cannot be empty", "Provide a valid name").to_dict()
+        if old_rel in _PROTECTED:
             return error_result(
-                "Cannot rename protected namespace: {}".format(old_ns),
-                "Protected namespaces: {}".format(", ".join(sorted(_PROTECTED_NS))),
+                "Cannot rename protected namespace: {}".format(old_rel),
+                "UI and shared are Maya built-in namespaces",
             ).to_dict()
 
-        if not cmds.namespace(exists=":{}".format(old_ns)):
+        if not cmds.namespace(exists=":{}".format(old_rel)):
             return error_result(
-                "Namespace does not exist: {}".format(old_ns),
-                "Create the namespace first or check the name",
+                "Namespace not found: {}".format(old_name),
+                "Verify the namespace with list_namespaces",
             ).to_dict()
 
-        if cmds.namespace(exists=":{}".format(new_ns)):
+        if cmds.namespace(exists=":{}".format(new_rel)):
             return error_result(
-                "Namespace already exists: {}".format(new_ns),
-                "Choose a different new_name",
+                "Namespace already exists: {}".format(new_name),
+                "Choose a different name",
             ).to_dict()
 
-        cmds.namespace(rename=[":{}".format(old_ns), new_ns])
+        cmds.namespace(rename=[old_rel, new_rel])
 
         return success_result(
-            "Renamed namespace '{}' → '{}'".format(old_ns, new_ns),
-            old_name=old_ns,
-            new_name=new_ns,
+            "Renamed namespace '{}' -> '{}'".format(old_rel, new_rel),
+            prompt="Use list_namespaces to verify the rename.",
+            old_name=old_rel,
+            new_name=new_rel,
         ).to_dict()
     except ImportError:
         return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
     except Exception as exc:
         logger.exception("rename_namespace failed")
-        return error_result("Failed to rename namespace '{}' to '{}'".format(old_name, new_name), str(exc)).to_dict()
+        return error_result("Failed to rename namespace", str(exc)).to_dict()
 
 
 def main(**kwargs):
@@ -76,5 +77,4 @@ def main(**kwargs):
 if __name__ == "__main__":
     import json
 
-    result = rename_namespace()
-    print(json.dumps(result))
+    print(json.dumps(rename_namespace("char_hero", "char_hero_v2")))

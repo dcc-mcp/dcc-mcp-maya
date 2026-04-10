@@ -1,9 +1,9 @@
 ---
 name: maya-namespaces
-description: "Maya namespace operations — assign, rename and delete namespaces"
+description: "Maya namespace management — create, rename, merge, and remove namespaces for asset organization"
 dcc: maya
 version: "1.0.0"
-tags: [maya, namespace, scene, utility]
+tags: [maya, namespaces, pipeline, rigging, scene-management]
 license: "MIT"
 allowed-tools: ["Bash", "Read"]
 depends: []
@@ -11,10 +11,12 @@ depends: []
 
 # maya-namespaces
 
-Maya namespaces skill. Provides actions for moving objects into namespaces, renaming, and deleting namespaces.
+Namespace utilities for Maya pipeline workflows. Manage asset namespaces for clean
+scene organization, referencing, and rigging.
 
 ## Scripts
 
-- `set_namespace` — Move a Maya object into a namespace
-- `rename_namespace` — Rename an existing Maya namespace
-- `delete_namespace` — Delete a Maya namespace
+- `create_namespace` — Create a new namespace (optionally nested)
+- `list_namespaces` — List all non-default namespaces with object counts
+- `rename_namespace` — Rename an existing namespace
+- `remove_namespace` — Remove a namespace (merge contents into parent)
