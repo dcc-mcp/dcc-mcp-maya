@@ -112,14 +112,15 @@ class TestServerLifecycle:
 
         server = MayaMcpServer(port=0)
         server.register_builtin_actions()
-        actions = server.registry.list_actions()
-        names = {a["name"] for a in actions}
-        # Skills SOP: action names follow {skill_name}__{script_stem}
-        assert "maya_primitives__create_sphere" in names
-        assert "maya_scripting__execute_mel" in names
-        assert "maya_scene__get_session_info" in names
-        assert "maya_animation__set_keyframe" in names
-        assert len(actions) >= 100
+        # Use SkillCatalog API to verify skills are loaded
+        loaded_skills = {
+            s.name if hasattr(s, "name") else s["name"] for s in server._server.list_skills(status="loaded")
+        }
+        assert "maya-primitives" in loaded_skills
+        assert "maya-scripting" in loaded_skills
+        assert "maya-scene" in loaded_skills
+        assert "maya-animation" in loaded_skills
+        assert len(loaded_skills) >= 20
 
 
 # ---------------------------------------------------------------------------
