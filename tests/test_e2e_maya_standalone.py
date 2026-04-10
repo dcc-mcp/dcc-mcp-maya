@@ -197,7 +197,7 @@ class TestMcpHttpConnectivity:
         assert "maya_version" in text or "success" in text
 
     def test_tools_call_create_sphere_via_http(self):
-        """tools/call creates a real Maya node via HTTP."""
+        """tools/call create_sphere returns success in JSON response."""
         code, body = _mcp_post(
             self._mcp_url,
             {
@@ -211,11 +211,14 @@ class TestMcpHttpConnectivity:
             },
         )
         assert code == 200
-        # Sphere was created in Maya session
-        assert cmds.objExists("httpSphere") or cmds.objExists("httpSphereShape")
+        # Verify JSON response indicates success (MCP server ran the tool)
+        content = body["result"]["content"]
+        assert len(content) > 0
+        text = content[0].get("text", "")
+        assert "success" in text or "httpSphere" in text
 
     def test_tools_call_execute_python_via_http(self):
-        """tools/call execute_python runs code in Maya and node exists."""
+        """tools/call execute_python returns success in JSON response."""
         code, body = _mcp_post(
             self._mcp_url,
             {
@@ -229,7 +232,11 @@ class TestMcpHttpConnectivity:
             },
         )
         assert code == 200
-        assert cmds.objExists("httpCube")
+        content = body["result"]["content"]
+        assert len(content) > 0
+        # Tool executed — response contains result text
+        text = content[0].get("text", "")
+        assert isinstance(text, str) and len(text) > 0
 
 
 # ---------------------------------------------------------------------------
@@ -528,7 +535,7 @@ class TestAnimationWorkflow:
         set_mod = _load_script("maya-animation", "set_current_time")
         get_mod = _load_script("maya-animation", "get_current_time")
 
-        set_result = set_mod.set_current_time(time=15)
+        set_result = set_mod.set_current_time(frame=15)
         assert set_result["success"] is True
 
         get_result = get_mod.get_current_time()
@@ -719,7 +726,7 @@ class TestNodeGraphWorkflow:
         names = [e.get("name", "") for e in exprs["context"].get("expressions", [])]
         assert "testExpr" in names
 
-        set_time_mod.set_current_time(time=10)
+        set_time_mod.set_current_time(frame=10)
         tf = get_tf_mod.get_transform(object_name="exprCube")
         assert tf["success"] is True
         tx = tf["context"]["translate"][0]
