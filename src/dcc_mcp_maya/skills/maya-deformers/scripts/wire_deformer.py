@@ -62,7 +62,7 @@ def wire_deformer(
         wire_kwargs = {
             "wire": curves,
             "dropoffDistance": [(i, dropoff_distance) for i in range(len(curves))],
-        }  # type: Dict
+        }
         if name:
             wire_kwargs["name"] = name
 
