@@ -144,7 +144,6 @@ class MayaMcpServer:
         self._server = McpHttpServer(self._registry, self._config)
         self._handle = None
         self._executor = None
-        self._poll_job = None
         self._enable_executor = enable_main_thread_executor and _maya_available()
 
         if self._enable_executor:
@@ -225,7 +224,7 @@ class MayaMcpServer:
         loaded = 0
         failed = 0
         for summary in self._server.list_skills():
-            # SkillSummary object (v0.12.10+) or dict (older versions)
+            # list_skills() returns dicts in current dcc-mcp-core; SkillSummary objects in future
             skill_name = summary.name if hasattr(summary, "name") else summary["name"]
             try:
                 self._server.load_skill(skill_name)
