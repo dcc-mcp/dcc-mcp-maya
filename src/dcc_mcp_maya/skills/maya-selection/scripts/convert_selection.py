@@ -1,4 +1,5 @@
 """Convert the current selection to a different component type."""
+
 from dcc_mcp_core import error_result, success_result
 
 _CONVERT_FLAGS = {
@@ -28,9 +29,7 @@ def run(params):
     if target not in _CONVERT_FLAGS:
         return error_result(
             "Invalid target type",
-            "'{}' is not a valid target. Choose from: {}".format(
-                target, ", ".join(sorted(_CONVERT_FLAGS.keys()))
-            ),
+            "'{}' is not a valid target. Choose from: {}".format(target, ", ".join(sorted(_CONVERT_FLAGS.keys()))),
         )
 
     try:

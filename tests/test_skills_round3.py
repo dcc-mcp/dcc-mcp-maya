@@ -23,9 +23,7 @@ def _load_script(skill_dir, script_name):
     """Load a skill script from its file path with a unique module name."""
     _MOD_COUNTER[0] += 1
     script_path = _SKILLS_ROOT / skill_dir / "scripts" / "{}.py".format(script_name)
-    module_name = "skill_r3_{}_{}_{}".format(
-        skill_dir.replace("-", "_"), script_name, _MOD_COUNTER[0]
-    )
+    module_name = "skill_r3_{}_{}_{}".format(skill_dir.replace("-", "_"), script_name, _MOD_COUNTER[0])
     spec = importlib.util.spec_from_file_location(module_name, str(script_path))
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
@@ -236,9 +234,7 @@ class TestSetNamespace:
     def test_create_namespace_if_missing(self):
         _, cmds_mock, _, modules = _make_maya_env()
         # namespace does not exist
-        cmds_mock.namespace.side_effect = lambda **kw: (
-            False if kw.get("exists") else None
-        )
+        cmds_mock.namespace.side_effect = lambda **kw: False if kw.get("exists") else None
         cmds_mock.rename.return_value = "newns:pSphere1"
         with patch.dict(sys.modules, modules):
             mod = _load_script("maya-namespaces", "set_namespace")

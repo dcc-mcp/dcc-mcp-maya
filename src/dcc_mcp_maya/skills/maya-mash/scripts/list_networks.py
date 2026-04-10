@@ -1,4 +1,5 @@
 """List all MASH networks in the scene."""
+
 from dcc_mcp_core import error_result, success_result
 
 

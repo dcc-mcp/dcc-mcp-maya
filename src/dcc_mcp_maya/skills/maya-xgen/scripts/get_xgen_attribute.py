@@ -1,4 +1,5 @@
 """Get an attribute value from an XGen description."""
+
 from dcc_mcp_core import error_result, success_result
 
 

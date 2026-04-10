@@ -620,9 +620,7 @@ class TestConnectBifrostPorts:
 
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             mod = _load_script("maya-bifrost", "connect_bifrost_ports")
-            result = mod.connect_bifrost_ports(
-                "bifrostGraph1", "/src", "out", "/dst", "in"
-            )
+            result = mod.connect_bifrost_ports("bifrostGraph1", "/src", "out", "/dst", "in")
 
         assert result["success"] is False
 

@@ -22,9 +22,7 @@ def _load_script(skill_dir, script_name):
     """Load a skill script with a unique module name."""
     _MOD_COUNTER[0] += 1
     script_path = _SKILLS_ROOT / skill_dir / "scripts" / "{}.py".format(script_name)
-    module_name = "skill_r9_{}_{}_{}".format(
-        skill_dir.replace("-", "_"), script_name, _MOD_COUNTER[0]
-    )
+    module_name = "skill_r9_{}_{}_{}".format(skill_dir.replace("-", "_"), script_name, _MOD_COUNTER[0])
     spec = importlib.util.spec_from_file_location(module_name, str(script_path))
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
@@ -145,17 +143,13 @@ class TestDeleteKeyframes:
     def test_delete_with_range(self):
         cmds_ov = {"cutKey": MagicMock(return_value=2)}
         result = _run_func(
-            "maya-animation", "delete_keyframes", cmds_ov,
-            object_name="pCube1", start_frame=1.0, end_frame=10.0
+            "maya-animation", "delete_keyframes", cmds_ov, object_name="pCube1", start_frame=1.0, end_frame=10.0
         )
         assert result["success"] is True
 
     def test_delete_with_attributes(self):
         cmds_ov = {"cutKey": MagicMock(return_value=3)}
-        result = _run_func(
-            "maya-animation", "delete_keyframes", cmds_ov,
-            object_name="pCube1", attributes=["tx", "ty"]
-        )
+        result = _run_func("maya-animation", "delete_keyframes", cmds_ov, object_name="pCube1", attributes=["tx", "ty"])
         assert result["success"] is True
 
     def test_object_not_found(self):
@@ -182,10 +176,12 @@ class TestListAnimationCurves:
         assert result["context"]["count"] == 0
 
     def test_with_curves(self):
-        listConns_mock = MagicMock(side_effect=[
-            ["pCube1_translateX"],   # listConnections for object
-            ["pCube1.translateX"],   # listConnections for driven plugs
-        ])
+        listConns_mock = MagicMock(
+            side_effect=[
+                ["pCube1_translateX"],  # listConnections for object
+                ["pCube1.translateX"],  # listConnections for driven plugs
+            ]
+        )
         cmds_ov = {
             "listConnections": listConns_mock,
             "objectType": MagicMock(return_value="animCurveTL"),
@@ -197,10 +193,7 @@ class TestListAnimationCurves:
 
     def test_with_specific_attribute(self):
         cmds_ov = {"listConnections": MagicMock(return_value=[])}
-        result = _run_func(
-            "maya-animation", "list_animation_curves", cmds_ov,
-            object_name="pCube1", attribute="tx"
-        )
+        result = _run_func("maya-animation", "list_animation_curves", cmds_ov, object_name="pCube1", attribute="tx")
         assert result["success"] is True
 
     def test_object_not_found(self):
@@ -209,10 +202,12 @@ class TestListAnimationCurves:
         assert result["success"] is False
 
     def test_curve_structure(self):
-        listConns_mock = MagicMock(side_effect=[
-            ["myCurve"],
-            ["pCube1.translateX"],
-        ])
+        listConns_mock = MagicMock(
+            side_effect=[
+                ["myCurve"],
+                ["pCube1.translateX"],
+            ]
+        )
         cmds_ov = {
             "listConnections": listConns_mock,
             "objectType": MagicMock(return_value="animCurveTL"),
@@ -234,30 +229,41 @@ class TestListAnimationCurves:
 class TestSetAnimationCurveTangent:
     def test_set_auto_tangent(self):
         result = _run_func(
-            "maya-animation", "set_animation_curve_tangent", {},
-            object_name="pCube1", attribute="tx", tangent_type="auto"
+            "maya-animation",
+            "set_animation_curve_tangent",
+            {},
+            object_name="pCube1",
+            attribute="tx",
+            tangent_type="auto",
         )
         assert result["success"] is True
 
     def test_set_linear_tangent(self):
         result = _run_func(
-            "maya-animation", "set_animation_curve_tangent", {},
-            object_name="pCube1", attribute="tx", tangent_type="linear"
+            "maya-animation",
+            "set_animation_curve_tangent",
+            {},
+            object_name="pCube1",
+            attribute="tx",
+            tangent_type="linear",
         )
         assert result["success"] is True
 
     def test_invalid_tangent_type(self):
         result = _run_func(
-            "maya-animation", "set_animation_curve_tangent", {},
-            object_name="pCube1", attribute="tx", tangent_type="invalid"
+            "maya-animation",
+            "set_animation_curve_tangent",
+            {},
+            object_name="pCube1",
+            attribute="tx",
+            tangent_type="invalid",
         )
         assert result["success"] is False
 
     def test_object_not_found(self):
         cmds_ov = {"objExists": MagicMock(return_value=False)}
         result = _run_func(
-            "maya-animation", "set_animation_curve_tangent", cmds_ov,
-            object_name="missing", attribute="tx"
+            "maya-animation", "set_animation_curve_tangent", cmds_ov, object_name="missing", attribute="tx"
         )
         assert result["success"] is False
 
@@ -267,32 +273,39 @@ class TestSetAnimationCurveTangent:
             "objExists": MagicMock(side_effect=lambda x: "." not in x),
         }
         result = _run_func(
-            "maya-animation", "set_animation_curve_tangent", cmds_ov,
-            object_name="pCube1", attribute="tx"
+            "maya-animation", "set_animation_curve_tangent", cmds_ov, object_name="pCube1", attribute="tx"
         )
         assert result["success"] is False
 
     def test_with_specific_frame(self):
         result = _run_func(
-            "maya-animation", "set_animation_curve_tangent", {},
-            object_name="pCube1", attribute="tx", frame=5.0, tangent_type="flat"
+            "maya-animation",
+            "set_animation_curve_tangent",
+            {},
+            object_name="pCube1",
+            attribute="tx",
+            frame=5.0,
+            tangent_type="flat",
         )
         assert result["success"] is True
         assert result["context"]["frame"] == 5.0
 
     def test_separate_in_out_tangent(self):
         result = _run_func(
-            "maya-animation", "set_animation_curve_tangent", {},
-            object_name="pCube1", attribute="tx",
-            in_tangent_type="linear", out_tangent_type="flat"
+            "maya-animation",
+            "set_animation_curve_tangent",
+            {},
+            object_name="pCube1",
+            attribute="tx",
+            in_tangent_type="linear",
+            out_tangent_type="flat",
         )
         assert result["success"] is True
 
     def test_exception(self):
         cmds_ov = {"keyTangent": MagicMock(side_effect=RuntimeError("error"))}
         result = _run_func(
-            "maya-animation", "set_animation_curve_tangent", cmds_ov,
-            object_name="pCube1", attribute="tx"
+            "maya-animation", "set_animation_curve_tangent", cmds_ov, object_name="pCube1", attribute="tx"
         )
         assert result["success"] is False
 
@@ -305,9 +318,7 @@ class TestSetAnimationCurveTangent:
 class TestBakeSimulation:
     def test_bake_with_objects(self):
         result = _run_func(
-            "maya-animation", "bake_simulation", {},
-            objects=["pCube1", "pSphere1"],
-            start_frame=1.0, end_frame=50.0
+            "maya-animation", "bake_simulation", {}, objects=["pCube1", "pSphere1"], start_frame=1.0, end_frame=50.0
         )
         assert result["success"] is True
         assert result["context"]["object_count"] == 2
@@ -324,24 +335,17 @@ class TestBakeSimulation:
 
     def test_bake_missing_object(self):
         cmds_ov = {"objExists": MagicMock(side_effect=lambda x: x != "missing")}
-        result = _run_func(
-            "maya-animation", "bake_simulation", cmds_ov,
-            objects=["pCube1", "missing"]
-        )
+        result = _run_func("maya-animation", "bake_simulation", cmds_ov, objects=["pCube1", "missing"])
         assert result["success"] is False
 
     def test_exception(self):
         cmds_ov = {"bakeSimulation": MagicMock(side_effect=RuntimeError("error"))}
-        result = _run_func(
-            "maya-animation", "bake_simulation", cmds_ov,
-            objects=["pCube1"]
-        )
+        result = _run_func("maya-animation", "bake_simulation", cmds_ov, objects=["pCube1"])
         assert result["success"] is False
 
     def test_context_has_frame_range(self):
         result = _run_func(
-            "maya-animation", "bake_simulation", {},
-            objects=["pCube1"], start_frame=5.0, end_frame=100.0
+            "maya-animation", "bake_simulation", {}, objects=["pCube1"], start_frame=5.0, end_frame=100.0
         )
         assert result["context"]["start_frame"] == 5.0
         assert result["context"]["end_frame"] == 100.0
@@ -355,9 +359,7 @@ class TestBakeSimulation:
 class TestBakeConstraints:
     def test_bake_with_objects(self):
         result = _run_func(
-            "maya-animation", "bake_constraints", {},
-            objects=["pCube1"],
-            start_frame=1.0, end_frame=24.0
+            "maya-animation", "bake_constraints", {}, objects=["pCube1"], start_frame=1.0, end_frame=24.0
         )
         assert result["success"] is True
         assert result["context"]["object_count"] == 1
@@ -374,10 +376,7 @@ class TestBakeConstraints:
 
     def test_bake_missing_object(self):
         cmds_ov = {"objExists": MagicMock(side_effect=lambda x: x != "noObj")}
-        result = _run_func(
-            "maya-animation", "bake_constraints", cmds_ov,
-            objects=["pCube1", "noObj"]
-        )
+        result = _run_func("maya-animation", "bake_constraints", cmds_ov, objects=["pCube1", "noObj"])
         assert result["success"] is False
 
     def test_remove_constraints(self):
@@ -386,25 +385,16 @@ class TestBakeConstraints:
             "listRelatives": listRelatives_mock,
             "delete": MagicMock(),
         }
-        result = _run_func(
-            "maya-animation", "bake_constraints", cmds_ov,
-            objects=["pCube1"], remove_constraints=True
-        )
+        result = _run_func("maya-animation", "bake_constraints", cmds_ov, objects=["pCube1"], remove_constraints=True)
         assert result["success"] is True
 
     def test_exception(self):
         cmds_ov = {"bakeSimulation": MagicMock(side_effect=RuntimeError("error"))}
-        result = _run_func(
-            "maya-animation", "bake_constraints", cmds_ov,
-            objects=["pCube1"]
-        )
+        result = _run_func("maya-animation", "bake_constraints", cmds_ov, objects=["pCube1"])
         assert result["success"] is False
 
     def test_removed_constraints_in_context(self):
-        result = _run_func(
-            "maya-animation", "bake_constraints", {},
-            objects=["pCube1"], remove_constraints=False
-        )
+        result = _run_func("maya-animation", "bake_constraints", {}, objects=["pCube1"], remove_constraints=False)
         assert "removed_constraints" in result["context"]
 
 
@@ -421,8 +411,7 @@ class TestExportAnimationCurves:
             "file": MagicMock(),
         }
         result = _run_func(
-            "maya-animation", "export_animation_curves", cmds_ov,
-            object_name="pCube1", file_path="/tmp/anim.ma"
+            "maya-animation", "export_animation_curves", cmds_ov, object_name="pCube1", file_path="/tmp/anim.ma"
         )
         assert result["success"] is True
         assert result["context"]["curve_count"] == 1
@@ -433,16 +422,14 @@ class TestExportAnimationCurves:
             "playbackOptions": MagicMock(return_value=1.0),
         }
         result = _run_func(
-            "maya-animation", "export_animation_curves", cmds_ov,
-            object_name="pCube1", file_path="/tmp/anim.ma"
+            "maya-animation", "export_animation_curves", cmds_ov, object_name="pCube1", file_path="/tmp/anim.ma"
         )
         assert result["success"] is False
 
     def test_object_not_found(self):
         cmds_ov = {"objExists": MagicMock(return_value=False)}
         result = _run_func(
-            "maya-animation", "export_animation_curves", cmds_ov,
-            object_name="missing", file_path="/tmp/anim.ma"
+            "maya-animation", "export_animation_curves", cmds_ov, object_name="missing", file_path="/tmp/anim.ma"
         )
         assert result["success"] is False
 
@@ -453,8 +440,7 @@ class TestExportAnimationCurves:
             "file": MagicMock(),
         }
         result = _run_func(
-            "maya-animation", "export_animation_curves", cmds_ov,
-            object_name="pCube1", file_path="/tmp/anim.mb"
+            "maya-animation", "export_animation_curves", cmds_ov, object_name="pCube1", file_path="/tmp/anim.mb"
         )
         assert result["success"] is True
 
@@ -465,8 +451,7 @@ class TestExportAnimationCurves:
             "file": MagicMock(side_effect=RuntimeError("permission denied")),
         }
         result = _run_func(
-            "maya-animation", "export_animation_curves", cmds_ov,
-            object_name="pCube1", file_path="/tmp/anim.ma"
+            "maya-animation", "export_animation_curves", cmds_ov, object_name="pCube1", file_path="/tmp/anim.ma"
         )
         assert result["success"] is False
 
@@ -479,18 +464,12 @@ class TestExportAnimationCurves:
 class TestImportAnimationCurves:
     def test_import_success(self):
         with patch("os.path.isfile", return_value=True):
-            result = _run_func(
-                "maya-animation", "import_animation_curves", {},
-                file_path="/tmp/anim.ma"
-            )
+            result = _run_func("maya-animation", "import_animation_curves", {}, file_path="/tmp/anim.ma")
         assert result["success"] is True
 
     def test_file_not_found(self):
         with patch("os.path.isfile", return_value=False):
-            result = _run_func(
-                "maya-animation", "import_animation_curves", {},
-                file_path="/tmp/nonexistent.ma"
-            )
+            result = _run_func("maya-animation", "import_animation_curves", {}, file_path="/tmp/nonexistent.ma")
         assert result["success"] is False
 
     def test_import_with_target_object(self):
@@ -501,8 +480,7 @@ class TestImportAnimationCurves:
         }
         with patch("os.path.isfile", return_value=True):
             result = _run_func(
-                "maya-animation", "import_animation_curves", cmds_ov,
-                file_path="/tmp/anim.ma", target_object="pSphere1"
+                "maya-animation", "import_animation_curves", cmds_ov, file_path="/tmp/anim.ma", target_object="pSphere1"
             )
         assert result["success"] is True
         assert result["context"]["target_object"] == "pSphere1"
@@ -510,17 +488,11 @@ class TestImportAnimationCurves:
     def test_exception(self):
         cmds_ov = {"file": MagicMock(side_effect=RuntimeError("error"))}
         with patch("os.path.isfile", return_value=True):
-            result = _run_func(
-                "maya-animation", "import_animation_curves", cmds_ov,
-                file_path="/tmp/anim.ma"
-            )
+            result = _run_func("maya-animation", "import_animation_curves", cmds_ov, file_path="/tmp/anim.ma")
         assert result["success"] is False
 
     def test_merge_flag_in_context(self):
         with patch("os.path.isfile", return_value=True):
-            result = _run_func(
-                "maya-animation", "import_animation_curves", {},
-                file_path="/tmp/anim.ma", merge=False
-            )
+            result = _run_func("maya-animation", "import_animation_curves", {}, file_path="/tmp/anim.ma", merge=False)
         assert result["success"] is True
         assert result["context"]["merge"] is False
