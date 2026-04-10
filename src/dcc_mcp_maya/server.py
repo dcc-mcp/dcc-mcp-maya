@@ -122,8 +122,6 @@ class MayaMcpServer:
         port: TCP port to listen on.  Use ``0`` for a random available port.
         server_name: Name reported in MCP ``initialize`` response.
         server_version: Version reported in MCP ``initialize`` response.
-        enable_main_thread_executor: Reserved for future main-thread dispatch
-            integration; currently a no-op placeholder.
     """
 
     def __init__(
@@ -131,7 +129,6 @@ class MayaMcpServer:
         port: int = 8765,
         server_name: str = "maya-mcp",
         server_version: str = "0.3.0",
-        enable_main_thread_executor: bool = True,
     ) -> None:
         from dcc_mcp_core import ActionRegistry, McpHttpConfig, McpHttpServer  # noqa: PLC0415
 
@@ -143,42 +140,6 @@ class MayaMcpServer:
         )
         self._server = McpHttpServer(self._registry, self._config)
         self._handle = None
-        self._executor = None
-        self._enable_executor = enable_main_thread_executor and _maya_available()
-
-        if self._enable_executor:
-            self._setup_executor()
-
-    # ── executor / main-thread safety ─────────────────────────────────────────
-
-    def _setup_executor(self) -> None:
-        """Placeholder for main-thread dispatch setup.
-
-        DeferredExecutor was removed from dcc-mcp-core >=0.12.10.
-        Main-thread safety is now handled by the Maya poll callback pattern
-        via ``maya.utils.executeDeferred``.
-        """
-        logger.debug("Main-thread executor: using maya.utils.executeDeferred poll pattern")
-
-    def _setup_poll_callback(self) -> None:
-        """Register a repeating Maya callback to drain the executor queue."""
-        if not self._enable_executor or not _maya_available():
-            return
-        try:
-            import maya.utils  # noqa: PLC0415
-
-            def repeating_poll() -> None:
-                try:
-                    if self._executor is not None:
-                        self._executor.poll_pending()
-                except Exception as exc:  # pragma: no cover
-                    logger.debug("Executor poll error: %s", exc)
-                maya.utils.executeDeferred(repeating_poll)
-
-            maya.utils.executeDeferred(repeating_poll)
-            logger.debug("Executor poll callback installed via maya.utils.executeDeferred")
-        except Exception as exc:
-            logger.warning("Could not install poll callback: %s", exc)
 
     # ── action registration ────────────────────────────────────────────────────
 
@@ -224,7 +185,7 @@ class MayaMcpServer:
         loaded = 0
         failed = 0
         for summary in self._server.list_skills():
-            # list_skills() returns dicts in current dcc-mcp-core; SkillSummary objects in future
+            # dcc-mcp-core <0.13: list_skills() returns dicts; >=0.13: returns SkillSummary objects
             skill_name = summary.name if hasattr(summary, "name") else summary["name"]
             try:
                 self._server.load_skill(skill_name)
@@ -255,10 +216,6 @@ class MayaMcpServer:
 
         self._handle = self._server.start()
         logger.info("Maya MCP server started at %s", self._handle.mcp_url())
-
-        if self._enable_executor:
-            self._setup_poll_callback()
-
         return self._handle
 
     def stop(self) -> None:

@@ -1,9 +1,8 @@
-"""Additional server.py tests to close remaining coverage gaps.
+﻿"""Additional server.py tests to close remaining coverage gaps.
 
 Targets:
 - lines 87-91: _BUILTIN_SKILLS_DIR.is_dir() False branch
 - lines 97-100: get_skills_dir() default path appended
-- lines 172-177: repeating_poll closure (executor poll + recursive deferred)
 - lines 233-235: load_skill failure warning path
 - line 332: start_server with extra_skill_paths
 """
@@ -93,86 +92,6 @@ class TestCollectSkillSearchPathsCoverage:
         assert None not in paths
 
 
-# ── repeating_poll closure coverage ───────────────────────────────────────────
-
-
-class TestRepeatingPollClosure:
-    def test_repeating_poll_invokes_executor_poll_pending(self):
-        """repeating_poll calls executor.poll_pending() when executor is set (lines 172-177)."""
-        srv_mod = _import_server()
-        server = srv_mod.MayaMcpServer(port=0, enable_main_thread_executor=True)
-
-        # Install a fake executor so the if-branch is taken
-        fake_executor = MagicMock()
-        server._executor = fake_executor
-
-        # Capture the callback passed to executeDeferred, then invoke it
-        import maya.utils
-
-        captured_callbacks = []
-
-        def capture_deferred(fn):
-            captured_callbacks.append(fn)
-
-        maya.utils.executeDeferred.side_effect = capture_deferred
-        server._setup_poll_callback()
-
-        # The first callback is the initial repeating_poll
-        assert len(captured_callbacks) >= 1
-        first_cb = captured_callbacks[0]
-        # Reset side_effect so the recursive call doesn't keep appending forever
-        maya.utils.executeDeferred.side_effect = None
-        first_cb()
-
-        # executor.poll_pending() must have been called exactly once
-        fake_executor.poll_pending.assert_called_once()
-
-    def test_repeating_poll_executor_none_skips_poll(self):
-        """repeating_poll with executor=None skips poll_pending (lines 173-174 False branch)."""
-        srv_mod = _import_server()
-        server = srv_mod.MayaMcpServer(port=0, enable_main_thread_executor=True)
-        server._executor = None  # explicitly None
-
-        import maya.utils
-
-        captured_callbacks = []
-
-        def capture_deferred(fn):
-            captured_callbacks.append(fn)
-
-        maya.utils.executeDeferred.side_effect = capture_deferred
-        server._setup_poll_callback()
-
-        assert len(captured_callbacks) >= 1
-        first_cb = captured_callbacks[0]
-        maya.utils.executeDeferred.side_effect = None
-        # Should complete without error even though executor is None
-        first_cb()
-
-    def test_repeating_poll_reschedules_itself(self):
-        """repeating_poll calls executeDeferred again to reschedule (line 177)."""
-        srv_mod = _import_server()
-        server = srv_mod.MayaMcpServer(port=0, enable_main_thread_executor=True)
-
-        import maya.utils
-
-        captured_callbacks = []
-
-        def capture_deferred(fn):
-            captured_callbacks.append(fn)
-
-        maya.utils.executeDeferred.side_effect = capture_deferred
-        server._setup_poll_callback()
-
-        initial_call_count = len(captured_callbacks)
-        # Run the first poll callback; it should re-schedule
-        maya.utils.executeDeferred.side_effect = capture_deferred
-        first_cb = captured_callbacks[0]
-        first_cb()
-
-        # One more call from inside repeating_poll (self-reschedule)
-        assert len(captured_callbacks) == initial_call_count + 1
-
 
 # ── load_skill failure path (lines 233-235) ───────────────────────────────────
 
@@ -181,7 +100,7 @@ class TestLoadSkillFailure:
     def test_load_skill_failure_logs_warning_and_continues(self):
         """If load_skill raises, a warning is logged and iteration continues (lines 233-235)."""
         srv_mod = _import_server()
-        server = srv_mod.MayaMcpServer(port=0, enable_main_thread_executor=False)
+        server = srv_mod.MayaMcpServer(port=0)
 
         # McpHttpServer is a Rust extension; replace the entire _server attribute
         # with a MagicMock so we can control discover/list_skills/load_skill.
@@ -208,7 +127,7 @@ class TestLoadSkillFailure:
     def test_load_skill_mixed_success_failure(self):
         """Counts loaded/failed correctly when some skills succeed and some fail."""
         srv_mod = _import_server()
-        server = srv_mod.MayaMcpServer(port=0, enable_main_thread_executor=False)
+        server = srv_mod.MayaMcpServer(port=0)
 
         mock_mcp_server = MagicMock()
         mock_mcp_server.discover.return_value = 2

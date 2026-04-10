@@ -1,4 +1,4 @@
-"""End-to-end tests that require a real Maya standalone interpreter.
+﻿"""End-to-end tests that require a real Maya standalone interpreter.
 
 These tests are skipped unless ``maya.standalone`` can be imported and
 initialised.  In CI they run inside the ``tahv/mayapy`` Docker image via
@@ -87,7 +87,7 @@ class TestServerLifecycle:
     def test_start_and_stop(self):
         from dcc_mcp_maya.server import MayaMcpServer
 
-        server = MayaMcpServer(port=0, enable_main_thread_executor=False)
+        server = MayaMcpServer(port=0)
         server.register_builtin_actions()
         handle = server.start()
 
@@ -110,7 +110,7 @@ class TestServerLifecycle:
         """Skills are discovered via SKILL.md and registered as MCP tools."""
         from dcc_mcp_maya.server import MayaMcpServer
 
-        server = MayaMcpServer(port=0, enable_main_thread_executor=False)
+        server = MayaMcpServer(port=0)
         server.register_builtin_actions()
         actions = server.registry.list_actions()
         names = {a["name"] for a in actions}
@@ -138,7 +138,7 @@ class TestMcpHttpConnectivity:
         from dcc_mcp_maya.server import MayaMcpServer
 
         _new_scene()
-        server = MayaMcpServer(port=0, enable_main_thread_executor=False)
+        server = MayaMcpServer(port=0)
         server.register_builtin_actions()
         handle = server.start()
         request.cls._mcp_url = handle.mcp_url()
@@ -783,7 +783,7 @@ class TestMultiInstanceIsolation:
         """Create, populate and start a fresh MayaMcpServer on a random port."""
         from dcc_mcp_maya.server import MayaMcpServer
 
-        srv = MayaMcpServer(port=0, enable_main_thread_executor=False)
+        srv = MayaMcpServer(port=0)
         srv.register_builtin_actions()
         handle = srv.start()
         return srv, handle
@@ -900,7 +900,7 @@ class TestMultiInstanceIsolation:
 
             from dcc_mcp_maya.server import MayaMcpServer
 
-            srv_a2 = MayaMcpServer(port=0, enable_main_thread_executor=False)
+            srv_a2 = MayaMcpServer(port=0)
             srv_a2.register_builtin_actions()
             srv_a2.start()
 
@@ -936,11 +936,11 @@ class TestMultiInstanceConcurrentWorkflows:
         _new_scene()
         from dcc_mcp_maya.server import MayaMcpServer
 
-        self._srv_a = MayaMcpServer(port=0, server_name="maya-worker-a", enable_main_thread_executor=False)
+        self._srv_a = MayaMcpServer(port=0, server_name="maya-worker-a")
         self._srv_a.register_builtin_actions()
         self._h_a = self._srv_a.start()
 
-        self._srv_b = MayaMcpServer(port=0, server_name="maya-worker-b", enable_main_thread_executor=False)
+        self._srv_b = MayaMcpServer(port=0, server_name="maya-worker-b")
         self._srv_b.register_builtin_actions()
         self._h_b = self._srv_b.start()
         yield

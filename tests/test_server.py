@@ -1,4 +1,4 @@
-"""Tests for MayaMcpServer (no real Maya required — maya.cmds is mocked)."""
+﻿"""Tests for MayaMcpServer (no real Maya required — maya.cmds is mocked)."""
 
 # Import future modules
 from __future__ import annotations
@@ -63,7 +63,7 @@ class TestMayaMcpServerApi:
     def test_start_stop(self):
         """Server starts, returns a handle with mcp_url, then stops."""
         srv_mod = _import_server()
-        server = srv_mod.MayaMcpServer(port=0, enable_main_thread_executor=False)
+        server = srv_mod.MayaMcpServer(port=0)
         server.register_builtin_actions()
         handle = server.start()
         assert handle is not None
@@ -76,7 +76,7 @@ class TestMayaMcpServerApi:
     def test_double_start_returns_same_handle(self):
         """Calling start() twice returns the same handle."""
         srv_mod = _import_server()
-        server = srv_mod.MayaMcpServer(port=0, enable_main_thread_executor=False)
+        server = srv_mod.MayaMcpServer(port=0)
         h1 = server.start()
         h2 = server.start()
         assert h1 is h2
@@ -85,7 +85,7 @@ class TestMayaMcpServerApi:
     def test_registry_has_builtins(self):
         """register_builtin_actions populates the registry."""
         srv_mod = _import_server()
-        server = srv_mod.MayaMcpServer(port=0, enable_main_thread_executor=False)
+        server = srv_mod.MayaMcpServer(port=0)
         # Pass explicit skills path to ensure discovery regardless of install mode
         server.register_builtin_actions(extra_skill_paths=[_builtin_skills_dir()])
         actions = server.registry.list_actions()
@@ -97,7 +97,7 @@ class TestMayaMcpServerApi:
 
     def test_mcp_url_none_when_not_running(self):
         srv_mod = _import_server()
-        server = srv_mod.MayaMcpServer(port=0, enable_main_thread_executor=False)
+        server = srv_mod.MayaMcpServer(port=0)
         assert server.mcp_url is None
 
 
@@ -107,7 +107,7 @@ class TestMayaMcpServerHttp:
     @pytest.fixture
     def running_server(self):
         srv_mod = _import_server()
-        server = srv_mod.MayaMcpServer(port=0, enable_main_thread_executor=False)
+        server = srv_mod.MayaMcpServer(port=0)
         # Pass explicit skills path to ensure discovery regardless of install mode
         server.register_builtin_actions(extra_skill_paths=[_builtin_skills_dir()])
         handle = server.start()
