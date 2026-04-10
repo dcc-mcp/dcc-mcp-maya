@@ -5,29 +5,39 @@ Starts a standards-compliant MCP server (2025-03-26 spec) inside Maya using
 tools that any compatible MCP host (Claude Desktop, OpenClaw, Cursor …) can
 call directly.
 
-Skills SOP (v0.12.12+)
------------------------
-Actions are discovered and loaded using ``McpHttpServer``'s built-in
-SkillCatalog API rather than manually calling ``scan_and_load`` and
-``registry.register()``.  The flow is:
+Skills-First API (v0.12.12+)
+-----------------------------
+The preferred entry point is :func:`create_skill_manager` from ``dcc-mcp-core``,
+which wires up ``ActionRegistry``, ``ActionDispatcher``, ``SkillCatalog`` and
+auto-discovers skills from env vars in one call.
 
-1. ``server.discover(extra_paths=[...], dcc_name="maya")`` scans every
-   directory on the search path for ``SKILL.md`` files and caches metadata.
-2. ``server.load_skill(skill_name)`` registers all scripts under
-   ``scripts/`` as MCP actions with the canonical naming convention::
+:class:`MayaMcpServer` wraps this factory and adds Maya-specific path discovery
+so built-in skills shipped with this package are always included.
 
-       {skill_name.replace("-", "_")}__{script_stem}
+Flow::
 
-   e.g.  ``maya_scene__new_scene``, ``maya_primitives__create_sphere``
+    server = MayaMcpServer(port=8765)
+    server.register_builtin_actions()   # discover & load all skills
+    handle = server.start()
+    print(handle.mcp_url())             # http://127.0.0.1:8765/mcp
+    handle.shutdown()
 
-3. A ``SkillWatcher`` can optionally be attached for hot-reload during
-   development (enabled via ``enable_skill_watcher=True``).
+Or via the module-level singleton helper::
+
+    import dcc_mcp_maya
+    handle = dcc_mcp_maya.start_server(port=8765)
+    print(handle.mcp_url())
+
+Action naming convention (unchanged)::
+
+    {skill_name.replace("-", "_")}__{script_stem}
+    # e.g. maya_scene__new_scene, maya_primitives__create_sphere
 
 Search path resolution (highest → lowest priority):
 
 1. ``extra_skill_paths`` supplied by the caller
 2. Built-in skills shipped with this package  (``src/dcc_mcp_maya/skills/``)
-3. ``DCC_MCP_MAYA_SKILL_PATHS`` environment variable (Maya-specific, via ``get_app_skill_paths_from_env``)
+3. ``DCC_MCP_MAYA_SKILL_PATHS`` environment variable (Maya-specific, v0.12.12+)
 4. ``DCC_MCP_SKILL_PATHS`` environment variable (global fallback)
 5. Platform default  (``dcc_mcp_core.get_skills_dir()``)
 
@@ -36,9 +46,7 @@ Architecture::
     Maya main thread                     Tokio worker thread
     ─────────────────                    ──────────────────────────
     MayaMcpServer.start()   ─────────►  McpHttpServer (axum HTTP)
-    maya.utils poll callback ◄─────────  handlers run on main thread
-        │
-        └─► maya.cmds / OpenMaya (main thread safe)
+                                         handlers called via registry
 """
 
 # Import future modules
@@ -106,9 +114,9 @@ def _collect_skill_search_paths(extra_paths: Optional[List[str]] = None) -> List
 class MayaMcpServer:
     """MCP Streamable HTTP server embedded inside Maya.
 
-    Uses the SkillCatalog API introduced in dcc-mcp-core v0.12.10:
-    ``server.discover()`` + ``server.load_skill()`` replace the legacy
-    manual ``scan_and_load`` + ``registry.register()`` pattern.
+    Uses the Skills-First API introduced in dcc-mcp-core v0.12.12:
+    :func:`dcc_mcp_core.create_skill_manager` wires up the full stack
+    (registry, dispatcher, catalog) in one call.
 
     Example::
 
@@ -122,8 +130,6 @@ class MayaMcpServer:
         port: TCP port to listen on.  Use ``0`` for a random available port.
         server_name: Name reported in MCP ``initialize`` response.
         server_version: Version reported in MCP ``initialize`` response.
-        enable_main_thread_executor: Reserved for future main-thread dispatch
-            integration; currently a no-op placeholder.
     """
 
     def __init__(
@@ -131,67 +137,36 @@ class MayaMcpServer:
         port: int = 8765,
         server_name: str = "maya-mcp",
         server_version: str = "0.3.0",
-        enable_main_thread_executor: bool = True,
     ) -> None:
-        from dcc_mcp_core import ActionRegistry, McpHttpConfig, McpHttpServer  # noqa: PLC0415
+        from dcc_mcp_core import McpHttpConfig, create_skill_manager  # noqa: PLC0415
 
-        self._registry = ActionRegistry()
         self._config = McpHttpConfig(
             port=port,
             server_name=server_name,
             server_version=server_version,
         )
-        self._server = McpHttpServer(self._registry, self._config)
+        # create_skill_manager pre-wires ActionRegistry + ActionDispatcher + SkillCatalog
+        # and auto-discovers skills from env vars (DCC_MCP_MAYA_SKILL_PATHS, DCC_MCP_SKILL_PATHS)
+        self._server = create_skill_manager("maya", self._config)
         self._handle = None
-        self._executor = None
-        self._poll_job = None
-        self._enable_executor = enable_main_thread_executor and _maya_available()
-
-        if self._enable_executor:
-            self._setup_executor()
-
-    # ── executor / main-thread safety ─────────────────────────────────────────
-
-    def _setup_executor(self) -> None:
-        """Placeholder for main-thread dispatch setup.
-
-        DeferredExecutor was removed from dcc-mcp-core >=0.12.10.
-        Main-thread safety is now handled by the Maya poll callback pattern
-        via ``maya.utils.executeDeferred``.
-        """
-        logger.debug("Main-thread executor: using maya.utils.executeDeferred poll pattern")
-
-    def _setup_poll_callback(self) -> None:
-        """Register a repeating Maya callback to drain the executor queue."""
-        if not self._enable_executor or not _maya_available():
-            return
-        try:
-            import maya.utils  # noqa: PLC0415
-
-            def repeating_poll() -> None:
-                try:
-                    if self._executor is not None:
-                        self._executor.poll_pending()
-                except Exception as exc:  # pragma: no cover
-                    logger.debug("Executor poll error: %s", exc)
-                maya.utils.executeDeferred(repeating_poll)
-
-            maya.utils.executeDeferred(repeating_poll)
-            logger.debug("Executor poll callback installed via maya.utils.executeDeferred")
-        except Exception as exc:
-            logger.warning("Could not install poll callback: %s", exc)
 
     # ── action registration ────────────────────────────────────────────────────
 
     @property
     def registry(self):
-        """The underlying ``ActionRegistry``."""
-        return self._registry
+        """The underlying ``ActionRegistry``.
+
+        .. deprecated::
+            With ``create_skill_manager`` (v0.12.12+), the registry is managed
+            internally by the ``McpHttpServer``.  Use ``self._server.list_skills()``
+            or the HTTP ``tools/list`` endpoint to inspect registered tools.
+        """
+        return getattr(self._server, "_registry", None)
 
     def register_builtin_actions(self, extra_skill_paths: Optional[List[str]] = None) -> "MayaMcpServer":
         """Discover and load all built-in Maya skills into the server.
 
-        Uses the dcc-mcp-core SkillCatalog API (v0.12.10+):
+        Uses the dcc-mcp-core SkillCatalog API (v0.12.12+):
 
         1. ``server.discover(extra_paths, dcc_name="maya")`` — scans all paths
            for ``SKILL.md`` files and caches skill metadata.
@@ -225,7 +200,6 @@ class MayaMcpServer:
         loaded = 0
         failed = 0
         for summary in self._server.list_skills():
-            # SkillSummary object (v0.12.10+) or dict (older versions)
             skill_name = summary.name if hasattr(summary, "name") else summary["name"]
             try:
                 self._server.load_skill(skill_name)
@@ -256,10 +230,6 @@ class MayaMcpServer:
 
         self._handle = self._server.start()
         logger.info("Maya MCP server started at %s", self._handle.mcp_url())
-
-        if self._enable_executor:
-            self._setup_poll_callback()
-
         return self._handle
 
     def stop(self) -> None:
@@ -294,10 +264,12 @@ def start_server(
 ) -> Any:
     """Start (or return the already-running) Maya MCP server.
 
-    Creates a module-level singleton ``MayaMcpServer``, optionally discovers
+    Creates a module-level singleton :class:`MayaMcpServer`, optionally discovers
     and loads all built-in Maya skills, and starts the HTTP server.
 
-    Skills are discovered via the dcc-mcp-core SkillCatalog API from:
+    Uses the dcc-mcp-core Skills-First API (``create_skill_manager``, v0.12.12+).
+    Skills are discovered from:
+
     - Built-in ``skills/`` directory in this package
     - ``DCC_MCP_MAYA_SKILL_PATHS`` environment variable (Maya-specific, v0.12.12+)
     - ``DCC_MCP_SKILL_PATHS`` environment variable (global fallback)
