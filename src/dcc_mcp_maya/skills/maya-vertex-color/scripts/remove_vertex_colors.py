@@ -27,12 +27,12 @@ def remove_vertex_colors(object_name: str, color_set: Optional[str] = None) -> d
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return error_result("Object not found: {}".format(object_name)).to_dict()
+            return error_result("Object not found: {}".format(object_name), "'{}' does not exist".format(object_name)).to_dict()
 
         if color_set:
             existing = cmds.polyColorSet(object_name, query=True, allColorSets=True) or []
             if color_set not in existing:
-                return error_result("Color set '{}' not found on '{}'".format(color_set, object_name)).to_dict()
+                return error_result("Color set '{}' not found on '{}'".format(color_set, object_name), "Available color sets: {}".format(existing)).to_dict()
             cmds.polyColorSet(object_name, delete=True, colorSet=color_set)
             removed = [color_set]
         else:

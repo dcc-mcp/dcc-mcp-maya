@@ -61,7 +61,7 @@ def sculpt_deformer(
         sculpt_kwargs = {
             "mode": mode_map[mode_lower],
             "maxDisplacement": max_displacement,
-        }  # type: Dict
+        }
         if name:
             sculpt_kwargs["name"] = name
 

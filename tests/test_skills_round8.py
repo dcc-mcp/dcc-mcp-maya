@@ -577,10 +577,6 @@ class TestGetMaterialConnections:
 
 class TestGetShaderAssignment:
     def test_with_shading_group(self):
-        cmds_ov = {
-            "listRelatives": MagicMock(return_value=["pCubeShape1"]),
-            "listConnections": MagicMock(return_value=["blinn1SG"]),
-        }
         # Second listConnections call for surfaceShader
         listConn_mock = MagicMock(side_effect=[["pCubeShape1"], ["blinn1"]])
         cmds_ov2 = {
