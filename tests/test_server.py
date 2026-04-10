@@ -63,7 +63,7 @@ class TestMayaMcpServerApi:
     def test_start_stop(self):
         """Server starts, returns a handle with mcp_url, then stops."""
         srv_mod = _import_server()
-        server = srv_mod.MayaMcpServer(port=0, enable_main_thread_executor=False)
+        server = srv_mod.MayaMcpServer(port=0)
         server.register_builtin_actions()
         handle = server.start()
         assert handle is not None
@@ -76,28 +76,29 @@ class TestMayaMcpServerApi:
     def test_double_start_returns_same_handle(self):
         """Calling start() twice returns the same handle."""
         srv_mod = _import_server()
-        server = srv_mod.MayaMcpServer(port=0, enable_main_thread_executor=False)
+        server = srv_mod.MayaMcpServer(port=0)
         h1 = server.start()
         h2 = server.start()
         assert h1 is h2
         server.stop()
 
     def test_registry_has_builtins(self):
-        """register_builtin_actions populates the registry."""
+        """register_builtin_actions loads skills into the SkillCatalog."""
         srv_mod = _import_server()
-        server = srv_mod.MayaMcpServer(port=0, enable_main_thread_executor=False)
+        server = srv_mod.MayaMcpServer(port=0)
         # Pass explicit skills path to ensure discovery regardless of install mode
         server.register_builtin_actions(extra_skill_paths=[_builtin_skills_dir()])
-        actions = server.registry.list_actions()
-        names = [a["name"] for a in actions]
-        # Skills SOP: action names follow {skill_name}__{script_stem}
-        assert "maya_primitives__create_sphere" in names
-        assert "maya_scripting__execute_mel" in names
-        assert "maya_scene__get_session_info" in names
+        # Verify skills are loaded via the SkillCatalog API
+        loaded_skills = [
+            s.name if hasattr(s, "name") else s["name"] for s in server._server.list_skills(status="loaded")
+        ]
+        assert "maya-primitives" in loaded_skills
+        assert "maya-scripting" in loaded_skills
+        assert "maya-scene" in loaded_skills
 
     def test_mcp_url_none_when_not_running(self):
         srv_mod = _import_server()
-        server = srv_mod.MayaMcpServer(port=0, enable_main_thread_executor=False)
+        server = srv_mod.MayaMcpServer(port=0)
         assert server.mcp_url is None
 
 
@@ -107,7 +108,7 @@ class TestMayaMcpServerHttp:
     @pytest.fixture
     def running_server(self):
         srv_mod = _import_server()
-        server = srv_mod.MayaMcpServer(port=0, enable_main_thread_executor=False)
+        server = srv_mod.MayaMcpServer(port=0)
         # Pass explicit skills path to ensure discovery regardless of install mode
         server.register_builtin_actions(extra_skill_paths=[_builtin_skills_dir()])
         handle = server.start()
