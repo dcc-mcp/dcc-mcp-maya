@@ -1,0 +1,92 @@
+"""Freeze translate, rotate, and/or scale transforms on one or more objects."""
+
+# Import future modules
+from __future__ import annotations
+
+# Import built-in modules
+import logging
+from typing import List, Optional
+
+logger = logging.getLogger(__name__)
+
+
+def freeze_transforms(
+    objects: List[str],
+    translate: bool = True,
+    rotate: bool = True,
+    scale: bool = True,
+    apply: bool = True,
+) -> dict:
+    """Freeze transforms on the given objects.
+
+    Zeroes out translate/rotate (values become 0) and normalises scale
+    (values become 1) without moving the object in world space.
+
+    Args:
+        objects: List of transform node names to freeze.
+        translate: Freeze translation if ``True``.
+        rotate: Freeze rotation if ``True``.
+        scale: Freeze scale if ``True``.
+        apply: If ``True`` (default) actually apply the freeze.  Set to
+            ``False`` to perform a dry-run that only validates inputs.
+
+    Returns:
+        ActionResultModel dict with ``context.frozen_objects``.
+    """
+    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
+
+    try:
+        import maya.cmds as cmds  # noqa: PLC0415
+
+        if not objects:
+            return error_result("No objects provided", "Pass at least one object name.").to_dict()
+
+        missing = [o for o in objects if not cmds.objExists(o)]
+        if missing:
+            return error_result(
+                "Objects not found",
+                "Missing: {}".format(", ".join(missing)),
+            ).to_dict()
+
+        if apply:
+            cmds.makeIdentity(
+                objects,
+                apply=True,
+                translate=translate,
+                rotate=rotate,
+                scale=scale,
+                normal=False,
+                preserveNormals=True,
+            )
+
+        frozen = []
+        for obj in objects:
+            entry = {"name": obj}
+            if translate:
+                entry["translate"] = list(cmds.getAttr("{}.translate".format(obj))[0])
+            if rotate:
+                entry["rotate"] = list(cmds.getAttr("{}.rotate".format(obj))[0])
+            if scale:
+                entry["scale"] = list(cmds.getAttr("{}.scale".format(obj))[0])
+            frozen.append(entry)
+
+        return success_result(
+            "Frozen transforms on {} object(s)".format(len(objects)),
+            prompt="Use reset_pivot to also centre the pivot, or match_transforms to align to another object.",
+            frozen_objects=frozen,
+        ).to_dict()
+    except ImportError:
+        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+    except Exception as exc:
+        logger.exception("freeze_transforms failed")
+        return error_result("Failed to freeze transforms", str(exc)).to_dict()
+
+
+def main(**kwargs):
+    return freeze_transforms(**kwargs)
+
+
+if __name__ == "__main__":
+    import json
+
+    print(json.dumps(freeze_transforms(["pSphere1"]), indent=2))
