@@ -45,18 +45,25 @@ jobs:
           mayapy -c "
           import maya.standalone
           maya.standalone.initialize()
+          import sys
           from maya import cmds
           print('Maya version:', cmds.about(version=True))
-          print('Python version:', cmds.about(pythonVersion=True))
+          print('Python version:', sys.version)
           "
 
-      - name: Install package
+      - name: Install package into mayapy
         run: |
-          python -m pip install --upgrade pip
-          pip install -e ".[dev]"
+          # Install into mayapy's site-packages so E2E tests can import dcc_mcp_maya
+          mayapy -m pip install --upgrade pip
+          mayapy -m pip install -e ".[dev]"
+
+      - name: Setup Node.js for mcporter
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
 
       - name: Run unit tests (no Maya required)
-        run: pytest tests/ -v --tb=short -m "not e2e"
+        run: mayapy -m pytest tests/ -v --tb=short -m "not e2e"
 
       - name: Run E2E tests (Maya standalone)
         run: |
@@ -68,8 +75,76 @@ jobs:
           # Run e2e tests via pytest inside mayapy
           result = subprocess.run(
               [sys.executable, '-m', 'pytest', 'tests/', '-v', '--tb=short', '-m', 'e2e'],
-              env={**os.environ, 'PYTHONPATH': 'src'},
+              env=dict(os.environ),
           )
           sys.exit(result.returncode)
           "
-        continue-on-error: true  # E2E tests are best-effort until test suite matures
+
+      - name: Test MCP connectivity with mcporter
+        run: |
+          # Start Maya MCP server in background (standalone mode, port 7891)
+          mayapy -c "
+          import maya.standalone
+          maya.standalone.initialize()
+          import dcc_mcp_maya, time
+          handle = dcc_mcp_maya.start_server(port=7891)
+          print('MCP server running at:', handle.mcp_url())
+          # Keep process alive while mcporter tests run
+          time.sleep(60)
+          dcc_mcp_maya.stop_server()
+          " &
+          SERVER_PID=$!
+
+          # Wait for server to be ready, then verify via Python urllib (no curl needed)
+          sleep 10
+          python -c "
+          import urllib.request, json, time, sys
+          url = 'http://127.0.0.1:7891/mcp'
+          body = json.dumps({
+              'jsonrpc': '2.0', 'id': 0, 'method': 'initialize',
+              'params': {'protocolVersion': '2025-03-26', 'capabilities': {},
+                         'clientInfo': {'name': 'ci', 'version': '1'}}
+          }).encode()
+          for attempt in range(5):
+              try:
+                  req = urllib.request.Request(url, data=body,
+                      headers={'Content-Type': 'application/json'}, method='POST')
+                  with urllib.request.urlopen(req, timeout=5) as r:
+                      d = json.loads(r.read())
+                      assert d['result']['serverInfo']['name'] == 'maya-mcp', d
+                      print('MCP initialize: OK')
+                      sys.exit(0)
+              except Exception as e:
+                  print(f'Attempt {attempt+1} failed: {e}')
+                  time.sleep(3)
+          sys.exit(1)
+          "
+          echo "MCP initialize: OK"
+
+          # List Maya tools via mcporter
+          npx --yes mcporter list \
+            --http-url http://127.0.0.1:7891/mcp \
+            --name maya-ci \
+            --allow-http
+
+          # Call get_session_info tool (colon-delimited key=value style)
+          npx mcporter call \
+            --http-url http://127.0.0.1:7891/mcp \
+            --allow-http \
+            maya-ci.maya_scene__get_session_info
+
+          # Call create_sphere tool
+          npx mcporter call \
+            --http-url http://127.0.0.1:7891/mcp \
+            --allow-http \
+            maya-ci.maya_primitives__create_sphere radius:2.0 name:mcporterSphere
+
+          # Call execute_python tool
+          npx mcporter call \
+            --http-url http://127.0.0.1:7891/mcp \
+            --allow-http \
+            maya-ci.maya_scripting__execute_python \
+            "code:import maya.cmds as cmds; cmds.polyCube(n='mcporterCube')"
+
+          kill $SERVER_PID 2>/dev/null || true
+          echo "mcporter connectivity tests: PASSED"

@@ -179,6 +179,49 @@ class TestMayaMcpServerHttp:
         assert "content" in result
 
 
+class TestSkillSearchPaths:
+    """_collect_skill_search_paths respects all path sources."""
+
+    def test_builtin_skills_always_included(self):
+        srv_mod = _import_server()
+        paths = srv_mod._collect_skill_search_paths()
+        builtin = str(srv_mod._BUILTIN_SKILLS_DIR)
+        assert builtin in paths
+
+    def test_extra_paths_take_highest_priority(self):
+        import tempfile
+
+        srv_mod = _import_server()
+        with tempfile.TemporaryDirectory() as tmp:
+            paths = srv_mod._collect_skill_search_paths(extra_paths=[tmp])
+            assert paths[0] == tmp
+
+    def test_dcc_mcp_maya_skill_paths_env_var(self):
+        """DCC_MCP_MAYA_SKILL_PATHS (per-app) is honoured (v0.12.12+)."""
+        import tempfile
+
+        srv_mod = _import_server()
+        with tempfile.TemporaryDirectory() as tmp:
+            with patch.dict("os.environ", {"DCC_MCP_MAYA_SKILL_PATHS": tmp}):
+                paths = srv_mod._collect_skill_search_paths()
+        assert tmp in paths
+
+    def test_app_env_var_before_global_env_var(self):
+        """Per-app env var (DCC_MCP_MAYA_SKILL_PATHS) appears before DCC_MCP_SKILL_PATHS."""
+        import tempfile
+
+        srv_mod = _import_server()
+        with tempfile.TemporaryDirectory() as app_tmp, tempfile.TemporaryDirectory() as global_tmp:
+            with patch.dict(
+                "os.environ",
+                {"DCC_MCP_MAYA_SKILL_PATHS": app_tmp, "DCC_MCP_SKILL_PATHS": global_tmp},
+            ):
+                paths = srv_mod._collect_skill_search_paths()
+        assert app_tmp in paths
+        assert global_tmp in paths
+        assert paths.index(app_tmp) < paths.index(global_tmp)
+
+
 class TestModuleSingleton:
     def test_start_stop_module_functions(self):
         """Module-level start_server / stop_server singleton pattern."""

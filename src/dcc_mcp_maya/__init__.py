@@ -18,10 +18,11 @@ from __future__ import annotations
 
 # Import local modules
 from dcc_mcp_maya.__version__ import __version__
-from dcc_mcp_maya.server import MayaMcpServer, start_server
+from dcc_mcp_maya.server import MayaMcpServer, start_server, stop_server
 
 __all__ = [
     "__version__",
     "MayaMcpServer",
     "start_server",
+    "stop_server",
 ]
