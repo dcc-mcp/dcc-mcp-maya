@@ -95,14 +95,30 @@ jobs:
           " &
           SERVER_PID=$!
 
-          # Wait for server to be ready
+          # Wait for server to be ready, then verify via Python urllib (no curl needed)
           sleep 10
-
-          # Verify server is reachable
-          curl -sf -X POST http://127.0.0.1:7891/mcp \
-            -H "Content-Type: application/json" \
-            -d '{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"ci","version":"1"}}}' \
-            | python -c "import sys,json; d=json.load(sys.stdin); assert d['result']['serverInfo']['name']=='maya-mcp', d"
+          python -c "
+          import urllib.request, json, time, sys
+          url = 'http://127.0.0.1:7891/mcp'
+          body = json.dumps({
+              'jsonrpc': '2.0', 'id': 0, 'method': 'initialize',
+              'params': {'protocolVersion': '2025-03-26', 'capabilities': {},
+                         'clientInfo': {'name': 'ci', 'version': '1'}}
+          }).encode()
+          for attempt in range(5):
+              try:
+                  req = urllib.request.Request(url, data=body,
+                      headers={'Content-Type': 'application/json'}, method='POST')
+                  with urllib.request.urlopen(req, timeout=5) as r:
+                      d = json.loads(r.read())
+                      assert d['result']['serverInfo']['name'] == 'maya-mcp', d
+                      print('MCP initialize: OK')
+                      sys.exit(0)
+              except Exception as e:
+                  print(f'Attempt {attempt+1} failed: {e}')
+                  time.sleep(3)
+          sys.exit(1)
+          "
           echo "MCP initialize: OK"
 
           # List Maya tools via mcporter
