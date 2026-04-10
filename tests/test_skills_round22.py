@@ -4,7 +4,7 @@ from __future__ import annotations
 import importlib.util
 import sys
 from pathlib import Path
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import MagicMock
 
 # ---------------------------------------------------------------------------
 # Helpers

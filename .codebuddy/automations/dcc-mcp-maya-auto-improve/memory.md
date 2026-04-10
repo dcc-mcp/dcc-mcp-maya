@@ -519,6 +519,175 @@
 
 ---
 
+## 2026-04-10 (Round 16 — maya-mocap, maya-cloth-sim, maya-pose-library new Skill domains)
+
+### Context
+- Branch: `feat/skills-sop`
+- Baseline: 1316 tests passing (1 skipped), all modules 100% coverage, Skill domains: 43
+
+### Work done
+1. **New Skill: `maya-mocap`** — 5 scripts:
+   - `create_hik_character`: Create HIKCharacterNode; auto-loads mayaHIK plugin
+   - `define_hik_joint`: Map a Maya joint to a HumanIK bone slot (20 canonical bones supported)
+   - `list_hik_characters`: List all HIKCharacterNode nodes with lock status
+   - `retarget_mocap`: Connect source→target characters via HIKRetargeter; optional bakeResults
+   - `delete_hik_character`: Delete char node + optional connected retargeters
+2. **New Skill: `maya-cloth-sim`** — 5 scripts:
+   - `create_cloth_object`: cmds.nCloth() with 4 presets (denim/silk/rubber/default) + override params
+   - `add_cloth_collider`: cmds.nRigid() passive collider with friction/stickiness clamping
+   - `simulate_cloth`: Play-through timeline simulation + optional nCache creation
+   - `set_cloth_attribute`: Set scalar/string/list attrs on nCloth nodes (type validated)
+   - `list_cloth_nodes`: List nCloth nodes with per-attr info
+3. **New Skill: `maya-pose-library`** — 5 scripts (pure Python file I/O, no Maya dependency except save/apply):
+   - `save_pose`: Capture translate/rotate/scale of selected/specified objects → .pose.json
+   - `apply_pose`: Restore pose from file with blend factor and namespace remapping
+   - `list_poses`: Enumerate .pose.json files with metadata
+   - `mirror_pose`: Flip left/right object names + negate axis-specific attrs; YZ or XZ plane
+   - `delete_pose`: Remove .pose.json from library
+4. **`tests/test_skills_round19.py`** — 81 new tests; all pass; ruff 0 errors
+5. Fixed 2 bugs: `simulate_cloth` missing `count` in result context; mirror_pose tests reading file inside tmpdir context
+
+### State after this round
+- Tests: **1397 passed, 1 skipped** (was 1316)
+- Skill domains: 46 (added maya-mocap, maya-cloth-sim, maya-pose-library)
+- All ruff checks pass (0 errors)
+- Committed: `e2c82f0` on `feat/skills-sop`
+
+### Remaining gaps for Round 17
+- New Skill domains: `maya-scene-assembly` (Assembly Reference), `maya-instancer` (particle instancer), `maya-spline-ik` (advanced IK)
+- `maya-mocap` could expand: `import_bvh`, `export_fbx_anim`, `set_hik_property`
+- `maya-cloth-sim` could expand: `delete_cloth_object`, `export_cloth_cache`, `create_cloth_constraint`
+- `maya-pose-library` could expand: `blend_poses` (interpolate multiple poses), `export_pose_library` (zip bundle)
+- Python 3.7 compat: all new scripts use `from __future__ import annotations` — verified clean
+
+---
+
+## 2026-04-10 (Round 17 — maya-scene-assembly, maya-instancer, maya-spline-ik new Skill domains)
+
+### Context
+- Branch: `feat/skills-sop`
+- Baseline: 1397 tests passing (1 skipped), all modules 100% coverage, Skill domains: 46
+
+### Work done
+1. **New Skill: `maya-scene-assembly`** — 5 scripts:
+   - `create_assembly`: Create assemblyReference node with optional .ad definition file
+   - `list_assemblies`: List all assemblyReference nodes with active representation info
+   - `activate_assembly_representation`: Activate a named LOD representation on an assembly node
+   - `list_assembly_representations`: List all available representations for an assembly
+   - `delete_assembly`: Delete an assemblyReference node (type-validated)
+2. **New Skill: `maya-instancer`** — 5 scripts:
+   - `create_instancer`: Create particle instancer with instance objects and cycle mode (None/Sequential/Random)
+   - `list_instancers`: List all instancer nodes with their instance object lists
+   - `add_instancer_object`: Add an object to an existing instancer
+   - `set_instancer_attribute`: Set scalar/string/list attrs on instancer nodes
+   - `delete_instancer`: Delete an instancer node (type-validated)
+3. **New Skill: `maya-spline-ik`** — 5 scripts:
+   - `create_spline_ik`: Create ikSplineSolver handle; auto-create or use existing curve
+   - `set_spline_ik_stretch`: Set dStretch/dSquash on spline IK handle
+   - `set_spline_ik_twist`: Set dWorldUpType and twist offset angle
+   - `list_spline_ik_handles`: List all ikHandle nodes using ikSplineSolver
+   - `delete_spline_ik`: Delete IK handle and optionally its driving curve
+4. **`tests/test_skills_round20.py`** — 88 new tests; all pass; ruff 0 errors
+5. Fixes: import cleanup (removed `dcc_mcp_core.models.ActionResultModel`; used `from dcc_mcp_core import error_result, success_result`); removed unused `deleted` var; removed unused `call` import
+
+### State after this round
+- Tests: **1485 passed, 1 skipped** (was 1397)
+- Skill domains: 49 (added maya-scene-assembly, maya-instancer, maya-spline-ik)
+- All ruff checks pass (0 errors)
+- Committed: `e801799` on `feat/skills-sop`
+
+### Remaining gaps for Round 18
+- New Skill domains to consider: `maya-constraints-advanced` (path constraints, rivet), `maya-pipeline` (Shotgrid/Ftrack metadata), `maya-gpu-cache` (GPU cache import/export)
+- `maya-instancer` could expand: remove_instancer_object, set_per_particle_attribute
+- `maya-spline-ik` could expand: bind_curve_to_joints, set_advanced_twist_controls
+- `maya-scene-assembly` could expand: create_assembly_definition, set_assembly_representation_label
+- Python 3.7 compat: all new scripts verified clean (no walrus, no X|Y unions, no built-in generics)
+- `tests/e2e/` exists but no E2E tests for new domains yet
+
+---
+
+## 2026-04-10 (Round 18 — maya-constraints-advanced, maya-pipeline, maya-gpu-cache new Skill domains)
+
+### Context
+- Branch: `feat/skills-sop`
+- Baseline: 1485 tests passing (1 skipped), all modules 100% coverage, Skill domains: 49
+
+### Work done
+1. **New Skill: `maya-constraints-advanced`** — 5 scripts:
+   - `create_path_constraint`: Attach object to NURBS curve via `cmds.pathAnimation`; front/up axis selectable
+   - `create_rivet`: Rivet locator on mesh surface using curveFromMeshEdge + loft + pointOnSurfaceInfo + aimConstraint
+   - `create_tangent_constraint`: Constrain object orientation to curve tangent via `cmds.tangentConstraint`
+   - `create_closest_point_constraint`: Snap object to nearest surface point using closestPointOnMesh/closestPointOnSurface
+   - `list_motion_paths`: List all motionPath nodes with driven objects, curve, and u-value info
+2. **New Skill: `maya-pipeline`** — 5 scripts:
+   - `get_scene_metadata`: Read `cmds.fileInfo` key-value pairs from the scene
+   - `set_scene_metadata`: Write pipeline metadata into scene's fileInfo block
+   - `tag_asset`: Add/update custom string attributes on nodes (pipeline_asset_name, type, shot, step, version, note)
+   - `get_asset_tags`: Read pipeline tags from a tagged node
+   - `list_tagged_assets`: List all nodes with pipeline tags; supports asset_type/step filters
+3. **New Skill: `maya-gpu-cache`** — 5 scripts:
+   - `export_gpu_cache`: Export to gpuCache format; auto-loads plugin; selection or all-DAG mode
+   - `import_gpu_cache`: Create gpuCache node wired to an .abc file
+   - `list_gpu_caches`: List all gpuCache nodes with file path, transform, visibility
+   - `delete_gpu_cache`: Delete gpuCache shape + optional parent transform; type-validated
+   - `set_gpu_cache_attribute`: Set string/numeric/list attrs on gpuCache nodes
+4. **`tests/test_skills_round21.py`** — 86 new tests; fixed 2 assertion strings; fixed 4 ruff issues
+5. ruff: 0 errors after all fixes
+
+### State after this round
+- Tests: **1571 passed, 1 skipped** (was 1485)
+- Skill domains: **52** (added maya-constraints-advanced, maya-pipeline, maya-gpu-cache)
+- All ruff checks pass (0 errors)
+- Committed: `7d190ca` on `feat/skills-sop`
+
+### Remaining gaps for Round 19
+- New Skill domains: `maya-render-passes` (AOV/render pass management), `maya-light-rig` (3-point lighting setup), `maya-proxy-mesh` (proxy/stand-in workflow)
+- `maya-constraints-advanced` could expand: `spring_constraint`, `matrix_constraint` (offsetParentMatrix approach)
+- `maya-pipeline` could expand: `sync_shotgrid_context`, `create_pipeline_report`
+- `maya-gpu-cache` could expand: `update_gpu_cache_path` (repath), `list_missing_gpu_caches`
+
+---
+
+## 2026-04-10 (Round 19 — maya-render-passes, maya-light-rig, maya-proxy-mesh new Skill domains)
+
+### Context
+- Branch: `feat/skills-sop`
+- Baseline: 1571 tests passing (1 skipped), all modules 100% coverage, Skill domains: 52
+
+### Work done
+1. **New Skill: `maya-render-passes`** — 5 scripts:
+   - `create_render_pass`: Create renderPass node with type/renderer/enabled/camera association
+   - `list_render_passes`: List all renderPass nodes with renderer/enabled filters
+   - `delete_render_pass`: Delete renderPass node (type-validated)
+   - `set_render_pass_attribute`: Set scalar/string/list attrs on renderPass nodes
+   - `assign_pass_to_layer`: Connect renderPass to renderLayer message array (idempotent)
+2. **New Skill: `maya-light-rig`** — 5 scripts:
+   - `create_three_point_rig`: Create key/fill/back light trio with optional group; validates light type
+   - `list_light_rigs`: Walk scene graph to find groups containing lights; pattern filter
+   - `set_rig_intensity`: Multiply or set absolute intensity for all lights in a rig group
+   - `delete_light_rig`: Delete a rig group transform (type-validated)
+   - `add_rim_light`: Add rim/back light to an existing rig group at configurable position
+3. **New Skill: `maya-proxy-mesh`** — 5 scripts:
+   - `create_proxy`: Generate bbox-cube or poly-reduce proxy; tags both meshes with lod_level attribute
+   - `swap_proxy`: Toggle visibility between proxy and high-res mesh
+   - `list_proxies`: List all transforms with lod_level attribute
+   - `delete_proxy`: Delete proxy and optionally reveal high-res source
+4. **`tests/test_skills_round22.py`** — 85 new tests; all pass; ruff 0 errors
+
+### State after this round
+- Tests: **1656 passed, 1 skipped** (was 1571)
+- Skill domains: **55** (added maya-render-passes, maya-light-rig, maya-proxy-mesh)
+- All ruff checks pass (0 errors)
+- Committed: `a9bde64` on `feat/skills-sop`
+
+### Remaining gaps for Round 20
+- New Skill domains: `maya-color-grading` (color correction via VP2 color management), `maya-rig-utils` (rig control curve shapes), `maya-shot-export` (batch shot frame range export)
+- `maya-render-passes` could expand: `list_renderable_cameras`, `set_pass_sampling`
+- `maya-light-rig` could expand: `create_hdri_rig` (sky dome + fill), `set_rig_color`
+- `maya-proxy-mesh` could expand: `update_proxy` (re-generate from updated source), `set_lod_level`
+
+---
+
 ## 2026-04-10 (Round 5 — attributes/dynamics/rigging/cameras/constraints/display/lighting test coverage)
 
 ### Context
