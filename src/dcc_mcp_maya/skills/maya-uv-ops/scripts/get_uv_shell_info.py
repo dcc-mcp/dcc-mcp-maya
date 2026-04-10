@@ -31,13 +31,13 @@ def get_uv_shell_info(object_name: str, uv_set: Optional[str] = None) -> dict:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return error_result("Object not found: {}".format(object_name)).to_dict()
+            return error_result("Object not found: {}".format(object_name), "'{}' does not exist".format(object_name)).to_dict()
 
         # Resolve UV set
         if uv_set:
             existing = cmds.polyUVSet(object_name, query=True, allUVSets=True) or []
             if uv_set not in existing:
-                return error_result("UV set '{}' not found on '{}'".format(uv_set, object_name)).to_dict()
+                return error_result("UV set '{}' not found on '{}'".format(uv_set, object_name), "Available UV sets: {}".format(existing)).to_dict()
             cmds.polyUVSet(object_name, currentUVSet=True, uvSet=uv_set)
 
         active_set = cmds.polyUVSet(object_name, query=True, currentUVSet=True)

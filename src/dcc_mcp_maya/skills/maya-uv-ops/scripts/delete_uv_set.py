@@ -25,15 +25,15 @@ def delete_uv_set(object_name: str, uv_set_name: str) -> dict:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return error_result("Object not found: {}".format(object_name)).to_dict()
+            return error_result("Object not found: {}".format(object_name), "'{}' does not exist".format(object_name)).to_dict()
 
         existing = cmds.polyUVSet(object_name, query=True, allUVSets=True) or []
         if uv_set_name not in existing:
-            return error_result("UV set '{}' not found on '{}'".format(uv_set_name, object_name)).to_dict()
+            return error_result("UV set '{}' not found on '{}'".format(uv_set_name, object_name), "Available UV sets: {}".format(existing)).to_dict()
 
         # Protect the only remaining UV set
         if len(existing) <= 1:
-            return error_result("Cannot delete the only UV set on '{}'".format(object_name)).to_dict()
+            return error_result("Cannot delete the only UV set on '{}'".format(object_name), "A mesh must have at least one UV set").to_dict()
 
         cmds.polyUVSet(object_name, delete=True, uvSet=uv_set_name)
 
