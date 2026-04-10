@@ -1,4 +1,5 @@
 """Delete an XGen description from the scene."""
+
 from dcc_mcp_core import error_result, success_result
 
 

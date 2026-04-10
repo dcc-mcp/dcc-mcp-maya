@@ -22,9 +22,7 @@ def _load_script(skill_dir, script_name):
     """Load a skill script from its file path with a unique module name."""
     _MOD_COUNTER[0] += 1
     script_path = _SKILLS_ROOT / skill_dir / "scripts" / "{}.py".format(script_name)
-    module_name = "skill_r4_{}_{}_{}".format(
-        skill_dir.replace("-", "_"), script_name, _MOD_COUNTER[0]
-    )
+    module_name = "skill_r4_{}_{}_{}".format(skill_dir.replace("-", "_"), script_name, _MOD_COUNTER[0])
     spec = importlib.util.spec_from_file_location(module_name, str(script_path))
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
@@ -207,9 +205,7 @@ class TestSkinClusterBind:
         _, cmds_mock, modules = _make_maya_env()
         cmds_mock.skinCluster.return_value = ["body_skin"]
         with patch.dict(sys.modules, modules):
-            result = mod.skin_cluster_bind(
-                joints=["joint1"], mesh="pSphere1", name="body_skin"
-            )
+            result = mod.skin_cluster_bind(joints=["joint1"], mesh="pSphere1", name="body_skin")
         assert result["success"] is True
         assert result["context"]["skin_cluster_name"] == "body_skin"
 
@@ -278,9 +274,7 @@ class TestCreateBlendShape:
         _, cmds_mock, modules = _make_maya_env()
         cmds_mock.blendShape.return_value = ["myBS"]
         with patch.dict(sys.modules, modules):
-            result = mod.create_blend_shape(
-                base_mesh="base", target_meshes=["target1", "target2"], name="myBS"
-            )
+            result = mod.create_blend_shape(base_mesh="base", target_meshes=["target1", "target2"], name="myBS")
         assert result["success"] is True
         assert result["context"]["target_count"] == 2
 
@@ -309,6 +303,7 @@ class TestBlendShapeAddTarget:
         mod = _load_script("maya-rigging", "blend_shape_add_target")
         _, cmds_mock, modules = _make_maya_env()
         cmds_mock.objectType.return_value = "blendShape"
+
         # blendShape(bs, query=True, weightCount=True) → int; geometry=True → list
         def _bs_query(bs, **kw):
             if kw.get("weightCount"):
@@ -316,6 +311,7 @@ class TestBlendShapeAddTarget:
             if kw.get("geometry"):
                 return ["pSphere1Shape"]
             return None
+
         cmds_mock.blendShape.side_effect = _bs_query
         with patch.dict(sys.modules, modules):
             result = mod.blend_shape_add_target(blend_shape="blendShape1", target_mesh="target1")
@@ -325,9 +321,7 @@ class TestBlendShapeAddTarget:
         mod = _load_script("maya-rigging", "blend_shape_add_target")
         _, cmds_mock, modules = _make_maya_env()
         with patch.dict(sys.modules, modules):
-            result = mod.blend_shape_add_target(
-                blend_shape="blendShape1", target_mesh="target1", weight=1.5
-            )
+            result = mod.blend_shape_add_target(blend_shape="blendShape1", target_mesh="target1", weight=1.5)
         assert result["success"] is False
         assert "weight" in result["message"].lower()
 
@@ -485,10 +479,15 @@ class TestGetPolyCount:
         mod = _load_script("maya-mesh-ops", "get_poly_count")
         _, cmds_mock, modules = _make_maya_env()
         cmds_mock.polyEvaluate.side_effect = lambda obj, **kw: (
-            8 if kw.get("face") else
-            6 if kw.get("vertex") else
-            12 if kw.get("edge") else
-            16 if kw.get("triangle") else 0
+            8
+            if kw.get("face")
+            else 6
+            if kw.get("vertex")
+            else 12
+            if kw.get("edge")
+            else 16
+            if kw.get("triangle")
+            else 0
         )
         with patch.dict(sys.modules, modules):
             result = mod.get_poly_count(object_name="pCube1")
@@ -696,9 +695,7 @@ class TestConnectAttr:
         mod = _load_script("maya-node-graph", "connect_attr")
         _, cmds_mock, modules = _make_maya_env()
         with patch.dict(sys.modules, modules):
-            result = mod.connect_attr(
-                source_attr="s.tx", dest_attr="d.tx", force=True
-            )
+            result = mod.connect_attr(source_attr="s.tx", dest_attr="d.tx", force=True)
         assert result["success"] is True
         cmds_mock.connectAttr.assert_called_once_with("s.tx", "d.tx", force=True)
 
@@ -720,9 +717,7 @@ class TestDisconnectAttr:
         _, cmds_mock, modules = _make_maya_env()
         cmds_mock.isConnected.return_value = True
         with patch.dict(sys.modules, modules):
-            result = mod.disconnect_attr(
-                source_attr="s.tx", dest_attr="d.tx"
-            )
+            result = mod.disconnect_attr(source_attr="s.tx", dest_attr="d.tx")
         assert result["success"] is True
         cmds_mock.disconnectAttr.assert_called_once_with("s.tx", "d.tx")
 

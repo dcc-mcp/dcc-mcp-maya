@@ -1,4 +1,5 @@
 """Delete a MASH network by waiter node name."""
+
 from dcc_mcp_core import error_result, success_result
 
 

@@ -1,4 +1,5 @@
 """Shrink the current component selection by one shell ring."""
+
 from dcc_mcp_core import error_result, success_result
 
 

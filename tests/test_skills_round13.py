@@ -3,6 +3,7 @@
 All tests use importlib to load scripts from hyphenated directories and
 mock both maya.cmds and the third-party XGen/MASH Python APIs.
 """
+
 import importlib.util
 import sys
 from pathlib import Path
@@ -11,20 +12,13 @@ from unittest.mock import MagicMock
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-SKILLS_ROOT = (
-    Path(__file__).parent.parent
-    / "src"
-    / "dcc_mcp_maya"
-    / "skills"
-)
+SKILLS_ROOT = Path(__file__).parent.parent / "src" / "dcc_mcp_maya" / "skills"
 
 
 def _load_script(skill_dir, script_name):
     """Dynamically load a skill script from a hyphenated directory."""
     path = SKILLS_ROOT / skill_dir / "scripts" / "{}.py".format(script_name)
-    spec = importlib.util.spec_from_file_location(
-        "{}_{}".format(skill_dir.replace("-", "_"), script_name), str(path)
-    )
+    spec = importlib.util.spec_from_file_location("{}_{}".format(skill_dir.replace("-", "_"), script_name), str(path))
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     return mod
@@ -454,7 +448,7 @@ class TestSelectionGrow:
     def setup_method(self):
         self.mock_cmds = _make_mock_maya()
         self.mock_cmds.ls.side_effect = [
-            ["pSphere1.f[0]", "pSphere1.f[1]"],   # before
+            ["pSphere1.f[0]", "pSphere1.f[1]"],  # before
             ["pSphere1.f[0]", "pSphere1.f[1]", "pSphere1.f[2]", "pSphere1.f[3]"],  # after
         ]
 
@@ -603,8 +597,8 @@ class TestSelectionSelectSimilar:
     def test_select_by_type(self):
         # Reset ls to return selection then all-objects list
         self.mock_cmds.ls.side_effect = [
-            ["pSphere1"],   # selection=True first call
-            ["pSphere1", "pSphere2", "pCube1"],   # all objects ls()
+            ["pSphere1"],  # selection=True first call
+            ["pSphere1", "pSphere2", "pCube1"],  # all objects ls()
         ]
         self.mock_cmds.objectType.return_value = "transform"
         mod = _load_script("maya-selection", "select_similar")

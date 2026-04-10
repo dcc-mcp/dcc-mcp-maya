@@ -22,9 +22,7 @@ def _load_script(skill_dir, script_name):
     """Load a skill script with a unique module name."""
     _MOD_COUNTER[0] += 1
     script_path = _SKILLS_ROOT / skill_dir / "scripts" / "{}.py".format(script_name)
-    module_name = "skill_r7_{}_{}_{}" .format(
-        skill_dir.replace("-", "_"), script_name, _MOD_COUNTER[0]
-    )
+    module_name = "skill_r7_{}_{}_{}".format(skill_dir.replace("-", "_"), script_name, _MOD_COUNTER[0])
     spec = importlib.util.spec_from_file_location(module_name, str(script_path))
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
@@ -200,9 +198,7 @@ class TestListAllCameras:
         _, cmds_mock, modules = _make_maya_env()
         cmds_mock.ls.return_value = ["perspShape", "myShape"]
         # persp → excluded (default); myShape → kept
-        cmds_mock.listRelatives.side_effect = lambda s, **kw: (
-            ["persp"] if s == "perspShape" else ["myCamera"]
-        )
+        cmds_mock.listRelatives.side_effect = lambda s, **kw: ["persp"] if s == "perspShape" else ["myCamera"]
         cmds_mock.getAttr.return_value = 35.0
         with patch.dict(sys.modules, modules):
             mod = _load_script("maya-cameras", "list_all_cameras")
@@ -236,8 +232,7 @@ class TestSetActiveCamera:
         assert result["success"] is True
 
     def test_camera_not_found(self):
-        result = self._run({"objExists": MagicMock(return_value=False)},
-                           camera_name="missing")
+        result = self._run({"objExists": MagicMock(return_value=False)}, camera_name="missing")
         assert result["success"] is False
 
     def test_no_model_panel(self):
@@ -261,8 +256,12 @@ class TestSetCameraAttribute:
         return _run_func("maya-cameras", "set_camera_attribute", cmds_overrides, **kwargs)
 
     def test_success_shape_node(self):
-        result = self._run({"objectType": MagicMock(return_value="camera")},
-                           camera_name="cameraShape1", attribute="focalLength", value=50.0)
+        result = self._run(
+            {"objectType": MagicMock(return_value="camera")},
+            camera_name="cameraShape1",
+            attribute="focalLength",
+            value=50.0,
+        )
         assert result["success"] is True
 
     def test_success_transform_node(self):
@@ -276,8 +275,9 @@ class TestSetCameraAttribute:
         assert result["success"] is True
 
     def test_camera_not_found(self):
-        result = self._run({"objExists": MagicMock(return_value=False)},
-                           camera_name="missing", attribute="focalLength", value=50.0)
+        result = self._run(
+            {"objExists": MagicMock(return_value=False)}, camera_name="missing", attribute="focalLength", value=50.0
+        )
         assert result["success"] is False
 
     def test_transform_no_camera_shape(self):
@@ -343,8 +343,7 @@ class TestAddConstraint:
             call_count[0] += 1
             return False  # first call (source) fails
 
-        result = self._run({"objExists": obj_exists},
-                           constraint_type="parent", source="missing", target="pCube1")
+        result = self._run({"objExists": obj_exists}, constraint_type="parent", source="missing", target="pCube1")
         assert result["success"] is False
 
     def test_target_not_found(self):
@@ -354,8 +353,7 @@ class TestAddConstraint:
             call_count[0] += 1
             return call_count[0] == 1  # source exists; target missing
 
-        result = self._run({"objExists": obj_exists},
-                           constraint_type="orient", source="pSphere1", target="missing")
+        result = self._run({"objExists": obj_exists}, constraint_type="orient", source="pSphere1", target="missing")
         assert result["success"] is False
 
     def test_exception_propagates(self):
@@ -481,9 +479,7 @@ class TestCreateConstraintWeighted:
         cmds_mock.parentConstraint.return_value = ["tgt_parentConstraint1"]
         with patch.dict(sys.modules, modules):
             mod = _load_script("maya-constraints", "create_constraint_weighted")
-            result = mod.create_constraint_weighted(
-                "parent", ["src1", "src2"], "tgt", weights=[0.7, 0.3]
-            )
+            result = mod.create_constraint_weighted("parent", ["src1", "src2"], "tgt", weights=[0.7, 0.3])
         assert result["success"] is True
         assert len(result["context"]["source_weights"]) == 2
 
@@ -581,8 +577,7 @@ class TestDeleteDisplayLayer:
         return _run_func("maya-display", "delete_display_layer", cmds_overrides, **kwargs)
 
     def test_success(self):
-        result = self._run({"objectType": MagicMock(return_value="displayLayer")},
-                           layer_name="myLayer")
+        result = self._run({"objectType": MagicMock(return_value="displayLayer")}, layer_name="myLayer")
         assert result["success"] is True
         assert result["context"]["layer_name"] == "myLayer"
 
@@ -592,13 +587,11 @@ class TestDeleteDisplayLayer:
         assert "cannot delete defaultlayer" in result["message"].lower()
 
     def test_layer_not_found(self):
-        result = self._run({"objExists": MagicMock(return_value=False)},
-                           layer_name="missing")
+        result = self._run({"objExists": MagicMock(return_value=False)}, layer_name="missing")
         assert result["success"] is False
 
     def test_not_a_display_layer(self):
-        result = self._run({"objectType": MagicMock(return_value="transform")},
-                           layer_name="pSphere1")
+        result = self._run({"objectType": MagicMock(return_value="transform")}, layer_name="pSphere1")
         assert result["success"] is False
         assert "not a display layer" in result["message"].lower()
 
@@ -664,8 +657,7 @@ class TestSetDisplayLayer:
         assert result["context"]["missing"] == []
 
     def test_layer_not_found(self):
-        result = self._run({"objExists": MagicMock(return_value=False)},
-                           layer_name="missing", objects=["pSphere1"])
+        result = self._run({"objExists": MagicMock(return_value=False)}, layer_name="missing", objects=["pSphere1"])
         assert result["success"] is False
 
     def test_partial_objects_missing(self):
@@ -676,8 +668,7 @@ class TestSetDisplayLayer:
             call_count[0] += 1
             return call_count[0] in (1, 2)  # layer + first obj exist; second obj missing
 
-        result = self._run({"objExists": obj_exists},
-                           layer_name="myLayer", objects=["pSphere1", "ghost"])
+        result = self._run({"objExists": obj_exists}, layer_name="myLayer", objects=["pSphere1", "ghost"])
         assert result["success"] is True
         assert len(result["context"]["assigned"]) == 1
         assert "ghost" in result["context"]["missing"]
@@ -728,7 +719,7 @@ class TestCreateLight:
         cmds_mock.directionalLight.return_value = "directionalLightShape1"
         cmds_mock.listRelatives.side_effect = [
             ["directionalLight1"],  # first call: parent
-            ["sunShape"],          # second call: after rename
+            ["sunShape"],  # second call: after rename
         ]
         cmds_mock.rename.return_value = "sun"
         with patch.dict(sys.modules, modules):
@@ -755,8 +746,7 @@ class TestDeleteLight:
         return _run_func("maya-lighting", "delete_light", cmds_overrides, **kwargs)
 
     def test_success_transform(self):
-        result = self._run({"objectType": MagicMock(return_value="transform")},
-                           light_name="pointLight1")
+        result = self._run({"objectType": MagicMock(return_value="transform")}, light_name="pointLight1")
         assert result["success"] is True
         assert result["context"]["light_name"] == "pointLight1"
 
@@ -771,8 +761,7 @@ class TestDeleteLight:
         assert result["success"] is True
 
     def test_light_not_found(self):
-        result = self._run({"objExists": MagicMock(return_value=False)},
-                           light_name="missing")
+        result = self._run({"objExists": MagicMock(return_value=False)}, light_name="missing")
         assert result["success"] is False
         assert "not found" in result["message"].lower()
 
@@ -836,8 +825,12 @@ class TestSetLightAttribute:
         return _run_func("maya-lighting", "set_light_attribute", cmds_overrides, **kwargs)
 
     def test_success_shape_node(self):
-        result = self._run({"objectType": MagicMock(return_value="pointLight")},
-                           light_name="pointLightShape1", attribute="intensity", value=3.0)
+        result = self._run(
+            {"objectType": MagicMock(return_value="pointLight")},
+            light_name="pointLightShape1",
+            attribute="intensity",
+            value=3.0,
+        )
         assert result["success"] is True
         assert result["context"]["value"] == 3.0
 
@@ -852,8 +845,9 @@ class TestSetLightAttribute:
         assert result["success"] is True
 
     def test_light_not_found(self):
-        result = self._run({"objExists": MagicMock(return_value=False)},
-                           light_name="missing", attribute="intensity", value=1.0)
+        result = self._run(
+            {"objExists": MagicMock(return_value=False)}, light_name="missing", attribute="intensity", value=1.0
+        )
         assert result["success"] is False
 
     def test_transform_no_shape(self):
@@ -867,9 +861,12 @@ class TestSetLightAttribute:
         assert result["success"] is False
 
     def test_list_value(self):
-        result = self._run({"objectType": MagicMock(return_value="pointLight")},
-                           light_name="pLightShape1", attribute="shadowColor",
-                           value=[0.0, 0.0, 0.0])
+        result = self._run(
+            {"objectType": MagicMock(return_value="pointLight")},
+            light_name="pLightShape1",
+            attribute="shadowColor",
+            value=[0.0, 0.0, 0.0],
+        )
         assert result["success"] is True
 
     def test_exception_propagates(self):

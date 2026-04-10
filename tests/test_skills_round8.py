@@ -22,9 +22,7 @@ def _load_script(skill_dir, script_name):
     """Load a skill script with a unique module name."""
     _MOD_COUNTER[0] += 1
     script_path = _SKILLS_ROOT / skill_dir / "scripts" / "{}.py".format(script_name)
-    module_name = "skill_r8_{}_{}_{}" .format(
-        skill_dir.replace("-", "_"), script_name, _MOD_COUNTER[0]
-    )
+    module_name = "skill_r8_{}_{}_{}".format(skill_dir.replace("-", "_"), script_name, _MOD_COUNTER[0])
     spec = importlib.util.spec_from_file_location(module_name, str(script_path))
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
@@ -80,17 +78,13 @@ class TestDuplicateObject:
             "duplicate": MagicMock(return_value=["pCube2"]),
             "rename": rename_mock,
         }
-        result = _run_func(
-            "maya-scene", "duplicate_object", cmds_ov, object_name="pCube1", new_name="myDupe"
-        )
+        result = _run_func("maya-scene", "duplicate_object", cmds_ov, object_name="pCube1", new_name="myDupe")
         assert result["success"] is True
         assert result["context"]["object_name"] == "myDupe"
 
     def test_duplicate_instance(self):
         cmds_ov = {"duplicate": MagicMock(return_value=["pCube1_inst"])}
-        result = _run_func(
-            "maya-scene", "duplicate_object", cmds_ov, object_name="pCube1", instance=True
-        )
+        result = _run_func("maya-scene", "duplicate_object", cmds_ov, object_name="pCube1", instance=True)
         assert result["success"] is True
         assert result["context"]["instance"] is True
 
@@ -317,26 +311,20 @@ class TestExportScene:
     def test_export_success(self):
         file_mock = MagicMock(return_value="/tmp/scene.mb")
         cmds_ov = {"file": file_mock}
-        result = _run_func(
-            "maya-scene", "export_scene", cmds_ov, file_path="/tmp/scene.mb", file_type="mayaBinary"
-        )
+        result = _run_func("maya-scene", "export_scene", cmds_ov, file_path="/tmp/scene.mb", file_type="mayaBinary")
         assert result["success"] is True
         assert result["context"]["file_type"] == "mayaBinary"
 
     def test_export_ascii(self):
         file_mock = MagicMock(return_value="/tmp/scene.ma")
         cmds_ov = {"file": file_mock}
-        result = _run_func(
-            "maya-scene", "export_scene", cmds_ov, file_path="/tmp/scene.ma", file_type="mayaAscii"
-        )
+        result = _run_func("maya-scene", "export_scene", cmds_ov, file_path="/tmp/scene.ma", file_type="mayaAscii")
         assert result["success"] is True
 
     def test_export_exception(self):
         file_mock = MagicMock(side_effect=RuntimeError("permission denied"))
         cmds_ov = {"file": file_mock}
-        result = _run_func(
-            "maya-scene", "export_scene", cmds_ov, file_path="/tmp/scene.mb"
-        )
+        result = _run_func("maya-scene", "export_scene", cmds_ov, file_path="/tmp/scene.mb")
         assert result["success"] is False
 
     def test_export_default_type(self):
@@ -482,46 +470,65 @@ class TestCreateLocator:
 class TestSetMaterialAttribute:
     def test_set_scalar_attribute(self):
         result = _run_func(
-            "maya-materials", "set_material_attribute", {},
-            material_name="lambert1", attribute="diffuse", value=0.8
+            "maya-materials", "set_material_attribute", {}, material_name="lambert1", attribute="diffuse", value=0.8
         )
         assert result["success"] is True
 
     def test_set_color_attribute(self):
         result = _run_func(
-            "maya-materials", "set_material_attribute", {},
-            material_name="lambert1", attribute="color", value=[1.0, 0.0, 0.0]
+            "maya-materials",
+            "set_material_attribute",
+            {},
+            material_name="lambert1",
+            attribute="color",
+            value=[1.0, 0.0, 0.0],
         )
         assert result["success"] is True
         assert result["context"]["value"] == [1.0, 0.0, 0.0]
 
     def test_set_tuple_attribute(self):
         result = _run_func(
-            "maya-materials", "set_material_attribute", {},
-            material_name="myShader", attribute="transparency", value=(0.5, 0.5, 0.5)
+            "maya-materials",
+            "set_material_attribute",
+            {},
+            material_name="myShader",
+            attribute="transparency",
+            value=(0.5, 0.5, 0.5),
         )
         assert result["success"] is True
 
     def test_material_not_found(self):
         cmds_ov = {"objExists": MagicMock(return_value=False)}
         result = _run_func(
-            "maya-materials", "set_material_attribute", cmds_ov,
-            material_name="noMat", attribute="color", value=[1, 0, 0]
+            "maya-materials",
+            "set_material_attribute",
+            cmds_ov,
+            material_name="noMat",
+            attribute="color",
+            value=[1, 0, 0],
         )
         assert result["success"] is False
 
     def test_exception(self):
         cmds_ov = {"setAttr": MagicMock(side_effect=RuntimeError("error"))}
         result = _run_func(
-            "maya-materials", "set_material_attribute", cmds_ov,
-            material_name="lambert1", attribute="color", value=[1, 0, 0]
+            "maya-materials",
+            "set_material_attribute",
+            cmds_ov,
+            material_name="lambert1",
+            attribute="color",
+            value=[1, 0, 0],
         )
         assert result["success"] is False
 
     def test_context_has_attribute(self):
         result = _run_func(
-            "maya-materials", "set_material_attribute", {},
-            material_name="blinn1", attribute="specularColor", value=[0.5, 0.5, 0.5]
+            "maya-materials",
+            "set_material_attribute",
+            {},
+            material_name="blinn1",
+            attribute="specularColor",
+            value=[0.5, 0.5, 0.5],
         )
         assert result["context"]["attribute"] == "specularColor"
 
@@ -721,16 +728,12 @@ class TestSetIkFkBlend:
             "objectType": MagicMock(return_value="ikHandle"),
             "objExists": MagicMock(side_effect=lambda x: not x.endswith(".ikBlend")),
         }
-        result = _run_func(
-            "maya-rigging", "set_ik_fk_blend", cmds_ov, ik_handle="ikHandle1", blend=0.5
-        )
+        result = _run_func("maya-rigging", "set_ik_fk_blend", cmds_ov, ik_handle="ikHandle1", blend=0.5)
         assert result["success"] is False
 
     def test_context_has_attribute_name(self):
         cmds_ov = {"objectType": MagicMock(return_value="ikHandle")}
-        result = _run_func(
-            "maya-rigging", "set_ik_fk_blend", cmds_ov, ik_handle="ikHandle1", blend=0.75
-        )
+        result = _run_func("maya-rigging", "set_ik_fk_blend", cmds_ov, ik_handle="ikHandle1", blend=0.75)
         assert result["context"]["attribute"] == "ikBlend"
 
 
@@ -746,34 +749,24 @@ class TestSetJointLimit:
             "getAttr": MagicMock(return_value=-45.0),
         }
         result = _run_func(
-            "maya-rigging", "set_joint_limit", cmds_ov,
-            joint_name="joint1", axis="x", min_angle=-45.0, max_angle=45.0
+            "maya-rigging", "set_joint_limit", cmds_ov, joint_name="joint1", axis="x", min_angle=-45.0, max_angle=45.0
         )
         assert result["success"] is True
         assert result["context"]["axis"] == "x"
 
     def test_invalid_axis(self):
         cmds_ov = {"objectType": MagicMock(return_value="joint")}
-        result = _run_func(
-            "maya-rigging", "set_joint_limit", cmds_ov,
-            joint_name="joint1", axis="w"
-        )
+        result = _run_func("maya-rigging", "set_joint_limit", cmds_ov, joint_name="joint1", axis="w")
         assert result["success"] is False
 
     def test_not_a_joint(self):
         cmds_ov = {"objectType": MagicMock(return_value="mesh")}
-        result = _run_func(
-            "maya-rigging", "set_joint_limit", cmds_ov,
-            joint_name="pCube1", axis="x"
-        )
+        result = _run_func("maya-rigging", "set_joint_limit", cmds_ov, joint_name="pCube1", axis="x")
         assert result["success"] is False
 
     def test_joint_not_found(self):
         cmds_ov = {"objExists": MagicMock(return_value=False)}
-        result = _run_func(
-            "maya-rigging", "set_joint_limit", cmds_ov,
-            joint_name="missing", axis="y"
-        )
+        result = _run_func("maya-rigging", "set_joint_limit", cmds_ov, joint_name="missing", axis="y")
         assert result["success"] is False
 
     def test_disable_limit(self):
@@ -781,10 +774,7 @@ class TestSetJointLimit:
             "objectType": MagicMock(return_value="joint"),
             "getAttr": MagicMock(return_value=0.0),
         }
-        result = _run_func(
-            "maya-rigging", "set_joint_limit", cmds_ov,
-            joint_name="joint1", axis="z", enable=False
-        )
+        result = _run_func("maya-rigging", "set_joint_limit", cmds_ov, joint_name="joint1", axis="z", enable=False)
         assert result["success"] is True
         assert result["context"]["enable"] is False
 
@@ -793,10 +783,7 @@ class TestSetJointLimit:
             "objectType": MagicMock(return_value="joint"),
             "setAttr": MagicMock(side_effect=RuntimeError("error")),
         }
-        result = _run_func(
-            "maya-rigging", "set_joint_limit", cmds_ov,
-            joint_name="joint1", axis="x"
-        )
+        result = _run_func("maya-rigging", "set_joint_limit", cmds_ov, joint_name="joint1", axis="x")
         assert result["success"] is False
 
     def test_context_has_axis(self):
@@ -804,10 +791,7 @@ class TestSetJointLimit:
             "objectType": MagicMock(return_value="joint"),
             "getAttr": MagicMock(return_value=0.0),
         }
-        result = _run_func(
-            "maya-rigging", "set_joint_limit", cmds_ov,
-            joint_name="joint1", axis="Y"
-        )
+        result = _run_func("maya-rigging", "set_joint_limit", cmds_ov, joint_name="joint1", axis="Y")
         assert result["context"]["axis"] == "y"
 
 
@@ -825,10 +809,7 @@ class TestSetJointOrient:
 
     def test_set_orient_values(self):
         cmds_ov = {"objectType": MagicMock(return_value="joint")}
-        result = _run_func(
-            "maya-rigging", "set_joint_orient", cmds_ov,
-            joint_name="joint1", orient=[45.0, 0.0, 0.0]
-        )
+        result = _run_func("maya-rigging", "set_joint_orient", cmds_ov, joint_name="joint1", orient=[45.0, 0.0, 0.0])
         assert result["success"] is True
         assert result["context"]["orient"] == [45.0, 0.0, 0.0]
 
@@ -848,10 +829,7 @@ class TestSetJointOrient:
             "objectType": MagicMock(return_value="joint"),
             "setAttr": set_attr_mock,
         }
-        result = _run_func(
-            "maya-rigging", "set_joint_orient", cmds_ov,
-            joint_name="joint1", zero_scale_orient=True
-        )
+        result = _run_func("maya-rigging", "set_joint_orient", cmds_ov, joint_name="joint1", zero_scale_orient=True)
         assert result["success"] is True
 
     def test_exception(self):

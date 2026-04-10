@@ -83,6 +83,7 @@ def _patch_maya(extra_attrs=None):
 # set_render_settings
 # ===========================================================================
 
+
 class TestSetRenderSettings:
     """Tests for maya-render/scripts/set_render_settings.py."""
 
@@ -123,9 +124,7 @@ class TestSetRenderSettings:
             for k in patches:
                 sys.modules.pop(k, None)
         assert result["success"] is True
-        mock_cmds.setAttr.assert_any_call(
-            "defaultRenderGlobals.currentRenderer", "arnold", type="string"
-        )
+        mock_cmds.setAttr.assert_any_call("defaultRenderGlobals.currentRenderer", "arnold", type="string")
 
     def test_set_frame_range(self):
         patches, mock_cmds = _patch_maya()
@@ -208,6 +207,7 @@ class TestSetRenderSettings:
 # get_render_settings
 # ===========================================================================
 
+
 class TestGetRenderSettings:
     """Tests for maya-render/scripts/get_render_settings.py."""
 
@@ -288,6 +288,7 @@ class TestGetRenderSettings:
 # get_scene_render_stats
 # ===========================================================================
 
+
 class TestGetSceneRenderStats:
     """Tests for maya-render/scripts/get_scene_render_stats.py."""
 
@@ -359,6 +360,7 @@ class TestGetSceneRenderStats:
 # set_render_quality
 # ===========================================================================
 
+
 class TestSetRenderQuality:
     """Tests for maya-render/scripts/set_render_quality.py."""
 
@@ -429,6 +431,7 @@ class TestSetRenderQuality:
 # capture_viewport
 # ===========================================================================
 
+
 class TestCaptureViewport:
     """Tests for maya-render/scripts/capture_viewport.py."""
 
@@ -444,10 +447,9 @@ class TestCaptureViewport:
             sys.modules[k] = v
         try:
             mod = _load_script("maya-render", "capture_viewport")
-            with patch("tempfile.NamedTemporaryFile") as mock_ntf, \
-                 patch("os.path.exists") as mock_exists, \
-                 patch("builtins.open", create=True) as mock_open, \
-                 patch("os.unlink"):
+            with patch("tempfile.NamedTemporaryFile") as mock_ntf, patch("os.path.exists") as mock_exists, patch(
+                "builtins.open", create=True
+            ) as mock_open, patch("os.unlink"):
                 # tempfile mock
                 ntf_inst = MagicMock()
                 ntf_inst.__enter__ = lambda s: ntf_inst
@@ -486,10 +488,9 @@ class TestCaptureViewport:
             sys.modules[k] = v
         try:
             mod = _load_script("maya-render", "capture_viewport")
-            with patch("tempfile.NamedTemporaryFile") as mock_ntf, \
-                 patch("os.path.exists", return_value=True), \
-                 patch("builtins.open", create=True) as mock_open, \
-                 patch("os.unlink"):
+            with patch("tempfile.NamedTemporaryFile") as mock_ntf, patch("os.path.exists", return_value=True), patch(
+                "builtins.open", create=True
+            ) as mock_open, patch("os.unlink"):
                 ntf_inst = MagicMock()
                 ntf_inst.__enter__ = lambda s: ntf_inst
                 ntf_inst.__exit__ = MagicMock(return_value=False)
@@ -522,11 +523,11 @@ class TestCaptureViewport:
 # playblast
 # ===========================================================================
 
+
 class TestPlayblast:
     """Tests for maya-render/scripts/playblast.py."""
 
-    def _run(self, frame=1.0, width=1920, height=1080, percent=100,
-             png_exists=True, raise_exc=None):
+    def _run(self, frame=1.0, width=1920, height=1080, percent=100, png_exists=True, raise_exc=None):
         patches, mock_cmds = _patch_maya()
         mock_cmds.currentTime.return_value = frame
         fake_img = b"\x89PNG\r\nfakeblast"
@@ -535,10 +536,9 @@ class TestPlayblast:
             sys.modules[k] = v
         try:
             mod = _load_script("maya-render", "playblast")
-            with patch("tempfile.NamedTemporaryFile") as mock_ntf, \
-                 patch("os.path.exists") as mock_exists, \
-                 patch("builtins.open", create=True) as mock_open, \
-                 patch("os.unlink"):
+            with patch("tempfile.NamedTemporaryFile") as mock_ntf, patch("os.path.exists") as mock_exists, patch(
+                "builtins.open", create=True
+            ) as mock_open, patch("os.unlink"):
                 ntf_inst = MagicMock()
                 ntf_inst.__enter__ = lambda s: ntf_inst
                 ntf_inst.__exit__ = MagicMock(return_value=False)
@@ -556,9 +556,7 @@ class TestPlayblast:
                 if raise_exc:
                     mock_cmds.playblast.side_effect = raise_exc
 
-                result = mod.playblast(
-                    width=width, height=height, frame=frame, percent=percent
-                )
+                result = mod.playblast(width=width, height=height, frame=frame, percent=percent)
         finally:
             for k in patches:
                 sys.modules.pop(k, None)
@@ -592,10 +590,9 @@ class TestPlayblast:
             sys.modules[k] = v
         try:
             mod = _load_script("maya-render", "playblast")
-            with patch("tempfile.NamedTemporaryFile") as mock_ntf, \
-                 patch("os.path.exists", return_value=True), \
-                 patch("builtins.open", create=True) as mock_open, \
-                 patch("os.unlink"):
+            with patch("tempfile.NamedTemporaryFile") as mock_ntf, patch("os.path.exists", return_value=True), patch(
+                "builtins.open", create=True
+            ) as mock_open, patch("os.unlink"):
                 ntf_inst = MagicMock()
                 ntf_inst.__enter__ = lambda s: ntf_inst
                 ntf_inst.__exit__ = MagicMock(return_value=False)
@@ -619,11 +616,11 @@ class TestPlayblast:
 # import_file
 # ===========================================================================
 
+
 class TestImportFile:
     """Tests for maya-render/scripts/import_file.py."""
 
-    def _run(self, file_path="/tmp/test.fbx", namespace=None,
-             merge_namespaces=False, ls_return=None, raise_exc=None):
+    def _run(self, file_path="/tmp/test.fbx", namespace=None, merge_namespaces=False, ls_return=None, raise_exc=None):
         patches, mock_cmds = _patch_maya()
         mock_cmds.ls.return_value = ls_return if ls_return is not None else ["node1"]
         if raise_exc:
@@ -674,11 +671,11 @@ class TestImportFile:
 # export_selection
 # ===========================================================================
 
+
 class TestExportSelection:
     """Tests for maya-render/scripts/export_selection.py."""
 
-    def _run(self, file_path="/tmp/out.fbx", file_type="FBX export",
-             file_return=None, raise_exc=None):
+    def _run(self, file_path="/tmp/out.fbx", file_type="FBX export", file_return=None, raise_exc=None):
         patches, mock_cmds = _patch_maya()
         mock_cmds.file.return_value = file_return or file_path
         if raise_exc:

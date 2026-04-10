@@ -1,4 +1,5 @@
 """Create an XGen description on a mesh."""
+
 from dcc_mcp_core import error_result, success_result
 
 
@@ -35,6 +36,7 @@ def run(params):
 
         # XGen Python API
         import xgenm as xg
+
         palette = xg.createPalette(collection)
         desc = xg.createDescription(palette, description, primitive, mesh)
         return success_result(

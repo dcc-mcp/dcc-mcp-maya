@@ -1,4 +1,5 @@
 """Add a MASH node to an existing network."""
+
 from dcc_mcp_core import error_result, success_result
 
 

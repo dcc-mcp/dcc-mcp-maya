@@ -22,9 +22,7 @@ def _load_script(skill_dir, script_name):
     """Load a skill script from its file path with a unique module name."""
     _MOD_COUNTER[0] += 1
     script_path = _SKILLS_ROOT / skill_dir / "scripts" / "{}.py".format(script_name)
-    module_name = "skill_r6_{}_{}_{}" .format(
-        skill_dir.replace("-", "_"), script_name, _MOD_COUNTER[0]
-    )
+    module_name = "skill_r6_{}_{}_{}".format(skill_dir.replace("-", "_"), script_name, _MOD_COUNTER[0])
     spec = importlib.util.spec_from_file_location(module_name, str(script_path))
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
@@ -82,8 +80,7 @@ class TestAddAttribute:
         assert result["context"]["attr_type"] == "string"
 
     def test_node_not_found(self):
-        result = self._run({"objExists": MagicMock(return_value=False)},
-                           node_name="missing", attribute="x")
+        result = self._run({"objExists": MagicMock(return_value=False)}, node_name="missing", attribute="x")
         assert result["success"] is False
         assert "not found" in result["message"].lower()
 
@@ -93,18 +90,15 @@ class TestAddAttribute:
         assert "invalid attribute type" in result["message"].lower()
 
     def test_with_min_max(self):
-        result = self._run(node_name="pSphere1", attribute="clamped",
-                           attr_type="float", min_value=0.0, max_value=1.0)
+        result = self._run(node_name="pSphere1", attribute="clamped", attr_type="float", min_value=0.0, max_value=1.0)
         assert result["success"] is True
 
     def test_with_default_value(self):
-        result = self._run(node_name="pSphere1", attribute="defVal",
-                           attr_type="double", default_value=3.14)
+        result = self._run(node_name="pSphere1", attribute="defVal", attr_type="double", default_value=3.14)
         assert result["success"] is True
 
     def test_keyable_false(self):
-        result = self._run(node_name="pSphere1", attribute="hidden",
-                           attr_type="bool", keyable=False)
+        result = self._run(node_name="pSphere1", attribute="hidden", attr_type="bool", keyable=False)
         assert result["success"] is True
         assert result["context"]["keyable"] is False
 
@@ -132,8 +126,7 @@ class TestSetAttribute:
         assert result["success"] is True
 
     def test_node_not_found(self):
-        result = self._run({"objExists": MagicMock(return_value=False)},
-                           node_name="ghost", attribute="tx", value=1.0)
+        result = self._run({"objExists": MagicMock(return_value=False)}, node_name="ghost", attribute="tx", value=1.0)
         assert result["success"] is False
         assert "not found" in result["message"].lower()
 
@@ -145,16 +138,19 @@ class TestSetAttribute:
             # first call: node exists; second call: attr does not
             return call_count[0] == 1
 
-        result = self._run({"objExists": obj_exists},
-                           node_name="pSphere1", attribute="noSuchAttr", value=1.0)
+        result = self._run({"objExists": obj_exists}, node_name="pSphere1", attribute="noSuchAttr", value=1.0)
         assert result["success"] is False
 
     def test_exception_propagates(self):
         cmds_mock = MagicMock()
         cmds_mock.objExists.return_value = True
         cmds_mock.setAttr.side_effect = RuntimeError("locked")
-        result = self._run({"objExists": cmds_mock.objExists, "setAttr": cmds_mock.setAttr},
-                           node_name="pSphere1", attribute="tx", value=0.0)
+        result = self._run(
+            {"objExists": cmds_mock.objExists, "setAttr": cmds_mock.setAttr},
+            node_name="pSphere1",
+            attribute="tx",
+            value=0.0,
+        )
         assert result["success"] is False
 
 
@@ -168,21 +164,20 @@ class TestGetAttribute:
         return _run_func("maya-attributes", "get_attribute", cmds_overrides, **kwargs)
 
     def test_success_scalar(self):
-        result = self._run({"getAttr": MagicMock(return_value=3.0)},
-                           node_name="pSphere1", attribute="translateX")
+        result = self._run({"getAttr": MagicMock(return_value=3.0)}, node_name="pSphere1", attribute="translateX")
         assert result["success"] is True
         assert result["context"]["value"] == 3.0
 
     def test_success_compound_flattened(self):
         # cmds.getAttr returns [(x, y, z)] for compound attrs
-        result = self._run({"getAttr": MagicMock(return_value=[(1.0, 2.0, 3.0)])},
-                           node_name="pSphere1", attribute="translate")
+        result = self._run(
+            {"getAttr": MagicMock(return_value=[(1.0, 2.0, 3.0)])}, node_name="pSphere1", attribute="translate"
+        )
         assert result["success"] is True
         assert result["context"]["value"] == [1.0, 2.0, 3.0]
 
     def test_node_not_found(self):
-        result = self._run({"objExists": MagicMock(return_value=False)},
-                           node_name="missing", attribute="tx")
+        result = self._run({"objExists": MagicMock(return_value=False)}, node_name="missing", attribute="tx")
         assert result["success"] is False
         assert "not found" in result["message"].lower()
 
@@ -193,16 +188,16 @@ class TestGetAttribute:
             call_count[0] += 1
             return call_count[0] == 1
 
-        result = self._run({"objExists": obj_exists},
-                           node_name="pSphere1", attribute="noSuchAttr")
+        result = self._run({"objExists": obj_exists}, node_name="pSphere1", attribute="noSuchAttr")
         assert result["success"] is False
 
     def test_exception_propagates(self):
         cmds_mock = MagicMock()
         cmds_mock.objExists.return_value = True
         cmds_mock.getAttr.side_effect = RuntimeError("no attr")
-        result = self._run({"objExists": cmds_mock.objExists, "getAttr": cmds_mock.getAttr},
-                           node_name="pSphere1", attribute="tx")
+        result = self._run(
+            {"objExists": cmds_mock.objExists, "getAttr": cmds_mock.getAttr}, node_name="pSphere1", attribute="tx"
+        )
         assert result["success"] is False
 
 
@@ -216,33 +211,30 @@ class TestListAttributes:
         return _run_func("maya-attributes", "list_attributes", cmds_overrides, **kwargs)
 
     def test_success_all(self):
-        result = self._run({"listAttr": MagicMock(return_value=["tx", "ty", "tz"])},
-                           node_name="pSphere1")
+        result = self._run({"listAttr": MagicMock(return_value=["tx", "ty", "tz"])}, node_name="pSphere1")
         assert result["success"] is True
         assert result["context"]["count"] == 3
         assert "tx" in result["context"]["attributes"]
 
     def test_success_empty(self):
-        result = self._run({"listAttr": MagicMock(return_value=[])},
-                           node_name="pSphere1")
+        result = self._run({"listAttr": MagicMock(return_value=[])}, node_name="pSphere1")
         assert result["success"] is True
         assert result["context"]["count"] == 0
 
     def test_success_user_defined_only(self):
-        result = self._run({"listAttr": MagicMock(return_value=["myFloat"])},
-                           node_name="pSphere1", user_defined_only=True)
+        result = self._run(
+            {"listAttr": MagicMock(return_value=["myFloat"])}, node_name="pSphere1", user_defined_only=True
+        )
         assert result["success"] is True
         assert result["context"]["attributes"] == ["myFloat"]
 
     def test_success_keyable_only(self):
-        result = self._run({"listAttr": MagicMock(return_value=["tx", "ty"])},
-                           node_name="pSphere1", keyable_only=True)
+        result = self._run({"listAttr": MagicMock(return_value=["tx", "ty"])}, node_name="pSphere1", keyable_only=True)
         assert result["success"] is True
         assert result["context"]["count"] == 2
 
     def test_node_not_found(self):
-        result = self._run({"objExists": MagicMock(return_value=False)},
-                           node_name="ghost")
+        result = self._run({"objExists": MagicMock(return_value=False)}, node_name="ghost")
         assert result["success"] is False
         assert "not found" in result["message"].lower()
 
@@ -257,14 +249,12 @@ class TestDeleteAttribute:
         return _run_func("maya-attributes", "delete_attribute", cmds_overrides, **kwargs)
 
     def test_success(self):
-        result = self._run({"attributeQuery": MagicMock(return_value=True)},
-                           node_name="pSphere1", attribute="myFloat")
+        result = self._run({"attributeQuery": MagicMock(return_value=True)}, node_name="pSphere1", attribute="myFloat")
         assert result["success"] is True
         assert result["context"]["attribute"] == "myFloat"
 
     def test_node_not_found(self):
-        result = self._run({"objExists": MagicMock(return_value=False)},
-                           node_name="missing", attribute="myFloat")
+        result = self._run({"objExists": MagicMock(return_value=False)}, node_name="missing", attribute="myFloat")
         assert result["success"] is False
         assert "not found" in result["message"].lower()
 
@@ -275,13 +265,13 @@ class TestDeleteAttribute:
             call_count[0] += 1
             return call_count[0] == 1
 
-        result = self._run({"objExists": obj_exists},
-                           node_name="pSphere1", attribute="noSuchAttr")
+        result = self._run({"objExists": obj_exists}, node_name="pSphere1", attribute="noSuchAttr")
         assert result["success"] is False
 
     def test_builtin_attribute_rejected(self):
-        result = self._run({"attributeQuery": MagicMock(return_value=False)},
-                           node_name="pSphere1", attribute="translateX")
+        result = self._run(
+            {"attributeQuery": MagicMock(return_value=False)}, node_name="pSphere1", attribute="translateX"
+        )
         assert result["success"] is False
         assert "built-in" in result["message"].lower()
 
@@ -291,10 +281,13 @@ class TestDeleteAttribute:
         cmds_mock.attributeQuery.return_value = True
         cmds_mock.deleteAttr.side_effect = RuntimeError("cannot delete")
         result = self._run(
-            {"objExists": cmds_mock.objExists,
-             "attributeQuery": cmds_mock.attributeQuery,
-             "deleteAttr": cmds_mock.deleteAttr},
-            node_name="pSphere1", attribute="myFloat"
+            {
+                "objExists": cmds_mock.objExists,
+                "attributeQuery": cmds_mock.attributeQuery,
+                "deleteAttr": cmds_mock.deleteAttr,
+            },
+            node_name="pSphere1",
+            attribute="myFloat",
         )
         assert result["success"] is False
 
@@ -531,9 +524,7 @@ class TestCreateDynamicField:
         cmds_mock.objExists.return_value = True
         with patch.dict(sys.modules, modules):
             mod = _load_script("maya-dynamics", "create_dynamic_field")
-            result = mod.create_dynamic_field(
-                field_type="gravity", objects=["nParticle1"]
-            )
+            result = mod.create_dynamic_field(field_type="gravity", objects=["nParticle1"])
         assert result["success"] is True
         assert "nParticle1" in result["context"]["connected_objects"]
 
@@ -552,9 +543,7 @@ class TestCreateDynamicField:
         cmds_mock.objExists = obj_exists
         with patch.dict(sys.modules, modules):
             mod = _load_script("maya-dynamics", "create_dynamic_field")
-            result = mod.create_dynamic_field(
-                field_type="gravity", objects=["nParticle_missing"]
-            )
+            result = mod.create_dynamic_field(field_type="gravity", objects=["nParticle_missing"])
         assert result["success"] is False
 
 
@@ -579,8 +568,7 @@ class TestConnectFieldToObjects:
         assert "no objects" in result["message"].lower()
 
     def test_field_not_found(self):
-        result = self._run({"objExists": MagicMock(return_value=False)},
-                           field_node="missing", objects=["nParticle1"])
+        result = self._run({"objExists": MagicMock(return_value=False)}, field_node="missing", objects=["nParticle1"])
         assert result["success"] is False
 
     def test_object_not_found(self):
@@ -590,13 +578,11 @@ class TestConnectFieldToObjects:
             call_count[0] += 1
             return call_count[0] == 1  # field exists; particle missing
 
-        result = self._run({"objExists": obj_exists},
-                           field_node="gravityField1", objects=["ghost"])
+        result = self._run({"objExists": obj_exists}, field_node="gravityField1", objects=["ghost"])
         assert result["success"] is False
 
     def test_multiple_objects(self):
-        result = self._run(field_node="turbField1",
-                           objects=["nParticle1", "nParticle2", "nCloth1"])
+        result = self._run(field_node="turbField1", objects=["nParticle1", "nParticle2", "nCloth1"])
         assert result["success"] is True
         assert len(result["context"]["connected_objects"]) == 3
 
@@ -611,25 +597,34 @@ class TestSetNClothAttribute:
         return _run_func("maya-dynamics", "set_ncloth_attribute", cmds_overrides, **kwargs)
 
     def test_success_scalar(self):
-        result = self._run({"objectType": MagicMock(return_value="nCloth")},
-                           ncloth_node="nClothShape1", attribute="thickness", value=0.1)
+        result = self._run(
+            {"objectType": MagicMock(return_value="nCloth")},
+            ncloth_node="nClothShape1",
+            attribute="thickness",
+            value=0.1,
+        )
         assert result["success"] is True
         assert result["context"]["value"] == 0.1
 
     def test_success_vector(self):
-        result = self._run({"objectType": MagicMock(return_value="nCloth")},
-                           ncloth_node="nClothShape1", attribute="inputForce",
-                           value=[0.0, 1.0, 0.0])
+        result = self._run(
+            {"objectType": MagicMock(return_value="nCloth")},
+            ncloth_node="nClothShape1",
+            attribute="inputForce",
+            value=[0.0, 1.0, 0.0],
+        )
         assert result["success"] is True
 
     def test_node_not_found(self):
-        result = self._run({"objExists": MagicMock(return_value=False)},
-                           ncloth_node="missing", attribute="thickness", value=0.1)
+        result = self._run(
+            {"objExists": MagicMock(return_value=False)}, ncloth_node="missing", attribute="thickness", value=0.1
+        )
         assert result["success"] is False
 
     def test_wrong_node_type(self):
-        result = self._run({"objectType": MagicMock(return_value="mesh")},
-                           ncloth_node="pPlane1Shape", attribute="thickness", value=0.1)
+        result = self._run(
+            {"objectType": MagicMock(return_value="mesh")}, ncloth_node="pPlane1Shape", attribute="thickness", value=0.1
+        )
         assert result["success"] is False
         assert "not an ncloth" in result["message"].lower()
 
@@ -641,9 +636,12 @@ class TestSetNClothAttribute:
             # node exists (1st call), attr path does not (2nd call)
             return call_count[0] == 1
 
-        result = self._run({"objExists": obj_exists,
-                            "objectType": MagicMock(return_value="nCloth")},
-                           ncloth_node="nClothShape1", attribute="noSuchAttr", value=1.0)
+        result = self._run(
+            {"objExists": obj_exists, "objectType": MagicMock(return_value="nCloth")},
+            ncloth_node="nClothShape1",
+            attribute="noSuchAttr",
+            value=1.0,
+        )
         assert result["success"] is False
 
 
@@ -657,15 +655,19 @@ class TestSetNRigidAttribute:
         return _run_func("maya-dynamics", "set_nrigid_attribute", cmds_overrides, **kwargs)
 
     def test_success_scalar(self):
-        result = self._run({"objectType": MagicMock(return_value="nRigid")},
-                           nrigid_node="nRigidShape1", attribute="bounce", value=0.5)
+        result = self._run(
+            {"objectType": MagicMock(return_value="nRigid")}, nrigid_node="nRigidShape1", attribute="bounce", value=0.5
+        )
         assert result["success"] is True
         assert result["context"]["value"] == 0.5
 
     def test_success_list_value(self):
-        result = self._run({"objectType": MagicMock(return_value="nRigid")},
-                           nrigid_node="nRigidShape1", attribute="someVec",
-                           value=[1.0, 2.0, 3.0])
+        result = self._run(
+            {"objectType": MagicMock(return_value="nRigid")},
+            nrigid_node="nRigidShape1",
+            attribute="someVec",
+            value=[1.0, 2.0, 3.0],
+        )
         assert result["success"] is True
 
     def test_missing_required_args(self):
@@ -673,13 +675,15 @@ class TestSetNRigidAttribute:
         assert result["success"] is False
 
     def test_node_not_found(self):
-        result = self._run({"objExists": MagicMock(return_value=False)},
-                           nrigid_node="missing", attribute="bounce", value=0.5)
+        result = self._run(
+            {"objExists": MagicMock(return_value=False)}, nrigid_node="missing", attribute="bounce", value=0.5
+        )
         assert result["success"] is False
 
     def test_wrong_node_type(self):
-        result = self._run({"objectType": MagicMock(return_value="mesh")},
-                           nrigid_node="pCubeShape1", attribute="bounce", value=0.5)
+        result = self._run(
+            {"objectType": MagicMock(return_value="mesh")}, nrigid_node="pCubeShape1", attribute="bounce", value=0.5
+        )
         assert result["success"] is False
         assert "not an nrigid" in result["message"].lower()
 
@@ -694,24 +698,30 @@ class TestSetNucleusAttribute:
         return _run_func("maya-dynamics", "set_nucleus_attribute", cmds_overrides, **kwargs)
 
     def test_success_scalar(self):
-        result = self._run({"objectType": MagicMock(return_value="nucleus")},
-                           nucleus="nucleus1", attribute="gravity", value=-9.8)
+        result = self._run(
+            {"objectType": MagicMock(return_value="nucleus")}, nucleus="nucleus1", attribute="gravity", value=-9.8
+        )
         assert result["success"] is True
 
     def test_success_vector(self):
-        result = self._run({"objectType": MagicMock(return_value="nucleus")},
-                           nucleus="nucleus1", attribute="windDirection",
-                           value=[1.0, 0.0, 0.0])
+        result = self._run(
+            {"objectType": MagicMock(return_value="nucleus")},
+            nucleus="nucleus1",
+            attribute="windDirection",
+            value=[1.0, 0.0, 0.0],
+        )
         assert result["success"] is True
 
     def test_node_not_found(self):
-        result = self._run({"objExists": MagicMock(return_value=False)},
-                           nucleus="missing", attribute="gravity", value=0.0)
+        result = self._run(
+            {"objExists": MagicMock(return_value=False)}, nucleus="missing", attribute="gravity", value=0.0
+        )
         assert result["success"] is False
 
     def test_wrong_node_type(self):
-        result = self._run({"objectType": MagicMock(return_value="transform")},
-                           nucleus="pSphere1", attribute="gravity", value=0.0)
+        result = self._run(
+            {"objectType": MagicMock(return_value="transform")}, nucleus="pSphere1", attribute="gravity", value=0.0
+        )
         assert result["success"] is False
         assert "not a nucleus" in result["message"].lower()
 
@@ -722,9 +732,12 @@ class TestSetNucleusAttribute:
             call_count[0] += 1
             return call_count[0] == 1
 
-        result = self._run({"objExists": obj_exists,
-                            "objectType": MagicMock(return_value="nucleus")},
-                           nucleus="nucleus1", attribute="noSuchAttr", value=0.0)
+        result = self._run(
+            {"objExists": obj_exists, "objectType": MagicMock(return_value="nucleus")},
+            nucleus="nucleus1",
+            attribute="noSuchAttr",
+            value=0.0,
+        )
         assert result["success"] is False
 
 
@@ -831,19 +844,16 @@ class TestSetIkFkBlend:
         return _run_func("maya-rigging", "set_ik_fk_blend", cmds_overrides, **kwargs)
 
     def test_success_full_ik(self):
-        result = self._run({"objectType": MagicMock(return_value="ikHandle")},
-                           ik_handle="ikHandle1", blend=1.0)
+        result = self._run({"objectType": MagicMock(return_value="ikHandle")}, ik_handle="ikHandle1", blend=1.0)
         assert result["success"] is True
         assert result["context"]["blend"] == 1.0
 
     def test_success_full_fk(self):
-        result = self._run({"objectType": MagicMock(return_value="ikHandle")},
-                           ik_handle="ikHandle1", blend=0.0)
+        result = self._run({"objectType": MagicMock(return_value="ikHandle")}, ik_handle="ikHandle1", blend=0.0)
         assert result["success"] is True
 
     def test_success_mid_blend(self):
-        result = self._run({"objectType": MagicMock(return_value="transform")},
-                           ik_handle="ikHandle1", blend=0.5)
+        result = self._run({"objectType": MagicMock(return_value="transform")}, ik_handle="ikHandle1", blend=0.5)
         assert result["success"] is True
 
     def test_blend_out_of_range_high(self):
@@ -856,13 +866,11 @@ class TestSetIkFkBlend:
         assert result["success"] is False
 
     def test_ik_handle_not_found(self):
-        result = self._run({"objExists": MagicMock(return_value=False)},
-                           ik_handle="missing", blend=1.0)
+        result = self._run({"objExists": MagicMock(return_value=False)}, ik_handle="missing", blend=1.0)
         assert result["success"] is False
 
     def test_wrong_node_type(self):
-        result = self._run({"objectType": MagicMock(return_value="joint")},
-                           ik_handle="joint1", blend=1.0)
+        result = self._run({"objectType": MagicMock(return_value="joint")}, ik_handle="joint1", blend=1.0)
         assert result["success"] is False
         assert "not an ik handle" in result["message"].lower()
 
@@ -874,9 +882,9 @@ class TestSetIkFkBlend:
             return call_count[0] == 1
 
         result = self._run(
-            {"objExists": obj_exists,
-             "objectType": MagicMock(return_value="ikHandle")},
-            ik_handle="ikHandle1", blend=1.0
+            {"objExists": obj_exists, "objectType": MagicMock(return_value="ikHandle")},
+            ik_handle="ikHandle1",
+            blend=1.0,
         )
         assert result["success"] is False
 
@@ -891,42 +899,48 @@ class TestSetJointLimit:
         return _run_func("maya-rigging", "set_joint_limit", cmds_overrides, **kwargs)
 
     def test_success_x_axis(self):
-        result = self._run({"objectType": MagicMock(return_value="joint"),
-                            "getAttr": MagicMock(return_value=-45.0)},
-                           joint_name="joint1", axis="x",
-                           min_angle=-90.0, max_angle=90.0)
+        result = self._run(
+            {"objectType": MagicMock(return_value="joint"), "getAttr": MagicMock(return_value=-45.0)},
+            joint_name="joint1",
+            axis="x",
+            min_angle=-90.0,
+            max_angle=90.0,
+        )
         assert result["success"] is True
         assert result["context"]["axis"] == "x"
         assert result["context"]["enable"] is True
 
     def test_success_disable_limit(self):
-        result = self._run({"objectType": MagicMock(return_value="joint"),
-                            "getAttr": MagicMock(return_value=0.0)},
-                           joint_name="joint1", axis="y", enable=False)
+        result = self._run(
+            {"objectType": MagicMock(return_value="joint"), "getAttr": MagicMock(return_value=0.0)},
+            joint_name="joint1",
+            axis="y",
+            enable=False,
+        )
         assert result["success"] is True
         assert result["context"]["enable"] is False
 
     def test_joint_not_found(self):
-        result = self._run({"objExists": MagicMock(return_value=False)},
-                           joint_name="missing", axis="x")
+        result = self._run({"objExists": MagicMock(return_value=False)}, joint_name="missing", axis="x")
         assert result["success"] is False
 
     def test_wrong_node_type(self):
-        result = self._run({"objectType": MagicMock(return_value="transform")},
-                           joint_name="pSphere1", axis="x")
+        result = self._run({"objectType": MagicMock(return_value="transform")}, joint_name="pSphere1", axis="x")
         assert result["success"] is False
         assert "not a joint" in result["message"].lower()
 
     def test_invalid_axis(self):
-        result = self._run({"objectType": MagicMock(return_value="joint")},
-                           joint_name="joint1", axis="w")
+        result = self._run({"objectType": MagicMock(return_value="joint")}, joint_name="joint1", axis="w")
         assert result["success"] is False
         assert "invalid axis" in result["message"].lower()
 
     def test_only_min_angle(self):
-        result = self._run({"objectType": MagicMock(return_value="joint"),
-                            "getAttr": MagicMock(return_value=-30.0)},
-                           joint_name="joint1", axis="z", min_angle=-30.0)
+        result = self._run(
+            {"objectType": MagicMock(return_value="joint"), "getAttr": MagicMock(return_value=-30.0)},
+            joint_name="joint1",
+            axis="z",
+            min_angle=-30.0,
+        )
         assert result["success"] is True
 
     def test_exception_propagates(self):
@@ -935,10 +949,9 @@ class TestSetJointLimit:
         cmds_mock.objectType.return_value = "joint"
         cmds_mock.setAttr.side_effect = RuntimeError("boom")
         result = self._run(
-            {"objExists": cmds_mock.objExists,
-             "objectType": cmds_mock.objectType,
-             "setAttr": cmds_mock.setAttr},
-            joint_name="joint1", axis="x"
+            {"objExists": cmds_mock.objExists, "objectType": cmds_mock.objectType, "setAttr": cmds_mock.setAttr},
+            joint_name="joint1",
+            axis="x",
         )
         assert result["success"] is False
 
@@ -953,31 +966,32 @@ class TestSetJointOrient:
         return _run_func("maya-rigging", "set_joint_orient", cmds_overrides, **kwargs)
 
     def test_success_default_zero(self):
-        result = self._run({"objectType": MagicMock(return_value="joint")},
-                           joint_name="joint1")
+        result = self._run({"objectType": MagicMock(return_value="joint")}, joint_name="joint1")
         assert result["success"] is True
         assert result["context"]["orient"] == [0.0, 0.0, 0.0]
 
     def test_success_custom_orient(self):
-        result = self._run({"objectType": MagicMock(return_value="joint")},
-                           joint_name="joint1", orient=[45.0, 0.0, 0.0])
+        result = self._run(
+            {"objectType": MagicMock(return_value="joint")}, joint_name="joint1", orient=[45.0, 0.0, 0.0]
+        )
         assert result["success"] is True
         assert result["context"]["orient"] == [45.0, 0.0, 0.0]
 
     def test_success_zero_scale_orient(self):
-        result = self._run({"objectType": MagicMock(return_value="joint")},
-                           joint_name="joint1", orient=[0.0, 90.0, 0.0],
-                           zero_scale_orient=True)
+        result = self._run(
+            {"objectType": MagicMock(return_value="joint")},
+            joint_name="joint1",
+            orient=[0.0, 90.0, 0.0],
+            zero_scale_orient=True,
+        )
         assert result["success"] is True
 
     def test_joint_not_found(self):
-        result = self._run({"objExists": MagicMock(return_value=False)},
-                           joint_name="missing")
+        result = self._run({"objExists": MagicMock(return_value=False)}, joint_name="missing")
         assert result["success"] is False
 
     def test_wrong_node_type(self):
-        result = self._run({"objectType": MagicMock(return_value="transform")},
-                           joint_name="pSphere1")
+        result = self._run({"objectType": MagicMock(return_value="transform")}, joint_name="pSphere1")
         assert result["success"] is False
         assert "not a joint" in result["message"].lower()
 
@@ -987,9 +1001,7 @@ class TestSetJointOrient:
         cmds_mock.objectType.return_value = "joint"
         cmds_mock.setAttr.side_effect = RuntimeError("locked")
         result = self._run(
-            {"objExists": cmds_mock.objExists,
-             "objectType": cmds_mock.objectType,
-             "setAttr": cmds_mock.setAttr},
-            joint_name="joint1"
+            {"objExists": cmds_mock.objExists, "objectType": cmds_mock.objectType, "setAttr": cmds_mock.setAttr},
+            joint_name="joint1",
         )
         assert result["success"] is False
