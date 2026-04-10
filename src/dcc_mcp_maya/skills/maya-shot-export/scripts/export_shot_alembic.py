@@ -1,0 +1,98 @@
+"""Export selected objects as an Alembic (.abc) sequence."""
+
+# Import future modules
+from __future__ import annotations
+
+# Import built-in modules
+import logging
+import os
+from typing import List, Optional
+
+logger = logging.getLogger(__name__)
+
+
+def export_shot_alembic(
+    file_path: str,
+    objects: Optional[List[str]] = None,
+    start_frame: Optional[float] = None,
+    end_frame: Optional[float] = None,
+    world_space: bool = True,
+    uv_write: bool = True,
+) -> dict:
+    """Export selected objects as an Alembic (.abc) sequence.
+
+    Args:
+        file_path: Output ``.abc`` file path.
+        objects: Objects to export.  If None, current selection is used.
+        start_frame: Start frame.  Defaults to timeline start.
+        end_frame: End frame.  Defaults to timeline end.
+        world_space: Write geometry in world space.  Default: True.
+        uv_write: Write UV sets.  Default: True.
+
+    Returns:
+        ActionResultModel dict with ``context.file_path`` and frame range.
+    """
+    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
+
+    try:
+        import maya.cmds as cmds  # noqa: PLC0415
+
+        if objects:
+            targets = objects
+        else:
+            targets = cmds.ls(selection=True) or []
+        if not targets:
+            return error_result(
+                "Nothing selected",
+                "Provide 'objects' or select nodes in Maya",
+            ).to_dict()
+
+        sf = start_frame if start_frame is not None else cmds.playbackOptions(q=True, minTime=True)
+        ef = end_frame if end_frame is not None else cmds.playbackOptions(q=True, maxTime=True)
+
+        out_dir = os.path.dirname(os.path.abspath(file_path))
+        os.makedirs(out_dir, exist_ok=True)
+
+        # Load AbcExport plugin if needed
+        if not cmds.pluginInfo("AbcExport", q=True, loaded=True):
+            cmds.loadPlugin("AbcExport")
+
+        root_flags = " ".join(["-root {}".format(obj) for obj in targets])
+        ws_flag = "-worldSpace" if world_space else ""
+        uv_flag = "-uvWrite" if uv_write else ""
+
+        job_str = (
+            "-frameRange {sf} {ef} {ws} {uv} {roots} -file \"{fp}\"".format(
+                sf=int(sf),
+                ef=int(ef),
+                ws=ws_flag,
+                uv=uv_flag,
+                roots=root_flags,
+                fp=file_path.replace("\\", "/"),
+            )
+        )
+        cmds.AbcExport(j=job_str)
+
+        return success_result(
+            "Exported Alembic to '{}'".format(file_path),
+            prompt="Use import_file to bring the Alembic back into a scene.",
+            file_path=file_path,
+            start_frame=sf,
+            end_frame=ef,
+            objects=targets,
+        ).to_dict()
+    except ImportError:
+        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+    except Exception as exc:
+        logger.exception("export_shot_alembic failed")
+        return error_result("Failed to export Alembic", str(exc)).to_dict()
+
+
+def main(**kwargs):
+    return export_shot_alembic(**kwargs)
+
+
+if __name__ == "__main__":
+    import json
+
+    print(json.dumps(export_shot_alembic("/tmp/shot_001.abc")))
