@@ -109,8 +109,9 @@ def set_camera_attribute(
         full_attr = "{}.{}".format(shape, attribute)
         if not cmds.objExists(full_attr):
             full_attr = "{}.{}".format(camera_name, attribute)
-        if not cmds.objExists(full_attr):
-            return skill_error("Attribute '{}' not found on camera '{}'".format(attribute, camera_name))
+        err = validate_node_exists(cmds, full_attr)
+        if err:
+            return err
 
         if isinstance(value, str):
             cmds.setAttr(full_attr, value, type="string")

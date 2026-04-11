@@ -131,8 +131,9 @@ def set_light_attribute(
         if not cmds.objExists(full_attr):
             # Attribute may be on transform instead
             full_attr = "{}.{}".format(light_name, attribute)
-        if not cmds.objExists(full_attr):
-            return skill_error("Attribute '{}' not found on '{}'".format(attribute, light_name))
+        err = validate_node_exists(cmds, full_attr)
+        if err:
+            return err
 
         if isinstance(value, (list, tuple)) and len(value) == 3:
             cmds.setAttr(full_attr, value[0], value[1], value[2], type="double3")
