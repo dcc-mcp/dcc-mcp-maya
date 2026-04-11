@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def create_plane(
@@ -33,7 +33,7 @@ def create_plane(
         obj = result[0]
         if name:
             obj = cmds.rename(obj, name)
-        return maya_success(
+        return skill_success(
             "Created plane: {}".format(obj),
             object_name=obj,
             width=width,
@@ -41,18 +41,17 @@ def create_plane(
             prompt="Use set_transform to position or assign_material to shade.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to create plane")
+        return skill_exception(exc, message="Failed to create plane")
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`create_plane`."""
     return create_plane(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = create_plane()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

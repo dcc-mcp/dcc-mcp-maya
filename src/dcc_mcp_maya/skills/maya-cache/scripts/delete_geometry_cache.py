@@ -7,7 +7,7 @@ from __future__ import annotations
 import os
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def delete_geometry_cache(
@@ -32,7 +32,7 @@ def delete_geometry_cache(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(cache_node):
-            return maya_error(
+            return skill_error(
                 "Cache node not found: {}".format(cache_node),
                 "'{}' does not exist in the scene".format(cache_node),
             )
@@ -55,24 +55,23 @@ def delete_geometry_cache(
         if files_deleted:
             msg += " and {} file(s)".format(len(files_deleted))
 
-        return maya_success(
+        return skill_success(
             msg,
             prompt="Use list_geometry_caches to confirm deletion.",
             deleted_node=cache_node,
             files_deleted=files_deleted,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to delete geometry cache")
+        return skill_exception(exc, message="Failed to delete geometry cache")
 
 
+@skill_entry
 def main(**kwargs):
     return delete_geometry_cache(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = delete_geometry_cache("cacheFile1", delete_files=False)
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

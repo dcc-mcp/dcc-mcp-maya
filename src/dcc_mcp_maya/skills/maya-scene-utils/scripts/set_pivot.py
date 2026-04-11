@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import List, Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def set_pivot(
@@ -38,20 +38,20 @@ def set_pivot(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return maya_error(
+            return skill_error(
                 "Object not found: {}".format(object_name),
                 "'{}' does not exist in the scene".format(object_name),
             )
 
         if pivot_type not in _VALID_PIVOT_TYPES:
-            return maya_error(
+            return skill_error(
                 "Invalid pivot_type: {}".format(pivot_type),
                 "pivot_type must be one of {}".format(_VALID_PIVOT_TYPES),
             )
 
         if position is not None:
             if len(position) != 3:
-                return maya_error(
+                return skill_error(
                     "Invalid position: {}".format(position),
                     "position must be a list of exactly 3 floats [x, y, z]",
                 )
@@ -68,7 +68,7 @@ def set_pivot(
         rp = list(cmds.xform(object_name, query=True, rotatePivot=True, worldSpace=True))
         sp = list(cmds.xform(object_name, query=True, scalePivot=True, worldSpace=True))
 
-        return maya_success(
+        return skill_success(
             "Set pivot on '{}' ({})".format(object_name, pivot_type),
             object_name=object_name,
             pivot_type=pivot_type,
@@ -78,18 +78,17 @@ def set_pivot(
             prompt="Check the result with list_scene_utils or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to set pivot on '{}'".format(object_name))
+        return skill_exception(exc, message="Failed to set pivot on '{}'".format(object_name))
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`set_pivot`."""
     return set_pivot(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = set_pivot()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

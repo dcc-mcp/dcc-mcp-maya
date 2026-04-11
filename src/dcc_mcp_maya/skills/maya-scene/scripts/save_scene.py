@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def save_scene(file_path: Optional[str] = None, file_type: str = "mayaBinary") -> dict:
@@ -27,22 +27,21 @@ def save_scene(file_path: Optional[str] = None, file_type: str = "mayaBinary") -
         if file_path:
             cmds.file(rename=file_path)
         saved = cmds.file(save=True, type=file_type)
-        return maya_success(
+        return skill_success(
             f"Scene saved to {saved}", file_path=saved, prompt="Use export_selection to share individual assets."
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to save scene")
+        return skill_exception(exc, message="Failed to save scene")
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`save_scene`."""
     return save_scene(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = save_scene()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

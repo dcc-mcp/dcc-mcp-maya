@@ -1,7 +1,7 @@
 """Grow the current component selection by one shell ring."""
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_success
+from dcc_mcp_core.skill import skill_error, skill_success
 
 
 def run(params):  # noqa: ARG001
@@ -23,7 +23,7 @@ def run(params):  # noqa: ARG001
         cmds.GrowPolygonSelectionRegion()
         after = cmds.ls(selection=True, flatten=True) or []
         added = len(after) - len(before)
-        return maya_success(
+        return skill_success(
             "Grew selection: {} -> {} components".format(len(before), len(after)),
             prompt="Use shrink_selection to undo, or convert_selection to switch modes.",
             before_count=len(before),
@@ -32,7 +32,7 @@ def run(params):  # noqa: ARG001
             selection=after,
         )
     except Exception as exc:
-        return maya_error(
+        return skill_error(
             "Failed to grow selection",
             str(exc),
             prompt="Ensure a mesh component is selected before calling grow_selection.",

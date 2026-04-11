@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import List, Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def set_cluster_weights(
@@ -32,7 +32,7 @@ def set_cluster_weights(
         ActionResultModel dict with ``context.vertex_count``.
     """
     if not weights:
-        return maya_error(
+        return skill_error(
             "No weights provided",
             "Supply at least one weight value",
         )
@@ -41,12 +41,12 @@ def set_cluster_weights(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(cluster_node):
-            return maya_error(
+            return skill_error(
                 "Cluster node not found: {}".format(cluster_node),
                 "'{}' does not exist".format(cluster_node),
             )
         if not cmds.objExists(mesh):
-            return maya_error(
+            return skill_error(
                 "Mesh not found: {}".format(mesh),
                 "'{}' does not exist".format(mesh),
             )
@@ -55,7 +55,7 @@ def set_cluster_weights(
 
         if vertex_indices is None:
             if len(weights) != vertex_count:
-                return maya_error(
+                return skill_error(
                     "Weight count mismatch",
                     "Expected {} weights, got {}".format(vertex_count, len(weights)),
                 )
@@ -68,7 +68,7 @@ def set_cluster_weights(
             vtx = "{}.vtx[{}]".format(mesh, idx)
             cmds.percent(cluster_node, vtx, value=w)
 
-        return maya_success(
+        return skill_success(
             "Set cluster weights on {} vertices of '{}'".format(len(vertex_indices), mesh),
             cluster_node=cluster_node,
             mesh=mesh,
@@ -77,18 +77,17 @@ def set_cluster_weights(
             prompt="Check the result with list_deformers or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to set cluster weights")
+        return skill_exception(exc, message="Failed to set cluster weights")
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`set_cluster_weights`."""
     return set_cluster_weights(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = set_cluster_weights()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

@@ -5,7 +5,7 @@ from __future__ import annotations
 
 # Import built-in modules
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def delete_aov(name: str) -> dict:
@@ -22,7 +22,7 @@ def delete_aov(name: str) -> dict:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not name:
-            return maya_error("AOV name is required", "Provide a non-empty AOV name")
+            return skill_error("AOV name is required", "Provide a non-empty AOV name")
 
         nodes = cmds.ls(type="aiAOV") or []
         target_node = None
@@ -35,31 +35,30 @@ def delete_aov(name: str) -> dict:
                 pass
 
         if target_node is None:
-            return maya_error(
+            return skill_error(
                 "AOV '{}' not found".format(name),
                 "No aiAOV node with name '{}' exists in the scene".format(name),
             )
 
         cmds.delete(target_node)
-        return maya_success(
+        return skill_success(
             "Deleted Arnold AOV '{}'".format(name),
             prompt="Use list_aovs to verify the AOV was removed.",
             deleted_node=target_node,
             aov_name=name,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to delete AOV '{}'".format(name))
+        return skill_exception(exc, message="Failed to delete AOV '{}'".format(name))
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`delete_aov`."""
     return delete_aov(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = delete_aov("diffuse")
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 # Import built-in modules
 
@@ -37,24 +37,23 @@ def list_mel_procedures(pattern: str = "", limit: int = 200) -> dict:
 
         procs = sorted(procs)[: int(limit)]
 
-        return maya_success(
+        return skill_success(
             "Found {} MEL procedures".format(len(procs)),
             prompt="Procedures listed. Use execute_mel to call any of them.",
             procedures=procs,
             count=len(procs),
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.mel could not be imported")
+        return skill_error("Maya not available", "maya.mel could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to list MEL procedures")
+        return skill_exception(exc, message="Failed to list MEL procedures")
 
 
+@skill_entry
 def main(**kwargs):
     return list_mel_procedures(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = list_mel_procedures(pattern="poly", limit=20)
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

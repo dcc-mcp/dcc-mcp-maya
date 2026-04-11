@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import List, Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def bake_simulation(
@@ -39,7 +39,7 @@ def bake_simulation(
         if targets:
             missing = [o for o in targets if not cmds.objExists(o)]
             if missing:
-                return maya_error(
+                return skill_error(
                     "Objects not found: {}".format(", ".join(missing)),
                     "The following objects do not exist: {}".format(", ".join(missing)),
                 )
@@ -48,7 +48,7 @@ def bake_simulation(
             targets = cmds.ls(selection=True) or []
 
         if not targets:
-            return maya_error(
+            return skill_error(
                 "No objects to bake",
                 "Provide object names or select objects before baking",
             )
@@ -60,7 +60,7 @@ def bake_simulation(
             simulation=True,
             preserveOutsideKeys=True,
         )
-        return maya_success(
+        return skill_success(
             "Baked {} object(s) from frame {} to {}".format(len(targets), start_frame, end_frame),
             object_count=len(targets),
             objects=targets,
@@ -70,18 +70,17 @@ def bake_simulation(
             prompt="Use delete_keyframes to trim unwanted frames, or export_animation_curves to save.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to bake simulation")
+        return skill_exception(exc, message="Failed to bake simulation")
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`bake_simulation`."""
     return bake_simulation(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = bake_simulation()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

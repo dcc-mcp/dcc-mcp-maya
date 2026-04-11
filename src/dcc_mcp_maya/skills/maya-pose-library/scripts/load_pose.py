@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success  # noqa: E402
 
 
 def load_pose(
@@ -40,7 +40,7 @@ def load_pose(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not os.path.isfile(file_path):
-            return maya_error(
+            return skill_error(
                 "Pose file not found: {}".format(file_path),
                 "'{}'  does not exist on disk".format(file_path),
             )
@@ -57,7 +57,7 @@ def load_pose(
                 if skip_missing:
                     missing.append(full_node)
                     continue
-                return maya_error(
+                return skill_error(
                     "Control not found: {}".format(full_node),
                     "Use skip_missing=True to ignore missing nodes",
                 )
@@ -73,7 +73,7 @@ def load_pose(
 
             applied += 1
 
-        return maya_success(
+        return skill_success(
             "Applied pose to {}/{} control(s)".format(applied, len(pose_data)),
             prompt="Use save_pose to capture any modifications as a new pose.",
             applied_count=applied,
@@ -82,17 +82,16 @@ def load_pose(
             file_path=file_path,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to load pose from '{}'".format(file_path))
+        return skill_exception(exc, message="Failed to load pose from '{}'".format(file_path))
 
 
+@skill_entry
 def main(**kwargs):
     return load_pose(**kwargs)
 
 
 if __name__ == "__main__":
-    import json as _json
-
-    result = load_pose("/tmp/my_pose.json")
-    print(_json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

@@ -2,7 +2,7 @@
 
 Provides:
 - ``load_skill_script(skill_dir, script_name)`` — load a skill script by path
-- ``make_mock_maya(cmds_attrs)`` — build a (mock_maya, mock_cmds) pair
+- ``make_mock_maya(cmds_attrs, mel_attrs)`` — build a (mock_maya, mock_cmds, mock_mel) triple
 - ``mock_maya_modules`` — autouse fixture for server tests
 """
 
@@ -11,13 +11,11 @@ from __future__ import annotations
 
 # Import built-in modules
 import importlib.util
-import sys
 from pathlib import Path
 from typing import Dict, Optional, Tuple
 from unittest.mock import MagicMock
 
 # Import third-party modules
-import pytest
 
 SKILLS_ROOT = Path(__file__).parent.parent / "src" / "dcc_mcp_maya" / "skills"
 
@@ -50,20 +48,29 @@ def load_skill_script(skill_dir: str, script_name: str):
 
 def make_mock_maya(
     cmds_attrs: Optional[Dict] = None,
-) -> Tuple[MagicMock, MagicMock]:
-    """Return ``(mock_maya, mock_cmds)`` with the ``.cmds`` linkage wired.
+    mel_attrs: Optional[Dict] = None,
+) -> Tuple[MagicMock, MagicMock, MagicMock]:
+    """Return ``(mock_maya, mock_cmds, mock_mel)`` with ``.cmds`` and ``.mel`` wired.
 
     Args:
         cmds_attrs: Optional dict of attribute name → return value to set on
             ``mock_cmds`` (e.g. ``{"objExists": MagicMock(return_value=True)}``).
+        mel_attrs: Optional dict of attribute name → return value to set on
+            ``mock_mel``.
 
     Returns:
-        Tuple of ``(mock_maya, mock_cmds)``.
+        Tuple of ``(mock_maya, mock_cmds, mock_mel)``.
     """
     mock_cmds = MagicMock()
+    mock_mel = MagicMock()
     mock_maya = MagicMock()
     mock_maya.cmds = mock_cmds
+    mock_maya.mel = mock_mel
     if cmds_attrs:
         for k, v in cmds_attrs.items():
             setattr(mock_cmds, k, v)
-    return mock_maya, mock_cmds
+    if mel_attrs:
+        for k, v in mel_attrs.items():
+            setattr(mock_mel, k, v)
+    return mock_maya, mock_cmds, mock_mel
+

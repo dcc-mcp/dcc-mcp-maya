@@ -5,7 +5,7 @@ from __future__ import annotations
 
 # Import built-in modules
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def smooth_mesh(
@@ -40,19 +40,19 @@ def smooth_mesh(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return maya_error(
+            return skill_error(
                 "Object not found: {}".format(object_name),
                 "'{}' does not exist in the scene".format(object_name),
             )
 
         if method not in _VALID_METHODS:
-            return maya_error(
+            return skill_error(
                 "Invalid method: {}".format(method),
                 "method must be one of {}".format(_VALID_METHODS),
             )
 
         if divisions < 0:
-            return maya_error(
+            return skill_error(
                 "Invalid divisions: {}".format(divisions),
                 "divisions must be >= 0",
             )
@@ -63,7 +63,7 @@ def smooth_mesh(
             target = shapes[0] if shapes else object_name
             cmds.setAttr("{}.displaySmoothMesh".format(target), 2)  # 2 = smooth + cage
             cmds.setAttr("{}.smoothLevel".format(target), divisions)
-            return maya_success(
+            return skill_success(
                 "Enabled smooth mesh preview on '{}' (level {})".format(object_name, divisions),
                 object_name=object_name,
                 divisions=divisions,
@@ -74,7 +74,7 @@ def smooth_mesh(
         # method == "subdivide"
         result = cmds.polySmooth(object_name, divisions=divisions)
         node_name = result[0] if result else "polySmoothFace1"
-        return maya_success(
+        return skill_success(
             "Subdivided '{}' with {} iteration(s)".format(object_name, divisions),
             object_name=object_name,
             divisions=divisions,
@@ -83,18 +83,17 @@ def smooth_mesh(
             prompt="Check the result with list_node_graph or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to smooth mesh {}".format(object_name))
+        return skill_exception(exc, message="Failed to smooth mesh {}".format(object_name))
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`smooth_mesh`."""
     return smooth_mesh(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = smooth_mesh()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

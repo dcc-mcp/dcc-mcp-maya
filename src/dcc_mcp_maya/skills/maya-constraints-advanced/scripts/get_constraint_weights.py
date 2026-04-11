@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def get_constraint_weights(constraint_node: str) -> dict:
@@ -24,7 +24,7 @@ def get_constraint_weights(constraint_node: str) -> dict:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(constraint_node):
-            return maya_error(
+            return skill_error(
                 "Constraint not found: {}".format(constraint_node),
                 "'{}' does not exist in the scene".format(constraint_node),
             )
@@ -55,7 +55,7 @@ def get_constraint_weights(constraint_node: str) -> dict:
                 weight_val = 1.0
             weights.append({"driver": driver, "weight": weight_val})
 
-        return maya_success(
+        return skill_success(
             "Constraint '{}' has {} driver(s)".format(constraint_node, len(weights)),
             prompt="Use set_constraint_weight to change a driver weight for space switching.",
             constraint_node=constraint_node,
@@ -63,17 +63,16 @@ def get_constraint_weights(constraint_node: str) -> dict:
             weights=weights,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to get constraint weights")
+        return skill_exception(exc, message="Failed to get constraint weights")
 
 
+@skill_entry
 def main(**kwargs):
     return get_constraint_weights(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = get_constraint_weights("parentConstraint1")
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

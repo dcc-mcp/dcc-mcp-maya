@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def list_instancers() -> dict:
@@ -36,23 +36,23 @@ def list_instancers() -> dict:
                 }
             )
 
-        return maya_success(
+        return skill_success(
             "Found {} instancer node(s)".format(len(results)),
             prompt="Use add_instance_object to add geometry, or set_instancer_attribute to drive per-particle variation.",
             instancers=results,
             count=len(results),
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to list instancers")
+        return skill_exception(exc, message="Failed to list instancers")
 
 
+@skill_entry
 def main(**kwargs):
     return list_instancers(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    print(json.dumps(list_instancers(), indent=2))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

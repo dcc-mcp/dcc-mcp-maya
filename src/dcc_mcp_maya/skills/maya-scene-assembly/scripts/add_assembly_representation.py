@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 _VALID_TYPES = {"Locator", "Cache", "GPU", "Scene"}
 
@@ -31,7 +31,7 @@ def add_assembly_representation(
     """
 
     if rep_type not in _VALID_TYPES:
-        return maya_error(
+        return skill_error(
             "Invalid rep_type '{}'. Valid types: {}".format(rep_type, sorted(_VALID_TYPES)),
             "Choose one of: Locator, Cache, GPU, Scene.",
         )
@@ -40,7 +40,7 @@ def add_assembly_representation(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(assembly):
-            return maya_error(
+            return skill_error(
                 "Assembly '{}' not found".format(assembly),
                 "Use list_assemblies or create_assembly_definition first.",
             )
@@ -57,7 +57,7 @@ def add_assembly_representation(
             except Exception:
                 pass
 
-        return maya_success(
+        return skill_success(
             "Added '{}' representation to '{}'".format(rep_type, assembly),
             prompt="Representation added. Use create_assembly_reference to instance this definition.",
             assembly=assembly,
@@ -66,17 +66,16 @@ def add_assembly_representation(
             file_path=file_path or "",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to add representation")
+        return skill_exception(exc, message="Failed to add representation")
 
 
+@skill_entry
 def main(**kwargs):
     return add_assembly_representation(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = add_assembly_representation("asm1", "Locator")
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

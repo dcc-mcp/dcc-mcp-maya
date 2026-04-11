@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import List, Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_error, skill_exception, skill_success
 
 
 def create_cluster(
@@ -30,7 +30,7 @@ def create_cluster(
     """
 
     if not objects:
-        return maya_error(
+        return skill_error(
             "No objects specified",
             "Provide at least one object name in the 'objects' list",
         )
@@ -40,7 +40,7 @@ def create_cluster(
 
         missing = [o for o in objects if not cmds.objExists(o)]
         if missing:
-            return maya_error(
+            return skill_error(
                 "Object(s) not found: {}".format(", ".join(missing)),
                 "Ensure all objects exist before creating a cluster",
             )
@@ -54,7 +54,7 @@ def create_cluster(
         cluster_node = result[0] if result else None
         cluster_handle = result[1] if result and len(result) > 1 else None
 
-        return maya_success(
+        return skill_success(
             "Created cluster deformer '{}' on {} object(s)".format(cluster_node, len(objects)),
             cluster_node=cluster_node,
             cluster_handle=cluster_handle,
@@ -63,9 +63,9 @@ def create_cluster(
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to create cluster deformer")
+        return skill_exception(exc, message="Failed to create cluster deformer")
 
 
 def set_cluster_weights(
@@ -91,7 +91,7 @@ def set_cluster_weights(
     """
 
     if not weights:
-        return maya_error(
+        return skill_error(
             "No weights provided",
             "Supply at least one weight value",
         )
@@ -100,12 +100,12 @@ def set_cluster_weights(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(cluster_node):
-            return maya_error(
+            return skill_error(
                 "Cluster node not found: {}".format(cluster_node),
                 "'{}' does not exist".format(cluster_node),
             )
         if not cmds.objExists(mesh):
-            return maya_error(
+            return skill_error(
                 "Mesh not found: {}".format(mesh),
                 "'{}' does not exist".format(mesh),
             )
@@ -114,7 +114,7 @@ def set_cluster_weights(
 
         if vertex_indices is None:
             if len(weights) != vertex_count:
-                return maya_error(
+                return skill_error(
                     "Weight count mismatch",
                     "Expected {} weights, got {}".format(vertex_count, len(weights)),
                 )
@@ -127,7 +127,7 @@ def set_cluster_weights(
             vtx = "{}.vtx[{}]".format(mesh, idx)
             cmds.percent(cluster_node, vtx, value=w)
 
-        return maya_success(
+        return skill_success(
             "Set cluster weights on {} vertices of '{}'".format(len(vertex_indices), mesh),
             cluster_node=cluster_node,
             mesh=mesh,
@@ -136,9 +136,9 @@ def set_cluster_weights(
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to set cluster weights")
+        return skill_exception(exc, message="Failed to set cluster weights")
 
 
 def create_lattice(
@@ -164,7 +164,7 @@ def create_lattice(
     """
 
     if not objects:
-        return maya_error(
+        return skill_error(
             "No objects specified",
             "Provide at least one object name in the 'objects' list",
         )
@@ -176,7 +176,7 @@ def create_lattice(
 
         missing = [o for o in objects if not cmds.objExists(o)]
         if missing:
-            return maya_error(
+            return skill_error(
                 "Object(s) not found: {}".format(", ".join(missing)),
                 "Ensure all objects exist before creating a lattice",
             )
@@ -198,7 +198,7 @@ def create_lattice(
             cmds.setAttr("{}.sy".format(lattice_node), local_scale[1])
             cmds.setAttr("{}.sz".format(lattice_node), local_scale[2])
 
-        return maya_success(
+        return skill_success(
             "Created FFD lattice '{}' ({}) on {} object(s)".format(ffd_node, divs, len(objects)),
             ffd_node=ffd_node,
             lattice_node=lattice_node,
@@ -208,9 +208,9 @@ def create_lattice(
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to create FFD lattice")
+        return skill_exception(exc, message="Failed to create FFD lattice")
 
 
 def wire_deformer(
@@ -234,12 +234,12 @@ def wire_deformer(
     """
 
     if not curves:
-        return maya_error(
+        return skill_error(
             "No curves specified",
             "Provide at least one NURBS curve name in 'curves'",
         )
     if not objects:
-        return maya_error(
+        return skill_error(
             "No objects specified",
             "Provide at least one mesh name in 'objects'",
         )
@@ -249,14 +249,14 @@ def wire_deformer(
 
         missing_curves = [c for c in curves if not cmds.objExists(c)]
         if missing_curves:
-            return maya_error(
+            return skill_error(
                 "Curve(s) not found: {}".format(", ".join(missing_curves)),
                 "Ensure all curves exist in the scene",
             )
 
         missing_objects = [o for o in objects if not cmds.objExists(o)]
         if missing_objects:
-            return maya_error(
+            return skill_error(
                 "Object(s) not found: {}".format(", ".join(missing_objects)),
                 "Ensure all objects exist in the scene",
             )
@@ -271,7 +271,7 @@ def wire_deformer(
         result = cmds.wire(objects, **wire_kwargs)
         wire_node = result[0] if result else None
 
-        return maya_success(
+        return skill_success(
             "Created wire deformer '{}' on {} object(s)".format(wire_node, len(objects)),
             wire_node=wire_node,
             curves=list(curves),
@@ -280,9 +280,9 @@ def wire_deformer(
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to create wire deformer")
+        return skill_exception(exc, message="Failed to create wire deformer")
 
 
 def sculpt_deformer(
@@ -311,13 +311,13 @@ def sculpt_deformer(
     mode_map = {"stretch": 0, "project": 1, "flip": 2}
     mode_lower = mode.lower()
     if mode_lower not in mode_map:
-        return maya_error(
+        return skill_error(
             "Invalid mode: {}".format(mode),
             "Valid modes: {}".format(", ".join(mode_map.keys())),
         )
 
     if not objects:
-        return maya_error(
+        return skill_error(
             "No objects specified",
             "Provide at least one mesh name in 'objects'",
         )
@@ -327,7 +327,7 @@ def sculpt_deformer(
 
         missing = [o for o in objects if not cmds.objExists(o)]
         if missing:
-            return maya_error(
+            return skill_error(
                 "Object(s) not found: {}".format(", ".join(missing)),
                 "Ensure all objects exist in the scene",
             )
@@ -345,7 +345,7 @@ def sculpt_deformer(
         sculpt_sphere = result[1] if result and len(result) > 1 else None
         sculpt_origin = result[2] if result and len(result) > 2 else None
 
-        return maya_success(
+        return skill_success(
             "Created sculpt deformer '{}' (mode='{}') on {} object(s)".format(sculpt_node, mode_lower, len(objects)),
             sculpt_node=sculpt_node,
             sculpt_sphere=sculpt_sphere,
@@ -356,6 +356,6 @@ def sculpt_deformer(
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to create sculpt deformer")
+        return skill_exception(exc, message="Failed to create sculpt deformer")

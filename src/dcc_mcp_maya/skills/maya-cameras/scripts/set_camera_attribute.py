@@ -5,7 +5,7 @@ from __future__ import annotations
 
 # Import built-in modules
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def set_camera_attribute(camera_name: str, attribute: str, value: object) -> dict:
@@ -26,7 +26,7 @@ def set_camera_attribute(camera_name: str, attribute: str, value: object) -> dic
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(camera_name):
-            return maya_error(
+            return skill_error(
                 "Camera not found: {}".format(camera_name),
                 "'{}' does not exist".format(camera_name),
             )
@@ -36,7 +36,7 @@ def set_camera_attribute(camera_name: str, attribute: str, value: object) -> dic
         if node_type == "transform":
             shapes = cmds.listRelatives(camera_name, shapes=True, type="camera") or []
             if not shapes:
-                return maya_error(
+                return skill_error(
                     "No camera shape under '{}'".format(camera_name),
                     "Transform has no camera shape",
                 )
@@ -47,7 +47,7 @@ def set_camera_attribute(camera_name: str, attribute: str, value: object) -> dic
         full_attr = "{}.{}".format(cam_node, attribute)
         cmds.setAttr(full_attr, value)
 
-        return maya_success(
+        return skill_success(
             "Set {}.{} = {}".format(cam_node, attribute, value),
             prompt="Use get_camera_info to verify the updated camera settings.",
             camera_name=cam_node,
@@ -55,18 +55,17 @@ def set_camera_attribute(camera_name: str, attribute: str, value: object) -> dic
             value=value,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to set camera attribute")
+        return skill_exception(exc, message="Failed to set camera attribute")
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`set_camera_attribute`."""
     return set_camera_attribute(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = set_camera_attribute("camera1", "focalLength", 50.0)
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

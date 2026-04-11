@@ -9,7 +9,7 @@ import os
 from typing import List, Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +45,7 @@ def bake_lighting(
 
         targets = objects or (cmds.ls(selection=True) or [])
         if not targets:
-            return maya_error(
+            return skill_error(
                 "No objects specified",
                 "Provide 'objects' or select meshes in Maya",
             )
@@ -54,7 +54,7 @@ def bake_lighting(
             try:
                 os.makedirs(output_dir)
             except Exception as exc:
-                return maya_error(
+                return skill_error(
                     "Cannot create output directory: {}".format(output_dir),
                     str(exc),
                 )
@@ -77,7 +77,7 @@ def bake_lighting(
             )
             baked_files.append(out_file)
 
-        return maya_success(
+        return skill_success(
             "Baked lighting for {} object(s)".format(len(baked_files)),
             prompt="Use bake_ambient_occlusion for AO or transfer_maps for normal maps.",
             baked_files=baked_files,
@@ -85,16 +85,16 @@ def bake_lighting(
             resolution=resolution,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to bake lighting")
+        return skill_exception(exc, message="Failed to bake lighting")
 
 
+@skill_entry
 def main(**kwargs):
     return bake_lighting(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    print(json.dumps(bake_lighting(["pSphere1"], output_dir="/tmp")))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

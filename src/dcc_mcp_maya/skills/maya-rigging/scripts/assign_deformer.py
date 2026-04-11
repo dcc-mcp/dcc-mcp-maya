@@ -4,7 +4,9 @@
 from __future__ import annotations
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success, validate_node_exists
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
+
+from dcc_mcp_maya.api import validate_node_exists
 
 # Import built-in modules
 
@@ -37,7 +39,7 @@ def assign_deformer(
             return err
 
         if deformer_type not in _SUPPORTED:
-            return maya_error(
+            return skill_error(
                 "Unsupported deformer type: {}".format(deformer_type),
                 "deformer_type must be one of {}".format(_SUPPORTED),
             )
@@ -48,7 +50,7 @@ def assign_deformer(
             result = cmds.cluster(object_name)
             deformer_name = result[0]
             handle_name = result[1] if len(result) > 1 else None
-            return maya_success(
+            return skill_success(
                 "Applied cluster deformer to '{}'".format(object_name),
                 object_name=object_name,
                 deformer_name=deformer_name,
@@ -60,7 +62,7 @@ def assign_deformer(
         if deformer_type == "lattice":
             result = cmds.lattice(object_name)
             deformer_name = result[0]
-            return maya_success(
+            return skill_success(
                 "Applied lattice deformer to '{}'".format(object_name),
                 object_name=object_name,
                 deformer_name=deformer_name,
@@ -72,7 +74,7 @@ def assign_deformer(
             result = cmds.nonLinear(object_name, type=deformer_type)
             deformer_name = result[0]
             handle_name = result[1] if len(result) > 1 else None
-            return maya_success(
+            return skill_success(
                 "Applied {} deformer to '{}'".format(deformer_type, object_name),
                 object_name=object_name,
                 deformer_name=deformer_name,
@@ -84,7 +86,7 @@ def assign_deformer(
         # blendShape / wrap — generic path
         result = cmds.deformer(object_name, type=deformer_type)
         deformer_name = result[0] if result else deformer_type
-        return maya_success(
+        return skill_success(
             "Applied {} deformer to '{}'".format(deformer_type, object_name),
             object_name=object_name,
             deformer_name=deformer_name,
@@ -92,18 +94,17 @@ def assign_deformer(
             prompt="Check the result with list_rigging or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to assign deformer to {}".format(object_name))
+        return skill_exception(exc, message="Failed to assign deformer to {}".format(object_name))
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`assign_deformer`."""
     return assign_deformer(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = assign_deformer()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def add_pole_vector_constraint(
@@ -30,14 +30,14 @@ def add_pole_vector_constraint(
 
         for obj in (pole_object, ik_handle):
             if not cmds.objExists(obj):
-                return maya_error(
+                return skill_error(
                     "Object not found: {}".format(obj),
                     "'{}' does not exist in the scene".format(obj),
                 )
 
         ik_type = cmds.objectType(ik_handle)
         if ik_type != "ikHandle":
-            return maya_error(
+            return skill_error(
                 "Not an IK handle: {}".format(ik_handle),
                 "Expected 'ikHandle', got '{}'".format(ik_type),
             )
@@ -45,7 +45,7 @@ def add_pole_vector_constraint(
         result = cmds.poleVectorConstraint(pole_object, ik_handle, weight=weight)
         constraint_node = result[0] if result else ""
 
-        return maya_success(
+        return skill_success(
             "Added pole vector constraint '{}' → '{}'".format(pole_object, ik_handle),
             prompt="Use set_constraint_weight to adjust blending, or bake_constraint to key the result.",
             constraint_node=constraint_node,
@@ -53,17 +53,16 @@ def add_pole_vector_constraint(
             ik_handle=ik_handle,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to add pole vector constraint")
+        return skill_exception(exc, message="Failed to add pole vector constraint")
 
 
+@skill_entry
 def main(**kwargs):
     return add_pole_vector_constraint(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = add_pole_vector_constraint("poleVectorLocator1", "ikHandle1")
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

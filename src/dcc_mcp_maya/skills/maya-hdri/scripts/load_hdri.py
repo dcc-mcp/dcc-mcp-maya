@@ -7,7 +7,7 @@ from __future__ import annotations
 import os
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def load_hdri(
@@ -38,7 +38,7 @@ def load_hdri(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not os.path.isfile(file_path):
-            return maya_error(
+            return skill_error(
                 "HDRI file not found: {}".format(file_path),
                 "Ensure the file path is correct and accessible",
             )
@@ -80,7 +80,7 @@ def load_hdri(
             cmds.setAttr("{}.fileTextureName".format(file_node), file_path, type="string")
             backend = "native"
 
-        return maya_success(
+        return skill_success(
             "HDRI loaded from '{}' using {} backend".format(os.path.basename(file_path), backend),
             prompt="Use set_hdri_exposure or set_hdri_rotation to fine-tune the environment.",
             light_node=light_transform,
@@ -89,16 +89,16 @@ def load_hdri(
             file_path=file_path,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to load HDRI")
+        return skill_exception(exc, message="Failed to load HDRI")
 
 
+@skill_entry
 def main(**kwargs):
     return load_hdri(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    print(json.dumps(load_hdri("/path/to/env.hdr")))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

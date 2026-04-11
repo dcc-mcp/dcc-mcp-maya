@@ -5,7 +5,7 @@ from __future__ import annotations
 
 # Import built-in modules
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def get_camera_info(camera_name: str) -> dict:
@@ -21,7 +21,7 @@ def get_camera_info(camera_name: str) -> dict:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(camera_name):
-            return maya_error(
+            return skill_error(
                 "Camera not found: {}".format(camera_name),
                 "'{}' does not exist".format(camera_name),
             )
@@ -30,7 +30,7 @@ def get_camera_info(camera_name: str) -> dict:
         if node_type == "transform":
             shapes = cmds.listRelatives(camera_name, shapes=True, type="camera") or []
             if not shapes:
-                return maya_error(
+                return skill_error(
                     "No camera shape under '{}'".format(camera_name),
                     "Transform has no camera shape",
                 )
@@ -53,24 +53,23 @@ def get_camera_info(camera_name: str) -> dict:
             "rotate": list(cmds.getAttr("{}.rotate".format(transform))[0]),
         }
 
-        return maya_success(
+        return skill_success(
             "Camera info for '{}'".format(cam_node),
             prompt="Use set_camera_attribute to modify focal length or clipping planes.",
             **info,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to get camera info for '{}'".format(camera_name))
+        return skill_exception(exc, message="Failed to get camera info for '{}'".format(camera_name))
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`get_camera_info`."""
     return get_camera_info(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = get_camera_info("persp")
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

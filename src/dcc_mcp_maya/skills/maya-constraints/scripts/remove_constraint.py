@@ -7,7 +7,9 @@ from __future__ import annotations
 from typing import Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success, validate_node_exists
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
+
+from dcc_mcp_maya.api import validate_node_exists
 
 _CONSTRAINT_NODE_TYPES = [
     "parentConstraint",
@@ -60,22 +62,21 @@ def remove_constraint(
         else:
             msg = "Removed {} constraint(s) from '{}'".format(len(removed), target)
 
-        return maya_success(
+        return skill_success(
             msg, target=target, removed=removed, prompt="Use list_constraints to verify the constraint was removed."
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to remove constraint")
+        return skill_exception(exc, message="Failed to remove constraint")
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`remove_constraint`."""
     return remove_constraint(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = remove_constraint("pCube1")
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

@@ -12,7 +12,7 @@ from __future__ import annotations
 from typing import Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_error, skill_exception, skill_success
 
 
 def create_expression(
@@ -52,13 +52,13 @@ def create_expression(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not expression or not expression.strip():
-            return maya_error(
+            return skill_error(
                 "Empty expression",
                 "expression string must not be empty",
             )
 
         if unit_conversion not in _VALID_UNIT_CONVERSIONS:
-            return maya_error(
+            return skill_error(
                 "Invalid unitConversion value: {}".format(unit_conversion),
                 "unitConversion must be one of {}".format(_VALID_UNIT_CONVERSIONS),
             )
@@ -73,7 +73,7 @@ def create_expression(
             kwargs["name"] = name
         if object_name:
             if not cmds.objExists(object_name):
-                return maya_error(
+                return skill_error(
                     "Object not found: {}".format(object_name),
                     "'{}' does not exist in the scene".format(object_name),
                 )
@@ -83,7 +83,7 @@ def create_expression(
 
         expr_name = cmds.expression(**kwargs)
 
-        return maya_success(
+        return skill_success(
             "Created expression '{}'".format(expr_name),
             expression_name=expr_name,
             object_name=object_name,
@@ -91,9 +91,9 @@ def create_expression(
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to create expression")
+        return skill_exception(exc, message="Failed to create expression")
 
 
 def list_expressions(
@@ -115,7 +115,7 @@ def list_expressions(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if object_name and not cmds.objExists(object_name):
-            return maya_error(
+            return skill_error(
                 "Object not found: {}".format(object_name),
                 "'{}' does not exist in the scene".format(object_name),
             )
@@ -138,7 +138,7 @@ def list_expressions(
                 expr_str = ""
             expressions.append({"name": expr, "string": expr_str})
 
-        return maya_success(
+        return skill_success(
             "Found {} expression(s){}".format(
                 len(expressions),
                 " on '{}'".format(object_name) if object_name else "",
@@ -149,9 +149,9 @@ def list_expressions(
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to list expressions")
+        return skill_exception(exc, message="Failed to list expressions")
 
 
 def delete_expression(
@@ -170,26 +170,26 @@ def delete_expression(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(expression_name):
-            return maya_error(
+            return skill_error(
                 "Expression not found: {}".format(expression_name),
                 "'{}' does not exist in the scene".format(expression_name),
             )
 
         node_type = cmds.objectType(expression_name)
         if node_type != "expression":
-            return maya_error(
+            return skill_error(
                 "Not an expression node: {}".format(expression_name),
                 "'{}' is of type '{}', expected 'expression'".format(expression_name, node_type),
             )
 
         cmds.delete(expression_name)
 
-        return maya_success(
+        return skill_success(
             "Deleted expression '{}'".format(expression_name),
             expression_name=expression_name,
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to delete expression {}".format(expression_name))
+        return skill_exception(exc, message="Failed to delete expression {}".format(expression_name))

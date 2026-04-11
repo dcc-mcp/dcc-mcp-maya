@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import List, Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def create_stroke(
@@ -73,7 +73,7 @@ def create_stroke(
         new_brushes = [b for b in brush_nodes_after if b not in brush_before]
         brush_node = new_brushes[-1] if new_brushes else ""
 
-        return maya_success(
+        return skill_success(
             "Paint Effects stroke created from preset '{}'".format(preset),
             prompt="Use attach_stroke_to_surface to paint on a surface or list_strokes to inspect.",
             stroke_node=stroke_node,
@@ -83,16 +83,16 @@ def create_stroke(
             curve=curve,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to create Paint Effects stroke")
+        return skill_exception(exc, message="Failed to create Paint Effects stroke")
 
 
+@skill_entry
 def main(**kwargs):
     return create_stroke(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    print(json.dumps(create_stroke()))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

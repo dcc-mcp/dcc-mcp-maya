@@ -7,7 +7,7 @@ from __future__ import annotations
 import os
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def validate_scene_for_farm() -> dict:
@@ -73,7 +73,7 @@ def validate_scene_for_farm() -> dict:
 
         valid = len(issues) == 0
         if valid:
-            return maya_success(
+            return skill_success(
                 "Scene is valid for farm submission",
                 prompt="Use write_render_job to create a job spec for the render farm.",
                 valid=True,
@@ -81,7 +81,7 @@ def validate_scene_for_farm() -> dict:
                 scene_path=scene_path,
             )
         else:
-            return maya_success(
+            return skill_success(
                 "Scene has {} issue(s) that should be resolved before submission".format(len(issues)),
                 prompt="Fix the listed issues, then re-run validate_scene_for_farm.",
                 valid=False,
@@ -89,16 +89,16 @@ def validate_scene_for_farm() -> dict:
                 scene_path=scene_path,
             )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to validate scene")
+        return skill_exception(exc, message="Failed to validate scene")
 
 
+@skill_entry
 def main(**kwargs):
     return validate_scene_for_farm(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    print(json.dumps(validate_scene_for_farm()))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

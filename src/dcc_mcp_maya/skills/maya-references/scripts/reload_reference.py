@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 # Import built-in modules
 
@@ -26,13 +26,13 @@ def reload_reference(reference_node: str) -> dict:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(reference_node):
-            return maya_error(
+            return skill_error(
                 "Reference node not found: {}".format(reference_node),
                 "'{}' does not exist".format(reference_node),
             )
 
         if cmds.objectType(reference_node) != "reference":
-            return maya_error(
+            return skill_error(
                 "Not a reference node: {}".format(reference_node),
                 "'{}' is of type '{}'".format(reference_node, cmds.objectType(reference_node)),
             )
@@ -44,7 +44,7 @@ def reload_reference(reference_node: str) -> dict:
         except Exception:
             file_path = ""
 
-        return maya_success(
+        return skill_success(
             "Reloaded reference '{}'".format(reference_node),
             reference_node=reference_node,
             file_path=file_path,
@@ -52,18 +52,17 @@ def reload_reference(reference_node: str) -> dict:
             prompt="Use list_references to confirm the reference status.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to reload reference '{}'".format(reference_node))
+        return skill_exception(exc, message="Failed to reload reference '{}'".format(reference_node))
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`reload_reference`."""
     return reload_reference(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = reload_reference()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

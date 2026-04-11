@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 _VALID_FIELD_TYPES = (
     "gravity",
@@ -48,20 +48,20 @@ def create_ncloth(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(mesh):
-            return maya_error(
+            return skill_error(
                 "Mesh not found: {}".format(mesh),
                 "'{}' does not exist in the scene".format(mesh),
             )
 
         mesh_type = cmds.objectType(mesh)
         if mesh_type not in ("transform", "mesh"):
-            return maya_error(
+            return skill_error(
                 "Invalid mesh type: {}".format(mesh_type),
                 "'{}' is not a polygon mesh or transform".format(mesh),
             )
 
         if nucleus and not cmds.objExists(nucleus):
-            return maya_error(
+            return skill_error(
                 "Nucleus node not found: {}".format(nucleus),
                 "'{}' does not exist in the scene".format(nucleus),
             )
@@ -83,7 +83,7 @@ def create_ncloth(
             )
 
         used_nucleus = nucleus or "default"
-        return maya_success(
+        return skill_success(
             "Created nCloth '{}' on mesh '{}'".format(ncloth_node, mesh),
             ncloth_node=ncloth_node,
             mesh=mesh,
@@ -91,18 +91,17 @@ def create_ncloth(
             prompt="Check the result with list_dynamics or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to create nCloth on '{}'".format(mesh))
+        return skill_exception(exc, message="Failed to create nCloth on '{}'".format(mesh))
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`create_ncloth`."""
     return create_ncloth(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = create_ncloth()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

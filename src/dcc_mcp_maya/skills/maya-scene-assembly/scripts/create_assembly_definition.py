@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def create_assembly_definition(name: Optional[str] = None) -> dict:
@@ -26,23 +26,22 @@ def create_assembly_definition(name: Optional[str] = None) -> dict:
 
         node_name = name or "assemblyDefinition1"
         node = cmds.assembly(name=node_name, type="assemblyDefinition")
-        return maya_success(
+        return skill_success(
             "Assembly definition '{}' created".format(node),
             prompt="Definition created. Use add_assembly_representation to add LOD representations.",
             node=node,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to create assembly definition")
+        return skill_exception(exc, message="Failed to create assembly definition")
 
 
+@skill_entry
 def main(**kwargs):
     return create_assembly_definition(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = create_assembly_definition("myAssembly")
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

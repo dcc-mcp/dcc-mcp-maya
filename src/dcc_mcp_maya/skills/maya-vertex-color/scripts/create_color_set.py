@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 # Import built-in modules
 
@@ -28,7 +28,7 @@ def create_color_set(
 
     valid_reps = ("RGB", "RGBA")
     if representation not in valid_reps:
-        return maya_error(
+        return skill_error(
             "Invalid representation: {}".format(representation),
             "Use one of: {}".format(", ".join(valid_reps)),
         )
@@ -37,11 +37,11 @@ def create_color_set(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return maya_error("Object not found: {}".format(object_name))
+            return skill_error("Object not found: {}".format(object_name))
 
         existing = cmds.polyColorSet(object_name, query=True, allColorSets=True) or []
         if color_set_name in existing:
-            return maya_error("Color set '{}' already exists on '{}'".format(color_set_name, object_name))
+            return skill_error("Color set '{}' already exists on '{}'".format(color_set_name, object_name))
 
         cmds.polyColorSet(
             object_name,
@@ -50,7 +50,7 @@ def create_color_set(
             representation=representation,
         )
 
-        return maya_success(
+        return skill_success(
             "Created color set '{}' on '{}'".format(color_set_name, object_name),
             object_name=object_name,
             color_set_name=color_set_name,
@@ -58,18 +58,17 @@ def create_color_set(
             prompt="Check the result with list_vertex_color or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to create color set")
+        return skill_exception(exc, message="Failed to create color set")
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`create_color_set`."""
     return create_color_set(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = create_color_set()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

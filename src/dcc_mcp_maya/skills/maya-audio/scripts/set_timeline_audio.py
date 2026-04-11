@@ -5,7 +5,7 @@ from __future__ import annotations
 
 # Import built-in modules
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def set_timeline_audio(sound_node: str) -> dict:
@@ -25,14 +25,14 @@ def set_timeline_audio(sound_node: str) -> dict:
         import maya.mel as mel  # noqa: PLC0415
 
         if not cmds.objExists(sound_node):
-            return maya_error(
+            return skill_error(
                 "Sound node not found: {}".format(sound_node),
                 "Use import_audio to create a sound node first.",
             )
 
         node_type = cmds.objectType(sound_node)
         if node_type != "audio":
-            return maya_error(
+            return skill_error(
                 "Not a sound node: {}".format(sound_node),
                 "Expected an 'audio' node, got '{}'".format(node_type),
             )
@@ -45,23 +45,22 @@ def set_timeline_audio(sound_node: str) -> dict:
             displaySound=True,
         )
 
-        return maya_success(
+        return skill_success(
             "Set timeline audio to '{}'".format(sound_node),
             prompt="Press play in Maya to hear the audio.",
             sound_node=sound_node,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to set timeline audio")
+        return skill_exception(exc, message="Failed to set timeline audio")
 
 
+@skill_entry
 def main(**kwargs):
     return set_timeline_audio(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = set_timeline_audio("sound1")
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

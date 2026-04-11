@@ -5,7 +5,9 @@ from __future__ import annotations
 
 # Import built-in modules
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success, validate_node_exists, validate_node_type
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
+
+from dcc_mcp_maya.api import validate_node_exists, validate_node_type
 
 _VALID_FIELD_TYPES = (
     "gravity",
@@ -56,7 +58,7 @@ def set_ncloth_attribute(
         plug = "{}.{}".format(ncloth_node, attribute)
         err = validate_node_exists(cmds, plug)
         if err:
-            return maya_error(
+            return skill_error(
                 "Attribute not found: {}".format(plug),
                 "'{}' does not have attribute '{}'".format(ncloth_node, attribute),
             )
@@ -68,7 +70,7 @@ def set_ncloth_attribute(
         else:
             cmds.setAttr(plug, value)
 
-        return maya_success(
+        return skill_success(
             "Set '{}.{}' = {}".format(ncloth_node, attribute, value),
             ncloth_node=ncloth_node,
             attribute=attribute,
@@ -76,18 +78,17 @@ def set_ncloth_attribute(
             prompt="Check the result with list_dynamics or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to set attribute on nCloth '{}'".format(ncloth_node))
+        return skill_exception(exc, message="Failed to set attribute on nCloth '{}'".format(ncloth_node))
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`set_ncloth_attribute`."""
     return set_ncloth_attribute(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = set_ncloth_attribute()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

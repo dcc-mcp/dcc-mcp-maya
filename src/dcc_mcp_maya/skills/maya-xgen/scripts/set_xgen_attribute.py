@@ -1,7 +1,7 @@
 """Set an attribute on an XGen description or modifier."""
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_success
+from dcc_mcp_core.skill import skill_error, skill_success
 
 
 def run(params):
@@ -24,7 +24,7 @@ def run(params):
     value = params.get("value")
 
     if not all([collection, description, attribute, value is not None]):
-        return maya_error(
+        return skill_error(
             "Missing required parameters",
             "'collection', 'description', 'attribute', and 'value' are all required",
         )
@@ -35,7 +35,7 @@ def run(params):
         import xgenm as xg
 
         xg.setAttr(attribute, str(value), collection, description, object_name)
-        return maya_success(
+        return skill_success(
             "Set {}.{} = {}".format(description, attribute, value),
             prompt="Use get_xgen_attribute to verify the change.",
             collection=collection,
@@ -44,4 +44,4 @@ def run(params):
             value=str(value),
         )
     except Exception as exc:
-        return maya_error("Failed to set XGen attribute", str(exc))
+        return skill_error("Failed to set XGen attribute", str(exc))

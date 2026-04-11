@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 # Import built-in modules
 
@@ -53,23 +53,23 @@ def list_bake_sets() -> dict:
                 pass
             bake_sets.append(info)
 
-        return maya_success(
+        return skill_success(
             "Found {} bake set(s)".format(len(bake_sets)),
             prompt="Use bake_lighting or transfer_maps to bake, or bake_ambient_occlusion for AO.",
             bake_sets=bake_sets,
             count=len(bake_sets),
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to list bake sets")
+        return skill_exception(exc, message="Failed to list bake sets")
 
 
+@skill_entry
 def main(**kwargs):
     return list_bake_sets(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    print(json.dumps(list_bake_sets()))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

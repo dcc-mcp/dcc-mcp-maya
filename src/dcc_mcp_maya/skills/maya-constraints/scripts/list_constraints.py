@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 _CONSTRAINT_NODE_TYPES = [
     "parentConstraint",
@@ -32,7 +32,7 @@ def list_constraints(target: str) -> dict:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(target):
-            return maya_error(
+            return skill_error(
                 "Object not found: {}".format(target),
                 "'{}' does not exist".format(target),
             )
@@ -55,7 +55,7 @@ def list_constraints(target: str) -> dict:
                     }
                 )
 
-        return maya_success(
+        return skill_success(
             "Found {} constraint(s) on '{}'".format(len(constraints), target),
             prompt="Use remove_constraint to delete constraints or add_constraint to add new ones.",
             target=target,
@@ -63,18 +63,17 @@ def list_constraints(target: str) -> dict:
             count=len(constraints),
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to list constraints on '{}'".format(target))
+        return skill_exception(exc, message="Failed to list constraints on '{}'".format(target))
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`list_constraints`."""
     return list_constraints(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = list_constraints("pCube1")
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

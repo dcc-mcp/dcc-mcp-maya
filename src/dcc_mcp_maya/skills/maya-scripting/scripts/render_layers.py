@@ -17,7 +17,7 @@ from __future__ import annotations
 from typing import List, Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_error, skill_exception, skill_success
 
 
 def create_render_layer(
@@ -43,12 +43,12 @@ def create_render_layer(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not name or not name.strip():
-            return maya_error("Invalid layer name", "name must not be empty")
+            return skill_error("Invalid layer name", "name must not be empty")
 
         objects_to_add = list(objects) if objects else []
         missing = [obj for obj in objects_to_add if not cmds.objExists(obj)]
         if missing:
-            return maya_error(
+            return skill_error(
                 "Objects not found: {}".format(missing),
                 "The following objects do not exist: {}".format(missing),
             )
@@ -58,7 +58,7 @@ def create_render_layer(
         else:
             layer = cmds.createRenderLayer(name=name, number=1, empty=True, makeCurrent=make_current)
 
-        return maya_success(
+        return skill_success(
             "Created render layer '{}' with {} object(s)".format(layer, len(objects_to_add)),
             layer_name=layer,
             objects_added=objects_to_add,
@@ -66,9 +66,9 @@ def create_render_layer(
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to create render layer '{}'".format(name))
+        return skill_exception(exc, message="Failed to create render layer '{}'".format(name))
 
 
 def set_render_layer(
@@ -90,35 +90,35 @@ def set_render_layer(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return maya_error(
+            return skill_error(
                 "Object not found: {}".format(object_name),
                 "'{}' does not exist in the scene".format(object_name),
             )
 
         if not cmds.objExists(layer_name):
-            return maya_error(
+            return skill_error(
                 "Render layer not found: {}".format(layer_name),
                 "'{}' does not exist".format(layer_name),
             )
 
         if cmds.objectType(layer_name) != "renderLayer":
-            return maya_error(
+            return skill_error(
                 "Not a render layer: {}".format(layer_name),
                 "'{}' is of type '{}', expected 'renderLayer'".format(layer_name, cmds.objectType(layer_name)),
             )
 
         cmds.editRenderLayerMembers(layer_name, object_name, noRecurse=True)
 
-        return maya_success(
+        return skill_success(
             "Assigned '{}' to render layer '{}'".format(object_name, layer_name),
             object_name=object_name,
             layer_name=layer_name,
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(
+        return skill_exception(
             exc,
             "Failed to assign '{}' to render layer '{}'".format(object_name, layer_name),
             str(exc),
@@ -162,7 +162,7 @@ def list_render_layers(include_default: bool = True) -> dict:
                 }
             )
 
-        return maya_success(
+        return skill_success(
             "Found {} render layer(s)".format(len(layers)),
             layers=layers,
             count=len(layers),
@@ -170,9 +170,9 @@ def list_render_layers(include_default: bool = True) -> dict:
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to list render layers")
+        return skill_exception(exc, message="Failed to list render layers")
 
 
 def delete_render_layer(layer_name: str) -> dict:
@@ -193,19 +193,19 @@ def delete_render_layer(layer_name: str) -> dict:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if layer_name == "defaultRenderLayer":
-            return maya_error(
+            return skill_error(
                 "Cannot delete defaultRenderLayer",
                 "The defaultRenderLayer is protected and cannot be removed",
             )
 
         if not cmds.objExists(layer_name):
-            return maya_error(
+            return skill_error(
                 "Render layer not found: {}".format(layer_name),
                 "'{}' does not exist".format(layer_name),
             )
 
         if cmds.objectType(layer_name) != "renderLayer":
-            return maya_error(
+            return skill_error(
                 "Not a render layer: {}".format(layer_name),
                 "'{}' is of type '{}'".format(layer_name, cmds.objectType(layer_name)),
             )
@@ -217,15 +217,15 @@ def delete_render_layer(layer_name: str) -> dict:
 
         cmds.delete(layer_name)
 
-        return maya_success(
+        return skill_success(
             "Deleted render layer '{}'".format(layer_name),
             layer_name=layer_name,
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to delete render layer '{}'".format(layer_name))
+        return skill_exception(exc, message="Failed to delete render layer '{}'".format(layer_name))
 
 
 def set_render_layer_attribute(
@@ -253,13 +253,13 @@ def set_render_layer_attribute(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(layer_name):
-            return maya_error(
+            return skill_error(
                 "Render layer not found: {}".format(layer_name),
                 "'{}' does not exist".format(layer_name),
             )
 
         if cmds.objectType(layer_name) != "renderLayer":
-            return maya_error(
+            return skill_error(
                 "Not a render layer: {}".format(layer_name),
                 "'{}' is of type '{}'".format(layer_name, cmds.objectType(layer_name)),
             )
@@ -273,7 +273,7 @@ def set_render_layer_attribute(
         else:
             cmds.setAttr(attr_path, value)
 
-        return maya_success(
+        return skill_success(
             "Set {}.{} = {}".format(layer_name, attribute, value),
             layer_name=layer_name,
             attribute=attribute,
@@ -281,6 +281,6 @@ def set_render_layer_attribute(
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception:
-        return maya_error("Failed to set attribute '{}.{}'".format(layer_name, attribute))
+        return skill_error("Failed to set attribute '{}.{}'".format(layer_name, attribute))

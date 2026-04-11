@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def edit_expression(
@@ -29,7 +29,7 @@ def edit_expression(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(name):
-            return maya_error(
+            return skill_error(
                 "Expression node '{}' does not exist".format(name),
                 "Use list_expressions to see available expression nodes.",
             )
@@ -39,24 +39,23 @@ def edit_expression(
             kwargs["unitConversion"] = unit_conversion
 
         cmds.expression(name, **kwargs)
-        return maya_success(
+        return skill_success(
             "Expression '{}' updated".format(name),
             prompt="Expression updated. Use list_expressions to verify the change.",
             node=name,
             expression=expression,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to edit expression '{}'".format(name))
+        return skill_exception(exc, message="Failed to edit expression '{}'".format(name))
 
 
+@skill_entry
 def main(**kwargs):
     return edit_expression(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = edit_expression("expression1", "pSphere1.ty = cos(time);")
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

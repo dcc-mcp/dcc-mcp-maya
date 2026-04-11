@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def list_connections(
@@ -35,14 +35,14 @@ def list_connections(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return maya_error(
+            return skill_error(
                 "Object not found: {}".format(object_name),
                 "'{}' does not exist in the scene".format(object_name),
             )
 
         query_target = "{}.{}".format(object_name, attribute) if attribute else object_name
         if attribute and not cmds.objExists(query_target):
-            return maya_error(
+            return skill_error(
                 "Attribute not found: {}".format(query_target),
                 "The attribute '{}' does not exist on '{}'".format(attribute, object_name),
             )
@@ -65,7 +65,7 @@ def list_connections(
         for a, b in zip(it, it):
             pairs.append({"from": a, "to": b})
 
-        return maya_success(
+        return skill_success(
             "Found {} connection(s) on '{}'".format(len(pairs), query_target),
             object_name=object_name,
             attribute=attribute,
@@ -74,18 +74,17 @@ def list_connections(
             prompt="Check the result with list_node_graph or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to list connections on {}".format(object_name))
+        return skill_exception(exc, message="Failed to list connections on {}".format(object_name))
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`list_connections`."""
     return list_connections(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = list_connections()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

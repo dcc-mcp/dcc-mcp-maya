@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def list_hdri_nodes() -> dict:
@@ -64,23 +64,23 @@ def list_hdri_nodes() -> dict:
 
                 nodes.append(info)
 
-        return maya_success(
+        return skill_success(
             "Found {} HDRI/IBL node(s)".format(len(nodes)),
             prompt="Use set_hdri_exposure or set_hdri_rotation to adjust, or load_hdri to add more.",
             nodes=nodes,
             count=len(nodes),
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to list HDRI nodes")
+        return skill_exception(exc, message="Failed to list HDRI nodes")
 
 
+@skill_entry
 def main(**kwargs):
     return list_hdri_nodes(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    print(json.dumps(list_hdri_nodes()))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

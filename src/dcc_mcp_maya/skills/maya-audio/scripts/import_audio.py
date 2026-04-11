@@ -8,7 +8,7 @@ import os
 from typing import Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def import_audio(
@@ -33,7 +33,7 @@ def import_audio(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not os.path.isfile(file_path):
-            return maya_error(
+            return skill_error(
                 "Audio file not found: {}".format(file_path),
                 "Ensure the file exists and the path is correct.",
             )
@@ -44,7 +44,7 @@ def import_audio(
 
         sound_node = cmds.sound(**kwargs)
 
-        return maya_success(
+        return skill_success(
             "Imported audio '{}'".format(os.path.basename(file_path)),
             prompt="Use set_timeline_audio to attach this sound to the playback timeline.",
             sound_node=sound_node,
@@ -52,17 +52,16 @@ def import_audio(
             offset=offset,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to import audio")
+        return skill_exception(exc, message="Failed to import audio")
 
 
+@skill_entry
 def main(**kwargs):
     return import_audio(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = import_audio("/path/to/audio.wav")
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

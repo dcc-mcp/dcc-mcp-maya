@@ -4,7 +4,9 @@
 from __future__ import annotations
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success, validate_node_exists
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
+
+from dcc_mcp_maya.api import validate_node_exists
 
 # Import built-in modules
 
@@ -35,7 +37,7 @@ def prune_skin_weights(
 
         sc_list = cmds.ls(cmds.listHistory(mesh) or [], type="skinCluster")
         if not sc_list:
-            return maya_error(
+            return skill_error(
                 "No skin cluster on: {}".format(mesh),
                 "'{}' has no skinCluster in its history".format(mesh),
             )
@@ -43,7 +45,7 @@ def prune_skin_weights(
         sc = sc_list[0]
         cmds.skinPercent(sc, mesh, pruneWeights=prune_value)
 
-        return maya_success(
+        return skill_success(
             "Pruned skin weights on '{}' (threshold={})".format(mesh, prune_value),
             prompt="Run normalize_skin_weights after pruning to ensure weights sum to 1.0.",
             mesh=mesh,
@@ -51,17 +53,16 @@ def prune_skin_weights(
             prune_value=prune_value,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to prune skin weights on '{}'".format(mesh))
+        return skill_exception(exc, message="Failed to prune skin weights on '{}'".format(mesh))
 
 
+@skill_entry
 def main(**kwargs):
     return prune_skin_weights(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = prune_skin_weights("pSphere1")
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

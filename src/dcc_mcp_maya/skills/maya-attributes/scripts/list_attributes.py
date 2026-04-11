@@ -5,7 +5,7 @@ from __future__ import annotations
 
 # Import built-in modules
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def list_attributes(
@@ -27,7 +27,7 @@ def list_attributes(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(node_name):
-            return maya_error(
+            return skill_error(
                 "Node not found: {}".format(node_name),
                 "'{}' does not exist".format(node_name),
             )
@@ -40,7 +40,7 @@ def list_attributes(
 
         attrs = cmds.listAttr(node_name, **kwargs) or []
 
-        return maya_success(
+        return skill_success(
             "Found {} attribute(s) on '{}'".format(len(attrs), node_name),
             prompt="Use get_attribute or set_attribute to inspect or modify values.",
             node_name=node_name,
@@ -48,18 +48,17 @@ def list_attributes(
             count=len(attrs),
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to list attributes")
+        return skill_exception(exc, message="Failed to list attributes")
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`list_attributes`."""
     return list_attributes(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = list_attributes("pSphere1", keyable_only=True)
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

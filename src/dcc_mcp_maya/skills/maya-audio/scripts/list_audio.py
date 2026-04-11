@@ -5,7 +5,7 @@ from __future__ import annotations
 
 # Import built-in modules
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def list_audio() -> dict:
@@ -31,24 +31,23 @@ def list_audio() -> dict:
                 }
             )
 
-        return maya_success(
+        return skill_success(
             "Found {} sound node(s)".format(len(result)),
             prompt="Use set_timeline_audio to activate a sound, or remove_audio to delete one.",
             sound_nodes=result,
             count=len(result),
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to list audio nodes")
+        return skill_exception(exc, message="Failed to list audio nodes")
 
 
+@skill_entry
 def main(**kwargs):
     return list_audio(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = list_audio()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)
