@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import List, Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def wire_deformer(
@@ -30,12 +30,12 @@ def wire_deformer(
         ``context.curves``, ``context.objects``.
     """
     if not curves:
-        return maya_error(
+        return skill_error(
             "No curves specified",
             "Provide at least one NURBS curve name in 'curves'",
         )
     if not objects:
-        return maya_error(
+        return skill_error(
             "No objects specified",
             "Provide at least one mesh name in 'objects'",
         )
@@ -45,14 +45,14 @@ def wire_deformer(
 
         missing_curves = [c for c in curves if not cmds.objExists(c)]
         if missing_curves:
-            return maya_error(
+            return skill_error(
                 "Curve(s) not found: {}".format(", ".join(missing_curves)),
                 "Ensure all curves exist in the scene",
             )
 
         missing_objects = [o for o in objects if not cmds.objExists(o)]
         if missing_objects:
-            return maya_error(
+            return skill_error(
                 "Object(s) not found: {}".format(", ".join(missing_objects)),
                 "Ensure all objects exist in the scene",
             )
@@ -67,7 +67,7 @@ def wire_deformer(
         result = cmds.wire(objects, **wire_kwargs)
         wire_node = result[0] if result else None
 
-        return maya_success(
+        return skill_success(
             "Created wire deformer '{}' on {} object(s)".format(wire_node, len(objects)),
             wire_node=wire_node,
             curves=list(curves),
@@ -76,18 +76,17 @@ def wire_deformer(
             prompt="Check the result with list_deformers or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to create wire deformer")
+        return skill_exception(exc, message="Failed to create wire deformer")
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`wire_deformer`."""
     return wire_deformer(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = wire_deformer()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

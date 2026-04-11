@@ -7,7 +7,9 @@ from __future__ import annotations
 from typing import Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success, validate_node_exists
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
+
+from dcc_mcp_maya.api import validate_node_exists
 
 _VALID_TYPES = {
     "float",
@@ -58,7 +60,7 @@ def add_attribute(
             return err
 
         if attr_type not in _VALID_TYPES:
-            return maya_error(
+            return skill_error(
                 "Invalid attribute type: {}".format(attr_type),
                 "Supported types: {}".format(", ".join(sorted(_VALID_TYPES))),
             )
@@ -76,7 +78,7 @@ def add_attribute(
 
         cmds.addAttr(node_name, **kwargs)
 
-        return maya_success(
+        return skill_success(
             "Added attribute '{}.{}'".format(node_name, attribute),
             prompt="Use set_attribute to assign a value to the new attribute.",
             node_name=node_name,
@@ -85,18 +87,17 @@ def add_attribute(
             keyable=keyable,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to add attribute")
+        return skill_exception(exc, message="Failed to add attribute")
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`add_attribute`."""
     return add_attribute(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = add_attribute("pSphere1", "myFloat", "float", 0.0)
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

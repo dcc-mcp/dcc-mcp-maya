@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 # Import built-in modules
 
@@ -27,7 +27,7 @@ def execute_python(code: str, capture_output: bool = False) -> dict:
     """
 
     if not code or not code.strip():
-        return maya_error("No Python code provided", "Provide 'code' with valid Python.")
+        return skill_error("No Python code provided", "Provide 'code' with valid Python.")
 
     # Import built-in modules
     import io
@@ -57,23 +57,22 @@ def execute_python(code: str, capture_output: bool = False) -> dict:
             output = str(raw) if raw is not None else ""
             captured = ""
 
-        return maya_success(
+        return skill_success(
             "Python executed successfully",
             prompt="Python script finished. Check 'output' for any return value.",
             output=output,
             stdout=captured,
         )
     except Exception as exc:
-        return maya_from_exception(exc, "Python execution failed")
+        return skill_exception(exc, message="Python execution failed")
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`execute_python`."""
     return execute_python(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = execute_python("result = 'hello'")
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

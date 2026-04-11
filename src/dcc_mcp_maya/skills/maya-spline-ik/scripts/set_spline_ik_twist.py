@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import List, Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 # Maya worldUpType enum values
 WORLD_UP_TYPES = {
@@ -47,7 +47,7 @@ def set_spline_ik_twist(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(ik_handle):
-            return maya_error(
+            return skill_error(
                 "IK handle not found: {}".format(ik_handle),
                 "'{}' does not exist".format(ik_handle),
             )
@@ -66,7 +66,7 @@ def set_spline_ik_twist(
         twist_type_val = 0 if twist_type.lower() == "linear" else 1
         cmds.setAttr("{}.dTwistValueType".format(ik_handle), twist_type_val)
 
-        return maya_success(
+        return skill_success(
             "Configured twist on '{}'".format(ik_handle),
             prompt="Test the twist by rotating joints or keying the twistRamp attribute.",
             ik_handle=ik_handle,
@@ -76,16 +76,16 @@ def set_spline_ik_twist(
             twist_type=twist_type,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to set spline IK twist")
+        return skill_exception(exc, message="Failed to set spline IK twist")
 
 
+@skill_entry
 def main(**kwargs):
     return set_spline_ik_twist(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    print(json.dumps(set_spline_ik_twist("ikHandle1"), indent=2))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

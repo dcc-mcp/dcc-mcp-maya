@@ -4,7 +4,9 @@
 from __future__ import annotations
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success, validate_node_exists
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
+
+from dcc_mcp_maya.api import validate_node_exists
 
 
 def triangulate(object_name: str) -> dict:
@@ -30,7 +32,7 @@ def triangulate(object_name: str) -> dict:
         before_count = before if isinstance(before, int) else 0
         after_count = after if isinstance(after, int) else 0
 
-        return maya_success(
+        return skill_success(
             "Triangulated '{}': {} -> {} faces".format(object_name, before_count, after_count),
             object_name=object_name,
             face_count_before=before_count,
@@ -38,18 +40,17 @@ def triangulate(object_name: str) -> dict:
             prompt="Use export_shot_fbx or get_poly_count to verify the result.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to triangulate")
+        return skill_exception(exc, message="Failed to triangulate")
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`triangulate`."""
     return triangulate(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = triangulate()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

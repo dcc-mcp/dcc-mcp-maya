@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 _LIGHT_SHAPE_TYPES = [
     "directionalLight",
@@ -52,25 +52,24 @@ def list_lights() -> dict:
                 }
             )
 
-        return maya_success(
+        return skill_success(
             "Found {} light(s) in the scene".format(len(lights)),
             prompt="Use create_light to add a light or set_light_attribute to modify one.",
             lights=lights,
             count=len(lights),
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to list lights")
+        return skill_exception(exc, message="Failed to list lights")
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`list_lights`."""
     return list_lights(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = list_lights()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

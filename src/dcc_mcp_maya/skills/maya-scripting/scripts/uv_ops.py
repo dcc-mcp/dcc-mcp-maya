@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_error, skill_exception, skill_success
 
 
 def get_uv_info(object_name: str, uv_set: Optional[str] = None) -> dict:
@@ -27,7 +27,7 @@ def get_uv_info(object_name: str, uv_set: Optional[str] = None) -> dict:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return maya_error("Object not found: {}".format(object_name))
+            return skill_error("Object not found: {}".format(object_name))
 
         uv_sets = cmds.polyUVSet(object_name, query=True, allUVSets=True) or []
         current_set = cmds.polyUVSet(object_name, query=True, currentUVSet=True)
@@ -42,20 +42,20 @@ def get_uv_info(object_name: str, uv_set: Optional[str] = None) -> dict:
 
         if uv_set:
             if uv_set not in uv_sets:
-                return maya_error("UV set '{}' not found on '{}'".format(uv_set, object_name))
+                return skill_error("UV set '{}' not found on '{}'".format(uv_set, object_name))
             u_coords = cmds.polyEditUV("{}.map[*]".format(object_name), query=True, uValue=True) or []
             result_kwargs["uv_count"] = len(u_coords)
             result_kwargs["queried_uv_set"] = uv_set
 
-        return maya_success(
+        return skill_success(
             "UV info for '{}'".format(object_name),
             **result_kwargs,
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to get UV info")
+        return skill_exception(exc, message="Failed to get UV info")
 
 
 def create_uv_set(object_name: str, uv_set_name: str, copy_from: Optional[str] = None) -> dict:
@@ -74,20 +74,20 @@ def create_uv_set(object_name: str, uv_set_name: str, copy_from: Optional[str] =
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return maya_error("Object not found: {}".format(object_name))
+            return skill_error("Object not found: {}".format(object_name))
 
         existing = cmds.polyUVSet(object_name, query=True, allUVSets=True) or []
         if uv_set_name in existing:
-            return maya_error("UV set '{}' already exists on '{}'".format(uv_set_name, object_name))
+            return skill_error("UV set '{}' already exists on '{}'".format(uv_set_name, object_name))
 
         if copy_from:
             if copy_from not in existing:
-                return maya_error("Source UV set '{}' not found on '{}'".format(copy_from, object_name))
+                return skill_error("Source UV set '{}' not found on '{}'".format(copy_from, object_name))
             cmds.polyUVSet(object_name, copy=True, uvSet=copy_from, newUVSet=uv_set_name)
         else:
             cmds.polyUVSet(object_name, create=True, uvSet=uv_set_name)
 
-        return maya_success(
+        return skill_success(
             "Created UV set '{}' on '{}'".format(uv_set_name, object_name),
             object_name=object_name,
             uv_set_name=uv_set_name,
@@ -95,9 +95,9 @@ def create_uv_set(object_name: str, uv_set_name: str, copy_from: Optional[str] =
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to create UV set")
+        return skill_exception(exc, message="Failed to create UV set")
 
 
 def delete_uv_set(object_name: str, uv_set_name: str) -> dict:
@@ -115,28 +115,28 @@ def delete_uv_set(object_name: str, uv_set_name: str) -> dict:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return maya_error("Object not found: {}".format(object_name))
+            return skill_error("Object not found: {}".format(object_name))
 
         existing = cmds.polyUVSet(object_name, query=True, allUVSets=True) or []
         if uv_set_name not in existing:
-            return maya_error("UV set '{}' not found on '{}'".format(uv_set_name, object_name))
+            return skill_error("UV set '{}' not found on '{}'".format(uv_set_name, object_name))
 
         # Protect the only remaining UV set
         if len(existing) <= 1:
-            return maya_error("Cannot delete the only UV set on '{}'".format(object_name))
+            return skill_error("Cannot delete the only UV set on '{}'".format(object_name))
 
         cmds.polyUVSet(object_name, delete=True, uvSet=uv_set_name)
 
-        return maya_success(
+        return skill_success(
             "Deleted UV set '{}' from '{}'".format(uv_set_name, object_name),
             object_name=object_name,
             uv_set_name=uv_set_name,
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to delete UV set")
+        return skill_exception(exc, message="Failed to delete UV set")
 
 
 def project_uvs(
@@ -159,14 +159,14 @@ def project_uvs(
 
     valid_types = ("planar", "cylindrical", "spherical")
     if projection_type not in valid_types:
-        return maya_error(
+        return skill_error(
             "Invalid projection_type: {}".format(projection_type),
             "Use one of: {}".format(", ".join(valid_types)),
         )
 
     valid_axes = ("x", "y", "z")
     if axis not in valid_axes:
-        return maya_error(
+        return skill_error(
             "Invalid axis: {}".format(axis),
             "Use one of: x, y, z",
         )
@@ -175,7 +175,7 @@ def project_uvs(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return maya_error("Object not found: {}".format(object_name))
+            return skill_error("Object not found: {}".format(object_name))
 
         axis_index = {"x": 0, "y": 1, "z": 2}[axis]
 
@@ -199,7 +199,7 @@ def project_uvs(
                 ch=False,
             )
 
-        return maya_success(
+        return skill_success(
             "Applied {} UV projection to '{}' (axis={})".format(projection_type, object_name, axis),
             object_name=object_name,
             projection_type=projection_type,
@@ -208,9 +208,9 @@ def project_uvs(
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to project UVs")
+        return skill_exception(exc, message="Failed to project UVs")
 
 
 def copy_uvs(
@@ -238,7 +238,7 @@ def copy_uvs(
 
         for name in (source, target):
             if not cmds.objExists(name):
-                return maya_error("Object not found: {}".format(name))
+                return skill_error("Object not found: {}".format(name))
 
         kwargs = {
             "transferUVs": 1,
@@ -252,7 +252,7 @@ def copy_uvs(
 
         cmds.transferAttributes(source, target, **kwargs)
 
-        return maya_success(
+        return skill_success(
             "Copied UVs from '{}' to '{}'".format(source, target),
             source=source,
             target=target,
@@ -261,9 +261,9 @@ def copy_uvs(
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to copy UVs")
+        return skill_exception(exc, message="Failed to copy UVs")
 
 
 def get_uv_shell_info(object_name: str, uv_set: Optional[str] = None) -> dict:
@@ -286,13 +286,13 @@ def get_uv_shell_info(object_name: str, uv_set: Optional[str] = None) -> dict:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return maya_error("Object not found: {}".format(object_name))
+            return skill_error("Object not found: {}".format(object_name))
 
         # Resolve UV set
         if uv_set:
             existing = cmds.polyUVSet(object_name, query=True, allUVSets=True) or []
             if uv_set not in existing:
-                return maya_error("UV set '{}' not found on '{}'".format(uv_set, object_name))
+                return skill_error("UV set '{}' not found on '{}'".format(uv_set, object_name))
             cmds.polyUVSet(object_name, currentUVSet=True, uvSet=uv_set)
 
         active_set = cmds.polyUVSet(object_name, query=True, currentUVSet=True)
@@ -330,7 +330,7 @@ def get_uv_shell_info(object_name: str, uv_set: Optional[str] = None) -> dict:
             else:
                 shells.append({"shell_id": sid, "uv_count": len(indices)})
 
-        return maya_success(
+        return skill_success(
             "UV shell info for '{}' (UV set: {})".format(object_name, active_set),
             object_name=object_name,
             uv_set=active_set,
@@ -339,9 +339,9 @@ def get_uv_shell_info(object_name: str, uv_set: Optional[str] = None) -> dict:
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to get UV shell info")
+        return skill_exception(exc, message="Failed to get UV shell info")
 
 
 def unfold_uvs(
@@ -365,7 +365,7 @@ def unfold_uvs(
     """
 
     if iterations < 1 or iterations > 100:
-        return maya_error(
+        return skill_error(
             "Invalid iterations: {}".format(iterations),
             "iterations must be between 1 and 100",
         )
@@ -374,7 +374,7 @@ def unfold_uvs(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return maya_error("Object not found: {}".format(object_name))
+            return skill_error("Object not found: {}".format(object_name))
 
         cmds.u3dUnfold(
             object_name,
@@ -389,7 +389,7 @@ def unfold_uvs(
         if optimize_scale:
             cmds.u3dOptimize(object_name, iterations=1, power=1, resultScale=1)
 
-        return maya_success(
+        return skill_success(
             "Unfolded UVs on '{}' ({} iteration(s))".format(object_name, iterations),
             object_name=object_name,
             iterations=iterations,
@@ -397,9 +397,9 @@ def unfold_uvs(
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to unfold UVs on '{}'".format(object_name))
+        return skill_exception(exc, message="Failed to unfold UVs on '{}'".format(object_name))
 
 
 def normalize_uvs(
@@ -422,12 +422,12 @@ def normalize_uvs(
     """
 
     if not (0 < layout_u <= 1):
-        return maya_error(
+        return skill_error(
             "Invalid layout_u: {}".format(layout_u),
             "layout_u must be in range (0, 1]",
         )
     if not (0 < layout_v <= 1):
-        return maya_error(
+        return skill_error(
             "Invalid layout_v: {}".format(layout_v),
             "layout_v must be in range (0, 1]",
         )
@@ -436,7 +436,7 @@ def normalize_uvs(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return maya_error("Object not found: {}".format(object_name))
+            return skill_error("Object not found: {}".format(object_name))
 
         cmds.polyNormalizeUV(
             object_name,
@@ -446,7 +446,7 @@ def normalize_uvs(
             ch=False,
         )
 
-        return maya_success(
+        return skill_success(
             "Normalized UVs on '{}' (layout_u={}, layout_v={})".format(object_name, layout_u, layout_v),
             object_name=object_name,
             layout_u=layout_u,
@@ -455,6 +455,6 @@ def normalize_uvs(
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to normalize UVs on '{}'".format(object_name))
+        return skill_exception(exc, message="Failed to normalize UVs on '{}'".format(object_name))

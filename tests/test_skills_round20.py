@@ -27,7 +27,7 @@ class TestNewScene:
 
     def test_new_scene_success(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             result = mod.new_scene()
         assert result["success"] is True
@@ -35,7 +35,7 @@ class TestNewScene:
 
     def test_new_scene_force(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             result = mod.new_scene(force=True)
         assert result["success"] is True
@@ -52,7 +52,7 @@ class TestNewScene:
 
     def test_main_callable(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             result = mod.main()
         assert isinstance(result, dict)
@@ -66,7 +66,7 @@ class TestListObjects:
 
     def test_list_all_objects(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.ls.return_value = ["pSphere1", "pCube1"]
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             result = mod.list_objects()
@@ -76,7 +76,7 @@ class TestListObjects:
 
     def test_list_by_type(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.ls.return_value = ["pSphereShape1"]
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             result = mod.list_objects(object_type="mesh")
@@ -85,7 +85,7 @@ class TestListObjects:
 
     def test_list_empty_scene(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.ls.return_value = []
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             result = mod.list_objects()
@@ -94,7 +94,7 @@ class TestListObjects:
 
     def test_main_callable(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.ls.return_value = []
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             result = mod.main()
@@ -109,7 +109,7 @@ class TestGetSelection:
 
     def test_nothing_selected(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.ls.return_value = []
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             result = mod.get_selection()
@@ -117,7 +117,7 @@ class TestGetSelection:
 
     def test_with_selection(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.ls.return_value = ["pSphere1", "pCube1"]
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             result = mod.get_selection()
@@ -125,7 +125,7 @@ class TestGetSelection:
 
     def test_main_callable(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.ls.return_value = []
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             result = mod.main()
@@ -140,7 +140,7 @@ class TestSaveScene:
 
     def test_save_success(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.file.return_value = "/path/to/scene.ma"
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             result = mod.save_scene()
@@ -148,7 +148,7 @@ class TestSaveScene:
 
     def test_main_callable(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.file.return_value = "/path/to/scene.ma"
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             result = mod.main()
@@ -168,7 +168,7 @@ class TestCreateSphere:
 
     def test_create_sphere_default(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.polySphere.return_value = ["pSphere1", "polySphere1"]
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             result = mod.create_sphere()
@@ -177,7 +177,7 @@ class TestCreateSphere:
 
     def test_create_sphere_with_name(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.polySphere.return_value = ["pSphere1", "polySphere1"]
         mock_cmds.rename.return_value = "mySphere"
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
@@ -196,7 +196,7 @@ class TestCreateSphere:
 
     def test_main_callable(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.polySphere.return_value = ["pSphere1", "polySphere1"]
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             result = mod.main()
@@ -211,7 +211,7 @@ class TestCreateCube:
 
     def test_create_cube_default(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.polyCube.return_value = ["pCube1", "polyCube1"]
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             result = mod.create_cube()
@@ -219,7 +219,7 @@ class TestCreateCube:
 
     def test_main_callable(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.polyCube.return_value = ["pCube1", "polyCube1"]
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             result = mod.main()
@@ -234,7 +234,7 @@ class TestCreateCylinder:
 
     def test_create_cylinder(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.polyCylinder.return_value = ["pCylinder1", "polyCylinder1"]
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             result = mod.create_cylinder()
@@ -242,7 +242,7 @@ class TestCreateCylinder:
 
     def test_main_callable(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.polyCylinder.return_value = ["pCylinder1", "polyCylinder1"]
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             result = mod.main()
@@ -257,7 +257,7 @@ class TestDeleteObjects:
 
     def test_delete_existing_objects(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.ls.return_value = ["pSphere1", "pCube1"]
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             result = mod.delete_objects(["pSphere1", "pCube1"])
@@ -266,7 +266,7 @@ class TestDeleteObjects:
 
     def test_delete_nonexistent_objects(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         # objects not found -> ls returns [] -> deleted=[] -> still success
         mock_cmds.ls.return_value = []
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
@@ -276,14 +276,14 @@ class TestDeleteObjects:
 
     def test_delete_empty_list(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             result = mod.delete_objects([])
         assert result["success"] is True
 
     def test_main_callable(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.ls.return_value = []
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             result = mod.main(object_names=["x"])
@@ -298,7 +298,7 @@ class TestGetTransform:
 
     def test_object_not_found(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = False
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             result = mod.get_transform("ghost")
@@ -306,7 +306,7 @@ class TestGetTransform:
 
     def test_get_transform_success(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         mock_cmds.getAttr.return_value = [(1.0, 2.0, 3.0)]
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
@@ -315,7 +315,7 @@ class TestGetTransform:
 
     def test_main_callable(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = False
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             result = mod.main(object_name="x")
@@ -330,7 +330,7 @@ class TestRenameObject:
 
     def test_object_not_found(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = False
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             result = mod.rename_object("ghost", "newName")
@@ -338,7 +338,7 @@ class TestRenameObject:
 
     def test_rename_success(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         mock_cmds.rename.return_value = "newName"
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
@@ -348,7 +348,7 @@ class TestRenameObject:
 
     def test_main_callable(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = False
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             result = mod.main(object_name="x", new_name="y")
@@ -368,7 +368,7 @@ class TestCreateMaterial:
 
     def test_create_lambert(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.shadingNode.return_value = "lambert1"
         mock_cmds.sets.return_value = "lambert1_SG"
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
@@ -379,7 +379,7 @@ class TestCreateMaterial:
 
     def test_create_with_name(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.shadingNode.return_value = "lambert1"
         mock_cmds.rename.return_value = "myMaterial"
         mock_cmds.sets.return_value = "myMaterial_SG"
@@ -390,7 +390,7 @@ class TestCreateMaterial:
 
     def test_shader_type_alias(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.shadingNode.return_value = "blinn1"
         mock_cmds.sets.return_value = "blinn1_SG"
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
@@ -409,7 +409,7 @@ class TestCreateMaterial:
 
     def test_main_callable(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.shadingNode.return_value = "lambert1"
         mock_cmds.sets.return_value = "lambert1_SG"
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
@@ -425,7 +425,7 @@ class TestAssignMaterial:
 
     def test_assign_with_shading_group(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objectType.return_value = "shadingEngine"
         mock_cmds.ls.return_value = ["pSphere1"]
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
@@ -435,7 +435,7 @@ class TestAssignMaterial:
 
     def test_assign_via_material_node(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objectType.return_value = "lambert"
         mock_cmds.listConnections.return_value = ["lambert1SG"]
         mock_cmds.ls.return_value = ["pSphere1"]
@@ -445,7 +445,7 @@ class TestAssignMaterial:
 
     def test_no_shading_group_found(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objectType.return_value = "lambert"
         mock_cmds.listConnections.return_value = []
         mock_cmds.ls.return_value = ["pSphere1"]
@@ -455,7 +455,7 @@ class TestAssignMaterial:
 
     def test_no_objects_found(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objectType.return_value = "shadingEngine"
         mock_cmds.ls.return_value = []
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
@@ -464,7 +464,7 @@ class TestAssignMaterial:
 
     def test_main_callable(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objectType.return_value = "shadingEngine"
         mock_cmds.ls.return_value = []
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
@@ -480,7 +480,7 @@ class TestListMaterials:
 
     def test_empty_scene(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.ls.return_value = []
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             result = mod.list_materials()
@@ -489,7 +489,7 @@ class TestListMaterials:
 
     def test_with_materials(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.ls.return_value = ["lambert1", "blinn1"]
         mock_cmds.objectType.return_value = "lambert"
         mock_cmds.listConnections.return_value = ["lambert1SG"]
@@ -500,7 +500,7 @@ class TestListMaterials:
 
     def test_main_callable(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.ls.return_value = []
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             result = mod.main()
@@ -520,7 +520,7 @@ class TestSetKeyframe:
 
     def test_object_not_found(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = False
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             result = mod.set_keyframe("ghost")
@@ -529,7 +529,7 @@ class TestSetKeyframe:
 
     def test_set_keyframe_success(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         mock_cmds.setKeyframe.return_value = 3
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
@@ -539,7 +539,7 @@ class TestSetKeyframe:
 
     def test_set_keyframe_with_attr_and_value(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         mock_cmds.setKeyframe.return_value = 1
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
@@ -549,7 +549,7 @@ class TestSetKeyframe:
 
     def test_set_keyframe_multiple_attrs(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         mock_cmds.setKeyframe.return_value = 3
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
@@ -567,7 +567,7 @@ class TestSetKeyframe:
 
     def test_main_callable(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = False
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             result = mod.main(object_name="x")
@@ -582,7 +582,7 @@ class TestGetKeyframes:
 
     def test_object_not_found(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = False
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             result = mod.get_keyframes("ghost")
@@ -590,7 +590,7 @@ class TestGetKeyframes:
 
     def test_no_keyframes(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         mock_cmds.keyframe.return_value = None
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
@@ -601,7 +601,7 @@ class TestGetKeyframes:
 
     def test_with_keyframes(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         mock_cmds.keyframe.return_value = [1.0, 5.0, 10.0]
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
@@ -612,7 +612,7 @@ class TestGetKeyframes:
 
     def test_with_attribute_filter(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         mock_cmds.keyframe.return_value = [1.0, 5.0]
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
@@ -622,7 +622,7 @@ class TestGetKeyframes:
 
     def test_main_callable(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = False
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             result = mod.main(object_name="x")
@@ -637,14 +637,14 @@ class TestSetTimeline:
 
     def test_set_timeline(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             result = mod.set_timeline(start_frame=1, end_frame=120)
         assert result["success"] is True
 
     def test_main_callable(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             result = mod.main(start_frame=1, end_frame=48)
         assert isinstance(result, dict)
@@ -658,7 +658,7 @@ class TestGetCurrentTime:
 
     def test_get_current_time(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.currentTime.return_value = 24.0
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             result = mod.get_current_time()
@@ -666,7 +666,7 @@ class TestGetCurrentTime:
 
     def test_main_callable(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.currentTime.return_value = 1.0
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             result = mod.main()
@@ -681,14 +681,14 @@ class TestSetCurrentTime:
 
     def test_set_current_time(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             result = mod.set_current_time(48.0)
         assert result["success"] is True
 
     def test_main_callable(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             result = mod.main(frame=1.0)
         assert isinstance(result, dict)

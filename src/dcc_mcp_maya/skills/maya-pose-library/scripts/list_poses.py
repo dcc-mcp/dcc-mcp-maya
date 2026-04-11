@@ -8,7 +8,7 @@ import json
 import os
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def list_poses(
@@ -29,7 +29,7 @@ def list_poses(
 
     try:
         if not os.path.isdir(directory):
-            return maya_error(
+            return skill_error(
                 "Directory not found: {}".format(directory),
                 "'{}'  does not exist on disk".format(directory),
             )
@@ -61,7 +61,7 @@ def list_poses(
                 info["parse_error"] = True
             poses.append(info)
 
-        return maya_success(
+        return skill_success(
             "Found {} pose file(s) in '{}'".format(len(poses), directory),
             prompt="Use load_pose with one of the listed file paths to apply a pose.",
             poses=poses,
@@ -69,15 +69,14 @@ def list_poses(
             directory=directory,
         )
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to list poses in '{}'".format(directory))
+        return skill_exception(exc, message="Failed to list poses in '{}'".format(directory))
 
 
+@skill_entry
 def main(**kwargs):
     return list_poses(**kwargs)
 
 
 if __name__ == "__main__":
-    import json as _json
-
-    result = list_poses("/tmp/poses")
-    print(_json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

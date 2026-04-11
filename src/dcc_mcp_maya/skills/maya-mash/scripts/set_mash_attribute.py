@@ -1,7 +1,7 @@
 """Set an attribute on a MASH node."""
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_success
+from dcc_mcp_core.skill import skill_error, skill_success
 
 
 def run(params):
@@ -23,13 +23,13 @@ def run(params):
     value = params.get("value")
 
     if not node or not attribute or value is None:
-        return maya_error(
+        return skill_error(
             "Missing required parameters",
             "'node', 'attribute', and 'value' are all required",
         )
 
     if not cmds.objExists(node):
-        return maya_error(
+        return skill_error(
             "Node not found",
             "Node '{}' does not exist".format(node),
             prompt="Use list_networks to find valid MASH node names.",
@@ -38,7 +38,7 @@ def run(params):
     try:
         attr_path = "{}.{}".format(node, attribute)
         cmds.setAttr(attr_path, value)
-        return maya_success(
+        return skill_success(
             "Set {}.{} = {}".format(node, attribute, value),
             prompt="Render or playback to see MASH network changes.",
             node=node,
@@ -46,7 +46,7 @@ def run(params):
             value=value,
         )
     except Exception as exc:
-        return maya_error(
+        return skill_error(
             "Failed to set MASH attribute",
             str(exc),
             prompt="Check attribute name spelling and value type.",

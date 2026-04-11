@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def set_light_attribute(
@@ -30,7 +30,7 @@ def set_light_attribute(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(light_name):
-            return maya_error(
+            return skill_error(
                 "Light not found: {}".format(light_name),
                 "'{}' does not exist".format(light_name),
             )
@@ -40,7 +40,7 @@ def set_light_attribute(
         if node_type == "transform":
             shapes = cmds.listRelatives(light_name, shapes=True) or []
             if not shapes:
-                return maya_error(
+                return skill_error(
                     "No shape under '{}'".format(light_name),
                     "Cannot find a light shape node",
                 )
@@ -54,7 +54,7 @@ def set_light_attribute(
         else:
             cmds.setAttr(full_attr, value)
 
-        return maya_success(
+        return skill_success(
             "Set {}.{} = {}".format(light_node, attribute, value),
             prompt="Use list_lights to see all lights in the scene.",
             light_name=light_node,
@@ -62,18 +62,17 @@ def set_light_attribute(
             value=value,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to set light attribute")
+        return skill_exception(exc, message="Failed to set light attribute")
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`set_light_attribute`."""
     return set_light_attribute(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = set_light_attribute("pointLight1", "intensity", 3.0)
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

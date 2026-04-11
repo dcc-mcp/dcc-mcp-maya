@@ -8,7 +8,7 @@ import os
 from typing import List, Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def export_shot_alembic(
@@ -41,7 +41,7 @@ def export_shot_alembic(
         else:
             targets = cmds.ls(selection=True) or []
         if not targets:
-            return maya_error(
+            return skill_error(
                 "Nothing selected",
                 "Provide 'objects' or select nodes in Maya",
             )
@@ -70,7 +70,7 @@ def export_shot_alembic(
         )
         cmds.AbcExport(j=job_str)
 
-        return maya_success(
+        return skill_success(
             "Exported Alembic to '{}'".format(file_path),
             prompt="Use import_file to bring the Alembic back into a scene.",
             file_path=file_path,
@@ -79,16 +79,16 @@ def export_shot_alembic(
             objects=targets,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to export Alembic")
+        return skill_exception(exc, message="Failed to export Alembic")
 
 
+@skill_entry
 def main(**kwargs):
     return export_shot_alembic(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    print(json.dumps(export_shot_alembic("/tmp/shot_001.abc")))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

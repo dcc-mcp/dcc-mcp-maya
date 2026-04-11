@@ -5,7 +5,7 @@ from __future__ import annotations
 
 # Import built-in modules
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def attach_stroke_to_surface(
@@ -31,7 +31,7 @@ def attach_stroke_to_surface(
         import maya.mel as mel  # noqa: PLC0415
 
         if not cmds.objExists(surface):
-            return maya_error(
+            return skill_error(
                 "Surface not found: {}".format(surface),
                 "Ensure the surface exists before attaching strokes",
             )
@@ -65,7 +65,7 @@ def attach_stroke_to_surface(
         else:
             renamed = new_strokes
 
-        return maya_success(
+        return skill_success(
             "Attached {} stroke(s) to surface '{}'".format(len(new_strokes), surface),
             prompt="Use list_strokes to inspect or delete_stroke to remove unwanted strokes.",
             surface=surface,
@@ -74,16 +74,16 @@ def attach_stroke_to_surface(
             stroke_nodes=renamed,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to attach stroke to surface")
+        return skill_exception(exc, message="Failed to attach stroke to surface")
 
 
+@skill_entry
 def main(**kwargs):
     return attach_stroke_to_surface(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    print(json.dumps(attach_stroke_to_surface("pSphere1")))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

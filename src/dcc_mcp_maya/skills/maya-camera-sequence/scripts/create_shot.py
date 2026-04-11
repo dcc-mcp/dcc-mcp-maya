@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def create_shot(
@@ -35,7 +35,7 @@ def create_shot(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(camera):
-            return maya_error(
+            return skill_error(
                 "Camera not found: {}".format(camera),
                 "Create the camera first or verify its name",
             )
@@ -54,7 +54,7 @@ def create_shot(
 
         shot_node = cmds.shot(**shot_kwargs)
 
-        return maya_success(
+        return skill_success(
             "Created shot '{}' for camera '{}' [{}-{}]".format(shot_node, camera, start_frame, end_frame),
             prompt="Use list_shots to view sequence order or set_shot_range to adjust timing.",
             shot_node=shot_node,
@@ -64,16 +64,16 @@ def create_shot(
             sequence_start_frame=seq_start,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to create shot")
+        return skill_exception(exc, message="Failed to create shot")
 
 
+@skill_entry
 def main(**kwargs):
     return create_shot(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    print(json.dumps(create_shot("camera1", 1, 48)))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

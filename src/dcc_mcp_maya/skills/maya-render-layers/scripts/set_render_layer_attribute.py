@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 # Import built-in modules
 
@@ -34,13 +34,13 @@ def set_render_layer_attribute(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(layer_name):
-            return maya_error(
+            return skill_error(
                 "Render layer not found: {}".format(layer_name),
                 "'{}' does not exist".format(layer_name),
             )
 
         if cmds.objectType(layer_name) != "renderLayer":
-            return maya_error(
+            return skill_error(
                 "Not a render layer: {}".format(layer_name),
                 "'{}' is of type '{}'".format(layer_name, cmds.objectType(layer_name)),
             )
@@ -54,7 +54,7 @@ def set_render_layer_attribute(
         else:
             cmds.setAttr(attr_path, value)
 
-        return maya_success(
+        return skill_success(
             "Set {}.{} = {}".format(layer_name, attribute, value),
             layer_name=layer_name,
             attribute=attribute,
@@ -62,18 +62,17 @@ def set_render_layer_attribute(
             prompt="Use list_render_layers to verify the change.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to set attribute '{}.{}'".format(layer_name, attribute))
+        return skill_exception(exc, message="Failed to set attribute '{}.{}'".format(layer_name, attribute))
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`set_render_layer_attribute`."""
     return set_render_layer_attribute(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = set_render_layer_attribute()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

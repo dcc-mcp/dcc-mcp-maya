@@ -5,7 +5,7 @@ from __future__ import annotations
 
 # Import built-in modules
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def connect_bifrost_ports(
@@ -43,13 +43,13 @@ def connect_bifrost_ports(
             ("target_port", target_port),
         ]:
             if not arg_val:
-                return maya_error(
+                return skill_error(
                     "'{}' is required".format(arg_name),
                     "Provide a non-empty value for '{}'".format(arg_name),
                 )
 
         if not cmds.objExists(graph_node):
-            return maya_error(
+            return skill_error(
                 "Graph '{}' not found".format(graph_node),
                 "No node named '{}' exists in the scene".format(graph_node),
             )
@@ -58,7 +58,7 @@ def connect_bifrost_ports(
         dst = "{}.{}".format(target_node_path, target_port)
         cmds.vnnConnect(graph_node, src, dst)
 
-        return maya_success(
+        return skill_success(
             "Connected {}{} → {}{}".format(source_node_path, source_port, target_node_path, target_port),
             prompt="Use set_bifrost_property to adjust node parameters after wiring.",
             graph_node=graph_node,
@@ -66,24 +66,17 @@ def connect_bifrost_ports(
             target=dst,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to connect Bifrost ports")
+        return skill_exception(exc, message="Failed to connect Bifrost ports")
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`connect_bifrost_ports`."""
     return connect_bifrost_ports(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = connect_bifrost_ports(
-        "bifrostGraph1",
-        "/get_property",
-        "value",
-        "/set_property",
-        "value",
-    )
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

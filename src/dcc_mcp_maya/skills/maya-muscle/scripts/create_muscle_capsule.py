@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def create_muscle_capsule(
@@ -34,7 +34,7 @@ def create_muscle_capsule(
 
         for jnt in (start_joint, end_joint):
             if not cmds.objExists(jnt):
-                return maya_error(
+                return skill_error(
                     "Joint '{}' not found".format(jnt),
                     "Verify joint names using the Outliner.",
                 )
@@ -56,7 +56,7 @@ def create_muscle_capsule(
             cmds.setAttr("{}.radius0".format(muscle_node), radius)
             cmds.setAttr("{}.radius1".format(muscle_node), radius)
 
-        return maya_success(
+        return skill_success(
             "Muscle capsule created: '{}'".format(muscle_node),
             prompt="Muscle created. Use apply_muscle_skin to connect it to a mesh.",
             muscle_node=muscle_node,
@@ -65,17 +65,16 @@ def create_muscle_capsule(
             radius=radius,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to create muscle capsule")
+        return skill_exception(exc, message="Failed to create muscle capsule")
 
 
+@skill_entry
 def main(**kwargs):
     return create_muscle_capsule(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = create_muscle_capsule("shoulder_jnt", "elbow_jnt")
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

@@ -4,7 +4,9 @@
 from __future__ import annotations
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success, validate_node_exists
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
+
+from dcc_mcp_maya.api import validate_node_exists
 
 # Import built-in modules
 
@@ -32,7 +34,7 @@ def set_ik_fk_blend(
     """
 
     if not (0.0 <= blend <= 1.0):
-        return maya_error(
+        return skill_error(
             "blend must be in the range [0.0, 1.0]",
             "Got blend={}".format(blend),
         )
@@ -46,7 +48,7 @@ def set_ik_fk_blend(
 
         node_type = cmds.objectType(ik_handle)
         if node_type not in ("ikHandle", "transform"):
-            return maya_error(
+            return skill_error(
                 "Not an IK handle: {}".format(ik_handle),
                 "'{}' is of type '{}'; expected 'ikHandle'".format(ik_handle, node_type),
             )
@@ -54,14 +56,14 @@ def set_ik_fk_blend(
         plug = "{}.{}".format(ik_handle, attribute)
         err = validate_node_exists(cmds, plug)
         if err:
-            return maya_error(
+            return skill_error(
                 "Attribute not found: {}".format(plug),
                 "IK handle '{}' does not have attribute '{}'".format(ik_handle, attribute),
             )
 
         cmds.setAttr(plug, blend)
 
-        return maya_success(
+        return skill_success(
             "Set IK/FK blend on '{}' to {}".format(ik_handle, blend),
             ik_handle=ik_handle,
             attribute=attribute,
@@ -69,18 +71,17 @@ def set_ik_fk_blend(
             prompt="Check the result with list_rigging or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to set IK/FK blend on '{}'".format(ik_handle))
+        return skill_exception(exc, message="Failed to set IK/FK blend on '{}'".format(ik_handle))
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`set_ik_fk_blend`."""
     return set_ik_fk_blend(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = set_ik_fk_blend()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

@@ -5,7 +5,7 @@ from __future__ import annotations
 
 # Import built-in modules
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def set_fluid_attribute(fluid_shape: str, attribute: str, value: float) -> dict:
@@ -23,14 +23,14 @@ def set_fluid_attribute(fluid_shape: str, attribute: str, value: float) -> dict:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(fluid_shape):
-            return maya_error(
+            return skill_error(
                 "Node not found",
                 "fluidShape '{}' does not exist".format(fluid_shape),
             )
 
         cmds.setAttr("{}.{}".format(fluid_shape, attribute), value)
 
-        return maya_success(
+        return skill_success(
             "Fluid attribute set",
             prompt="Attribute {}.{} updated. Simulate to see the effect.".format(fluid_shape, attribute),
             fluid_shape=fluid_shape,
@@ -38,17 +38,16 @@ def set_fluid_attribute(fluid_shape: str, attribute: str, value: float) -> dict:
             value=value,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to set fluid attribute")
+        return skill_exception(exc, message="Failed to set fluid attribute")
 
 
+@skill_entry
 def main(**kwargs):
     return set_fluid_attribute(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = set_fluid_attribute("fluidShape1", "density", 0.5)
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

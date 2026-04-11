@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def get_vertex_color(
@@ -31,7 +31,7 @@ def get_vertex_color(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return maya_error("Object not found: {}".format(object_name))
+            return skill_error("Object not found: {}".format(object_name))
 
         color_sets = cmds.polyColorSet(object_name, query=True, allColorSets=True) or []
         current_set = cmds.polyColorSet(object_name, query=True, currentColorSet=True)
@@ -46,7 +46,7 @@ def get_vertex_color(
         if vertex_index is not None:
             component = "{}.vtx[{}]".format(object_name, vertex_index)
             if not cmds.objExists(component):
-                return maya_error("Vertex {} not found on '{}'".format(vertex_index, object_name))
+                return skill_error("Vertex {} not found on '{}'".format(vertex_index, object_name))
 
             query_kwargs = {}  # type: dict
             if color_set:
@@ -62,24 +62,23 @@ def get_vertex_color(
                 result_kwargs["color"] = [1.0, 1.0, 1.0]
                 result_kwargs["alpha"] = 1.0
 
-        return maya_success(
+        return skill_success(
             "Vertex color info for '{}'".format(object_name),
             **result_kwargs,
             prompt="Check the result with list_vertex_color or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to get vertex color")
+        return skill_exception(exc, message="Failed to get vertex color")
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`get_vertex_color`."""
     return get_vertex_color(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = get_vertex_color()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

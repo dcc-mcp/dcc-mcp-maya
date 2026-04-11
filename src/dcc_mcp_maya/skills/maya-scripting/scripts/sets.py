@@ -12,7 +12,7 @@ from __future__ import annotations
 from typing import List, Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_error, skill_exception, skill_success
 
 
 def create_set(
@@ -35,12 +35,12 @@ def create_set(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not name or not name.strip():
-            return maya_error("Invalid set name", "name must not be empty")
+            return skill_error("Invalid set name", "name must not be empty")
 
         objects_to_add = list(objects) if objects else []
         missing = [obj for obj in objects_to_add if not cmds.objExists(obj)]
         if missing:
-            return maya_error(
+            return skill_error(
                 "Objects not found: {}".format(missing),
                 "The following objects do not exist: {}".format(missing),
             )
@@ -50,16 +50,16 @@ def create_set(
         else:
             set_node = cmds.sets(name=name, empty=True)
 
-        return maya_success(
+        return skill_success(
             "Created object set '{}' with {} object(s)".format(set_node, len(objects_to_add)),
             set_name=set_node,
             objects_added=objects_to_add,
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to create set '{}'".format(name))
+        return skill_exception(exc, message="Failed to create set '{}'".format(name))
 
 
 def add_to_set(
@@ -81,39 +81,39 @@ def add_to_set(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not objects:
-            return maya_error("No objects specified", "objects list must not be empty")
+            return skill_error("No objects specified", "objects list must not be empty")
 
         if not cmds.objExists(set_name):
-            return maya_error(
+            return skill_error(
                 "Set not found: {}".format(set_name),
                 "'{}' does not exist in the scene".format(set_name),
             )
 
         if cmds.objectType(set_name) != "objectSet":
-            return maya_error(
+            return skill_error(
                 "Not an object set: {}".format(set_name),
                 "'{}' is of type '{}', expected 'objectSet'".format(set_name, cmds.objectType(set_name)),
             )
 
         missing = [obj for obj in objects if not cmds.objExists(obj)]
         if missing:
-            return maya_error(
+            return skill_error(
                 "Objects not found: {}".format(missing),
                 "The following objects do not exist: {}".format(missing),
             )
 
         cmds.sets(*objects, addElement=set_name)
 
-        return maya_success(
+        return skill_success(
             "Added {} object(s) to set '{}'".format(len(objects), set_name),
             set_name=set_name,
             objects_added=list(objects),
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to add objects to set '{}'".format(set_name))
+        return skill_exception(exc, message="Failed to add objects to set '{}'".format(set_name))
 
 
 def remove_from_set(
@@ -135,16 +135,16 @@ def remove_from_set(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not objects:
-            return maya_error("No objects specified", "objects list must not be empty")
+            return skill_error("No objects specified", "objects list must not be empty")
 
         if not cmds.objExists(set_name):
-            return maya_error(
+            return skill_error(
                 "Set not found: {}".format(set_name),
                 "'{}' does not exist in the scene".format(set_name),
             )
 
         if cmds.objectType(set_name) != "objectSet":
-            return maya_error(
+            return skill_error(
                 "Not an object set: {}".format(set_name),
                 "'{}' is of type '{}', expected 'objectSet'".format(set_name, cmds.objectType(set_name)),
             )
@@ -157,7 +157,7 @@ def remove_from_set(
         removed_count = len(existing)
         skipped = [obj for obj in objects if obj not in existing]
 
-        return maya_success(
+        return skill_success(
             "Removed {} object(s) from set '{}'{}".format(
                 removed_count,
                 set_name,
@@ -169,9 +169,9 @@ def remove_from_set(
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to remove objects from set '{}'".format(set_name))
+        return skill_exception(exc, message="Failed to remove objects from set '{}'".format(set_name))
 
 
 def list_sets(include_internal: bool = False) -> dict:
@@ -213,13 +213,13 @@ def list_sets(include_internal: bool = False) -> dict:
                 }
             )
 
-        return maya_success(
+        return skill_success(
             "Found {} object set(s)".format(len(result)),
             sets=result,
             count=len(result),
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to list object sets")
+        return skill_exception(exc, message="Failed to list object sets")

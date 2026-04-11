@@ -8,7 +8,7 @@ import json
 from typing import List, Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def load_material(
@@ -35,7 +35,7 @@ def load_material(
             with open(file_path) as fh:
                 preset_data = json.load(fh)
         except (IOError, ValueError) as exc:
-            return maya_error("Cannot read preset '{}'".format(file_path), str(exc))
+            return skill_error("Cannot read preset '{}'".format(file_path), str(exc))
 
         node_type = preset_data.get("node_type", "lambert")
         default_name = preset_data.get("material", "mat_preset")
@@ -68,7 +68,7 @@ def load_material(
                     cmds.sets(obj, edit=True, forceElement=sg)
                     assigned_to.append(obj)
 
-        return maya_success(
+        return skill_success(
             "Loaded material '{}' from '{}'".format(mat_node, file_path),
             prompt="Use assign_material to assign this material to additional objects.",
             material=mat_node,
@@ -77,16 +77,16 @@ def load_material(
             assigned_to=assigned_to,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to load material preset")
+        return skill_exception(exc, message="Failed to load material preset")
 
 
+@skill_entry
 def main(**kwargs):
     return load_material(**kwargs)
 
 
 if __name__ == "__main__":
-    import json as _json
-
-    print(_json.dumps(load_material("/tmp/mat_lib/lambert1.json")))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

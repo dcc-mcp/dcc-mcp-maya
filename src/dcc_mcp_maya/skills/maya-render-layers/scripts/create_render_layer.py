@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import List, Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def create_render_layer(
@@ -33,12 +33,12 @@ def create_render_layer(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not name or not name.strip():
-            return maya_error("Invalid layer name", "name must not be empty")
+            return skill_error("Invalid layer name", "name must not be empty")
 
         objects_to_add = list(objects) if objects else []
         missing = [obj for obj in objects_to_add if not cmds.objExists(obj)]
         if missing:
-            return maya_error(
+            return skill_error(
                 "Objects not found: {}".format(missing),
                 "The following objects do not exist: {}".format(missing),
             )
@@ -48,7 +48,7 @@ def create_render_layer(
         else:
             layer = cmds.createRenderLayer(name=name, number=1, empty=True, makeCurrent=make_current)
 
-        return maya_success(
+        return skill_success(
             "Created render layer '{}' with {} object(s)".format(layer, len(objects_to_add)),
             layer_name=layer,
             objects_added=objects_to_add,
@@ -56,18 +56,17 @@ def create_render_layer(
             prompt="Use add_to_render_layer to populate or set_render_layer_attribute to adjust.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to create render layer '{}'".format(name))
+        return skill_exception(exc, message="Failed to create render layer '{}'".format(name))
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`create_render_layer`."""
     return create_render_layer(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = create_render_layer()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

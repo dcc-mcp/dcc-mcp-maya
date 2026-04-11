@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def list_expressions(
@@ -33,7 +33,7 @@ def list_expressions(
 
         # Validate object existence if filter specified
         if obj_filter and not cmds.objExists(obj_filter):
-            return maya_error(
+            return skill_error(
                 "Object '{}' not found".format(obj_filter),
                 "Ensure the object exists in the scene.",
             )
@@ -58,25 +58,24 @@ def list_expressions(
                 }
             )
 
-        return maya_success(
+        return skill_success(
             "Found {} expression node(s)".format(len(results)),
             prompt="Use create_expression to add more or delete_expression to remove unwanted ones.",
             expressions=results,
             count=len(results),
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to list expressions")
+        return skill_exception(exc, message="Failed to list expressions")
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`list_expressions`."""
     return list_expressions(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = list_expressions()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

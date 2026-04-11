@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import Union
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def set_proxy_attribute(
@@ -31,7 +31,7 @@ def set_proxy_attribute(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(proxy):
-            return maya_error(
+            return skill_error(
                 "Proxy mesh '{}' not found".format(proxy),
                 "Use list_proxies to see available proxy meshes.",
             )
@@ -45,7 +45,7 @@ def set_proxy_attribute(
         else:
             cmds.setAttr(full_attr, float(value))
 
-        return maya_success(
+        return skill_success(
             "Set {}.{} = {}".format(proxy, attribute, value),
             prompt="Attribute updated. Check the viewport to see the effect.",
             proxy=proxy,
@@ -53,17 +53,16 @@ def set_proxy_attribute(
             value=value,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to set attribute '{}.{}'".format(proxy, attribute))
+        return skill_exception(exc, message="Failed to set attribute '{}.{}'".format(proxy, attribute))
 
 
+@skill_entry
 def main(**kwargs):
     return set_proxy_attribute(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = set_proxy_attribute("proxy1", "castsShadows", False)
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

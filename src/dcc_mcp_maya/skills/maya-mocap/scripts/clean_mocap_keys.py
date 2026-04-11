@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import List, Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def clean_mocap_keys(
@@ -40,7 +40,7 @@ def clean_mocap_keys(
             targets = cmds.ls(type="joint") or []
 
         if not targets:
-            return maya_error(
+            return skill_error(
                 "No joints found to clean",
                 "Specify joint names or ensure joints exist in the scene.",
             )
@@ -61,7 +61,7 @@ def clean_mocap_keys(
         anim_curves_after = cmds.keyframe(targets, query=True, keyframeCount=True) or 0
         removed = anim_curves_before - anim_curves_after
 
-        return maya_success(
+        return skill_success(
             "Cleaned {} joint(s): {} -> {} keys (removed {})".format(
                 len(targets), anim_curves_before, anim_curves_after, removed
             ),
@@ -72,17 +72,16 @@ def clean_mocap_keys(
             keys_removed=removed,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to clean mocap keys")
+        return skill_exception(exc, message="Failed to clean mocap keys")
 
 
+@skill_entry
 def main(**kwargs):
     return clean_mocap_keys(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = clean_mocap_keys()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

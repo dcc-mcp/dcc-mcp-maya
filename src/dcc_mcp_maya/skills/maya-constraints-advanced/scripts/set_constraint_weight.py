@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def set_constraint_weight(
@@ -30,7 +30,7 @@ def set_constraint_weight(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(constraint_node):
-            return maya_error(
+            return skill_error(
                 "Constraint not found: {}".format(constraint_node),
                 "'{}' does not exist in the scene".format(constraint_node),
             )
@@ -40,7 +40,7 @@ def set_constraint_weight(
         weight_suffix = "W{}".format(driver_index)
         matching = [a for a in all_ud if a.endswith(weight_suffix)]
         if not matching:
-            return maya_error(
+            return skill_error(
                 "No weight attribute found for driver index {} on '{}'".format(driver_index, constraint_node),
                 "Use get_constraint_weights to list available driver indices.",
             )
@@ -48,7 +48,7 @@ def set_constraint_weight(
         w_attr = "{}.{}".format(constraint_node, matching[0])
         cmds.setAttr(w_attr, weight)
 
-        return maya_success(
+        return skill_success(
             "Set weight of driver {} to {} on '{}'".format(driver_index, weight, constraint_node),
             prompt="Key this attribute on the timeline for an animated space switch.",
             constraint_node=constraint_node,
@@ -57,17 +57,16 @@ def set_constraint_weight(
             weight_attribute=w_attr,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to set constraint weight")
+        return skill_exception(exc, message="Failed to set constraint weight")
 
 
+@skill_entry
 def main(**kwargs):
     return set_constraint_weight(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = set_constraint_weight("parentConstraint1", driver_index=0, weight=1.0)
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

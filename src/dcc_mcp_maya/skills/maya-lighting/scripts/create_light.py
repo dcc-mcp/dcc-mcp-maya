@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import List, Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 _LIGHT_TYPES = {
     "directional": "directionalLight",
@@ -44,7 +44,7 @@ def create_light(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if light_type not in _LIGHT_TYPES:
-            return maya_error(
+            return skill_error(
                 "Unknown light type: {}".format(light_type),
                 "Supported types: {}".format(", ".join(sorted(_LIGHT_TYPES))),
             )
@@ -69,7 +69,7 @@ def create_light(
         if rotation and len(rotation) == 3:
             cmds.rotate(rotation[0], rotation[1], rotation[2], transform)
 
-        return maya_success(
+        return skill_success(
             "Created {} light '{}'".format(light_type, transform),
             prompt="Use set_light_attribute to adjust intensity, color, or shadows.",
             transform=transform,
@@ -78,18 +78,17 @@ def create_light(
             intensity=intensity,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to create light")
+        return skill_exception(exc, message="Failed to create light")
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`create_light`."""
     return create_light(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = create_light("point", "myLight", intensity=2.0, color=[1.0, 0.9, 0.8])
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

@@ -7,7 +7,9 @@ from __future__ import annotations
 from typing import Any
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success, validate_node_exists
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
+
+from dcc_mcp_maya.api import validate_node_exists
 
 _SUPPORTED_SHADERS = ("lambert", "blinn", "phong", "phongE", "aiStandardSurface")
 
@@ -40,7 +42,7 @@ def set_material_attribute(
         else:
             cmds.setAttr(attr_path, value)
 
-        return maya_success(
+        return skill_success(
             "Set {}.{} = {}".format(material_name, attribute, value),
             material_name=material_name,
             attribute=attribute,
@@ -48,18 +50,17 @@ def set_material_attribute(
             prompt="Use get_material_connections to verify or render_frame to preview.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to set material attribute")
+        return skill_exception(exc, message="Failed to set material attribute")
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`set_material_attribute`."""
     return set_material_attribute(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = set_material_attribute()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

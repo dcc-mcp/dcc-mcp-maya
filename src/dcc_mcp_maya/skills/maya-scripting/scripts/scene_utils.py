@@ -11,7 +11,7 @@ from __future__ import annotations
 from typing import List, Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_error, skill_exception, skill_success
 
 
 def set_pivot(
@@ -42,20 +42,20 @@ def set_pivot(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return maya_error(
+            return skill_error(
                 "Object not found: {}".format(object_name),
                 "'{}' does not exist in the scene".format(object_name),
             )
 
         if pivot_type not in _VALID_PIVOT_TYPES:
-            return maya_error(
+            return skill_error(
                 "Invalid pivot_type: {}".format(pivot_type),
                 "pivot_type must be one of {}".format(_VALID_PIVOT_TYPES),
             )
 
         if position is not None:
             if len(position) != 3:
-                return maya_error(
+                return skill_error(
                     "Invalid position: {}".format(position),
                     "position must be a list of exactly 3 floats [x, y, z]",
                 )
@@ -72,7 +72,7 @@ def set_pivot(
         rp = list(cmds.xform(object_name, query=True, rotatePivot=True, worldSpace=True))
         sp = list(cmds.xform(object_name, query=True, scalePivot=True, worldSpace=True))
 
-        return maya_success(
+        return skill_success(
             "Set pivot on '{}' ({})".format(object_name, pivot_type),
             object_name=object_name,
             pivot_type=pivot_type,
@@ -82,9 +82,9 @@ def set_pivot(
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to set pivot on '{}'".format(object_name))
+        return skill_exception(exc, message="Failed to set pivot on '{}'".format(object_name))
 
 
 def align_objects(
@@ -125,21 +125,21 @@ def align_objects(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not objects or len(objects) < 2:
-            return maya_error(
+            return skill_error(
                 "Insufficient objects",
                 "align_objects requires at least 2 objects",
             )
 
         axis_lower = axis.lower()
         if axis_lower not in _VALID_AXES:
-            return maya_error(
+            return skill_error(
                 "Invalid axis: {}".format(axis),
                 "axis must be one of {}".format(_VALID_AXES),
             )
 
         mode_lower = mode.lower()
         if mode_lower not in _VALID_MODES:
-            return maya_error(
+            return skill_error(
                 "Invalid mode: {}".format(mode),
                 "mode must be one of {}".format(_VALID_MODES),
             )
@@ -147,7 +147,7 @@ def align_objects(
         # Validate all objects exist
         missing = [obj for obj in objects if not cmds.objExists(obj)]
         if missing:
-            return maya_error(
+            return skill_error(
                 "Objects not found: {}".format(missing),
                 "The following objects do not exist: {}".format(missing),
             )
@@ -156,7 +156,7 @@ def align_objects(
 
         if reference:
             if not cmds.objExists(reference):
-                return maya_error(
+                return skill_error(
                     "Reference object not found: {}".format(reference),
                     "'{}' does not exist".format(reference),
                 )
@@ -198,7 +198,7 @@ def align_objects(
             cmds.setAttr("{}.{}".format(obj, translate_attr), current_t + delta)
             aligned.append(obj)
 
-        return maya_success(
+        return skill_success(
             "Aligned {} object(s) along {} axis ({} mode)".format(len(aligned), axis_lower, mode_lower),
             objects=aligned,
             axis=axis_lower,
@@ -207,9 +207,9 @@ def align_objects(
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to align objects")
+        return skill_exception(exc, message="Failed to align objects")
 
 
 def create_annotation(
@@ -237,13 +237,13 @@ def create_annotation(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return maya_error(
+            return skill_error(
                 "Object not found: {}".format(object_name),
                 "'{}' does not exist in the scene".format(object_name),
             )
 
         if not text:
-            return maya_error(
+            return skill_error(
                 "Empty annotation text",
                 "text must be a non-empty string",
             )
@@ -251,7 +251,7 @@ def create_annotation(
         # Determine annotation position
         if position is not None:
             if len(position) != 3:
-                return maya_error(
+                return skill_error(
                     "Invalid position: {}".format(position),
                     "position must be a list of exactly 3 floats [x, y, z]",
                 )
@@ -266,7 +266,7 @@ def create_annotation(
         ann_parent = cmds.listRelatives(ann_transform, parent=True, fullPath=False)
         ann_transform_name = ann_parent[0] if ann_parent else ann_transform
 
-        return maya_success(
+        return skill_success(
             "Created annotation '{}' on '{}'".format(text, object_name),
             annotation_transform=ann_transform_name,
             annotation_shape=ann_transform,
@@ -276,9 +276,9 @@ def create_annotation(
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to create annotation on '{}'".format(object_name))
+        return skill_exception(exc, message="Failed to create annotation on '{}'".format(object_name))
 
 
 def set_object_color(
@@ -304,7 +304,7 @@ def set_object_color(
     """
 
     if not (0 <= color_index <= 31):
-        return maya_error(
+        return skill_error(
             "Invalid color_index: {}".format(color_index),
             "color_index must be between 0 and 31",
         )
@@ -313,7 +313,7 @@ def set_object_color(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return maya_error(
+            return skill_error(
                 "Object not found: {}".format(object_name),
                 "'{}' does not exist in the scene".format(object_name),
             )
@@ -327,7 +327,7 @@ def set_object_color(
             cmds.setAttr("{}.overrideColor".format(object_name), color_index)
             effective_index = color_index
 
-        return maya_success(
+        return skill_success(
             "Set wireframe color on '{}' to index {}".format(object_name, effective_index),
             object_name=object_name,
             color_index=effective_index,
@@ -335,9 +335,9 @@ def set_object_color(
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to set object color on '{}'".format(object_name))
+        return skill_exception(exc, message="Failed to set object color on '{}'".format(object_name))
 
 
 def toggle_gpu_override(
@@ -369,7 +369,7 @@ def toggle_gpu_override(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return maya_error(
+            return skill_error(
                 "Object not found: {}".format(object_name),
                 "'{}' does not exist in the scene".format(object_name),
             )
@@ -384,7 +384,7 @@ def toggle_gpu_override(
             cmds.setAttr("{}.overrideDisplayType".format(object_name), 0)
             display_type = 0
 
-        return maya_success(
+        return skill_success(
             "{} GPU override on '{}'".format("Enabled" if enabled else "Disabled", object_name),
             object_name=object_name,
             enabled=enabled,
@@ -392,9 +392,9 @@ def toggle_gpu_override(
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to toggle GPU override on '{}'".format(object_name))
+        return skill_exception(exc, message="Failed to toggle GPU override on '{}'".format(object_name))
 
 
 def create_polygon_text(
@@ -427,7 +427,7 @@ def create_polygon_text(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not text:
-            return maya_error("Empty text", "text parameter must not be empty")
+            return skill_error("Empty text", "text parameter must not be empty")
 
         kwargs = {"font": font, "text": text}
         if name:
@@ -449,7 +449,7 @@ def create_polygon_text(
                     extruded.append(crv)
             objects = extruded
 
-        return maya_success(
+        return skill_success(
             "Created polygon text: '{}'".format(text),
             text=text,
             font=font,
@@ -460,9 +460,9 @@ def create_polygon_text(
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to create polygon text '{}'".format(text))
+        return skill_exception(exc, message="Failed to create polygon text '{}'".format(text))
 
 
 def set_shading_mode(
@@ -499,7 +499,7 @@ def set_shading_mode(
 
     mode_lower = mode.lower()
     if mode_lower not in _MODE_MAP:
-        return maya_error(
+        return skill_error(
             "Invalid mode: {}".format(mode),
             "mode must be one of {}".format(sorted(_MODE_MAP.keys())),
         )
@@ -510,7 +510,7 @@ def set_shading_mode(
         # Resolve target panel
         if panel:
             if not cmds.modelPanel(panel, query=True, exists=True):
-                return maya_error(
+                return skill_error(
                     "Panel not found: {}".format(panel),
                     "'{}' is not a valid model panel".format(panel),
                 )
@@ -518,7 +518,7 @@ def set_shading_mode(
         else:
             panels = cmds.getPanel(type="modelPanel") or []
             if not panels:
-                return maya_error(
+                return skill_error(
                     "No model panels found",
                     "Could not locate any Maya model view panel",
                 )
@@ -536,13 +536,13 @@ def set_shading_mode(
         elif mode_lower == "bounding_box":
             cmds.modelEditor(target_panel, edit=True, displayAppearance="boundingBox", displayTextures=False)
 
-        return maya_success(
+        return skill_success(
             "Set shading mode to '{}' on panel '{}'".format(mode_lower, target_panel),
             mode=mode_lower,
             panel=target_panel,
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to set shading mode")
+        return skill_exception(exc, message="Failed to set shading mode")

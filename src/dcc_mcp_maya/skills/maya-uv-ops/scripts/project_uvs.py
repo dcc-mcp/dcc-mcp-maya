@@ -4,7 +4,9 @@
 from __future__ import annotations
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success, validate_node_exists
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
+
+from dcc_mcp_maya.api import validate_node_exists
 
 # Import built-in modules
 
@@ -29,14 +31,14 @@ def project_uvs(
 
     valid_types = ("planar", "cylindrical", "spherical")
     if projection_type not in valid_types:
-        return maya_error(
+        return skill_error(
             "Invalid projection_type: {}".format(projection_type),
             "Use one of: {}".format(", ".join(valid_types)),
         )
 
     valid_axes = ("x", "y", "z")
     if axis not in valid_axes:
-        return maya_error(
+        return skill_error(
             "Invalid axis: {}".format(axis),
             "Use one of: x, y, z",
         )
@@ -70,7 +72,7 @@ def project_uvs(
                 ch=False,
             )
 
-        return maya_success(
+        return skill_success(
             "Applied {} UV projection to '{}' (axis={})".format(projection_type, object_name, axis),
             object_name=object_name,
             projection_type=projection_type,
@@ -79,18 +81,17 @@ def project_uvs(
             prompt="Check the result with list_uv_ops or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to project UVs")
+        return skill_exception(exc, message="Failed to project UVs")
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`project_uvs`."""
     return project_uvs(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = project_uvs()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

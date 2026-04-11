@@ -8,7 +8,7 @@ import logging
 from typing import List
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 logger = logging.getLogger(__name__)
 
@@ -40,23 +40,23 @@ def bake_textures(
 
     valid_types = ("diffuse", "full_render", "normals", "ao")
     if bake_type not in valid_types:
-        return maya_error(
+        return skill_error(
             "Invalid bake_type: {}".format(bake_type),
             "Use one of: {}".format(", ".join(valid_types)),
         )
 
     valid_renderers = ("mentalRay", "arnold")
     if renderer not in valid_renderers:
-        return maya_error(
+        return skill_error(
             "Invalid renderer: {}".format(renderer),
             "Use one of: {}".format(", ".join(valid_renderers)),
         )
 
     if not objects:
-        return maya_error("No objects specified for baking", "objects list must not be empty")
+        return skill_error("No objects specified for baking", "objects list must not be empty")
 
     if resolution < 1:
-        return maya_error(
+        return skill_error(
             "Invalid resolution: {}".format(resolution),
             "Resolution must be >= 1",
         )
@@ -66,7 +66,7 @@ def bake_textures(
 
         missing = [obj for obj in objects if not cmds.objExists(obj)]
         if missing:
-            return maya_error("Objects not found: {}".format(", ".join(missing)))
+            return skill_error("Objects not found: {}".format(", ".join(missing)))
 
         bake_type_map = {
             "diffuse": "diffuse",
@@ -98,7 +98,7 @@ def bake_textures(
             except Exception as bake_exc:
                 logger.warning("Bake skipped for '%s': %s", obj, bake_exc)
 
-        return maya_success(
+        return skill_success(
             "Baked {} object(s) to '{}'".format(len(baked_files), file_path),
             objects=objects,
             baked_count=len(baked_files),
@@ -109,18 +109,17 @@ def bake_textures(
             prompt="Check the result with list_texture_bake or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to bake textures")
+        return skill_exception(exc, message="Failed to bake textures")
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`bake_textures`."""
     return bake_textures(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = bake_textures()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

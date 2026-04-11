@@ -1,7 +1,7 @@
 """Invert the current selection within its context."""
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_success
+from dcc_mcp_core.skill import skill_error, skill_success
 
 
 def run(params):  # noqa: ARG001
@@ -22,7 +22,7 @@ def run(params):  # noqa: ARG001
         before = cmds.ls(selection=True, flatten=True) or []
         cmds.InvertSelection()
         after = cmds.ls(selection=True, flatten=True) or []
-        return maya_success(
+        return skill_success(
             "Inverted selection: {} -> {} items".format(len(before), len(after)),
             prompt="Use get_selection (maya-scene) to inspect the result.",
             before_count=len(before),
@@ -30,4 +30,4 @@ def run(params):  # noqa: ARG001
             selection=after,
         )
     except Exception as exc:
-        return maya_error("Failed to invert selection", str(exc))
+        return skill_error("Failed to invert selection", str(exc))

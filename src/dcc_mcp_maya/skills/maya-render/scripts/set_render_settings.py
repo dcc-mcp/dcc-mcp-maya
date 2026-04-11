@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def set_render_settings(
@@ -81,26 +81,25 @@ def set_render_settings(
             applied["output_path"] = output_path
 
         if not applied:
-            return maya_error("No settings provided", "Specify at least one render setting to update")
+            return skill_error("No settings provided", "Specify at least one render setting to update")
 
-        return maya_success(
+        return skill_success(
             "Updated render settings: {}".format(", ".join(applied.keys())),
             prompt="Use render_frame or playblast to render with the new settings.",
             **applied,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to set render settings")
+        return skill_exception(exc, message="Failed to set render settings")
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`set_render_settings`."""
     return set_render_settings(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = set_render_settings(width=1920, height=1080, renderer="mayaHardware2")
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

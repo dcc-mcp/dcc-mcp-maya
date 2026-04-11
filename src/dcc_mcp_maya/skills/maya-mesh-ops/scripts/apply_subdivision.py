@@ -4,7 +4,9 @@
 from __future__ import annotations
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success, validate_node_exists
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
+
+from dcc_mcp_maya.api import validate_node_exists
 
 
 def apply_subdivision(
@@ -25,7 +27,7 @@ def apply_subdivision(
         ActionResultModel dict.
     """
     if method not in ("preview", "subdivide"):
-        return maya_error(
+        return skill_error(
             "Invalid method: {}".format(method),
             "Use 'preview' or 'subdivide'",
         )
@@ -42,7 +44,7 @@ def apply_subdivision(
             if cmds.objectType(object_name) == "mesh":
                 shapes = [object_name]
             else:
-                return maya_error("'{}' has no polygon mesh shape".format(object_name), "")
+                return skill_error("'{}' has no polygon mesh shape".format(object_name), "")
 
         shape = shapes[0]
 
@@ -52,7 +54,7 @@ def apply_subdivision(
         else:
             cmds.polySubdivideFacet(object_name, dv=level)
 
-        return maya_success(
+        return skill_success(
             "Subdivision applied to '{}' (method={}, level={})".format(object_name, method, level),
             object_name=object_name,
             method=method,
@@ -60,18 +62,17 @@ def apply_subdivision(
             prompt="Use get_poly_count to verify the increased density.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to apply subdivision")
+        return skill_exception(exc, message="Failed to apply subdivision")
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`apply_subdivision`."""
     return apply_subdivision(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = apply_subdivision()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

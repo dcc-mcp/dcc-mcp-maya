@@ -1,7 +1,7 @@
 """List all XGen descriptions in the scene."""
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_success
+from dcc_mcp_core.skill import skill_error, skill_success
 
 
 def run(params):
@@ -35,14 +35,14 @@ def run(params):
                     }
                 )
 
-        return maya_success(
+        return skill_success(
             "Found {} XGen description(s)".format(len(result)),
             prompt="Use set_xgen_attribute to modify description parameters.",
             descriptions=result,
             count=len(result),
         )
     except Exception as exc:
-        return maya_error(
+        return skill_error(
             "Failed to list XGen descriptions",
             str(exc),
             prompt="Ensure XGen plugin is loaded: cmds.loadPlugin('xgenToolkit').",

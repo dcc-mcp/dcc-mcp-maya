@@ -5,7 +5,7 @@ from __future__ import annotations
 
 # Import built-in modules
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def list_history(
@@ -32,7 +32,7 @@ def list_history(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return maya_error(
+            return skill_error(
                 "Object not found: {}".format(object_name),
                 "'{}' does not exist in the scene".format(object_name),
             )
@@ -45,7 +45,7 @@ def list_history(
 
         history = [{"name": node, "type": cmds.objectType(node)} for node in history_nodes if node != object_name]
 
-        return maya_success(
+        return skill_success(
             "Found {} history node(s) for '{}'".format(len(history), object_name),
             object_name=object_name,
             history=history,
@@ -54,18 +54,17 @@ def list_history(
             prompt="Check the result with list_node_graph or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to list history for {}".format(object_name))
+        return skill_exception(exc, message="Failed to list history for {}".format(object_name))
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`list_history`."""
     return list_history(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = list_history()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

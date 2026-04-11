@@ -7,7 +7,7 @@ from __future__ import annotations
 import sys
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def get_session_info() -> dict:
@@ -30,22 +30,21 @@ def get_session_info() -> dict:
             "up_axis": cmds.upAxis(query=True, axis=True),
             "object_count": len(cmds.ls(dag=True) or []),
         }
-        return maya_success(
+        return skill_success(
             "Maya session info", **info, prompt="Check the result with list_scene or use related actions to continue."
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to get session info")
+        return skill_exception(exc, message="Failed to get session info")
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`get_session_info`."""
     return get_session_info(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = get_session_info()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

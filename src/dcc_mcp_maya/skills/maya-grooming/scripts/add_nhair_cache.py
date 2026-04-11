@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def add_nhair_cache(
@@ -30,7 +30,7 @@ def add_nhair_cache(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(hair_system):
-            return maya_error(
+            return skill_error(
                 "Node not found",
                 "hairSystem '{}' does not exist".format(hair_system),
             )
@@ -46,7 +46,7 @@ def add_nhair_cache(
         cmds.select(hair_system)
         cmds.mel.eval('doCreateNclothCache 5 {{ "{}" }};'.format(hair_system))
 
-        return maya_success(
+        return skill_success(
             "nHair cache baked ({}-{})".format(start_frame, end_frame),
             prompt=(
                 "Hair cache baked for frames {}-{}. Playback is now deterministic without re-simulating.".format(
@@ -58,17 +58,16 @@ def add_nhair_cache(
             end_frame=end_frame,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to bake nHair cache")
+        return skill_exception(exc, message="Failed to bake nHair cache")
 
 
+@skill_entry
 def main(**kwargs):
     return add_nhair_cache(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = add_nhair_cache("hairSystem1")
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

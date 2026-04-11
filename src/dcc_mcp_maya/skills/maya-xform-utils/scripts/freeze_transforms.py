@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import List
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def freeze_transforms(
@@ -38,11 +38,11 @@ def freeze_transforms(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not objects:
-            return maya_error("No objects provided", "Pass at least one object name.")
+            return skill_error("No objects provided", "Pass at least one object name.")
 
         missing = [o for o in objects if not cmds.objExists(o)]
         if missing:
-            return maya_error(
+            return skill_error(
                 "Objects not found",
                 "Missing: {}".format(", ".join(missing)),
             )
@@ -69,22 +69,22 @@ def freeze_transforms(
                 entry["scale"] = list(cmds.getAttr("{}.scale".format(obj))[0])
             frozen.append(entry)
 
-        return maya_success(
+        return skill_success(
             "Frozen transforms on {} object(s)".format(len(objects)),
             prompt="Use reset_pivot to also centre the pivot, or match_transforms to align to another object.",
             frozen_objects=frozen,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to freeze transforms")
+        return skill_exception(exc, message="Failed to freeze transforms")
 
 
+@skill_entry
 def main(**kwargs):
     return freeze_transforms(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    print(json.dumps(freeze_transforms(["pSphere1"]), indent=2))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

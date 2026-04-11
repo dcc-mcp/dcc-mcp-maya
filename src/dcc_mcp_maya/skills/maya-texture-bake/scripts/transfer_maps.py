@@ -8,7 +8,7 @@ import os
 from typing import List, Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 _VALID_MAP_TYPES = {
     "normals",
@@ -54,7 +54,7 @@ def transfer_maps(
 
         for node in (source, target):
             if not cmds.objExists(node):
-                return maya_error(
+                return skill_error(
                     "Object not found: {}".format(node),
                     "Verify both source and target mesh names",
                 )
@@ -62,7 +62,7 @@ def transfer_maps(
         bake_types = map_types or ["normals"]
         invalid = [t for t in bake_types if t not in _VALID_MAP_TYPES]
         if invalid:
-            return maya_error(
+            return skill_error(
                 "Invalid map types: {}".format(invalid),
                 "Valid types: {}".format(sorted(_VALID_MAP_TYPES)),
             )
@@ -88,7 +88,7 @@ def transfer_maps(
             )
             baked_files.append(out_file)
 
-        return maya_success(
+        return skill_success(
             "Transferred {} map(s) from '{}' to '{}'".format(len(baked_files), source, target),
             prompt="Check output_dir for baked textures. Assign them to the target material.",
             baked_files=baked_files,
@@ -97,16 +97,16 @@ def transfer_maps(
             resolution=resolution,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to transfer maps")
+        return skill_exception(exc, message="Failed to transfer maps")
 
 
+@skill_entry
 def main(**kwargs):
     return transfer_maps(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    print(json.dumps(transfer_maps("highRes_mesh", "lowRes_mesh", output_dir="/tmp")))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

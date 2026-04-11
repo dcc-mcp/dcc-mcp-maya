@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def mirror_mesh(
@@ -37,13 +37,13 @@ def mirror_mesh(
     """
     axis_lower = (axis or "x").lower()
     if axis_lower not in ("x", "y", "z"):
-        return maya_error(
+        return skill_error(
             "Invalid axis: {}".format(axis),
             "axis must be one of 'x', 'y', 'z'",
         )
 
     if not object_name:
-        return maya_error(
+        return skill_error(
             "object_name is required",
             "Provide a non-empty polygon mesh name",
         )
@@ -55,7 +55,7 @@ def mirror_mesh(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return maya_error(
+            return skill_error(
                 "Object not found: {}".format(object_name),
                 "'{}' does not exist in the scene".format(object_name),
             )
@@ -73,7 +73,7 @@ def mirror_mesh(
             mergeThreshold=merge_threshold,
         )
 
-        return maya_success(
+        return skill_success(
             "Mirrored '{}' along {} axis at {}".format(object_name, axis_lower, cut_position),
             object_name=object_name,
             axis=axis_lower,
@@ -81,18 +81,17 @@ def mirror_mesh(
             prompt="Use freeze_transforms in maya-xform-utils to clean up.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to mirror mesh '{}'".format(object_name))
+        return skill_exception(exc, message="Failed to mirror mesh '{}'".format(object_name))
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`mirror_mesh`."""
     return mirror_mesh(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = mirror_mesh()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

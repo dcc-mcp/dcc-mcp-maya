@@ -4,7 +4,9 @@
 from __future__ import annotations
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success, validate_node_exists
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
+
+from dcc_mcp_maya.api import validate_node_exists
 
 
 def cleanup_mesh(
@@ -40,7 +42,7 @@ def cleanup_mesh(
         }
         cmds.polyClean(object_name, **kwargs)
 
-        return maya_success(
+        return skill_success(
             "Cleaned mesh '{}'".format(object_name),
             object_name=object_name,
             non_manifold=non_manifold,
@@ -49,18 +51,17 @@ def cleanup_mesh(
             prompt="Use get_poly_count or select_by_material to inspect the result.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to clean mesh")
+        return skill_exception(exc, message="Failed to clean mesh")
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`cleanup_mesh`."""
     return cleanup_mesh(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = cleanup_mesh()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

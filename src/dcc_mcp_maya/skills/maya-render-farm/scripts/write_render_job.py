@@ -9,7 +9,7 @@ import os
 from typing import Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def write_render_job(
@@ -83,7 +83,7 @@ def write_render_job(
         frame_count = max(0, (ef - sf) // step + 1)
         task_count = max(1, (frame_count + chunk_size - 1) // chunk_size)
 
-        return maya_success(
+        return skill_success(
             "Wrote render job spec '{}' to '{}'".format(name, job_file),
             prompt="Use submit_to_deadline to send this job to the render farm.",
             job_file=job_file,
@@ -94,16 +94,16 @@ def write_render_job(
             task_count=task_count,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to write render job")
+        return skill_exception(exc, message="Failed to write render job")
 
 
+@skill_entry
 def main(**kwargs):
     return write_render_job(**kwargs)
 
 
 if __name__ == "__main__":
-    import json as _json
-
-    print(_json.dumps(write_render_job("/tmp/jobs")))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

@@ -4,7 +4,9 @@
 from __future__ import annotations
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success, validate_node_exists
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
+
+from dcc_mcp_maya.api import validate_node_exists
 
 _SUPPORTED_SHADERS = ("lambert", "blinn", "phong", "phongE", "aiStandardSurface")
 
@@ -64,7 +66,7 @@ def get_material_connections(material_name: str) -> dict:
             )
             i += 2
 
-        return maya_success(
+        return skill_success(
             "Found {} connection(s) into material '{}'".format(len(connections), material_name),
             material_name=material_name,
             connections=connections,
@@ -72,18 +74,17 @@ def get_material_connections(material_name: str) -> dict:
             prompt="Use set_material_attribute to modify or assign_material to reassign.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to get connections for material '{}'".format(material_name))
+        return skill_exception(exc, message="Failed to get connections for material '{}'".format(material_name))
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`get_material_connections`."""
     return get_material_connections(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = get_material_connections()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

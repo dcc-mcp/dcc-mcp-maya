@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import List, Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def create_annotation(
@@ -35,13 +35,13 @@ def create_annotation(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return maya_error(
+            return skill_error(
                 "Object not found: {}".format(object_name),
                 "'{}' does not exist in the scene".format(object_name),
             )
 
         if not text:
-            return maya_error(
+            return skill_error(
                 "Empty annotation text",
                 "text must be a non-empty string",
             )
@@ -49,7 +49,7 @@ def create_annotation(
         # Determine annotation position
         if position is not None:
             if len(position) != 3:
-                return maya_error(
+                return skill_error(
                     "Invalid position: {}".format(position),
                     "position must be a list of exactly 3 floats [x, y, z]",
                 )
@@ -64,7 +64,7 @@ def create_annotation(
         ann_parent = cmds.listRelatives(ann_transform, parent=True, fullPath=False)
         ann_transform_name = ann_parent[0] if ann_parent else ann_transform
 
-        return maya_success(
+        return skill_success(
             "Created annotation '{}' on '{}'".format(text, object_name),
             annotation_transform=ann_transform_name,
             annotation_shape=ann_transform,
@@ -74,18 +74,17 @@ def create_annotation(
             prompt="Check the result with list_scene_utils or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to create annotation on '{}'".format(object_name))
+        return skill_exception(exc, message="Failed to create annotation on '{}'".format(object_name))
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`create_annotation`."""
     return create_annotation(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = create_annotation()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

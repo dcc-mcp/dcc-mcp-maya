@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def merge_vertices(
@@ -24,7 +24,7 @@ def merge_vertices(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return maya_error("Object not found: {}".format(object_name), "")
+            return skill_error("Object not found: {}".format(object_name), "")
 
         before = cmds.polyEvaluate(object_name, vertex=True)
         cmds.polyMergeVertex(object_name, distance=threshold, ch=False)
@@ -34,7 +34,7 @@ def merge_vertices(
         after_count = after if isinstance(after, int) else 0
         merged = before_count - after_count
 
-        return maya_success(
+        return skill_success(
             "Merged {} vertices on '{}' (threshold={})".format(merged, object_name, threshold),
             object_name=object_name,
             merged_count=merged,
@@ -44,18 +44,17 @@ def merge_vertices(
             prompt="Use cleanup_mesh to verify or get_poly_count to check the result.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to merge vertices")
+        return skill_exception(exc, message="Failed to merge vertices")
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`merge_vertices`."""
     return merge_vertices(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = merge_vertices()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

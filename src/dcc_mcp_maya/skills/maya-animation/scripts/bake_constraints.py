@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import List, Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def bake_constraints(
@@ -43,7 +43,7 @@ def bake_constraints(
         if targets:
             missing = [o for o in targets if not cmds.objExists(o)]
             if missing:
-                return maya_error(
+                return skill_error(
                     "Objects not found: {}".format(", ".join(missing)),
                     "The following objects do not exist: {}".format(", ".join(missing)),
                 )
@@ -52,7 +52,7 @@ def bake_constraints(
             targets = cmds.ls(selection=True) or []
 
         if not targets:
-            return maya_error(
+            return skill_error(
                 "No objects to bake",
                 "Provide object names or select objects before baking",
             )
@@ -84,7 +84,7 @@ def bake_constraints(
                         cmds.delete(node)
                         removed_constraints.append(node)
 
-        return maya_success(
+        return skill_success(
             "Baked constraints on {} object(s) from frame {} to {}".format(len(targets), start_frame, end_frame),
             object_count=len(targets),
             objects=targets,
@@ -95,18 +95,17 @@ def bake_constraints(
             prompt="Use list_animation_curves or set_keyframe to adjust the baked keys.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to bake constraints")
+        return skill_exception(exc, message="Failed to bake constraints")
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`bake_constraints`."""
     return bake_constraints(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = bake_constraints()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)
