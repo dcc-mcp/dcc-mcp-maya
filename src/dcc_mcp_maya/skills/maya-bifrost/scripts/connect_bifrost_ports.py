@@ -4,9 +4,10 @@
 from __future__ import annotations
 
 # Import built-in modules
-import logging
 
-logger = logging.getLogger(__name__)
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 
 
 def connect_bifrost_ports(
@@ -33,8 +34,6 @@ def connect_bifrost_ports(
     Returns:
         ActionResultModel dict with connection details.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
@@ -46,33 +45,32 @@ def connect_bifrost_ports(
             ("target_port", target_port),
         ]:
             if not arg_val:
-                return error_result(
+                return maya_error(
                     "'{}' is required".format(arg_name),
                     "Provide a non-empty value for '{}'".format(arg_name),
-                ).to_dict()
+                )
 
         if not cmds.objExists(graph_node):
-            return error_result(
+            return maya_error(
                 "Graph '{}' not found".format(graph_node),
                 "No node named '{}' exists in the scene".format(graph_node),
-            ).to_dict()
+            )
 
         src = "{}.{}".format(source_node_path, source_port)
         dst = "{}.{}".format(target_node_path, target_port)
         cmds.vnnConnect(graph_node, src, dst)
 
-        return success_result(
+        return maya_success(
             "Connected {}{} → {}{}".format(source_node_path, source_port, target_node_path, target_port),
             prompt="Use set_bifrost_property to adjust node parameters after wiring.",
             graph_node=graph_node,
             source=src,
             target=dst,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("connect_bifrost_ports failed")
-        return error_result("Failed to connect Bifrost ports", str(exc)).to_dict()
+        return maya_from_exception(exc, "Failed to connect Bifrost ports")
 
 
 def main(**kwargs) -> dict:

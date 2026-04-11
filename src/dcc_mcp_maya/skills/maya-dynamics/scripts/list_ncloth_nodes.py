@@ -4,9 +4,9 @@
 from __future__ import annotations
 
 # Import built-in modules
-import logging
 
-logger = logging.getLogger(__name__)
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 _VALID_FIELD_TYPES = (
     "gravity",
@@ -21,7 +21,6 @@ _VALID_FIELD_TYPES = (
 
 _VALID_MIRROR_AXES = ("x", "y", "z")
 
-
 def list_ncloth_nodes() -> dict:
     """List all nCloth shape nodes in the current Maya scene.
 
@@ -32,8 +31,6 @@ def list_ncloth_nodes() -> dict:
         ActionResultModel dict with ``context.nodes`` (list of dicts) and
         ``context.count``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
@@ -60,22 +57,19 @@ def list_ncloth_nodes() -> dict:
                 }
             )
 
-        return success_result(
+        return maya_success(
             "Found {} nCloth node(s) in scene".format(len(nodes)),
             nodes=nodes,
             count=len(nodes),
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("list_ncloth_nodes failed")
-        return error_result("Failed to list nCloth nodes", str(exc)).to_dict()
-
+        return maya_from_exception(exc, "Failed to list nCloth nodes")
 
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`list_ncloth_nodes`."""
     return list_ncloth_nodes(**kwargs)
-
 
 if __name__ == "__main__":
     import json

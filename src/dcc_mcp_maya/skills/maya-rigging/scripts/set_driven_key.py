@@ -3,12 +3,11 @@
 # Import future modules
 from __future__ import annotations
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 # Import built-in modules
-import logging
 from typing import List
-
-logger = logging.getLogger(__name__)
-
 
 def set_driven_key(
     driver_attr: str,
@@ -40,39 +39,38 @@ def set_driven_key(
         ActionResultModel dict with ``context.driver_attr``,
         ``context.driven_attrs``, ``context.key_count``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     _VALID_TANGENTS = ("linear", "smooth", "flat", "step")
 
     if not driver_values:
-        return error_result(
+        return maya_error(
             "driver_values cannot be empty",
             "Provide at least one driver value",
-        ).to_dict()
+        )
 
     if len(driven_values) != len(driver_values):
-        return error_result(
+        return maya_error(
             "Mismatched driver/driven value counts",
             "driven_values must have the same length as driver_values",
-        ).to_dict()
+        )
 
     if tangent_type not in _VALID_TANGENTS:
-        return error_result(
+        return maya_error(
             "Invalid tangent_type: {}".format(tangent_type),
             "Use one of: {}".format(", ".join(_VALID_TANGENTS)),
-        ).to_dict()
+        )
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         driver_obj = driver_attr.rsplit(".", 1)[0]
         if not cmds.objExists(driver_obj):
-            return error_result("Driver object not found: {}".format(driver_obj)).to_dict()
+            return maya_error("Driver object not found: {}".format(driver_obj))
 
         for da in driven_attrs:
             da_obj = da.rsplit(".", 1)[0]
             if not cmds.objExists(da_obj):
-                return error_result("Driven object not found: {}".format(da_obj)).to_dict()
+                return maya_error("Driven object not found: {}".format(da_obj))
 
         keys_set = 0
         for i, drv_val in enumerate(driver_values):
@@ -89,7 +87,7 @@ def set_driven_key(
                 )
                 keys_set += 1
 
-        return success_result(
+        return maya_success(
             "Set driven key: '{}' drives {} attr(s) with {} key(s)".format(
                 driver_attr, len(driven_attrs), len(driver_values)
             ),
@@ -98,18 +96,15 @@ def set_driven_key(
             key_count=len(driver_values),
             keys_set=keys_set,
             tangent_type=tangent_type,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("set_driven_key failed")
-        return error_result("Failed to set driven key", str(exc)).to_dict()
-
+        return maya_from_exception(exc, "Failed to set driven key")
 
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`set_driven_key`."""
     return set_driven_key(**kwargs)
-
 
 if __name__ == "__main__":
     import json

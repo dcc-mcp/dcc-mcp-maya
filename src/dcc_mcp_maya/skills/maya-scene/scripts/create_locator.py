@@ -3,12 +3,11 @@
 # Import future modules
 from __future__ import annotations
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 # Import built-in modules
-import logging
 from typing import List, Optional
-
-logger = logging.getLogger(__name__)
-
 
 def create_locator(name: Optional[str] = None, position: Optional[List[float]] = None) -> dict:
     """Create a Maya locator node.
@@ -26,7 +25,6 @@ def create_locator(name: Optional[str] = None, position: Optional[List[float]] =
         ActionResultModel dict with ``context.object_name`` and
         ``context.position``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
@@ -38,22 +36,19 @@ def create_locator(name: Optional[str] = None, position: Optional[List[float]] =
             cmds.move(position[0], position[1], position[2], loc_transform)
 
         pos = position or [0.0, 0.0, 0.0]
-        return success_result(
+        return maya_success(
             "Created locator '{}'".format(loc_transform),
             object_name=loc_transform,
             position=pos,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("create_locator failed")
-        return error_result("Failed to create locator", str(exc)).to_dict()
-
+        return maya_from_exception(exc, "Failed to create locator")
 
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`create_locator`."""
     return create_locator(**kwargs)
-
 
 if __name__ == "__main__":
     import json

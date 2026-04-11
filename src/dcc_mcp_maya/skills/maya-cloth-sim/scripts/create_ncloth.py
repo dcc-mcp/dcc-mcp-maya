@@ -4,10 +4,10 @@
 from __future__ import annotations
 
 # Import built-in modules
-import logging
 from typing import Optional
 
-logger = logging.getLogger(__name__)
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 
 def create_ncloth(
@@ -27,16 +27,14 @@ def create_ncloth(
         ActionResultModel dict with ``context.ncloth_shape`` and
         ``context.nucleus``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(mesh):
-            return error_result(
+            return maya_error(
                 "Node not found",
                 "Mesh '{}' does not exist".format(mesh),
-            ).to_dict()
+            )
 
         cmds.select(mesh)
         cmds.nClothCreate()
@@ -62,7 +60,7 @@ def create_ncloth(
                 except Exception:
                     pass
 
-        return success_result(
+        return maya_success(
             "nCloth created on '{}'".format(mesh),
             prompt=(
                 "nCloth '{}' created with '{}' preset. "
@@ -71,12 +69,11 @@ def create_ncloth(
             ncloth_shape=ncloth_shape,
             nucleus=nucleus_node,
             preset=preset,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("create_ncloth failed")
-        return error_result("Failed to create nCloth", str(exc)).to_dict()
+        return maya_from_exception(exc, "Failed to create nCloth")
 
 
 def main(**kwargs):

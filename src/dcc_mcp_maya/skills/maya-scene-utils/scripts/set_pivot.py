@@ -3,12 +3,11 @@
 # Import future modules
 from __future__ import annotations
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 # Import built-in modules
-import logging
 from typing import List, Optional
-
-logger = logging.getLogger(__name__)
-
 
 def set_pivot(
     object_name: str,
@@ -31,7 +30,6 @@ def set_pivot(
         ActionResultModel dict with ``context.object_name``,
         ``context.position``, ``context.pivot_type``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     _VALID_PIVOT_TYPES = ("rotate", "scale", "both")
 
@@ -39,23 +37,23 @@ def set_pivot(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return error_result(
+            return maya_error(
                 "Object not found: {}".format(object_name),
                 "'{}' does not exist in the scene".format(object_name),
-            ).to_dict()
+            )
 
         if pivot_type not in _VALID_PIVOT_TYPES:
-            return error_result(
+            return maya_error(
                 "Invalid pivot_type: {}".format(pivot_type),
                 "pivot_type must be one of {}".format(_VALID_PIVOT_TYPES),
-            ).to_dict()
+            )
 
         if position is not None:
             if len(position) != 3:
-                return error_result(
+                return maya_error(
                     "Invalid position: {}".format(position),
                     "position must be a list of exactly 3 floats [x, y, z]",
-                ).to_dict()
+                )
 
             px, py, pz = float(position[0]), float(position[1]), float(position[2])
             space_flag = {"worldSpace": True} if world_space else {}
@@ -69,25 +67,22 @@ def set_pivot(
         rp = list(cmds.xform(object_name, query=True, rotatePivot=True, worldSpace=True))
         sp = list(cmds.xform(object_name, query=True, scalePivot=True, worldSpace=True))
 
-        return success_result(
+        return maya_success(
             "Set pivot on '{}' ({})".format(object_name, pivot_type),
             object_name=object_name,
             pivot_type=pivot_type,
             rotate_pivot=rp,
             scale_pivot=sp,
             world_space=world_space,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("set_pivot failed")
-        return error_result("Failed to set pivot on '{}'".format(object_name), str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to set pivot on '{}'".format(object_name))
 
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`set_pivot`."""
     return set_pivot(**kwargs)
-
 
 if __name__ == "__main__":
     import json

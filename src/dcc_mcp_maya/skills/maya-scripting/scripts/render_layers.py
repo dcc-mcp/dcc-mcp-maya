@@ -13,12 +13,11 @@ versions (2020 – 2025).
 # Import future modules
 from __future__ import annotations
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 # Import built-in modules
-import logging
 from typing import List, Optional
-
-logger = logging.getLogger(__name__)
-
 
 def create_render_layer(
     name: str,
@@ -38,39 +37,36 @@ def create_render_layer(
         ActionResultModel dict with ``context.layer_name``,
         ``context.objects_added``, and ``context.is_current``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not name or not name.strip():
-            return error_result("Invalid layer name", "name must not be empty").to_dict()
+            return maya_error("Invalid layer name", "name must not be empty")
 
         objects_to_add = list(objects) if objects else []
         missing = [obj for obj in objects_to_add if not cmds.objExists(obj)]
         if missing:
-            return error_result(
+            return maya_error(
                 "Objects not found: {}".format(missing),
                 "The following objects do not exist: {}".format(missing),
-            ).to_dict()
+            )
 
         if objects_to_add:
             layer = cmds.createRenderLayer(*objects_to_add, name=name, number=1, makeCurrent=make_current)
         else:
             layer = cmds.createRenderLayer(name=name, number=1, empty=True, makeCurrent=make_current)
 
-        return success_result(
+        return maya_success(
             "Created render layer '{}' with {} object(s)".format(layer, len(objects_to_add)),
             layer_name=layer,
             objects_added=objects_to_add,
             is_current=make_current,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("create_render_layer failed")
-        return error_result("Failed to create render layer '{}'".format(name), str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to create render layer '{}'".format(name))
 
 def set_render_layer(
     object_name: str,
@@ -86,45 +82,41 @@ def set_render_layer(
         ActionResultModel dict with ``context.object_name`` and
         ``context.layer_name``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return error_result(
+            return maya_error(
                 "Object not found: {}".format(object_name),
                 "'{}' does not exist in the scene".format(object_name),
-            ).to_dict()
+            )
 
         if not cmds.objExists(layer_name):
-            return error_result(
+            return maya_error(
                 "Render layer not found: {}".format(layer_name),
                 "'{}' does not exist".format(layer_name),
-            ).to_dict()
+            )
 
         if cmds.objectType(layer_name) != "renderLayer":
-            return error_result(
+            return maya_error(
                 "Not a render layer: {}".format(layer_name),
                 "'{}' is of type '{}', expected 'renderLayer'".format(layer_name, cmds.objectType(layer_name)),
-            ).to_dict()
+            )
 
         cmds.editRenderLayerMembers(layer_name, object_name, noRecurse=True)
 
-        return success_result(
+        return maya_success(
             "Assigned '{}' to render layer '{}'".format(object_name, layer_name),
             object_name=object_name,
             layer_name=layer_name,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("set_render_layer failed")
-        return error_result(
-            "Failed to assign '{}' to render layer '{}'".format(object_name, layer_name),
+        return maya_from_exception(exc, "Failed to assign '{}' to render layer '{}'".format(object_name, layer_name),
             str(exc),
-        ).to_dict()
-
+        )
 
 def list_render_layers(include_default: bool = True) -> dict:
     """List all render layers in the scene.
@@ -137,7 +129,6 @@ def list_render_layers(include_default: bool = True) -> dict:
         ActionResultModel dict with ``context.layers`` — a list of dicts with
         ``name``, ``renderable``, ``member_count``, and ``is_current``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
@@ -164,18 +155,16 @@ def list_render_layers(include_default: bool = True) -> dict:
                 }
             )
 
-        return success_result(
+        return maya_success(
             "Found {} render layer(s)".format(len(layers)),
             layers=layers,
             count=len(layers),
             current_layer=current_layer,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("list_render_layers failed")
-        return error_result("Failed to list render layers", str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to list render layers")
 
 def delete_render_layer(layer_name: str) -> dict:
     """Delete a render layer from the scene.
@@ -190,28 +179,27 @@ def delete_render_layer(layer_name: str) -> dict:
     Returns:
         ActionResultModel dict with ``context.layer_name``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if layer_name == "defaultRenderLayer":
-            return error_result(
+            return maya_error(
                 "Cannot delete defaultRenderLayer",
                 "The defaultRenderLayer is protected and cannot be removed",
-            ).to_dict()
+            )
 
         if not cmds.objExists(layer_name):
-            return error_result(
+            return maya_error(
                 "Render layer not found: {}".format(layer_name),
                 "'{}' does not exist".format(layer_name),
-            ).to_dict()
+            )
 
         if cmds.objectType(layer_name) != "renderLayer":
-            return error_result(
+            return maya_error(
                 "Not a render layer: {}".format(layer_name),
                 "'{}' is of type '{}'".format(layer_name, cmds.objectType(layer_name)),
-            ).to_dict()
+            )
 
         # Switch to defaultRenderLayer if this is the current layer
         current = cmds.editRenderLayerGlobals(query=True, currentRenderLayer=True)
@@ -220,16 +208,14 @@ def delete_render_layer(layer_name: str) -> dict:
 
         cmds.delete(layer_name)
 
-        return success_result(
+        return maya_success(
             "Deleted render layer '{}'".format(layer_name),
             layer_name=layer_name,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("delete_render_layer failed")
-        return error_result("Failed to delete render layer '{}'".format(layer_name), str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to delete render layer '{}'".format(layer_name))
 
 def set_render_layer_attribute(
     layer_name: str,
@@ -251,22 +237,21 @@ def set_render_layer_attribute(
         ActionResultModel dict with ``context.layer_name``,
         ``context.attribute``, and ``context.value``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(layer_name):
-            return error_result(
+            return maya_error(
                 "Render layer not found: {}".format(layer_name),
                 "'{}' does not exist".format(layer_name),
-            ).to_dict()
+            )
 
         if cmds.objectType(layer_name) != "renderLayer":
-            return error_result(
+            return maya_error(
                 "Not a render layer: {}".format(layer_name),
                 "'{}' is of type '{}'".format(layer_name, cmds.objectType(layer_name)),
-            ).to_dict()
+            )
 
         attr_path = "{}.{}".format(layer_name, attribute)
 
@@ -277,14 +262,13 @@ def set_render_layer_attribute(
         else:
             cmds.setAttr(attr_path, value)
 
-        return success_result(
+        return maya_success(
             "Set {}.{} = {}".format(layer_name, attribute, value),
             layer_name=layer_name,
             attribute=attribute,
             value=value,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("set_render_layer_attribute failed")
-        return error_result("Failed to set attribute '{}.{}'".format(layer_name, attribute), str(exc)).to_dict()
+        return maya_error("Failed to set attribute '{}.{}'".format(layer_name, attribute))

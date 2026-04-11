@@ -11,17 +11,16 @@ attributes on Maya nodes:
 # Import future modules
 from __future__ import annotations
 
-# Import built-in modules
-import logging
-from typing import Any, Optional
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
-logger = logging.getLogger(__name__)
+# Import built-in modules
+from typing import Any, Optional
 
 # Supported attribute type tokens for addAttr -attributeType / -dataType
 _SCALAR_TYPES = ("bool", "byte", "short", "long", "float", "double", "angle", "time")
 _STRING_TYPES = ("string",)
 _VECTOR_TYPES = ("float2", "float3", "double2", "double3")
-
 
 def add_attribute(
     object_name: str,
@@ -57,22 +56,21 @@ def add_attribute(
         ActionResultModel dict with ``context.object_name``,
         ``context.long_name``, ``context.attr_type``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return error_result(
+            return maya_error(
                 "Object not found: {}".format(object_name),
                 "'{}' does not exist in the scene".format(object_name),
-            ).to_dict()
+            )
 
         if cmds.objExists("{}.{}".format(object_name, long_name)):
-            return error_result(
+            return maya_error(
                 "Attribute already exists: {}.{}".format(object_name, long_name),
                 "Delete the existing attribute first or use a different long_name",
-            ).to_dict()
+            )
 
         sn = short_name if short_name else long_name[:3]
 
@@ -86,12 +84,12 @@ def add_attribute(
             cmds.addAttr(object_name, longName=long_name, shortName=sn, attributeType=attr_type)
         else:
             if attr_type not in _SCALAR_TYPES:
-                return error_result(
+                return maya_error(
                     "Unsupported attribute type: {}".format(attr_type),
                     "Supported types: {}".format(
                         ", ".join(list(_SCALAR_TYPES) + list(_STRING_TYPES) + list(_VECTOR_TYPES))
                     ),
-                ).to_dict()
+                )
 
             if default_value is not None:
                 kwargs["defaultValue"] = float(default_value)
@@ -107,20 +105,18 @@ def add_attribute(
         if cmds.objExists(full_attr):
             cmds.setAttr(full_attr, keyable=keyable)
 
-        return success_result(
+        return maya_success(
             "Added attribute '{}.{}'".format(object_name, long_name),
             object_name=object_name,
             long_name=long_name,
             short_name=sn,
             attr_type=attr_type,
             keyable=keyable,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("add_attribute failed")
-        return error_result("Failed to add attribute '{}.{}'".format(object_name, long_name), str(exc)).to_dict()
-
+        return maya_from_exception(exc, "Failed to add attribute '{}.{}'".format(object_name, long_name))
 
 def delete_attribute(
     object_name: str,
@@ -138,44 +134,41 @@ def delete_attribute(
     Returns:
         ActionResultModel dict.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return error_result(
+            return maya_error(
                 "Object not found: {}".format(object_name),
                 "'{}' does not exist in the scene".format(object_name),
-            ).to_dict()
+            )
 
         full_attr = "{}.{}".format(object_name, attribute)
         if not cmds.objExists(full_attr):
-            return error_result(
+            return maya_error(
                 "Attribute not found: {}".format(full_attr),
                 "The attribute '{}' does not exist on '{}'".format(attribute, object_name),
-            ).to_dict()
+            )
 
         # Only user-defined attributes have userData / dynamic flag
         user_defined = cmds.listAttr(object_name, userDefined=True) or []
         if attribute not in user_defined:
-            return error_result(
+            return maya_error(
                 "Cannot delete built-in attribute: {}.{}".format(object_name, attribute),
                 "Only user-defined (custom) attributes can be deleted",
-            ).to_dict()
+            )
 
         cmds.deleteAttr(full_attr)
-        return success_result(
+        return maya_success(
             "Deleted attribute '{}.{}'".format(object_name, attribute),
             object_name=object_name,
             attribute=attribute,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("delete_attribute failed")
-        return error_result("Failed to delete attribute '{}.{}'".format(object_name, attribute), str(exc)).to_dict()
-
+        return maya_from_exception(exc, "Failed to delete attribute '{}.{}'".format(object_name, attribute))
 
 def list_attributes(
     object_name: str,
@@ -198,16 +191,15 @@ def list_attributes(
         ActionResultModel dict with ``context.attributes`` — list of dicts
         with ``name``, ``type``, ``value``, ``keyable``, ``locked`` keys.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return error_result(
+            return maya_error(
                 "Object not found: {}".format(object_name),
                 "'{}' does not exist in the scene".format(object_name),
-            ).to_dict()
+            )
 
         # Build query kwargs
         list_kwargs = {}  # type: dict
@@ -258,16 +250,15 @@ def list_attributes(
             except Exception:
                 result.append({"name": attr_name, "type": "unknown", "value": None, "keyable": False, "locked": False})
 
-        return success_result(
+        return maya_success(
             "Found {} attribute(s) on '{}'".format(len(result), object_name),
             object_name=object_name,
             attributes=result,
             count=len(result),
             user_defined_only=user_defined,
             keyable_only=keyable,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("list_attributes failed")
-        return error_result("Failed to list attributes on '{}'".format(object_name), str(exc)).to_dict()
+                return maya_from_exception(exc, "Failed to list attributes on '{}'".format(object_name))

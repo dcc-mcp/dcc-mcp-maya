@@ -3,10 +3,8 @@
 # Import future modules
 from __future__ import annotations
 
-# Import built-in modules
-import logging
-
-logger = logging.getLogger(__name__)
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 
 def set_hdri_rotation(
@@ -25,16 +23,14 @@ def set_hdri_rotation(
     Returns:
         ActionResultModel dict with ``light_node`` and ``rotation_y``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(light_node):
-            return error_result(
+            return maya_error(
                 "Light node not found: {}".format(light_node),
                 "Verify the node name with list_hdri_nodes",
-            ).to_dict()
+            )
 
         # Resolve transform
         node_type = cmds.objectType(light_node)
@@ -46,17 +42,16 @@ def set_hdri_rotation(
 
         cmds.setAttr("{}.rotateY".format(transform), rotation_y)
 
-        return success_result(
+        return maya_success(
             "HDRI rotation set to {}° on '{}'".format(rotation_y, transform),
             prompt="Use set_hdri_exposure to adjust brightness or list_hdri_nodes to inspect.",
             light_node=transform,
             rotation_y=rotation_y,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("set_hdri_rotation failed")
-        return error_result("Failed to set HDRI rotation", str(exc)).to_dict()
+        return maya_from_exception(exc, "Failed to set HDRI rotation")
 
 
 def main(**kwargs):

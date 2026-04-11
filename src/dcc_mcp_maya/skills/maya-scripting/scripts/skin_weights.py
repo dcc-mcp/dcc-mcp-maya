@@ -10,12 +10,11 @@ Provides programmatic skin weight operations:
 # Import future modules
 from __future__ import annotations
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 # Import built-in modules
-import logging
 from typing import List, Optional
-
-logger = logging.getLogger(__name__)
-
 
 def _find_skin_cluster(cmds, mesh):
     """Return the first skinCluster node in *mesh*'s history, or None."""
@@ -23,7 +22,6 @@ def _find_skin_cluster(cmds, mesh):
     # cmds.ls with type filter is the most reliable way — avoids objectType mock issues
     skin_clusters = cmds.ls(history, type="skinCluster") or []
     return skin_clusters[0] if skin_clusters else None
-
 
 def get_skin_weights(
     mesh: str,
@@ -45,23 +43,22 @@ def get_skin_weights(
         Also includes ``context.skin_cluster``, ``context.joint_count``,
         ``context.vertex_count``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(mesh):
-            return error_result(
+            return maya_error(
                 "Mesh not found: {}".format(mesh),
                 "'{}' does not exist".format(mesh),
-            ).to_dict()
+            )
 
         sc = skin_cluster or _find_skin_cluster(cmds, mesh)
         if not sc:
-            return error_result(
+            return maya_error(
                 "No skin cluster on mesh: {}".format(mesh),
                 "Bind a skin cluster first",
-            ).to_dict()
+            )
 
         # Resolve shape
         shapes = cmds.listRelatives(mesh, shapes=True, fullPath=True) or []
@@ -84,20 +81,18 @@ def get_skin_weights(
                     entry[joint] = round(w, 6)
             weights[str(vi)] = entry
 
-        return success_result(
+        return maya_success(
             "Got skin weights for '{}' ({} vertices, {} joints)".format(mesh, len(indices), joint_count),
             skin_cluster=sc,
             mesh=mesh,
             joint_count=joint_count,
             vertex_count=len(indices),
             weights=weights,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("get_skin_weights failed")
-        return error_result("Failed to get skin weights for {}".format(mesh), str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to get skin weights for {}".format(mesh))
 
 def paint_skin_weights(
     mesh: str,
@@ -121,35 +116,34 @@ def paint_skin_weights(
     Returns:
         ActionResultModel dict with ``context.modified_vertices`` count.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(mesh):
-            return error_result(
+            return maya_error(
                 "Mesh not found: {}".format(mesh),
                 "'{}' does not exist".format(mesh),
-            ).to_dict()
+            )
 
         if not cmds.objExists(joint):
-            return error_result(
+            return maya_error(
                 "Joint not found: {}".format(joint),
                 "'{}' does not exist".format(joint),
-            ).to_dict()
+            )
 
         if not 0.0 <= weight <= 1.0:
-            return error_result(
+            return maya_error(
                 "Invalid weight: {}".format(weight),
                 "weight must be between 0.0 and 1.0",
-            ).to_dict()
+            )
 
         sc = skin_cluster or _find_skin_cluster(cmds, mesh)
         if not sc:
-            return error_result(
+            return maya_error(
                 "No skin cluster on mesh: {}".format(mesh),
                 "Bind a skin cluster first",
-            ).to_dict()
+            )
 
         # Resolve shape
         shapes = cmds.listRelatives(mesh, shapes=True, fullPath=True) or []
@@ -162,7 +156,7 @@ def paint_skin_weights(
             vtx = "{}.vtx[{}]".format(shape, vi)
             cmds.skinPercent(sc, vtx, transformValue=[(joint, weight)], normalize=normalize)
 
-        return success_result(
+        return maya_success(
             "Painted weight {:.4f} on '{}' for {} vertices".format(weight, joint, len(indices)),
             skin_cluster=sc,
             mesh=mesh,
@@ -170,13 +164,11 @@ def paint_skin_weights(
             weight=weight,
             modified_vertices=len(indices),
             normalize=normalize,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("paint_skin_weights failed")
-        return error_result("Failed to paint skin weights", str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to paint skin weights")
 
 def mirror_skin_weights(
     mesh: str,
@@ -202,7 +194,6 @@ def mirror_skin_weights(
         ActionResultModel dict with ``context.skin_cluster`` and
         ``context.mirror_axis``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     _VALID_AXES = ("YZ", "XY", "XZ")
 
@@ -210,23 +201,23 @@ def mirror_skin_weights(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(mesh):
-            return error_result(
+            return maya_error(
                 "Mesh not found: {}".format(mesh),
                 "'{}' does not exist".format(mesh),
-            ).to_dict()
+            )
 
         if mirror_axis not in _VALID_AXES:
-            return error_result(
+            return maya_error(
                 "Invalid mirror_axis: {}".format(mirror_axis),
                 "mirror_axis must be one of {}".format(_VALID_AXES),
-            ).to_dict()
+            )
 
         sc = skin_cluster or _find_skin_cluster(cmds, mesh)
         if not sc:
-            return error_result(
+            return maya_error(
                 "No skin cluster on mesh: {}".format(mesh),
                 "Bind a skin cluster first",
-            ).to_dict()
+            )
 
         cmds.copySkinWeights(
             mesh,
@@ -235,18 +226,16 @@ def mirror_skin_weights(
             influenceAssociation=[influence_association_1, influence_association_2],
         )
 
-        return success_result(
+        return maya_success(
             "Mirrored skin weights on '{}' across {}".format(mesh, mirror_axis),
             skin_cluster=sc,
             mesh=mesh,
             mirror_axis=mirror_axis,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("mirror_skin_weights failed")
-        return error_result("Failed to mirror skin weights on {}".format(mesh), str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to mirror skin weights on {}".format(mesh))
 
 def copy_skin_weights(
     source: str,
@@ -277,17 +266,16 @@ def copy_skin_weights(
         ActionResultModel dict with ``context.source``, ``context.target``,
         ``context.surface_association`` and ``context.influence_association``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         for name in (source, target):
             if not cmds.objExists(name):
-                return error_result(
+                return maya_error(
                     "Object not found: {}".format(name),
                     "'{}' does not exist in the scene".format(name),
-                ).to_dict()
+                )
 
         cmds.copySkinWeights(
             source,
@@ -298,16 +286,15 @@ def copy_skin_weights(
             normalize=normalize,
         )
 
-        return success_result(
+        return maya_success(
             "Copied skin weights from '{}' to '{}'".format(source, target),
             source=source,
             target=target,
             surface_association=surface_association,
             influence_association=influence_association,
             normalize=normalize,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("copy_skin_weights failed")
-        return error_result("Failed to copy skin weights from '{}' to '{}'".format(source, target), str(exc)).to_dict()
+        return maya_from_exception(exc, "Failed to copy skin weights from '{}' to '{}'".format(source, target))

@@ -3,10 +3,8 @@
 # Import future modules
 from __future__ import annotations
 
-# Import built-in modules
-import logging
-
-logger = logging.getLogger(__name__)
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 _CONSTRAINT_TYPES = {
     "parent": "parentConstraint",
@@ -40,41 +38,38 @@ def add_constraint(
     Returns:
         ActionResultModel dict with ``context.constraint_node``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if constraint_type not in _CONSTRAINT_TYPES:
-            return error_result(
+            return maya_error(
                 "Unknown constraint type: {}".format(constraint_type),
                 "Supported types: {}".format(", ".join(sorted(_CONSTRAINT_TYPES))),
-            ).to_dict()
+            )
 
         for obj in (source, target):
             if not cmds.objExists(obj):
-                return error_result(
+                return maya_error(
                     "Object not found: {}".format(obj),
                     "'{}' does not exist".format(obj),
-                ).to_dict()
+                )
 
         cmd_fn = getattr(cmds, _CONSTRAINT_TYPES[constraint_type])
         result = cmd_fn(source, target, maintainOffset=maintain_offset, weight=weight)
         constraint_node = result[0] if result else ""
 
-        return success_result(
+        return maya_success(
             "Added {} constraint '{}' → '{}'".format(constraint_type, source, target),
             prompt="Use list_constraints to see all constraints on the target, or remove_constraint to remove it.",
             constraint_node=constraint_node,
             constraint_type=constraint_type,
             source=source,
             target=target,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("add_constraint failed")
-        return error_result("Failed to add constraint", str(exc)).to_dict()
+        return maya_from_exception(exc, "Failed to add constraint")
 
 
 def main(**kwargs) -> dict:

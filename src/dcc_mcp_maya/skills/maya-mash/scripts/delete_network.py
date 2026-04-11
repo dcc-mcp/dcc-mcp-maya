@@ -1,6 +1,7 @@
 """Delete a MASH network by waiter node name."""
 
-from dcc_mcp_core import error_result, success_result
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_success
 
 
 def run(params):
@@ -17,10 +18,10 @@ def run(params):
 
     waiter = params.get("waiter")
     if not waiter:
-        return error_result("Missing required parameter", "'waiter' is required")
+        return maya_error("Missing required parameter", "'waiter' is required")
 
     if not cmds.objExists(waiter):
-        return error_result(
+        return maya_error(
             "Waiter node not found",
             "MASH_Waiter node '{}' does not exist".format(waiter),
             prompt="Use list_networks to find valid waiter node names.",
@@ -31,10 +32,10 @@ def run(params):
 
         mash = mapi.Network(waiter)
         mash.deleteNetwork()
-        return success_result(
+        return maya_success(
             "Deleted MASH network '{}'".format(waiter),
             prompt="Use list_networks to verify deletion.",
             waiter=waiter,
         )
     except Exception as exc:
-        return error_result("Failed to delete MASH network", str(exc))
+        return maya_error("Failed to delete MASH network", str(exc))

@@ -3,10 +3,8 @@
 # Import future modules
 from __future__ import annotations
 
-# Import built-in modules
-import logging
-
-logger = logging.getLogger(__name__)
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 
 def list_hdri_nodes() -> dict:
@@ -16,8 +14,6 @@ def list_hdri_nodes() -> dict:
         ActionResultModel dict with ``nodes`` list.  Each entry contains
         ``name``, ``node_type``, ``exposure``, ``rotation_y``, and ``file_path``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
@@ -68,17 +64,16 @@ def list_hdri_nodes() -> dict:
 
                 nodes.append(info)
 
-        return success_result(
+        return maya_success(
             "Found {} HDRI/IBL node(s)".format(len(nodes)),
             prompt="Use set_hdri_exposure or set_hdri_rotation to adjust, or load_hdri to add more.",
             nodes=nodes,
             count=len(nodes),
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("list_hdri_nodes failed")
-        return error_result("Failed to list HDRI nodes", str(exc)).to_dict()
+        return maya_from_exception(exc, "Failed to list HDRI nodes")
 
 
 def main(**kwargs):

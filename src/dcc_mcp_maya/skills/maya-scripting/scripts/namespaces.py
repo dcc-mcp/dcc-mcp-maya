@@ -11,14 +11,13 @@ full namespace lifecycle management:
 # Import future modules
 from __future__ import annotations
 
-# Import built-in modules
-import logging
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
-logger = logging.getLogger(__name__)
+# Import built-in modules
 
 # Built-in namespaces that must never be modified
 _PROTECTED_NS = frozenset({"UI", "shared", ":"})
-
 
 def set_namespace(
     object_name: str,
@@ -38,16 +37,15 @@ def set_namespace(
         ActionResultModel dict with ``context.object_name``,
         ``context.namespace``, ``context.new_name``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return error_result(
+            return maya_error(
                 "Object not found: {}".format(object_name),
                 "'{}' does not exist in the scene".format(object_name),
-            ).to_dict()
+            )
 
         # Normalise namespace — strip leading/trailing colons
         ns = namespace.strip(":") if namespace else ""
@@ -57,10 +55,10 @@ def set_namespace(
             exists = cmds.namespace(exists=":{}".format(ns))
             if not exists:
                 if not create_if_missing:
-                    return error_result(
+                    return maya_error(
                         "Namespace does not exist: {}".format(ns),
                         "Set create_if_missing=True to create it automatically",
-                    ).to_dict()
+                    )
                 cmds.namespace(add=ns)
 
             # Move object via namespace rename (moves into ns)
@@ -70,18 +68,16 @@ def set_namespace(
             bare = object_name.split(":")[-1]
             new_name = cmds.rename(object_name, bare)
 
-        return success_result(
+        return maya_success(
             "Moved '{}' to namespace '{}'".format(object_name, ns or ":"),
             object_name=object_name,
             namespace=ns or ":",
             new_name=new_name,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("set_namespace failed")
-        return error_result("Failed to set namespace for '{}'".format(object_name), str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to set namespace for '{}'".format(object_name))
 
 def rename_namespace(
     old_name: str,
@@ -97,7 +93,6 @@ def rename_namespace(
         ActionResultModel dict with ``context.old_name``,
         ``context.new_name``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
@@ -106,39 +101,37 @@ def rename_namespace(
         new_ns = new_name.strip(":")
 
         if not old_ns:
-            return error_result("Cannot rename root namespace", "old_name must not be empty or ':'").to_dict()
+            return maya_error("Cannot rename root namespace", "old_name must not be empty or ':'")
 
         if old_ns in _PROTECTED_NS:
-            return error_result(
+            return maya_error(
                 "Cannot rename protected namespace: {}".format(old_ns),
                 "Protected namespaces: {}".format(", ".join(sorted(_PROTECTED_NS))),
-            ).to_dict()
+            )
 
         if not cmds.namespace(exists=":{}".format(old_ns)):
-            return error_result(
+            return maya_error(
                 "Namespace does not exist: {}".format(old_ns),
                 "Create the namespace first or check the name",
-            ).to_dict()
+            )
 
         if cmds.namespace(exists=":{}".format(new_ns)):
-            return error_result(
+            return maya_error(
                 "Namespace already exists: {}".format(new_ns),
                 "Choose a different new_name",
-            ).to_dict()
+            )
 
         cmds.namespace(rename=[":{}".format(old_ns), new_ns])
 
-        return success_result(
+        return maya_success(
             "Renamed namespace '{}' → '{}'".format(old_ns, new_ns),
             old_name=old_ns,
             new_name=new_ns,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("rename_namespace failed")
-        return error_result("Failed to rename namespace '{}' to '{}'".format(old_name, new_name), str(exc)).to_dict()
-
+        return maya_from_exception(exc, "Failed to rename namespace '{}' to '{}'".format(old_name, new_name))
 
 def delete_namespace(
     namespace: str,
@@ -159,7 +152,6 @@ def delete_namespace(
     Returns:
         ActionResultModel dict with ``context.namespace``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
@@ -167,32 +159,31 @@ def delete_namespace(
         ns = namespace.strip(":")
 
         if not ns:
-            return error_result("Cannot delete root namespace", "namespace must not be empty or ':'").to_dict()
+            return maya_error("Cannot delete root namespace", "namespace must not be empty or ':'")
 
         if ns in _PROTECTED_NS:
-            return error_result(
+            return maya_error(
                 "Cannot delete protected namespace: {}".format(ns),
                 "Protected namespaces: {}".format(", ".join(sorted(_PROTECTED_NS))),
-            ).to_dict()
+            )
 
         if not cmds.namespace(exists=":{}".format(ns)):
-            return error_result(
+            return maya_error(
                 "Namespace does not exist: {}".format(ns),
                 "Nothing to delete",
-            ).to_dict()
+            )
 
         if merge_with_root:
             cmds.namespace(removeNamespace=":{}".format(ns), mergeNamespaceWithRoot=True)
         else:
             cmds.namespace(removeNamespace=":{}".format(ns))
 
-        return success_result(
+        return maya_success(
             "Deleted namespace '{}'".format(ns),
             namespace=ns,
             merged_with_root=merge_with_root,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("delete_namespace failed")
-        return error_result("Failed to delete namespace '{}'".format(namespace), str(exc)).to_dict()
+                return maya_from_exception(exc, "Failed to delete namespace '{}'".format(namespace))

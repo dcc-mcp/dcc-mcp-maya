@@ -3,10 +3,8 @@
 # Import future modules
 from __future__ import annotations
 
-# Import built-in modules
-import logging
-
-logger = logging.getLogger(__name__)
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 
 def set_constraint_weight(
@@ -28,43 +26,40 @@ def set_constraint_weight(
         ActionResultModel dict with ``context.constraint_node``,
         ``context.driver_index``, ``context.weight``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(constraint_node):
-            return error_result(
+            return maya_error(
                 "Constraint not found: {}".format(constraint_node),
                 "'{}' does not exist in the scene".format(constraint_node),
-            ).to_dict()
+            )
 
         # Discover the weight attribute for the given index
         all_ud = cmds.listAttr(constraint_node, userDefined=True) or []
         weight_suffix = "W{}".format(driver_index)
         matching = [a for a in all_ud if a.endswith(weight_suffix)]
         if not matching:
-            return error_result(
+            return maya_error(
                 "No weight attribute found for driver index {} on '{}'".format(driver_index, constraint_node),
                 "Use get_constraint_weights to list available driver indices.",
-            ).to_dict()
+            )
 
         w_attr = "{}.{}".format(constraint_node, matching[0])
         cmds.setAttr(w_attr, weight)
 
-        return success_result(
+        return maya_success(
             "Set weight of driver {} to {} on '{}'".format(driver_index, weight, constraint_node),
             prompt="Key this attribute on the timeline for an animated space switch.",
             constraint_node=constraint_node,
             driver_index=driver_index,
             weight=weight,
             weight_attribute=w_attr,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("set_constraint_weight failed")
-        return error_result("Failed to set constraint weight", str(exc)).to_dict()
+        return maya_from_exception(exc, "Failed to set constraint weight")
 
 
 def main(**kwargs):

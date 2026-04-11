@@ -7,12 +7,11 @@ an Agent manipulate the Maya node network directly.
 # Import future modules
 from __future__ import annotations
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 # Import built-in modules
-import logging
 from typing import Optional
-
-logger = logging.getLogger(__name__)
-
 
 def connect_attr(
     source_attr: str,
@@ -32,39 +31,36 @@ def connect_attr(
         ActionResultModel dict with ``context.source_attr`` and
         ``context.dest_attr``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(source_attr):
-            return error_result(
+            return maya_error(
                 "Source attribute not found: {}".format(source_attr),
                 "'{}' does not exist".format(source_attr),
-            ).to_dict()
+            )
 
         if not cmds.objExists(dest_attr):
-            return error_result(
+            return maya_error(
                 "Destination attribute not found: {}".format(dest_attr),
                 "'{}' does not exist".format(dest_attr),
-            ).to_dict()
+            )
 
         cmds.connectAttr(source_attr, dest_attr, force=force)
 
-        return success_result(
+        return maya_success(
             "Connected {} -> {}".format(source_attr, dest_attr),
             source_attr=source_attr,
             dest_attr=dest_attr,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("connect_attr failed")
-        return error_result(
+        return maya_error(
             "Failed to connect {} -> {}".format(source_attr, dest_attr),
             str(exc),
-        ).to_dict()
-
+        )
 
 def disconnect_attr(
     source_attr: str,
@@ -81,46 +77,43 @@ def disconnect_attr(
         ActionResultModel dict with ``context.source_attr`` and
         ``context.dest_attr``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(source_attr):
-            return error_result(
+            return maya_error(
                 "Source attribute not found: {}".format(source_attr),
                 "'{}' does not exist".format(source_attr),
-            ).to_dict()
+            )
 
         if not cmds.objExists(dest_attr):
-            return error_result(
+            return maya_error(
                 "Destination attribute not found: {}".format(dest_attr),
                 "'{}' does not exist".format(dest_attr),
-            ).to_dict()
+            )
 
         # Check if actually connected before attempting disconnect
         if not cmds.isConnected(source_attr, dest_attr):
-            return error_result(
+            return maya_error(
                 "Attributes not connected: {} -> {}".format(source_attr, dest_attr),
                 "No connection exists between these attributes",
-            ).to_dict()
+            )
 
         cmds.disconnectAttr(source_attr, dest_attr)
 
-        return success_result(
+        return maya_success(
             "Disconnected {} -x-> {}".format(source_attr, dest_attr),
             source_attr=source_attr,
             dest_attr=dest_attr,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("disconnect_attr failed")
-        return error_result(
+        return maya_error(
             "Failed to disconnect {} -> {}".format(source_attr, dest_attr),
             str(exc),
-        ).to_dict()
-
+        )
 
 def list_connections(
     object_name: str,
@@ -142,23 +135,22 @@ def list_connections(
         ActionResultModel dict with ``context.connections`` — a list of
         connected attribute path strings, and ``context.count``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return error_result(
+            return maya_error(
                 "Object not found: {}".format(object_name),
                 "'{}' does not exist in the scene".format(object_name),
-            ).to_dict()
+            )
 
         query_target = "{}.{}".format(object_name, attribute) if attribute else object_name
         if attribute and not cmds.objExists(query_target):
-            return error_result(
+            return maya_error(
                 "Attribute not found: {}".format(query_target),
                 "The attribute '{}' does not exist on '{}'".format(attribute, object_name),
-            ).to_dict()
+            )
 
         connections = (
             cmds.listConnections(
@@ -178,19 +170,17 @@ def list_connections(
         for a, b in zip(it, it):
             pairs.append({"from": a, "to": b})
 
-        return success_result(
+        return maya_success(
             "Found {} connection(s) on '{}'".format(len(pairs), query_target),
             object_name=object_name,
             attribute=attribute,
             connections=pairs,
             count=len(pairs),
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("list_connections failed")
-        return error_result("Failed to list connections on {}".format(object_name), str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to list connections on {}".format(object_name))
 
 def get_dag_path(
     object_name: str,
@@ -207,42 +197,39 @@ def get_dag_path(
         ActionResultModel dict with ``context.dag_path`` (full path),
         ``context.short_name``, and ``context.node_type``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return error_result(
+            return maya_error(
                 "Object not found: {}".format(object_name),
                 "'{}' does not exist in the scene".format(object_name),
-            ).to_dict()
+            )
 
         # ls -long returns full DAG paths
         full_paths = cmds.ls(object_name, long=True)
         if not full_paths:
-            return error_result(
+            return maya_error(
                 "Could not resolve DAG path for: {}".format(object_name),
                 "cmds.ls returned empty list",
-            ).to_dict()
+            )
 
         dag_path = full_paths[0]
         node_type = cmds.objectType(object_name)
         short_name = dag_path.split("|")[-1]
 
-        return success_result(
+        return maya_success(
             "DAG path for '{}': {}".format(object_name, dag_path),
             dag_path=dag_path,
             short_name=short_name,
             node_type=node_type,
             object_name=object_name,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("get_dag_path failed")
-        return error_result("Failed to get DAG path for {}".format(object_name), str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to get DAG path for {}".format(object_name))
 
 def smooth_mesh(
     object_name: str,
@@ -269,7 +256,6 @@ def smooth_mesh(
         ActionResultModel dict with ``context.object_name``,
         ``context.divisions``, ``context.method``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     _VALID_METHODS = ("preview", "subdivide")
 
@@ -277,22 +263,22 @@ def smooth_mesh(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return error_result(
+            return maya_error(
                 "Object not found: {}".format(object_name),
                 "'{}' does not exist in the scene".format(object_name),
-            ).to_dict()
+            )
 
         if method not in _VALID_METHODS:
-            return error_result(
+            return maya_error(
                 "Invalid method: {}".format(method),
                 "method must be one of {}".format(_VALID_METHODS),
-            ).to_dict()
+            )
 
         if divisions < 0:
-            return error_result(
+            return maya_error(
                 "Invalid divisions: {}".format(divisions),
                 "divisions must be >= 0",
-            ).to_dict()
+            )
 
         if method == "preview":
             # Enable smooth mesh preview — attribute lives on the shape node
@@ -300,29 +286,27 @@ def smooth_mesh(
             target = shapes[0] if shapes else object_name
             cmds.setAttr("{}.displaySmoothMesh".format(target), 2)  # 2 = smooth + cage
             cmds.setAttr("{}.smoothLevel".format(target), divisions)
-            return success_result(
+            return maya_success(
                 "Enabled smooth mesh preview on '{}' (level {})".format(object_name, divisions),
                 object_name=object_name,
                 divisions=divisions,
                 method=method,
-            ).to_dict()
+            )
 
         # method == "subdivide"
         result = cmds.polySmooth(object_name, divisions=divisions)
         node_name = result[0] if result else "polySmoothFace1"
-        return success_result(
+        return maya_success(
             "Subdivided '{}' with {} iteration(s)".format(object_name, divisions),
             object_name=object_name,
             divisions=divisions,
             method=method,
             poly_smooth_node=node_name,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("smooth_mesh failed")
-        return error_result("Failed to smooth mesh {}".format(object_name), str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to smooth mesh {}".format(object_name))
 
 def list_history(
     object_name: str,
@@ -343,16 +327,15 @@ def list_history(
         with ``name`` and ``type`` for each history node, and
         ``context.count``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return error_result(
+            return maya_error(
                 "Object not found: {}".format(object_name),
                 "'{}' does not exist in the scene".format(object_name),
-            ).to_dict()
+            )
 
         kwargs = {
             "future": future,
@@ -362,19 +345,17 @@ def list_history(
 
         history = [{"name": node, "type": cmds.objectType(node)} for node in history_nodes if node != object_name]
 
-        return success_result(
+        return maya_success(
             "Found {} history node(s) for '{}'".format(len(history), object_name),
             object_name=object_name,
             history=history,
             count=len(history),
             future=future,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("list_history failed")
-        return error_result("Failed to list history for {}".format(object_name), str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to list history for {}".format(object_name))
 
 def delete_history(
     object_name: str,
@@ -391,29 +372,26 @@ def delete_history(
     Returns:
         ActionResultModel dict with ``context.object_name``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return error_result(
+            return maya_error(
                 "Object not found: {}".format(object_name),
                 "'{}' does not exist in the scene".format(object_name),
-            ).to_dict()
+            )
 
         cmds.delete(object_name, constructionHistory=True)
 
-        return success_result(
+        return maya_success(
             "Deleted construction history on '{}'".format(object_name),
             object_name=object_name,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("delete_history failed")
-        return error_result("Failed to delete history for {}".format(object_name), str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to delete history for {}".format(object_name))
 
 def apply_symmetry(
     object_name: str,
@@ -437,7 +415,6 @@ def apply_symmetry(
         ActionResultModel dict with ``context.object_name``,
         ``context.axis``, ``context.world_space``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     _VALID_AXES = ("x", "y", "z", "none")
 
@@ -445,17 +422,17 @@ def apply_symmetry(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return error_result(
+            return maya_error(
                 "Object not found: {}".format(object_name),
                 "'{}' does not exist in the scene".format(object_name),
-            ).to_dict()
+            )
 
         axis_lower = axis.lower()
         if axis_lower not in _VALID_AXES:
-            return error_result(
+            return maya_error(
                 "Invalid axis: {}".format(axis),
                 "axis must be one of {}".format(_VALID_AXES),
-            ).to_dict()
+            )
 
         if axis_lower == "none":
             cmds.symmetricModelling(symmetry=False)
@@ -468,20 +445,18 @@ def apply_symmetry(
                 about=space,
             )
 
-        return success_result(
+        return maya_success(
             "Applied {} symmetry on '{}' ({} space)".format(
                 axis_lower, object_name, "world" if world_space else "object"
             ),
             object_name=object_name,
             axis=axis_lower,
             world_space=world_space,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("apply_symmetry failed")
-        return error_result("Failed to apply symmetry on {}".format(object_name), str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to apply symmetry on {}".format(object_name))
 
 def transfer_attributes(
     source: str,
@@ -514,7 +489,6 @@ def transfer_attributes(
         ActionResultModel dict with ``context.source``, ``context.target``,
         ``context.transfer_node`` (the created ``transferAttributes`` node).
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     _VALID_SPACES = (0, 1, 4, 5)
 
@@ -522,22 +496,22 @@ def transfer_attributes(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(source):
-            return error_result(
+            return maya_error(
                 "Source not found: {}".format(source),
                 "'{}' does not exist in the scene".format(source),
-            ).to_dict()
+            )
 
         if not cmds.objExists(target):
-            return error_result(
+            return maya_error(
                 "Target not found: {}".format(target),
                 "'{}' does not exist in the scene".format(target),
-            ).to_dict()
+            )
 
         if sample_space not in _VALID_SPACES:
-            return error_result(
+            return maya_error(
                 "Invalid sample_space: {}".format(sample_space),
                 "sample_space must be one of {} (0=World, 1=Local, 4=UV, 5=Component)".format(_VALID_SPACES),
-            ).to_dict()
+            )
 
         result = cmds.transferAttributes(
             source,
@@ -550,7 +524,7 @@ def transfer_attributes(
         )
         node_name = result[0] if result else "transferAttributes1"
 
-        return success_result(
+        return maya_success(
             "Transferred attributes from '{}' to '{}'".format(source, target),
             source=source,
             target=target,
@@ -560,11 +534,10 @@ def transfer_attributes(
             transfer_normals=transfer_normals,
             transfer_uvs=transfer_uvs,
             transfer_colors=transfer_colors,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("transfer_attributes failed")
-        return error_result(
+        return maya_error(
             "Failed to transfer attributes from '{}' to '{}'".format(source, target), str(exc)
-        ).to_dict()
+        )

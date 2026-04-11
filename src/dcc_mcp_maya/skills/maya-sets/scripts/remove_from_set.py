@@ -3,12 +3,11 @@
 # Import future modules
 from __future__ import annotations
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 # Import built-in modules
-import logging
 from typing import List
-
-logger = logging.getLogger(__name__)
-
 
 def remove_from_set(
     set_name: str,
@@ -24,25 +23,24 @@ def remove_from_set(
         ActionResultModel dict with ``context.set_name`` and
         ``context.objects_removed``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not objects:
-            return error_result("No objects specified", "objects list must not be empty").to_dict()
+            return maya_error("No objects specified", "objects list must not be empty")
 
         if not cmds.objExists(set_name):
-            return error_result(
+            return maya_error(
                 "Set not found: {}".format(set_name),
                 "'{}' does not exist in the scene".format(set_name),
-            ).to_dict()
+            )
 
         if cmds.objectType(set_name) != "objectSet":
-            return error_result(
+            return maya_error(
                 "Not an object set: {}".format(set_name),
                 "'{}' is of type '{}', expected 'objectSet'".format(set_name, cmds.objectType(set_name)),
-            ).to_dict()
+            )
 
         # Only attempt to remove objects that actually exist
         existing = [obj for obj in objects if cmds.objExists(obj)]
@@ -52,7 +50,7 @@ def remove_from_set(
         removed_count = len(existing)
         skipped = [obj for obj in objects if obj not in existing]
 
-        return success_result(
+        return maya_success(
             "Removed {} object(s) from set '{}'{}".format(
                 removed_count,
                 set_name,
@@ -61,18 +59,15 @@ def remove_from_set(
             set_name=set_name,
             objects_removed=existing,
             objects_skipped=skipped,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("remove_from_set failed")
-        return error_result("Failed to remove objects from set '{}'".format(set_name), str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to remove objects from set '{}'".format(set_name))
 
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`remove_from_set`."""
     return remove_from_set(**kwargs)
-
 
 if __name__ == "__main__":
     import json

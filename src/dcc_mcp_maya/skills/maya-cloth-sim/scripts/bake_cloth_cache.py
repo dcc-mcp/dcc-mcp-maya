@@ -4,10 +4,10 @@
 from __future__ import annotations
 
 # Import built-in modules
-import logging
 from typing import Optional
 
-logger = logging.getLogger(__name__)
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 
 def bake_cloth_cache(
@@ -26,16 +26,14 @@ def bake_cloth_cache(
         ActionResultModel dict with ``context.start_frame``,
         ``context.end_frame``, and ``context.ncloth_shape``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(ncloth_shape):
-            return error_result(
+            return maya_error(
                 "Node not found",
                 "nCloth shape '{}' does not exist".format(ncloth_shape),
-            ).to_dict()
+            )
 
         if start_frame is None:
             start_frame = int(cmds.playbackOptions(query=True, minTime=True))
@@ -50,7 +48,7 @@ def bake_cloth_cache(
         cmds.select(mesh_transform)
         cmds.mel.eval('doCreateNclothCache 5 {{ "{}" }};'.format(ncloth_shape))
 
-        return success_result(
+        return maya_success(
             "nCloth cache baked ({}-{})".format(start_frame, end_frame),
             prompt=(
                 "Cloth cache baked for frames {}-{}. Playback is now deterministic without re-simulating.".format(
@@ -60,12 +58,11 @@ def bake_cloth_cache(
             ncloth_shape=ncloth_shape,
             start_frame=start_frame,
             end_frame=end_frame,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("bake_cloth_cache failed")
-        return error_result("Failed to bake cloth cache", str(exc)).to_dict()
+        return maya_from_exception(exc, "Failed to bake cloth cache")
 
 
 def main(**kwargs):

@@ -5,10 +5,10 @@ from __future__ import annotations
 
 # Import built-in modules
 import json
-import logging
 import os
 
-logger = logging.getLogger(__name__)
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 
 def list_materials(library_dir: str) -> dict:
@@ -20,14 +20,12 @@ def list_materials(library_dir: str) -> dict:
     Returns:
         ActionResultModel dict with a list of preset info dicts.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     try:
         if not os.path.isdir(library_dir):
-            return error_result(
+            return maya_error(
                 "Library directory not found: '{}'".format(library_dir),
                 "Create the directory or run save_material first",
-            ).to_dict()
+            )
 
         presets = []
         for fname in sorted(os.listdir(library_dir)):
@@ -48,18 +46,17 @@ def list_materials(library_dir: str) -> dict:
                 pass
             presets.append(info)
 
-        return success_result(
+        return maya_success(
             "Found {} material preset(s) in '{}'".format(len(presets), library_dir),
             prompt="Use load_material with a file_path to apply a preset.",
             presets=presets,
             count=len(presets),
             library_dir=library_dir,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("list_materials failed")
-        return error_result("Failed to list material presets", str(exc)).to_dict()
+        return maya_from_exception(exc, "Failed to list material presets")
 
 
 def main(**kwargs):

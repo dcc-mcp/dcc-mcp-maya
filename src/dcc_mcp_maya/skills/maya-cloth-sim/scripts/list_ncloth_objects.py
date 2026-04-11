@@ -3,10 +3,8 @@
 # Import future modules
 from __future__ import annotations
 
-# Import built-in modules
-import logging
-
-logger = logging.getLogger(__name__)
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 
 def list_ncloth_objects() -> dict:
@@ -16,8 +14,6 @@ def list_ncloth_objects() -> dict:
         ActionResultModel dict with ``context.cloth_objects`` (list of dicts),
         ``context.nucleus_nodes``, and ``context.count``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
@@ -46,18 +42,17 @@ def list_ncloth_objects() -> dict:
 
         nucleus_nodes = cmds.ls(type="nucleus") or []
 
-        return success_result(
+        return maya_success(
             "Found {} nCloth object(s)".format(len(cloth_objects)),
             prompt="Use set_ncloth_attribute or bake_cloth_cache to modify cloth behavior.",
             cloth_objects=cloth_objects,
             nucleus_nodes=nucleus_nodes,
             count=len(cloth_objects),
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("list_ncloth_objects failed")
-        return error_result("Failed to list nCloth objects", str(exc)).to_dict()
+        return maya_from_exception(exc, "Failed to list nCloth objects")
 
 
 def main(**kwargs):

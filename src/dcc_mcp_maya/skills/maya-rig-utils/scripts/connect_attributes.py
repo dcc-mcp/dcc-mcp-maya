@@ -3,12 +3,11 @@
 # Import future modules
 from __future__ import annotations
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 # Import built-in modules
-import logging
 from typing import List
-
-logger = logging.getLogger(__name__)
-
 
 def connect_attributes(
     connections: List[List[str]],
@@ -28,16 +27,15 @@ def connect_attributes(
         ActionResultModel dict with ``context.connected_count`` and
         ``context.failed_connections``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not connections:
-            return error_result(
+            return maya_error(
                 "No connections specified",
                 "connections list must contain at least one [source, dest] pair",
-            ).to_dict()
+            )
 
         connected = []
         failed = []
@@ -57,28 +55,25 @@ def connect_attributes(
                 failed.append({"pair": [src, dst], "error": str(exc)})
 
         if not connected and failed:
-            return error_result(
+            return maya_error(
                 "All {} connection(s) failed".format(len(failed)),
                 "; ".join(f["error"] for f in failed),
-            ).to_dict()
+            )
 
-        return success_result(
+        return maya_success(
             "Connected {}/{} attribute pair(s)".format(len(connected), len(connections)),
             prompt="Use lock_hide_attributes if driven attrs should not be keyable.",
             connected_count=len(connected),
             connected=connected,
             failed_connections=failed,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("connect_attributes failed")
-        return error_result("Failed to connect attributes", str(exc)).to_dict()
-
+        return maya_from_exception(exc, "Failed to connect attributes")
 
 def main(**kwargs):
     return connect_attributes(**kwargs)
-
 
 if __name__ == "__main__":
     import json

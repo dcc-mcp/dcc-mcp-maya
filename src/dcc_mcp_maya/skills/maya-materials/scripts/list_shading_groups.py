@@ -3,10 +3,8 @@
 # Import future modules
 from __future__ import annotations
 
-# Import built-in modules
-import logging
-
-logger = logging.getLogger(__name__)
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 _SUPPORTED_SHADERS = ("lambert", "blinn", "phong", "phongE", "aiStandardSurface")
 
@@ -22,8 +20,6 @@ def list_shading_groups() -> dict:
         dicts with ``name``, ``surface_shader``, ``shader_type``,
         ``member_count`` keys, and ``context.count``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
@@ -47,16 +43,15 @@ def list_shading_groups() -> dict:
                 }
             )
 
-        return success_result(
+        return maya_success(
             "Found {} shading group(s)".format(len(result)),
             shading_groups=result,
             count=len(result),
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("list_shading_groups failed")
-        return error_result("Failed to list shading groups", str(exc)).to_dict()
+        return maya_from_exception(exc, "Failed to list shading groups")
 
 
 def main(**kwargs) -> dict:

@@ -4,9 +4,10 @@
 from __future__ import annotations
 
 # Import built-in modules
-import logging
 
-logger = logging.getLogger(__name__)
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 
 _INT_TO_TYPE = {1: "FLOAT", 2: "INT", 3: "RGB", 4: "RGBA", 5: "VECTOR"}
 
@@ -18,8 +19,6 @@ def list_aovs() -> dict:
         ActionResultModel dict with ``context.aovs`` (list of dicts with
         ``name``, ``type``, ``enabled``, ``node``) and ``context.count``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
@@ -41,17 +40,16 @@ def list_aovs() -> dict:
             except Exception:
                 pass
 
-        return success_result(
+        return maya_success(
             "Found {} Arnold AOV(s)".format(len(aovs)),
             prompt="Use add_aov to create more passes or enable_aov to toggle individual AOVs.",
             aovs=aovs,
             count=len(aovs),
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("list_aovs failed")
-        return error_result("Failed to list AOVs", str(exc)).to_dict()
+        return maya_from_exception(exc, "Failed to list AOVs")
 
 
 def main(**kwargs) -> dict:

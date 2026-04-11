@@ -4,10 +4,10 @@
 from __future__ import annotations
 
 # Import built-in modules
-import logging
 from typing import List, Optional
 
-logger = logging.getLogger(__name__)
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 
 def wire_deformer(
@@ -29,35 +29,33 @@ def wire_deformer(
         ActionResultModel dict with ``context.wire_node``,
         ``context.curves``, ``context.objects``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     if not curves:
-        return error_result(
+        return maya_error(
             "No curves specified",
             "Provide at least one NURBS curve name in 'curves'",
-        ).to_dict()
+        )
     if not objects:
-        return error_result(
+        return maya_error(
             "No objects specified",
             "Provide at least one mesh name in 'objects'",
-        ).to_dict()
+        )
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         missing_curves = [c for c in curves if not cmds.objExists(c)]
         if missing_curves:
-            return error_result(
+            return maya_error(
                 "Curve(s) not found: {}".format(", ".join(missing_curves)),
                 "Ensure all curves exist in the scene",
-            ).to_dict()
+            )
 
         missing_objects = [o for o in objects if not cmds.objExists(o)]
         if missing_objects:
-            return error_result(
+            return maya_error(
                 "Object(s) not found: {}".format(", ".join(missing_objects)),
                 "Ensure all objects exist in the scene",
-            ).to_dict()
+            )
 
         wire_kwargs = {
             "wire": curves,
@@ -69,18 +67,17 @@ def wire_deformer(
         result = cmds.wire(objects, **wire_kwargs)
         wire_node = result[0] if result else None
 
-        return success_result(
+        return maya_success(
             "Created wire deformer '{}' on {} object(s)".format(wire_node, len(objects)),
             wire_node=wire_node,
             curves=list(curves),
             objects=list(objects),
             dropoff_distance=dropoff_distance,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("wire_deformer failed")
-        return error_result("Failed to create wire deformer", str(exc)).to_dict()
+        return maya_from_exception(exc, "Failed to create wire deformer")
 
 
 def main(**kwargs) -> dict:

@@ -3,12 +3,11 @@
 # Import future modules
 from __future__ import annotations
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 # Import built-in modules
-import logging
 from typing import List, Optional
-
-logger = logging.getLogger(__name__)
-
 
 def add_constraint(
     source: str,
@@ -35,7 +34,6 @@ def add_constraint(
         ActionResultModel dict with ``context.constraint_name``,
         ``context.constraint_type``, ``context.source``, ``context.target``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     _VALID_TYPES = ("parent", "point", "orient", "scale", "aim")
 
@@ -43,22 +41,22 @@ def add_constraint(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(source):
-            return error_result(
+            return maya_error(
                 "Source not found: {}".format(source),
                 "'{}' does not exist in the scene".format(source),
-            ).to_dict()
+            )
 
         if not cmds.objExists(target):
-            return error_result(
+            return maya_error(
                 "Target not found: {}".format(target),
                 "'{}' does not exist in the scene".format(target),
-            ).to_dict()
+            )
 
         if constraint_type not in _VALID_TYPES:
-            return error_result(
+            return maya_error(
                 "Invalid constraint type: {}".format(constraint_type),
                 "constraint_type must be one of {}".format(_VALID_TYPES),
-            ).to_dict()
+            )
 
         kwargs = {"maintainOffset": maintain_offset}
         if name:
@@ -75,20 +73,18 @@ def add_constraint(
         result = fn(source, target, **kwargs)
         constraint_name = result[0] if result else (name or "{}_{}1".format(target, constraint_type))
 
-        return success_result(
+        return maya_success(
             "Added {} constraint: '{}' -> '{}'".format(constraint_type, source, target),
             constraint_name=constraint_name,
             constraint_type=constraint_type,
             source=source,
             target=target,
             maintain_offset=maintain_offset,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("add_constraint failed")
-        return error_result("Failed to add {} constraint".format(constraint_type), str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to add {} constraint".format(constraint_type))
 
 def remove_constraint(
     target: str,
@@ -106,7 +102,6 @@ def remove_constraint(
         ActionResultModel dict with ``context.removed`` list of removed
         constraint node names.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     _TYPE_MAP = {
         "parent": "parentConstraint",
@@ -120,16 +115,16 @@ def remove_constraint(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(target):
-            return error_result(
+            return maya_error(
                 "Target not found: {}".format(target),
                 "'{}' does not exist in the scene".format(target),
-            ).to_dict()
+            )
 
         if constraint_type is not None and constraint_type not in _TYPE_MAP:
-            return error_result(
+            return maya_error(
                 "Invalid constraint type: {}".format(constraint_type),
                 "constraint_type must be one of {}".format(list(_TYPE_MAP.keys())),
-            ).to_dict()
+            )
 
         node_types = [_TYPE_MAP[constraint_type]] if constraint_type else list(_TYPE_MAP.values())
 
@@ -140,18 +135,16 @@ def remove_constraint(
                 cmds.delete(c)
                 removed.append(c)
 
-        return success_result(
+        return maya_success(
             "Removed {} constraint(s) from '{}'".format(len(removed), target),
             target=target,
             removed=removed,
             count=len(removed),
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("remove_constraint failed")
-        return error_result("Failed to remove constraints from {}".format(target), str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to remove constraints from {}".format(target))
 
 def list_constraints(
     target: str,
@@ -165,7 +158,6 @@ def list_constraints(
         ActionResultModel dict with ``context.constraints`` — a list of dicts
         with ``name`` and ``type`` for each constraint found.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     _CONSTRAINT_TYPES = (
         "parentConstraint",
@@ -179,10 +171,10 @@ def list_constraints(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(target):
-            return error_result(
+            return maya_error(
                 "Target not found: {}".format(target),
                 "'{}' does not exist in the scene".format(target),
-            ).to_dict()
+            )
 
         constraints = []
         for ct in _CONSTRAINT_TYPES:
@@ -190,18 +182,16 @@ def list_constraints(
             for node in nodes:
                 constraints.append({"name": node, "type": ct})
 
-        return success_result(
+        return maya_success(
             "Found {} constraint(s) on '{}'".format(len(constraints), target),
             target=target,
             constraints=constraints,
             count=len(constraints),
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("list_constraints failed")
-        return error_result("Failed to list constraints on {}".format(target), str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to list constraints on {}".format(target))
 
 def create_constraint_weighted(
     sources: List[str],
@@ -232,7 +222,6 @@ def create_constraint_weighted(
         ActionResultModel dict with ``context.constraint_name``,
         ``context.sources``, ``context.weights_applied``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     _VALID_TYPES = ("parent", "point", "orient", "scale", "aim")
 
@@ -240,26 +229,26 @@ def create_constraint_weighted(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not sources:
-            return error_result("No sources provided", "Provide at least one source object").to_dict()
+            return maya_error("No sources provided", "Provide at least one source object")
 
         if constraint_type not in _VALID_TYPES:
-            return error_result(
+            return maya_error(
                 "Invalid constraint type: {}".format(constraint_type),
                 "constraint_type must be one of {}".format(_VALID_TYPES),
-            ).to_dict()
+            )
 
         if not cmds.objExists(target):
-            return error_result(
+            return maya_error(
                 "Target not found: {}".format(target),
                 "'{}' does not exist".format(target),
-            ).to_dict()
+            )
 
         for src in sources:
             if not cmds.objExists(src):
-                return error_result(
+                return maya_error(
                     "Source not found: {}".format(src),
                     "'{}' does not exist".format(src),
-                ).to_dict()
+                )
 
         # Normalise weights list
         w_list = list(weights) if weights else []
@@ -294,7 +283,7 @@ def create_constraint_weighted(
             if cmds.objExists(full_attr):
                 cmds.setAttr(full_attr, w)
 
-        return success_result(
+        return maya_success(
             "Created weighted {} constraint on '{}' from {} sources".format(constraint_type, target, len(sources)),
             constraint_name=constraint_name,
             constraint_type=constraint_type,
@@ -302,9 +291,8 @@ def create_constraint_weighted(
             target=target,
             weights_applied=w_list[: len(sources)],
             maintain_offset=maintain_offset,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("create_constraint_weighted failed")
-        return error_result("Failed to create weighted {} constraint".format(constraint_type), str(exc)).to_dict()
+                return maya_from_exception(exc, "Failed to create weighted {} constraint".format(constraint_type))

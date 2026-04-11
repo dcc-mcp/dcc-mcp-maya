@@ -4,9 +4,10 @@
 from __future__ import annotations
 
 # Import built-in modules
-import logging
 
-logger = logging.getLogger(__name__)
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 
 
 def set_aov_attribute(name: str, attribute: str, value: object) -> dict:
@@ -24,15 +25,13 @@ def set_aov_attribute(name: str, attribute: str, value: object) -> dict:
         ActionResultModel dict with ``context.aov_node``, ``context.attribute``,
         ``context.value``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not name:
-            return error_result("AOV name is required", "Provide a non-empty AOV name").to_dict()
+            return maya_error("AOV name is required", "Provide a non-empty AOV name")
         if not attribute:
-            return error_result("Attribute name is required", "Provide a non-empty attribute name").to_dict()
+            return maya_error("Attribute name is required", "Provide a non-empty attribute name")
 
         # Find the aiAOV node
         nodes = cmds.ls(type="aiAOV") or []
@@ -46,36 +45,35 @@ def set_aov_attribute(name: str, attribute: str, value: object) -> dict:
                 pass
 
         if target_node is None:
-            return error_result(
+            return maya_error(
                 "AOV '{}' not found".format(name),
                 "No aiAOV node with name '{}' exists".format(name),
-            ).to_dict()
+            )
 
         attr_path = "{}.{}".format(target_node, attribute)
         if not cmds.objExists(attr_path):
-            return error_result(
+            return maya_error(
                 "Attribute '{}' not found on AOV node".format(attribute),
                 "The attribute '{}' does not exist on '{}'".format(attribute, target_node),
-            ).to_dict()
+            )
 
         if isinstance(value, str):
             cmds.setAttr(attr_path, value, type="string")
         else:
             cmds.setAttr(attr_path, value)
 
-        return success_result(
+        return maya_success(
             "Set {}.{} = {}".format(name, attribute, value),
             prompt="Use list_aovs to review all AOV settings.",
             aov_node=target_node,
             aov_name=name,
             attribute=attribute,
             value=value,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("set_aov_attribute failed")
-        return error_result("Failed to set AOV attribute", str(exc)).to_dict()
+        return maya_from_exception(exc, "Failed to set AOV attribute")
 
 
 def main(**kwargs) -> dict:

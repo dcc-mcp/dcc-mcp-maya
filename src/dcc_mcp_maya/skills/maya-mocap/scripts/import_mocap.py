@@ -4,11 +4,11 @@
 from __future__ import annotations
 
 # Import built-in modules
-import logging
 import os
 
-logger = logging.getLogger(__name__)
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 def import_mocap(
     file_path: str,
@@ -25,16 +25,15 @@ def import_mocap(
     Returns:
         ActionResultModel dict with ``context.root_joints`` and ``context.joint_count``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     if not file_path:
-        return error_result("Missing parameter", "'file_path' is required").to_dict()
+        return maya_error("Missing parameter", "'file_path' is required")
 
     if not os.path.isfile(file_path):
-        return error_result(
+        return maya_error(
             "File not found: {}".format(file_path),
             "Verify the file path and ensure the file exists.",
-        ).to_dict()
+        )
 
     ext = os.path.splitext(file_path)[1].lower()
 
@@ -65,33 +64,30 @@ def import_mocap(
                 options="fbx" + merge_mode,
             )
         else:
-            return error_result(
+            return maya_error(
                 "Unsupported file type: {}".format(ext),
                 "Supported formats: .bvh, .fbx. Convert your file first.",
-            ).to_dict()
+            )
 
         after = set(cmds.ls(type="joint") or [])
         new_joints = sorted(after - before)
         roots = [j for j in new_joints if not cmds.listRelatives(j, parent=True, type="joint")]
 
-        return success_result(
+        return maya_success(
             "Imported mocap from '{}' ({} joints)".format(os.path.basename(file_path), len(new_joints)),
             prompt="Mocap skeleton imported. Use create_hik_definition to set up retargeting.",
             file=file_path,
             namespace=namespace,
             joint_count=len(new_joints),
             root_joints=roots,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("import_mocap failed")
-        return error_result("Failed to import mocap file", str(exc)).to_dict()
-
+        return maya_from_exception(exc, "Failed to import mocap file")
 
 def main(**kwargs):
     return import_mocap(**kwargs)
-
 
 if __name__ == "__main__":
     import json

@@ -3,10 +3,8 @@
 # Import future modules
 from __future__ import annotations
 
-# Import built-in modules
-import logging
-
-logger = logging.getLogger(__name__)
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 
 def create_nhair_system(
@@ -25,16 +23,14 @@ def create_nhair_system(
         ActionResultModel dict with ``context.hair_system`` and
         ``context.follicle_count``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(mesh):
-            return error_result(
+            return maya_error(
                 "Node not found",
                 "Mesh '{}' does not exist".format(mesh),
-            ).to_dict()
+            )
 
         cmds.select(mesh)
         cmds.mel.eval("assignNewHairSystem;makeHairCurves 0 {0} {0} 0 0 0 0 0 0 0 1 1;".format(uv_density))
@@ -51,7 +47,7 @@ def create_nhair_system(
             except Exception:
                 pass
 
-        return success_result(
+        return maya_success(
             "nHair system created on '{}'".format(mesh),
             prompt=(
                 "Hair system '{}' created with {} follicles. Use set_nhair_attribute to adjust dynamics.".format(
@@ -61,12 +57,11 @@ def create_nhair_system(
             hair_system=hair_system,
             follicle_count=follicle_count,
             mesh=mesh,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("create_nhair_system failed")
-        return error_result("Failed to create nHair system", str(exc)).to_dict()
+        return maya_from_exception(exc, "Failed to create nHair system")
 
 
 def main(**kwargs):

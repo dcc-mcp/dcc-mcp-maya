@@ -3,11 +3,11 @@
 # Import future modules
 from __future__ import annotations
 
-# Import built-in modules
-import logging
-from typing import List, Optional
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
-logger = logging.getLogger(__name__)
+# Import built-in modules
+from typing import List, Optional
 
 # Supported Maya light types and their corresponding command/node names
 _LIGHT_TYPE_MAP = {
@@ -17,7 +17,6 @@ _LIGHT_TYPE_MAP = {
     "area": "areaLight",
     "ambient": "ambientLight",
 }
-
 
 def create_light(
     light_type: str = "point",
@@ -40,14 +39,13 @@ def create_light(
         ActionResultModel dict with ``context.light_name`` and
         ``context.light_shape``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     lt = light_type.lower()
     if lt not in _LIGHT_TYPE_MAP:
-        return error_result(
+        return maya_error(
             "Unsupported light type: {}".format(light_type),
             "Supported types: {}".format(", ".join(sorted(_LIGHT_TYPE_MAP))),
-        ).to_dict()
+        )
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
@@ -77,20 +75,18 @@ def create_light(
         if position and len(position) >= 3:
             cmds.setAttr("{}.translate".format(transform), position[0], position[1], position[2], type="double3")
 
-        return success_result(
+        return maya_success(
             "Created {} light '{}'".format(lt, transform),
             light_name=transform,
             light_shape=shape,
             light_type=lt,
             intensity=intensity,
             color=[r, g, b],
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("create_light failed")
-        return error_result("Failed to create light", str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to create light")
 
 def set_light_attribute(
     light_name: str,
@@ -114,13 +110,12 @@ def set_light_attribute(
     Returns:
         ActionResultModel dict.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(light_name):
-            return error_result("Light not found: {}".format(light_name)).to_dict()
+            return maya_error("Light not found: {}".format(light_name))
 
         # Try to resolve shape for light-specific attrs
         shapes = cmds.listRelatives(light_name, shapes=True) or []
@@ -131,7 +126,7 @@ def set_light_attribute(
             # Attribute may be on transform instead
             full_attr = "{}.{}".format(light_name, attribute)
         if not cmds.objExists(full_attr):
-            return error_result("Attribute '{}' not found on '{}'".format(attribute, light_name)).to_dict()
+            return maya_error("Attribute '{}' not found on '{}'".format(attribute, light_name))
 
         if isinstance(value, (list, tuple)) and len(value) == 3:
             cmds.setAttr(full_attr, value[0], value[1], value[2], type="double3")
@@ -140,18 +135,16 @@ def set_light_attribute(
         else:
             cmds.setAttr(full_attr, value)
 
-        return success_result(
+        return maya_success(
             "Set {}.{} = {}".format(light_name, attribute, value),
             light_name=light_name,
             attribute=attribute,
             value=value,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("set_light_attribute failed")
-        return error_result("Failed to set light attribute", str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to set light attribute")
 
 def list_lights(include_default: bool = False) -> dict:
     """List all lights in the current Maya scene.
@@ -165,7 +158,6 @@ def list_lights(include_default: bool = False) -> dict:
         ``name``, ``shape``, ``light_type``, ``intensity``, ``color``,
         ``visible``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
@@ -208,17 +200,15 @@ def list_lights(include_default: bool = False) -> dict:
                 }
             )
 
-        return success_result(
+        return maya_success(
             "Found {} light(s)".format(len(results)),
             lights=results,
             count=len(results),
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("list_lights failed")
-        return error_result("Failed to list lights", str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to list lights")
 
 def delete_light(light_name: str) -> dict:
     """Delete a light from the scene by transform name.
@@ -229,13 +219,12 @@ def delete_light(light_name: str) -> dict:
     Returns:
         ActionResultModel dict.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(light_name):
-            return error_result("Light not found: {}".format(light_name)).to_dict()
+            return maya_error("Light not found: {}".format(light_name))
 
         node_type = cmds.objectType(light_name)
         # If it's a shape, delete its transform
@@ -245,9 +234,8 @@ def delete_light(light_name: str) -> dict:
                 light_name = parents[0]
 
         cmds.delete(light_name)
-        return success_result("Deleted light '{}'".format(light_name), light_name=light_name).to_dict()
+        return maya_success("Deleted light '{}'".format(light_name), light_name=light_name)
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("delete_light failed")
-        return error_result("Failed to delete light", str(exc)).to_dict()
+                return maya_from_exception(exc, "Failed to delete light")

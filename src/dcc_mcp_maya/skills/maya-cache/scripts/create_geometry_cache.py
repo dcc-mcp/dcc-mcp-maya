@@ -4,11 +4,11 @@
 from __future__ import annotations
 
 # Import built-in modules
-import logging
 import os
 from typing import List, Optional
 
-logger = logging.getLogger(__name__)
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 
 def create_geometry_cache(
@@ -38,18 +38,16 @@ def create_geometry_cache(
         ActionResultModel dict with ``context.cache_files`` and
         ``context.cache_nodes``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     try:
         import maya.cmds as cmds  # noqa: PLC0415
         import maya.mel as mel  # noqa: PLC0415
 
         for obj in objects:
             if not cmds.objExists(obj):
-                return error_result(
+                return maya_error(
                     "Object not found: {}".format(obj),
                     "'{}' does not exist in the scene".format(obj),
-                ).to_dict()
+                )
 
         if not os.path.isdir(directory):
             os.makedirs(directory)
@@ -77,7 +75,7 @@ def create_geometry_cache(
 
         cache_nodes = cmds.ls(type="cacheFile") or []
 
-        return success_result(
+        return maya_success(
             "Created geometry cache '{}' ({} — {})".format(cname, int(sf), int(ef)),
             prompt="Use attach_geometry_cache to attach this cache to another mesh, or list_geometry_caches to inspect.",
             cache_name=cname,
@@ -85,12 +83,11 @@ def create_geometry_cache(
             start_frame=int(sf),
             end_frame=int(ef),
             cache_nodes=cache_nodes,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("create_geometry_cache failed")
-        return error_result("Failed to create geometry cache", str(exc)).to_dict()
+        return maya_from_exception(exc, "Failed to create geometry cache")
 
 
 def main(**kwargs):

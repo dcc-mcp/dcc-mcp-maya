@@ -10,12 +10,11 @@ are broadly useful for working with Maya scenes:
 # Import future modules
 from __future__ import annotations
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 # Import built-in modules
-import logging
 from typing import Optional
-
-logger = logging.getLogger(__name__)
-
 
 def create_utility_node(
     node_type: str,
@@ -38,30 +37,27 @@ def create_utility_node(
         ActionResultModel dict with ``context.node_name`` and
         ``context.node_type``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not node_type or not node_type.strip():
-            return error_result("Invalid node_type", "node_type must not be empty").to_dict()
+            return maya_error("Invalid node_type", "node_type must not be empty")
 
         node = cmds.shadingNode(node_type, asUtility=True)
 
         if name and name.strip():
             node = cmds.rename(node, name)
 
-        return success_result(
+        return maya_success(
             "Created utility node '{}' of type '{}'".format(node, node_type),
             node_name=node,
             node_type=node_type,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("create_utility_node failed")
-        return error_result("Failed to create utility node of type '{}'".format(node_type), str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to create utility node of type '{}'".format(node_type))
 
 def get_scene_statistics() -> dict:
     """Query scene-level statistics: polygon counts, node counts and memory.
@@ -82,7 +78,6 @@ def get_scene_statistics() -> dict:
         - ``light_count`` — number of light nodes
         - ``scene_file`` — current scene file path (empty string if unsaved)
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
@@ -124,7 +119,7 @@ def get_scene_statistics() -> dict:
         except Exception:
             scene_file = ""
 
-        return success_result(
+        return maya_success(
             "Scene statistics: {} nodes, {} meshes, {} poly verts".format(len(all_nodes), len(meshes), poly_verts),
             total_nodes=len(all_nodes),
             transform_count=len(transforms),
@@ -135,9 +130,8 @@ def get_scene_statistics() -> dict:
             camera_count=len(cameras),
             light_count=len(lights),
             scene_file=scene_file,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("get_scene_statistics failed")
-        return error_result("Failed to get scene statistics", str(exc)).to_dict()
+                return maya_from_exception(exc, "Failed to get scene statistics")

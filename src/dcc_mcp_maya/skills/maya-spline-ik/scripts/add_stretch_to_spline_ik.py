@@ -3,12 +3,11 @@
 # Import future modules
 from __future__ import annotations
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 # Import built-in modules
-import logging
 from typing import List
-
-logger = logging.getLogger(__name__)
-
 
 def add_stretch_to_spline_ik(
     ik_handle: str,
@@ -33,31 +32,30 @@ def add_stretch_to_spline_ik(
         ActionResultModel dict with ``context.curve_info``,
         ``context.multiply_divide``, and ``context.joints_driven``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         for name in [ik_handle, curve] + joints:
             if not cmds.objExists(name):
-                return error_result(
+                return maya_error(
                     "Node not found: {}".format(name),
                     "'{}' does not exist".format(name),
-                ).to_dict()
+                )
 
         if stretch_axis not in ("x", "y", "z"):
-            return error_result(
+            return maya_error(
                 "Invalid stretch_axis: {}".format(stretch_axis),
                 "Choose 'x', 'y', or 'z'.",
-            ).to_dict()
+            )
 
         # Get shape from curve transform
         shape = cmds.listRelatives(curve, shapes=True, type="nurbsCurve")
         if not shape:
-            return error_result(
+            return maya_error(
                 "No NURBS curve shape under '{}'".format(curve),
                 "Provide the transform of a NURBS curve.",
-            ).to_dict()
+            )
         curve_shape = shape[0]
 
         base_name = ik_handle.replace("ikHandle", "").strip("_") or "splineIK"
@@ -81,7 +79,7 @@ def add_stretch_to_spline_ik(
         for jnt in joints:
             cmds.connectAttr("{}.outputX".format(md), "{}.{}".format(jnt, scale_attr), force=True)
 
-        return success_result(
+        return maya_success(
             "Added stretch to {} joint(s) via '{}'".format(len(joints), ci),
             prompt="Animate the curve's CVs to see the joints stretch. "
             "Use bake_transforms to collapse the result before export.",
@@ -90,17 +88,14 @@ def add_stretch_to_spline_ik(
             joints_driven=joints,
             rest_length=rest_length,
             stretch_axis=stretch_axis,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("add_stretch_to_spline_ik failed")
-        return error_result("Failed to add stretch", str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to add stretch")
 
 def main(**kwargs):
     return add_stretch_to_spline_ik(**kwargs)
-
 
 if __name__ == "__main__":
     import json

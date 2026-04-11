@@ -3,12 +3,11 @@
 # Import future modules
 from __future__ import annotations
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 # Import built-in modules
-import logging
 from typing import Optional
-
-logger = logging.getLogger(__name__)
-
 
 def set_joint_limit(
     joint_name: str,
@@ -38,7 +37,6 @@ def set_joint_limit(
         ``context.axis``, ``context.min_angle``, ``context.max_angle``,
         ``context.enable``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     _VALID_AXES = ("x", "y", "z")
 
@@ -46,24 +44,24 @@ def set_joint_limit(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(joint_name):
-            return error_result(
+            return maya_error(
                 "Joint not found: {}".format(joint_name),
                 "'{}' does not exist in the scene".format(joint_name),
-            ).to_dict()
+            )
 
         node_type = cmds.objectType(joint_name)
         if node_type != "joint":
-            return error_result(
+            return maya_error(
                 "Not a joint: {}".format(joint_name),
                 "'{}' is of type '{}', expected 'joint'".format(joint_name, node_type),
-            ).to_dict()
+            )
 
         axis_lower = axis.lower()
         if axis_lower not in _VALID_AXES:
-            return error_result(
+            return maya_error(
                 "Invalid axis: {}".format(axis),
                 "axis must be one of {}".format(_VALID_AXES),
-            ).to_dict()
+            )
 
         axis_upper = axis_lower.upper()
         enable_attr_min = "minRot{}LimitEnable".format(axis_upper)
@@ -83,25 +81,22 @@ def set_joint_limit(
         actual_min = cmds.getAttr("{}.{}".format(joint_name, min_attr))
         actual_max = cmds.getAttr("{}.{}".format(joint_name, max_attr))
 
-        return success_result(
+        return maya_success(
             "Set rotation limit on '{}.{}': [{}, {}]".format(joint_name, axis_lower, actual_min, actual_max),
             joint_name=joint_name,
             axis=axis_lower,
             min_angle=actual_min,
             max_angle=actual_max,
             enable=enable,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("set_joint_limit failed")
-        return error_result("Failed to set joint limit on {}".format(joint_name), str(exc)).to_dict()
-
+        return maya_from_exception(exc, "Failed to set joint limit on {}".format(joint_name))
 
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`set_joint_limit`."""
     return set_joint_limit(**kwargs)
-
 
 if __name__ == "__main__":
     import json

@@ -4,11 +4,11 @@
 from __future__ import annotations
 
 # Import built-in modules
-import logging
 import os
 from typing import Optional
 
-logger = logging.getLogger(__name__)
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 
 def import_gpu_cache(
@@ -25,8 +25,6 @@ def import_gpu_cache(
         ActionResultModel dict with ``context.transform_node`` and
         ``context.cache_node``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
@@ -34,10 +32,10 @@ def import_gpu_cache(
             cmds.loadPlugin("gpuCache")
 
         if not os.path.isfile(file_path):
-            return error_result(
+            return maya_error(
                 "File not found: {}".format(file_path),
                 "The GPU cache file does not exist on disk.",
-            ).to_dict()
+            )
 
         # Create transform + gpuCache shape
         transform = cmds.createNode("transform", name=name or "gpuCache_import")
@@ -45,19 +43,18 @@ def import_gpu_cache(
         cmds.setAttr("{}.cacheFileName".format(cache_node), file_path, type="string")
         cmds.setAttr("{}.cacheGeomPath".format(cache_node), "|", type="string")
 
-        return success_result(
+        return maya_success(
             "Imported GPU cache '{}' as '{}'".format(os.path.basename(file_path), transform),
             prompt="Use refresh_gpu_cache if the file changes on disk. "
             "Use list_gpu_caches to inspect all loaded caches.",
             transform_node=transform,
             cache_node=cache_node,
             file_path=file_path,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("import_gpu_cache failed")
-        return error_result("Failed to import GPU cache", str(exc)).to_dict()
+        return maya_from_exception(exc, "Failed to import GPU cache")
 
 
 def main(**kwargs):

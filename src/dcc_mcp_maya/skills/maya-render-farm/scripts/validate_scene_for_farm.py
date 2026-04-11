@@ -3,12 +3,11 @@
 # Import future modules
 from __future__ import annotations
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 # Import built-in modules
-import logging
 import os
-
-logger = logging.getLogger(__name__)
-
 
 def validate_scene_for_farm() -> dict:
     """Check the open Maya scene for common farm-submission issues.
@@ -23,7 +22,6 @@ def validate_scene_for_farm() -> dict:
     Returns:
         ActionResultModel dict with ``context.issues`` list and ``context.valid`` flag.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
@@ -74,31 +72,28 @@ def validate_scene_for_farm() -> dict:
 
         valid = len(issues) == 0
         if valid:
-            return success_result(
+            return maya_success(
                 "Scene is valid for farm submission",
                 prompt="Use write_render_job to create a job spec for the render farm.",
                 valid=True,
                 issues=[],
                 scene_path=scene_path,
-            ).to_dict()
+            )
         else:
-            return success_result(
+            return maya_success(
                 "Scene has {} issue(s) that should be resolved before submission".format(len(issues)),
                 prompt="Fix the listed issues, then re-run validate_scene_for_farm.",
                 valid=False,
                 issues=issues,
                 scene_path=scene_path,
-            ).to_dict()
+            )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("validate_scene_for_farm failed")
-        return error_result("Failed to validate scene", str(exc)).to_dict()
-
+        return maya_from_exception(exc, "Failed to validate scene")
 
 def main(**kwargs):
     return validate_scene_for_farm(**kwargs)
-
 
 if __name__ == "__main__":
     import json

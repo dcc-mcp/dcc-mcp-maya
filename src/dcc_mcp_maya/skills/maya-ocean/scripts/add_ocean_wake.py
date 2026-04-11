@@ -4,11 +4,11 @@
 from __future__ import annotations
 
 # Import built-in modules
-import logging
 from typing import Optional
 
-logger = logging.getLogger(__name__)
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 def add_ocean_wake(
     shader: str,
@@ -25,16 +25,15 @@ def add_ocean_wake(
     Returns:
         ActionResultModel dict with ``context.wake_locator``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(shader):
-            return error_result(
+            return maya_error(
                 "Node not found",
                 "oceanShader '{}' does not exist".format(shader),
-            ).to_dict()
+            )
 
         locator_transform = cmds.spaceLocator(name="{}_wake_loc".format(shader))[0]
         cmds.setAttr("{}.waveHeightScale".format(shader), wake_size)
@@ -42,7 +41,7 @@ def add_ocean_wake(
         if wake_object and cmds.objExists(wake_object):
             cmds.parentConstraint(wake_object, locator_transform, maintainOffset=False)
 
-        return success_result(
+        return maya_success(
             "Ocean wake added",
             prompt=(
                 "Wake locator '{}' created. Animate the locator to simulate a moving vessel.".format(locator_transform)
@@ -50,17 +49,14 @@ def add_ocean_wake(
             wake_locator=locator_transform,
             shader=shader,
             wake_size=wake_size,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("add_ocean_wake failed")
-        return error_result("Failed to add ocean wake", str(exc)).to_dict()
-
+        return maya_from_exception(exc, "Failed to add ocean wake")
 
 def main(**kwargs):
     return add_ocean_wake(**kwargs)
-
 
 if __name__ == "__main__":
     import json

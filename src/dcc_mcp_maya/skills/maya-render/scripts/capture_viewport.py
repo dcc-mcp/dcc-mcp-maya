@@ -3,15 +3,14 @@
 # Import future modules
 from __future__ import annotations
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 # Import built-in modules
 import base64
-import logging
 import os
 import tempfile
 from typing import Optional
-
-logger = logging.getLogger(__name__)
-
 
 def capture_viewport(
     width: int = 1920,
@@ -31,7 +30,6 @@ def capture_viewport(
     Returns:
         ActionResultModel dict with ``context.image`` (base64 PNG string).
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
@@ -66,24 +64,21 @@ def capture_viewport(
         os.unlink(img_path)
 
         encoded = base64.b64encode(img_bytes).decode("ascii")
-        return success_result(
+        return maya_success(
             "Viewport captured ({}x{} @ frame {})".format(width, height, frame),
             image=encoded,
             width=width,
             height=height,
             frame=frame,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("capture_viewport failed")
-        return error_result("Failed to capture viewport", str(exc)).to_dict()
-
+        return maya_from_exception(exc, "Failed to capture viewport")
 
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`capture_viewport`."""
     return capture_viewport(**kwargs)
-
 
 if __name__ == "__main__":
     import json

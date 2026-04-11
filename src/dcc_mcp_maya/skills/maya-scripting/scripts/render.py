@@ -3,15 +3,14 @@
 # Import future modules
 from __future__ import annotations
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 # Import built-in modules
 import base64
-import logging
 import os
 import tempfile
 from typing import Optional
-
-logger = logging.getLogger(__name__)
-
 
 def set_render_settings(
     width: int = 1920,
@@ -33,7 +32,6 @@ def set_render_settings(
     Returns:
         ActionResultModel dict with applied render settings.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
@@ -54,13 +52,11 @@ def set_render_settings(
             cmds.setAttr("defaultRenderGlobals.currentRenderer", renderer, type="string")
             applied["renderer"] = renderer
 
-        return success_result("Render settings applied ({}x{})".format(width, height), **applied).to_dict()
+        return maya_success("Render settings applied ({}x{})".format(width, height), **applied)
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("set_render_settings failed")
-        return error_result("Failed to set render settings", str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to set render settings")
 
 def capture_viewport(
     width: int = 1920,
@@ -80,7 +76,6 @@ def capture_viewport(
     Returns:
         ActionResultModel dict with ``context.image`` (base64 PNG string).
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
@@ -115,19 +110,17 @@ def capture_viewport(
         os.unlink(img_path)
 
         encoded = base64.b64encode(img_bytes).decode("ascii")
-        return success_result(
+        return maya_success(
             "Viewport captured ({}x{} @ frame {})".format(width, height, frame),
             image=encoded,
             width=width,
             height=height,
             frame=frame,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("capture_viewport failed")
-        return error_result("Failed to capture viewport", str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to capture viewport")
 
 def import_file(
     file_path: str,
@@ -147,7 +140,6 @@ def import_file(
     Returns:
         ActionResultModel dict with ``context.imported_nodes`` list.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
@@ -160,18 +152,16 @@ def import_file(
 
         cmds.file(file_path, **kwargs)
         imported = cmds.ls(importedNodes=True) or []
-        return success_result(
+        return maya_success(
             "Imported {} node(s) from {}".format(len(imported), file_path),
             file_path=file_path,
             imported_nodes=imported,
             count=len(imported),
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("import_file failed")
-        return error_result("Failed to import file: {}".format(file_path), str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to import file: {}".format(file_path))
 
 def export_selection(
     file_path: str,
@@ -188,7 +178,6 @@ def export_selection(
     Returns:
         ActionResultModel dict.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
@@ -199,17 +188,15 @@ def export_selection(
             type=file_type,
             force=True,
         )
-        return success_result(
+        return maya_success(
             "Selection exported to {}".format(saved),
             file_path=saved,
             file_type=file_type,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("export_selection failed")
-        return error_result("Failed to export selection", str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to export selection")
 
 # Render quality preset mappings
 # Keys map to (globalQuality, shadingQuality, raytracingQuality) tuples
@@ -248,7 +235,6 @@ _RENDER_QUALITY_PRESETS = {
     },
 }
 
-
 def set_render_quality(preset: str = "medium") -> dict:
     """Apply a render quality preset to the Maya Software render globals.
 
@@ -263,14 +249,13 @@ def set_render_quality(preset: str = "medium") -> dict:
         ActionResultModel dict with ``context.preset`` and
         ``context.applied`` (dict of attribute names and values set).
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     preset_key = preset.lower()
     if preset_key not in _RENDER_QUALITY_PRESETS:
-        return error_result(
+        return maya_error(
             "Invalid preset: {}".format(preset),
             "Supported presets: {}".format(", ".join(sorted(_RENDER_QUALITY_PRESETS))),
-        ).to_dict()
+        )
 
     attrs = _RENDER_QUALITY_PRESETS[preset_key]
 
@@ -285,17 +270,15 @@ def set_render_quality(preset: str = "medium") -> dict:
                 cmds.setAttr(plug, value)
                 applied[attr_name] = value
 
-        return success_result(
+        return maya_success(
             "Applied '{}' render quality preset".format(preset_key),
             preset=preset_key,
             applied=applied,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("set_render_quality failed")
-        return error_result("Failed to set render quality preset '{}'".format(preset), str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to set render quality preset '{}'".format(preset))
 
 def get_scene_render_stats() -> dict:
     """Query a summary of the current scene render configuration.
@@ -311,7 +294,6 @@ def get_scene_render_stats() -> dict:
         - ``context.output_file_prefix``
         - ``context.quality`` — dict of quality attribute values
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
@@ -339,7 +321,7 @@ def get_scene_render_stats() -> dict:
             if cmds.objExists(plug):
                 quality[attr_name] = cmds.getAttr(plug)
 
-        return success_result(
+        return maya_success(
             "Scene render stats: {} @ {}x{}".format(renderer, width, height),
             renderer=renderer,
             width=width,
@@ -348,9 +330,8 @@ def get_scene_render_stats() -> dict:
             end_frame=end_frame,
             output_file_prefix=output_prefix,
             quality=quality,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("get_scene_render_stats failed")
-        return error_result("Failed to query scene render stats", str(exc)).to_dict()
+                return maya_from_exception(exc, "Failed to query scene render stats")

@@ -3,11 +3,8 @@
 # Import future modules
 from __future__ import annotations
 
-# Import built-in modules
-import logging
-
-logger = logging.getLogger(__name__)
-
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 def list_render_passes() -> dict:
     """List all render pass elements (renderPass and aiAOV nodes) in the scene.
@@ -16,7 +13,6 @@ def list_render_passes() -> dict:
         ActionResultModel dict with ``context.passes`` (list of dicts with
         ``name``, ``type``, ``enabled``) and ``context.count``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
@@ -36,22 +32,19 @@ def list_render_passes() -> dict:
                         pass
                 passes.append(info)
 
-        return success_result(
+        return maya_success(
             "Found {} render pass(es) in the scene".format(len(passes)),
             prompt="Use enable_render_pass to toggle or set_render_pass_output to configure paths.",
             passes=passes,
             count=len(passes),
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("list_render_passes failed")
-        return error_result("Failed to list render passes", str(exc)).to_dict()
-
+        return maya_from_exception(exc, "Failed to list render passes")
 
 def main(**kwargs):
     return list_render_passes(**kwargs)
-
 
 if __name__ == "__main__":
     import json

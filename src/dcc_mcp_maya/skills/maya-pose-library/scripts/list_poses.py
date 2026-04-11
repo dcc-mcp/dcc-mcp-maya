@@ -5,11 +5,10 @@ from __future__ import annotations
 
 # Import built-in modules
 import json
-import logging
 import os
 
-logger = logging.getLogger(__name__)
-
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 def list_poses(
     directory: str,
@@ -26,14 +25,13 @@ def list_poses(
         ActionResultModel dict with ``context.poses`` (list of dicts with
         ``file``, ``control_count``) and ``context.count``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         if not os.path.isdir(directory):
-            return error_result(
+            return maya_error(
                 "Directory not found: {}".format(directory),
                 "'{}'  does not exist on disk".format(directory),
-            ).to_dict()
+            )
 
         pose_files = []
 
@@ -62,21 +60,18 @@ def list_poses(
                 info["parse_error"] = True
             poses.append(info)
 
-        return success_result(
+        return maya_success(
             "Found {} pose file(s) in '{}'".format(len(poses), directory),
             prompt="Use load_pose with one of the listed file paths to apply a pose.",
             poses=poses,
             count=len(poses),
             directory=directory,
-        ).to_dict()
+        )
     except Exception as exc:
-        logger.exception("list_poses failed")
-        return error_result("Failed to list poses in '{}'".format(directory), str(exc)).to_dict()
-
+        return maya_from_exception(exc, "Failed to list poses in '{}'".format(directory))
 
 def main(**kwargs):
     return list_poses(**kwargs)
-
 
 if __name__ == "__main__":
     import json as _json

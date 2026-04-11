@@ -4,10 +4,10 @@
 from __future__ import annotations
 
 # Import built-in modules
-import logging
 from typing import Optional
 
-logger = logging.getLogger(__name__)
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 
 def create_proxy_mesh(
@@ -34,25 +34,23 @@ def create_proxy_mesh(
         ``context.original``, ``context.reduction``,
         ``context.face_count_before``, ``context.face_count_after``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     if not (0.0 <= reduction < 1.0):
-        return error_result(
+        return maya_error(
             "Invalid reduction: {}".format(reduction),
             "reduction must be in range [0.0, 1.0)",
-        ).to_dict()
+        )
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return error_result("Object not found: {}".format(object_name)).to_dict()
+            return maya_error("Object not found: {}".format(object_name), "")
 
         shapes = cmds.listRelatives(object_name, shapes=True, type="mesh") or []
         if not shapes:
             obj_type = cmds.objectType(object_name)
             if obj_type != "mesh":
-                return error_result("'{}' has no polygon mesh shape".format(object_name)).to_dict()
+                return maya_error("'{}' has no polygon mesh shape".format(object_name), "")
 
         # Record original face count
         face_count_before = cmds.polyEvaluate(object_name, face=True)
@@ -65,7 +63,7 @@ def create_proxy_mesh(
         dup_result = cmds.duplicate(object_name, **dup_kwargs)
         proxy = dup_result[0] if dup_result else None
         if not proxy:
-            return error_result("Failed to duplicate '{}'".format(object_name)).to_dict()
+            return maya_error("Failed to duplicate '{}'".format(object_name), "")
 
         # Apply polyReduce
         percentage = (1.0 - reduction) * 100.0
@@ -79,19 +77,18 @@ def create_proxy_mesh(
         face_count_after = cmds.polyEvaluate(proxy, face=True)
         face_count_after = face_count_after if isinstance(face_count_after, int) else 0
 
-        return success_result(
+        return maya_success(
             "Created proxy mesh '{}' from '{}' (reduction={})".format(proxy, object_name, reduction),
             proxy_mesh=proxy,
             original=object_name,
             reduction=reduction,
             face_count_before=face_count_before,
             face_count_after=face_count_after,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("create_proxy_mesh failed")
-        return error_result("Failed to create proxy mesh from '{}'".format(object_name), str(exc)).to_dict()
+        return maya_from_exception(exc, "Failed to create proxy mesh from '{}'".format(object_name))
 
 
 def main(**kwargs) -> dict:

@@ -3,12 +3,11 @@
 # Import future modules
 from __future__ import annotations
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 # Import built-in modules
-import logging
 from typing import List, Optional
-
-logger = logging.getLogger(__name__)
-
 
 def get_scene_statistics(
     include_memory: bool = True,
@@ -26,7 +25,6 @@ def get_scene_statistics(
         ``poly_vertex_count``, ``poly_face_count``, ``scene_file``,
         ``memory_mb`` (optional).
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     extra_types = node_types or []
 
@@ -72,25 +70,22 @@ def get_scene_statistics(
             key = "{}_count".format(nt)
             ctx[key] = len(cmds.ls(type=nt) or [])
 
-        return success_result(
+        return maya_success(
             "Scene statistics: {} nodes, {} meshes".format(total_nodes, len(meshes)),
             prompt=(
                 "Statistics gathered. Large scenes (>500k verts) may be slow to manipulate; "
                 "consider using proxy meshes."
             ),
             **ctx,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("get_scene_statistics failed")
-        return error_result("Failed to get scene statistics", str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to get scene statistics")
 
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`get_scene_statistics`."""
     return get_scene_statistics(**kwargs)
-
 
 if __name__ == "__main__":
     import json

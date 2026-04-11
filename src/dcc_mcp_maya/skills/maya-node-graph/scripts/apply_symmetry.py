@@ -4,10 +4,9 @@
 from __future__ import annotations
 
 # Import built-in modules
-import logging
 
-logger = logging.getLogger(__name__)
-
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 def apply_symmetry(
     object_name: str,
@@ -31,7 +30,6 @@ def apply_symmetry(
         ActionResultModel dict with ``context.object_name``,
         ``context.axis``, ``context.world_space``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     _VALID_AXES = ("x", "y", "z", "none")
 
@@ -39,17 +37,17 @@ def apply_symmetry(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return error_result(
+            return maya_error(
                 "Object not found: {}".format(object_name),
                 "'{}' does not exist in the scene".format(object_name),
-            ).to_dict()
+            )
 
         axis_lower = axis.lower()
         if axis_lower not in _VALID_AXES:
-            return error_result(
+            return maya_error(
                 "Invalid axis: {}".format(axis),
                 "axis must be one of {}".format(_VALID_AXES),
-            ).to_dict()
+            )
 
         if axis_lower == "none":
             cmds.symmetricModelling(symmetry=False)
@@ -62,25 +60,22 @@ def apply_symmetry(
                 about=space,
             )
 
-        return success_result(
+        return maya_success(
             "Applied {} symmetry on '{}' ({} space)".format(
                 axis_lower, object_name, "world" if world_space else "object"
             ),
             object_name=object_name,
             axis=axis_lower,
             world_space=world_space,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("apply_symmetry failed")
-        return error_result("Failed to apply symmetry on {}".format(object_name), str(exc)).to_dict()
-
+        return maya_from_exception(exc, "Failed to apply symmetry on {}".format(object_name))
 
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`apply_symmetry`."""
     return apply_symmetry(**kwargs)
-
 
 if __name__ == "__main__":
     import json

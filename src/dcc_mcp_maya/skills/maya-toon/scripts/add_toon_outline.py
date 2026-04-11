@@ -3,12 +3,11 @@
 # Import future modules
 from __future__ import annotations
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 # Import built-in modules
-import logging
 from typing import List, Optional
-
-logger = logging.getLogger(__name__)
-
 
 def add_toon_outline(
     objects: Optional[List[str]] = None,
@@ -28,7 +27,6 @@ def add_toon_outline(
     Returns:
         ActionResultModel dict with the created node name and linked objects.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
@@ -36,10 +34,10 @@ def add_toon_outline(
 
         targets = objects or (cmds.ls(selection=True) or [])
         if not targets:
-            return error_result(
+            return maya_error(
                 "No objects specified",
                 "Provide 'objects' or select meshes in Maya",
-            ).to_dict()
+            )
 
         # Resolve mesh shapes
         mesh_shapes = []
@@ -51,10 +49,10 @@ def add_toon_outline(
                 mesh_shapes.extend(shapes)
 
         if not mesh_shapes:
-            return error_result(
+            return maya_error(
                 "No mesh shapes found in the specified objects",
                 "Ensure the objects are polygon meshes",
-            ).to_dict()
+            )
 
         # Select meshes and run toon MEL command
         cmds.select(mesh_shapes, replace=True)
@@ -79,23 +77,20 @@ def add_toon_outline(
             if cmds.attributeQuery(attr, node=toon_node, exists=True):
                 cmds.setAttr("{}.{}".format(toon_node, attr), color[i])
 
-        return success_result(
+        return maya_success(
             "Added toon outline '{}' to {} mesh(es)".format(toon_node, len(mesh_shapes)),
             prompt="Use set_outline_width to adjust line width or list_toon_outlines to inspect.",
             toon_node=toon_node,
             meshes=mesh_shapes,
             line_width=line_width,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("add_toon_outline failed")
-        return error_result("Failed to add toon outline", str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to add toon outline")
 
 def main(**kwargs):
     return add_toon_outline(**kwargs)
-
 
 if __name__ == "__main__":
     import json

@@ -4,10 +4,10 @@
 from __future__ import annotations
 
 # Import built-in modules
-import logging
 from typing import Optional
 
-logger = logging.getLogger(__name__)
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 
 def list_blend_shapes(mesh: Optional[str] = None) -> dict:
@@ -21,17 +21,15 @@ def list_blend_shapes(mesh: Optional[str] = None) -> dict:
         ActionResultModel dict with ``context.blend_shapes`` (list of dicts with
         ``node``, ``base_mesh``, and ``target_count`` keys) and ``context.count``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if mesh:
             if not cmds.objExists(mesh):
-                return error_result(
+                return maya_error(
                     "Mesh not found: {}".format(mesh),
                     "'{}' does not exist in the scene".format(mesh),
-                ).to_dict()
+                )
             nodes = cmds.listHistory(mesh, type="blendShape") or []
         else:
             nodes = cmds.ls(type="blendShape") or []
@@ -57,17 +55,16 @@ def list_blend_shapes(mesh: Optional[str] = None) -> dict:
                 }
             )
 
-        return success_result(
+        return maya_success(
             "Found {} blend shape node(s)".format(len(results)),
             prompt=("Use get_blend_shape_weights to inspect targets, or set_blend_shape_weight to animate them."),
             blend_shapes=results,
             count=len(results),
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("list_blend_shapes failed")
-        return error_result("Failed to list blend shapes", str(exc)).to_dict()
+        return maya_from_exception(exc, "Failed to list blend shapes")
 
 
 def main(**kwargs):

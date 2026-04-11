@@ -4,11 +4,11 @@
 from __future__ import annotations
 
 # Import built-in modules
-import logging
 from typing import List, Optional
 
-logger = logging.getLogger(__name__)
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 def create_stroke(
     preset: str = "flowers/daisy.mel",
@@ -28,7 +28,6 @@ def create_stroke(
     Returns:
         ActionResultModel dict with ``stroke_node``, ``brush_node``, and ``preset``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
@@ -74,7 +73,7 @@ def create_stroke(
         new_brushes = [b for b in brush_nodes_after if b not in brush_before]
         brush_node = new_brushes[-1] if new_brushes else ""
 
-        return success_result(
+        return maya_success(
             "Paint Effects stroke created from preset '{}'".format(preset),
             prompt="Use attach_stroke_to_surface to paint on a surface or list_strokes to inspect.",
             stroke_node=stroke_node,
@@ -82,17 +81,14 @@ def create_stroke(
             brush_node=brush_node,
             preset=preset,
             curve=curve,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("create_stroke failed")
-        return error_result("Failed to create Paint Effects stroke", str(exc)).to_dict()
-
+        return maya_from_exception(exc, "Failed to create Paint Effects stroke")
 
 def main(**kwargs):
     return create_stroke(**kwargs)
-
 
 if __name__ == "__main__":
     import json

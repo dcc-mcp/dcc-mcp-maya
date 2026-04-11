@@ -3,12 +3,11 @@
 # Import future modules
 from __future__ import annotations
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 # Import built-in modules
-import logging
 from typing import List, Optional
-
-logger = logging.getLogger(__name__)
-
 
 def create_joint(
     name: Optional[str] = None,
@@ -33,23 +32,22 @@ def create_joint(
         ActionResultModel dict with ``context.object_name``,
         ``context.position``, and ``context.parent``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if parent and not cmds.objExists(parent):
-            return error_result(
+            return maya_error(
                 "Parent not found: {}".format(parent),
                 "'{}' does not exist in the scene".format(parent),
-            ).to_dict()
+            )
 
         pos = position or [0.0, 0.0, 0.0]
         if len(pos) != 3:
-            return error_result(
+            return maya_error(
                 "Invalid position",
                 "position must be a list of 3 floats, got: {}".format(pos),
-            ).to_dict()
+            )
 
         # Select parent first so joint is created as its child
         if parent:
@@ -63,18 +61,16 @@ def create_joint(
 
         joint_name = cmds.joint(**kwargs)
 
-        return success_result(
+        return maya_success(
             "Created joint '{}'".format(joint_name),
             object_name=joint_name,
             position=pos,
             parent=parent,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("create_joint failed")
-        return error_result("Failed to create joint", str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to create joint")
 
 def create_curve(
     points: Optional[List[List[float]]] = None,
@@ -97,7 +93,6 @@ def create_curve(
         ActionResultModel dict with ``context.object_name``,
         ``context.degree``, ``context.point_count``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
@@ -107,10 +102,10 @@ def create_curve(
             points = [[float(i), 0.0, 0.0] for i in range(degree + 2)]
 
         if len(points) < degree + 1:
-            return error_result(
+            return maya_error(
                 "Not enough control points",
                 "Need at least {} points for degree-{} curve, got {}".format(degree + 1, degree, len(points)),
-            ).to_dict()
+            )
 
         point_tuples = [(p[0], p[1], p[2]) for p in points]
         periodic_val = 2 if periodic else 0  # 0=open, 2=periodic
@@ -125,19 +120,17 @@ def create_curve(
 
         result = cmds.curve(**kwargs)
 
-        return success_result(
+        return maya_success(
             "Created NURBS curve '{}'".format(result),
             object_name=result,
             degree=degree,
             point_count=len(points),
             periodic=periodic,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("create_curve failed")
-        return error_result("Failed to create curve", str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to create curve")
 
 def set_joint_orient(
     joint_name: str,
@@ -160,23 +153,22 @@ def set_joint_orient(
         ActionResultModel dict with ``context.object_name`` and
         ``context.orient``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(joint_name):
-            return error_result(
+            return maya_error(
                 "Joint not found: {}".format(joint_name),
                 "'{}' does not exist in the scene".format(joint_name),
-            ).to_dict()
+            )
 
         node_type = cmds.objectType(joint_name)
         if node_type != "joint":
-            return error_result(
+            return maya_error(
                 "Not a joint: {}".format(joint_name),
                 "'{}' is of type '{}', expected 'joint'".format(joint_name, node_type),
-            ).to_dict()
+            )
 
         ox, oy, oz = (orient or [0.0, 0.0, 0.0])[:3]
         cmds.setAttr("{}.jointOrientX".format(joint_name), ox)
@@ -187,17 +179,15 @@ def set_joint_orient(
             for ax in ("X", "Y", "Z"):
                 cmds.setAttr("{}.segmentScaleCompensate".format(joint_name), True)
 
-        return success_result(
+        return maya_success(
             "Set joint orient on '{}' to [{}, {}, {}]".format(joint_name, ox, oy, oz),
             object_name=joint_name,
             orient=[ox, oy, oz],
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("set_joint_orient failed")
-        return error_result("Failed to set joint orient on {}".format(joint_name), str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to set joint orient on {}".format(joint_name))
 
 def mirror_joints(
     joint_name: str,
@@ -224,7 +214,6 @@ def mirror_joints(
     Returns:
         ActionResultModel dict with ``context.mirrored_joints`` list.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     _VALID_AXES = ("YZ", "XY", "XZ")
 
@@ -232,23 +221,23 @@ def mirror_joints(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(joint_name):
-            return error_result(
+            return maya_error(
                 "Joint not found: {}".format(joint_name),
                 "'{}' does not exist in the scene".format(joint_name),
-            ).to_dict()
+            )
 
         if mirror_axis not in _VALID_AXES:
-            return error_result(
+            return maya_error(
                 "Invalid mirror axis: {}".format(mirror_axis),
                 "mirror_axis must be one of {}".format(_VALID_AXES),
-            ).to_dict()
+            )
 
         sr = search_replace or ["L_", "R_"]
         if len(sr) != 2:
-            return error_result(
+            return maya_error(
                 "Invalid search_replace",
                 "search_replace must be a list of exactly two strings",
-            ).to_dict()
+            )
 
         axis_kwargs = {
             "YZ": {"mirrorYZ": True},
@@ -258,18 +247,16 @@ def mirror_joints(
 
         mirrored = cmds.mirrorJoint(joint_name, mirrorBehavior=mirror_behavior, searchReplace=sr, **axis_kwargs)
 
-        return success_result(
+        return maya_success(
             "Mirrored joint chain from '{}'".format(joint_name),
             source_joint=joint_name,
             mirrored_joints=list(mirrored) if mirrored else [],
             mirror_axis=mirror_axis,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("mirror_joints failed")
-        return error_result("Failed to mirror joints from {}".format(joint_name), str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to mirror joints from {}".format(joint_name))
 
 def create_ik_handle(
     start_joint: str,
@@ -292,7 +279,6 @@ def create_ik_handle(
         ActionResultModel dict with ``context.handle_name``,
         ``context.effector_name``, and ``context.solver``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     _VALID_SOLVERS = ("ikRPsolver", "ikSCsolver")
 
@@ -300,22 +286,22 @@ def create_ik_handle(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(start_joint):
-            return error_result(
+            return maya_error(
                 "Start joint not found: {}".format(start_joint),
                 "'{}' does not exist in the scene".format(start_joint),
-            ).to_dict()
+            )
 
         if not cmds.objExists(end_joint):
-            return error_result(
+            return maya_error(
                 "End joint not found: {}".format(end_joint),
                 "'{}' does not exist in the scene".format(end_joint),
-            ).to_dict()
+            )
 
         if solver not in _VALID_SOLVERS:
-            return error_result(
+            return maya_error(
                 "Invalid solver: {}".format(solver),
                 "solver must be one of {}".format(_VALID_SOLVERS),
-            ).to_dict()
+            )
 
         kwargs = {
             "startJoint": start_joint,
@@ -329,20 +315,18 @@ def create_ik_handle(
         handle_name = result[0]
         effector_name = result[1]
 
-        return success_result(
+        return maya_success(
             "Created IK handle '{}'".format(handle_name),
             handle_name=handle_name,
             effector_name=effector_name,
             start_joint=start_joint,
             end_joint=end_joint,
             solver=solver,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("create_ik_handle failed")
-        return error_result("Failed to create IK handle", str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to create IK handle")
 
 def assign_deformer(
     object_name: str,
@@ -361,7 +345,6 @@ def assign_deformer(
         ActionResultModel dict with ``context.deformer_name``,
         ``context.handle_name`` (for cluster/lattice) if applicable.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     _SUPPORTED = ("cluster", "blendShape", "lattice", "wrap", "bend", "twist", "flare", "sine", "squash", "wave")
 
@@ -369,16 +352,16 @@ def assign_deformer(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return error_result(
+            return maya_error(
                 "Object not found: {}".format(object_name),
                 "'{}' does not exist in the scene".format(object_name),
-            ).to_dict()
+            )
 
         if deformer_type not in _SUPPORTED:
-            return error_result(
+            return maya_error(
                 "Unsupported deformer type: {}".format(deformer_type),
                 "deformer_type must be one of {}".format(_SUPPORTED),
-            ).to_dict()
+            )
 
         cmds.select(object_name, replace=True)
 
@@ -386,51 +369,49 @@ def assign_deformer(
             result = cmds.cluster(object_name)
             deformer_name = result[0]
             handle_name = result[1] if len(result) > 1 else None
-            return success_result(
+            return maya_success(
                 "Applied cluster deformer to '{}'".format(object_name),
                 object_name=object_name,
                 deformer_name=deformer_name,
                 handle_name=handle_name,
                 deformer_type=deformer_type,
-            ).to_dict()
+            )
 
         if deformer_type == "lattice":
             result = cmds.lattice(object_name)
             deformer_name = result[0]
-            return success_result(
+            return maya_success(
                 "Applied lattice deformer to '{}'".format(object_name),
                 object_name=object_name,
                 deformer_name=deformer_name,
                 deformer_type=deformer_type,
-            ).to_dict()
+            )
 
         if deformer_type in ("bend", "twist", "flare", "sine", "squash", "wave"):
             result = cmds.nonLinear(object_name, type=deformer_type)
             deformer_name = result[0]
             handle_name = result[1] if len(result) > 1 else None
-            return success_result(
+            return maya_success(
                 "Applied {} deformer to '{}'".format(deformer_type, object_name),
                 object_name=object_name,
                 deformer_name=deformer_name,
                 handle_name=handle_name,
                 deformer_type=deformer_type,
-            ).to_dict()
+            )
 
         # blendShape / wrap — generic path
         result = cmds.deformer(object_name, type=deformer_type)
         deformer_name = result[0] if result else deformer_type
-        return success_result(
+        return maya_success(
             "Applied {} deformer to '{}'".format(deformer_type, object_name),
             object_name=object_name,
             deformer_name=deformer_name,
             deformer_type=deformer_type,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("assign_deformer failed")
-        return error_result("Failed to assign deformer to {}".format(object_name), str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to assign deformer to {}".format(object_name))
 
 def create_blend_shape(
     base_mesh: str,
@@ -451,24 +432,23 @@ def create_blend_shape(
         ActionResultModel dict with ``context.blend_shape_name``,
         ``context.target_count``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(base_mesh):
-            return error_result(
+            return maya_error(
                 "Base mesh not found: {}".format(base_mesh),
                 "'{}' does not exist in the scene".format(base_mesh),
-            ).to_dict()
+            )
 
         targets = target_meshes or []
         missing = [t for t in targets if not cmds.objExists(t)]
         if missing:
-            return error_result(
+            return maya_error(
                 "Target meshes not found: {}".format(", ".join(missing)),
                 "The following targets do not exist: {}".format(", ".join(missing)),
-            ).to_dict()
+            )
 
         all_meshes = targets + [base_mesh]
         kwargs = {"origin": origin}  # type: dict
@@ -478,19 +458,17 @@ def create_blend_shape(
         result = cmds.blendShape(*all_meshes, **kwargs)
         bs_name = result[0] if result else (name or "blendShape1")
 
-        return success_result(
+        return maya_success(
             "Created blend shape '{}' on '{}'".format(bs_name, base_mesh),
             blend_shape_name=bs_name,
             base_mesh=base_mesh,
             target_count=len(targets),
             targets=targets,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("create_blend_shape failed")
-        return error_result("Failed to create blend shape on {}".format(base_mesh), str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to create blend shape on {}".format(base_mesh))
 
 def skin_cluster_bind(
     joints: List[str],
@@ -517,29 +495,28 @@ def skin_cluster_bind(
         ActionResultModel dict with ``context.skin_cluster_name``,
         ``context.joint_count``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not joints:
-            return error_result(
+            return maya_error(
                 "No joints specified",
                 "joints list must contain at least one joint name",
-            ).to_dict()
+            )
 
         if not cmds.objExists(mesh):
-            return error_result(
+            return maya_error(
                 "Mesh not found: {}".format(mesh),
                 "'{}' does not exist in the scene".format(mesh),
-            ).to_dict()
+            )
 
         missing = [j for j in joints if not cmds.objExists(j)]
         if missing:
-            return error_result(
+            return maya_error(
                 "Joints not found: {}".format(", ".join(missing)),
                 "The following joints do not exist: {}".format(", ".join(missing)),
-            ).to_dict()
+            )
 
         objects = list(joints) + [mesh]
         kwargs = {
@@ -553,20 +530,18 @@ def skin_cluster_bind(
         result = cmds.skinCluster(*objects, **kwargs)
         sc_name = result[0] if result else (name or "skinCluster1")
 
-        return success_result(
+        return maya_success(
             "Bound '{}' to {} joint(s) via skin cluster '{}'".format(mesh, len(joints), sc_name),
             skin_cluster_name=sc_name,
             mesh=mesh,
             joint_count=len(joints),
             joints=joints,
             max_influences=max_influences,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("skin_cluster_bind failed")
-        return error_result("Failed to bind skin cluster on {}".format(mesh), str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to bind skin cluster on {}".format(mesh))
 
 def set_joint_limit(
     joint_name: str,
@@ -596,7 +571,6 @@ def set_joint_limit(
         ``context.axis``, ``context.min_angle``, ``context.max_angle``,
         ``context.enable``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     _VALID_AXES = ("x", "y", "z")
 
@@ -604,24 +578,24 @@ def set_joint_limit(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(joint_name):
-            return error_result(
+            return maya_error(
                 "Joint not found: {}".format(joint_name),
                 "'{}' does not exist in the scene".format(joint_name),
-            ).to_dict()
+            )
 
         node_type = cmds.objectType(joint_name)
         if node_type != "joint":
-            return error_result(
+            return maya_error(
                 "Not a joint: {}".format(joint_name),
                 "'{}' is of type '{}', expected 'joint'".format(joint_name, node_type),
-            ).to_dict()
+            )
 
         axis_lower = axis.lower()
         if axis_lower not in _VALID_AXES:
-            return error_result(
+            return maya_error(
                 "Invalid axis: {}".format(axis),
                 "axis must be one of {}".format(_VALID_AXES),
-            ).to_dict()
+            )
 
         axis_upper = axis_lower.upper()
         enable_attr_min = "minRot{}LimitEnable".format(axis_upper)
@@ -641,20 +615,18 @@ def set_joint_limit(
         actual_min = cmds.getAttr("{}.{}".format(joint_name, min_attr))
         actual_max = cmds.getAttr("{}.{}".format(joint_name, max_attr))
 
-        return success_result(
+        return maya_success(
             "Set rotation limit on '{}.{}': [{}, {}]".format(joint_name, axis_lower, actual_min, actual_max),
             joint_name=joint_name,
             axis=axis_lower,
             min_angle=actual_min,
             max_angle=actual_max,
             enable=enable,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("set_joint_limit failed")
-        return error_result("Failed to set joint limit on {}".format(joint_name), str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to set joint limit on {}".format(joint_name))
 
 def blend_shape_add_target(
     blend_shape: str,
@@ -676,26 +648,25 @@ def blend_shape_add_target(
         ActionResultModel dict with ``context.blend_shape``,
         ``context.target_mesh``, ``context.target_index``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     if not (0.0 <= weight <= 1.0):
-        return error_result(
+        return maya_error(
             "Invalid weight: {}".format(weight),
             "weight must be between 0.0 and 1.0",
-        ).to_dict()
+        )
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(blend_shape):
-            return error_result("Blend shape not found: {}".format(blend_shape)).to_dict()
+            return maya_error("Blend shape not found: {}".format(blend_shape))
 
         node_type = cmds.objectType(blend_shape)
         if node_type != "blendShape":
-            return error_result("'{}' is not a blendShape node (type: {})".format(blend_shape, node_type)).to_dict()
+            return maya_error("'{}' is not a blendShape node (type: {})".format(blend_shape, node_type))
 
         if not cmds.objExists(target_mesh):
-            return error_result("Target mesh not found: {}".format(target_mesh)).to_dict()
+            return maya_error("Target mesh not found: {}".format(target_mesh))
 
         # Determine target index
         if index is None:
@@ -715,19 +686,17 @@ def blend_shape_add_target(
             ),
         )
 
-        return success_result(
+        return maya_success(
             "Added target '{}' to blend shape '{}' at index {}".format(target_mesh, blend_shape, target_index),
             blend_shape=blend_shape,
             target_mesh=target_mesh,
             target_index=target_index,
             weight=weight,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("blend_shape_add_target failed")
-        return error_result("Failed to add blend shape target", str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to add blend shape target")
 
 def set_driven_key(
     driver_attr: str,
@@ -759,39 +728,38 @@ def set_driven_key(
         ActionResultModel dict with ``context.driver_attr``,
         ``context.driven_attrs``, ``context.key_count``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     _VALID_TANGENTS = ("linear", "smooth", "flat", "step")
 
     if not driver_values:
-        return error_result(
+        return maya_error(
             "driver_values cannot be empty",
             "Provide at least one driver value",
-        ).to_dict()
+        )
 
     if len(driven_values) != len(driver_values):
-        return error_result(
+        return maya_error(
             "Mismatched driver/driven value counts",
             "driven_values must have the same length as driver_values",
-        ).to_dict()
+        )
 
     if tangent_type not in _VALID_TANGENTS:
-        return error_result(
+        return maya_error(
             "Invalid tangent_type: {}".format(tangent_type),
             "Use one of: {}".format(", ".join(_VALID_TANGENTS)),
-        ).to_dict()
+        )
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         driver_obj = driver_attr.rsplit(".", 1)[0]
         if not cmds.objExists(driver_obj):
-            return error_result("Driver object not found: {}".format(driver_obj)).to_dict()
+            return maya_error("Driver object not found: {}".format(driver_obj))
 
         for da in driven_attrs:
             da_obj = da.rsplit(".", 1)[0]
             if not cmds.objExists(da_obj):
-                return error_result("Driven object not found: {}".format(da_obj)).to_dict()
+                return maya_error("Driven object not found: {}".format(da_obj))
 
         keys_set = 0
         for i, drv_val in enumerate(driver_values):
@@ -808,7 +776,7 @@ def set_driven_key(
                 )
                 keys_set += 1
 
-        return success_result(
+        return maya_success(
             "Set driven key: '{}' drives {} attr(s) with {} key(s)".format(
                 driver_attr, len(driven_attrs), len(driver_values)
             ),
@@ -817,13 +785,11 @@ def set_driven_key(
             key_count=len(driver_values),
             keys_set=keys_set,
             tangent_type=tangent_type,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("set_driven_key failed")
-        return error_result("Failed to set driven key", str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to set driven key")
 
 def set_ik_fk_blend(
     ik_handle: str,
@@ -846,47 +812,45 @@ def set_ik_fk_blend(
         ActionResultModel dict with ``context.ik_handle``,
         ``context.attribute``, ``context.blend``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     if not (0.0 <= blend <= 1.0):
-        return error_result(
+        return maya_error(
             "blend must be in the range [0.0, 1.0]",
             "Got blend={}".format(blend),
-        ).to_dict()
+        )
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(ik_handle):
-            return error_result(
+            return maya_error(
                 "IK handle not found: {}".format(ik_handle),
                 "'{}' does not exist in the scene".format(ik_handle),
-            ).to_dict()
+            )
 
         node_type = cmds.objectType(ik_handle)
         if node_type not in ("ikHandle", "transform"):
-            return error_result(
+            return maya_error(
                 "Not an IK handle: {}".format(ik_handle),
                 "'{}' is of type '{}'; expected 'ikHandle'".format(ik_handle, node_type),
-            ).to_dict()
+            )
 
         plug = "{}.{}".format(ik_handle, attribute)
         if not cmds.objExists(plug):
-            return error_result(
+            return maya_error(
                 "Attribute not found: {}".format(plug),
                 "IK handle '{}' does not have attribute '{}'".format(ik_handle, attribute),
-            ).to_dict()
+            )
 
         cmds.setAttr(plug, blend)
 
-        return success_result(
+        return maya_success(
             "Set IK/FK blend on '{}' to {}".format(ik_handle, blend),
             ik_handle=ik_handle,
             attribute=attribute,
             blend=blend,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("set_ik_fk_blend failed")
-        return error_result("Failed to set IK/FK blend on '{}'".format(ik_handle), str(exc)).to_dict()
+                return maya_from_exception(exc, "Failed to set IK/FK blend on '{}'".format(ik_handle))

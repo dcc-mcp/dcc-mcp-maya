@@ -3,12 +3,11 @@
 # Import future modules
 from __future__ import annotations
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 # Import built-in modules
-import logging
 from typing import Optional
-
-logger = logging.getLogger(__name__)
-
 
 def create_assembly_reference(
     definition: str,
@@ -25,13 +24,12 @@ def create_assembly_reference(
     Returns:
         ActionResultModel dict with ``context.ref_node`` and ``context.definition``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     if not definition:
-        return error_result(
+        return maya_error(
             "Missing parameter",
             "'definition' is required — provide an assembly definition node name or file path.",
-        ).to_dict()
+        )
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
@@ -50,23 +48,20 @@ def create_assembly_reference(
             except Exception:
                 pass
 
-        return success_result(
+        return maya_success(
             "Assembly reference '{}' created".format(ref_node),
             prompt="Reference instantiated. Use list_assemblies to manage LOD switching.",
             ref_node=ref_node,
             definition=definition,
             active_rep=active_rep or "",
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("create_assembly_reference failed")
-        return error_result("Failed to create assembly reference", str(exc)).to_dict()
-
+        return maya_from_exception(exc, "Failed to create assembly reference")
 
 def main(**kwargs):
     return create_assembly_reference(**kwargs)
-
 
 if __name__ == "__main__":
     import json

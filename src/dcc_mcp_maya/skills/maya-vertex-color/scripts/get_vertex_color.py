@@ -3,12 +3,11 @@
 # Import future modules
 from __future__ import annotations
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 # Import built-in modules
-import logging
 from typing import Optional
-
-logger = logging.getLogger(__name__)
-
 
 def get_vertex_color(
     object_name: str,
@@ -26,13 +25,12 @@ def get_vertex_color(
     Returns:
         ActionResultModel dict with color data.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return error_result("Object not found: {}".format(object_name)).to_dict()
+            return maya_error("Object not found: {}".format(object_name))
 
         color_sets = cmds.polyColorSet(object_name, query=True, allColorSets=True) or []
         current_set = cmds.polyColorSet(object_name, query=True, currentColorSet=True)
@@ -47,7 +45,7 @@ def get_vertex_color(
         if vertex_index is not None:
             component = "{}.vtx[{}]".format(object_name, vertex_index)
             if not cmds.objExists(component):
-                return error_result("Vertex {} not found on '{}'".format(vertex_index, object_name)).to_dict()
+                return maya_error("Vertex {} not found on '{}'".format(vertex_index, object_name))
 
             query_kwargs = {}  # type: dict
             if color_set:
@@ -63,18 +61,15 @@ def get_vertex_color(
                 result_kwargs["color"] = [1.0, 1.0, 1.0]
                 result_kwargs["alpha"] = 1.0
 
-        return success_result("Vertex color info for '{}'".format(object_name), **result_kwargs).to_dict()
+        return maya_success("Vertex color info for '{}'".format(object_name), **result_kwargs)
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("get_vertex_color failed")
-        return error_result("Failed to get vertex color", str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to get vertex color")
 
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`get_vertex_color`."""
     return get_vertex_color(**kwargs)
-
 
 if __name__ == "__main__":
     import json

@@ -3,11 +3,10 @@
 # Import future modules
 from __future__ import annotations
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 # Import built-in modules
-import logging
-
-logger = logging.getLogger(__name__)
-
 
 def delete_render_layer(layer_name: str) -> dict:
     """Delete a render layer from the scene.
@@ -22,28 +21,27 @@ def delete_render_layer(layer_name: str) -> dict:
     Returns:
         ActionResultModel dict with ``context.layer_name``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if layer_name == "defaultRenderLayer":
-            return error_result(
+            return maya_error(
                 "Cannot delete defaultRenderLayer",
                 "The defaultRenderLayer is protected and cannot be removed",
-            ).to_dict()
+            )
 
         if not cmds.objExists(layer_name):
-            return error_result(
+            return maya_error(
                 "Render layer not found: {}".format(layer_name),
                 "'{}' does not exist".format(layer_name),
-            ).to_dict()
+            )
 
         if cmds.objectType(layer_name) != "renderLayer":
-            return error_result(
+            return maya_error(
                 "Not a render layer: {}".format(layer_name),
                 "'{}' is of type '{}'".format(layer_name, cmds.objectType(layer_name)),
-            ).to_dict()
+            )
 
         # Switch to defaultRenderLayer if this is the current layer
         current = cmds.editRenderLayerGlobals(query=True, currentRenderLayer=True)
@@ -52,21 +50,18 @@ def delete_render_layer(layer_name: str) -> dict:
 
         cmds.delete(layer_name)
 
-        return success_result(
+        return maya_success(
             "Deleted render layer '{}'".format(layer_name),
             layer_name=layer_name,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("delete_render_layer failed")
-        return error_result("Failed to delete render layer '{}'".format(layer_name), str(exc)).to_dict()
-
+        return maya_from_exception(exc, "Failed to delete render layer '{}'".format(layer_name))
 
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`delete_render_layer`."""
     return delete_render_layer(**kwargs)
-
 
 if __name__ == "__main__":
     import json

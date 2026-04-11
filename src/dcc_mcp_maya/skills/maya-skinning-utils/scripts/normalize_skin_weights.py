@@ -3,11 +3,10 @@
 # Import future modules
 from __future__ import annotations
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 # Import built-in modules
-import logging
-
-logger = logging.getLogger(__name__)
-
 
 def normalize_skin_weights(
     mesh: str,
@@ -23,45 +22,41 @@ def normalize_skin_weights(
     Returns:
         ActionResultModel dict with ``context.skin_cluster_name``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(mesh):
-            return error_result(
+            return maya_error(
                 "Mesh not found: {}".format(mesh),
                 "'{}' does not exist in the scene".format(mesh),
-            ).to_dict()
+            )
 
         sc_list = cmds.ls(cmds.listHistory(mesh) or [], type="skinCluster")
         if not sc_list:
-            return error_result(
+            return maya_error(
                 "No skin cluster on: {}".format(mesh),
                 "'{}' has no skinCluster in its history".format(mesh),
-            ).to_dict()
+            )
 
         sc = sc_list[0]
         cmds.setAttr("{}.normalizeWeights".format(sc), normalize_weights)
         cmds.skinPercent(sc, mesh, normalize=True)
 
-        return success_result(
+        return maya_success(
             "Normalized skin weights on '{}' (cluster: '{}')".format(mesh, sc),
             prompt="Use prune_skin_weights to remove low-influence joints after normalizing.",
             mesh=mesh,
             skin_cluster_name=sc,
             normalize_weights=normalize_weights,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("normalize_skin_weights failed")
-        return error_result("Failed to normalize skin weights on '{}'".format(mesh), str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to normalize skin weights on '{}'".format(mesh))
 
 def main(**kwargs):
     return normalize_skin_weights(**kwargs)
-
 
 if __name__ == "__main__":
     import json

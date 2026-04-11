@@ -4,10 +4,10 @@
 from __future__ import annotations
 
 # Import built-in modules
-import logging
 from typing import Optional
 
-logger = logging.getLogger(__name__)
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 # Standard Arnold AOV types
 _STANDARD_AOV_TYPES = {
@@ -30,7 +30,6 @@ _STANDARD_AOV_TYPES = {
     "crypto_material": "FLOAT",
 }
 
-
 def add_aov(
     name: str,
     aov_type: Optional[str] = None,
@@ -52,13 +51,11 @@ def add_aov(
     Returns:
         ActionResultModel dict with ``context.aov_node``, ``context.aov_type``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not name:
-            return error_result("AOV name is required", "Provide a non-empty AOV name").to_dict()
+            return maya_error("AOV name is required", "Provide a non-empty AOV name")
 
         # Resolve type — check both original case and lowercase for case-insensitive lookup
         resolved_type = aov_type or _STANDARD_AOV_TYPES.get(name) or _STANDARD_AOV_TYPES.get(name.lower(), "RGB")
@@ -67,10 +64,10 @@ def add_aov(
         existing = cmds.ls(type="aiAOV") or []
         for node in existing:
             if cmds.getAttr("{}.name".format(node)) == name:
-                return error_result(
+                return maya_error(
                     "AOV '{}' already exists".format(name),
                     "Delete the existing AOV before adding a new one with the same name",
-                ).to_dict()
+                )
 
         # Create aiAOV node
         aov_node = cmds.createNode("aiAOV", name="aiAOV_{}".format(name))
@@ -87,37 +84,32 @@ def add_aov(
                 force=True,
             )
 
-        return success_result(
+        return maya_success(
             "Added Arnold AOV '{}' ({})".format(name, resolved_type),
             prompt="Use set_aov_attribute to configure filters or drivers, or enable_aov to toggle it.",
             aov_node=aov_node,
             aov_name=name,
             aov_type=resolved_type,
             enabled=enabled,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("add_aov failed")
-        return error_result("Failed to add AOV '{}'".format(name), str(exc)).to_dict()
-
+        return maya_from_exception(exc, "Failed to add AOV '{}'".format(name))
 
 def _type_to_int(type_str: str) -> int:
     """Map Arnold AOV type string to integer index."""
     _map = {"RGBA": 4, "RGB": 3, "VECTOR": 5, "FLOAT": 1, "INT": 2}
     return _map.get(type_str.upper(), 3)
 
-
 def _get_next_aov_index(cmds) -> int:  # type: ignore[no-untyped-def]
     """Return the next unused index in the Arnold render options AOV list."""
     existing = cmds.getAttr("defaultArnoldRenderOptions.aovList", multiIndices=True) or []
     return max(existing) + 1 if existing else 0
 
-
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`add_aov`."""
     return add_aov(**kwargs)
-
 
 if __name__ == "__main__":
     import json

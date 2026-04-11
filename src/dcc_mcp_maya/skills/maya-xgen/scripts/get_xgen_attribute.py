@@ -1,7 +1,7 @@
 """Get an attribute value from an XGen description."""
 
-from dcc_mcp_core import error_result, success_result
-
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_success
 
 def run(params):
     """Get an XGen attribute value.
@@ -21,7 +21,7 @@ def run(params):
     attribute = params.get("attribute")
 
     if not all([collection, description, attribute]):
-        return error_result(
+        return maya_error(
             "Missing required parameters",
             "'collection', 'description', and 'attribute' are all required",
         )
@@ -32,7 +32,7 @@ def run(params):
         import xgenm as xg
 
         value = xg.getAttr(attribute, collection, description, object_name)
-        return success_result(
+        return maya_success(
             "{}.{} = {}".format(description, attribute, value),
             prompt="Use set_xgen_attribute to modify this value.",
             collection=collection,
@@ -41,4 +41,4 @@ def run(params):
             value=value,
         )
     except Exception as exc:
-        return error_result("Failed to get XGen attribute", str(exc))
+        return maya_error("Failed to get XGen attribute", str(exc))

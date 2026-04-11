@@ -4,9 +4,10 @@
 from __future__ import annotations
 
 # Import built-in modules
-import logging
 
-logger = logging.getLogger(__name__)
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 
 
 def remove_audio(sound_node: str) -> dict:
@@ -18,36 +19,33 @@ def remove_audio(sound_node: str) -> dict:
     Returns:
         ActionResultModel dict with ``context.deleted_node``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(sound_node):
-            return error_result(
+            return maya_error(
                 "Sound node not found: {}".format(sound_node),
                 "'{}' does not exist in the scene".format(sound_node),
-            ).to_dict()
+            )
 
         node_type = cmds.objectType(sound_node)
         if node_type != "audio":
-            return error_result(
+            return maya_error(
                 "Not a sound node: {}".format(sound_node),
                 "Expected an 'audio' node, got '{}'".format(node_type),
-            ).to_dict()
+            )
 
         cmds.delete(sound_node)
 
-        return success_result(
+        return maya_success(
             "Deleted sound node '{}'".format(sound_node),
             prompt="Use list_audio to confirm deletion.",
             deleted_node=sound_node,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("remove_audio failed")
-        return error_result("Failed to remove audio", str(exc)).to_dict()
+        return maya_from_exception(exc, "Failed to remove audio")
 
 
 def main(**kwargs):

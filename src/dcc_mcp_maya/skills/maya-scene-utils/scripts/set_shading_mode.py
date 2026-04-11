@@ -3,12 +3,11 @@
 # Import future modules
 from __future__ import annotations
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 # Import built-in modules
-import logging
 from typing import Optional
-
-logger = logging.getLogger(__name__)
-
 
 def set_shading_mode(
     mode: str = "smooth",
@@ -33,7 +32,6 @@ def set_shading_mode(
     Returns:
         ActionResultModel dict with ``context.mode``, ``context.panel``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     _MODE_MAP = {
         "wireframe": ("wireframeOnShaded", False),
@@ -45,10 +43,10 @@ def set_shading_mode(
 
     mode_lower = mode.lower()
     if mode_lower not in _MODE_MAP:
-        return error_result(
+        return maya_error(
             "Invalid mode: {}".format(mode),
             "mode must be one of {}".format(sorted(_MODE_MAP.keys())),
-        ).to_dict()
+        )
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
@@ -56,18 +54,18 @@ def set_shading_mode(
         # Resolve target panel
         if panel:
             if not cmds.modelPanel(panel, query=True, exists=True):
-                return error_result(
+                return maya_error(
                     "Panel not found: {}".format(panel),
                     "'{}' is not a valid model panel".format(panel),
-                ).to_dict()
+                )
             target_panel = panel
         else:
             panels = cmds.getPanel(type="modelPanel") or []
             if not panels:
-                return error_result(
+                return maya_error(
                     "No model panels found",
                     "Could not locate any Maya model view panel",
-                ).to_dict()
+                )
             target_panel = panels[0]
 
         # Apply the shading mode
@@ -82,22 +80,19 @@ def set_shading_mode(
         elif mode_lower == "bounding_box":
             cmds.modelEditor(target_panel, edit=True, displayAppearance="boundingBox", displayTextures=False)
 
-        return success_result(
+        return maya_success(
             "Set shading mode to '{}' on panel '{}'".format(mode_lower, target_panel),
             mode=mode_lower,
             panel=target_panel,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("set_shading_mode failed")
-        return error_result("Failed to set shading mode", str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to set shading mode")
 
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`set_shading_mode`."""
     return set_shading_mode(**kwargs)
-
 
 if __name__ == "__main__":
     import json

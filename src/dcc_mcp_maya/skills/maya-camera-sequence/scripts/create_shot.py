@@ -4,10 +4,10 @@
 from __future__ import annotations
 
 # Import built-in modules
-import logging
 from typing import Optional
 
-logger = logging.getLogger(__name__)
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 
 def create_shot(
@@ -31,16 +31,14 @@ def create_shot(
         ActionResultModel dict with ``shot_node``, ``camera``, ``start_frame``,
         ``end_frame``, and ``sequence_start_frame``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(camera):
-            return error_result(
+            return maya_error(
                 "Camera not found: {}".format(camera),
                 "Create the camera first or verify its name",
-            ).to_dict()
+            )
 
         seq_start = sequence_start_frame if sequence_start_frame is not None else start_frame
 
@@ -56,7 +54,7 @@ def create_shot(
 
         shot_node = cmds.shot(**shot_kwargs)
 
-        return success_result(
+        return maya_success(
             "Created shot '{}' for camera '{}' [{}-{}]".format(shot_node, camera, start_frame, end_frame),
             prompt="Use list_shots to view sequence order or set_shot_range to adjust timing.",
             shot_node=shot_node,
@@ -64,12 +62,11 @@ def create_shot(
             start_frame=start_frame,
             end_frame=end_frame,
             sequence_start_frame=seq_start,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("create_shot failed")
-        return error_result("Failed to create shot", str(exc)).to_dict()
+        return maya_from_exception(exc, "Failed to create shot")
 
 
 def main(**kwargs):

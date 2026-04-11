@@ -4,10 +4,7 @@
 from __future__ import annotations
 
 # Import built-in modules
-import logging
 from typing import List, Optional
-
-logger = logging.getLogger(__name__)
 
 _FIELD_TYPES = {
     "gravity": "gravity",
@@ -20,6 +17,8 @@ _FIELD_TYPES = {
     "air": "air",
 }
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 def add_field_to_nparticles(
     particle_shapes: Optional[List[str]] = None,
@@ -41,24 +40,23 @@ def add_field_to_nparticles(
     Returns:
         ActionResultModel dict with the field node name and connected particles.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         ft = field_type.lower()
         if ft not in _FIELD_TYPES:
-            return error_result(
+            return maya_error(
                 "Unknown field type '{}'".format(field_type),
                 "Valid types: {}".format(", ".join(sorted(_FIELD_TYPES))),
-            ).to_dict()
+            )
 
         targets = particle_shapes or (cmds.ls(type="nParticle") or [])
         if not targets:
-            return error_result(
+            return maya_error(
                 "No nParticle shapes found",
                 "Create nParticle systems first with create_nparticle_emitter",
-            ).to_dict()
+            )
 
         cmds.select(targets, replace=True)
 
@@ -78,7 +76,7 @@ def add_field_to_nparticles(
             shapes = cmds.listRelatives(field_transform, shapes=True) or []
             field_shapes = shapes
 
-        return success_result(
+        return maya_success(
             "Added '{}' field to {} nParticle system(s)".format(field_type, len(targets)),
             prompt="Scrub the timeline to see the field affecting the particles.",
             field_transform=field_transform,
@@ -86,17 +84,14 @@ def add_field_to_nparticles(
             field_type=field_type,
             magnitude=magnitude,
             connected_particles=targets,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("add_field_to_nparticles failed")
-        return error_result("Failed to add field '{}'".format(field_type), str(exc)).to_dict()
-
+        return maya_from_exception(exc, "Failed to add field '{}'".format(field_type))
 
 def main(**kwargs):
     return add_field_to_nparticles(**kwargs)
-
 
 if __name__ == "__main__":
     import json

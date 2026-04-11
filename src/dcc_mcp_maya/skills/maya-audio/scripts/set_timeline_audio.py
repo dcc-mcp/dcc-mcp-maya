@@ -4,9 +4,10 @@
 from __future__ import annotations
 
 # Import built-in modules
-import logging
 
-logger = logging.getLogger(__name__)
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 
 
 def set_timeline_audio(sound_node: str) -> dict:
@@ -21,24 +22,22 @@ def set_timeline_audio(sound_node: str) -> dict:
     Returns:
         ActionResultModel dict with ``context.sound_node``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     try:
         import maya.cmds as cmds  # noqa: PLC0415
         import maya.mel as mel  # noqa: PLC0415
 
         if not cmds.objExists(sound_node):
-            return error_result(
+            return maya_error(
                 "Sound node not found: {}".format(sound_node),
                 "Use import_audio to create a sound node first.",
-            ).to_dict()
+            )
 
         node_type = cmds.objectType(sound_node)
         if node_type != "audio":
-            return error_result(
+            return maya_error(
                 "Not a sound node: {}".format(sound_node),
                 "Expected an 'audio' node, got '{}'".format(node_type),
-            ).to_dict()
+            )
 
         # Connect to the timeline via the playbackOptions sound attribute
         cmds.timeControl(
@@ -48,16 +47,15 @@ def set_timeline_audio(sound_node: str) -> dict:
             displaySound=True,
         )
 
-        return success_result(
+        return maya_success(
             "Set timeline audio to '{}'".format(sound_node),
             prompt="Press play in Maya to hear the audio.",
             sound_node=sound_node,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("set_timeline_audio failed")
-        return error_result("Failed to set timeline audio", str(exc)).to_dict()
+        return maya_from_exception(exc, "Failed to set timeline audio")
 
 
 def main(**kwargs):

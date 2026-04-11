@@ -4,10 +4,10 @@
 from __future__ import annotations
 
 # Import built-in modules
-import logging
 
-logger = logging.getLogger(__name__)
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 def create_ocean(
     name: str = "ocean_surface",
@@ -27,7 +27,6 @@ def create_ocean(
         ActionResultModel dict with ``context.ocean_transform``,
         ``context.shader_name``, and ``context.shading_group``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
@@ -55,7 +54,7 @@ def create_ocean(
         )
         cmds.sets(ocean_transform, edit=True, forceElement=shading_group)
 
-        return success_result(
+        return maya_success(
             "Ocean surface created",
             prompt=(
                 "Ocean surface '{}' created with shader '{}'. "
@@ -64,17 +63,14 @@ def create_ocean(
             ocean_transform=ocean_transform,
             shader_name=shader,
             shading_group=shading_group,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("create_ocean failed")
-        return error_result("Failed to create ocean surface", str(exc)).to_dict()
-
+        return maya_from_exception(exc, "Failed to create ocean surface")
 
 def main(**kwargs):
     return create_ocean(**kwargs)
-
 
 if __name__ == "__main__":
     import json

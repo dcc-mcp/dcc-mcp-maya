@@ -3,12 +3,12 @@
 # Import future modules
 from __future__ import annotations
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 # Import built-in modules
-import logging
 import os
 from typing import List, Optional
-
-logger = logging.getLogger(__name__)
 
 _VALID_MAP_TYPES = {
     "normals",
@@ -17,7 +17,6 @@ _VALID_MAP_TYPES = {
     "shading",
     "ambientOcclusion",
 }
-
 
 def transfer_maps(
     source: str,
@@ -48,25 +47,24 @@ def transfer_maps(
     Returns:
         ActionResultModel dict with ``baked_files``, ``source``, ``target``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         for node in (source, target):
             if not cmds.objExists(node):
-                return error_result(
+                return maya_error(
                     "Object not found: {}".format(node),
                     "Verify both source and target mesh names",
-                ).to_dict()
+                )
 
         bake_types = map_types or ["normals"]
         invalid = [t for t in bake_types if t not in _VALID_MAP_TYPES]
         if invalid:
-            return error_result(
+            return maya_error(
                 "Invalid map types: {}".format(invalid),
                 "Valid types: {}".format(sorted(_VALID_MAP_TYPES)),
-            ).to_dict()
+            )
 
         if not os.path.isdir(output_dir):
             os.makedirs(output_dir)
@@ -89,24 +87,21 @@ def transfer_maps(
             )
             baked_files.append(out_file)
 
-        return success_result(
+        return maya_success(
             "Transferred {} map(s) from '{}' to '{}'".format(len(baked_files), source, target),
             prompt="Check output_dir for baked textures. Assign them to the target material.",
             baked_files=baked_files,
             source=source,
             target=target,
             resolution=resolution,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("transfer_maps failed")
-        return error_result("Failed to transfer maps", str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to transfer maps")
 
 def main(**kwargs):
     return transfer_maps(**kwargs)
-
 
 if __name__ == "__main__":
     import json

@@ -3,14 +3,13 @@
 # Import future modules
 from __future__ import annotations
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 # Import built-in modules
-import logging
 from typing import Any, List, Optional
 
-logger = logging.getLogger(__name__)
-
 _SUPPORTED_SHADERS = ("lambert", "blinn", "phong", "phongE", "aiStandardSurface")
-
 
 def create_material(
     shader_type: str = "lambert",
@@ -27,7 +26,6 @@ def create_material(
         ActionResultModel dict with ``context.material_name`` and
         ``context.shading_group``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
@@ -37,18 +35,16 @@ def create_material(
             mat = cmds.rename(mat, name)
         sg = cmds.sets(renderable=True, noSurfaceShader=True, empty=True, name="{}_SG".format(mat))
         cmds.connectAttr("{}.outColor".format(mat), "{}.surfaceShader".format(sg), force=True)
-        return success_result(
+        return maya_success(
             "Created material: {}".format(mat),
             material_name=mat,
             shader_type=shader_type,
             shading_group=sg,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("create_material failed")
-        return error_result("Failed to create material", str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to create material")
 
 def assign_material(material_name: str, objects: List[str]) -> dict:
     """Assign a material to one or more objects.
@@ -60,7 +56,6 @@ def assign_material(material_name: str, objects: List[str]) -> dict:
     Returns:
         ActionResultModel dict.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
@@ -72,33 +67,31 @@ def assign_material(material_name: str, objects: List[str]) -> dict:
                 type="shadingEngine",
             )
             if not connections:
-                return error_result(
+                return maya_error(
                     "No shading group found for '{}'".format(material_name),
                     "Connect material to a shading group first or use assign_material with the SG name",
-                ).to_dict()
+                )
             sg = connections[0]
         else:
             sg = material_name
 
         existing = cmds.ls(objects)
         if not existing:
-            return error_result(
+            return maya_error(
                 "No objects found",
                 "None of the requested objects exist: {}".format(objects),
-            ).to_dict()
+            )
 
         cmds.sets(existing, edit=True, forceElement=sg)
-        return success_result(
+        return maya_success(
             "Assigned '{}' to {} object(s)".format(sg, len(existing)),
             shading_group=sg,
             objects=existing,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("assign_material failed")
-        return error_result("Failed to assign material", str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to assign material")
 
 def set_material_attribute(
     material_name: str,
@@ -115,16 +108,15 @@ def set_material_attribute(
     Returns:
         ActionResultModel dict.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(material_name):
-            return error_result(
+            return maya_error(
                 "Material not found: {}".format(material_name),
                 "'{}' does not exist".format(material_name),
-            ).to_dict()
+            )
 
         attr_path = "{}.{}".format(material_name, attribute)
         if isinstance(value, (list, tuple)):
@@ -132,18 +124,16 @@ def set_material_attribute(
         else:
             cmds.setAttr(attr_path, value)
 
-        return success_result(
+        return maya_success(
             "Set {}.{} = {}".format(material_name, attribute, value),
             material_name=material_name,
             attribute=attribute,
             value=value,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("set_material_attribute failed")
-        return error_result("Failed to set material attribute", str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to set material attribute")
 
 def list_materials(shader_type: Optional[str] = None) -> dict:
     """List all material nodes in the scene.
@@ -154,7 +144,6 @@ def list_materials(shader_type: Optional[str] = None) -> dict:
     Returns:
         ActionResultModel dict with ``context.materials`` list.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
@@ -175,17 +164,15 @@ def list_materials(shader_type: Optional[str] = None) -> dict:
                     seen.add(m)
                     materials.append(m)
 
-        return success_result(
+        return maya_success(
             "Found {} material(s)".format(len(materials)),
             materials=materials,
             count=len(materials),
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("list_materials failed")
-        return error_result("Failed to list materials", str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to list materials")
 
 def get_shader_assignment(object_name: str) -> dict:
     """Query which shader (material) is assigned to an object or face set.
@@ -198,16 +185,15 @@ def get_shader_assignment(object_name: str) -> dict:
         ActionResultModel dict with ``context.shading_groups`` — a list of
         dicts with ``shading_group`` and ``material`` keys.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return error_result(
+            return maya_error(
                 "Object not found: {}".format(object_name),
                 "'{}' does not exist in the scene".format(object_name),
-            ).to_dict()
+            )
 
         # Resolve shading engines connected to the shape(s)
         shapes = cmds.listRelatives(object_name, shapes=True, fullPath=True) or []
@@ -229,18 +215,16 @@ def get_shader_assignment(object_name: str) -> dict:
                 material = shaders[0] if shaders else ""
                 shading_groups.append({"shading_group": sg, "material": material})
 
-        return success_result(
+        return maya_success(
             "Found {} shading group(s) on '{}'".format(len(shading_groups), object_name),
             object_name=object_name,
             shading_groups=shading_groups,
             count=len(shading_groups),
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("get_shader_assignment failed")
-        return error_result("Failed to get shader assignment for '{}'".format(object_name), str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to get shader assignment for '{}'".format(object_name))
 
 def get_material_connections(material_name: str) -> dict:
     """List all nodes connected to a material (textures, utilities, etc.).
@@ -256,16 +240,15 @@ def get_material_connections(material_name: str) -> dict:
         with ``source_node``, ``source_attr``, ``dest_attr``, ``node_type``
         keys, and ``context.count``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(material_name):
-            return error_result(
+            return maya_error(
                 "Material not found: {}".format(material_name),
                 "'{}' does not exist in the scene".format(material_name),
-            ).to_dict()
+            )
 
         # List all source plugs connected into this material
         raw_connections = (
@@ -301,18 +284,16 @@ def get_material_connections(material_name: str) -> dict:
             )
             i += 2
 
-        return success_result(
+        return maya_success(
             "Found {} connection(s) into material '{}'".format(len(connections), material_name),
             material_name=material_name,
             connections=connections,
             count=len(connections),
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("get_material_connections failed")
-        return error_result("Failed to get connections for material '{}'".format(material_name), str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to get connections for material '{}'".format(material_name))
 
 def list_shading_groups() -> dict:
     """List all shading engine (shadingEngine) nodes in the current scene.
@@ -325,7 +306,6 @@ def list_shading_groups() -> dict:
         dicts with ``name``, ``surface_shader``, ``shader_type``,
         ``member_count`` keys, and ``context.count``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
@@ -350,17 +330,15 @@ def list_shading_groups() -> dict:
                 }
             )
 
-        return success_result(
+        return maya_success(
             "Found {} shading group(s)".format(len(result)),
             shading_groups=result,
             count=len(result),
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("list_shading_groups failed")
-        return error_result("Failed to list shading groups", str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to list shading groups")
 
 def reset_to_default_material(object_name: str) -> dict:
     """Assign the built-in ``lambert1`` (initialShadingGroup) to an object.
@@ -374,27 +352,25 @@ def reset_to_default_material(object_name: str) -> dict:
     Returns:
         ActionResultModel dict with ``context.object_name``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return error_result(
+            return maya_error(
                 "Object not found: {}".format(object_name),
                 "'{}' does not exist in the scene".format(object_name),
-            ).to_dict()
+            )
 
         cmds.sets(object_name, edit=True, forceElement="initialShadingGroup")
 
-        return success_result(
+        return maya_success(
             "Reset '{}' to default material (lambert1)".format(object_name),
             object_name=object_name,
             shading_group="initialShadingGroup",
             material="lambert1",
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("reset_to_default_material failed")
-        return error_result("Failed to reset material for '{}'".format(object_name), str(exc)).to_dict()
+                return maya_from_exception(exc, "Failed to reset material for '{}'".format(object_name))

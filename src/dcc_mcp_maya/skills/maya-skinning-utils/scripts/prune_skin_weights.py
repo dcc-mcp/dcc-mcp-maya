@@ -3,11 +3,10 @@
 # Import future modules
 from __future__ import annotations
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 # Import built-in modules
-import logging
-
-logger = logging.getLogger(__name__)
-
 
 def prune_skin_weights(
     mesh: str,
@@ -25,44 +24,40 @@ def prune_skin_weights(
         ActionResultModel dict with ``context.skin_cluster_name`` and
         ``context.prune_value``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(mesh):
-            return error_result(
+            return maya_error(
                 "Mesh not found: {}".format(mesh),
                 "'{}' does not exist in the scene".format(mesh),
-            ).to_dict()
+            )
 
         sc_list = cmds.ls(cmds.listHistory(mesh) or [], type="skinCluster")
         if not sc_list:
-            return error_result(
+            return maya_error(
                 "No skin cluster on: {}".format(mesh),
                 "'{}' has no skinCluster in its history".format(mesh),
-            ).to_dict()
+            )
 
         sc = sc_list[0]
         cmds.skinPercent(sc, mesh, pruneWeights=prune_value)
 
-        return success_result(
+        return maya_success(
             "Pruned skin weights on '{}' (threshold={})".format(mesh, prune_value),
             prompt="Run normalize_skin_weights after pruning to ensure weights sum to 1.0.",
             mesh=mesh,
             skin_cluster_name=sc,
             prune_value=prune_value,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("prune_skin_weights failed")
-        return error_result("Failed to prune skin weights on '{}'".format(mesh), str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to prune skin weights on '{}'".format(mesh))
 
 def main(**kwargs):
     return prune_skin_weights(**kwargs)
-
 
 if __name__ == "__main__":
     import json

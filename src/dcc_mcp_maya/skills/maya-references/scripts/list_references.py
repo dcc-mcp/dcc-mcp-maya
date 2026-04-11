@@ -3,11 +3,8 @@
 # Import future modules
 from __future__ import annotations
 
-# Import built-in modules
-import logging
-
-logger = logging.getLogger(__name__)
-
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 def list_references() -> dict:
     """List all file references in the current scene.
@@ -16,7 +13,6 @@ def list_references() -> dict:
         ActionResultModel dict with ``context.references`` — a list of dicts
         with ``reference_node``, ``file_path``, ``namespace``, and ``loaded``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
@@ -42,22 +38,19 @@ def list_references() -> dict:
                 }
             )
 
-        return success_result(
+        return maya_success(
             "Found {} reference(s)".format(len(references)),
             references=references,
             count=len(references),
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("list_references failed")
-        return error_result("Failed to list references", str(exc)).to_dict()
-
+        return maya_from_exception(exc, "Failed to list references")
 
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`list_references`."""
     return list_references(**kwargs)
-
 
 if __name__ == "__main__":
     import json

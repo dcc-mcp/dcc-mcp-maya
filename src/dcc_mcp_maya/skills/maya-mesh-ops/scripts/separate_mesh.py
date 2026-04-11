@@ -3,10 +3,8 @@
 # Import future modules
 from __future__ import annotations
 
-# Import built-in modules
-import logging
-
-logger = logging.getLogger(__name__)
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 
 def separate_mesh(
@@ -25,22 +23,20 @@ def separate_mesh(
         ActionResultModel dict with ``context.separated_meshes`` (list of
         result transform names) and ``context.count``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     if not object_name:
-        return error_result(
+        return maya_error(
             "object_name is required",
             "Provide a non-empty polygon mesh name",
-        ).to_dict()
+        )
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return error_result(
+            return maya_error(
                 "Object not found: {}".format(object_name),
                 "'{}' does not exist in the scene".format(object_name),
-            ).to_dict()
+            )
 
         result = cmds.polySeparate(object_name, constructionHistory=False) or []
         # polySeparate returns shape nodes; get their parent transforms
@@ -61,16 +57,15 @@ def separate_mesh(
                 seen.add(s)
                 unique.append(s)
 
-        return success_result(
+        return maya_success(
             "Separated '{}' into {} meshes".format(object_name, len(unique)),
             separated_meshes=unique,
             count=len(unique),
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("separate_mesh failed")
-        return error_result("Failed to separate mesh '{}'".format(object_name), str(exc)).to_dict()
+        return maya_from_exception(exc, "Failed to separate mesh '{}'".format(object_name))
 
 
 def main(**kwargs) -> dict:

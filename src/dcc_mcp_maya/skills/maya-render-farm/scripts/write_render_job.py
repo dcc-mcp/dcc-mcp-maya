@@ -3,14 +3,13 @@
 # Import future modules
 from __future__ import annotations
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 # Import built-in modules
 import json
-import logging
 import os
 from typing import Optional
-
-logger = logging.getLogger(__name__)
-
 
 def write_render_job(
     output_dir: str,
@@ -38,7 +37,6 @@ def write_render_job(
     Returns:
         ActionResultModel dict with ``context.job_file`` path and job spec summary.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
@@ -84,7 +82,7 @@ def write_render_job(
         frame_count = max(0, (ef - sf) // step + 1)
         task_count = max(1, (frame_count + chunk_size - 1) // chunk_size)
 
-        return success_result(
+        return maya_success(
             "Wrote render job spec '{}' to '{}'".format(name, job_file),
             prompt="Use submit_to_deadline to send this job to the render farm.",
             job_file=job_file,
@@ -93,17 +91,14 @@ def write_render_job(
             frame_range="{}-{}".format(sf, ef),
             frame_count=frame_count,
             task_count=task_count,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("write_render_job failed")
-        return error_result("Failed to write render job", str(exc)).to_dict()
-
+        return maya_from_exception(exc, "Failed to write render job")
 
 def main(**kwargs):
     return write_render_job(**kwargs)
-
 
 if __name__ == "__main__":
     import json as _json

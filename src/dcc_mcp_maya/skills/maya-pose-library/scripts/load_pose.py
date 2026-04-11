@@ -10,6 +10,10 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 def load_pose(
     file_path: str,
     namespace: str = "",
@@ -29,7 +33,6 @@ def load_pose(
         ActionResultModel dict with ``context.applied_count`` and
         ``context.missing_controls``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import os
@@ -37,10 +40,10 @@ def load_pose(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not os.path.isfile(file_path):
-            return error_result(
+            return maya_error(
                 "Pose file not found: {}".format(file_path),
                 "'{}'  does not exist on disk".format(file_path),
-            ).to_dict()
+            )
 
         with open(file_path, "r") as fh:
             pose_data = json.load(fh)
@@ -54,10 +57,10 @@ def load_pose(
                 if skip_missing:
                     missing.append(full_node)
                     continue
-                return error_result(
+                return maya_error(
                     "Control not found: {}".format(full_node),
                     "Use skip_missing=True to ignore missing nodes",
-                ).to_dict()
+                )
 
             for attr, value in attrs.items():
                 full_attr = "{}.{}".format(full_node, attr)
@@ -70,19 +73,18 @@ def load_pose(
 
             applied += 1
 
-        return success_result(
+        return maya_success(
             "Applied pose to {}/{} control(s)".format(applied, len(pose_data)),
             prompt="Use save_pose to capture any modifications as a new pose.",
             applied_count=applied,
             total_controls=len(pose_data),
             missing_controls=missing,
             file_path=file_path,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("load_pose failed")
-        return error_result("Failed to load pose from '{}'".format(file_path), str(exc)).to_dict()
+        return maya_from_exception(exc, "Failed to load pose from '{}'".format(file_path))
 
 
 def main(**kwargs):

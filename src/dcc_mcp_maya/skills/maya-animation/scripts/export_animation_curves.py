@@ -4,11 +4,10 @@
 from __future__ import annotations
 
 # Import built-in modules
-import logging
 from typing import List, Optional
 
-logger = logging.getLogger(__name__)
-
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 def export_animation_curves(
     object_name: str,
@@ -36,16 +35,14 @@ def export_animation_curves(
         ActionResultModel dict with ``context.file_path`` and
         ``context.curve_count``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return error_result(
+            return maya_error(
                 "Object not found: {}".format(object_name),
                 "'{}' does not exist in the scene".format(object_name),
-            ).to_dict()
+            )
 
         # Resolve frame range
         if start_frame is None:
@@ -64,10 +61,10 @@ def export_animation_curves(
             anim_curves = filtered
 
         if not anim_curves:
-            return error_result(
+            return maya_error(
                 "No animation curves found on '{}'".format(object_name),
                 "Object has no keyframe data to export",
-            ).to_dict()
+            )
 
         # Export via cmds.select + cmds.file
         cmds.select(anim_curves, replace=True)
@@ -83,25 +80,22 @@ def export_animation_curves(
         cmds.file(file_path, **export_kwargs)
         cmds.select(clear=True)
 
-        return success_result(
+        return maya_success(
             "Exported {} animation curve(s) to '{}'".format(len(anim_curves), file_path),
             file_path=file_path,
             object_name=object_name,
             curve_count=len(anim_curves),
             start_frame=start_frame,
             end_frame=end_frame,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("export_animation_curves failed")
-        return error_result("Failed to export animation curves for '{}'".format(object_name), str(exc)).to_dict()
-
+        return maya_from_exception(exc, "Failed to export animation curves for '{}'".format(object_name))
 
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`export_animation_curves`."""
     return export_animation_curves(**kwargs)
-
 
 if __name__ == "__main__":
     import json

@@ -3,11 +3,8 @@
 # Import future modules
 from __future__ import annotations
 
-# Import built-in modules
-import logging
-
-logger = logging.getLogger(__name__)
-
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 def export_selection(
     file_path: str,
@@ -24,7 +21,6 @@ def export_selection(
     Returns:
         ActionResultModel dict.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
@@ -35,22 +31,19 @@ def export_selection(
             type=file_type,
             force=True,
         )
-        return success_result(
+        return maya_success(
             "Selection exported to {}".format(saved),
             file_path=saved,
             file_type=file_type,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("export_selection failed")
-        return error_result("Failed to export selection", str(exc)).to_dict()
-
+        return maya_from_exception(exc, "Failed to export selection")
 
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`export_selection`."""
     return export_selection(**kwargs)
-
 
 if __name__ == "__main__":
     import json

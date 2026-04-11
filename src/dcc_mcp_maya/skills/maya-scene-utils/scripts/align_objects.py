@@ -3,12 +3,11 @@
 # Import future modules
 from __future__ import annotations
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 # Import built-in modules
-import logging
 from typing import List, Optional
-
-logger = logging.getLogger(__name__)
-
 
 def align_objects(
     objects: List[str],
@@ -39,7 +38,6 @@ def align_objects(
         ActionResultModel dict with ``context.objects``, ``context.axis``,
         ``context.mode``, ``context.target_value``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     _VALID_AXES = ("x", "y", "z")
     _VALID_MODES = ("min", "center", "max")
@@ -49,41 +47,41 @@ def align_objects(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not objects or len(objects) < 2:
-            return error_result(
+            return maya_error(
                 "Insufficient objects",
                 "align_objects requires at least 2 objects",
-            ).to_dict()
+            )
 
         axis_lower = axis.lower()
         if axis_lower not in _VALID_AXES:
-            return error_result(
+            return maya_error(
                 "Invalid axis: {}".format(axis),
                 "axis must be one of {}".format(_VALID_AXES),
-            ).to_dict()
+            )
 
         mode_lower = mode.lower()
         if mode_lower not in _VALID_MODES:
-            return error_result(
+            return maya_error(
                 "Invalid mode: {}".format(mode),
                 "mode must be one of {}".format(_VALID_MODES),
-            ).to_dict()
+            )
 
         # Validate all objects exist
         missing = [obj for obj in objects if not cmds.objExists(obj)]
         if missing:
-            return error_result(
+            return maya_error(
                 "Objects not found: {}".format(missing),
                 "The following objects do not exist: {}".format(missing),
-            ).to_dict()
+            )
 
         idx = _AXIS_INDEX[axis_lower]
 
         if reference:
             if not cmds.objExists(reference):
-                return error_result(
+                return maya_error(
                     "Reference object not found: {}".format(reference),
                     "'{}' does not exist".format(reference),
-                ).to_dict()
+                )
             ref_bb = cmds.exactWorldBoundingBox(reference)
             # bb = [xmin, ymin, zmin, xmax, ymax, zmax]
             if mode_lower == "min":
@@ -122,24 +120,21 @@ def align_objects(
             cmds.setAttr("{}.{}".format(obj, translate_attr), current_t + delta)
             aligned.append(obj)
 
-        return success_result(
+        return maya_success(
             "Aligned {} object(s) along {} axis ({} mode)".format(len(aligned), axis_lower, mode_lower),
             objects=aligned,
             axis=axis_lower,
             mode=mode_lower,
             target_value=target_value,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("align_objects failed")
-        return error_result("Failed to align objects", str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to align objects")
 
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`align_objects`."""
     return align_objects(**kwargs)
-
 
 if __name__ == "__main__":
     import json

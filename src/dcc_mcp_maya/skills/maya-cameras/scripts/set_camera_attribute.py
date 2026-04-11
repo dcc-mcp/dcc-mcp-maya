@@ -4,9 +4,10 @@
 from __future__ import annotations
 
 # Import built-in modules
-import logging
 
-logger = logging.getLogger(__name__)
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 
 
 def set_camera_attribute(camera_name: str, attribute: str, value: object) -> dict:
@@ -23,26 +24,24 @@ def set_camera_attribute(camera_name: str, attribute: str, value: object) -> dic
     Returns:
         ActionResultModel dict with ``context.camera_name`` and ``context.attribute``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(camera_name):
-            return error_result(
+            return maya_error(
                 "Camera not found: {}".format(camera_name),
                 "'{}' does not exist".format(camera_name),
-            ).to_dict()
+            )
 
         # Resolve shape node if transform was supplied
         node_type = cmds.objectType(camera_name)
         if node_type == "transform":
             shapes = cmds.listRelatives(camera_name, shapes=True, type="camera") or []
             if not shapes:
-                return error_result(
+                return maya_error(
                     "No camera shape under '{}'".format(camera_name),
                     "Transform has no camera shape",
-                ).to_dict()
+                )
             cam_node = shapes[0]
         else:
             cam_node = camera_name
@@ -50,18 +49,17 @@ def set_camera_attribute(camera_name: str, attribute: str, value: object) -> dic
         full_attr = "{}.{}".format(cam_node, attribute)
         cmds.setAttr(full_attr, value)
 
-        return success_result(
+        return maya_success(
             "Set {}.{} = {}".format(cam_node, attribute, value),
             prompt="Use get_camera_info to verify the updated camera settings.",
             camera_name=cam_node,
             attribute=attribute,
             value=value,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("set_camera_attribute failed")
-        return error_result("Failed to set camera attribute", str(exc)).to_dict()
+        return maya_from_exception(exc, "Failed to set camera attribute")
 
 
 def main(**kwargs) -> dict:

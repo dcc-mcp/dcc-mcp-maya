@@ -3,10 +3,8 @@
 # Import future modules
 from __future__ import annotations
 
-# Import built-in modules
-import logging
-
-logger = logging.getLogger(__name__)
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 
 def get_constraint_weights(constraint_node: str) -> dict:
@@ -22,16 +20,14 @@ def get_constraint_weights(constraint_node: str) -> dict:
         ActionResultModel dict with ``context.weights`` (list of dicts
         with ``driver`` and ``weight``) and ``context.constraint_type``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(constraint_node):
-            return error_result(
+            return maya_error(
                 "Constraint not found: {}".format(constraint_node),
                 "'{}' does not exist in the scene".format(constraint_node),
-            ).to_dict()
+            )
 
         constraint_type = cmds.objectType(constraint_node)
 
@@ -59,18 +55,17 @@ def get_constraint_weights(constraint_node: str) -> dict:
                 weight_val = 1.0
             weights.append({"driver": driver, "weight": weight_val})
 
-        return success_result(
+        return maya_success(
             "Constraint '{}' has {} driver(s)".format(constraint_node, len(weights)),
             prompt="Use set_constraint_weight to change a driver weight for space switching.",
             constraint_node=constraint_node,
             constraint_type=constraint_type,
             weights=weights,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("get_constraint_weights failed")
-        return error_result("Failed to get constraint weights", str(exc)).to_dict()
+        return maya_from_exception(exc, "Failed to get constraint weights")
 
 
 def main(**kwargs):

@@ -14,6 +14,10 @@ logger = logging.getLogger(__name__)
 _POSE_ATTRS = ["tx", "ty", "tz", "rx", "ry", "rz", "sx", "sy", "sz"]
 
 
+
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 def save_pose(
     file_path: str,
     controls: Optional[List[str]] = None,
@@ -35,25 +39,24 @@ def save_pose(
         ActionResultModel dict with ``context.file_path`` and
         ``context.control_count``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         nodes = controls if controls else (cmds.ls(selection=True) or [])
         if not nodes:
-            return error_result(
+            return maya_error(
                 "No controls specified",
                 "Provide 'controls' or select nodes in Maya",
-            ).to_dict()
+            )
 
         attrs = attributes if attributes else _POSE_ATTRS
 
         if not overwrite and os.path.exists(file_path):
-            return error_result(
+            return maya_error(
                 "File already exists: {}".format(file_path),
                 "Set overwrite=True to replace the existing pose file",
-            ).to_dict()
+            )
 
         pose_data = {}  # type: dict
         for node in nodes:
@@ -74,18 +77,17 @@ def save_pose(
         with open(file_path, "w") as fh:
             json.dump(pose_data, fh, indent=2)
 
-        return success_result(
+        return maya_success(
             "Saved pose for {} control(s) to '{}'".format(len(pose_data), file_path),
             prompt="Use load_pose to apply this pose back to the rig.",
             file_path=file_path,
             control_count=len(pose_data),
             controls=list(pose_data.keys()),
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("save_pose failed")
-        return error_result("Failed to save pose to '{}'".format(file_path), str(exc)).to_dict()
+        return maya_from_exception(exc, "Failed to save pose to '{}'".format(file_path))
 
 
 def main(**kwargs):

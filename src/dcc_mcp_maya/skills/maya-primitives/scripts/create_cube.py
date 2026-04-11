@@ -4,11 +4,11 @@
 from __future__ import annotations
 
 # Import built-in modules
-import logging
 from typing import Optional
 
-logger = logging.getLogger(__name__)
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 def create_cube(
     width: float = 1.0,
@@ -27,7 +27,6 @@ def create_cube(
     Returns:
         ActionResultModel dict with ``context.object_name``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
@@ -36,24 +35,21 @@ def create_cube(
         obj = result[0]
         if name:
             obj = cmds.rename(obj, name)
-        return success_result(
+        return maya_success(
             f"Created cube: {obj}",
             object_name=obj,
             width=width,
             height=height,
             depth=depth,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("create_cube failed")
-        return error_result("Failed to create cube", str(exc)).to_dict()
-
+        return maya_from_exception(exc, "Failed to create cube")
 
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`create_cube`."""
     return create_cube(**kwargs)
-
 
 if __name__ == "__main__":
     import json

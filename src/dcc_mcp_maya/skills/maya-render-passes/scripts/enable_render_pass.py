@@ -3,11 +3,10 @@
 # Import future modules
 from __future__ import annotations
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 # Import built-in modules
-import logging
-
-logger = logging.getLogger(__name__)
-
 
 def enable_render_pass(
     pass_node: str,
@@ -23,16 +22,15 @@ def enable_render_pass(
         ActionResultModel dict with ``context.pass_node`` and
         ``context.enabled``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(pass_node):
-            return error_result(
+            return maya_error(
                 "Render pass not found: {}".format(pass_node),
                 "'{}' does not exist in the scene".format(pass_node),
-            ).to_dict()
+            )
 
         attr_candidates = ["renderable", "enabled"]
         toggled = False
@@ -44,27 +42,24 @@ def enable_render_pass(
                 break
 
         if not toggled:
-            return error_result(
+            return maya_error(
                 "Cannot toggle pass: {}".format(pass_node),
                 "Node has neither 'renderable' nor 'enabled' attribute",
-            ).to_dict()
+            )
 
-        return success_result(
+        return maya_success(
             "{} render pass '{}'".format("Enabled" if enabled else "Disabled", pass_node),
             prompt="Use list_render_passes to review all active passes.",
             pass_node=pass_node,
             enabled=enabled,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("enable_render_pass failed")
-        return error_result("Failed to toggle render pass '{}'".format(pass_node), str(exc)).to_dict()
-
+        return maya_from_exception(exc, "Failed to toggle render pass '{}'".format(pass_node))
 
 def main(**kwargs):
     return enable_render_pass(**kwargs)
-
 
 if __name__ == "__main__":
     import json
