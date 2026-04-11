@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import Union
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def set_blend_shape_weight(
@@ -31,7 +31,7 @@ def set_blend_shape_weight(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(blend_shape_node):
-            return maya_error(
+            return skill_error(
                 "Blend shape node not found: {}".format(blend_shape_node),
                 "'{}' does not exist in the scene".format(blend_shape_node),
             )
@@ -51,7 +51,7 @@ def set_blend_shape_weight(
                         pass
                     break
             if index is None:
-                return maya_error(
+                return skill_error(
                     "Target not found: {}".format(target),
                     "No alias '{}' on '{}'".format(target, blend_shape_node),
                 )
@@ -60,7 +60,7 @@ def set_blend_shape_weight(
 
         cmds.setAttr("{}.weight[{}]".format(blend_shape_node, index), weight)
 
-        return maya_success(
+        return skill_success(
             "Set weight[{}] = {:.4f} on '{}'".format(index, weight, blend_shape_node),
             prompt="Use get_blend_shape_weights to verify, or set a keyframe with cmds.setKeyframe.",
             blend_shape_node=blend_shape_node,
@@ -68,17 +68,16 @@ def set_blend_shape_weight(
             weight=weight,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to set blend shape weight")
+        return skill_exception(exc, message="Failed to set blend shape weight")
 
 
+@skill_entry
 def main(**kwargs):
     return set_blend_shape_weight(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = set_blend_shape_weight("blendShape1", 0, 0.5)
-    print(json.dumps(result, indent=2))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

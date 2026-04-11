@@ -7,7 +7,9 @@ from __future__ import annotations
 from typing import Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success, validate_node_exists
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
+
+from dcc_mcp_maya.api import validate_node_exists
 
 
 def get_uv_info(object_name: str, uv_set: Optional[str] = None) -> dict:
@@ -43,30 +45,29 @@ def get_uv_info(object_name: str, uv_set: Optional[str] = None) -> dict:
 
         if uv_set:
             if uv_set not in uv_sets:
-                return maya_error("UV set '{}' not found on '{}'".format(uv_set, object_name))
+                return skill_error("UV set '{}' not found on '{}'".format(uv_set, object_name))
             u_coords = cmds.polyEditUV("{}.map[*]".format(object_name), query=True, uValue=True) or []
             _ = cmds.polyEditUV("{}.map[*]".format(object_name), query=True, vValue=True) or []
             result_kwargs["uv_count"] = len(u_coords)
             result_kwargs["queried_uv_set"] = uv_set
 
-        return maya_success(
+        return skill_success(
             "UV info for '{}'".format(object_name),
             **result_kwargs,
             prompt="Check the result with list_uv_ops or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to get UV info")
+        return skill_exception(exc, message="Failed to get UV info")
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`get_uv_info`."""
     return get_uv_info(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = get_uv_info()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

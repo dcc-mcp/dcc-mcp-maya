@@ -7,7 +7,7 @@ from __future__ import annotations
 import os
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def get_shot_info() -> dict:
@@ -43,7 +43,7 @@ def get_shot_info() -> dict:
             parents = cmds.listRelatives(shape, parent=True, fullPath=False) or []
             cameras.append(parents[0] if parents else shape)
 
-        return maya_success(
+        return skill_success(
             "Shot info for '{}'".format(scene_name),
             prompt="Use export_shot_fbx or export_shot_alembic to export this shot.",
             scene_name=scene_name,
@@ -55,16 +55,16 @@ def get_shot_info() -> dict:
             cameras=cameras,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to get shot info")
+        return skill_exception(exc, message="Failed to get shot info")
 
 
+@skill_entry
 def main(**kwargs):
     return get_shot_info(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    print(json.dumps(get_shot_info()))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

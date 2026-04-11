@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 _SHAPES = {
     "circle": [
@@ -83,7 +83,7 @@ def create_control_curve(
 
         pts = _SHAPES.get(shape)
         if pts is None:
-            return maya_error(
+            return skill_error(
                 "Unknown shape: {}".format(shape),
                 "Valid shapes: {}".format(", ".join(sorted(_SHAPES.keys()))),
             )
@@ -102,7 +102,7 @@ def create_control_curve(
             cmds.setAttr("{}.overrideEnabled".format(shape_node), True)
             cmds.setAttr("{}.overrideColor".format(shape_node), int(color))
 
-        return maya_success(
+        return skill_success(
             "Created control curve '{}' (shape={}, scale={})".format(crv, shape, scale),
             prompt="Use lock_hide_attributes to clean up the control's channel box.",
             curve_name=crv,
@@ -111,17 +111,16 @@ def create_control_curve(
             color=color,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to create control curve '{}'".format(name or shape))
+        return skill_exception(exc, message="Failed to create control curve '{}'".format(name or shape))
 
 
+@skill_entry
 def main(**kwargs):
     return create_control_curve(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = create_control_curve(shape="circle", name="ctrl_root")
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

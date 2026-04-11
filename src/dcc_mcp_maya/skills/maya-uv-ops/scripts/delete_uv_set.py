@@ -4,7 +4,9 @@
 from __future__ import annotations
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success, validate_node_exists
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
+
+from dcc_mcp_maya.api import validate_node_exists
 
 # Import built-in modules
 
@@ -29,38 +31,37 @@ def delete_uv_set(object_name: str, uv_set_name: str) -> dict:
 
         existing = cmds.polyUVSet(object_name, query=True, allUVSets=True) or []
         if uv_set_name not in existing:
-            return maya_error(
+            return skill_error(
                 "UV set '{}' not found on '{}'".format(uv_set_name, object_name),
                 "Available UV sets: {}".format(existing),
             )
 
         # Protect the only remaining UV set
         if len(existing) <= 1:
-            return maya_error(
+            return skill_error(
                 "Cannot delete the only UV set on '{}'".format(object_name), "A mesh must have at least one UV set"
             )
 
         cmds.polyUVSet(object_name, delete=True, uvSet=uv_set_name)
 
-        return maya_success(
+        return skill_success(
             "Deleted UV set '{}' from '{}'".format(uv_set_name, object_name),
             object_name=object_name,
             uv_set_name=uv_set_name,
             prompt="Check the result with list_uv_ops or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to delete UV set")
+        return skill_exception(exc, message="Failed to delete UV set")
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`delete_uv_set`."""
     return delete_uv_set(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = delete_uv_set()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

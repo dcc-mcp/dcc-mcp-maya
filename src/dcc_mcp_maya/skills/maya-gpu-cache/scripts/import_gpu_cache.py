@@ -8,7 +8,7 @@ import os
 from typing import Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def import_gpu_cache(
@@ -32,7 +32,7 @@ def import_gpu_cache(
             cmds.loadPlugin("gpuCache")
 
         if not os.path.isfile(file_path):
-            return maya_error(
+            return skill_error(
                 "File not found: {}".format(file_path),
                 "The GPU cache file does not exist on disk.",
             )
@@ -43,7 +43,7 @@ def import_gpu_cache(
         cmds.setAttr("{}.cacheFileName".format(cache_node), file_path, type="string")
         cmds.setAttr("{}.cacheGeomPath".format(cache_node), "|", type="string")
 
-        return maya_success(
+        return skill_success(
             "Imported GPU cache '{}' as '{}'".format(os.path.basename(file_path), transform),
             prompt="Use refresh_gpu_cache if the file changes on disk. "
             "Use list_gpu_caches to inspect all loaded caches.",
@@ -52,16 +52,16 @@ def import_gpu_cache(
             file_path=file_path,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to import GPU cache")
+        return skill_exception(exc, message="Failed to import GPU cache")
 
 
+@skill_entry
 def main(**kwargs):
     return import_gpu_cache(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    print(json.dumps(import_gpu_cache("/tmp/test_cache.abc"), indent=2))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

@@ -7,7 +7,7 @@ from __future__ import annotations
 import os
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def set_project(path: str, create_if_missing: bool = False) -> dict:
@@ -24,16 +24,16 @@ def set_project(path: str, create_if_missing: bool = False) -> dict:
     """
 
     if not path:
-        return maya_error("No project path provided", "Provide 'path' parameter.")
+        return skill_error("No project path provided", "Provide 'path' parameter.")
 
     if not os.path.isdir(path):
         if create_if_missing:
             try:
                 os.makedirs(path)
             except Exception as exc:
-                return maya_error("Failed to create directory", str(exc))
+                return skill_error("Failed to create directory", str(exc))
         else:
-            return maya_error(
+            return skill_error(
                 "Directory not found",
                 "Path '{}' does not exist. Use create_if_missing=True.".format(path),
             )
@@ -43,24 +43,23 @@ def set_project(path: str, create_if_missing: bool = False) -> dict:
 
         cmds.workspace(path, openWorkspace=True)
         workspace_mel = os.path.join(path, "workspace.mel")
-        return maya_success(
+        return skill_success(
             "Project set to: {}".format(path),
             prompt="Project set. Use open_scene or publish_asset with paths relative to this project.",
             project_path=path,
             workspace_mel=workspace_mel,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to set Maya project")
+        return skill_exception(exc, message="Failed to set Maya project")
 
 
+@skill_entry
 def main(**kwargs):
     return set_project(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = set_project("/path/to/project")
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

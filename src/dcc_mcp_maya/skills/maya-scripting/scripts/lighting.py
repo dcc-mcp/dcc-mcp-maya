@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import List, Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_error, skill_exception, skill_success
 
 # Supported Maya light types and their corresponding command/node names
 _LIGHT_TYPE_MAP = {
@@ -43,7 +43,7 @@ def create_light(
 
     lt = light_type.lower()
     if lt not in _LIGHT_TYPE_MAP:
-        return maya_error(
+        return skill_error(
             "Unsupported light type: {}".format(light_type),
             "Supported types: {}".format(", ".join(sorted(_LIGHT_TYPE_MAP))),
         )
@@ -76,7 +76,7 @@ def create_light(
         if position and len(position) >= 3:
             cmds.setAttr("{}.translate".format(transform), position[0], position[1], position[2], type="double3")
 
-        return maya_success(
+        return skill_success(
             "Created {} light '{}'".format(lt, transform),
             light_name=transform,
             light_shape=shape,
@@ -86,9 +86,9 @@ def create_light(
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to create light")
+        return skill_exception(exc, message="Failed to create light")
 
 
 def set_light_attribute(
@@ -118,7 +118,7 @@ def set_light_attribute(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(light_name):
-            return maya_error("Light not found: {}".format(light_name))
+            return skill_error("Light not found: {}".format(light_name))
 
         # Try to resolve shape for light-specific attrs
         shapes = cmds.listRelatives(light_name, shapes=True) or []
@@ -129,7 +129,7 @@ def set_light_attribute(
             # Attribute may be on transform instead
             full_attr = "{}.{}".format(light_name, attribute)
         if not cmds.objExists(full_attr):
-            return maya_error("Attribute '{}' not found on '{}'".format(attribute, light_name))
+            return skill_error("Attribute '{}' not found on '{}'".format(attribute, light_name))
 
         if isinstance(value, (list, tuple)) and len(value) == 3:
             cmds.setAttr(full_attr, value[0], value[1], value[2], type="double3")
@@ -138,7 +138,7 @@ def set_light_attribute(
         else:
             cmds.setAttr(full_attr, value)
 
-        return maya_success(
+        return skill_success(
             "Set {}.{} = {}".format(light_name, attribute, value),
             light_name=light_name,
             attribute=attribute,
@@ -146,9 +146,9 @@ def set_light_attribute(
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to set light attribute")
+        return skill_exception(exc, message="Failed to set light attribute")
 
 
 def list_lights(include_default: bool = False) -> dict:
@@ -205,16 +205,16 @@ def list_lights(include_default: bool = False) -> dict:
                 }
             )
 
-        return maya_success(
+        return skill_success(
             "Found {} light(s)".format(len(results)),
             lights=results,
             count=len(results),
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to list lights")
+        return skill_exception(exc, message="Failed to list lights")
 
 
 def delete_light(light_name: str) -> dict:
@@ -231,7 +231,7 @@ def delete_light(light_name: str) -> dict:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(light_name):
-            return maya_error("Light not found: {}".format(light_name))
+            return skill_error("Light not found: {}".format(light_name))
 
         node_type = cmds.objectType(light_name)
         # If it's a shape, delete its transform
@@ -241,12 +241,12 @@ def delete_light(light_name: str) -> dict:
                 light_name = parents[0]
 
         cmds.delete(light_name)
-        return maya_success(
+        return skill_success(
             "Deleted light '{}'".format(light_name),
             light_name=light_name,
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to delete light")
+        return skill_exception(exc, message="Failed to delete light")

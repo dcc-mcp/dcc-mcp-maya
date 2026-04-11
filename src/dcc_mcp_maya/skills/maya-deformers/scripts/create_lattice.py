@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import List, Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def create_lattice(
@@ -32,7 +32,7 @@ def create_lattice(
         ``context.objects``.
     """
     if not objects:
-        return maya_error(
+        return skill_error(
             "No objects specified",
             "Provide at least one object name in the 'objects' list",
         )
@@ -44,7 +44,7 @@ def create_lattice(
 
         missing = [o for o in objects if not cmds.objExists(o)]
         if missing:
-            return maya_error(
+            return skill_error(
                 "Object(s) not found: {}".format(", ".join(missing)),
                 "Ensure all objects exist before creating a lattice",
             )
@@ -66,7 +66,7 @@ def create_lattice(
             cmds.setAttr("{}.sy".format(lattice_node), local_scale[1])
             cmds.setAttr("{}.sz".format(lattice_node), local_scale[2])
 
-        return maya_success(
+        return skill_success(
             "Created FFD lattice '{}' ({}) on {} object(s)".format(ffd_node, divs, len(objects)),
             ffd_node=ffd_node,
             lattice_node=lattice_node,
@@ -76,18 +76,17 @@ def create_lattice(
             prompt="Check the result with list_deformers or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to create FFD lattice")
+        return skill_exception(exc, message="Failed to create FFD lattice")
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`create_lattice`."""
     return create_lattice(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = create_lattice()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

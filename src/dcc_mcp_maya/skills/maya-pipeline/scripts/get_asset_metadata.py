@@ -9,7 +9,7 @@ _META_ATTRS = ["asset_name", "asset_variant", "asset_version", "pipeline_step"]
 
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success  # noqa: E402
 
 
 def get_asset_metadata(node: str) -> dict:
@@ -24,13 +24,13 @@ def get_asset_metadata(node: str) -> dict:
     """
 
     if not node:
-        return maya_error("No node provided", "Provide 'node' parameter.")
+        return skill_error("No node provided", "Provide 'node' parameter.")
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(node):
-            return maya_error("Node not found", "No node named '{}'.".format(node))
+            return skill_error("Node not found", "No node named '{}'.".format(node))
 
         metadata = {}
         for attr in _META_ATTRS:
@@ -40,7 +40,7 @@ def get_asset_metadata(node: str) -> dict:
                 metadata[attr] = ""
 
         tagged = [k for k, v in metadata.items() if v]
-        return maya_success(
+        return skill_success(
             "Retrieved metadata from '{}' ({} tagged)".format(node, len(tagged)),
             prompt=("Metadata retrieved. Use tag_asset_metadata to update any empty fields before publishing."),
             node=node,
@@ -48,17 +48,16 @@ def get_asset_metadata(node: str) -> dict:
             tagged_count=len(tagged),
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to get metadata")
+        return skill_exception(exc, message="Failed to get metadata")
 
 
+@skill_entry
 def main(**kwargs):
     return get_asset_metadata(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = get_asset_metadata("pSphere1")
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

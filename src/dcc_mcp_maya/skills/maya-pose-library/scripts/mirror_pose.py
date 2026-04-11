@@ -15,7 +15,7 @@ _NEGATE_ATTRS = {"tx", "ry", "rz"}
 
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success  # noqa: E402
 
 
 def mirror_pose(
@@ -46,7 +46,7 @@ def mirror_pose(
 
     try:
         if not os.path.isfile(file_path):
-            return maya_error(
+            return skill_error(
                 "Pose file not found: {}".format(file_path),
                 "'{}'  does not exist on disk".format(file_path),
             )
@@ -109,7 +109,7 @@ def mirror_pose(
                         logger.warning("Could not set %s: %s", full, exc)
             msg = "Mirrored pose applied to scene"
 
-        return maya_success(
+        return skill_success(
             "{} ({} pair(s) swapped)".format(msg, len(processed_pairs)),
             prompt="Use save_pose to persist the mirrored pose for reuse.",
             mirrored_pairs=processed_pairs,
@@ -117,17 +117,16 @@ def mirror_pose(
             control_count=len(mirrored_data),
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to mirror pose from '{}'".format(file_path))
+        return skill_exception(exc, message="Failed to mirror pose from '{}'".format(file_path))
 
 
+@skill_entry
 def main(**kwargs):
     return mirror_pose(**kwargs)
 
 
 if __name__ == "__main__":
-    import json as _json
-
-    result = mirror_pose("/tmp/my_pose.json", output_path="/tmp/my_pose_mirrored.json")
-    print(_json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

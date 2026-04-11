@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 # Import built-in modules
 
@@ -20,32 +20,31 @@ def execute_mel(code: str) -> dict:
     """
 
     if not code or not code.strip():
-        return maya_error("No MEL code provided", "Provide 'code' with valid MEL.")
+        return skill_error("No MEL code provided", "Provide 'code' with valid MEL.")
 
     try:
         import maya.mel as mel  # noqa: PLC0415
 
         raw = mel.eval(code)
         output = str(raw) if raw is not None else ""
-        return maya_success(
+        return skill_success(
             "MEL executed successfully",
             prompt="MEL script finished. Check 'output' for any return value.",
             output=output,
             script=code,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.mel could not be imported")
+        return skill_error("Maya not available", "maya.mel could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "MEL execution failed")
+        return skill_exception(exc, message="MEL execution failed")
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`execute_mel`."""
     return execute_mel(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = execute_mel("polySphere -n mySphere;")
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

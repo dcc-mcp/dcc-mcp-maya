@@ -7,7 +7,7 @@ from __future__ import annotations
 import logging
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +47,7 @@ def set_light_rig_intensity(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(rig_group):
-            return maya_error(
+            return skill_error(
                 "Rig group not found: {}".format(rig_group),
                 "'{}' does not exist in the scene".format(rig_group),
             )
@@ -56,7 +56,7 @@ def set_light_rig_intensity(
         light_shapes = [n for n in descendants if cmds.objectType(n) in _LIGHT_TYPES]
 
         if not light_shapes:
-            return maya_error(
+            return skill_error(
                 "No lights found under: {}".format(rig_group),
                 "The group '{}' contains no light shape nodes".format(rig_group),
             )
@@ -74,7 +74,7 @@ def set_light_rig_intensity(
             except Exception as exc:
                 logger.warning("Could not set intensity on %s: %s", shape, exc)
 
-        return maya_success(
+        return skill_success(
             "{} {} light(s) in rig '{}'".format(
                 "Scaled" if multiply else "Set intensity of",
                 len(updated),
@@ -86,17 +86,16 @@ def set_light_rig_intensity(
             light_count=len(updated),
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to set intensity for rig '{}'".format(rig_group))
+        return skill_exception(exc, message="Failed to set intensity for rig '{}'".format(rig_group))
 
 
+@skill_entry
 def main(**kwargs):
     return set_light_rig_intensity(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = set_light_rig_intensity("threePoint_rig", 1.5, multiply=True)
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

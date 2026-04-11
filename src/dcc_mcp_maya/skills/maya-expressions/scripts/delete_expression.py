@@ -5,7 +5,7 @@ from __future__ import annotations
 
 # Import built-in modules
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def delete_expression(name: str) -> dict:
@@ -21,7 +21,7 @@ def delete_expression(name: str) -> dict:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(name):
-            return maya_error(
+            return skill_error(
                 "Expression node '{}' does not exist".format(name),
                 "Use list_expressions to see available expression nodes.",
             )
@@ -29,31 +29,30 @@ def delete_expression(name: str) -> dict:
         # Verify it is actually an expression node
         node_type = cmds.objectType(name)
         if node_type != "expression":
-            return maya_error(
+            return skill_error(
                 "Node '{}' is not an expression (type: {})".format(name, node_type),
                 "Provide an expression node name. Use list_expressions to find them.",
             )
 
         cmds.delete(name)
-        return maya_success(
+        return skill_success(
             "Expression node '{}' deleted".format(name),
             prompt="Expression removed. Driven attributes will retain their last evaluated values.",
             expression_name=name,
             deleted_node=name,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to delete expression '{}'".format(name))
+        return skill_exception(exc, message="Failed to delete expression '{}'".format(name))
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`delete_expression`."""
     return delete_expression(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = delete_expression("expression1")
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

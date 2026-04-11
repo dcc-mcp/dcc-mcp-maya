@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import List, Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def update_annotation(
@@ -32,7 +32,7 @@ def update_annotation(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(annotation_node):
-            return maya_error(
+            return skill_error(
                 "Annotation not found: {}".format(annotation_node),
                 "'{}' does not exist".format(annotation_node),
             )
@@ -41,7 +41,7 @@ def update_annotation(
         if node_type != "annotationShape":
             shapes = cmds.listRelatives(annotation_node, shapes=True, type="annotationShape") or []
             if not shapes:
-                return maya_error(
+                return skill_error(
                     "No annotationShape found under '{}'".format(annotation_node),
                     "Provide the annotationShape node name directly.",
                 )
@@ -57,7 +57,7 @@ def update_annotation(
             cmds.move(position[0], position[1], position[2], transform_node, absolute=True)
 
         current_text = cmds.getAttr("{}.text".format(annotation_node)) or ""
-        return maya_success(
+        return skill_success(
             "Updated annotation '{}'".format(current_text[:40]),
             prompt="Use list_annotations to verify the update.",
             annotation_node=annotation_node,
@@ -65,17 +65,16 @@ def update_annotation(
             text=current_text,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to update annotation")
+        return skill_exception(exc, message="Failed to update annotation")
 
 
+@skill_entry
 def main(**kwargs):
     return update_annotation(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = update_annotation("annotationShape1", text="Updated text")
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

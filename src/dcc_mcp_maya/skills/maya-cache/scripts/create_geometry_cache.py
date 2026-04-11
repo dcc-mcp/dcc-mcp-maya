@@ -8,7 +8,7 @@ import os
 from typing import List, Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def create_geometry_cache(
@@ -44,7 +44,7 @@ def create_geometry_cache(
 
         for obj in objects:
             if not cmds.objExists(obj):
-                return maya_error(
+                return skill_error(
                     "Object not found: {}".format(obj),
                     "'{}' does not exist in the scene".format(obj),
                 )
@@ -75,7 +75,7 @@ def create_geometry_cache(
 
         cache_nodes = cmds.ls(type="cacheFile") or []
 
-        return maya_success(
+        return skill_success(
             "Created geometry cache '{}' ({} — {})".format(cname, int(sf), int(ef)),
             prompt="Use attach_geometry_cache to attach this cache to another mesh, or list_geometry_caches to inspect.",
             cache_name=cname,
@@ -85,17 +85,16 @@ def create_geometry_cache(
             cache_nodes=cache_nodes,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to create geometry cache")
+        return skill_exception(exc, message="Failed to create geometry cache")
 
 
+@skill_entry
 def main(**kwargs):
     return create_geometry_cache(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = create_geometry_cache(["pSphere1"], "/tmp/cache", cache_name="sphere_cache")
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

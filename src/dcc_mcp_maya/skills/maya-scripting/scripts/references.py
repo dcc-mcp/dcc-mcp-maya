@@ -12,7 +12,7 @@ from __future__ import annotations
 from typing import Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_error, skill_exception, skill_success
 
 
 def create_reference(
@@ -38,7 +38,7 @@ def create_reference(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not file_path or not file_path.strip():
-            return maya_error("Invalid file path", "file_path must not be empty")
+            return skill_error("Invalid file path", "file_path must not be empty")
 
         kwargs = {
             "reference": True,
@@ -60,7 +60,7 @@ def create_reference(
         except Exception:
             resolved_ns = namespace or ""
 
-        return maya_success(
+        return skill_success(
             "Referenced '{}' as '{}'".format(file_path, resolved_ns),
             reference_node=ref_node,
             namespace=resolved_ns,
@@ -68,9 +68,9 @@ def create_reference(
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to reference file '{}'".format(file_path))
+        return skill_exception(exc, message="Failed to reference file '{}'".format(file_path))
 
 
 def list_references() -> dict:
@@ -105,16 +105,16 @@ def list_references() -> dict:
                 }
             )
 
-        return maya_success(
+        return skill_success(
             "Found {} reference(s)".format(len(references)),
             references=references,
             count=len(references),
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to list references")
+        return skill_exception(exc, message="Failed to list references")
 
 
 def remove_reference(
@@ -139,13 +139,13 @@ def remove_reference(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(reference_node):
-            return maya_error(
+            return skill_error(
                 "Reference node not found: {}".format(reference_node),
                 "'{}' does not exist in the scene".format(reference_node),
             )
 
         if cmds.objectType(reference_node) != "reference":
-            return maya_error(
+            return skill_error(
                 "Not a reference node: {}".format(reference_node),
                 "'{}' is of type '{}', expected 'reference'".format(reference_node, cmds.objectType(reference_node)),
             )
@@ -168,16 +168,16 @@ def remove_reference(
             except Exception:
                 pass
 
-        return maya_success(
+        return skill_success(
             "Removed reference '{}'".format(reference_node),
             reference_node=reference_node,
             namespace_removed=namespace_removed if remove_namespace else "",
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to remove reference '{}'".format(reference_node))
+        return skill_exception(exc, message="Failed to remove reference '{}'".format(reference_node))
 
 
 def reload_reference(reference_node: str) -> dict:
@@ -197,13 +197,13 @@ def reload_reference(reference_node: str) -> dict:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(reference_node):
-            return maya_error(
+            return skill_error(
                 "Reference node not found: {}".format(reference_node),
                 "'{}' does not exist".format(reference_node),
             )
 
         if cmds.objectType(reference_node) != "reference":
-            return maya_error(
+            return skill_error(
                 "Not a reference node: {}".format(reference_node),
                 "'{}' is of type '{}'".format(reference_node, cmds.objectType(reference_node)),
             )
@@ -215,7 +215,7 @@ def reload_reference(reference_node: str) -> dict:
         except Exception:
             file_path = ""
 
-        return maya_success(
+        return skill_success(
             "Reloaded reference '{}'".format(reference_node),
             reference_node=reference_node,
             file_path=file_path,
@@ -223,9 +223,9 @@ def reload_reference(reference_node: str) -> dict:
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to reload reference '{}'".format(reference_node))
+        return skill_exception(exc, message="Failed to reload reference '{}'".format(reference_node))
 
 
 def unload_reference(reference_node: str) -> dict:
@@ -246,29 +246,29 @@ def unload_reference(reference_node: str) -> dict:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(reference_node):
-            return maya_error(
+            return skill_error(
                 "Reference node not found: {}".format(reference_node),
                 "'{}' does not exist".format(reference_node),
             )
 
         if cmds.objectType(reference_node) != "reference":
-            return maya_error(
+            return skill_error(
                 "Not a reference node: {}".format(reference_node),
                 "'{}' is of type '{}'".format(reference_node, cmds.objectType(reference_node)),
             )
 
         cmds.file(unloadReference=reference_node)
 
-        return maya_success(
+        return skill_success(
             "Unloaded reference '{}'".format(reference_node),
             reference_node=reference_node,
             loaded=False,
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to unload reference '{}'".format(reference_node))
+        return skill_exception(exc, message="Failed to unload reference '{}'".format(reference_node))
 
 
 def list_namespaces(root_only: bool = False) -> dict:
@@ -296,13 +296,13 @@ def list_namespaces(root_only: bool = False) -> dict:
         built_in = {"UI", "shared"}
         namespaces = [ns for ns in raw if ns not in built_in]
 
-        return maya_success(
+        return skill_success(
             "Found {} namespace(s)".format(len(namespaces)),
             namespaces=namespaces,
             count=len(namespaces),
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to list namespaces")
+        return skill_exception(exc, message="Failed to list namespaces")

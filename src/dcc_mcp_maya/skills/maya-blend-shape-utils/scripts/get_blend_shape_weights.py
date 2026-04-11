@@ -5,7 +5,7 @@ from __future__ import annotations
 
 # Import built-in modules
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def get_blend_shape_weights(blend_shape_node: str) -> dict:
@@ -22,7 +22,7 @@ def get_blend_shape_weights(blend_shape_node: str) -> dict:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(blend_shape_node):
-            return maya_error(
+            return skill_error(
                 "Blend shape node not found: {}".format(blend_shape_node),
                 "'{}' does not exist in the scene".format(blend_shape_node),
             )
@@ -51,7 +51,7 @@ def get_blend_shape_weights(blend_shape_node: str) -> dict:
                 }
             )
 
-        return maya_success(
+        return skill_success(
             "Queried {} target(s) on '{}'".format(len(targets), blend_shape_node),
             prompt="Use set_blend_shape_weight to modify any target's value.",
             blend_shape_node=blend_shape_node,
@@ -59,16 +59,16 @@ def get_blend_shape_weights(blend_shape_node: str) -> dict:
             count=len(targets),
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to get blend shape weights")
+        return skill_exception(exc, message="Failed to get blend shape weights")
 
 
+@skill_entry
 def main(**kwargs):
     return get_blend_shape_weights(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    print(json.dumps(get_blend_shape_weights("blendShape1"), indent=2))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

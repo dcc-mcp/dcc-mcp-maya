@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import List, Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def mirror_joints(
@@ -42,20 +42,20 @@ def mirror_joints(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(joint_name):
-            return maya_error(
+            return skill_error(
                 "Joint not found: {}".format(joint_name),
                 "'{}' does not exist in the scene".format(joint_name),
             )
 
         if mirror_axis not in _VALID_AXES:
-            return maya_error(
+            return skill_error(
                 "Invalid mirror axis: {}".format(mirror_axis),
                 "mirror_axis must be one of {}".format(_VALID_AXES),
             )
 
         sr = search_replace or ["L_", "R_"]
         if len(sr) != 2:
-            return maya_error(
+            return skill_error(
                 "Invalid search_replace",
                 "search_replace must be a list of exactly two strings",
             )
@@ -68,7 +68,7 @@ def mirror_joints(
 
         mirrored = cmds.mirrorJoint(joint_name, mirrorBehavior=mirror_behavior, searchReplace=sr, **axis_kwargs)
 
-        return maya_success(
+        return skill_success(
             "Mirrored joint chain from '{}'".format(joint_name),
             source_joint=joint_name,
             mirrored_joints=list(mirrored) if mirrored else [],
@@ -76,18 +76,17 @@ def mirror_joints(
             prompt="Check the result with list_rigging or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to mirror joints from {}".format(joint_name))
+        return skill_exception(exc, message="Failed to mirror joints from {}".format(joint_name))
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`mirror_joints`."""
     return mirror_joints(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = mirror_joints()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

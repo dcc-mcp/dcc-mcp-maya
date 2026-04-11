@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 # Import built-in modules
 
@@ -37,23 +37,23 @@ def list_toon_outlines() -> dict:
 
             result.append(info)
 
-        return maya_success(
+        return skill_success(
             "Found {} pfxToon outline(s)".format(len(result)),
             prompt="Use set_outline_width to adjust width or add_toon_outline to add new outlines.",
             outlines=result,
             count=len(result),
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to list toon outlines")
+        return skill_exception(exc, message="Failed to list toon outlines")
 
 
+@skill_entry
 def main(**kwargs):
     return list_toon_outlines(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    print(json.dumps(list_toon_outlines()))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

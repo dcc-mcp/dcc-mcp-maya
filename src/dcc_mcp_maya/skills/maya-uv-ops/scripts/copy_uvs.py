@@ -7,7 +7,9 @@ from __future__ import annotations
 from typing import Optional
 
 # Import local modules
-from dcc_mcp_maya.api import batch_validate_nodes, maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
+
+from dcc_mcp_maya.api import batch_validate_nodes
 
 
 def copy_uvs(
@@ -49,7 +51,7 @@ def copy_uvs(
 
         cmds.transferAttributes(source, target, **kwargs)
 
-        return maya_success(
+        return skill_success(
             "Copied UVs from '{}' to '{}'".format(source, target),
             source=source,
             target=target,
@@ -58,18 +60,17 @@ def copy_uvs(
             prompt="Use layout_uvs to arrange or export_uv_snapshot to preview.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to copy UVs")
+        return skill_exception(exc, message="Failed to copy UVs")
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`copy_uvs`."""
     return copy_uvs(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = copy_uvs()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

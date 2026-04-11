@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def create_ncloth(
@@ -31,7 +31,7 @@ def create_ncloth(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(mesh):
-            return maya_error(
+            return skill_error(
                 "Node not found",
                 "Mesh '{}' does not exist".format(mesh),
             )
@@ -60,7 +60,7 @@ def create_ncloth(
                 except Exception:
                     pass
 
-        return maya_success(
+        return skill_success(
             "nCloth created on '{}'".format(mesh),
             prompt=(
                 "nCloth '{}' created with '{}' preset. "
@@ -71,17 +71,16 @@ def create_ncloth(
             preset=preset,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to create nCloth")
+        return skill_exception(exc, message="Failed to create nCloth")
 
 
+@skill_entry
 def main(**kwargs):
     return create_ncloth(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = create_ncloth("pPlane1")
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

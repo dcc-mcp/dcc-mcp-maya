@@ -7,7 +7,9 @@ from __future__ import annotations
 from typing import List
 
 # Import local modules
-from dcc_mcp_maya.api import batch_validate_nodes, maya_error, maya_from_exception, maya_success, validate_node_exists
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
+
+from dcc_mcp_maya.api import batch_validate_nodes, validate_node_exists
 
 
 def set_driven_key(
@@ -44,19 +46,19 @@ def set_driven_key(
     _VALID_TANGENTS = ("linear", "smooth", "flat", "step")
 
     if not driver_values:
-        return maya_error(
+        return skill_error(
             "driver_values cannot be empty",
             "Provide at least one driver value",
         )
 
     if len(driven_values) != len(driver_values):
-        return maya_error(
+        return skill_error(
             "Mismatched driver/driven value counts",
             "driven_values must have the same length as driver_values",
         )
 
     if tangent_type not in _VALID_TANGENTS:
-        return maya_error(
+        return skill_error(
             "Invalid tangent_type: {}".format(tangent_type),
             "Use one of: {}".format(", ".join(_VALID_TANGENTS)),
         )
@@ -89,7 +91,7 @@ def set_driven_key(
                 )
                 keys_set += 1
 
-        return maya_success(
+        return skill_success(
             "Set driven key: '{}' drives {} attr(s) with {} key(s)".format(
                 driver_attr, len(driven_attrs), len(driver_values)
             ),
@@ -101,18 +103,17 @@ def set_driven_key(
             prompt="Check the result with list_rigging or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to set driven key")
+        return skill_exception(exc, message="Failed to set driven key")
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`set_driven_key`."""
     return set_driven_key(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = set_driven_key()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

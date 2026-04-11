@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 # Standard Arnold AOV types
 _STANDARD_AOV_TYPES = {
@@ -56,7 +56,7 @@ def add_aov(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not name:
-            return maya_error("AOV name is required", "Provide a non-empty AOV name")
+            return skill_error("AOV name is required", "Provide a non-empty AOV name")
 
         # Resolve type — check both original case and lowercase for case-insensitive lookup
         resolved_type = aov_type or _STANDARD_AOV_TYPES.get(name) or _STANDARD_AOV_TYPES.get(name.lower(), "RGB")
@@ -65,7 +65,7 @@ def add_aov(
         existing = cmds.ls(type="aiAOV") or []
         for node in existing:
             if cmds.getAttr("{}.name".format(node)) == name:
-                return maya_error(
+                return skill_error(
                     "AOV '{}' already exists".format(name),
                     "Delete the existing AOV before adding a new one with the same name",
                 )
@@ -85,7 +85,7 @@ def add_aov(
                 force=True,
             )
 
-        return maya_success(
+        return skill_success(
             "Added Arnold AOV '{}' ({})".format(name, resolved_type),
             prompt="Use set_aov_attribute to configure filters or drivers, or enable_aov to toggle it.",
             aov_node=aov_node,
@@ -94,9 +94,9 @@ def add_aov(
             enabled=enabled,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to add AOV '{}'".format(name))
+        return skill_exception(exc, message="Failed to add AOV '{}'".format(name))
 
 
 def _type_to_int(type_str: str) -> int:
@@ -111,13 +111,12 @@ def _get_next_aov_index(cmds) -> int:  # type: ignore[no-untyped-def]
     return max(existing) + 1 if existing else 0
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`add_aov`."""
     return add_aov(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = add_aov("diffuse")
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

@@ -21,7 +21,6 @@ from typing import Any
 from unittest.mock import MagicMock, patch
 
 # Import third-party modules
-import pytest
 
 _SKILLS_ROOT = Path(__file__).parent.parent / "src" / "dcc_mcp_maya" / "skills"
 _MOD_COUNTER = [0]

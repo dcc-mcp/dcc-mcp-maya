@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import List, Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_error, skill_exception, skill_success
 
 
 def set_keyframe(
@@ -34,7 +34,7 @@ def set_keyframe(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return maya_error(
+            return skill_error(
                 "Object not found: {}".format(object_name),
                 "'{}' does not exist in the scene".format(object_name),
             )
@@ -48,7 +48,7 @@ def set_keyframe(
                 cmds.setAttr("{}.{}".format(object_name, attributes[0]), value)
 
         count = cmds.setKeyframe(object_name, **kwargs)
-        return maya_success(
+        return skill_success(
             "Set {} keyframe(s) on {}".format(count, object_name),
             object_name=object_name,
             keyframe_count=count,
@@ -57,9 +57,9 @@ def set_keyframe(
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to set keyframe on {}".format(object_name))
+        return skill_exception(exc, message="Failed to set keyframe on {}".format(object_name))
 
 
 def get_keyframes(
@@ -81,7 +81,7 @@ def get_keyframes(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return maya_error(
+            return skill_error(
                 "Object not found: {}".format(object_name),
                 "'{}' does not exist in the scene".format(object_name),
             )
@@ -91,7 +91,7 @@ def get_keyframes(
             kwargs["attribute"] = attribute
         raw = cmds.keyframe(object_name, query=True, timeChange=True, **kwargs)
         keyframes = list(raw) if raw else []
-        return maya_success(
+        return skill_success(
             "Found {} keyframe(s) on {}".format(len(keyframes), object_name),
             object_name=object_name,
             attribute=attribute,
@@ -100,9 +100,9 @@ def get_keyframes(
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to get keyframes for {}".format(object_name))
+        return skill_exception(exc, message="Failed to get keyframes for {}".format(object_name))
 
 
 def set_timeline(
@@ -139,7 +139,7 @@ def set_timeline(
             animationStartTime=min_frame,
             animationEndTime=max_frame,
         )
-        return maya_success(
+        return skill_success(
             "Timeline set: {} - {}".format(start_frame, end_frame),
             start_frame=start_frame,
             end_frame=end_frame,
@@ -148,9 +148,9 @@ def set_timeline(
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to set timeline")
+        return skill_exception(exc, message="Failed to set timeline")
 
 
 def get_current_time() -> dict:
@@ -164,15 +164,15 @@ def get_current_time() -> dict:
         import maya.cmds as cmds  # noqa: PLC0415
 
         current = cmds.currentTime(query=True)
-        return maya_success(
+        return skill_success(
             "Current time: {}".format(current),
             current_time=current,
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to get current time")
+        return skill_exception(exc, message="Failed to get current time")
 
 
 def set_current_time(frame: float) -> dict:
@@ -189,15 +189,15 @@ def set_current_time(frame: float) -> dict:
         import maya.cmds as cmds  # noqa: PLC0415
 
         cmds.currentTime(frame, update=True)
-        return maya_success(
+        return skill_success(
             "Current time set to {}".format(frame),
             current_time=frame,
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to set current time")
+        return skill_exception(exc, message="Failed to set current time")
 
 
 def delete_keyframes(
@@ -225,7 +225,7 @@ def delete_keyframes(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return maya_error(
+            return skill_error(
                 "Object not found: {}".format(object_name),
                 "'{}' does not exist in the scene".format(object_name),
             )
@@ -241,7 +241,7 @@ def delete_keyframes(
             kwargs["time"] = (end_frame, end_frame)
 
         deleted = cmds.cutKey(object_name, clear=True, **kwargs)
-        return maya_success(
+        return skill_success(
             "Deleted {} keyframe(s) from {}".format(deleted, object_name),
             object_name=object_name,
             deleted_count=deleted,
@@ -251,9 +251,9 @@ def delete_keyframes(
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to delete keyframes from {}".format(object_name))
+        return skill_exception(exc, message="Failed to delete keyframes from {}".format(object_name))
 
 
 def bake_simulation(
@@ -286,7 +286,7 @@ def bake_simulation(
         if targets:
             missing = [o for o in targets if not cmds.objExists(o)]
             if missing:
-                return maya_error(
+                return skill_error(
                     "Objects not found: {}".format(", ".join(missing)),
                     "The following objects do not exist: {}".format(", ".join(missing)),
                 )
@@ -295,7 +295,7 @@ def bake_simulation(
             targets = cmds.ls(selection=True) or []
 
         if not targets:
-            return maya_error(
+            return skill_error(
                 "No objects to bake",
                 "Provide object names or select objects before baking",
             )
@@ -307,7 +307,7 @@ def bake_simulation(
             simulation=True,
             preserveOutsideKeys=True,
         )
-        return maya_success(
+        return skill_success(
             "Baked {} object(s) from frame {} to {}".format(len(targets), start_frame, end_frame),
             object_count=len(targets),
             objects=targets,
@@ -317,9 +317,9 @@ def bake_simulation(
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to bake simulation")
+        return skill_exception(exc, message="Failed to bake simulation")
 
 
 def list_animation_curves(
@@ -342,7 +342,7 @@ def list_animation_curves(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return maya_error(
+            return skill_error(
                 "Object not found: {}".format(object_name),
                 "'{}' does not exist in the scene".format(object_name),
             )
@@ -377,7 +377,7 @@ def list_animation_curves(
                 }
             )
 
-        return maya_success(
+        return skill_success(
             "Found {} animCurve(s) on '{}'".format(len(curves), object_name),
             object_name=object_name,
             attribute=attribute,
@@ -386,9 +386,9 @@ def list_animation_curves(
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to list animation curves for '{}'".format(object_name))
+        return skill_exception(exc, message="Failed to list animation curves for '{}'".format(object_name))
 
 
 def set_animation_curve_tangent(
@@ -424,12 +424,12 @@ def set_animation_curve_tangent(
     out_type = (out_tangent_type or tangent_type).lower()
 
     if in_type not in _VALID_TANGENTS:
-        return maya_error(
+        return skill_error(
             "Invalid in_tangent_type: {}".format(in_type),
             "Must be one of: {}".format(", ".join(_VALID_TANGENTS)),
         )
     if out_type not in _VALID_TANGENTS:
-        return maya_error(
+        return skill_error(
             "Invalid out_tangent_type: {}".format(out_type),
             "Must be one of: {}".format(", ".join(_VALID_TANGENTS)),
         )
@@ -438,14 +438,14 @@ def set_animation_curve_tangent(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return maya_error(
+            return skill_error(
                 "Object not found: {}".format(object_name),
                 "'{}' does not exist in the scene".format(object_name),
             )
 
         plug = "{}.{}".format(object_name, attribute)
         if not cmds.objExists(plug):
-            return maya_error(
+            return skill_error(
                 "Attribute not found: {}".format(plug),
                 "'{}.{}' does not exist".format(object_name, attribute),
             )
@@ -460,7 +460,7 @@ def set_animation_curve_tangent(
 
         cmds.keyTangent(object_name, edit=True, **kwargs)
 
-        return maya_success(
+        return skill_success(
             "Set tangent type on '{}.{}' (frame={})".format(object_name, attribute, frame),
             object_name=object_name,
             attribute=attribute,
@@ -470,9 +470,9 @@ def set_animation_curve_tangent(
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to set tangent on '{}.{}'".format(object_name, attribute))
+        return skill_exception(exc, message="Failed to set tangent on '{}.{}'".format(object_name, attribute))
 
 
 def bake_constraints(
@@ -509,7 +509,7 @@ def bake_constraints(
         if targets:
             missing = [o for o in targets if not cmds.objExists(o)]
             if missing:
-                return maya_error(
+                return skill_error(
                     "Objects not found: {}".format(", ".join(missing)),
                     "The following objects do not exist: {}".format(", ".join(missing)),
                 )
@@ -518,7 +518,7 @@ def bake_constraints(
             targets = cmds.ls(selection=True) or []
 
         if not targets:
-            return maya_error(
+            return skill_error(
                 "No objects to bake",
                 "Provide object names or select objects before baking",
             )
@@ -550,7 +550,7 @@ def bake_constraints(
                         cmds.delete(node)
                         removed_constraints.append(node)
 
-        return maya_success(
+        return skill_success(
             "Baked constraints on {} object(s) from frame {} to {}".format(len(targets), start_frame, end_frame),
             object_count=len(targets),
             objects=targets,
@@ -561,9 +561,9 @@ def bake_constraints(
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to bake constraints")
+        return skill_exception(exc, message="Failed to bake constraints")
 
 
 def export_animation_curves(
@@ -597,7 +597,7 @@ def export_animation_curves(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return maya_error(
+            return skill_error(
                 "Object not found: {}".format(object_name),
                 "'{}' does not exist in the scene".format(object_name),
             )
@@ -619,7 +619,7 @@ def export_animation_curves(
             anim_curves = filtered
 
         if not anim_curves:
-            return maya_error(
+            return skill_error(
                 "No animation curves found on '{}'".format(object_name),
                 "Object has no keyframe data to export",
             )
@@ -638,7 +638,7 @@ def export_animation_curves(
         cmds.file(file_path, **export_kwargs)
         cmds.select(clear=True)
 
-        return maya_success(
+        return skill_success(
             "Exported {} animation curve(s) to '{}'".format(len(anim_curves), file_path),
             file_path=file_path,
             object_name=object_name,
@@ -648,9 +648,9 @@ def export_animation_curves(
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to export animation curves for '{}'".format(object_name))
+        return skill_exception(exc, message="Failed to export animation curves for '{}'".format(object_name))
 
 
 def import_animation_curves(
@@ -678,7 +678,7 @@ def import_animation_curves(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not os.path.isfile(file_path):
-            return maya_error(
+            return skill_error(
                 "File not found: {}".format(file_path),
                 "Cannot import animation curves: path does not exist",
             )
@@ -710,7 +710,7 @@ def import_animation_curves(
                         except Exception:
                             pass
 
-        return maya_success(
+        return skill_success(
             "Imported animation curves from '{}'".format(file_path),
             file_path=file_path,
             target_object=target_object,
@@ -718,9 +718,9 @@ def import_animation_curves(
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to import animation curves from '{}'".format(file_path))
+        return skill_exception(exc, message="Failed to import animation curves from '{}'".format(file_path))
 
 
 def query_scene_time_info() -> dict:
@@ -745,7 +745,7 @@ def query_scene_time_info() -> dict:
         pb_end = cmds.playbackOptions(query=True, maxTime=True)
         current = cmds.currentTime(query=True)
 
-        return maya_success(
+        return skill_success(
             "Scene time info retrieved",
             fps=fps,
             animation_start=anim_start,
@@ -756,6 +756,6 @@ def query_scene_time_info() -> dict:
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to query scene time info")
+        return skill_exception(exc, message="Failed to query scene time info")

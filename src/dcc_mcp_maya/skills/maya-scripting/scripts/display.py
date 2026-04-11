@@ -11,7 +11,7 @@ from __future__ import annotations
 from typing import List, Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_error, skill_exception, skill_success
 
 
 def create_display_layer(
@@ -39,10 +39,10 @@ def create_display_layer(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not name or not name.strip():
-            return maya_error("Invalid layer name", "name must not be empty")
+            return skill_error("Invalid layer name", "name must not be empty")
 
         if display_type not in (0, 1, 2):
-            return maya_error(
+            return skill_error(
                 "Invalid display_type: {}".format(display_type),
                 "display_type must be 0 (Normal), 1 (Template) or 2 (Reference)",
             )
@@ -51,7 +51,7 @@ def create_display_layer(
         objects_to_add = list(objects) if objects else []
         missing = [obj for obj in objects_to_add if not cmds.objExists(obj)]
         if missing:
-            return maya_error(
+            return skill_error(
                 "Objects not found: {}".format(missing),
                 "The following objects do not exist in the scene: {}".format(missing),
             )
@@ -65,7 +65,7 @@ def create_display_layer(
         if objects_to_add:
             cmds.editDisplayLayerMembers(layer, *objects_to_add, noRecurse=True)
 
-        return maya_success(
+        return skill_success(
             "Created display layer '{}' with {} object(s)".format(layer, len(objects_to_add)),
             layer_name=layer,
             objects_added=objects_to_add,
@@ -74,9 +74,9 @@ def create_display_layer(
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to create display layer '{}'".format(name))
+        return skill_exception(exc, message="Failed to create display layer '{}'".format(name))
 
 
 def set_display_layer(
@@ -98,36 +98,36 @@ def set_display_layer(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return maya_error(
+            return skill_error(
                 "Object not found: {}".format(object_name),
                 "'{}' does not exist in the scene".format(object_name),
             )
 
         if not cmds.objExists(layer_name):
-            return maya_error(
+            return skill_error(
                 "Display layer not found: {}".format(layer_name),
                 "'{}' does not exist".format(layer_name),
             )
 
         # Verify it is actually a displayLayer node
         if cmds.objectType(layer_name) != "displayLayer":
-            return maya_error(
+            return skill_error(
                 "Not a display layer: {}".format(layer_name),
                 "'{}' is of type '{}', expected 'displayLayer'".format(layer_name, cmds.objectType(layer_name)),
             )
 
         cmds.editDisplayLayerMembers(layer_name, object_name, noRecurse=True)
 
-        return maya_success(
+        return skill_success(
             "Assigned '{}' to display layer '{}'".format(object_name, layer_name),
             object_name=object_name,
             layer_name=layer_name,
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to assign '{}' to layer '{}'".format(object_name, layer_name))
+        return skill_exception(exc, message="Failed to assign '{}' to layer '{}'".format(object_name, layer_name))
 
 
 def delete_display_layer(
@@ -151,19 +151,19 @@ def delete_display_layer(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if layer_name == "defaultLayer":
-            return maya_error(
+            return skill_error(
                 "Cannot delete defaultLayer",
                 "The built-in 'defaultLayer' cannot be deleted",
             )
 
         if not cmds.objExists(layer_name):
-            return maya_error(
+            return skill_error(
                 "Display layer not found: {}".format(layer_name),
                 "'{}' does not exist".format(layer_name),
             )
 
         if cmds.objectType(layer_name) != "displayLayer":
-            return maya_error(
+            return skill_error(
                 "Not a display layer: {}".format(layer_name),
                 "'{}' is not a displayLayer node".format(layer_name),
             )
@@ -177,7 +177,7 @@ def delete_display_layer(
 
         cmds.delete(layer_name)
 
-        return maya_success(
+        return skill_success(
             "Deleted display layer '{}'{}".format(
                 layer_name,
                 " and {} object(s)".format(len(deleted_objects)) if deleted_objects else "",
@@ -187,9 +187,9 @@ def delete_display_layer(
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to delete display layer '{}'".format(layer_name))
+        return skill_exception(exc, message="Failed to delete display layer '{}'".format(layer_name))
 
 
 def list_display_layers() -> dict:
@@ -216,13 +216,13 @@ def list_display_layers() -> dict:
                 }
             )
 
-        return maya_success(
+        return skill_success(
             "Found {} display layer(s)".format(len(layers)),
             layers=layers,
             count=len(layers),
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to list display layers")
+        return skill_exception(exc, message="Failed to list display layers")

@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def set_shot_range(
@@ -32,7 +32,7 @@ def set_shot_range(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(shot_node):
-            return maya_error(
+            return skill_error(
                 "Shot not found: {}".format(shot_node),
                 "Verify the shot node name with list_shots",
             )
@@ -55,7 +55,7 @@ def set_shot_range(
             sequenceEndTime=new_seq_end,
         )
 
-        return maya_success(
+        return skill_success(
             "Shot '{}' range updated to [{}-{}]".format(shot_node, new_start, new_end),
             prompt="Use list_shots to review the full sequence order.",
             shot_node=shot_node,
@@ -65,16 +65,16 @@ def set_shot_range(
             sequence_end_frame=new_seq_end,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to set shot range")
+        return skill_exception(exc, message="Failed to set shot range")
 
 
+@skill_entry
 def main(**kwargs):
     return set_shot_range(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    print(json.dumps(set_shot_range("shot1", start_frame=10, end_frame=60)))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import List, Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def create_locator(name: Optional[str] = None, position: Optional[List[float]] = None) -> dict:
@@ -37,25 +37,24 @@ def create_locator(name: Optional[str] = None, position: Optional[List[float]] =
             cmds.move(position[0], position[1], position[2], loc_transform)
 
         pos = position or [0.0, 0.0, 0.0]
-        return maya_success(
+        return skill_success(
             "Created locator '{}'".format(loc_transform),
             object_name=loc_transform,
             position=pos,
             prompt="Check the result with list_scene or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to create locator")
+        return skill_exception(exc, message="Failed to create locator")
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`create_locator`."""
     return create_locator(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = create_locator()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

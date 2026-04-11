@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import List, Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def bake_constraint(
@@ -40,7 +40,7 @@ def bake_constraint(
 
         for obj in objects:
             if not cmds.objExists(obj):
-                return maya_error(
+                return skill_error(
                     "Object not found: {}".format(obj),
                     "'{}' does not exist in the scene".format(obj),
                 )
@@ -67,7 +67,7 @@ def bake_constraint(
                     if cmds.objExists(con):
                         cmds.delete(con)
 
-        return maya_success(
+        return skill_success(
             "Baked {} object(s) from frame {} to {}".format(len(objects), int(sf), int(ef)),
             prompt="Objects are now free with explicit keyframes. Use the Graph Editor to review.",
             baked_objects=objects,
@@ -75,17 +75,16 @@ def bake_constraint(
             constraints_removed=remove_constraints,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to bake constraint")
+        return skill_exception(exc, message="Failed to bake constraint")
 
 
+@skill_entry
 def main(**kwargs):
     return bake_constraint(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = bake_constraint(["pSphere1"], start_frame=1, end_frame=50)
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

@@ -7,7 +7,7 @@ from __future__ import annotations
 import os
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def attach_geometry_cache(
@@ -31,13 +31,13 @@ def attach_geometry_cache(
         import maya.mel as mel  # noqa: PLC0415
 
         if not cmds.objExists(mesh):
-            return maya_error(
+            return skill_error(
                 "Mesh not found: {}".format(mesh),
                 "'{}' does not exist in the scene".format(mesh),
             )
 
         if not os.path.isfile(cache_xml_path):
-            return maya_error(
+            return skill_error(
                 "Cache file not found: {}".format(cache_xml_path),
                 "Ensure the .xml descriptor file exists.",
             )
@@ -47,7 +47,7 @@ def attach_geometry_cache(
 
         cache_nodes = cmds.ls(type="cacheFile") or []
 
-        return maya_success(
+        return skill_success(
             "Attached cache '{}' to '{}'".format(os.path.basename(cache_xml_path), mesh),
             prompt="Use list_geometry_caches to verify the cache attachment.",
             mesh=mesh,
@@ -55,17 +55,16 @@ def attach_geometry_cache(
             cache_nodes=cache_nodes,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to attach geometry cache")
+        return skill_exception(exc, message="Failed to attach geometry cache")
 
 
+@skill_entry
 def main(**kwargs):
     return attach_geometry_cache(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = attach_geometry_cache("pSphere1", "/tmp/cache/sphere_cache.xml")
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

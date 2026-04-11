@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import Optional, Union
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 _VALID_UNIT_CONVERSIONS = {"none", "angularOnly", "all"}
 
@@ -36,16 +36,16 @@ def create_expression(
         and optional ``context.object_name``.
     """
     if not expression or not expression.strip():
-        return maya_error("Missing parameter", "'expression' string is required and must not be empty")
+        return skill_error("Missing parameter", "'expression' string is required and must not be empty")
 
     # Validate unit_conversion
     if unit_conversion is not None and not isinstance(unit_conversion, str):
-        return maya_error(
+        return skill_error(
             "Invalid parameter",
             "'unit_conversion' must be one of: {}".format(sorted(_VALID_UNIT_CONVERSIONS)),
         )
     if isinstance(unit_conversion, str) and unit_conversion not in _VALID_UNIT_CONVERSIONS:
-        return maya_error(
+        return skill_error(
             "Invalid unit_conversion '{}'".format(unit_conversion),
             "Must be one of: {}".format(sorted(_VALID_UNIT_CONVERSIONS)),
         )
@@ -58,7 +58,7 @@ def create_expression(
 
         # Validate object existence if specified
         if obj and not cmds.objExists(obj):
-            return maya_error(
+            return skill_error(
                 "Object '{}' not found".format(obj),
                 "Ensure the object exists in the scene before creating the expression.",
             )
@@ -83,24 +83,23 @@ def create_expression(
         if attribute:
             ctx["attribute"] = attribute
 
-        return maya_success(
+        return skill_success(
             "Expression node '{}' created".format(node),
             prompt="Expression is live. Use list_expressions to verify or delete_expression to remove.",
             **ctx,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to create expression")
+        return skill_exception(exc, message="Failed to create expression")
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`create_expression`."""
     return create_expression(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = create_expression("pSphere1.translateY = sin(time) * 2;")
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

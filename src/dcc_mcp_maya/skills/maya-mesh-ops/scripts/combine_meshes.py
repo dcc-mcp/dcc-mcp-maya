@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def combine_meshes(
@@ -26,7 +26,7 @@ def combine_meshes(
         result) and ``context.input_count``.
     """
     if not objects or len(objects) < 2:
-        return maya_error(
+        return skill_error(
             "At least two objects are required for combine_meshes",
             "Provide a list of two or more polygon mesh names",
         )
@@ -36,7 +36,7 @@ def combine_meshes(
 
         for obj in objects:
             if not cmds.objExists(obj):
-                return maya_error(
+                return skill_error(
                     "Object not found: {}".format(obj),
                     "'{}' does not exist in the scene".format(obj),
                 )
@@ -47,30 +47,29 @@ def combine_meshes(
         result = cmds.polyUnite(*objects, constructionHistory=False, **kwargs) or []
         combined = result[0] if result else None
         if not combined:
-            return maya_error(
+            return skill_error(
                 "polyUnite returned no result",
                 "polyUnite did not produce any output mesh",
             )
 
-        return maya_success(
+        return skill_success(
             "Combined {} meshes into '{}'".format(len(objects), combined),
             combined_mesh=combined,
             input_count=len(objects),
             prompt="Use cleanup_mesh or assign_material to finalise the combined mesh.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to combine meshes")
+        return skill_exception(exc, message="Failed to combine meshes")
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`combine_meshes`."""
     return combine_meshes(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = combine_meshes()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

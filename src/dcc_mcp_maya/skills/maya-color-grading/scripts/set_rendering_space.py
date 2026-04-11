@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def set_rendering_space(rendering_space: str) -> dict:
@@ -33,23 +33,22 @@ def set_rendering_space(rendering_space: str) -> dict:
 
         applied = cmds.colorManagementPrefs(query=True, renderingSpaceName=True) or ""
 
-        return maya_success(
+        return skill_success(
             "Set rendering space to '{}'".format(applied),
             prompt="Use get_color_management_info to verify all color settings.",
             rendering_space=applied,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to set rendering space")
+        return skill_exception(exc, message="Failed to set rendering space")
 
 
+@skill_entry
 def main(**kwargs):
     return set_rendering_space(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = set_rendering_space("ACEScg")
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

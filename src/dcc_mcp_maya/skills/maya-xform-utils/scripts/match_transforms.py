@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 # Import built-in modules
 
@@ -35,7 +35,7 @@ def match_transforms(
 
         for name in (source, target):
             if not cmds.objExists(name):
-                return maya_error(
+                return skill_error(
                     "Object not found: {}".format(name),
                     "'{}' does not exist in the scene".format(name),
                 )
@@ -57,7 +57,7 @@ def match_transforms(
         new_r = cmds.xform(source, query=True, worldSpace=True, rotation=True)
         new_s = cmds.xform(source, query=True, worldSpace=True, scale=True)
 
-        return maya_success(
+        return skill_success(
             "Matched '{}' to '{}'".format(source, target),
             prompt="Use freeze_transforms to bake the matched position, or parent_object if you want a hierarchy.",
             source=source,
@@ -67,16 +67,16 @@ def match_transforms(
             scale=new_s,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to match transforms")
+        return skill_exception(exc, message="Failed to match transforms")
 
 
+@skill_entry
 def main(**kwargs):
     return match_transforms(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    print(json.dumps(match_transforms("pSphere1", "pCube1"), indent=2))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

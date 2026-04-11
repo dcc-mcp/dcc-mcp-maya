@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def create_spline_ik(
@@ -44,7 +44,7 @@ def create_spline_ik(
 
         for jnt in (start_joint, end_joint):
             if not cmds.objExists(jnt):
-                return maya_error(
+                return skill_error(
                     "Joint not found: {}".format(jnt),
                     "'{}' does not exist".format(jnt),
                 )
@@ -69,7 +69,7 @@ def create_spline_ik(
         ik_effector = result[1]
         ik_curve = result[2] if len(result) > 2 else (curve or "")
 
-        return maya_success(
+        return skill_success(
             "Created spline IK handle '{}'".format(ik_handle),
             prompt=(
                 "Use set_spline_ik_twist to configure advanced twist, "
@@ -82,16 +82,16 @@ def create_spline_ik(
             end_joint=end_joint,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to create spline IK")
+        return skill_exception(exc, message="Failed to create spline IK")
 
 
+@skill_entry
 def main(**kwargs):
     return create_spline_ik(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    print(json.dumps(create_spline_ik("spine_01", "spine_05"), indent=2))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

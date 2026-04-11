@@ -5,7 +5,9 @@ from __future__ import annotations
 
 # Import built-in modules
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_success, validate_node_exists, validate_node_type
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_success
+
+from dcc_mcp_maya.api import validate_node_exists, validate_node_type
 
 _VALID_FIELD_TYPES = (
     "gravity",
@@ -40,7 +42,7 @@ def set_nrigid_attribute(
         ``context.attribute``, ``context.value``.
     """
     if not nrigid_node or not attribute:
-        return maya_error(
+        return skill_error(
             "nrigid_node and attribute are required",
             "Provide non-empty nrigid_node and attribute strings",
         )
@@ -59,7 +61,7 @@ def set_nrigid_attribute(
         attr_path = "{}.{}".format(nrigid_node, attribute)
         err = validate_node_exists(cmds, attr_path)
         if err:
-            return maya_error(
+            return skill_error(
                 "Attribute not found: {}".format(attr_path),
                 "'{}' does not have attribute '{}'".format(nrigid_node, attribute),
             )
@@ -71,7 +73,7 @@ def set_nrigid_attribute(
         else:
             cmds.setAttr(attr_path, value)
 
-        return maya_success(
+        return skill_success(
             "Set {}.{} = {}".format(nrigid_node, attribute, value),
             nrigid_node=nrigid_node,
             attribute=attribute,
@@ -79,21 +81,20 @@ def set_nrigid_attribute(
             prompt="Check the result with list_dynamics or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_error(
+        return skill_error(
             "Failed to set attribute '{}' on '{}'".format(attribute, nrigid_node),
             str(exc),
         )
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`set_nrigid_attribute`."""
     return set_nrigid_attribute(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = set_nrigid_attribute()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

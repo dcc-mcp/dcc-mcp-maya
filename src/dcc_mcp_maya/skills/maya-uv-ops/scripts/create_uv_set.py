@@ -7,7 +7,9 @@ from __future__ import annotations
 from typing import Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success, validate_node_exists
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
+
+from dcc_mcp_maya.api import validate_node_exists
 
 
 def create_uv_set(object_name: str, uv_set_name: str, copy_from: Optional[str] = None) -> dict:
@@ -31,16 +33,16 @@ def create_uv_set(object_name: str, uv_set_name: str, copy_from: Optional[str] =
 
         existing = cmds.polyUVSet(object_name, query=True, allUVSets=True) or []
         if uv_set_name in existing:
-            return maya_error("UV set '{}' already exists on '{}'".format(uv_set_name, object_name))
+            return skill_error("UV set '{}' already exists on '{}'".format(uv_set_name, object_name))
 
         if copy_from:
             if copy_from not in existing:
-                return maya_error("Source UV set '{}' not found on '{}'".format(copy_from, object_name))
+                return skill_error("Source UV set '{}' not found on '{}'".format(copy_from, object_name))
             cmds.polyUVSet(object_name, copy=True, uvSet=copy_from, newUVSet=uv_set_name)
         else:
             cmds.polyUVSet(object_name, create=True, uvSet=uv_set_name)
 
-        return maya_success(
+        return skill_success(
             "Created UV set '{}' on '{}'".format(uv_set_name, object_name),
             object_name=object_name,
             uv_set_name=uv_set_name,
@@ -48,18 +50,17 @@ def create_uv_set(object_name: str, uv_set_name: str, copy_from: Optional[str] =
             prompt="Check the result with list_uv_ops or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to create UV set")
+        return skill_exception(exc, message="Failed to create UV set")
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`create_uv_set`."""
     return create_uv_set(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = create_uv_set()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

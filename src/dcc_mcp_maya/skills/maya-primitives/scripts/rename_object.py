@@ -5,7 +5,7 @@ from __future__ import annotations
 
 # Import built-in modules
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def rename_object(object_name: str, new_name: str) -> dict:
@@ -23,31 +23,30 @@ def rename_object(object_name: str, new_name: str) -> dict:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return maya_error(
+            return skill_error(
                 "Object not found: {}".format(object_name),
                 "'{}' does not exist in the scene".format(object_name),
             )
 
         result = cmds.rename(object_name, new_name)
-        return maya_success(
+        return skill_success(
             "Renamed '{}' to '{}'".format(object_name, result),
             old_name=object_name,
             object_name=result,
             prompt="Check the result with list_primitives or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to rename {}".format(object_name))
+        return skill_exception(exc, message="Failed to rename {}".format(object_name))
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`rename_object`."""
     return rename_object(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = rename_object()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

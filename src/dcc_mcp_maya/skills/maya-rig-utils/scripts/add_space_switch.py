@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import List
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def add_space_switch(
@@ -40,20 +40,20 @@ def add_space_switch(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(control):
-            return maya_error(
+            return skill_error(
                 "Control not found: {}".format(control),
                 "'{}' does not exist in the scene".format(control),
             )
 
         if len(spaces) != len(space_names):
-            return maya_error(
+            return skill_error(
                 "Mismatched spaces/space_names lengths",
                 "spaces ({}) and space_names ({}) must have the same length".format(len(spaces), len(space_names)),
             )
 
         missing = [s for s in spaces if not cmds.objExists(s)]
         if missing:
-            return maya_error(
+            return skill_error(
                 "Driver nodes not found: {}".format(", ".join(missing)),
                 "The following space drivers do not exist: {}".format(", ".join(missing)),
             )
@@ -77,7 +77,7 @@ def add_space_switch(
                     value=1.0 if i == j else 0.0,
                 )
 
-        return maya_success(
+        return skill_success(
             "Added space switch on '{}' with {} spaces".format(control, len(spaces)),
             prompt="Set {}.space enum to switch between spaces at runtime.".format(control),
             control=control,
@@ -86,21 +86,16 @@ def add_space_switch(
             spaces=space_names,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to add space switch on '{}'".format(control))
+        return skill_exception(exc, message="Failed to add space switch on '{}'".format(control))
 
 
+@skill_entry
 def main(**kwargs):
     return add_space_switch(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = add_space_switch(
-        "hand_ctrl",
-        ["world_loc", "hip_ctrl"],
-        ["world", "hip"],
-    )
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

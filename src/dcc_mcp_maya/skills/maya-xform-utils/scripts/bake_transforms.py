@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import List, Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def bake_transforms(
@@ -38,11 +38,11 @@ def bake_transforms(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not objects:
-            return maya_error("No objects provided", "Pass at least one object name.")
+            return skill_error("No objects provided", "Pass at least one object name.")
 
         missing = [o for o in objects if not cmds.objExists(o)]
         if missing:
-            return maya_error(
+            return skill_error(
                 "Objects not found",
                 "Missing: {}".format(", ".join(missing)),
             )
@@ -64,7 +64,7 @@ def bake_transforms(
             shape=True,
         )
 
-        return maya_success(
+        return skill_success(
             "Baked transforms for {} object(s) [{} → {}]".format(len(objects), s, e),
             prompt="You can now delete constraints and export the objects. "
             "Use maya-animation skills to further edit keyframes.",
@@ -73,16 +73,16 @@ def bake_transforms(
             step=step,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to bake transforms")
+        return skill_exception(exc, message="Failed to bake transforms")
 
 
+@skill_entry
 def main(**kwargs):
     return bake_transforms(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    print(json.dumps(bake_transforms(["pSphere1"], start_frame=1, end_frame=24), indent=2))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

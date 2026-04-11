@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def extract_faces(
@@ -32,12 +32,12 @@ def extract_faces(
         ``context.face_count``.
     """
     if not object_name:
-        return maya_error(
+        return skill_error(
             "object_name is required",
             "Provide a non-empty polygon mesh name",
         )
     if not face_indices:
-        return maya_error(
+        return skill_error(
             "face_indices is required",
             "Provide a non-empty list of integer face indices",
         )
@@ -46,7 +46,7 @@ def extract_faces(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return maya_error(
+            return skill_error(
                 "Object not found: {}".format(object_name),
                 "'{}' does not exist in the scene".format(object_name),
             )
@@ -66,25 +66,24 @@ def extract_faces(
                     parents = cmds.listRelatives(last, parent=True, fullPath=False) or []
                     extracted = parents[0] if parents else object_name
 
-        return maya_success(
+        return skill_success(
             "Extracted {} face(s) from '{}'".format(len(face_indices), object_name),
             extracted_mesh=extracted,
             face_count=len(face_indices),
             prompt="Use combine_meshes or cleanup_mesh to post-process.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to extract faces from '{}'".format(object_name))
+        return skill_exception(exc, message="Failed to extract faces from '{}'".format(object_name))
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`extract_faces`."""
     return extract_faces(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = extract_faces()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

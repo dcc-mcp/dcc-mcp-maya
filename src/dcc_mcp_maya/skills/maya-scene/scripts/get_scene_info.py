@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def get_scene_info(include_transforms: bool = True) -> dict:
@@ -42,25 +42,24 @@ def get_scene_info(include_transforms: bool = True) -> dict:
                 node["scale"] = list(cmds.getAttr("{}.scale".format(long_name))[0])
             nodes.append(node)
 
-        return maya_success(
+        return skill_success(
             "Scene info: {} transform node(s)".format(len(nodes)),
             nodes=nodes,
             count=len(nodes),
             prompt="Use set_transform or assign_material to modify listed objects.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to get scene info")
+        return skill_exception(exc, message="Failed to get scene info")
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`get_scene_info`."""
     return get_scene_info(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = get_scene_info()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

@@ -4,7 +4,9 @@
 from __future__ import annotations
 
 # Import local modules
-from dcc_mcp_maya.api import batch_validate_nodes, maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
+
+from dcc_mcp_maya.api import batch_validate_nodes
 
 _CONSTRAINT_TYPES = {
     "parent": "parentConstraint",
@@ -42,7 +44,7 @@ def add_constraint(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if constraint_type not in _CONSTRAINT_TYPES:
-            return maya_error(
+            return skill_error(
                 "Unknown constraint type: {}".format(constraint_type),
                 "Supported types: {}".format(", ".join(sorted(_CONSTRAINT_TYPES))),
             )
@@ -55,7 +57,7 @@ def add_constraint(
         result = cmd_fn(source, target, maintainOffset=maintain_offset, weight=weight)
         constraint_node = result[0] if result else ""
 
-        return maya_success(
+        return skill_success(
             "Added {} constraint '{}' → '{}'".format(constraint_type, source, target),
             prompt="Use list_constraints to see all constraints on the target, or remove_constraint to remove it.",
             constraint_node=constraint_node,
@@ -64,18 +66,17 @@ def add_constraint(
             target=target,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to add constraint")
+        return skill_exception(exc, message="Failed to add constraint")
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`add_constraint`."""
     return add_constraint(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = add_constraint("parent", "pSphere1", "pCube1")
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

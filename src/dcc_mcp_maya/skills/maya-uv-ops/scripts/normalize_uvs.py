@@ -4,7 +4,9 @@
 from __future__ import annotations
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success, validate_node_exists
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
+
+from dcc_mcp_maya.api import validate_node_exists
 
 # Import built-in modules
 
@@ -29,12 +31,12 @@ def normalize_uvs(
     """
 
     if not (0 < layout_u <= 1):
-        return maya_error(
+        return skill_error(
             "Invalid layout_u: {}".format(layout_u),
             "layout_u must be in range (0, 1]",
         )
     if not (0 < layout_v <= 1):
-        return maya_error(
+        return skill_error(
             "Invalid layout_v: {}".format(layout_v),
             "layout_v must be in range (0, 1]",
         )
@@ -54,7 +56,7 @@ def normalize_uvs(
             ch=False,
         )
 
-        return maya_success(
+        return skill_success(
             "Normalized UVs on '{}' (layout_u={}, layout_v={})".format(object_name, layout_u, layout_v),
             object_name=object_name,
             layout_u=layout_u,
@@ -63,18 +65,17 @@ def normalize_uvs(
             prompt="Use layout_uvs or export_uv_snapshot to verify.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to normalize UVs on '{}'".format(object_name))
+        return skill_exception(exc, message="Failed to normalize UVs on '{}'".format(object_name))
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`normalize_uvs`."""
     return normalize_uvs(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = normalize_uvs()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

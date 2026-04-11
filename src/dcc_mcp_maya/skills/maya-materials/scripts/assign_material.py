@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import List
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 _SUPPORTED_SHADERS = ("lambert", "blinn", "phong", "phongE", "aiStandardSurface")
 
@@ -32,7 +32,7 @@ def assign_material(material_name: str, objects: List[str]) -> dict:
                 type="shadingEngine",
             )
             if not connections:
-                return maya_error(
+                return skill_error(
                     "No shading group found for '{}'".format(material_name),
                     "Connect material to a shading group first or use assign_material with the SG name",
                 )
@@ -42,31 +42,30 @@ def assign_material(material_name: str, objects: List[str]) -> dict:
 
         existing = cmds.ls(objects)
         if not existing:
-            return maya_error(
+            return skill_error(
                 "No objects found",
                 "None of the requested objects exist: {}".format(objects),
             )
 
         cmds.sets(existing, edit=True, forceElement=sg)
-        return maya_success(
+        return skill_success(
             "Assigned '{}' to {} object(s)".format(sg, len(existing)),
             shading_group=sg,
             objects=existing,
             prompt="Use set_material_attribute to fine-tune the material properties.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to assign material")
+        return skill_exception(exc, message="Failed to assign material")
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`assign_material`."""
     return assign_material(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = assign_material()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

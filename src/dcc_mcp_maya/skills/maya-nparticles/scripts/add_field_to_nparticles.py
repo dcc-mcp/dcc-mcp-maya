@@ -18,7 +18,7 @@ _FIELD_TYPES = {
 }
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success  # noqa: E402
 
 
 def add_field_to_nparticles(
@@ -47,14 +47,14 @@ def add_field_to_nparticles(
 
         ft = field_type.lower()
         if ft not in _FIELD_TYPES:
-            return maya_error(
+            return skill_error(
                 "Unknown field type '{}'".format(field_type),
                 "Valid types: {}".format(", ".join(sorted(_FIELD_TYPES))),
             )
 
         targets = particle_shapes or (cmds.ls(type="nParticle") or [])
         if not targets:
-            return maya_error(
+            return skill_error(
                 "No nParticle shapes found",
                 "Create nParticle systems first with create_nparticle_emitter",
             )
@@ -77,7 +77,7 @@ def add_field_to_nparticles(
             shapes = cmds.listRelatives(field_transform, shapes=True) or []
             field_shapes = shapes
 
-        return maya_success(
+        return skill_success(
             "Added '{}' field to {} nParticle system(s)".format(field_type, len(targets)),
             prompt="Scrub the timeline to see the field affecting the particles.",
             field_transform=field_transform,
@@ -87,16 +87,16 @@ def add_field_to_nparticles(
             connected_particles=targets,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to add field '{}'".format(field_type))
+        return skill_exception(exc, message="Failed to add field '{}'".format(field_type))
 
 
+@skill_entry
 def main(**kwargs):
     return add_field_to_nparticles(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    print(json.dumps(add_field_to_nparticles(field_type="gravity")))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

@@ -7,7 +7,9 @@ from __future__ import annotations
 from typing import List, Optional
 
 # Import local modules
-from dcc_mcp_maya.api import batch_validate_nodes, maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
+
+from dcc_mcp_maya.api import batch_validate_nodes
 
 _CONSTRAINT_TYPES = {
     "parent": "parentConstraint",
@@ -43,13 +45,13 @@ def create_constraint_weighted(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if constraint_type not in _CONSTRAINT_TYPES:
-            return maya_error(
+            return skill_error(
                 "Unknown constraint type: {}".format(constraint_type),
                 "Supported types: {}".format(", ".join(sorted(_CONSTRAINT_TYPES))),
             )
 
         if len(sources) < 1:
-            return maya_error("No sources provided", "At least one source object is required")
+            return skill_error("No sources provided", "At least one source object is required")
 
         err = batch_validate_nodes(cmds, sources + [target])
         if err:
@@ -71,7 +73,7 @@ def create_constraint_weighted(
 
         source_weights = list(zip(sources, effective_weights))
 
-        return maya_success(
+        return skill_success(
             "Created weighted {} constraint on '{}' with {} sources".format(constraint_type, target, len(sources)),
             prompt="Use list_constraints to inspect the result or remove_constraint to undo.",
             constraint_node=constraint_node,
@@ -80,18 +82,17 @@ def create_constraint_weighted(
             source_weights=[{"source": s, "weight": w} for s, w in source_weights],
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to create weighted constraint")
+        return skill_exception(exc, message="Failed to create weighted constraint")
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`create_constraint_weighted`."""
     return create_constraint_weighted(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = create_constraint_weighted("parent", ["pSphere1", "pCube1"], "pCylinder1", [0.7, 0.3])
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

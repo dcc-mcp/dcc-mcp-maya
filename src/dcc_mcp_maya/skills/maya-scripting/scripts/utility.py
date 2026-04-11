@@ -14,7 +14,7 @@ from __future__ import annotations
 from typing import Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_error, skill_exception, skill_success
 
 
 def create_utility_node(
@@ -43,23 +43,23 @@ def create_utility_node(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not node_type or not node_type.strip():
-            return maya_error("Invalid node_type", "node_type must not be empty")
+            return skill_error("Invalid node_type", "node_type must not be empty")
 
         node = cmds.shadingNode(node_type, asUtility=True)
 
         if name and name.strip():
             node = cmds.rename(node, name)
 
-        return maya_success(
+        return skill_success(
             "Created utility node '{}' of type '{}'".format(node, node_type),
             node_name=node,
             node_type=node_type,
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to create utility node of type '{}'".format(node_type))
+        return skill_exception(exc, message="Failed to create utility node of type '{}'".format(node_type))
 
 
 def get_scene_statistics() -> dict:
@@ -122,7 +122,7 @@ def get_scene_statistics() -> dict:
         except Exception:
             scene_file = ""
 
-        return maya_success(
+        return skill_success(
             "Scene statistics: {} nodes, {} meshes, {} poly verts".format(len(all_nodes), len(meshes), poly_verts),
             total_nodes=len(all_nodes),
             transform_count=len(transforms),
@@ -136,6 +136,6 @@ def get_scene_statistics() -> dict:
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to get scene statistics")
+        return skill_exception(exc, message="Failed to get scene statistics")
