@@ -23,7 +23,7 @@ class TestCopySkinWeights:
     """Tests for copy_skin_weights script."""
 
     def test_copy_success(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         mock_cmds.ls.return_value = ["skinCluster1"]
         mock_cmds.skinCluster.return_value = ["joint1", "joint2"]
@@ -36,7 +36,7 @@ class TestCopySkinWeights:
         assert result["context"]["target_mesh"] == "targetMesh"
 
     def test_source_not_found(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = False
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             mod = load_skill_script("maya-skinning-utils", "copy_skin_weights")
@@ -44,7 +44,7 @@ class TestCopySkinWeights:
         assert result["success"] is False
 
     def test_no_skin_cluster_on_source(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         mock_cmds.ls.return_value = []
         mock_cmds.listHistory.return_value = []
@@ -61,7 +61,7 @@ class TestCopySkinWeights:
         assert result["success"] is False
 
     def test_main_passthrough(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         mock_cmds.ls.return_value = ["skinCluster1"]
         mock_cmds.skinCluster.return_value = ["j1"]
@@ -75,7 +75,7 @@ class TestNormalizeSkinWeights:
     """Tests for normalize_skin_weights script."""
 
     def test_normalize_success(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         mock_cmds.ls.return_value = ["skinCluster1"]
         mock_cmds.listHistory.return_value = ["skinCluster1"]
@@ -86,7 +86,7 @@ class TestNormalizeSkinWeights:
         assert result["context"]["skin_cluster_name"] == "skinCluster1"
 
     def test_mesh_not_found(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = False
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             mod = load_skill_script("maya-skinning-utils", "normalize_skin_weights")
@@ -94,7 +94,7 @@ class TestNormalizeSkinWeights:
         assert result["success"] is False
 
     def test_no_skin_cluster(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         mock_cmds.ls.return_value = []
         mock_cmds.listHistory.return_value = []
@@ -110,7 +110,7 @@ class TestNormalizeSkinWeights:
         assert result["success"] is False
 
     def test_main_passthrough(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         mock_cmds.ls.return_value = ["skinCluster1"]
         mock_cmds.listHistory.return_value = ["skinCluster1"]
@@ -124,7 +124,7 @@ class TestMirrorSkinWeights:
     """Tests for mirror_skin_weights script."""
 
     def test_mirror_success(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         mock_cmds.ls.return_value = ["skinCluster1"]
         mock_cmds.listHistory.return_value = ["skinCluster1"]
@@ -135,7 +135,7 @@ class TestMirrorSkinWeights:
         assert result["context"]["mirror_mode"] == "YZ"
 
     def test_mesh_not_found(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = False
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             mod = load_skill_script("maya-skinning-utils", "mirror_skin_weights")
@@ -143,7 +143,7 @@ class TestMirrorSkinWeights:
         assert result["success"] is False
 
     def test_no_skin_cluster(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         mock_cmds.ls.return_value = []
         mock_cmds.listHistory.return_value = []
@@ -159,7 +159,7 @@ class TestMirrorSkinWeights:
         assert result["success"] is False
 
     def test_negative_to_positive(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         mock_cmds.ls.return_value = ["skinCluster1"]
         mock_cmds.listHistory.return_value = ["skinCluster1"]
@@ -174,7 +174,7 @@ class TestPruneSkinWeights:
     """Tests for prune_skin_weights script."""
 
     def test_prune_success(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         mock_cmds.ls.return_value = ["skinCluster1"]
         mock_cmds.listHistory.return_value = ["skinCluster1"]
@@ -185,7 +185,7 @@ class TestPruneSkinWeights:
         assert result["context"]["prune_value"] == 0.05
 
     def test_mesh_not_found(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = False
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             mod = load_skill_script("maya-skinning-utils", "prune_skin_weights")
@@ -193,7 +193,7 @@ class TestPruneSkinWeights:
         assert result["success"] is False
 
     def test_no_skin_cluster(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         mock_cmds.ls.return_value = []
         mock_cmds.listHistory.return_value = []
@@ -209,7 +209,7 @@ class TestPruneSkinWeights:
         assert result["success"] is False
 
     def test_main_passthrough(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         mock_cmds.ls.return_value = ["skinCluster1"]
         mock_cmds.listHistory.return_value = ["skinCluster1"]
@@ -228,7 +228,7 @@ class TestCreateControlCurve:
     """Tests for create_control_curve script."""
 
     def test_create_circle(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.curve.return_value = "ctrl_root"
         mock_cmds.listRelatives.return_value = ["ctrl_rootShape"]
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
@@ -239,7 +239,7 @@ class TestCreateControlCurve:
         assert result["context"]["shape"] == "circle"
 
     def test_create_with_color(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.curve.return_value = "ctrl_color"
         mock_cmds.listRelatives.return_value = ["ctrl_colorShape"]
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
@@ -249,7 +249,7 @@ class TestCreateControlCurve:
         assert result["context"]["color"] == 17
 
     def test_unknown_shape(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             mod = load_skill_script("maya-rig-utils", "create_control_curve")
             result = mod.create_control_curve(shape="unknown_shape")
@@ -263,7 +263,7 @@ class TestCreateControlCurve:
 
     def test_all_preset_shapes(self):
         for shape in ("circle", "square", "triangle", "arrow", "diamond"):
-            mock_maya, mock_cmds = make_mock_maya()
+            mock_maya, mock_cmds, _ = make_mock_maya()
             mock_cmds.curve.return_value = "{}_ctrl".format(shape)
             mock_cmds.listRelatives.return_value = ["{}_ctrlShape".format(shape)]
             with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
@@ -272,7 +272,7 @@ class TestCreateControlCurve:
             assert result["success"] is True, "Shape '{}' failed".format(shape)
 
     def test_main_passthrough(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.curve.return_value = "circle_ctrl"
         mock_cmds.listRelatives.return_value = ["circle_ctrlShape"]
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
@@ -285,7 +285,7 @@ class TestLockHideAttributes:
     """Tests for lock_hide_attributes script."""
 
     def test_lock_and_hide(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         mock_cmds.attributeQuery.return_value = True
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
@@ -296,7 +296,7 @@ class TestLockHideAttributes:
         assert result["context"]["hide"] is True
 
     def test_node_not_found(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = False
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             mod = load_skill_script("maya-rig-utils", "lock_hide_attributes")
@@ -304,7 +304,7 @@ class TestLockHideAttributes:
         assert result["success"] is False
 
     def test_skip_missing_attribute(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         mock_cmds.attributeQuery.return_value = False
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
@@ -314,7 +314,7 @@ class TestLockHideAttributes:
         assert result["context"]["processed_attributes"] == []
 
     def test_lock_only(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         mock_cmds.attributeQuery.return_value = True
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
@@ -329,7 +329,7 @@ class TestLockHideAttributes:
         assert result["success"] is False
 
     def test_main_passthrough(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         mock_cmds.attributeQuery.return_value = True
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
@@ -342,7 +342,7 @@ class TestAddSpaceSwitch:
     """Tests for add_space_switch script."""
 
     def test_add_success(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         mock_cmds.attributeQuery.return_value = False
         mock_cmds.parentConstraint.side_effect = [
@@ -360,7 +360,7 @@ class TestAddSpaceSwitch:
         assert result["context"]["constraint_node"] == "pConst1"
 
     def test_control_not_found(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.side_effect = lambda n: n != "hand_ctrl"
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             mod = load_skill_script("maya-rig-utils", "add_space_switch")
@@ -368,7 +368,7 @@ class TestAddSpaceSwitch:
         assert result["success"] is False
 
     def test_mismatched_lengths(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             mod = load_skill_script("maya-rig-utils", "add_space_switch")
@@ -377,7 +377,7 @@ class TestAddSpaceSwitch:
         assert "length" in result["message"].lower()
 
     def test_missing_driver(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.side_effect = lambda n: n not in ["missing_loc"]
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             mod = load_skill_script("maya-rig-utils", "add_space_switch")
@@ -395,7 +395,7 @@ class TestConnectAttributes:
     """Tests for connect_attributes script."""
 
     def test_connect_success(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.connectionInfo.return_value = False
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             mod = load_skill_script("maya-rig-utils", "connect_attributes")
@@ -404,14 +404,14 @@ class TestConnectAttributes:
         assert result["context"]["connected_count"] == 1
 
     def test_empty_connections(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             mod = load_skill_script("maya-rig-utils", "connect_attributes")
             result = mod.connect_attributes([])
         assert result["success"] is False
 
     def test_invalid_pair_format(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             mod = load_skill_script("maya-rig-utils", "connect_attributes")
             result = mod.connect_attributes([["single_item"]])
@@ -419,7 +419,7 @@ class TestConnectAttributes:
         assert result["success"] is False
 
     def test_connection_exception(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.connectionInfo.return_value = False
         mock_cmds.connectAttr.side_effect = RuntimeError("already connected")
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
@@ -435,7 +435,7 @@ class TestConnectAttributes:
         assert result["success"] is False
 
     def test_main_passthrough(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.connectionInfo.return_value = False
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             mod = load_skill_script("maya-rig-utils", "connect_attributes")
@@ -452,7 +452,7 @@ class TestCreateRenderPass:
     """Tests for create_render_pass script."""
 
     def test_create_maya_software(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.createNode.return_value = "beauty_pass"
         mock_cmds.attributeQuery.return_value = False
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
@@ -462,7 +462,7 @@ class TestCreateRenderPass:
         assert result["context"]["pass_node"] == "beauty_pass"
 
     def test_create_arnold_aov(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.createNode.return_value = "diffuse_aov"
         mock_cmds.pluginInfo.return_value = True
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
@@ -478,7 +478,7 @@ class TestCreateRenderPass:
         assert result["success"] is False
 
     def test_main_passthrough(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.createNode.return_value = "shadow_pass"
         mock_cmds.attributeQuery.return_value = False
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
@@ -491,7 +491,7 @@ class TestListRenderPasses:
     """Tests for list_render_passes script."""
 
     def test_list_empty(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.ls.return_value = []
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             mod = load_skill_script("maya-render-passes", "list_render_passes")
@@ -500,7 +500,7 @@ class TestListRenderPasses:
         assert result["context"]["count"] == 0
 
     def test_list_with_nodes(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.ls.side_effect = lambda type=None: (
             ["beauty_pass"] if type == "renderPass" else ["diffuse_aov"] if type == "aiAOV" else []
         )
@@ -519,7 +519,7 @@ class TestListRenderPasses:
         assert result["success"] is False
 
     def test_main_passthrough(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.ls.return_value = []
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             mod = load_skill_script("maya-render-passes", "list_render_passes")
@@ -531,7 +531,7 @@ class TestEnableRenderPass:
     """Tests for enable_render_pass script."""
 
     def test_enable_success(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         mock_cmds.attributeQuery.return_value = True
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
@@ -541,7 +541,7 @@ class TestEnableRenderPass:
         assert result["context"]["enabled"] is True
 
     def test_disable_success(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         mock_cmds.attributeQuery.return_value = True
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
@@ -551,7 +551,7 @@ class TestEnableRenderPass:
         assert result["context"]["enabled"] is False
 
     def test_pass_not_found(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = False
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             mod = load_skill_script("maya-render-passes", "enable_render_pass")
@@ -559,7 +559,7 @@ class TestEnableRenderPass:
         assert result["success"] is False
 
     def test_no_toggle_attr(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         mock_cmds.attributeQuery.return_value = False
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
@@ -578,7 +578,7 @@ class TestSetRenderPassOutput:
     """Tests for set_render_pass_output script."""
 
     def test_set_output_path(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         mock_cmds.attributeQuery.side_effect = lambda attr, node, exists: attr == "fileNamePrefix"
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
@@ -588,7 +588,7 @@ class TestSetRenderPassOutput:
         assert result["context"]["output_path"] == "images/beauty"
 
     def test_pass_not_found(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = False
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             mod = load_skill_script("maya-render-passes", "set_render_pass_output")
@@ -596,7 +596,7 @@ class TestSetRenderPassOutput:
         assert result["success"] is False
 
     def test_no_settable_attrs(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         mock_cmds.attributeQuery.return_value = False
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
@@ -621,7 +621,7 @@ class TestSavePose:
 
     def test_save_success(self, tmp_path):
         pose_file = str(tmp_path / "test.json")
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.ls.return_value = ["ctrl_a"]
         mock_cmds.objExists.return_value = True
         mock_cmds.attributeQuery.return_value = True
@@ -633,7 +633,7 @@ class TestSavePose:
         assert os.path.isfile(pose_file)
 
     def test_no_controls(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.ls.return_value = []
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             mod = load_skill_script("maya-pose-library", "save_pose")
@@ -644,7 +644,7 @@ class TestSavePose:
         pose_file = str(tmp_path / "existing.json")
         with open(pose_file, "w") as f:
             f.write("{}")
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             mod = load_skill_script("maya-pose-library", "save_pose")
             result = mod.save_pose(pose_file, controls=["ctrl"], overwrite=False)
@@ -659,7 +659,7 @@ class TestSavePose:
 
     def test_main_passthrough(self, tmp_path):
         pose_file = str(tmp_path / "main_test.json")
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.ls.return_value = ["ctrl"]
         mock_cmds.objExists.return_value = True
         mock_cmds.attributeQuery.return_value = True
@@ -678,7 +678,7 @@ class TestLoadPose:
         pose_data = {"ctrl_a": {"tx": 1.0, "ty": 2.0}}
         with open(pose_file, "w") as f:
             json.dump(pose_data, f)
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         mock_cmds.attributeQuery.return_value = True
         mock_cmds.getAttr.return_value = False
@@ -689,7 +689,7 @@ class TestLoadPose:
         assert result["context"]["applied_count"] == 1
 
     def test_file_not_found(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             mod = load_skill_script("maya-pose-library", "load_pose")
             result = mod.load_pose("/nonexistent/pose.json")
@@ -699,7 +699,7 @@ class TestLoadPose:
         pose_file = str(tmp_path / "missing.json")
         with open(pose_file, "w") as f:
             json.dump({"missing_ctrl": {"tx": 0.0}}, f)
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = False
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             mod = load_skill_script("maya-pose-library", "load_pose")
@@ -711,7 +711,7 @@ class TestLoadPose:
         pose_file = str(tmp_path / "strict.json")
         with open(pose_file, "w") as f:
             json.dump({"gone_ctrl": {"tx": 0.0}}, f)
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = False
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             mod = load_skill_script("maya-pose-library", "load_pose")
@@ -796,7 +796,7 @@ class TestMirrorPose:
         pose = {"L_arm": {"tx": 5.0, "ry": 30.0}}
         with open(src, "w") as f:
             json.dump(pose, f)
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         mock_cmds.attributeQuery.return_value = True
         mock_cmds.getAttr.return_value = False
@@ -824,7 +824,7 @@ class TestCreateThreePointRig:
     """Tests for create_three_point_rig script."""
 
     def test_create_success(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.group.return_value = "threePoint_rig"
         mock_cmds.createNode.side_effect = [
             "threePoint_rig_key",
@@ -841,7 +841,7 @@ class TestCreateThreePointRig:
         assert result["context"]["rig_group"] == "threePoint_rig"
 
     def test_custom_intensities(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.group.return_value = "hero_rig"
         mock_cmds.createNode.side_effect = ["k", "kS", "f", "fS", "r", "rS"]
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
@@ -855,7 +855,7 @@ class TestCreateThreePointRig:
         assert result["success"] is True
 
     def test_spot_light_type(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.group.return_value = "spot_rig"
         mock_cmds.createNode.side_effect = ["k", "kS", "f", "fS", "r", "rS"]
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
@@ -871,7 +871,7 @@ class TestCreateThreePointRig:
         assert result["success"] is False
 
     def test_main_passthrough(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.group.return_value = "rig"
         mock_cmds.createNode.side_effect = ["k", "kS", "f", "fS", "r", "rS"]
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
@@ -884,7 +884,7 @@ class TestCreateHdriDome:
     """Tests for create_hdri_dome script."""
 
     def test_create_arnold(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.pluginInfo.return_value = True
         mock_cmds.createNode.side_effect = ["env_dome", "env_dome_Shape", "env_dome_texture"]
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
@@ -894,7 +894,7 @@ class TestCreateHdriDome:
         assert result["context"]["hdri_path"] == "/path/env.hdr"
 
     def test_create_fallback(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.pluginInfo.return_value = False
         mock_cmds.createNode.side_effect = ["dome_t", "dome_s", "dome_file"]
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
@@ -909,7 +909,7 @@ class TestCreateHdriDome:
         assert result["success"] is False
 
     def test_main_passthrough(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.pluginInfo.return_value = False
         mock_cmds.createNode.side_effect = ["t", "s", "f"]
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
@@ -922,7 +922,7 @@ class TestListLightRigs:
     """Tests for list_light_rigs script."""
 
     def test_list_empty(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.ls.return_value = []
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             mod = load_skill_script("maya-light-rig", "list_light_rigs")
@@ -931,7 +931,7 @@ class TestListLightRigs:
         assert result["context"]["total_lights"] == 0
 
     def test_list_with_lights(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
 
         def _ls_side(type=None):
             if type == "directionalLight":
@@ -963,7 +963,7 @@ class TestSetLightRigIntensity:
     """Tests for set_light_rig_intensity script."""
 
     def test_set_absolute(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         mock_cmds.objectType.return_value = "directionalLight"
         mock_cmds.listRelatives.return_value = ["lightShape1"]
@@ -973,7 +973,7 @@ class TestSetLightRigIntensity:
         assert result["success"] is True
 
     def test_multiply(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         mock_cmds.objectType.return_value = "directionalLight"
         mock_cmds.listRelatives.return_value = ["lightShape1"]
@@ -984,7 +984,7 @@ class TestSetLightRigIntensity:
         assert result["success"] is True
 
     def test_rig_not_found(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = False
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             mod = load_skill_script("maya-light-rig", "set_light_rig_intensity")
@@ -992,7 +992,7 @@ class TestSetLightRigIntensity:
         assert result["success"] is False
 
     def test_no_lights_in_group(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         mock_cmds.listRelatives.return_value = []
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
@@ -1007,7 +1007,7 @@ class TestSetLightRigIntensity:
         assert result["success"] is False
 
     def test_main_passthrough(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         mock_cmds.objectType.return_value = "directionalLight"
         mock_cmds.listRelatives.return_value = ["ls1"]

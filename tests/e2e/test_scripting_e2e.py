@@ -13,7 +13,6 @@ from __future__ import annotations
 
 # Import built-in modules
 import importlib.util
-import os
 from pathlib import Path
 
 # Import third-party modules
@@ -42,7 +41,7 @@ def _load(skill_dir: str, script_name: str):
     _MOD_COUNTER[0] += 1
     path = _SKILLS_ROOT / skill_dir / "scripts" / "{}.py".format(script_name)
     spec = importlib.util.spec_from_file_location(
-        "e2e_scr_{}_{}_{}" .format(skill_dir.replace("-", "_"), script_name, _MOD_COUNTER[0]),
+        "e2e_scr_{}_{}_{}".format(skill_dir.replace("-", "_"), script_name, _MOD_COUNTER[0]),
         str(path),
     )
     mod = importlib.util.module_from_spec(spec)
@@ -96,9 +95,8 @@ class TestScriptingE2E:
     def test_get_script_node(self):
         # Create a script node first
         import maya.mel as mel
-        mel.eval(
-            'scriptNode -st 2 -bs "print(\\"hello\\");" -n e2eScriptNode -stp "python";'
-        )
+
+        mel.eval('scriptNode -st 2 -bs "print(\\"hello\\");" -n e2eScriptNode -stp "python";')
         mod = _load("maya-scripting", "get_script_node")
         result = mod.get_script_node(node_name="e2eScriptNode")
         assert result["success"] is True

@@ -21,38 +21,7 @@ import sys
 from unittest.mock import MagicMock
 
 # Import third-party modules
-import pytest
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-sys.path.insert(0, "src")
-_CONFTEST_IMPORTED = False
-
-try:
-    from conftest import load_skill_script
-    _CONFTEST_IMPORTED = True
-except ImportError:
-    pass
-
-if not _CONFTEST_IMPORTED:
-    import importlib.util
-    from pathlib import Path
-
-    _SKILLS_ROOT = Path("src/dcc_mcp_maya/skills")
-    _MOD_COUNTER = [0]
-
-    def load_skill_script(skill_dir, script_name):
-        _MOD_COUNTER[0] += 1
-        script_path = _SKILLS_ROOT / skill_dir / "scripts" / "{}.py".format(script_name)
-        module_name = "r23_{}_{}_{}".format(
-            skill_dir.replace("-", "_"), script_name, _MOD_COUNTER[0]
-        )
-        spec = importlib.util.spec_from_file_location(module_name, str(script_path))
-        mod = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(mod)
-        return mod
+from tests.conftest import load_skill_script
 
 
 def _mock_maya():
@@ -538,9 +507,7 @@ class TestSceneAssemblySkills:
         mod = load_skill_script("maya-scene-assembly", "create_assembly_definition")
         result = mod.create_assembly_definition(name="myAssembly")
         assert result["success"] is True
-        mock_cmds.assembly.assert_called_once_with(
-            name="myAssembly", type="assemblyDefinition"
-        )
+        mock_cmds.assembly.assert_called_once_with(name="myAssembly", type="assemblyDefinition")
 
     def test_add_assembly_representation_success(self):
         """add_assembly_representation uses param 'assembly', not 'definition_node'."""
@@ -632,8 +599,7 @@ class TestProxyMeshSkills:
         assert result["success"] is True
         # setAttr to hide source should NOT be called with False
         hide_calls = [
-            c for c in mock_cmds.setAttr.call_args_list
-            if "pSphere1.visibility" in str(c) and "False" in str(c)
+            c for c in mock_cmds.setAttr.call_args_list if "pSphere1.visibility" in str(c) and "False" in str(c)
         ]
         assert len(hide_calls) == 0
 
@@ -779,6 +745,7 @@ class TestExportPresetSkills:
         )
         assert result["success"] is True
         import os
+
         saved = os.path.join(str(tmp_path), "test_preset.json")
         assert os.path.exists(saved)
 
@@ -797,6 +764,7 @@ class TestExportPresetSkills:
         )
         assert result["success"] is True
         import os
+
         assert os.path.isdir(new_dir)
 
     def test_list_export_presets_empty_dir(self, tmp_path):
@@ -809,12 +777,9 @@ class TestExportPresetSkills:
 
     def test_list_export_presets_found(self, tmp_path):
         import json
-        (tmp_path / "preset_a.json").write_text(
-            json.dumps({"format": "fbx"}), encoding="utf-8"
-        )
-        (tmp_path / "preset_b.json").write_text(
-            json.dumps({"format": "abc"}), encoding="utf-8"
-        )
+
+        (tmp_path / "preset_a.json").write_text(json.dumps({"format": "fbx"}), encoding="utf-8")
+        (tmp_path / "preset_b.json").write_text(json.dumps({"format": "abc"}), encoding="utf-8")
         mock_cmds, _ = _mock_maya()
         mod = load_skill_script("maya-export-preset", "list_export_presets")
         result = mod.list_export_presets(preset_dir=str(tmp_path))
@@ -832,6 +797,7 @@ class TestExportPresetSkills:
 
     def test_load_export_preset_success(self, tmp_path):
         import json
+
         data = {"format": "fbx", "frame_range": [1, 24], "fps": "film"}
         preset_file = tmp_path / "my_preset.json"
         preset_file.write_text(json.dumps(data), encoding="utf-8")
@@ -852,6 +818,7 @@ class TestExportPresetSkills:
 
     def test_delete_export_preset_success(self, tmp_path):
         import json
+
         preset_file = tmp_path / "to_delete.json"
         preset_file.write_text(json.dumps({"format": "fbx"}), encoding="utf-8")
         mock_cmds, _ = _mock_maya()
@@ -890,10 +857,11 @@ class TestPipelineEdgeCases:
     def test_set_project_with_create_if_missing(self, tmp_path):
         mock_cmds, _ = _mock_maya()
         new_dir = str(tmp_path / "new_project")
-        result_dict = mod = load_skill_script("maya-pipeline", "set_project")
+        mod = load_skill_script("maya-pipeline", "set_project")
         result = mod.set_project(path=new_dir, create_if_missing=True)
         assert result["success"] is True
         import os
+
         assert os.path.isdir(new_dir)
 
     def test_tag_asset_metadata_node_missing(self):
