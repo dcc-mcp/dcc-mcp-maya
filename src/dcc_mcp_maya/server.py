@@ -216,6 +216,90 @@ class MayaMcpServer:
         )
         return self
 
+    # ── skill discovery helpers ───────────────────────────────────────────────
+
+    def search_skills(
+        self,
+        category: Optional[str] = None,
+        tags: Optional[List[str]] = None,
+        dcc_name: Optional[str] = None,
+    ) -> List[Any]:
+        """Search registered skills / actions using dcc-mcp-core's ``search_actions``.
+
+        Wraps ``ActionRegistry.search_actions`` (v0.12.5+).  All filters are
+        applied as AND conditions; passing ``None`` ignores that filter.
+
+        Args:
+            category: Filter by action category (e.g. ``"geometry"``).
+            tags: Filter by tag list (e.g. ``["mesh", "create"]``).
+            dcc_name: Filter by DCC name (e.g. ``"maya"``).  Defaults to
+                ``"maya"`` when not specified.
+
+        Returns:
+            List of :class:`ActionInfo` objects (or dicts) matching the filters.
+
+        Example::
+
+            server.register_builtin_actions()
+            results = server.search_skills(category="geometry", tags=["create"])
+        """
+        registry = self.registry
+        if registry is None:
+            logger.warning("Registry not available; returning empty search result")
+            return []
+
+        effective_dcc = dcc_name if dcc_name is not None else "maya"
+        try:
+            return list(
+                registry.search_actions(
+                    category=category,
+                    tags=tags,
+                    dcc_name=effective_dcc,
+                )
+            )
+        except Exception as exc:
+            logger.debug("search_actions failed: %s", exc)
+            return []
+
+    def get_skill_categories(self) -> List[str]:
+        """Return all unique action categories registered in the server.
+
+        Wraps ``ActionRegistry.get_categories`` (v0.12.5+).
+
+        Returns:
+            Sorted list of category strings.
+        """
+        registry = self.registry
+        if registry is None:
+            return []
+        try:
+            return list(registry.get_categories())
+        except Exception as exc:
+            logger.debug("get_categories failed: %s", exc)
+            return []
+
+    def get_skill_tags(self, dcc_name: Optional[str] = None) -> List[str]:
+        """Return all unique tags for the given DCC (or all DCCs).
+
+        Wraps ``ActionRegistry.get_tags`` (v0.12.5+).
+
+        Args:
+            dcc_name: If given, only return tags for that DCC.  Defaults to
+                ``"maya"`` when not specified.
+
+        Returns:
+            Sorted list of tag strings.
+        """
+        registry = self.registry
+        if registry is None:
+            return []
+        effective_dcc = dcc_name if dcc_name is not None else "maya"
+        try:
+            return list(registry.get_tags(dcc_name=effective_dcc))
+        except Exception as exc:
+            logger.debug("get_tags failed: %s", exc)
+            return []
+
     # ── lifecycle ─────────────────────────────────────────────────────────────
 
     def start(self):
