@@ -130,7 +130,9 @@ def test_with_maya_import_error():
 
         return maya_success("never")
 
-    result = broken()
+    # Force ImportError even when running inside mayapy by patching maya.cmds
+    with patch.dict("sys.modules", {"maya.cmds": None}):
+        result = broken()
     assert result["success"] is False
     assert result["message"] == "Maya not available"
     assert "possible_solutions" in result["context"]
