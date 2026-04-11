@@ -34,11 +34,13 @@ def list_ocean_surfaces() -> dict:
             if cmds.attributeQuery("waveHeight", node=shader, exists=True):
                 wave_height = cmds.getAttr("{}.waveHeight".format(shader))
 
-            surfaces.append({
-                "shader": shader,
-                "connected_meshes": meshes,
-                "wave_height": wave_height,
-            })
+            surfaces.append(
+                {
+                    "shader": shader,
+                    "connected_meshes": meshes,
+                    "wave_height": wave_height,
+                }
+            )
 
         return success_result(
             "Found {} ocean surface(s)".format(len(surfaces)),
@@ -59,5 +61,6 @@ def main(**kwargs):
 
 if __name__ == "__main__":
     import json
+
     result = list_ocean_surfaces()
     print(json.dumps(result))

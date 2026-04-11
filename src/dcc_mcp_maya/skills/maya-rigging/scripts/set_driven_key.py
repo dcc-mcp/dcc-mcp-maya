@@ -106,7 +106,8 @@ def set_driven_key(
         return error_result("Failed to set driven key", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`set_driven_key`."""
     return set_driven_key(**kwargs)
 
 

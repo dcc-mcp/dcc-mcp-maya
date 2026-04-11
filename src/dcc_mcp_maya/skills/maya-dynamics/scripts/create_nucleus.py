@@ -89,7 +89,8 @@ def create_nucleus(
         return error_result("Failed to create nucleus solver", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`create_nucleus`."""
     return create_nucleus(**kwargs)
 
 

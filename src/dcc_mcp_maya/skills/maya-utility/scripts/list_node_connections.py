@@ -39,9 +39,7 @@ def list_node_connections(
         connections = []
 
         if direction in ("incoming", "both"):
-            raw = cmds.listConnections(
-                node, source=True, destination=False, plugs=plugs, connections=plugs
-            ) or []
+            raw = cmds.listConnections(node, source=True, destination=False, plugs=plugs, connections=plugs) or []
             if plugs:
                 for i in range(0, len(raw) - 1, 2):
                     connections.append({"source": raw[i + 1], "destination": raw[i]})
@@ -50,9 +48,7 @@ def list_node_connections(
                     connections.append({"source": src, "destination": node})
 
         if direction in ("outgoing", "both"):
-            raw = cmds.listConnections(
-                node, source=False, destination=True, plugs=plugs, connections=plugs
-            ) or []
+            raw = cmds.listConnections(node, source=False, destination=True, plugs=plugs, connections=plugs) or []
             if plugs:
                 for i in range(0, len(raw) - 1, 2):
                     connections.append({"source": raw[i], "destination": raw[i + 1]})
@@ -62,10 +58,7 @@ def list_node_connections(
 
         return success_result(
             "{} connections found for '{}'".format(len(connections), node),
-            prompt=(
-                "Connections listed. Use connectAttr / disconnectAttr actions to modify the "
-                "shading network."
-            ),
+            prompt=("Connections listed. Use connectAttr / disconnectAttr actions to modify the shading network."),
             connections=connections,
             count=len(connections),
         ).to_dict()
@@ -82,5 +75,6 @@ def main(**kwargs):
 
 if __name__ == "__main__":
     import json
+
     result = list_node_connections("lambert1")
     print(json.dumps(result))

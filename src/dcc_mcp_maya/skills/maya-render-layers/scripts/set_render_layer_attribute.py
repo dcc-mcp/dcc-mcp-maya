@@ -68,7 +68,8 @@ def set_render_layer_attribute(
         return error_result("Failed to set attribute '{}.{}'".format(layer_name, attribute), str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`set_render_layer_attribute`."""
     return set_render_layer_attribute(**kwargs)
 
 

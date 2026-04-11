@@ -56,7 +56,8 @@ def delete_uv_set(object_name: str, uv_set_name: str) -> dict:
         return error_result("Failed to delete UV set", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`delete_uv_set`."""
     return delete_uv_set(**kwargs)
 
 

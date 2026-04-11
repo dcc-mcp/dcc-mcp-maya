@@ -32,7 +32,8 @@ def get_current_time() -> dict:
         return error_result("Failed to get current time", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`get_current_time`."""
     return get_current_time(**kwargs)
 
 

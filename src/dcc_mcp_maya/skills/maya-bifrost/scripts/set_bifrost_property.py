@@ -83,6 +83,7 @@ def set_bifrost_property(
 
 
 def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`set_bifrost_property`."""
     return set_bifrost_property(**kwargs)
 
 

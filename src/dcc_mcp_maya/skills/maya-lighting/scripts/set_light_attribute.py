@@ -72,7 +72,8 @@ def set_light_attribute(
         return error_result("Failed to set light attribute", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`set_light_attribute`."""
     return set_light_attribute(**kwargs)
 
 

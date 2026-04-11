@@ -79,5 +79,6 @@ def main(**kwargs):
 
 if __name__ == "__main__":
     import json
+
     result = add_assembly_representation("asm1", "Locator")
     print(json.dumps(result))

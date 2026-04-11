@@ -36,7 +36,7 @@ def list_mel_procedures(pattern: str = "", limit: int = 200) -> dict:
         if lower_pattern:
             procs = [p for p in procs if lower_pattern in p.lower()]
 
-        procs = sorted(procs)[:int(limit)]
+        procs = sorted(procs)[: int(limit)]
 
         return success_result(
             "Found {} MEL procedures".format(len(procs)),
@@ -57,5 +57,6 @@ def main(**kwargs):
 
 if __name__ == "__main__":
     import json
+
     result = list_mel_procedures(pattern="poly", limit=20)
     print(json.dumps(result))

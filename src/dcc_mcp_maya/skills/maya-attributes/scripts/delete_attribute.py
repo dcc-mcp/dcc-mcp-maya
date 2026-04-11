@@ -59,7 +59,8 @@ def delete_attribute(node_name: str, attribute: str) -> dict:
         return error_result("Failed to delete attribute", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`delete_attribute`."""
     return delete_attribute(**kwargs)
 
 

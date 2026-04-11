@@ -47,7 +47,7 @@ def set_hdri_exposure(
             cmds.setAttr("{}.aiExposure".format(shape), exposure)
             attr_set = "{}.aiExposure".format(shape)
         elif cmds.attributeQuery("intensity", node=shape, exists=True):
-            intensity = 2.0 ** exposure
+            intensity = 2.0**exposure
             cmds.setAttr("{}.intensity".format(shape), intensity)
             attr_set = "{}.intensity (mapped from exposure)".format(shape)
         else:

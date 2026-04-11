@@ -90,7 +90,8 @@ def mirror_mesh(
         return error_result("Failed to mirror mesh '{}'".format(object_name), str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`mirror_mesh`."""
     return mirror_mesh(**kwargs)
 
 

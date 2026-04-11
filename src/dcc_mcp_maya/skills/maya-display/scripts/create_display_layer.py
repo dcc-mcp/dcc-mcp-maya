@@ -59,7 +59,8 @@ def create_display_layer(
         return error_result("Failed to create display layer", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`create_display_layer`."""
     return create_display_layer(**kwargs)
 
 

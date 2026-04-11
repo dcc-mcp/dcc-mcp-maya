@@ -69,7 +69,8 @@ def create_cluster(
         return error_result("Failed to create cluster deformer", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`create_cluster`."""
     return create_cluster(**kwargs)
 
 

@@ -71,5 +71,6 @@ def main(**kwargs):
 
 if __name__ == "__main__":
     import json as _json
+
     result = load_export_preset("/path/to/preset.json")
     print(_json.dumps(result))

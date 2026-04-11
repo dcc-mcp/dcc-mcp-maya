@@ -50,7 +50,8 @@ def create_cube(
         return error_result("Failed to create cube", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`create_cube`."""
     return create_cube(**kwargs)
 
 

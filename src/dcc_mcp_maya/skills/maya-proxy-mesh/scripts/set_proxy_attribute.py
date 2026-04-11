@@ -66,5 +66,6 @@ def main(**kwargs):
 
 if __name__ == "__main__":
     import json
+
     result = set_proxy_attribute("proxy1", "castsShadows", False)
     print(json.dumps(result))

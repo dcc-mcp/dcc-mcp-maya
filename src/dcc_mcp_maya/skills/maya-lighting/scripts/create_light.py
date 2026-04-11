@@ -86,7 +86,8 @@ def create_light(
         return error_result("Failed to create light", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`create_light`."""
     return create_light(**kwargs)
 
 

@@ -43,7 +43,8 @@ def rename_object(object_name: str, new_name: str) -> dict:
         return error_result("Failed to rename {}".format(object_name), str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`rename_object`."""
     return rename_object(**kwargs)
 
 

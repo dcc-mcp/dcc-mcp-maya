@@ -46,7 +46,8 @@ def get_transform(object_name: str) -> dict:
         return error_result("Failed to get transform of {}".format(object_name), str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`get_transform`."""
     return get_transform(**kwargs)
 
 

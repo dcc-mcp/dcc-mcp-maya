@@ -69,9 +69,7 @@ def list_nparticle_systems() -> dict:
             nucleus_info.append(ninfo)
 
         return success_result(
-            "Found {} nParticle system(s) and {} nucleus solver(s)".format(
-                len(systems), len(nucleus_nodes)
-            ),
+            "Found {} nParticle system(s) and {} nucleus solver(s)".format(len(systems), len(nucleus_nodes)),
             prompt="Use set_nparticle_attribute to tune particle properties.",
             systems=systems,
             nucleus_solvers=nucleus_info,

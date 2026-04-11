@@ -67,7 +67,8 @@ def get_render_settings() -> dict:
         return error_result("Failed to get render settings", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`get_render_settings`."""
     return get_render_settings(**kwargs)
 
 

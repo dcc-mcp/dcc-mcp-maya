@@ -64,7 +64,8 @@ def set_camera_attribute(camera_name: str, attribute: str, value: object) -> dic
         return error_result("Failed to set camera attribute", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`set_camera_attribute`."""
     return set_camera_attribute(**kwargs)
 
 

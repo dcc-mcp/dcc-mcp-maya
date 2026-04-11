@@ -63,7 +63,8 @@ def delete_render_layer(layer_name: str) -> dict:
         return error_result("Failed to delete render layer '{}'".format(layer_name), str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`delete_render_layer`."""
     return delete_render_layer(**kwargs)
 
 

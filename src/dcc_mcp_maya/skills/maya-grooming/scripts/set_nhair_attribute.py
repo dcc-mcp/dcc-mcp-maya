@@ -35,9 +35,7 @@ def set_nhair_attribute(hair_system: str, attribute: str, value: float) -> dict:
 
         return success_result(
             "nHair attribute set",
-            prompt="hairSystem {}.{} = {}. Simulate to see the effect.".format(
-                hair_system, attribute, value
-            ),
+            prompt="hairSystem {}.{} = {}. Simulate to see the effect.".format(hair_system, attribute, value),
             hair_system=hair_system,
             attribute=attribute,
             value=value,
@@ -55,5 +53,6 @@ def main(**kwargs):
 
 if __name__ == "__main__":
     import json
+
     result = set_nhair_attribute("hairSystem1", "stiffness", 0.8)
     print(json.dumps(result))

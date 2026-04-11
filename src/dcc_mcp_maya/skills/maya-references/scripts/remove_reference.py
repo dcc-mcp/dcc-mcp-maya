@@ -73,7 +73,8 @@ def remove_reference(
         return error_result("Failed to remove reference '{}'".format(reference_node), str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`remove_reference`."""
     return remove_reference(**kwargs)
 
 

@@ -59,7 +59,8 @@ def list_shading_groups() -> dict:
         return error_result("Failed to list shading groups", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`list_shading_groups`."""
     return list_shading_groups(**kwargs)
 
 

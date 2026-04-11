@@ -54,7 +54,8 @@ def duplicate_object(
         return error_result("Failed to duplicate '{}'".format(object_name), str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`duplicate_object`."""
     return duplicate_object(**kwargs)
 
 

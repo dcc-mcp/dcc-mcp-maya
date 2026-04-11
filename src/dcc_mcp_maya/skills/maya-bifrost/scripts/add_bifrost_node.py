@@ -63,6 +63,7 @@ def add_bifrost_node(graph_node: str, compound_name: str) -> dict:
 
 
 def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`add_bifrost_node`."""
     return add_bifrost_node(**kwargs)
 
 

@@ -26,21 +26,19 @@ def list_instancers() -> dict:
         results = []
         for node in nodes:
             # Find connected particle system (inputPoints plug)
-            particle_conns = cmds.listConnections(
-                "{}.inputPoints".format(node), source=True, destination=False
-            ) or []
+            particle_conns = cmds.listConnections("{}.inputPoints".format(node), source=True, destination=False) or []
             particle_system = particle_conns[0] if particle_conns else ""
 
             # Instance geometry is connected via inputHierarchy
-            geo_conns = cmds.listConnections(
-                "{}.inputHierarchy".format(node), source=True, destination=False
-            ) or []
+            geo_conns = cmds.listConnections("{}.inputHierarchy".format(node), source=True, destination=False) or []
 
-            results.append({
-                "node": node,
-                "particle_system": particle_system,
-                "instance_objects": geo_conns,
-            })
+            results.append(
+                {
+                    "node": node,
+                    "particle_system": particle_system,
+                    "instance_objects": geo_conns,
+                }
+            )
 
         return success_result(
             "Found {} instancer node(s)".format(len(results)),

@@ -94,7 +94,8 @@ def set_shading_mode(
         return error_result("Failed to set shading mode", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`set_shading_mode`."""
     return set_shading_mode(**kwargs)
 
 

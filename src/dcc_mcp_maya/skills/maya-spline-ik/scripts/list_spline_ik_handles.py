@@ -33,12 +33,14 @@ def list_spline_ik_handles() -> dict:
                 # The curve is connected via ikHandle.inCurve
                 curve_nodes = cmds.listConnections("{}.inCurve".format(h), source=True, destination=False) or []
                 curve = curve_nodes[0] if curve_nodes else ""
-                results.append({
-                    "name": h,
-                    "start_joint": start_joint,
-                    "end_effector": end_effector,
-                    "curve": curve,
-                })
+                results.append(
+                    {
+                        "name": h,
+                        "start_joint": start_joint,
+                        "end_effector": end_effector,
+                        "curve": curve,
+                    }
+                )
             except Exception:
                 results.append({"name": h, "start_joint": "", "end_effector": "", "curve": ""})
 

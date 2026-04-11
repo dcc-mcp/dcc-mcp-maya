@@ -136,7 +136,8 @@ def align_objects(
         return error_result("Failed to align objects", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`align_objects`."""
     return align_objects(**kwargs)
 
 

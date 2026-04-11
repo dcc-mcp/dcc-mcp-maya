@@ -77,9 +77,7 @@ def create_hik_definition(
             if not cmds.objExists(joint_name):
                 skipped.append({"slot": slot_name, "joint": joint_name, "reason": "Joint not found"})
                 continue
-            mel.eval('setCharacterObject("{}", "{}", {}, 0)'.format(
-                joint_name, char_node, slot_id
-            ))
+            mel.eval('setCharacterObject("{}", "{}", {}, 0)'.format(joint_name, char_node, slot_id))
             mapped.append({"slot": slot_name, "joint": joint_name})
 
         mel.eval("hikUpdateDefinitionUI")
@@ -105,5 +103,6 @@ def main(**kwargs):
 
 if __name__ == "__main__":
     import json
+
     result = create_hik_definition("myChar", {"Hips": "Hips"})
     print(json.dumps(result))

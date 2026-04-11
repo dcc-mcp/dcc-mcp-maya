@@ -31,11 +31,13 @@ def list_assemblies(node_type: str = "all") -> dict:
             def_nodes = cmds.ls(type="assemblyDefinition") or []
             for node in def_nodes:
                 reps = cmds.assembly(node, query=True, listRepresentations=True) or []
-                definitions.append({
-                    "node": node,
-                    "type": "assemblyDefinition",
-                    "representations": reps,
-                })
+                definitions.append(
+                    {
+                        "node": node,
+                        "type": "assemblyDefinition",
+                        "representations": reps,
+                    }
+                )
 
         if node_type in ("reference", "all"):
             ref_nodes = cmds.ls(type="assemblyReference") or []
@@ -48,12 +50,14 @@ def list_assemblies(node_type: str = "all") -> dict:
                     reps = cmds.assembly(node, query=True, listRepresentations=True) or []
                 except Exception:
                     reps = []
-                references.append({
-                    "node": node,
-                    "type": "assemblyReference",
-                    "active_rep": active,
-                    "representations": reps,
-                })
+                references.append(
+                    {
+                        "node": node,
+                        "type": "assemblyReference",
+                        "active_rep": active,
+                        "representations": reps,
+                    }
+                )
 
         all_nodes = definitions + references
         return success_result(
@@ -78,5 +82,6 @@ def main(**kwargs):
 
 if __name__ == "__main__":
     import json
+
     result = list_assemblies()
     print(json.dumps(result))

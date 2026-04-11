@@ -62,7 +62,8 @@ def set_attribute(node_name: str, attribute: str, value: object) -> dict:
         return error_result("Failed to set attribute", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`set_attribute`."""
     return set_attribute(**kwargs)
 
 

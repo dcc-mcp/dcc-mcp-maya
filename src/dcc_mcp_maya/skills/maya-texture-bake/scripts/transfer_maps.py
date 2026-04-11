@@ -75,9 +75,7 @@ def transfer_maps(
         for map_type in bake_types:
             out_file = os.path.join(
                 output_dir,
-                "{}_{}_from_{}.{}".format(
-                    target.replace(":", "_"), map_type, source.replace(":", "_"), file_format
-                ),
+                "{}_{}_from_{}.{}".format(target.replace(":", "_"), map_type, source.replace(":", "_"), file_format),
             )
             cmds.transferMaps(
                 source,
@@ -92,9 +90,7 @@ def transfer_maps(
             baked_files.append(out_file)
 
         return success_result(
-            "Transferred {} map(s) from '{}' to '{}'".format(
-                len(baked_files), source, target
-            ),
+            "Transferred {} map(s) from '{}' to '{}'".format(len(baked_files), source, target),
             prompt="Check output_dir for baked textures. Assign them to the target material.",
             baked_files=baked_files,
             source=source,

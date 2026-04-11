@@ -81,7 +81,8 @@ def import_animation_curves(
         return error_result("Failed to import animation curves from '{}'".format(file_path), str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`import_animation_curves`."""
     return import_animation_curves(**kwargs)
 
 

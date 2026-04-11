@@ -70,7 +70,8 @@ def create_blend_shape(
         return error_result("Failed to create blend shape on {}".format(base_mesh), str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`create_blend_shape`."""
     return create_blend_shape(**kwargs)
 
 

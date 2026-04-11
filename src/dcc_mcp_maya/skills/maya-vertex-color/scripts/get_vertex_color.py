@@ -71,7 +71,8 @@ def get_vertex_color(
         return error_result("Failed to get vertex color", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`get_vertex_color`."""
     return get_vertex_color(**kwargs)
 
 

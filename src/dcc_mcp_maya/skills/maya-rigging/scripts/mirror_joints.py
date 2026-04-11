@@ -82,7 +82,8 @@ def mirror_joints(
         return error_result("Failed to mirror joints from {}".format(joint_name), str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`mirror_joints`."""
     return mirror_joints(**kwargs)
 
 

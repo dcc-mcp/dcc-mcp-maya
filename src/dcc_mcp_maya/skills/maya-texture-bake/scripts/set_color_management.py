@@ -86,7 +86,8 @@ def set_color_management(
         return error_result("Failed to set color management", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`set_color_management`."""
     return set_color_management(**kwargs)
 
 

@@ -59,7 +59,8 @@ def lock_object(object_name: str, lock: bool = True) -> dict:
         return error_result("Failed to {} '{}'".format("lock" if lock else "unlock", object_name), str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`lock_object`."""
     return lock_object(**kwargs)
 
 

@@ -65,9 +65,7 @@ def set_nparticle_attribute(
         return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
     except Exception as exc:
         logger.exception("set_nparticle_attribute failed")
-        return error_result(
-            "Failed to set attribute '{}'".format(attribute), str(exc)
-        ).to_dict()
+        return error_result("Failed to set attribute '{}'".format(attribute), str(exc)).to_dict()
 
 
 def main(**kwargs):

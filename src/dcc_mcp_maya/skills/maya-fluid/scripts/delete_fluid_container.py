@@ -49,5 +49,6 @@ def main(**kwargs):
 
 if __name__ == "__main__":
     import json
+
     result = delete_fluid_container("fluid1")
     print(json.dumps(result))

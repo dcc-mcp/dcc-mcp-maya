@@ -83,7 +83,8 @@ def get_material_connections(material_name: str) -> dict:
         return error_result("Failed to get connections for material '{}'".format(material_name), str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`get_material_connections`."""
     return get_material_connections(**kwargs)
 
 

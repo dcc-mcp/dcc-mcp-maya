@@ -34,8 +34,7 @@ def get_render_job_status(
         if not cmd:
             for candidate in ["deadlinecommand", "deadlinecommand.exe"]:
                 result = subprocess.run(
-                    ["where", candidate] if os.name == "nt" else ["which", candidate],
-                    capture_output=True, text=True
+                    ["where", candidate] if os.name == "nt" else ["which", candidate], capture_output=True, text=True
                 )
                 if result.returncode == 0:
                     cmd = candidate
@@ -48,7 +47,9 @@ def get_render_job_status(
 
         proc = subprocess.run(
             [cmd, "-GetJobDetails", job_id],
-            capture_output=True, text=True, timeout=30,
+            capture_output=True,
+            text=True,
+            timeout=30,
         )
 
         if proc.returncode != 0:

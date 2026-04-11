@@ -45,5 +45,6 @@ def main(**kwargs):
 
 if __name__ == "__main__":
     import json
+
     result = create_assembly_definition("myAssembly")
     print(json.dumps(result))

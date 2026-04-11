@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+  <!-- Background circle -->
+  <circle cx="50" cy="50" r="48" fill="#1a1a2e" stroke="#646cff" stroke-width="2"/>
+  <!-- M letter stylized -->
+  <path d="M20 72 L20 28 L35 52 L50 28 L50 72" fill="none" stroke="#646cff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- MCP connector line -->
+  <path d="M55 50 L80 50" stroke="#42b883" stroke-width="3" stroke-linecap="round"/>
+  <!-- MCP node -->
+  <circle cx="80" cy="50" r="7" fill="#42b883"/>
+  <!-- Small decorative nodes -->
+  <circle cx="80" cy="30" r="4" fill="#646cff" opacity="0.7"/>
+  <circle cx="80" cy="70" r="4" fill="#646cff" opacity="0.7"/>
+  <line x1="80" y1="43" x2="80" y2="34" stroke="#646cff" stroke-width="2" opacity="0.7"/>
+  <line x1="80" y1="57" x2="80" y2="66" stroke="#646cff" stroke-width="2" opacity="0.7"/>
+</svg>

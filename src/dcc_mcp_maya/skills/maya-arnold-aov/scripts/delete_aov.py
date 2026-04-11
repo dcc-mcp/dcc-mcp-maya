@@ -58,6 +58,7 @@ def delete_aov(name: str) -> dict:
 
 
 def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`delete_aov`."""
     return delete_aov(**kwargs)
 
 

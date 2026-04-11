@@ -1,943 +1,694 @@
-"""Round 20 - Tests for maya-fluid, maya-ocean, maya-cloth-sim, maya-grooming, maya-export-preset skills."""
+"""Round 20: Unit tests for maya-scene, maya-primitives, maya-materials, and maya-animation skills.
+
+These four skills lacked dedicated test coverage. Each test uses the shared
+``conftest.load_skill_script`` / ``make_mock_maya`` helpers and mocks
+``maya.cmds`` to run without a Maya install.
+"""
+
+# Import future modules
+from __future__ import annotations
 
 # Import built-in modules
-import importlib.util
-import json
-import os
 import sys
-from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
-SKILLS_ROOT = Path(__file__).parent.parent / "src" / "dcc_mcp_maya" / "skills"
+from tests.conftest import load_skill_script, make_mock_maya
 
-
-def _load_script(skill_dir, script_name):
-    """Load a skill script module by path."""
-    script_path = SKILLS_ROOT / skill_dir / "scripts" / "{}.py".format(script_name)
-    spec = importlib.util.spec_from_file_location(
-        "{}.{}".format(skill_dir.replace("-", "_"), script_name),
-        script_path,
-    )
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+# ---------------------------------------------------------------------------
+# maya-scene
+# ---------------------------------------------------------------------------
 
 
-def _make_mock_maya(cmds_attrs=None):
-    mock_cmds = MagicMock()
-    mock_maya = MagicMock()
-    mock_maya.cmds = mock_cmds
-    if cmds_attrs:
-        for k, v in cmds_attrs.items():
-            setattr(mock_cmds, k, v)
-    return mock_maya, mock_cmds
+class TestNewScene:
+    """Tests for maya-scene/scripts/new_scene.py."""
 
+    def _load(self):
+        return load_skill_script("maya-scene", "new_scene")
 
-# ===========================================================================
-# maya-fluid
-# ===========================================================================
-
-class TestCreateFluidContainer:
-    def test_create_default(self):
-        mock_maya, mc = _make_mock_maya()
-        mc.ls.return_value = ["fluidShape1"]
-        mc.listRelatives.return_value = ["fluid1"]
-        mc.attributeQuery.return_value = False
-
-        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
-            mod = _load_script("maya-fluid", "create_fluid_container")
-            result = mod.create_fluid_container()
-
+    def test_new_scene_success(self):
+        mod = self._load()
+        mock_maya, mock_cmds = make_mock_maya()
+        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
+            result = mod.new_scene()
         assert result["success"] is True
-        assert result["context"]["fluid_shape"] == "fluidShape1"
-        assert result["context"]["fluid_transform"] == "fluid1"
+        mock_cmds.file.assert_called_once_with(new=True, force=False)
+
+    def test_new_scene_force(self):
+        mod = self._load()
+        mock_maya, mock_cmds = make_mock_maya()
+        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
+            result = mod.new_scene(force=True)
+        assert result["success"] is True
+        mock_cmds.file.assert_called_once_with(new=True, force=True)
+
+    def test_new_scene_no_maya(self):
+        mod = self._load()
+        saved = {k: sys.modules.pop(k) for k in list(sys.modules.keys()) if k == "maya" or k.startswith("maya.")}
+        try:
+            result = mod.new_scene()
+        finally:
+            sys.modules.update(saved)
+        assert result["success"] is False
+
+    def test_main_callable(self):
+        mod = self._load()
+        mock_maya, mock_cmds = make_mock_maya()
+        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
+            result = mod.main()
+        assert isinstance(result, dict)
+
+
+class TestListObjects:
+    """Tests for maya-scene/scripts/list_objects.py."""
+
+    def _load(self):
+        return load_skill_script("maya-scene", "list_objects")
+
+    def test_list_all_objects(self):
+        mod = self._load()
+        mock_maya, mock_cmds = make_mock_maya()
+        mock_cmds.ls.return_value = ["pSphere1", "pCube1"]
+        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
+            result = mod.list_objects()
+        assert result["success"] is True
+        assert result["context"]["count"] == 2
+        assert "pSphere1" in result["context"]["objects"]
+
+    def test_list_by_type(self):
+        mod = self._load()
+        mock_maya, mock_cmds = make_mock_maya()
+        mock_cmds.ls.return_value = ["pSphereShape1"]
+        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
+            result = mod.list_objects(object_type="mesh")
+        assert result["success"] is True
+        mock_cmds.ls.assert_called_once_with(dag=True, type="mesh")
+
+    def test_list_empty_scene(self):
+        mod = self._load()
+        mock_maya, mock_cmds = make_mock_maya()
+        mock_cmds.ls.return_value = []
+        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
+            result = mod.list_objects()
+        assert result["success"] is True
+        assert result["context"]["count"] == 0
+
+    def test_main_callable(self):
+        mod = self._load()
+        mock_maya, mock_cmds = make_mock_maya()
+        mock_cmds.ls.return_value = []
+        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
+            result = mod.main()
+        assert isinstance(result, dict)
+
+
+class TestGetSelection:
+    """Tests for maya-scene/scripts/get_selection.py."""
+
+    def _load(self):
+        return load_skill_script("maya-scene", "get_selection")
+
+    def test_nothing_selected(self):
+        mod = self._load()
+        mock_maya, mock_cmds = make_mock_maya()
+        mock_cmds.ls.return_value = []
+        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
+            result = mod.get_selection()
+        assert result["success"] is True
+
+    def test_with_selection(self):
+        mod = self._load()
+        mock_maya, mock_cmds = make_mock_maya()
+        mock_cmds.ls.return_value = ["pSphere1", "pCube1"]
+        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
+            result = mod.get_selection()
+        assert result["success"] is True
+
+    def test_main_callable(self):
+        mod = self._load()
+        mock_maya, mock_cmds = make_mock_maya()
+        mock_cmds.ls.return_value = []
+        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
+            result = mod.main()
+        assert isinstance(result, dict)
+
+
+class TestSaveScene:
+    """Tests for maya-scene/scripts/save_scene.py."""
+
+    def _load(self):
+        return load_skill_script("maya-scene", "save_scene")
+
+    def test_save_success(self):
+        mod = self._load()
+        mock_maya, mock_cmds = make_mock_maya()
+        mock_cmds.file.return_value = "/path/to/scene.ma"
+        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
+            result = mod.save_scene()
+        assert result["success"] is True
+
+    def test_main_callable(self):
+        mod = self._load()
+        mock_maya, mock_cmds = make_mock_maya()
+        mock_cmds.file.return_value = "/path/to/scene.ma"
+        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
+            result = mod.main()
+        assert isinstance(result, dict)
+
+
+# ---------------------------------------------------------------------------
+# maya-primitives
+# ---------------------------------------------------------------------------
+
+
+class TestCreateSphere:
+    """Tests for maya-primitives/scripts/create_sphere.py."""
+
+    def _load(self):
+        return load_skill_script("maya-primitives", "create_sphere")
+
+    def test_create_sphere_default(self):
+        mod = self._load()
+        mock_maya, mock_cmds = make_mock_maya()
+        mock_cmds.polySphere.return_value = ["pSphere1", "polySphere1"]
+        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
+            result = mod.create_sphere()
+        assert result["success"] is True
+        assert result["context"]["object_name"] == "pSphere1"
+
+    def test_create_sphere_with_name(self):
+        mod = self._load()
+        mock_maya, mock_cmds = make_mock_maya()
+        mock_cmds.polySphere.return_value = ["pSphere1", "polySphere1"]
+        mock_cmds.rename.return_value = "mySphere"
+        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
+            result = mod.create_sphere(radius=2.0, name="mySphere")
+        assert result["success"] is True
+        assert result["context"]["object_name"] == "mySphere"
+
+    def test_create_sphere_no_maya(self):
+        mod = self._load()
+        saved = {k: sys.modules.pop(k) for k in list(sys.modules.keys()) if k == "maya" or k.startswith("maya.")}
+        try:
+            result = mod.create_sphere()
+        finally:
+            sys.modules.update(saved)
+        assert result["success"] is False
+
+    def test_main_callable(self):
+        mod = self._load()
+        mock_maya, mock_cmds = make_mock_maya()
+        mock_cmds.polySphere.return_value = ["pSphere1", "polySphere1"]
+        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
+            result = mod.main()
+        assert isinstance(result, dict)
+
+
+class TestCreateCube:
+    """Tests for maya-primitives/scripts/create_cube.py."""
+
+    def _load(self):
+        return load_skill_script("maya-primitives", "create_cube")
+
+    def test_create_cube_default(self):
+        mod = self._load()
+        mock_maya, mock_cmds = make_mock_maya()
+        mock_cmds.polyCube.return_value = ["pCube1", "polyCube1"]
+        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
+            result = mod.create_cube()
+        assert result["success"] is True
+
+    def test_main_callable(self):
+        mod = self._load()
+        mock_maya, mock_cmds = make_mock_maya()
+        mock_cmds.polyCube.return_value = ["pCube1", "polyCube1"]
+        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
+            result = mod.main()
+        assert isinstance(result, dict)
+
+
+class TestCreateCylinder:
+    """Tests for maya-primitives/scripts/create_cylinder.py."""
+
+    def _load(self):
+        return load_skill_script("maya-primitives", "create_cylinder")
+
+    def test_create_cylinder(self):
+        mod = self._load()
+        mock_maya, mock_cmds = make_mock_maya()
+        mock_cmds.polyCylinder.return_value = ["pCylinder1", "polyCylinder1"]
+        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
+            result = mod.create_cylinder()
+        assert result["success"] is True
+
+    def test_main_callable(self):
+        mod = self._load()
+        mock_maya, mock_cmds = make_mock_maya()
+        mock_cmds.polyCylinder.return_value = ["pCylinder1", "polyCylinder1"]
+        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
+            result = mod.main()
+        assert isinstance(result, dict)
+
+
+class TestDeleteObjects:
+    """Tests for maya-primitives/scripts/delete_objects.py."""
+
+    def _load(self):
+        return load_skill_script("maya-primitives", "delete_objects")
+
+    def test_delete_existing_objects(self):
+        mod = self._load()
+        mock_maya, mock_cmds = make_mock_maya()
+        mock_cmds.ls.return_value = ["pSphere1", "pCube1"]
+        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
+            result = mod.delete_objects(["pSphere1", "pCube1"])
+        assert result["success"] is True
+        assert result["context"]["deleted"] == ["pSphere1", "pCube1"]
+
+    def test_delete_nonexistent_objects(self):
+        mod = self._load()
+        mock_maya, mock_cmds = make_mock_maya()
+        # objects not found -> ls returns [] -> deleted=[] -> still success
+        mock_cmds.ls.return_value = []
+        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
+            result = mod.delete_objects(["ghost1"])
+        assert result["success"] is True
+        assert result["context"]["deleted"] == []
+
+    def test_delete_empty_list(self):
+        mod = self._load()
+        mock_maya, mock_cmds = make_mock_maya()
+        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
+            result = mod.delete_objects([])
+        assert result["success"] is True
+
+    def test_main_callable(self):
+        mod = self._load()
+        mock_maya, mock_cmds = make_mock_maya()
+        mock_cmds.ls.return_value = []
+        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
+            result = mod.main(object_names=["x"])
+        assert isinstance(result, dict)
+
+
+class TestGetTransform:
+    """Tests for maya-primitives/scripts/get_transform.py."""
+
+    def _load(self):
+        return load_skill_script("maya-primitives", "get_transform")
+
+    def test_object_not_found(self):
+        mod = self._load()
+        mock_maya, mock_cmds = make_mock_maya()
+        mock_cmds.objExists.return_value = False
+        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
+            result = mod.get_transform("ghost")
+        assert result["success"] is False
+
+    def test_get_transform_success(self):
+        mod = self._load()
+        mock_maya, mock_cmds = make_mock_maya()
+        mock_cmds.objExists.return_value = True
+        mock_cmds.getAttr.return_value = [(1.0, 2.0, 3.0)]
+        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
+            result = mod.get_transform("pSphere1")
+        assert result["success"] is True
+
+    def test_main_callable(self):
+        mod = self._load()
+        mock_maya, mock_cmds = make_mock_maya()
+        mock_cmds.objExists.return_value = False
+        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
+            result = mod.main(object_name="x")
+        assert isinstance(result, dict)
+
+
+class TestRenameObject:
+    """Tests for maya-primitives/scripts/rename_object.py."""
+
+    def _load(self):
+        return load_skill_script("maya-primitives", "rename_object")
+
+    def test_object_not_found(self):
+        mod = self._load()
+        mock_maya, mock_cmds = make_mock_maya()
+        mock_cmds.objExists.return_value = False
+        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
+            result = mod.rename_object("ghost", "newName")
+        assert result["success"] is False
+
+    def test_rename_success(self):
+        mod = self._load()
+        mock_maya, mock_cmds = make_mock_maya()
+        mock_cmds.objExists.return_value = True
+        mock_cmds.rename.return_value = "newName"
+        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
+            result = mod.rename_object("pSphere1", "newName")
+        assert result["success"] is True
+        assert result["context"]["object_name"] == "newName"
+
+    def test_main_callable(self):
+        mod = self._load()
+        mock_maya, mock_cmds = make_mock_maya()
+        mock_cmds.objExists.return_value = False
+        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
+            result = mod.main(object_name="x", new_name="y")
+        assert isinstance(result, dict)
+
+
+# ---------------------------------------------------------------------------
+# maya-materials
+# ---------------------------------------------------------------------------
+
+
+class TestCreateMaterial:
+    """Tests for maya-materials/scripts/create_material.py."""
+
+    def _load(self):
+        return load_skill_script("maya-materials", "create_material")
+
+    def test_create_lambert(self):
+        mod = self._load()
+        mock_maya, mock_cmds = make_mock_maya()
+        mock_cmds.shadingNode.return_value = "lambert1"
+        mock_cmds.sets.return_value = "lambert1_SG"
+        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
+            result = mod.create_material(material_type="lambert")
+        assert result["success"] is True
+        assert result["context"]["material_name"] == "lambert1"
+        assert result["context"]["shading_group"] == "lambert1_SG"
 
     def test_create_with_name(self):
-        mock_maya, mc = _make_mock_maya()
-        mc.ls.return_value = ["fluidShape1"]
-        mc.listRelatives.side_effect = [
-            ["fluid1"],       # parent of fluidShape
-            ["myFluidShape"], # shapes after rename
-        ]
-        mc.rename.return_value = "myFluid"
-
-        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
-            mod = _load_script("maya-fluid", "create_fluid_container")
-            result = mod.create_fluid_container(name="myFluid", size_x=20, resolution=5)
-
+        mod = self._load()
+        mock_maya, mock_cmds = make_mock_maya()
+        mock_cmds.shadingNode.return_value = "lambert1"
+        mock_cmds.rename.return_value = "myMaterial"
+        mock_cmds.sets.return_value = "myMaterial_SG"
+        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
+            result = mod.create_material(name="myMaterial")
         assert result["success"] is True
-        mc.rename.assert_called_once()
+        assert result["context"]["material_name"] == "myMaterial"
 
-    def test_create_no_fluid_shapes(self):
-        mock_maya, mc = _make_mock_maya()
-        mc.ls.return_value = []
-
-        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
-            mod = _load_script("maya-fluid", "create_fluid_container")
-            result = mod.create_fluid_container()
-
+    def test_shader_type_alias(self):
+        mod = self._load()
+        mock_maya, mock_cmds = make_mock_maya()
+        mock_cmds.shadingNode.return_value = "blinn1"
+        mock_cmds.sets.return_value = "blinn1_SG"
+        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
+            result = mod.create_material(shader_type="blinn")
         assert result["success"] is True
-        assert result["context"]["fluid_shape"] == ""
+        assert result["context"]["material_type"] == "blinn"
 
-    def test_create_exception(self):
-        mock_maya, mc = _make_mock_maya()
-        mc.create3dFluid.side_effect = RuntimeError("no fluid plugin")
-
-        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
-            mod = _load_script("maya-fluid", "create_fluid_container")
-            result = mod.create_fluid_container()
-
-        assert result["success"] is False
-        assert "no fluid plugin" in result["error"]
-
-
-class TestSetFluidAttribute:
-    def test_set_density(self):
-        mock_maya, mc = _make_mock_maya()
-        mc.objExists.return_value = True
-
-        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
-            mod = _load_script("maya-fluid", "set_fluid_attribute")
-            result = mod.set_fluid_attribute("fluidShape1", "density", 0.5)
-
-        assert result["success"] is True
-        mc.setAttr.assert_called_with("fluidShape1.density", 0.5)
-
-    def test_node_not_found(self):
-        mock_maya, mc = _make_mock_maya()
-        mc.objExists.return_value = False
-
-        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
-            mod = _load_script("maya-fluid", "set_fluid_attribute")
-            result = mod.set_fluid_attribute("ghost", "density", 0.5)
-
+    def test_no_maya(self):
+        mod = self._load()
+        saved = {k: sys.modules.pop(k) for k in list(sys.modules.keys()) if k == "maya" or k.startswith("maya.")}
+        try:
+            result = mod.create_material()
+        finally:
+            sys.modules.update(saved)
         assert result["success"] is False
 
-    def test_setattr_exception(self):
-        mock_maya, mc = _make_mock_maya()
-        mc.objExists.return_value = True
-        mc.setAttr.side_effect = RuntimeError("locked attr")
+    def test_main_callable(self):
+        mod = self._load()
+        mock_maya, mock_cmds = make_mock_maya()
+        mock_cmds.shadingNode.return_value = "lambert1"
+        mock_cmds.sets.return_value = "lambert1_SG"
+        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
+            result = mod.main()
+        assert isinstance(result, dict)
 
-        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
-            mod = _load_script("maya-fluid", "set_fluid_attribute")
-            result = mod.set_fluid_attribute("fluidShape1", "density", 0.5)
 
+class TestAssignMaterial:
+    """Tests for maya-materials/scripts/assign_material.py."""
+
+    def _load(self):
+        return load_skill_script("maya-materials", "assign_material")
+
+    def test_assign_with_shading_group(self):
+        mod = self._load()
+        mock_maya, mock_cmds = make_mock_maya()
+        mock_cmds.objectType.return_value = "shadingEngine"
+        mock_cmds.ls.return_value = ["pSphere1"]
+        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
+            result = mod.assign_material("lambert1SG", ["pSphere1"])
+        assert result["success"] is True
+        assert result["context"]["shading_group"] == "lambert1SG"
+
+    def test_assign_via_material_node(self):
+        mod = self._load()
+        mock_maya, mock_cmds = make_mock_maya()
+        mock_cmds.objectType.return_value = "lambert"
+        mock_cmds.listConnections.return_value = ["lambert1SG"]
+        mock_cmds.ls.return_value = ["pSphere1"]
+        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
+            result = mod.assign_material("lambert1", ["pSphere1"])
+        assert result["success"] is True
+
+    def test_no_shading_group_found(self):
+        mod = self._load()
+        mock_maya, mock_cmds = make_mock_maya()
+        mock_cmds.objectType.return_value = "lambert"
+        mock_cmds.listConnections.return_value = []
+        mock_cmds.ls.return_value = ["pSphere1"]
+        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
+            result = mod.assign_material("orphanMat", ["pSphere1"])
         assert result["success"] is False
-        assert "locked attr" in result["error"]
+
+    def test_no_objects_found(self):
+        mod = self._load()
+        mock_maya, mock_cmds = make_mock_maya()
+        mock_cmds.objectType.return_value = "shadingEngine"
+        mock_cmds.ls.return_value = []
+        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
+            result = mod.assign_material("lambert1SG", ["ghost1"])
+        assert result["success"] is False
+
+    def test_main_callable(self):
+        mod = self._load()
+        mock_maya, mock_cmds = make_mock_maya()
+        mock_cmds.objectType.return_value = "shadingEngine"
+        mock_cmds.ls.return_value = []
+        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
+            result = mod.main(material_name="mat", objects=[])
+        assert isinstance(result, dict)
 
 
-class TestListFluidContainers:
-    def test_list_empty(self):
-        mock_maya, mc = _make_mock_maya()
-        mc.ls.return_value = []
+class TestListMaterials:
+    """Tests for maya-materials/scripts/list_materials.py."""
 
-        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
-            mod = _load_script("maya-fluid", "list_fluid_containers")
-            result = mod.list_fluid_containers()
+    def _load(self):
+        return load_skill_script("maya-materials", "list_materials")
 
+    def test_empty_scene(self):
+        mod = self._load()
+        mock_maya, mock_cmds = make_mock_maya()
+        mock_cmds.ls.return_value = []
+        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
+            result = mod.list_materials()
         assert result["success"] is True
         assert result["context"]["count"] == 0
 
-    def test_list_one_container(self):
-        mock_maya, mc = _make_mock_maya()
-        mc.ls.return_value = ["fluidShape1"]
-        mc.listRelatives.return_value = ["fluid1"]
-        mc.attributeQuery.return_value = True
-        mc.getAttr.return_value = [(10, 10, 10)]
-
-        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
-            mod = _load_script("maya-fluid", "list_fluid_containers")
-            result = mod.list_fluid_containers()
-
+    def test_with_materials(self):
+        mod = self._load()
+        mock_maya, mock_cmds = make_mock_maya()
+        mock_cmds.ls.return_value = ["lambert1", "blinn1"]
+        mock_cmds.objectType.return_value = "lambert"
+        mock_cmds.listConnections.return_value = ["lambert1SG"]
+        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
+            result = mod.list_materials()
         assert result["success"] is True
-        assert result["context"]["count"] == 1
-        assert result["context"]["containers"][0]["shape"] == "fluidShape1"
+        assert result["context"]["count"] == 2
 
-    def test_list_exception(self):
-        mock_maya, mc = _make_mock_maya()
-        mc.ls.side_effect = RuntimeError("scene error")
+    def test_main_callable(self):
+        mod = self._load()
+        mock_maya, mock_cmds = make_mock_maya()
+        mock_cmds.ls.return_value = []
+        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
+            result = mod.main()
+        assert isinstance(result, dict)
 
-        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
-            mod = _load_script("maya-fluid", "list_fluid_containers")
-            result = mod.list_fluid_containers()
 
+# ---------------------------------------------------------------------------
+# maya-animation
+# ---------------------------------------------------------------------------
+
+
+class TestSetKeyframe:
+    """Tests for maya-animation/scripts/set_keyframe.py."""
+
+    def _load(self):
+        return load_skill_script("maya-animation", "set_keyframe")
+
+    def test_object_not_found(self):
+        mod = self._load()
+        mock_maya, mock_cmds = make_mock_maya()
+        mock_cmds.objExists.return_value = False
+        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
+            result = mod.set_keyframe("ghost")
+        assert result["success"] is False
+        assert "not found" in result["message"].lower()
+
+    def test_set_keyframe_success(self):
+        mod = self._load()
+        mock_maya, mock_cmds = make_mock_maya()
+        mock_cmds.objExists.return_value = True
+        mock_cmds.setKeyframe.return_value = 3
+        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
+            result = mod.set_keyframe("pSphere1")
+        assert result["success"] is True
+        assert result["context"]["keyframe_count"] == 3
+
+    def test_set_keyframe_with_attr_and_value(self):
+        mod = self._load()
+        mock_maya, mock_cmds = make_mock_maya()
+        mock_cmds.objExists.return_value = True
+        mock_cmds.setKeyframe.return_value = 1
+        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
+            result = mod.set_keyframe("pSphere1", attribute="translateX", value=5.0, time=10.0)
+        assert result["success"] is True
+        mock_cmds.setAttr.assert_called_once_with("pSphere1.translateX", 5.0)
+
+    def test_set_keyframe_multiple_attrs(self):
+        mod = self._load()
+        mock_maya, mock_cmds = make_mock_maya()
+        mock_cmds.objExists.return_value = True
+        mock_cmds.setKeyframe.return_value = 3
+        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
+            result = mod.set_keyframe("pSphere1", attributes=["tx", "ty", "tz"])
+        assert result["success"] is True
+
+    def test_no_maya(self):
+        mod = self._load()
+        saved = {k: sys.modules.pop(k) for k in list(sys.modules.keys()) if k == "maya" or k.startswith("maya.")}
+        try:
+            result = mod.set_keyframe("pSphere1")
+        finally:
+            sys.modules.update(saved)
         assert result["success"] is False
 
+    def test_main_callable(self):
+        mod = self._load()
+        mock_maya, mock_cmds = make_mock_maya()
+        mock_cmds.objExists.return_value = False
+        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
+            result = mod.main(object_name="x")
+        assert isinstance(result, dict)
 
-class TestDeleteFluidContainer:
-    def test_delete_ok(self):
-        mock_maya, mc = _make_mock_maya()
-        mc.objExists.return_value = True
 
-        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
-            mod = _load_script("maya-fluid", "delete_fluid_container")
-            result = mod.delete_fluid_container("fluid1")
+class TestGetKeyframes:
+    """Tests for maya-animation/scripts/get_keyframes.py."""
 
-        assert result["success"] is True
-        mc.delete.assert_called_with("fluid1")
+    def _load(self):
+        return load_skill_script("maya-animation", "get_keyframes")
 
-    def test_delete_not_found(self):
-        mock_maya, mc = _make_mock_maya()
-        mc.objExists.return_value = False
-
-        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
-            mod = _load_script("maya-fluid", "delete_fluid_container")
-            result = mod.delete_fluid_container("ghost")
-
+    def test_object_not_found(self):
+        mod = self._load()
+        mock_maya, mock_cmds = make_mock_maya()
+        mock_cmds.objExists.return_value = False
+        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
+            result = mod.get_keyframes("ghost")
         assert result["success"] is False
 
-    def test_delete_exception(self):
-        mock_maya, mc = _make_mock_maya()
-        mc.objExists.return_value = True
-        mc.delete.side_effect = RuntimeError("locked")
-
-        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
-            mod = _load_script("maya-fluid", "delete_fluid_container")
-            result = mod.delete_fluid_container("fluid1")
-
-        assert result["success"] is False
-
-
-# ===========================================================================
-# maya-ocean
-# ===========================================================================
-
-class TestCreateOcean:
-    def test_create_default(self):
-        mock_maya, mc = _make_mock_maya()
-        mc.polyPlane.return_value = ["ocean_surface", "polyPlane1"]
-        mc.shadingNode.return_value = "ocean_surface_shader"
-        mc.sets.return_value = "ocean_surface_SG"
-
-        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
-            mod = _load_script("maya-ocean", "create_ocean")
-            result = mod.create_ocean()
-
+    def test_no_keyframes(self):
+        mod = self._load()
+        mock_maya, mock_cmds = make_mock_maya()
+        mock_cmds.objExists.return_value = True
+        mock_cmds.keyframe.return_value = None
+        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
+            result = mod.get_keyframes("pSphere1")
         assert result["success"] is True
-        assert result["context"]["ocean_transform"] == "ocean_surface"
-        assert result["context"]["shader_name"] == "ocean_surface_shader"
-
-    def test_create_with_params(self):
-        mock_maya, mc = _make_mock_maya()
-        mc.polyPlane.return_value = ["myOcean", "polyPlane1"]
-        mc.shadingNode.return_value = "myOcean_shader"
-        mc.sets.return_value = "myOcean_SG"
-
-        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
-            mod = _load_script("maya-ocean", "create_ocean")
-            result = mod.create_ocean(name="myOcean", subdivisions_x=100, scale=200.0)
-
-        assert result["success"] is True
-        call_kwargs = mc.polyPlane.call_args
-        assert call_kwargs.kwargs.get("subdivisionsX") == 100 or 100 in call_kwargs.args
-
-    def test_create_exception(self):
-        mock_maya, mc = _make_mock_maya()
-        mc.polyPlane.side_effect = RuntimeError("polyPlane failed")
-
-        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
-            mod = _load_script("maya-ocean", "create_ocean")
-            result = mod.create_ocean()
-
-        assert result["success"] is False
-
-
-class TestSetOceanAttribute:
-    def test_set_wave_height(self):
-        mock_maya, mc = _make_mock_maya()
-        mc.objExists.return_value = True
-
-        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
-            mod = _load_script("maya-ocean", "set_ocean_attribute")
-            result = mod.set_ocean_attribute("oceanShader1", "waveHeight", 2.5)
-
-        assert result["success"] is True
-        mc.setAttr.assert_called_with("oceanShader1.waveHeight", 2.5)
-
-    def test_node_not_found(self):
-        mock_maya, mc = _make_mock_maya()
-        mc.objExists.return_value = False
-
-        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
-            mod = _load_script("maya-ocean", "set_ocean_attribute")
-            result = mod.set_ocean_attribute("ghost", "waveHeight", 1.0)
-
-        assert result["success"] is False
-
-    def test_setattr_exception(self):
-        mock_maya, mc = _make_mock_maya()
-        mc.objExists.return_value = True
-        mc.setAttr.side_effect = RuntimeError("read only")
-
-        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
-            mod = _load_script("maya-ocean", "set_ocean_attribute")
-            result = mod.set_ocean_attribute("oceanShader1", "waveHeight", 2.5)
-
-        assert result["success"] is False
-
-
-class TestAddOceanWake:
-    def test_add_wake_basic(self):
-        mock_maya, mc = _make_mock_maya()
-        mc.objExists.return_value = True
-        mc.spaceLocator.return_value = ["oceanShader1_wake_loc"]
-
-        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
-            mod = _load_script("maya-ocean", "add_ocean_wake")
-            result = mod.add_ocean_wake("oceanShader1")
-
-        assert result["success"] is True
-        assert result["context"]["wake_locator"] == "oceanShader1_wake_loc"
-
-    def test_add_wake_with_object(self):
-        mock_maya, mc = _make_mock_maya()
-        mc.objExists.return_value = True
-        mc.spaceLocator.return_value = ["oceanShader1_wake_loc"]
-
-        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
-            mod = _load_script("maya-ocean", "add_ocean_wake")
-            result = mod.add_ocean_wake("oceanShader1", wake_object="boat1", wake_size=2.0)
-
-        assert result["success"] is True
-        mc.parentConstraint.assert_called()
-
-    def test_shader_not_found(self):
-        mock_maya, mc = _make_mock_maya()
-        mc.objExists.return_value = False
-
-        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
-            mod = _load_script("maya-ocean", "add_ocean_wake")
-            result = mod.add_ocean_wake("ghost")
-
-        assert result["success"] is False
-
-    def test_exception(self):
-        mock_maya, mc = _make_mock_maya()
-        mc.objExists.return_value = True
-        mc.spaceLocator.side_effect = RuntimeError("locator fail")
-
-        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
-            mod = _load_script("maya-ocean", "add_ocean_wake")
-            result = mod.add_ocean_wake("oceanShader1")
-
-        assert result["success"] is False
-
-
-class TestListOceanSurfaces:
-    def test_list_empty(self):
-        mock_maya, mc = _make_mock_maya()
-        mc.ls.return_value = []
-
-        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
-            mod = _load_script("maya-ocean", "list_ocean_surfaces")
-            result = mod.list_ocean_surfaces()
-
-        assert result["success"] is True
+        assert result["context"]["keyframes"] == []
         assert result["context"]["count"] == 0
 
-    def test_list_one_shader(self):
-        mock_maya, mc = _make_mock_maya()
-        mc.ls.return_value = ["oceanShader1"]
-        mc.listConnections.return_value = ["oceanSG1"]
-        mc.sets.return_value = ["oceanPlane1"]
-        mc.attributeQuery.return_value = True
-        mc.getAttr.return_value = 1.5
-
-        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
-            mod = _load_script("maya-ocean", "list_ocean_surfaces")
-            result = mod.list_ocean_surfaces()
-
-        assert result["success"] is True
-        assert result["context"]["count"] == 1
-        assert result["context"]["surfaces"][0]["shader"] == "oceanShader1"
-
-    def test_list_exception(self):
-        mock_maya, mc = _make_mock_maya()
-        mc.ls.side_effect = RuntimeError("scene error")
-
-        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
-            mod = _load_script("maya-ocean", "list_ocean_surfaces")
-            result = mod.list_ocean_surfaces()
-
-        assert result["success"] is False
-
-
-# ===========================================================================
-# maya-cloth-sim
-# ===========================================================================
-
-class TestCreateNCloth:
-    def test_create_ok(self):
-        mock_maya, mc = _make_mock_maya()
-        mc.objExists.return_value = True
-        mc.ls.side_effect = [["nCloth1"], ["nucleus1"]]
-
-        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
-            mod = _load_script("maya-cloth-sim", "create_ncloth")
-            result = mod.create_ncloth("pPlane1")
-
-        assert result["success"] is True
-        assert result["context"]["ncloth_shape"] == "nCloth1"
-        assert result["context"]["nucleus"] == "nucleus1"
-
-    def test_create_mesh_not_found(self):
-        mock_maya, mc = _make_mock_maya()
-        mc.objExists.return_value = False
-
-        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
-            mod = _load_script("maya-cloth-sim", "create_ncloth")
-            result = mod.create_ncloth("ghost")
-
-        assert result["success"] is False
-
-    def test_create_preset_denim(self):
-        mock_maya, mc = _make_mock_maya()
-        mc.objExists.return_value = True
-        mc.ls.side_effect = [["nCloth1"], ["nucleus1"]]
-
-        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
-            mod = _load_script("maya-cloth-sim", "create_ncloth")
-            result = mod.create_ncloth("pPlane1", preset="denim")
-
-        assert result["success"] is True
-        assert result["context"]["preset"] == "denim"
-
-    def test_create_preset_silk(self):
-        mock_maya, mc = _make_mock_maya()
-        mc.objExists.return_value = True
-        mc.ls.side_effect = [["nCloth1"], ["nucleus1"]]
-
-        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
-            mod = _load_script("maya-cloth-sim", "create_ncloth")
-            result = mod.create_ncloth("pPlane1", preset="silk")
-
-        assert result["success"] is True
-
-    def test_create_exception(self):
-        mock_maya, mc = _make_mock_maya()
-        mc.objExists.return_value = True
-        mc.nClothCreate.side_effect = RuntimeError("nucleus error")
-
-        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
-            mod = _load_script("maya-cloth-sim", "create_ncloth")
-            result = mod.create_ncloth("pPlane1")
-
-        assert result["success"] is False
-
-
-class TestSetNClothAttribute:
-    def test_set_ok(self):
-        mock_maya, mc = _make_mock_maya()
-        mc.objExists.return_value = True
-
-        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
-            mod = _load_script("maya-cloth-sim", "set_ncloth_attribute")
-            result = mod.set_ncloth_attribute("nCloth1", "thickness", 0.1)
-
-        assert result["success"] is True
-        mc.setAttr.assert_called_with("nCloth1.thickness", 0.1)
-
-    def test_node_not_found(self):
-        mock_maya, mc = _make_mock_maya()
-        mc.objExists.return_value = False
-
-        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
-            mod = _load_script("maya-cloth-sim", "set_ncloth_attribute")
-            result = mod.set_ncloth_attribute("ghost", "thickness", 0.1)
-
-        assert result["success"] is False
-
-    def test_setattr_exception(self):
-        mock_maya, mc = _make_mock_maya()
-        mc.objExists.return_value = True
-        mc.setAttr.side_effect = RuntimeError("read only")
-
-        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
-            mod = _load_script("maya-cloth-sim", "set_ncloth_attribute")
-            result = mod.set_ncloth_attribute("nCloth1", "thickness", 0.1)
-
-        assert result["success"] is False
-
-
-class TestBakeClothCache:
-    def test_bake_default_range(self):
-        mock_maya, mc = _make_mock_maya()
-        mc.objExists.return_value = True
-        mc.playbackOptions.side_effect = [1.0, 24.0]
-        mc.listRelatives.return_value = ["nClothMesh"]
-        mc.mel = MagicMock()
-
-        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
-            mod = _load_script("maya-cloth-sim", "bake_cloth_cache")
-            result = mod.bake_cloth_cache("nCloth1")
-
-        assert result["success"] is True
-        assert result["context"]["start_frame"] == 1
-        assert result["context"]["end_frame"] == 24
-
-    def test_bake_explicit_range(self):
-        mock_maya, mc = _make_mock_maya()
-        mc.objExists.return_value = True
-        mc.listRelatives.return_value = ["nClothMesh"]
-        mc.mel = MagicMock()
-
-        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
-            mod = _load_script("maya-cloth-sim", "bake_cloth_cache")
-            result = mod.bake_cloth_cache("nCloth1", start_frame=10, end_frame=50)
-
-        assert result["success"] is True
-        assert result["context"]["end_frame"] == 50
-
-    def test_bake_node_not_found(self):
-        mock_maya, mc = _make_mock_maya()
-        mc.objExists.return_value = False
-
-        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
-            mod = _load_script("maya-cloth-sim", "bake_cloth_cache")
-            result = mod.bake_cloth_cache("ghost")
-
-        assert result["success"] is False
-
-    def test_bake_exception(self):
-        mock_maya, mc = _make_mock_maya()
-        mc.objExists.return_value = True
-        mc.playbackOptions.side_effect = [1.0, 24.0]
-        mc.listRelatives.side_effect = RuntimeError("scene error")
-
-        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
-            mod = _load_script("maya-cloth-sim", "bake_cloth_cache")
-            result = mod.bake_cloth_cache("nCloth1")
-
-        assert result["success"] is False
-
-
-class TestListNClothObjects:
-    def test_list_empty(self):
-        mock_maya, mc = _make_mock_maya()
-        mc.ls.return_value = []
-
-        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
-            mod = _load_script("maya-cloth-sim", "list_ncloth_objects")
-            result = mod.list_ncloth_objects()
-
-        assert result["success"] is True
-        assert result["context"]["count"] == 0
-
-    def test_list_one_ncloth(self):
-        mock_maya, mc = _make_mock_maya()
-        mc.ls.side_effect = [["nCloth1"], ["nucleus1"]]
-        mc.listRelatives.return_value = ["nClothMesh"]
-        mc.listConnections.side_effect = [["nucleus1"], []]
-
-        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
-            mod = _load_script("maya-cloth-sim", "list_ncloth_objects")
-            result = mod.list_ncloth_objects()
-
-        assert result["success"] is True
-        assert result["context"]["count"] == 1
-        assert result["context"]["cloth_objects"][0]["shape"] == "nCloth1"
-
-    def test_list_exception(self):
-        mock_maya, mc = _make_mock_maya()
-        mc.ls.side_effect = RuntimeError("scene error")
-
-        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
-            mod = _load_script("maya-cloth-sim", "list_ncloth_objects")
-            result = mod.list_ncloth_objects()
-
-        assert result["success"] is False
-
-
-# ===========================================================================
-# maya-grooming
-# ===========================================================================
-
-class TestCreateNHairSystem:
-    def test_create_ok(self):
-        mock_maya, mc = _make_mock_maya()
-        mc.objExists.return_value = True
-        mc.ls.side_effect = [["hairSystem1"], ["follicle1", "follicle2"]]
-        mc.mel = MagicMock()
-
-        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
-            mod = _load_script("maya-grooming", "create_nhair_system")
-            result = mod.create_nhair_system("pSphere1")
-
-        assert result["success"] is True
-        assert result["context"]["hair_system"] == "hairSystem1"
-        assert result["context"]["follicle_count"] == 2
-
-    def test_create_mesh_not_found(self):
-        mock_maya, mc = _make_mock_maya()
-        mc.objExists.return_value = False
-
-        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
-            mod = _load_script("maya-grooming", "create_nhair_system")
-            result = mod.create_nhair_system("ghost")
-
-        assert result["success"] is False
-
-    def test_create_custom_density(self):
-        mock_maya, mc = _make_mock_maya()
-        mc.objExists.return_value = True
-        mc.ls.side_effect = [["hairSystem1"], ["follicle1"]]
-        mc.mel = MagicMock()
-
-        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
-            mod = _load_script("maya-grooming", "create_nhair_system")
-            result = mod.create_nhair_system("pSphere1", uv_density=5, hair_length=10.0)
-
-        assert result["success"] is True
-
-    def test_create_exception(self):
-        mock_maya, mc = _make_mock_maya()
-        mc.objExists.return_value = True
-        mc.mel = MagicMock()
-        mc.mel.eval.side_effect = RuntimeError("no hair plugin")
-
-        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
-            mod = _load_script("maya-grooming", "create_nhair_system")
-            result = mod.create_nhair_system("pSphere1")
-
-        assert result["success"] is False
-
-
-class TestSetNHairAttribute:
-    def test_set_stiffness(self):
-        mock_maya, mc = _make_mock_maya()
-        mc.objExists.return_value = True
-
-        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
-            mod = _load_script("maya-grooming", "set_nhair_attribute")
-            result = mod.set_nhair_attribute("hairSystem1", "stiffness", 0.8)
-
-        assert result["success"] is True
-        mc.setAttr.assert_called_with("hairSystem1.stiffness", 0.8)
-
-    def test_node_not_found(self):
-        mock_maya, mc = _make_mock_maya()
-        mc.objExists.return_value = False
-
-        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
-            mod = _load_script("maya-grooming", "set_nhair_attribute")
-            result = mod.set_nhair_attribute("ghost", "stiffness", 0.8)
-
-        assert result["success"] is False
-
-    def test_setattr_exception(self):
-        mock_maya, mc = _make_mock_maya()
-        mc.objExists.return_value = True
-        mc.setAttr.side_effect = RuntimeError("locked")
-
-        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
-            mod = _load_script("maya-grooming", "set_nhair_attribute")
-            result = mod.set_nhair_attribute("hairSystem1", "stiffness", 0.8)
-
-        assert result["success"] is False
-
-
-class TestListHairSystems:
-    def test_list_empty(self):
-        mock_maya, mc = _make_mock_maya()
-        mc.ls.return_value = []
-
-        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
-            mod = _load_script("maya-grooming", "list_hair_systems")
-            result = mod.list_hair_systems()
-
-        assert result["success"] is True
-        assert result["context"]["count"] == 0
-
-    def test_list_one_system(self):
-        mock_maya, mc = _make_mock_maya()
-        mc.ls.return_value = ["hairSystem1"]
-        mc.listRelatives.return_value = ["hairSystem1Transform"]
-        mc.listConnections.side_effect = [
-            ["follicle1", "follicle2"],
-            ["nucleus1"],
-        ]
-        mc.attributeQuery.return_value = True
-        mc.getAttr.return_value = 0.5
-
-        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
-            mod = _load_script("maya-grooming", "list_hair_systems")
-            result = mod.list_hair_systems()
-
-        assert result["success"] is True
-        assert result["context"]["count"] == 1
-        assert result["context"]["hair_systems"][0]["hair_system"] == "hairSystem1"
-
-    def test_list_exception(self):
-        mock_maya, mc = _make_mock_maya()
-        mc.ls.side_effect = RuntimeError("scene error")
-
-        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
-            mod = _load_script("maya-grooming", "list_hair_systems")
-            result = mod.list_hair_systems()
-
-        assert result["success"] is False
-
-
-class TestAddNHairCache:
-    def test_bake_default_range(self):
-        mock_maya, mc = _make_mock_maya()
-        mc.objExists.return_value = True
-        mc.playbackOptions.side_effect = [1.0, 48.0]
-        mc.mel = MagicMock()
-
-        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
-            mod = _load_script("maya-grooming", "add_nhair_cache")
-            result = mod.add_nhair_cache("hairSystem1")
-
-        assert result["success"] is True
-        assert result["context"]["start_frame"] == 1
-        assert result["context"]["end_frame"] == 48
-
-    def test_bake_explicit_range(self):
-        mock_maya, mc = _make_mock_maya()
-        mc.objExists.return_value = True
-        mc.mel = MagicMock()
-
-        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
-            mod = _load_script("maya-grooming", "add_nhair_cache")
-            result = mod.add_nhair_cache("hairSystem1", start_frame=5, end_frame=30)
-
-        assert result["success"] is True
-        assert result["context"]["end_frame"] == 30
-
-    def test_bake_node_not_found(self):
-        mock_maya, mc = _make_mock_maya()
-        mc.objExists.return_value = False
-
-        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
-            mod = _load_script("maya-grooming", "add_nhair_cache")
-            result = mod.add_nhair_cache("ghost")
-
-        assert result["success"] is False
-
-    def test_bake_exception(self):
-        mock_maya, mc = _make_mock_maya()
-        mc.objExists.return_value = True
-        mc.playbackOptions.side_effect = [1.0, 48.0]
-        mc.mel = MagicMock()
-        mc.select.side_effect = RuntimeError("select fail")
-
-        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
-            mod = _load_script("maya-grooming", "add_nhair_cache")
-            result = mod.add_nhair_cache("hairSystem1")
-
-        assert result["success"] is False
-
-
-# ===========================================================================
-# maya-export-preset
-# ===========================================================================
-
-class TestSaveExportPreset:
-    def test_save_ok(self, tmp_path):
-        mock_maya, mc = _make_mock_maya()
-        mc.playbackOptions.side_effect = [1.0, 100.0]
-        mc.file.return_value = "/tmp/scene.ma"
-        mc.currentUnit.return_value = "film"
-
-        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
-            mod = _load_script("maya-export-preset", "save_export_preset")
-            result = mod.save_export_preset(
-                "my_fbx",
-                preset_dir=str(tmp_path),
-                format="fbx",
-                frame_range=[1, 100],
-            )
-
-        assert result["success"] is True
-        saved_path = result["context"]["preset_path"]
-        assert os.path.isfile(saved_path)
-        with open(saved_path) as fh:
-            data = json.load(fh)
-        assert data["preset_name"] == "my_fbx"
-        assert data["frame_range"] == [1, 100]
-
-    def test_save_default_frame_range(self, tmp_path):
-        mock_maya, mc = _make_mock_maya()
-        mc.playbackOptions.side_effect = [1.0, 24.0]
-        mc.file.return_value = ""
-        mc.currentUnit.return_value = "film"
-
-        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
-            mod = _load_script("maya-export-preset", "save_export_preset")
-            result = mod.save_export_preset("auto_range", preset_dir=str(tmp_path))
-
-        assert result["success"] is True
-        assert result["context"]["preset_data"]["frame_range"] == [1, 24]
-
-    def test_save_creates_nested_dir(self, tmp_path):
-        mock_maya, mc = _make_mock_maya()
-        mc.playbackOptions.side_effect = [1.0, 24.0]
-        mc.file.return_value = ""
-        mc.currentUnit.return_value = "film"
-        new_dir = str(tmp_path / "nested" / "presets")
-
-        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
-            mod = _load_script("maya-export-preset", "save_export_preset")
-            result = mod.save_export_preset("test", preset_dir=new_dir)
-
-        assert result["success"] is True
-        assert os.path.isdir(new_dir)
-
-    def test_save_with_custom_settings(self, tmp_path):
-        mock_maya, mc = _make_mock_maya()
-        mc.playbackOptions.side_effect = [1.0, 24.0]
-        mc.file.return_value = ""
-        mc.currentUnit.return_value = "film"
-
-        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
-            mod = _load_script("maya-export-preset", "save_export_preset")
-            result = mod.save_export_preset(
-                "custom",
-                preset_dir=str(tmp_path),
-                custom_settings={"triangulate": True},
-            )
-
-        assert result["success"] is True
-        with open(result["context"]["preset_path"]) as fh:
-            data = json.load(fh)
-        assert data["triangulate"] is True
-
-    def test_save_exception(self, tmp_path):
-        mock_maya, mc = _make_mock_maya()
-        mc.playbackOptions.side_effect = RuntimeError("playback error")
-        mc.file.return_value = ""
-        mc.currentUnit.return_value = "film"
-
-        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
-            mod = _load_script("maya-export-preset", "save_export_preset")
-            # frame_range provided so playbackOptions not called -> should succeed
-            result = mod.save_export_preset("fail", preset_dir=str(tmp_path), frame_range=[1, 10])
-
-        assert result["success"] is True
-
-
-class TestLoadExportPreset:
-    def _create_preset(self, tmp_path, name="test_preset"):
-        preset_data = {
-            "preset_name": name,
-            "format": "fbx",
-            "frame_range": [10, 50],
-            "fps": "film",
-        }
-        path = str(tmp_path / "{}.json".format(name))
-        with open(path, "w") as fh:
-            json.dump(preset_data, fh)
-        return path
-
-    def test_load_ok(self, tmp_path):
-        path = self._create_preset(tmp_path)
-        mock_maya, mc = _make_mock_maya()
-
-        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
-            mod = _load_script("maya-export-preset", "load_export_preset")
-            result = mod.load_export_preset(path)
-
-        assert result["success"] is True
-        assert result["context"]["preset_data"]["preset_name"] == "test_preset"
-        mc.playbackOptions.assert_called()
-
-    def test_load_no_apply_range(self, tmp_path):
-        path = self._create_preset(tmp_path)
-        mock_maya, mc = _make_mock_maya()
-
-        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
-            mod = _load_script("maya-export-preset", "load_export_preset")
-            result = mod.load_export_preset(path, apply_frame_range=False)
-
-        assert result["success"] is True
-        mc.playbackOptions.assert_not_called()
-
-    def test_load_file_not_found(self, tmp_path):
-        mock_maya, mc = _make_mock_maya()
-
-        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
-            mod = _load_script("maya-export-preset", "load_export_preset")
-            result = mod.load_export_preset(str(tmp_path / "ghost.json"))
-
-        assert result["success"] is False
-
-
-class TestListExportPresets:
-    def test_list_empty_dir(self, tmp_path):
-        mock_maya, mc = _make_mock_maya()
-
-        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
-            mod = _load_script("maya-export-preset", "list_export_presets")
-            result = mod.list_export_presets(preset_dir=str(tmp_path))
-
-        assert result["success"] is True
-        assert result["context"]["count"] == 0
-
-    def test_list_no_dir(self, tmp_path):
-        mock_maya, mc = _make_mock_maya()
-        non_existent = str(tmp_path / "no_such_dir")
-
-        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
-            mod = _load_script("maya-export-preset", "list_export_presets")
-            result = mod.list_export_presets(preset_dir=non_existent)
-
-        assert result["success"] is True
-        assert result["context"]["count"] == 0
-
-    def test_list_presets(self, tmp_path):
-        for i in range(3):
-            path = str(tmp_path / "preset_{}.json".format(i))
-            with open(path, "w") as fh:
-                json.dump({"preset_name": "preset_{}".format(i), "format": "fbx", "frame_range": [1, 10]}, fh)
-
-        mock_maya, mc = _make_mock_maya()
-
-        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
-            mod = _load_script("maya-export-preset", "list_export_presets")
-            result = mod.list_export_presets(preset_dir=str(tmp_path))
-
+    def test_with_keyframes(self):
+        mod = self._load()
+        mock_maya, mock_cmds = make_mock_maya()
+        mock_cmds.objExists.return_value = True
+        mock_cmds.keyframe.return_value = [1.0, 5.0, 10.0]
+        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
+            result = mod.get_keyframes("pSphere1")
         assert result["success"] is True
         assert result["context"]["count"] == 3
+        assert result["context"]["keyframes"] == [1.0, 5.0, 10.0]
 
-    def test_list_invalid_json(self, tmp_path):
-        bad = str(tmp_path / "bad.json")
-        with open(bad, "w") as fh:
-            fh.write("not json {{")
-
-        mock_maya, mc = _make_mock_maya()
-
-        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
-            mod = _load_script("maya-export-preset", "list_export_presets")
-            result = mod.list_export_presets(preset_dir=str(tmp_path))
-
+    def test_with_attribute_filter(self):
+        mod = self._load()
+        mock_maya, mock_cmds = make_mock_maya()
+        mock_cmds.objExists.return_value = True
+        mock_cmds.keyframe.return_value = [1.0, 5.0]
+        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
+            result = mod.get_keyframes("pSphere1", attribute="tx")
         assert result["success"] is True
-        assert result["context"]["count"] == 1
-        assert result["context"]["presets"][0].get("error") is not None
+        assert result["context"]["attribute"] == "tx"
+
+    def test_main_callable(self):
+        mod = self._load()
+        mock_maya, mock_cmds = make_mock_maya()
+        mock_cmds.objExists.return_value = False
+        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
+            result = mod.main(object_name="x")
+        assert isinstance(result, dict)
 
 
-class TestDeleteExportPreset:
-    def test_delete_ok(self, tmp_path):
-        path = str(tmp_path / "my_preset.json")
-        with open(path, "w") as fh:
-            json.dump({}, fh)
+class TestSetTimeline:
+    """Tests for maya-animation/scripts/set_timeline.py."""
 
-        mod = _load_script("maya-export-preset", "delete_export_preset")
-        result = mod.delete_export_preset(path)
+    def _load(self):
+        return load_skill_script("maya-animation", "set_timeline")
 
+    def test_set_timeline(self):
+        mod = self._load()
+        mock_maya, mock_cmds = make_mock_maya()
+        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
+            result = mod.set_timeline(start_frame=1, end_frame=120)
         assert result["success"] is True
-        assert not os.path.exists(path)
-        assert result["context"]["preset_name"] == "my_preset"
 
-    def test_delete_file_not_found(self, tmp_path):
-        mod = _load_script("maya-export-preset", "delete_export_preset")
-        result = mod.delete_export_preset(str(tmp_path / "ghost.json"))
+    def test_main_callable(self):
+        mod = self._load()
+        mock_maya, mock_cmds = make_mock_maya()
+        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
+            result = mod.main(start_frame=1, end_frame=48)
+        assert isinstance(result, dict)
 
-        assert result["success"] is False
 
-    def test_delete_exception(self, tmp_path):
-        # Pass a directory instead of a file to trigger an error path
-        mod = _load_script("maya-export-preset", "delete_export_preset")
-        result = mod.delete_export_preset(str(tmp_path))
+class TestGetCurrentTime:
+    """Tests for maya-animation/scripts/get_current_time.py."""
 
-        assert result["success"] is False
+    def _load(self):
+        return load_skill_script("maya-animation", "get_current_time")
+
+    def test_get_current_time(self):
+        mod = self._load()
+        mock_maya, mock_cmds = make_mock_maya()
+        mock_cmds.currentTime.return_value = 24.0
+        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
+            result = mod.get_current_time()
+        assert result["success"] is True
+
+    def test_main_callable(self):
+        mod = self._load()
+        mock_maya, mock_cmds = make_mock_maya()
+        mock_cmds.currentTime.return_value = 1.0
+        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
+            result = mod.main()
+        assert isinstance(result, dict)
+
+
+class TestSetCurrentTime:
+    """Tests for maya-animation/scripts/set_current_time.py."""
+
+    def _load(self):
+        return load_skill_script("maya-animation", "set_current_time")
+
+    def test_set_current_time(self):
+        mod = self._load()
+        mock_maya, mock_cmds = make_mock_maya()
+        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
+            result = mod.set_current_time(48.0)
+        assert result["success"] is True
+
+    def test_main_callable(self):
+        mod = self._load()
+        mock_maya, mock_cmds = make_mock_maya()
+        with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
+            result = mod.main(frame=1.0)
+        assert isinstance(result, dict)

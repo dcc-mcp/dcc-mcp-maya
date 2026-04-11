@@ -39,7 +39,7 @@ def clean_scene(
 
         # Unknown nodes
         if remove_unknown_nodes:
-            for node in (cmds.ls(type="unknown") or []):
+            for node in cmds.ls(type="unknown") or []:
                 if dry_run:
                     flagged.append("unknown_node:{}".format(node))
                 else:
@@ -52,7 +52,7 @@ def clean_scene(
 
         # Unknown plug-ins
         if remove_unknown_plugins:
-            for plugin in (cmds.unknownPlugin(query=True, list=True) or []):
+            for plugin in cmds.unknownPlugin(query=True, list=True) or []:
                 if dry_run:
                     flagged.append("unknown_plugin:{}".format(plugin))
                 else:
@@ -64,7 +64,7 @@ def clean_scene(
 
         # Empty display layers
         if remove_empty_display_layers:
-            for layer in (cmds.ls(type="displayLayer") or []):
+            for layer in cmds.ls(type="displayLayer") or []:
                 if layer == "defaultLayer":
                     continue
                 members = cmds.editDisplayLayerMembers(layer, query=True, fullNames=True) or []
@@ -80,7 +80,7 @@ def clean_scene(
 
         # Empty render layers
         if remove_empty_render_layers:
-            for layer in (cmds.ls(type="renderLayer") or []):
+            for layer in cmds.ls(type="renderLayer") or []:
                 if layer == "defaultRenderLayer":
                     continue
                 members = cmds.editRenderLayerMembers(layer, query=True, fullNames=True) or []
@@ -96,9 +96,7 @@ def clean_scene(
 
         action_str = "dry-run" if dry_run else "cleaned"
         return success_result(
-            "Scene {} — {} items removed, {} flagged".format(
-                action_str, len(removed), len(flagged)
-            ),
+            "Scene {} — {} items removed, {} flagged".format(action_str, len(removed), len(flagged)),
             prompt="Clean complete. Run validate_scene_for_farm to check render readiness.",
             removed=removed,
             flagged=flagged,
@@ -118,5 +116,6 @@ def main(**kwargs):
 
 if __name__ == "__main__":
     import json
+
     result = clean_scene(dry_run=True)
     print(json.dumps(result))

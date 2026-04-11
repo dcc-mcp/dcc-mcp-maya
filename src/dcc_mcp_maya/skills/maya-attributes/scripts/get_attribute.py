@@ -58,7 +58,8 @@ def get_attribute(node_name: str, attribute: str) -> dict:
         return error_result("Failed to get attribute", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`get_attribute`."""
     return get_attribute(**kwargs)
 
 

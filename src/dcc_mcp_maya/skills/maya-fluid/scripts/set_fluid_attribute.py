@@ -35,9 +35,7 @@ def set_fluid_attribute(fluid_shape: str, attribute: str, value: float) -> dict:
 
         return success_result(
             "Fluid attribute set",
-            prompt="Attribute {}.{} updated. Simulate to see the effect.".format(
-                fluid_shape, attribute
-            ),
+            prompt="Attribute {}.{} updated. Simulate to see the effect.".format(fluid_shape, attribute),
             fluid_shape=fluid_shape,
             attribute=attribute,
             value=value,
@@ -55,5 +53,6 @@ def main(**kwargs):
 
 if __name__ == "__main__":
     import json
+
     result = set_fluid_attribute("fluidShape1", "density", 0.5)
     print(json.dumps(result))

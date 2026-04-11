@@ -35,9 +35,7 @@ def set_ocean_attribute(shader: str, attribute: str, value: float) -> dict:
 
         return success_result(
             "Ocean attribute set",
-            prompt="Attribute {}.{} = {}. Render or preview to see wave changes.".format(
-                shader, attribute, value
-            ),
+            prompt="Attribute {}.{} = {}. Render or preview to see wave changes.".format(shader, attribute, value),
             shader=shader,
             attribute=attribute,
             value=value,
@@ -55,5 +53,6 @@ def main(**kwargs):
 
 if __name__ == "__main__":
     import json
+
     result = set_ocean_attribute("oceanShader1", "waveHeight", 2.5)
     print(json.dumps(result))

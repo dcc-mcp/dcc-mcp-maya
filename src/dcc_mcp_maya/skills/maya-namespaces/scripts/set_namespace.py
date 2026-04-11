@@ -75,7 +75,8 @@ def set_namespace(
         return error_result("Failed to set namespace for '{}'".format(object_name), str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`set_namespace`."""
     return set_namespace(**kwargs)
 
 

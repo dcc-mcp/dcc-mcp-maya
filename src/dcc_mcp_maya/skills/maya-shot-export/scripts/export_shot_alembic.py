@@ -61,15 +61,13 @@ def export_shot_alembic(
         ws_flag = "-worldSpace" if world_space else ""
         uv_flag = "-uvWrite" if uv_write else ""
 
-        job_str = (
-            "-frameRange {sf} {ef} {ws} {uv} {roots} -file \"{fp}\"".format(
-                sf=int(sf),
-                ef=int(ef),
-                ws=ws_flag,
-                uv=uv_flag,
-                roots=root_flags,
-                fp=file_path.replace("\\", "/"),
-            )
+        job_str = '-frameRange {sf} {ef} {ws} {uv} {roots} -file "{fp}"'.format(
+            sf=int(sf),
+            ef=int(ef),
+            ws=ws_flag,
+            uv=uv_flag,
+            roots=root_flags,
+            fp=file_path.replace("\\", "/"),
         )
         cmds.AbcExport(j=job_str)
 

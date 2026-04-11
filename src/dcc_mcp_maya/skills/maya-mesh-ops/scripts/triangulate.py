@@ -46,7 +46,8 @@ def triangulate(object_name: str) -> dict:
         return error_result("Failed to triangulate", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`triangulate`."""
     return triangulate(**kwargs)
 
 

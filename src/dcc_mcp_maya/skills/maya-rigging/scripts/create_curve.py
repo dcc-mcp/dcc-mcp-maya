@@ -73,7 +73,8 @@ def create_curve(
         return error_result("Failed to create curve", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`create_curve`."""
     return create_curve(**kwargs)
 
 

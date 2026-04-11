@@ -5,7 +5,6 @@ from __future__ import annotations
 
 # Import built-in modules
 import logging
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -42,11 +41,13 @@ def execute_mel(code: str) -> dict:
         return error_result("MEL execution failed", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`execute_mel`."""
     return execute_mel(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = execute_mel("polySphere -n mySphere;")
     print(json.dumps(result))

@@ -63,10 +63,8 @@ def load_material(
         # Optionally assign to meshes
         assigned_to = []
         if assign_to:
-            sg = cmds.sets(renderable=True, noSurfaceShader=True, empty=True,
-                           name="{}_SG".format(mat_node))
-            cmds.connectAttr("{}.outColor".format(mat_node),
-                             "{}.surfaceShader".format(sg), force=True)
+            sg = cmds.sets(renderable=True, noSurfaceShader=True, empty=True, name="{}_SG".format(mat_node))
+            cmds.connectAttr("{}.outColor".format(mat_node), "{}.surfaceShader".format(sg), force=True)
             for obj in assign_to:
                 if cmds.objExists(obj):
                     cmds.sets(obj, edit=True, forceElement=sg)

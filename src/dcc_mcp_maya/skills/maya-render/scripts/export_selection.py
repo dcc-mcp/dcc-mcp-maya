@@ -47,7 +47,8 @@ def export_selection(
         return error_result("Failed to export selection", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`export_selection`."""
     return export_selection(**kwargs)
 
 

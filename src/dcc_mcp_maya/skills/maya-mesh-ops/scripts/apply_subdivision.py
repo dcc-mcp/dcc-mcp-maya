@@ -68,7 +68,8 @@ def apply_subdivision(
         return error_result("Failed to apply subdivision", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`apply_subdivision`."""
     return apply_subdivision(**kwargs)
 
 

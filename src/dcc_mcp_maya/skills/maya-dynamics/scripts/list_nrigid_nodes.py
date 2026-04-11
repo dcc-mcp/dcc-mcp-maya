@@ -69,7 +69,8 @@ def list_nrigid_nodes():
         return error_result("Failed to list nRigid nodes", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`list_nrigid_nodes`."""
     return list_nrigid_nodes(**kwargs)
 
 

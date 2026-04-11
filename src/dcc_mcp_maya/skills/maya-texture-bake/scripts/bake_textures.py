@@ -112,7 +112,8 @@ def bake_textures(
         return error_result("Failed to bake textures", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`bake_textures`."""
     return bake_textures(**kwargs)
 
 

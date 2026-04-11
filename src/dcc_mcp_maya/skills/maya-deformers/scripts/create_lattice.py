@@ -83,7 +83,8 @@ def create_lattice(
         return error_result("Failed to create FFD lattice", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`create_lattice`."""
     return create_lattice(**kwargs)
 
 

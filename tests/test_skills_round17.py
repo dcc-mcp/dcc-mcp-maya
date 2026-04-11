@@ -9,18 +9,15 @@ from __future__ import annotations
 import json
 import os
 import sys
-import tempfile
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 # Import third-party modules
-import pytest
-
 from tests.conftest import load_skill_script, make_mock_maya
-
 
 # ---------------------------------------------------------------------------
 # maya-skinning-utils
 # ---------------------------------------------------------------------------
+
 
 class TestCopySkinWeights:
     """Tests for copy_skin_weights script."""
@@ -225,6 +222,7 @@ class TestPruneSkinWeights:
 # ---------------------------------------------------------------------------
 # maya-rig-utils
 # ---------------------------------------------------------------------------
+
 
 class TestCreateControlCurve:
     """Tests for create_control_curve script."""
@@ -449,6 +447,7 @@ class TestConnectAttributes:
 # maya-render-passes
 # ---------------------------------------------------------------------------
 
+
 class TestCreateRenderPass:
     """Tests for create_render_pass script."""
 
@@ -503,8 +502,7 @@ class TestListRenderPasses:
     def test_list_with_nodes(self):
         mock_maya, mock_cmds = make_mock_maya()
         mock_cmds.ls.side_effect = lambda type=None: (
-            ["beauty_pass"] if type == "renderPass" else
-            ["diffuse_aov"] if type == "aiAOV" else []
+            ["beauty_pass"] if type == "renderPass" else ["diffuse_aov"] if type == "aiAOV" else []
         )
         mock_cmds.objectType.return_value = "renderPass"
         mock_cmds.attributeQuery.return_value = False
@@ -616,6 +614,7 @@ class TestSetRenderPassOutput:
 # ---------------------------------------------------------------------------
 # maya-pose-library
 # ---------------------------------------------------------------------------
+
 
 class TestSavePose:
     """Tests for save_pose script."""
@@ -820,6 +819,7 @@ class TestMirrorPose:
 # maya-light-rig
 # ---------------------------------------------------------------------------
 
+
 class TestCreateThreePointRig:
     """Tests for create_three_point_rig script."""
 
@@ -827,9 +827,12 @@ class TestCreateThreePointRig:
         mock_maya, mock_cmds = make_mock_maya()
         mock_cmds.group.return_value = "threePoint_rig"
         mock_cmds.createNode.side_effect = [
-            "threePoint_rig_key", "threePoint_rig_keyShape",
-            "threePoint_rig_fill", "threePoint_rig_fillShape",
-            "threePoint_rig_rim", "threePoint_rig_rimShape",
+            "threePoint_rig_key",
+            "threePoint_rig_keyShape",
+            "threePoint_rig_fill",
+            "threePoint_rig_fillShape",
+            "threePoint_rig_rim",
+            "threePoint_rig_rimShape",
         ]
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             mod = load_skill_script("maya-light-rig", "create_three_point_rig")

@@ -36,7 +36,8 @@ def set_selection(objects: List[str]) -> dict:
         return error_result("Failed to set selection", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`set_selection`."""
     return set_selection(**kwargs)
 
 

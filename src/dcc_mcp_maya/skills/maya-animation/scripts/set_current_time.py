@@ -35,7 +35,8 @@ def set_current_time(frame: float) -> dict:
         return error_result("Failed to set current time", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`set_current_time`."""
     return set_current_time(**kwargs)
 
 

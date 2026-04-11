@@ -48,12 +48,8 @@ def write_render_job(
 
         name = job_name or scene_stem
 
-        sf = start_frame if start_frame is not None else int(
-            cmds.getAttr("defaultRenderGlobals.startFrame")
-        )
-        ef = end_frame if end_frame is not None else int(
-            cmds.getAttr("defaultRenderGlobals.endFrame")
-        )
+        sf = start_frame if start_frame is not None else int(cmds.getAttr("defaultRenderGlobals.startFrame"))
+        ef = end_frame if end_frame is not None else int(cmds.getAttr("defaultRenderGlobals.endFrame"))
 
         active_renderer = renderer
         if not active_renderer:

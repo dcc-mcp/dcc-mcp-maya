@@ -73,7 +73,8 @@ def list_constraints(target: str) -> dict:
         return error_result("Failed to list constraints on '{}'".format(target), str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`list_constraints`."""
     return list_constraints(**kwargs)
 
 

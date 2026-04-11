@@ -102,7 +102,8 @@ def create_dynamic_field(
         return error_result("Failed to create dynamic field", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`create_dynamic_field`."""
     return create_dynamic_field(**kwargs)
 
 

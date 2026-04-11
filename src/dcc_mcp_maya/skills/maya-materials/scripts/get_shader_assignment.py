@@ -66,7 +66,8 @@ def get_shader_assignment(object_name: str) -> dict:
         return error_result("Failed to get shader assignment for '{}'".format(object_name), str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`get_shader_assignment`."""
     return get_shader_assignment(**kwargs)
 
 

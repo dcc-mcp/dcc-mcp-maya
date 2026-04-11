@@ -80,7 +80,8 @@ def capture_viewport(
         return error_result("Failed to capture viewport", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`capture_viewport`."""
     return capture_viewport(**kwargs)
 
 

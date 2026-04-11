@@ -48,7 +48,8 @@ def delete_history(
         return error_result("Failed to delete history for {}".format(object_name), str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`delete_history`."""
     return delete_history(**kwargs)
 
 

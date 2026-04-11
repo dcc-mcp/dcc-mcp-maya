@@ -32,9 +32,10 @@ def load_pose(
     from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
+        import os
+
         import maya.cmds as cmds  # noqa: PLC0415
 
-        import os
         if not os.path.isfile(file_path):
             return error_result(
                 "Pose file not found: {}".format(file_path),

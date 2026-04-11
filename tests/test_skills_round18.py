@@ -13,10 +13,7 @@ import tempfile
 from unittest.mock import MagicMock, patch
 
 # Import third-party modules
-import pytest
-
 from tests.conftest import load_skill_script, make_mock_maya
-
 
 # ---------------------------------------------------------------------------
 # maya-shot-export
@@ -216,9 +213,7 @@ class TestGetShotInfo:
     def test_shot_info_success(self):
         mock_maya, mock_cmds = make_mock_maya()
         mock_cmds.file.return_value = "/path/to/shot_001.ma"
-        mock_cmds.playbackOptions.side_effect = lambda **kw: (
-            1.0 if kw.get("minTime") else 120.0
-        )
+        mock_cmds.playbackOptions.side_effect = lambda **kw: 1.0 if kw.get("minTime") else 120.0
         mock_cmds.currentTime.return_value = 50.0
         mock_cmds.getPanel.return_value = ["modelPanel1"]
         mock_cmds.modelEditor.return_value = "persp"
@@ -449,8 +444,8 @@ class TestAddToonOutline:
         mock_maya, mock_cmds, mock_mel = self._make_cmds()
         # Simulate pfxToon node existing after MEL call
         mock_cmds.ls.side_effect = [
-            ["pSphere1"],       # first ls call for selection
-            ["pfxToon_new"],    # second ls(type="pfxToon")
+            ["pSphere1"],  # first ls call for selection
+            ["pfxToon_new"],  # second ls(type="pfxToon")
         ]
         with patch.dict(
             sys.modules,
@@ -485,9 +480,7 @@ class TestAddToonOutline:
         assert result["success"] is False
 
     def test_no_maya(self):
-        with patch.dict(
-            sys.modules, {"maya": None, "maya.cmds": None, "maya.mel": None}
-        ):
+        with patch.dict(sys.modules, {"maya": None, "maya.cmds": None, "maya.mel": None}):
             mod = load_skill_script("maya-toon", "add_toon_outline")
             result = mod.add_toon_outline(objects=["pSphere1"])
         assert result["success"] is False
@@ -608,8 +601,8 @@ class TestCreateNParticleEmitter:
         mock_maya, mock_cmds = make_mock_maya()
         mock_mel = MagicMock()
         mock_cmds.ls.side_effect = [
-            ["nParticleShape1"],    # ls(type="nParticle") — particle created
-            ["nucleus1"],           # ls(type="nucleus")
+            ["nParticleShape1"],  # ls(type="nParticle") — particle created
+            ["nucleus1"],  # ls(type="nucleus")
         ]
         mock_cmds.listRelatives.return_value = ["nParticle1"]
         mock_cmds.listConnections.return_value = ["emitter1"]
@@ -641,9 +634,7 @@ class TestCreateNParticleEmitter:
         assert result["success"] is False
 
     def test_no_maya(self):
-        with patch.dict(
-            sys.modules, {"maya": None, "maya.cmds": None, "maya.mel": None}
-        ):
+        with patch.dict(sys.modules, {"maya": None, "maya.cmds": None, "maya.mel": None}):
             mod = load_skill_script("maya-nparticles", "create_nparticle_emitter")
             result = mod.create_nparticle_emitter()
         assert result["success"] is False
@@ -738,9 +729,7 @@ class TestAddFieldToNParticles:
         mock_cmds.ls.return_value = []
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             mod = load_skill_script("maya-nparticles", "add_field_to_nparticles")
-            result = mod.add_field_to_nparticles(
-                particle_shapes=[], field_type="gravity"
-            )
+            result = mod.add_field_to_nparticles(particle_shapes=[], field_type="gravity")
         assert result["success"] is False
 
     def test_no_maya(self):
@@ -828,9 +817,12 @@ class TestValidateSceneForFarm:
         mock_cmds.file.return_value = "/path/to/scene.ma"
         mock_cmds.ls.return_value = ["file1"]
         mock_cmds.getAttr.side_effect = lambda attr: (
-            "/nonexistent/texture.png" if "fileTextureName" in attr
-            else 1.0 if "startFrame" in attr
-            else 100.0 if "endFrame" in attr
+            "/nonexistent/texture.png"
+            if "fileTextureName" in attr
+            else 1.0
+            if "startFrame" in attr
+            else 100.0
+            if "endFrame" in attr
             else "arnold"
         )
         mock_cmds.editRenderLayerGlobals.return_value = "defaultRenderLayer"
@@ -854,9 +846,7 @@ class TestWriteRenderJob:
         mock_maya, mock_cmds = make_mock_maya()
         mock_cmds.file.return_value = "/path/scene_001.ma"
         mock_cmds.getAttr.side_effect = lambda attr: (
-            1.0 if "startFrame" in attr
-            else 100.0 if "endFrame" in attr
-            else "arnold"
+            1.0 if "startFrame" in attr else 100.0 if "endFrame" in attr else "arnold"
         )
         mock_cmds.workspace.return_value = "/project"
         with tempfile.TemporaryDirectory() as tmp:
@@ -870,9 +860,7 @@ class TestWriteRenderJob:
         mock_maya, mock_cmds = make_mock_maya()
         mock_cmds.file.return_value = "/path/scene.ma"
         mock_cmds.getAttr.side_effect = lambda attr: (
-            1.0 if "startFrame" in attr
-            else 100.0 if "endFrame" in attr
-            else "vray"
+            1.0 if "startFrame" in attr else 100.0 if "endFrame" in attr else "vray"
         )
         mock_cmds.workspace.return_value = "/project"
         with tempfile.TemporaryDirectory() as tmp:

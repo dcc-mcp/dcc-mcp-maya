@@ -98,7 +98,8 @@ def playblast(
         return error_result("Playblast failed", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`playblast`."""
     return playblast(**kwargs)
 
 

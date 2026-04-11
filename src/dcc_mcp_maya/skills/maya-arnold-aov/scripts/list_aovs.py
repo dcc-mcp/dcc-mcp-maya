@@ -55,6 +55,7 @@ def list_aovs() -> dict:
 
 
 def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`list_aovs`."""
     return list_aovs(**kwargs)
 
 

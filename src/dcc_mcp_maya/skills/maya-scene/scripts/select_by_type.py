@@ -43,7 +43,8 @@ def select_by_type(object_type: str) -> dict:
         return error_result("Failed to select by type '{}'".format(object_type), str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`select_by_type`."""
     return select_by_type(**kwargs)
 
 

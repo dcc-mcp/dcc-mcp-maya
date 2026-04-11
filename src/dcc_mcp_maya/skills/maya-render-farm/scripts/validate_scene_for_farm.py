@@ -6,7 +6,6 @@ from __future__ import annotations
 # Import built-in modules
 import logging
 import os
-from typing import List
 
 logger = logging.getLogger(__name__)
 
@@ -61,9 +60,7 @@ def validate_scene_for_farm() -> dict:
             start = cmds.getAttr("defaultRenderGlobals.startFrame")
             end = cmds.getAttr("defaultRenderGlobals.endFrame")
             if end <= start:
-                issues.append(
-                    "Render frame range invalid: startFrame={} endFrame={}".format(start, end)
-                )
+                issues.append("Render frame range invalid: startFrame={} endFrame={}".format(start, end))
         except Exception:
             issues.append("Could not query defaultRenderGlobals frame range")
 
