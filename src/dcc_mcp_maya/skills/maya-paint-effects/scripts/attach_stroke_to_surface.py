@@ -7,6 +7,8 @@ from __future__ import annotations
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 
 def attach_stroke_to_surface(
     surface: str,
@@ -30,11 +32,9 @@ def attach_stroke_to_surface(
         import maya.cmds as cmds  # noqa: PLC0415
         import maya.mel as mel  # noqa: PLC0415
 
-        if not cmds.objExists(surface):
-            return skill_error(
-                "Surface not found: {}".format(surface),
-                "Ensure the surface exists before attaching strokes",
-            )
+        err = validate_node_exists(cmds, surface)
+        if err:
+            return err
 
         strokes_before = set(cmds.ls(type="stroke") or [])
 

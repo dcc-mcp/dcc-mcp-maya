@@ -6,6 +6,8 @@ from __future__ import annotations
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 
 def refresh_gpu_cache(cache_node: str) -> dict:
     """Reload a GPU cache node from its file path.
@@ -23,11 +25,9 @@ def refresh_gpu_cache(cache_node: str) -> dict:
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(cache_node):
-            return skill_error(
-                "GPU cache node not found: {}".format(cache_node),
-                "'{}' does not exist in the scene".format(cache_node),
-            )
+        err = validate_node_exists(cmds, cache_node)
+        if err:
+            return err
 
         node_type = cmds.objectType(cache_node)
         if node_type != "gpuCache":

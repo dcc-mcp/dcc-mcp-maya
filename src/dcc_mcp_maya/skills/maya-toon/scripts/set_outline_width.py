@@ -6,6 +6,8 @@ from __future__ import annotations
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 # Import built-in modules
 
 
@@ -29,11 +31,9 @@ def set_outline_width(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(toon_node):
-            return skill_error(
-                "pfxToon node '{}' not found".format(toon_node),
-                "Use list_toon_outlines to find available nodes",
-            )
+        err = validate_node_exists(cmds, toon_node)
+        if err:
+            return err
 
         if cmds.objectType(toon_node) != "pfxToon":
             return skill_error(

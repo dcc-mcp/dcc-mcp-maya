@@ -9,6 +9,8 @@ from typing import Optional
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 
 def set_shot_range(
     shot_node: str,
@@ -31,11 +33,9 @@ def set_shot_range(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(shot_node):
-            return skill_error(
-                "Shot not found: {}".format(shot_node),
-                "Verify the shot node name with list_shots",
-            )
+        err = validate_node_exists(cmds, shot_node)
+        if err:
+            return err
 
         current_start = float(cmds.shot(shot_node, query=True, startTime=True))
         current_end = float(cmds.shot(shot_node, query=True, endTime=True))

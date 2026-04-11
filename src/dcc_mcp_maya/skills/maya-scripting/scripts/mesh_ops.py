@@ -9,6 +9,8 @@ from typing import List, Optional
 # Import local modules
 from dcc_mcp_core.skill import skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 
 def get_poly_count(object_name: Optional[str] = None) -> dict:
     """Query polygon statistics for an object or the entire scene.
@@ -370,11 +372,9 @@ def select_by_material(material_name: str) -> dict:
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(material_name):
-            return skill_error(
-                "Material not found: {}".format(material_name),
-                "'{}' does not exist in the scene".format(material_name),
-            )
+        err = validate_node_exists(cmds, material_name)
+        if err:
+            return err
 
         # Find all shading engines connected to this material
         shading_engines = (
@@ -541,11 +541,9 @@ def combine_meshes(
         import maya.cmds as cmds  # noqa: PLC0415
 
         for obj in objects:
-            if not cmds.objExists(obj):
-                return skill_error(
-                    "Object not found: {}".format(obj),
-                    "'{}' does not exist in the scene".format(obj),
-                )
+            err = validate_node_exists(cmds, obj)
+            if err:
+                return err
 
         kwargs = {}
         if name:
@@ -596,11 +594,9 @@ def separate_mesh(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(object_name):
-            return skill_error(
-                "Object not found: {}".format(object_name),
-                "'{}' does not exist in the scene".format(object_name),
-            )
+        err = validate_node_exists(cmds, object_name)
+        if err:
+            return err
 
         result = cmds.polySeparate(object_name, constructionHistory=False) or []
         # polySeparate returns shape nodes; get their parent transforms
@@ -672,11 +668,9 @@ def extract_faces(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(object_name):
-            return skill_error(
-                "Object not found: {}".format(object_name),
-                "'{}' does not exist in the scene".format(object_name),
-            )
+        err = validate_node_exists(cmds, object_name)
+        if err:
+            return err
 
         face_components = ["{}.f[{}]".format(object_name, idx) for idx in face_indices]
 
@@ -753,11 +747,9 @@ def mirror_mesh(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(object_name):
-            return skill_error(
-                "Object not found: {}".format(object_name),
-                "'{}' does not exist in the scene".format(object_name),
-            )
+        err = validate_node_exists(cmds, object_name)
+        if err:
+            return err
 
         cmds.polyMirrorFace(
             object_name,

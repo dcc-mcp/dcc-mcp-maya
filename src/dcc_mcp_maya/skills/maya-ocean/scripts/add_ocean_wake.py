@@ -9,6 +9,8 @@ from typing import Optional
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 
 def add_ocean_wake(
     shader: str,
@@ -29,11 +31,9 @@ def add_ocean_wake(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(shader):
-            return skill_error(
-                "Node not found",
-                "oceanShader '{}' does not exist".format(shader),
-            )
+        err = validate_node_exists(cmds, shader)
+        if err:
+            return err
 
         locator_transform = cmds.spaceLocator(name="{}_wake_loc".format(shader))[0]
         cmds.setAttr("{}.waveHeightScale".format(shader), wake_size)

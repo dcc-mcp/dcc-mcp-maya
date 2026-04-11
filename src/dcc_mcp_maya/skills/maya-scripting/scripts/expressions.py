@@ -14,6 +14,8 @@ from typing import Optional
 # Import local modules
 from dcc_mcp_core.skill import skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 
 def create_expression(
     expression: str,
@@ -72,11 +74,9 @@ def create_expression(
         if name:
             kwargs["name"] = name
         if object_name:
-            if not cmds.objExists(object_name):
-                return skill_error(
-                    "Object not found: {}".format(object_name),
-                    "'{}' does not exist in the scene".format(object_name),
-                )
+            err = validate_node_exists(cmds, object_name)
+            if err:
+                return err
             kwargs["object"] = object_name
             if attribute:
                 kwargs["attribute"] = attribute
@@ -169,11 +169,9 @@ def delete_expression(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(expression_name):
-            return skill_error(
-                "Expression not found: {}".format(expression_name),
-                "'{}' does not exist in the scene".format(expression_name),
-            )
+        err = validate_node_exists(cmds, expression_name)
+        if err:
+            return err
 
         node_type = cmds.objectType(expression_name)
         if node_type != "expression":

@@ -9,6 +9,8 @@ import os
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 
 def attach_geometry_cache(
     mesh: str,
@@ -30,11 +32,9 @@ def attach_geometry_cache(
         import maya.cmds as cmds  # noqa: PLC0415
         import maya.mel as mel  # noqa: PLC0415
 
-        if not cmds.objExists(mesh):
-            return skill_error(
-                "Mesh not found: {}".format(mesh),
-                "'{}' does not exist in the scene".format(mesh),
-            )
+        err = validate_node_exists(cmds, mesh)
+        if err:
+            return err
 
         if not os.path.isfile(cache_xml_path):
             return skill_error(

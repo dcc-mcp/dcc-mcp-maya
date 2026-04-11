@@ -9,6 +9,8 @@ from typing import List, Optional
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 
 def create_blend_shape(
     base_mesh: str,
@@ -33,11 +35,9 @@ def create_blend_shape(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(base_mesh):
-            return skill_error(
-                "Base mesh not found: {}".format(base_mesh),
-                "'{}' does not exist in the scene".format(base_mesh),
-            )
+        err = validate_node_exists(cmds, base_mesh)
+        if err:
+            return err
 
         targets = target_meshes or []
         missing = [t for t in targets if not cmds.objExists(t)]

@@ -7,6 +7,8 @@ from __future__ import annotations
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 
 def list_attributes(
     node_name: str,
@@ -26,11 +28,9 @@ def list_attributes(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(node_name):
-            return skill_error(
-                "Node not found: {}".format(node_name),
-                "'{}' does not exist".format(node_name),
-            )
+        err = validate_node_exists(cmds, node_name)
+        if err:
+            return err
 
         kwargs = {}
         if user_defined_only:

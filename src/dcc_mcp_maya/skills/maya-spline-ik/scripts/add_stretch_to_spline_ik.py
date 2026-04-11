@@ -9,6 +9,8 @@ from typing import List
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 
 def add_stretch_to_spline_ik(
     ik_handle: str,
@@ -38,11 +40,9 @@ def add_stretch_to_spline_ik(
         import maya.cmds as cmds  # noqa: PLC0415
 
         for name in [ik_handle, curve] + joints:
-            if not cmds.objExists(name):
-                return skill_error(
-                    "Node not found: {}".format(name),
-                    "'{}' does not exist".format(name),
-                )
+            err = validate_node_exists(cmds, name)
+            if err:
+                return err
 
         if stretch_axis not in ("x", "y", "z"):
             return skill_error(

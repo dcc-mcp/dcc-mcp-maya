@@ -9,6 +9,8 @@ from typing import Optional
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 
 def set_active_camera(camera_name: str, panel: Optional[str] = None) -> dict:
     """Set the active camera for a Maya viewport panel.
@@ -24,11 +26,9 @@ def set_active_camera(camera_name: str, panel: Optional[str] = None) -> dict:
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(camera_name):
-            return skill_error(
-                "Camera not found: {}".format(camera_name),
-                "'{}' does not exist".format(camera_name),
-            )
+        err = validate_node_exists(cmds, camera_name)
+        if err:
+            return err
 
         if panel is None:
             panels = cmds.getPanel(type="modelPanel") or []

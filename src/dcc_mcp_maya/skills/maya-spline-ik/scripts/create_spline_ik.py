@@ -9,6 +9,8 @@ from typing import Optional
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 
 def create_spline_ik(
     start_joint: str,
@@ -43,11 +45,9 @@ def create_spline_ik(
         import maya.cmds as cmds  # noqa: PLC0415
 
         for jnt in (start_joint, end_joint):
-            if not cmds.objExists(jnt):
-                return skill_error(
-                    "Joint not found: {}".format(jnt),
-                    "'{}' does not exist".format(jnt),
-                )
+            err = validate_node_exists(cmds, jnt)
+            if err:
+                return err
 
         kwargs = {
             "startJoint": start_joint,

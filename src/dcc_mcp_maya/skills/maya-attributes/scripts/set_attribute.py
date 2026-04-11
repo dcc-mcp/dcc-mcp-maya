@@ -32,11 +32,9 @@ def set_attribute(node_name: str, attribute: str, value: object) -> dict:
             return err
 
         full_attr = "{}.{}".format(node_name, attribute)
-        if not cmds.objExists(full_attr):
-            return skill_error(
-                "Attribute not found: {}".format(full_attr),
-                "'{}.{}' does not exist on this node".format(node_name, attribute),
-            )
+        err = validate_node_exists(cmds, full_attr)
+        if err:
+            return err
 
         if isinstance(value, str):
             cmds.setAttr(full_attr, value, type="string")

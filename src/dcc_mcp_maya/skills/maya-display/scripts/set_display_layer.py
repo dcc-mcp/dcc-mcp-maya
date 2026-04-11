@@ -9,6 +9,8 @@ from typing import List
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 
 def set_display_layer(layer_name: str, objects: List[str]) -> dict:
     """Assign one or more objects to an existing display layer.
@@ -23,11 +25,9 @@ def set_display_layer(layer_name: str, objects: List[str]) -> dict:
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(layer_name):
-            return skill_error(
-                "Display layer not found",
-                "Layer '{}' does not exist in the scene".format(layer_name),
-            )
+        err = validate_node_exists(cmds, layer_name)
+        if err:
+            return err
 
         assigned = []
         missing = []

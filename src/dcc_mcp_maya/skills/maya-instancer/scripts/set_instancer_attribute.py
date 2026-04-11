@@ -9,6 +9,8 @@ from typing import Optional
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 # Mapping of friendly names to Maya instancer attribute fields
 ATTRIBUTE_MAP = {
     "position": "position",
@@ -49,11 +51,9 @@ def set_instancer_attribute(
         import maya.cmds as cmds  # noqa: PLC0415
 
         for name in (particle_system, instancer_node):
-            if not cmds.objExists(name):
-                return skill_error(
-                    "Node not found: {}".format(name),
-                    "'{}' does not exist".format(name),
-                )
+            err = validate_node_exists(cmds, name)
+            if err:
+                return err
 
         if attribute not in ATTRIBUTE_MAP:
             return skill_error(

@@ -14,6 +14,8 @@ from typing import Optional
 # Import local modules
 from dcc_mcp_core.skill import skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 
 def create_reference(
     file_path: str,
@@ -138,11 +140,9 @@ def remove_reference(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(reference_node):
-            return skill_error(
-                "Reference node not found: {}".format(reference_node),
-                "'{}' does not exist in the scene".format(reference_node),
-            )
+        err = validate_node_exists(cmds, reference_node)
+        if err:
+            return err
 
         if cmds.objectType(reference_node) != "reference":
             return skill_error(
@@ -196,11 +196,9 @@ def reload_reference(reference_node: str) -> dict:
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(reference_node):
-            return skill_error(
-                "Reference node not found: {}".format(reference_node),
-                "'{}' does not exist".format(reference_node),
-            )
+        err = validate_node_exists(cmds, reference_node)
+        if err:
+            return err
 
         if cmds.objectType(reference_node) != "reference":
             return skill_error(
@@ -245,11 +243,9 @@ def unload_reference(reference_node: str) -> dict:
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(reference_node):
-            return skill_error(
-                "Reference node not found: {}".format(reference_node),
-                "'{}' does not exist".format(reference_node),
-            )
+        err = validate_node_exists(cmds, reference_node)
+        if err:
+            return err
 
         if cmds.objectType(reference_node) != "reference":
             return skill_error(

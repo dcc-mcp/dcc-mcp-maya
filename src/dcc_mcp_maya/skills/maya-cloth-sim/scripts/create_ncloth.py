@@ -9,6 +9,8 @@ from typing import Optional
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 
 def create_ncloth(
     mesh: str,
@@ -30,11 +32,9 @@ def create_ncloth(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(mesh):
-            return skill_error(
-                "Node not found",
-                "Mesh '{}' does not exist".format(mesh),
-            )
+        err = validate_node_exists(cmds, mesh)
+        if err:
+            return err
 
         cmds.select(mesh)
         cmds.nClothCreate()

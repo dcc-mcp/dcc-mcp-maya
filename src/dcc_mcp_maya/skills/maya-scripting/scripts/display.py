@@ -13,6 +13,8 @@ from typing import List, Optional
 # Import local modules
 from dcc_mcp_core.skill import skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 
 def create_display_layer(
     name: str,
@@ -97,17 +99,13 @@ def set_display_layer(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(object_name):
-            return skill_error(
-                "Object not found: {}".format(object_name),
-                "'{}' does not exist in the scene".format(object_name),
-            )
+        err = validate_node_exists(cmds, object_name)
+        if err:
+            return err
 
-        if not cmds.objExists(layer_name):
-            return skill_error(
-                "Display layer not found: {}".format(layer_name),
-                "'{}' does not exist".format(layer_name),
-            )
+        err = validate_node_exists(cmds, layer_name)
+        if err:
+            return err
 
         # Verify it is actually a displayLayer node
         if cmds.objectType(layer_name) != "displayLayer":
@@ -156,11 +154,9 @@ def delete_display_layer(
                 "The built-in 'defaultLayer' cannot be deleted",
             )
 
-        if not cmds.objExists(layer_name):
-            return skill_error(
-                "Display layer not found: {}".format(layer_name),
-                "'{}' does not exist".format(layer_name),
-            )
+        err = validate_node_exists(cmds, layer_name)
+        if err:
+            return err
 
         if cmds.objectType(layer_name) != "displayLayer":
             return skill_error(

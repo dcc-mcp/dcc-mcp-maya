@@ -9,6 +9,8 @@ from typing import List, Optional
 # Import local modules
 from dcc_mcp_core.skill import skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 _VALID_FIELD_TYPES = (
     "gravity",
     "turbulence",
@@ -110,11 +112,9 @@ def set_nucleus_attribute(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(nucleus):
-            return skill_error(
-                "Nucleus node not found: {}".format(nucleus),
-                "'{}' does not exist in the scene".format(nucleus),
-            )
+        err = validate_node_exists(cmds, nucleus)
+        if err:
+            return err
 
         node_type = cmds.objectType(nucleus)
         if node_type != "nucleus":
@@ -124,11 +124,9 @@ def set_nucleus_attribute(
             )
 
         plug = "{}.{}".format(nucleus, attribute)
-        if not cmds.objExists(plug):
-            return skill_error(
-                "Attribute not found: {}".format(plug),
-                "'{}' does not have attribute '{}'".format(nucleus, attribute),
-            )
+        err = validate_node_exists(cmds, plug)
+        if err:
+            return err
 
         if isinstance(value, (list, tuple)) and len(value) == 3:
             cmds.setAttr(plug, value[0], value[1], value[2], type="double3")
@@ -257,11 +255,9 @@ def connect_field_to_objects(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(field_node):
-            return skill_error(
-                "Field node not found: {}".format(field_node),
-                "'{}' does not exist in the scene".format(field_node),
-            )
+        err = validate_node_exists(cmds, field_node)
+        if err:
+            return err
 
         missing = [o for o in objects if not cmds.objExists(o)]
         if missing:
@@ -309,11 +305,9 @@ def create_ncloth(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(mesh):
-            return skill_error(
-                "Mesh not found: {}".format(mesh),
-                "'{}' does not exist in the scene".format(mesh),
-            )
+        err = validate_node_exists(cmds, mesh)
+        if err:
+            return err
 
         mesh_type = cmds.objectType(mesh)
         if mesh_type not in ("transform", "mesh"):
@@ -383,11 +377,9 @@ def create_nrigid(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(mesh):
-            return skill_error(
-                "Mesh not found: {}".format(mesh),
-                "'{}' does not exist in the scene".format(mesh),
-            )
+        err = validate_node_exists(cmds, mesh)
+        if err:
+            return err
 
         mesh_type = cmds.objectType(mesh)
         if mesh_type not in ("transform", "mesh"):
@@ -455,11 +447,9 @@ def set_ncloth_attribute(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(ncloth_node):
-            return skill_error(
-                "nCloth node not found: {}".format(ncloth_node),
-                "'{}' does not exist in the scene".format(ncloth_node),
-            )
+        err = validate_node_exists(cmds, ncloth_node)
+        if err:
+            return err
 
         node_type = cmds.objectType(ncloth_node)
         if node_type != "nCloth":
@@ -469,11 +459,9 @@ def set_ncloth_attribute(
             )
 
         plug = "{}.{}".format(ncloth_node, attribute)
-        if not cmds.objExists(plug):
-            return skill_error(
-                "Attribute not found: {}".format(plug),
-                "'{}' does not have attribute '{}'".format(ncloth_node, attribute),
-            )
+        err = validate_node_exists(cmds, plug)
+        if err:
+            return err
 
         if isinstance(value, (list, tuple)) and len(value) == 3:
             cmds.setAttr(plug, value[0], value[1], value[2], type="double3")
@@ -572,11 +560,9 @@ def set_nrigid_attribute(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(nrigid_node):
-            return skill_error(
-                "nRigid node not found: {}".format(nrigid_node),
-                "'{}' does not exist in the scene".format(nrigid_node),
-            )
+        err = validate_node_exists(cmds, nrigid_node)
+        if err:
+            return err
 
         node_type = cmds.objectType(nrigid_node)
         if node_type != "nRigid":
@@ -586,11 +572,9 @@ def set_nrigid_attribute(
             )
 
         attr_path = "{}.{}".format(nrigid_node, attribute)
-        if not cmds.objExists(attr_path):
-            return skill_error(
-                "Attribute not found: {}".format(attr_path),
-                "'{}' does not have attribute '{}'".format(nrigid_node, attribute),
-            )
+        err = validate_node_exists(cmds, attr_path)
+        if err:
+            return err
 
         if isinstance(value, (list, tuple)) and len(value) == 3:
             cmds.setAttr(attr_path, value[0], value[1], value[2], type="double3")

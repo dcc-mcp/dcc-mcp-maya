@@ -6,6 +6,8 @@ from __future__ import annotations
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 # Supported Maya light types and their corresponding command/node names
 _LIGHT_TYPE_MAP = {
     "point": "pointLight",
@@ -28,11 +30,9 @@ def delete_light(light_name: str) -> dict:
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(light_name):
-            return skill_error(
-                "Light not found: {}".format(light_name),
-                "'{}' does not exist in the scene".format(light_name),
-            )
+        err = validate_node_exists(cmds, light_name)
+        if err:
+            return err
 
         node_type = cmds.objectType(light_name)
         # If it's a shape, delete its transform

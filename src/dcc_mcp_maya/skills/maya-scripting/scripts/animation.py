@@ -9,6 +9,8 @@ from typing import List, Optional
 # Import local modules
 from dcc_mcp_core.skill import skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 
 def set_keyframe(
     object_name: str,
@@ -33,11 +35,9 @@ def set_keyframe(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(object_name):
-            return skill_error(
-                "Object not found: {}".format(object_name),
-                "'{}' does not exist in the scene".format(object_name),
-            )
+        err = validate_node_exists(cmds, object_name)
+        if err:
+            return err
 
         kwargs = {}  # type: Dict
         if time is not None:
@@ -80,11 +80,9 @@ def get_keyframes(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(object_name):
-            return skill_error(
-                "Object not found: {}".format(object_name),
-                "'{}' does not exist in the scene".format(object_name),
-            )
+        err = validate_node_exists(cmds, object_name)
+        if err:
+            return err
 
         kwargs = {}  # type: Dict
         if attribute:
@@ -224,11 +222,9 @@ def delete_keyframes(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(object_name):
-            return skill_error(
-                "Object not found: {}".format(object_name),
-                "'{}' does not exist in the scene".format(object_name),
-            )
+        err = validate_node_exists(cmds, object_name)
+        if err:
+            return err
 
         kwargs = {}  # type: Dict
         if attributes:
@@ -341,11 +337,9 @@ def list_animation_curves(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(object_name):
-            return skill_error(
-                "Object not found: {}".format(object_name),
-                "'{}' does not exist in the scene".format(object_name),
-            )
+        err = validate_node_exists(cmds, object_name)
+        if err:
+            return err
 
         if attribute:
             plug = "{}.{}".format(object_name, attribute)
@@ -437,18 +431,14 @@ def set_animation_curve_tangent(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(object_name):
-            return skill_error(
-                "Object not found: {}".format(object_name),
-                "'{}' does not exist in the scene".format(object_name),
-            )
+        err = validate_node_exists(cmds, object_name)
+        if err:
+            return err
 
         plug = "{}.{}".format(object_name, attribute)
-        if not cmds.objExists(plug):
-            return skill_error(
-                "Attribute not found: {}".format(plug),
-                "'{}.{}' does not exist".format(object_name, attribute),
-            )
+        err = validate_node_exists(cmds, plug)
+        if err:
+            return err
 
         kwargs = {
             "attribute": attribute,
@@ -596,11 +586,9 @@ def export_animation_curves(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(object_name):
-            return skill_error(
-                "Object not found: {}".format(object_name),
-                "'{}' does not exist in the scene".format(object_name),
-            )
+        err = validate_node_exists(cmds, object_name)
+        if err:
+            return err
 
         # Resolve frame range
         if start_frame is None:

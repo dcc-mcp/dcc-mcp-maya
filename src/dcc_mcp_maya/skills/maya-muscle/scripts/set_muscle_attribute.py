@@ -9,6 +9,8 @@ from typing import Union
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 
 def set_muscle_attribute(
     muscle_node: str,
@@ -29,11 +31,9 @@ def set_muscle_attribute(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(muscle_node):
-            return skill_error(
-                "Muscle node '{}' not found".format(muscle_node),
-                "Use list_muscles to see available nodes.",
-            )
+        err = validate_node_exists(cmds, muscle_node)
+        if err:
+            return err
 
         cmds.setAttr("{}.{}".format(muscle_node, attribute), value)
 

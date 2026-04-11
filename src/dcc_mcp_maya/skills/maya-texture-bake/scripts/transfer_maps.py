@@ -10,6 +10,8 @@ from typing import List, Optional
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 _VALID_MAP_TYPES = {
     "normals",
     "displacement",
@@ -53,11 +55,9 @@ def transfer_maps(
         import maya.cmds as cmds  # noqa: PLC0415
 
         for node in (source, target):
-            if not cmds.objExists(node):
-                return skill_error(
-                    "Object not found: {}".format(node),
-                    "Verify both source and target mesh names",
-                )
+            err = validate_node_exists(cmds, node)
+            if err:
+                return err
 
         bake_types = map_types or ["normals"]
         invalid = [t for t in bake_types if t not in _VALID_MAP_TYPES]

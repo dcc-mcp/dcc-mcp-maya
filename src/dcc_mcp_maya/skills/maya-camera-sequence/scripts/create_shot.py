@@ -9,6 +9,8 @@ from typing import Optional
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 
 def create_shot(
     camera: str,
@@ -34,11 +36,9 @@ def create_shot(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(camera):
-            return skill_error(
-                "Camera not found: {}".format(camera),
-                "Create the camera first or verify its name",
-            )
+        err = validate_node_exists(cmds, camera)
+        if err:
+            return err
 
         seq_start = sequence_start_frame if sequence_start_frame is not None else start_frame
 

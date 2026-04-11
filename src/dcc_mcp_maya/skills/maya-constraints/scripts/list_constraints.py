@@ -6,6 +6,8 @@ from __future__ import annotations
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 _CONSTRAINT_NODE_TYPES = [
     "parentConstraint",
     "pointConstraint",
@@ -31,11 +33,9 @@ def list_constraints(target: str) -> dict:
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(target):
-            return skill_error(
-                "Object not found: {}".format(target),
-                "'{}' does not exist".format(target),
-            )
+        err = validate_node_exists(cmds, target)
+        if err:
+            return err
 
         constraints = []
         seen = set()

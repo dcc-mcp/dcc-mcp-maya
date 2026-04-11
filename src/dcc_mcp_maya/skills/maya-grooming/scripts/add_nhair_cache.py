@@ -9,6 +9,8 @@ from typing import Optional
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 
 def add_nhair_cache(
     hair_system: str,
@@ -29,11 +31,9 @@ def add_nhair_cache(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(hair_system):
-            return skill_error(
-                "Node not found",
-                "hairSystem '{}' does not exist".format(hair_system),
-            )
+        err = validate_node_exists(cmds, hair_system)
+        if err:
+            return err
 
         if start_frame is None:
             start_frame = int(cmds.playbackOptions(query=True, minTime=True))

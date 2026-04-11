@@ -6,6 +6,8 @@ from __future__ import annotations
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 
 def create_nhair_system(
     mesh: str,
@@ -26,11 +28,9 @@ def create_nhair_system(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(mesh):
-            return skill_error(
-                "Node not found",
-                "Mesh '{}' does not exist".format(mesh),
-            )
+        err = validate_node_exists(cmds, mesh)
+        if err:
+            return err
 
         cmds.select(mesh)
         cmds.mel.eval("assignNewHairSystem;makeHairCurves 0 {0} {0} 0 0 0 0 0 0 0 1 1;".format(uv_density))

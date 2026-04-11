@@ -9,6 +9,8 @@ from typing import Optional
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 
 def create_proxy(
     source: str,
@@ -35,11 +37,9 @@ def create_proxy(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(source):
-            return skill_error(
-                "Source mesh '{}' not found".format(source),
-                "Verify the mesh name in the Outliner.",
-            )
+        err = validate_node_exists(cmds, source)
+        if err:
+            return err
 
         reduction = max(0.0, min(100.0, float(reduction)))
         percentage = (100.0 - reduction) / 100.0

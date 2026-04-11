@@ -9,6 +9,8 @@ from typing import Optional
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 
 def apply_gamma_correction(
     texture_node: str,
@@ -35,11 +37,9 @@ def apply_gamma_correction(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(texture_node):
-            return skill_error(
-                "Texture node not found: {}".format(texture_node),
-                "'{}' does not exist in the scene".format(texture_node),
-            )
+        err = validate_node_exists(cmds, texture_node)
+        if err:
+            return err
 
         node_type = cmds.objectType(texture_node)
         if node_type != "file":

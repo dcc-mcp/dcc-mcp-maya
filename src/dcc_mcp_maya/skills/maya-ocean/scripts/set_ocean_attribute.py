@@ -7,6 +7,8 @@ from __future__ import annotations
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 
 def set_ocean_attribute(shader: str, attribute: str, value: float) -> dict:
     """Set an attribute on an oceanShader node.
@@ -23,11 +25,9 @@ def set_ocean_attribute(shader: str, attribute: str, value: float) -> dict:
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(shader):
-            return skill_error(
-                "Node not found",
-                "oceanShader '{}' does not exist".format(shader),
-            )
+        err = validate_node_exists(cmds, shader)
+        if err:
+            return err
 
         cmds.setAttr("{}.{}".format(shader, attribute), value)
 

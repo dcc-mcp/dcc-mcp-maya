@@ -6,6 +6,8 @@ from __future__ import annotations
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 
 def set_constraint_weight(
     constraint_node: str,
@@ -29,11 +31,9 @@ def set_constraint_weight(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(constraint_node):
-            return skill_error(
-                "Constraint not found: {}".format(constraint_node),
-                "'{}' does not exist in the scene".format(constraint_node),
-            )
+        err = validate_node_exists(cmds, constraint_node)
+        if err:
+            return err
 
         # Discover the weight attribute for the given index
         all_ud = cmds.listAttr(constraint_node, userDefined=True) or []
