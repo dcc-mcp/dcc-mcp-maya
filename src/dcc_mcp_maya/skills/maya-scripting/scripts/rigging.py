@@ -9,7 +9,7 @@ from typing import List, Optional
 # Import local modules
 from dcc_mcp_core.skill import skill_error, skill_exception, skill_success
 
-from dcc_mcp_maya.api import validate_node_exists
+from dcc_mcp_maya.api import batch_validate_nodes, validate_node_exists
 
 
 def create_joint(
@@ -39,11 +39,10 @@ def create_joint(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if parent and not cmds.objExists(parent):
-            return skill_error(
-                "Parent not found: {}".format(parent),
-                "'{}' does not exist in the scene".format(parent),
-            )
+        if parent:
+            err = validate_node_exists(cmds, parent)
+            if err:
+                return err
 
         pos = position or [0.0, 0.0, 0.0]
         if len(pos) != 3:
@@ -449,12 +448,9 @@ def create_blend_shape(
             return err
 
         targets = target_meshes or []
-        missing = [t for t in targets if not cmds.objExists(t)]
-        if missing:
-            return skill_error(
-                "Target meshes not found: {}".format(", ".join(missing)),
-                "The following targets do not exist: {}".format(", ".join(missing)),
-            )
+        err = batch_validate_nodes(cmds, list(targets))
+        if err:
+            return err
 
         all_meshes = targets + [base_mesh]
         kwargs = {"origin": origin}  # type: dict
@@ -517,12 +513,9 @@ def skin_cluster_bind(
         if err:
             return err
 
-        missing = [j for j in joints if not cmds.objExists(j)]
-        if missing:
-            return skill_error(
-                "Joints not found: {}".format(", ".join(missing)),
-                "The following joints do not exist: {}".format(", ".join(missing)),
-            )
+        err = batch_validate_nodes(cmds, list(joints))
+        if err:
+            return err
 
         objects = list(joints) + [mesh]
         kwargs = {
@@ -666,15 +659,17 @@ def blend_shape_add_target(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(blend_shape):
-            return skill_error("Blend shape not found: {}".format(blend_shape))
+        err = validate_node_exists(cmds, blend_shape)
+        if err:
+            return err
 
         node_type = cmds.objectType(blend_shape)
         if node_type != "blendShape":
             return skill_error("'{}' is not a blendShape node (type: {})".format(blend_shape, node_type))
 
-        if not cmds.objExists(target_mesh):
-            return skill_error("Target mesh not found: {}".format(target_mesh))
+        err = validate_node_exists(cmds, target_mesh)
+        if err:
+            return err
 
         # Determine target index
         if index is None:
@@ -763,13 +758,15 @@ def set_driven_key(
         import maya.cmds as cmds  # noqa: PLC0415
 
         driver_obj = driver_attr.rsplit(".", 1)[0]
-        if not cmds.objExists(driver_obj):
-            return skill_error("Driver object not found: {}".format(driver_obj))
+        err = validate_node_exists(cmds, driver_obj)
+        if err:
+            return err
 
         for da in driven_attrs:
             da_obj = da.rsplit(".", 1)[0]
-            if not cmds.objExists(da_obj):
-                return skill_error("Driven object not found: {}".format(da_obj))
+            err = validate_node_exists(cmds, da_obj)
+            if err:
+                return err
 
         keys_set = 0
         for i, drv_val in enumerate(driver_values):

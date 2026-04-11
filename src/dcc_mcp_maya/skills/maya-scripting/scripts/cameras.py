@@ -9,6 +9,8 @@ from typing import List, Optional
 # Import local modules
 from dcc_mcp_core.skill import skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 
 def create_camera(
     name: Optional[str] = None,
@@ -97,8 +99,9 @@ def set_camera_attribute(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(camera_name):
-            return skill_error("Camera not found: {}".format(camera_name))
+        err = validate_node_exists(cmds, camera_name)
+        if err:
+            return err
 
         shapes = cmds.listRelatives(camera_name, shapes=True) or []
         shape = shapes[0] if shapes else camera_name
@@ -143,8 +146,9 @@ def get_camera_info(camera_name: str) -> dict:
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(camera_name):
-            return skill_error("Camera not found: {}".format(camera_name))
+        err = validate_node_exists(cmds, camera_name)
+        if err:
+            return err
 
         shapes = cmds.listRelatives(camera_name, shapes=True) or []
         if not shapes:

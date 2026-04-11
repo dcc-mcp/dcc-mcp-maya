@@ -28,8 +28,9 @@ def get_poly_count(object_name: Optional[str] = None) -> dict:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if object_name:
-            if not cmds.objExists(object_name):
-                return skill_error("Object not found: {}".format(object_name))
+            err = validate_node_exists(cmds, object_name)
+            if err:
+                return err
             targets = [object_name]
         else:
             targets = cmds.ls(type="mesh") or []
@@ -111,8 +112,9 @@ def apply_subdivision(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(object_name):
-            return skill_error("Object not found: {}".format(object_name))
+        err = validate_node_exists(cmds, object_name)
+        if err:
+            return err
 
         shapes = cmds.listRelatives(object_name, shapes=True, type="mesh") or []
         if not shapes:
@@ -159,8 +161,9 @@ def merge_vertices(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(object_name):
-            return skill_error("Object not found: {}".format(object_name))
+        err = validate_node_exists(cmds, object_name)
+        if err:
+            return err
 
         before = cmds.polyEvaluate(object_name, vertex=True)
         cmds.polyMergeVertex(object_name, distance=threshold, ch=False)
@@ -198,8 +201,9 @@ def triangulate(object_name: str) -> dict:
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(object_name):
-            return skill_error("Object not found: {}".format(object_name))
+        err = validate_node_exists(cmds, object_name)
+        if err:
+            return err
 
         before = cmds.polyEvaluate(object_name, face=True)
         cmds.polyTriangulate(object_name)
@@ -243,8 +247,9 @@ def cleanup_mesh(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(object_name):
-            return skill_error("Object not found: {}".format(object_name))
+        err = validate_node_exists(cmds, object_name)
+        if err:
+            return err
 
         kwargs = {
             "selectOnly": False,
@@ -287,8 +292,9 @@ def get_mesh_edge_info(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(object_name):
-            return skill_error("Object not found: {}".format(object_name))
+        err = validate_node_exists(cmds, object_name)
+        if err:
+            return err
 
         total_edges = cmds.polyEvaluate(object_name, edge=True)
         if not isinstance(total_edges, int) or total_edges == 0:
@@ -463,8 +469,9 @@ def create_proxy_mesh(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(object_name):
-            return skill_error("Object not found: {}".format(object_name))
+        err = validate_node_exists(cmds, object_name)
+        if err:
+            return err
 
         shapes = cmds.listRelatives(object_name, shapes=True, type="mesh") or []
         if not shapes:
