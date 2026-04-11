@@ -9,6 +9,8 @@ from typing import List
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import batch_validate_nodes
+
 
 def reset_pivot(
     objects: List[str],
@@ -30,15 +32,13 @@ def reset_pivot(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
+
         if not objects:
             return skill_error("No objects provided", "Pass at least one object name.")
 
-        missing = [o for o in objects if not cmds.objExists(o)]
-        if missing:
-            return skill_error(
-                "Objects not found",
-                "Missing: {}".format(", ".join(missing)),
-            )
+        err = batch_validate_nodes(cmds, list(objects))
+        if err:
+            return err
 
         valid_modes = {"bbox_center", "world_origin", "bottom"}
         if mode not in valid_modes:

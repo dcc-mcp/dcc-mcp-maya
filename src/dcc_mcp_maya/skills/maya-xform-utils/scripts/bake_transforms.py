@@ -9,6 +9,8 @@ from typing import List, Optional
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import batch_validate_nodes
+
 
 def bake_transforms(
     objects: List[str],
@@ -37,15 +39,13 @@ def bake_transforms(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
+
         if not objects:
             return skill_error("No objects provided", "Pass at least one object name.")
 
-        missing = [o for o in objects if not cmds.objExists(o)]
-        if missing:
-            return skill_error(
-                "Objects not found",
-                "Missing: {}".format(", ".join(missing)),
-            )
+        err = batch_validate_nodes(cmds, list(objects))
+        if err:
+            return err
 
         s = start_frame if start_frame is not None else cmds.playbackOptions(query=True, min=True)
         e = end_frame if end_frame is not None else cmds.playbackOptions(query=True, max=True)
