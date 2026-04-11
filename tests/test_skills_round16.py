@@ -21,7 +21,7 @@ class TestBlendShapeCreate:
     """Tests for create_blend_shape script."""
 
     def test_create_success(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         mock_cmds.blendShape.return_value = ["blendShape1"]
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
@@ -32,7 +32,7 @@ class TestBlendShapeCreate:
         assert result["context"]["targets"] == ["pSphere2"]
 
     def test_missing_base_mesh(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = False
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             mod = load_skill_script("maya-blend-shape-utils", "create_blend_shape")
@@ -41,7 +41,7 @@ class TestBlendShapeCreate:
         assert "missing_mesh" in result["message"]
 
     def test_missing_target(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         # base exists but target doesn't
         mock_cmds.objExists.side_effect = lambda n: n == "pSphere1"
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
@@ -56,7 +56,7 @@ class TestBlendShapeCreate:
         assert result["success"] is False
 
     def test_main_passthrough(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         mock_cmds.blendShape.return_value = ["blendShape1"]
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
@@ -69,7 +69,7 @@ class TestBlendShapeList:
     """Tests for list_blend_shapes script."""
 
     def test_list_all(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.ls.return_value = ["blendShape1"]
         mock_cmds.blendShape.side_effect = [
             [0.0, 0.5],  # weight query
@@ -83,7 +83,7 @@ class TestBlendShapeList:
         assert result["context"]["count"] == 1
 
     def test_list_for_mesh(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         mock_cmds.listHistory.return_value = ["blendShape1"]
         mock_cmds.blendShape.side_effect = [[1.0], ["pSphere1"]]
@@ -94,7 +94,7 @@ class TestBlendShapeList:
         assert result["success"] is True
 
     def test_mesh_not_found(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = False
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             mod = load_skill_script("maya-blend-shape-utils", "list_blend_shapes")
@@ -102,7 +102,7 @@ class TestBlendShapeList:
         assert result["success"] is False
 
     def test_empty_scene(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.ls.return_value = []
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             mod = load_skill_script("maya-blend-shape-utils", "list_blend_shapes")
@@ -115,7 +115,7 @@ class TestBlendShapeSetWeight:
     """Tests for set_blend_shape_weight script."""
 
     def test_set_by_index(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             mod = load_skill_script("maya-blend-shape-utils", "set_blend_shape_weight")
@@ -124,7 +124,7 @@ class TestBlendShapeSetWeight:
         assert result["context"]["weight"] == 0.75
 
     def test_set_by_name(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         mock_cmds.aliasAttr.return_value = ["smile", "weight[0]"]
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
@@ -134,7 +134,7 @@ class TestBlendShapeSetWeight:
         assert result["context"]["target_index"] == 0
 
     def test_name_not_found(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         mock_cmds.aliasAttr.return_value = ["other", "weight[1]"]
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
@@ -143,7 +143,7 @@ class TestBlendShapeSetWeight:
         assert result["success"] is False
 
     def test_node_not_found(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = False
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             mod = load_skill_script("maya-blend-shape-utils", "set_blend_shape_weight")
@@ -155,7 +155,7 @@ class TestBlendShapeGetWeights:
     """Tests for get_blend_shape_weights script."""
 
     def test_get_weights(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         mock_cmds.blendShape.return_value = [0.0, 0.5, 1.0]
         mock_cmds.aliasAttr.return_value = ["smile", "weight[0]", "frown", "weight[1]"]
@@ -169,7 +169,7 @@ class TestBlendShapeGetWeights:
         assert targets[1]["name"] == "frown"
 
     def test_node_missing(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = False
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             mod = load_skill_script("maya-blend-shape-utils", "get_blend_shape_weights")
@@ -186,7 +186,7 @@ class TestFreezeTransforms:
     """Tests for freeze_transforms script."""
 
     def test_freeze_success(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         mock_cmds.getAttr.return_value = [(0.0, 0.0, 0.0)]
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
@@ -196,14 +196,14 @@ class TestFreezeTransforms:
         assert len(result["context"]["frozen_objects"]) == 1
 
     def test_no_objects(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             mod = load_skill_script("maya-xform-utils", "freeze_transforms")
             result = mod.freeze_transforms([])
         assert result["success"] is False
 
     def test_missing_objects(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = False
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             mod = load_skill_script("maya-xform-utils", "freeze_transforms")
@@ -211,7 +211,7 @@ class TestFreezeTransforms:
         assert result["success"] is False
 
     def test_dry_run(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         mock_cmds.getAttr.return_value = [(1.0, 2.0, 3.0)]
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
@@ -225,7 +225,7 @@ class TestResetPivot:
     """Tests for reset_pivot script."""
 
     def test_bbox_center(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         mock_cmds.exactWorldBoundingBox.return_value = [-1.0, -1.0, -1.0, 1.0, 1.0, 1.0]
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
@@ -235,7 +235,7 @@ class TestResetPivot:
         assert result["context"]["updated_objects"][0]["pivot"] == [0.0, 0.0, 0.0]
 
     def test_world_origin(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             mod = load_skill_script("maya-xform-utils", "reset_pivot")
@@ -244,7 +244,7 @@ class TestResetPivot:
         assert result["context"]["updated_objects"][0]["pivot"] == [0.0, 0.0, 0.0]
 
     def test_bottom_mode(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         mock_cmds.exactWorldBoundingBox.return_value = [-1.0, 0.0, -1.0, 1.0, 2.0, 1.0]
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
@@ -255,7 +255,7 @@ class TestResetPivot:
         assert result["context"]["updated_objects"][0]["pivot"][1] == 0.0
 
     def test_invalid_mode(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             mod = load_skill_script("maya-xform-utils", "reset_pivot")
@@ -263,7 +263,7 @@ class TestResetPivot:
         assert result["success"] is False
 
     def test_no_objects(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             mod = load_skill_script("maya-xform-utils", "reset_pivot")
             result = mod.reset_pivot([])
@@ -274,7 +274,7 @@ class TestMatchTransforms:
     """Tests for match_transforms script."""
 
     def test_match_translate_rotate(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         # xform calls:
         # 1. query target translate
@@ -300,7 +300,7 @@ class TestMatchTransforms:
         assert result["context"]["source"] == "pSphere1"
 
     def test_source_missing(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.side_effect = lambda n: n == "pCube1"
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             mod = load_skill_script("maya-xform-utils", "match_transforms")
@@ -308,7 +308,7 @@ class TestMatchTransforms:
         assert result["success"] is False
 
     def test_target_missing(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.side_effect = lambda n: n == "pSphere1"
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             mod = load_skill_script("maya-xform-utils", "match_transforms")
@@ -320,7 +320,7 @@ class TestBakeTransforms:
     """Tests for bake_transforms script."""
 
     def test_bake_success(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         mock_cmds.playbackOptions.side_effect = [1.0, 24.0]
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
@@ -330,14 +330,14 @@ class TestBakeTransforms:
         assert result["context"]["frame_range"] == [1, 24]
 
     def test_no_objects(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             mod = load_skill_script("maya-xform-utils", "bake_transforms")
             result = mod.bake_transforms([])
         assert result["success"] is False
 
     def test_missing_objects(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = False
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             mod = load_skill_script("maya-xform-utils", "bake_transforms")
@@ -345,7 +345,7 @@ class TestBakeTransforms:
         assert result["success"] is False
 
     def test_uses_playback_defaults(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         mock_cmds.playbackOptions.side_effect = [0.0, 120.0]
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
@@ -364,7 +364,7 @@ class TestCreateSplineIk:
     """Tests for create_spline_ik script."""
 
     def test_create_success(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         mock_cmds.ikHandle.return_value = ["ikHandle1", "effector1", "curve1"]
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
@@ -375,7 +375,7 @@ class TestCreateSplineIk:
         assert result["context"]["curve"] == "curve1"
 
     def test_missing_start_joint(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.side_effect = lambda n: n == "spine_05"
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             mod = load_skill_script("maya-spline-ik", "create_spline_ik")
@@ -383,7 +383,7 @@ class TestCreateSplineIk:
         assert result["success"] is False
 
     def test_missing_end_joint(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.side_effect = lambda n: n == "spine_01"
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             mod = load_skill_script("maya-spline-ik", "create_spline_ik")
@@ -391,7 +391,7 @@ class TestCreateSplineIk:
         assert result["success"] is False
 
     def test_with_existing_curve(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         mock_cmds.ikHandle.return_value = ["ikHandle1", "effector1"]
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
@@ -405,7 +405,7 @@ class TestSetSplineIkTwist:
     """Tests for set_spline_ik_twist script."""
 
     def test_set_twist(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             mod = load_skill_script("maya-spline-ik", "set_spline_ik_twist")
@@ -414,7 +414,7 @@ class TestSetSplineIkTwist:
         assert result["context"]["ik_handle"] == "ikHandle1"
 
     def test_missing_handle(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = False
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             mod = load_skill_script("maya-spline-ik", "set_spline_ik_twist")
@@ -422,7 +422,7 @@ class TestSetSplineIkTwist:
         assert result["success"] is False
 
     def test_custom_up_vector(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             mod = load_skill_script("maya-spline-ik", "set_spline_ik_twist")
@@ -435,7 +435,7 @@ class TestAddStretchToSplineIk:
     """Tests for add_stretch_to_spline_ik script."""
 
     def test_add_stretch_success(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         mock_cmds.listRelatives.return_value = ["curveShape1"]
         mock_cmds.createNode.side_effect = ["ci_node", "md_node"]
@@ -447,7 +447,7 @@ class TestAddStretchToSplineIk:
         assert result["context"]["rest_length"] == 10.0
 
     def test_no_nurbs_shape(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         mock_cmds.listRelatives.return_value = []  # no shape
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
@@ -456,7 +456,7 @@ class TestAddStretchToSplineIk:
         assert result["success"] is False
 
     def test_invalid_stretch_axis(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         mock_cmds.listRelatives.return_value = ["curveShape1"]
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
@@ -469,7 +469,7 @@ class TestListSplineIkHandles:
     """Tests for list_spline_ik_handles script."""
 
     def test_list_success(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.ls.return_value = ["ikHandle1"]
         mock_cmds.ikHandle.side_effect = [
             "ikSplineSolver",  # solver query
@@ -484,7 +484,7 @@ class TestListSplineIkHandles:
         assert result["context"]["count"] == 1
 
     def test_no_handles(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.ls.return_value = []
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             mod = load_skill_script("maya-spline-ik", "list_spline_ik_handles")
@@ -493,7 +493,7 @@ class TestListSplineIkHandles:
         assert result["context"]["count"] == 0
 
     def test_non_spline_filtered_out(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.ls.return_value = ["ikHandle1", "ikHandle2"]
         # ikHandle1 is ikSCSolver, ikHandle2 is ikSplineSolver
         mock_cmds.ikHandle.side_effect = [
@@ -519,7 +519,7 @@ class TestExportGpuCache:
     """Tests for export_gpu_cache script."""
 
     def test_export_success(self, tmp_path):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         mock_cmds.pluginInfo.return_value = True
         mock_cmds.playbackOptions.return_value = 1.0
@@ -531,7 +531,7 @@ class TestExportGpuCache:
         assert result["context"]["file_path"] == out_file
 
     def test_missing_objects(self, tmp_path):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = False
         mock_cmds.pluginInfo.return_value = True
         out_file = str(tmp_path / "out.abc")
@@ -541,7 +541,7 @@ class TestExportGpuCache:
         assert result["success"] is False
 
     def test_bad_directory(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         mock_cmds.pluginInfo.return_value = True
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
@@ -556,7 +556,7 @@ class TestImportGpuCache:
     def test_import_success(self, tmp_path):
         abc_file = tmp_path / "test.abc"
         abc_file.write_bytes(b"fake_alembic")
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.pluginInfo.return_value = True
         mock_cmds.createNode.side_effect = ["gpuCache_import", "gpuCache_import_cacheShape"]
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
@@ -566,7 +566,7 @@ class TestImportGpuCache:
         assert result["context"]["transform_node"] == "gpuCache_import"
 
     def test_file_not_found(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.pluginInfo.return_value = True
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             mod = load_skill_script("maya-gpu-cache", "import_gpu_cache")
@@ -578,7 +578,7 @@ class TestListGpuCaches:
     """Tests for list_gpu_caches script."""
 
     def test_list_caches(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.ls.return_value = ["gpuCacheShape1"]
         mock_cmds.getAttr.return_value = "/path/to/cache.abc"
         mock_cmds.listRelatives.return_value = ["gpuCache1"]
@@ -590,7 +590,7 @@ class TestListGpuCaches:
         assert result["context"]["caches"][0]["file_path"] == "/path/to/cache.abc"
 
     def test_no_caches(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.ls.return_value = []
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             mod = load_skill_script("maya-gpu-cache", "list_gpu_caches")
@@ -603,7 +603,7 @@ class TestRefreshGpuCache:
     """Tests for refresh_gpu_cache script."""
 
     def test_refresh_success(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         mock_cmds.objectType.return_value = "gpuCache"
         mock_cmds.getAttr.return_value = "/path/to/cache.abc"
@@ -613,7 +613,7 @@ class TestRefreshGpuCache:
         assert result["success"] is True
 
     def test_node_not_found(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = False
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             mod = load_skill_script("maya-gpu-cache", "refresh_gpu_cache")
@@ -621,7 +621,7 @@ class TestRefreshGpuCache:
         assert result["success"] is False
 
     def test_wrong_node_type(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         mock_cmds.objectType.return_value = "transform"
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
@@ -639,7 +639,7 @@ class TestCreateInstancer:
     """Tests for create_instancer script."""
 
     def test_create_success(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         mock_cmds.particleInstancer.return_value = "instancer1"
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
@@ -649,7 +649,7 @@ class TestCreateInstancer:
         assert result["context"]["instancer_node"] == "instancer1"
 
     def test_particle_missing(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.side_effect = lambda n: n != "nParticle1"
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             mod = load_skill_script("maya-instancer", "create_instancer")
@@ -657,7 +657,7 @@ class TestCreateInstancer:
         assert result["success"] is False
 
     def test_instance_object_missing(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.side_effect = lambda n: n == "nParticle1"
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             mod = load_skill_script("maya-instancer", "create_instancer")
@@ -675,7 +675,7 @@ class TestAddInstanceObject:
     """Tests for add_instance_object script."""
 
     def test_add_success(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             mod = load_skill_script("maya-instancer", "add_instance_object")
@@ -684,7 +684,7 @@ class TestAddInstanceObject:
         assert result["context"]["added_object"] == "pCube1"
 
     def test_missing_instancer(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.side_effect = lambda n: n != "instancer1"
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             mod = load_skill_script("maya-instancer", "add_instance_object")
@@ -696,7 +696,7 @@ class TestSetInstancerAttribute:
     """Tests for set_instancer_attribute script."""
 
     def test_set_object_index(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             mod = load_skill_script("maya-instancer", "set_instancer_attribute")
@@ -705,7 +705,7 @@ class TestSetInstancerAttribute:
         assert result["context"]["particle_attribute"] == "objectIndexPP"
 
     def test_invalid_attribute(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             mod = load_skill_script("maya-instancer", "set_instancer_attribute")
@@ -713,7 +713,7 @@ class TestSetInstancerAttribute:
         assert result["success"] is False
 
     def test_clear_attribute(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             mod = load_skill_script("maya-instancer", "set_instancer_attribute")
@@ -726,7 +726,7 @@ class TestListInstancers:
     """Tests for list_instancers script."""
 
     def test_list_success(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.ls.return_value = ["instancer1"]
         mock_cmds.listConnections.side_effect = [
             ["nParticle1"],  # inputPoints
@@ -740,7 +740,7 @@ class TestListInstancers:
         assert result["context"]["instancers"][0]["particle_system"] == "nParticle1"
 
     def test_no_instancers(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.ls.return_value = []
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             mod = load_skill_script("maya-instancer", "list_instancers")

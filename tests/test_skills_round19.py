@@ -25,7 +25,7 @@ class TestCreateStroke:
 
     def test_create_stroke_success(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_mel = MagicMock()
         mock_cmds.curve.return_value = "curve1"
         mock_cmds.ls.return_value = ["pfxToon1"]
@@ -37,7 +37,7 @@ class TestCreateStroke:
 
     def test_create_stroke_with_points(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_mel = MagicMock()
         mock_cmds.curve.return_value = "curve2"
         mock_cmds.ls.return_value = []
@@ -65,7 +65,7 @@ class TestCreateStroke:
 
     def test_create_stroke_main_callable(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_mel = MagicMock()
         mock_cmds.curve.return_value = "curve3"
         mock_cmds.ls.return_value = []
@@ -83,7 +83,7 @@ class TestAttachStrokeToSurface:
 
     def test_surface_not_found(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_mel = MagicMock()
         mock_cmds.objExists.return_value = False
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds, "maya.mel": mock_mel}):
@@ -93,7 +93,7 @@ class TestAttachStrokeToSurface:
 
     def test_attach_success(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_mel = MagicMock()
         mock_cmds.objExists.return_value = True
         mock_cmds.ls.side_effect = [[], ["stroke1", "stroke2"]]
@@ -104,7 +104,7 @@ class TestAttachStrokeToSurface:
 
     def test_attach_with_name(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_mel = MagicMock()
         mock_cmds.objExists.return_value = True
         mock_cmds.ls.side_effect = [[], ["stroke1"]]
@@ -116,7 +116,7 @@ class TestAttachStrokeToSurface:
 
     def test_main_callable(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_mel = MagicMock()
         mock_cmds.objExists.return_value = False
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds, "maya.mel": mock_mel}):
@@ -132,7 +132,7 @@ class TestListStrokes:
 
     def test_list_empty(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.ls.return_value = []
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             result = mod.list_strokes()
@@ -141,7 +141,7 @@ class TestListStrokes:
 
     def test_list_with_strokes(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.ls.return_value = ["stroke1", "stroke2"]
         mock_cmds.listRelatives.return_value = ["strokeTransform1"]
         mock_cmds.getAttr.return_value = True
@@ -153,7 +153,7 @@ class TestListStrokes:
 
     def test_main_callable(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.ls.return_value = []
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             result = mod.main()
@@ -168,7 +168,7 @@ class TestDeleteStroke:
 
     def test_delete_specific_stroke(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         mock_cmds.ls.return_value = ["stroke1"]
         mock_cmds.listRelatives.return_value = ["strokeTransform1"]
@@ -179,7 +179,7 @@ class TestDeleteStroke:
 
     def test_delete_all(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.ls.return_value = ["s1", "s2", "s3"]
         mock_cmds.listRelatives.return_value = ["t1"]
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
@@ -189,14 +189,14 @@ class TestDeleteStroke:
 
     def test_delete_no_args(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             result = mod.delete_stroke()
         assert result["success"] is False
 
     def test_delete_nonexistent(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = False
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             result = mod.delete_stroke(stroke="ghost")
@@ -216,7 +216,7 @@ class TestLoadHdri:
 
     def test_file_not_found(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             with patch("os.path.isfile", return_value=False):
                 result = mod.load_hdri("/nonexistent.hdr")
@@ -225,7 +225,7 @@ class TestLoadHdri:
 
     def test_load_with_arnold(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.loadPlugin.return_value = None
         mock_cmds.shadingNode.side_effect = ["hdriDome1", "hdriDome1_tex"]
         mock_cmds.attributeQuery.return_value = True
@@ -237,7 +237,7 @@ class TestLoadHdri:
 
     def test_load_native_fallback(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.loadPlugin.side_effect = Exception("no mtoa")
         mock_cmds.shadingNode.side_effect = ["hdriDome1_tex"]
         mock_cmds.directionalLight.return_value = "nativeDome1"
@@ -248,7 +248,7 @@ class TestLoadHdri:
 
     def test_main_callable(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             with patch("os.path.isfile", return_value=False):
                 result = mod.main(file_path="/fake.hdr")
@@ -263,7 +263,7 @@ class TestSetHdriExposure:
 
     def test_node_not_found(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = False
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             result = mod.set_hdri_exposure("ghost", 1.0)
@@ -271,7 +271,7 @@ class TestSetHdriExposure:
 
     def test_arnold_exposure(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         mock_cmds.listRelatives.return_value = ["aiSkyDomeLightShape"]
         mock_cmds.objectType.return_value = "aiSkyDomeLight"
@@ -283,7 +283,7 @@ class TestSetHdriExposure:
 
     def test_native_intensity_fallback(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         mock_cmds.listRelatives.return_value = ["directionalLightShape"]
         mock_cmds.objectType.return_value = "directionalLight"
@@ -294,7 +294,7 @@ class TestSetHdriExposure:
 
     def test_main_callable(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = False
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             result = mod.main(light_node="x", exposure=0.0)
@@ -309,7 +309,7 @@ class TestSetHdriRotation:
 
     def test_node_not_found(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = False
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             result = mod.set_hdri_rotation("ghost", 90.0)
@@ -317,7 +317,7 @@ class TestSetHdriRotation:
 
     def test_rotation_on_transform(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         mock_cmds.objectType.return_value = "transform"
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
@@ -327,7 +327,7 @@ class TestSetHdriRotation:
 
     def test_rotation_on_shape_node(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         mock_cmds.objectType.return_value = "aiSkyDomeLight"
         mock_cmds.listRelatives.return_value = ["hdriDome1"]
@@ -337,7 +337,7 @@ class TestSetHdriRotation:
 
     def test_main_callable(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = False
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             result = mod.main(light_node="x", rotation_y=0.0)
@@ -352,7 +352,7 @@ class TestListHdriNodes:
 
     def test_empty_scene(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.ls.return_value = []
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             result = mod.list_hdri_nodes()
@@ -361,7 +361,7 @@ class TestListHdriNodes:
 
     def test_with_dome_light(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
 
         def ls_side(type=None, **kw):
             if type == "aiSkyDomeLight":
@@ -380,7 +380,7 @@ class TestListHdriNodes:
 
     def test_main_callable(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.ls.return_value = []
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             result = mod.main()
@@ -400,7 +400,7 @@ class TestCreateShot:
 
     def test_camera_not_found(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = False
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             result = mod.create_shot("nonexistent_cam", 1, 24)
@@ -409,7 +409,7 @@ class TestCreateShot:
 
     def test_create_shot_success(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         mock_cmds.shot.return_value = "shot1"
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
@@ -419,7 +419,7 @@ class TestCreateShot:
 
     def test_create_named_shot(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         mock_cmds.shot.return_value = "myShot"
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
@@ -428,7 +428,7 @@ class TestCreateShot:
 
     def test_create_shot_with_seq_start(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         mock_cmds.shot.return_value = "shot2"
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
@@ -438,7 +438,7 @@ class TestCreateShot:
 
     def test_main_callable(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = False
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             result = mod.main(camera="cam1")
@@ -453,7 +453,7 @@ class TestListShots:
 
     def test_no_shots(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.ls.return_value = []
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             result = mod.list_shots()
@@ -462,7 +462,7 @@ class TestListShots:
 
     def test_with_shots(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.ls.return_value = ["shot1", "shot2"]
         mock_cmds.shot.side_effect = lambda sn, **kw: (
             "camera1"
@@ -482,7 +482,7 @@ class TestListShots:
 
     def test_main_callable(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.ls.return_value = []
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             result = mod.main()
@@ -497,7 +497,7 @@ class TestSetShotRange:
 
     def test_shot_not_found(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = False
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             result = mod.set_shot_range("ghost")
@@ -505,7 +505,7 @@ class TestSetShotRange:
 
     def test_update_start_and_end(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         mock_cmds.shot.side_effect = lambda sn, **kw: (
             1.0 if kw.get("startTime") else 24.0 if kw.get("endTime") else 1.0 if kw.get("sequenceStartTime") else None
@@ -518,7 +518,7 @@ class TestSetShotRange:
 
     def test_update_only_end(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         mock_cmds.shot.side_effect = lambda sn, **kw: 5.0 if kw.get("startTime") else 30.0 if kw.get("endTime") else 5.0
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
@@ -527,7 +527,7 @@ class TestSetShotRange:
 
     def test_main_callable(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = False
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             result = mod.main(shot_node="x")
@@ -542,7 +542,7 @@ class TestDeleteShot:
 
     def test_delete_success(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             result = mod.delete_shot("shot1")
@@ -551,7 +551,7 @@ class TestDeleteShot:
 
     def test_delete_not_found(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = False
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             result = mod.delete_shot("ghost")
@@ -559,7 +559,7 @@ class TestDeleteShot:
 
     def test_main_callable(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = False
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             result = mod.main(shot_node="x")
@@ -579,14 +579,14 @@ class TestCreateNamespace:
 
     def test_empty_name(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             result = mod.create_namespace("")
         assert result["success"] is False
 
     def test_already_exists(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.namespaceInfo.return_value = ":"
         mock_cmds.namespace.side_effect = lambda *a, **kw: True if kw.get("exists") else None
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
@@ -596,7 +596,7 @@ class TestCreateNamespace:
 
     def test_create_success(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.namespaceInfo.return_value = ":"
 
         exists_call_count = [0]
@@ -615,7 +615,7 @@ class TestCreateNamespace:
 
     def test_main_callable(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             result = mod.main(name="")
         assert isinstance(result, dict)
@@ -629,7 +629,7 @@ class TestListNamespaces:
 
     def test_empty_scene(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.namespaceInfo.return_value = []
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             result = mod.list_namespaces()
@@ -638,7 +638,7 @@ class TestListNamespaces:
 
     def test_filters_defaults(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.namespaceInfo.return_value = ["UI", "shared", "char_hero"]
         mock_cmds.ls.return_value = ["char_hero:ctrl1"]
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
@@ -651,7 +651,7 @@ class TestListNamespaces:
 
     def test_include_defaults(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.namespaceInfo.return_value = ["UI", "shared"]
         mock_cmds.ls.return_value = []
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
@@ -661,7 +661,7 @@ class TestListNamespaces:
 
     def test_main_callable(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.namespaceInfo.return_value = []
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             result = mod.main()
@@ -676,7 +676,7 @@ class TestRenameNamespace:
 
     def test_old_not_found(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
 
         def ns_side(*a, **kw):
             if kw.get("exists"):
@@ -690,7 +690,7 @@ class TestRenameNamespace:
 
     def test_new_already_exists(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         call_n = [0]
 
         def ns_side(*a, **kw):
@@ -706,7 +706,7 @@ class TestRenameNamespace:
 
     def test_rename_success(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         call_n = [0]
 
         def ns_side(*a, **kw):
@@ -722,7 +722,7 @@ class TestRenameNamespace:
 
     def test_main_callable(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.namespace.side_effect = lambda *a, **kw: False if kw.get("exists") else None
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             result = mod.main(old_name="x", new_name="y")
@@ -737,7 +737,7 @@ class TestRemoveNamespace:
 
     def test_not_found(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.namespace.side_effect = lambda *a, **kw: False if kw.get("exists") else None
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             result = mod.remove_namespace("ghost")
@@ -745,7 +745,7 @@ class TestRemoveNamespace:
 
     def test_not_empty_no_force(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.namespace.side_effect = lambda *a, **kw: True if kw.get("exists") else None
         mock_cmds.ls.return_value = ["char_hero:ctrl1", "char_hero:ctrl2"]
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
@@ -755,7 +755,7 @@ class TestRemoveNamespace:
 
     def test_remove_with_force(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.namespace.side_effect = lambda *a, **kw: True if kw.get("exists") else None
         mock_cmds.ls.return_value = ["char_hero:ctrl1"]
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
@@ -765,7 +765,7 @@ class TestRemoveNamespace:
 
     def test_remove_empty_namespace(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.namespace.side_effect = lambda *a, **kw: True if kw.get("exists") else None
         mock_cmds.ls.return_value = []
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
@@ -775,7 +775,7 @@ class TestRemoveNamespace:
 
     def test_main_callable(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.namespace.side_effect = lambda *a, **kw: False if kw.get("exists") else None
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             result = mod.main(name="x")
@@ -795,7 +795,7 @@ class TestBakeLighting:
 
     def test_no_objects(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.ls.return_value = []
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             result = mod.bake_lighting()
@@ -804,7 +804,7 @@ class TestBakeLighting:
 
     def test_bake_success(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             with patch("os.path.isdir", return_value=True):
@@ -814,7 +814,7 @@ class TestBakeLighting:
 
     def test_skip_nonexistent_objects(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = False
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             with patch("os.path.isdir", return_value=True):
@@ -824,7 +824,7 @@ class TestBakeLighting:
 
     def test_main_callable(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.ls.return_value = []
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             result = mod.main()
@@ -839,7 +839,7 @@ class TestBakeAmbientOcclusion:
 
     def test_no_objects(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.ls.return_value = []
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             result = mod.bake_ambient_occlusion()
@@ -847,7 +847,7 @@ class TestBakeAmbientOcclusion:
 
     def test_bake_ao_success(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         mock_cmds.shadingNode.side_effect = ["_tmp_ao_shader", "_tmp_ao_sg"]
         mock_cmds.sets.return_value = "_tmp_ao_sg"
@@ -860,7 +860,7 @@ class TestBakeAmbientOcclusion:
 
     def test_main_callable(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.ls.return_value = []
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             result = mod.main()
@@ -875,7 +875,7 @@ class TestTransferMaps:
 
     def test_source_not_found(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.side_effect = [False, True]
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             result = mod.transfer_maps("ghost", "lowRes")
@@ -883,7 +883,7 @@ class TestTransferMaps:
 
     def test_invalid_map_type(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             with patch("os.path.isdir", return_value=True):
@@ -893,7 +893,7 @@ class TestTransferMaps:
 
     def test_transfer_normals(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             with patch("os.path.isdir", return_value=True):
@@ -903,7 +903,7 @@ class TestTransferMaps:
 
     def test_transfer_multiple_maps(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             with patch("os.path.isdir", return_value=True):
@@ -917,7 +917,7 @@ class TestTransferMaps:
 
     def test_main_callable(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = False
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             result = mod.main(source="x", target="y")
@@ -932,7 +932,7 @@ class TestListBakeSets:
 
     def test_no_bake_sets(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.ls.return_value = ["defaultObjectSet"]
         mock_cmds.attributeQuery.return_value = False
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
@@ -942,7 +942,7 @@ class TestListBakeSets:
 
     def test_with_bake_sets(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.ls.return_value = ["bakeSet1"]
         mock_cmds.attributeQuery.return_value = True
         mock_cmds.getAttr.side_effect = lambda attr: (
@@ -956,7 +956,7 @@ class TestListBakeSets:
 
     def test_main_callable(self):
         mod = self._load()
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.ls.return_value = []
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             result = mod.main()

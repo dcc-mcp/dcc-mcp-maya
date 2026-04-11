@@ -65,9 +65,7 @@ class TestGroomingE2E:
     def test_set_nhair_attribute_not_found(self):
         """set_nhair_attribute on nonexistent node returns error."""
         mod = _import_script("maya-grooming", "set_nhair_attribute")
-        result = mod.set_nhair_attribute(
-            hair_system="nonexistent_hair", attribute="stiffness", value=0.5
-        )
+        result = mod.set_nhair_attribute(hair_system="nonexistent_hair", attribute="stiffness", value=0.5)
 
         assert result["success"] is False
 
@@ -82,9 +80,7 @@ class TestGroomingE2E:
     def test_set_nhair_attribute_invalid_node(self, attr, value):
         """set_nhair_attribute with invalid node returns error for any attribute."""
         mod = _import_script("maya-grooming", "set_nhair_attribute")
-        result = mod.set_nhair_attribute(
-            hair_system="ghost_hair", attribute=attr, value=value
-        )
+        result = mod.set_nhair_attribute(hair_system="ghost_hair", attribute=attr, value=value)
         assert result["success"] is False
 
 
