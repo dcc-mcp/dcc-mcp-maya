@@ -14,7 +14,7 @@ from typing import List, Optional
 # Import local modules
 from dcc_mcp_core.skill import skill_error, skill_exception, skill_success
 
-from dcc_mcp_maya.api import validate_node_exists
+from dcc_mcp_maya.api import batch_validate_nodes, validate_node_exists
 
 
 def create_set(
@@ -40,12 +40,9 @@ def create_set(
             return skill_error("Invalid set name", "name must not be empty")
 
         objects_to_add = list(objects) if objects else []
-        missing = [obj for obj in objects_to_add if not cmds.objExists(obj)]
-        if missing:
-            return skill_error(
-                "Objects not found: {}".format(missing),
-                "The following objects do not exist: {}".format(missing),
-            )
+        err = batch_validate_nodes(cmds, list(objects_to_add))
+        if err:
+            return err
 
         if objects_to_add:
             set_node = cmds.sets(*objects_to_add, name=name)
@@ -95,12 +92,9 @@ def add_to_set(
                 "'{}' is of type '{}', expected 'objectSet'".format(set_name, cmds.objectType(set_name)),
             )
 
-        missing = [obj for obj in objects if not cmds.objExists(obj)]
-        if missing:
-            return skill_error(
-                "Objects not found: {}".format(missing),
-                "The following objects do not exist: {}".format(missing),
-            )
+        err = batch_validate_nodes(cmds, list(objects))
+        if err:
+            return err
 
         cmds.sets(*objects, addElement=set_name)
 

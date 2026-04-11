@@ -201,6 +201,38 @@ Pushed to `origin/auto-improve`
 2. `server.py:164` dead branch — investigate if it can be covered or documented as unreachable
 3. GitHub Dependabot flagged 2 moderate vulnerabilities on default branch — worth checking `pyproject.toml` deps
 
+---
+
+### Run 8 — 2026-04-11 22:13
+
+**Branch**: auto-improve worktree at `G:\PycharmProjects\github\dcc-mcp-maya-auto-improve`
+
+**Baseline before**: 1851 passed (Run 7); **After this run**: 2068 passed, 1 skipped (+217 new tests)
+
+**Merge**: `git merge origin/main` → Already up to date. `feat/skill-api-improvements` branch still ahead of main with 7 commits.
+
+**Key finding**: `feat/skill-api-improvements` branch had 374 src files and 16 test files not yet absorbed into auto-improve. Tests read from auto-improve's own `src/` (not main workspace), so the mismatch caused 78 failures when round25-29 were added.
+
+**Actions taken**:
+1. **Added round25-29 test files** — Copied 5 test files from `feat/skill-api-improvements` (batch_validate_nodes/require_any_param/get_param_list/skinning-utils + rigging/dynamics/node-graph/mesh-ops/animation refactor tests + mash/selection/xgen skill_entry tests + bulk validate_node_exists migration structural tests).
+2. **`git checkout origin/feat/skill-api-improvements -- src/`** — Applied 374 src file changes to auto-improve:
+   - mash/selection/xgen 15 scripts: `run(params)` → `skill_entry` style
+   - 136 scripts: `if not cmds.objExists(X)` guards → `validate_node_exists(cmds, X)` (212 replacements)
+   - `api.py` + `__init__.py`: new helpers (`batch_validate_nodes`, `require_any_param`, `get_param_list`)
+3. **Test file sync** — Updated 11 existing test files (round6/7/13/16-21/23/24) from feat branch to fix stale message assertions (`"not an ncloth"` → `"wrong node type"`, `"not exist"` → `"node not found"`, `mod.run({...})` → `mod.select_similar(...)`)
+4. **ruff format**: 334 files reformatted; **ruff check**: All checks passed ✅
+
+**Quality gate**:
+- `ruff check src/ tests/` → **All checks passed!** ✅
+- `pytest tests/ --ignore=tests/e2e` → **2068 passed, 1 skipped** ✅ (up from 1851)
+
+**Commit**: `47ee89e` pushed to `origin/auto-improve`
+
+**Next priorities for future runs**:
+1. `server.py:164` dead branch — investigate if it can be covered or documented as unreachable
+2. GitHub Dependabot flagged 2 moderate vulnerabilities — check `pyproject.toml` deps
+3. Once `feat/skill-api-improvements` merges to main, run merge + rebase cycle to keep auto-improve current
+
 
 **Branch**: auto-improve worktree at `G:\PycharmProjects\github\dcc-mcp-maya-auto-improve`
 
