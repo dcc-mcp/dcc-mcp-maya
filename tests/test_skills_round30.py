@@ -151,6 +151,7 @@ class TestUvOpsValidation:
     def _get_module(self):
         import importlib
         import importlib.util
+
         path = str(SKILLS_ROOT / "maya-scripting/scripts/uv_ops.py")
         spec = importlib.util.spec_from_file_location("uv_ops_r30", path)
         mod = importlib.util.module_from_spec(spec)
@@ -158,6 +159,7 @@ class TestUvOpsValidation:
 
     def test_get_uv_info_missing_object(self):
         from dcc_mcp_maya.api import validate_node_exists
+
         cmds = _mock_cmds()
         cmds.objExists.return_value = False
 
@@ -171,6 +173,7 @@ class TestUvOpsValidation:
         cmds.polyUVSet.return_value = ["map1"]
 
         from dcc_mcp_maya.api import validate_node_exists
+
         err = validate_node_exists(cmds, "pSphere1")
         assert err is None  # object exists
 
@@ -191,6 +194,7 @@ class TestVertexColorValidation:
 
     def test_missing_object_returns_error_via_validate(self):
         from dcc_mcp_maya.api import validate_node_exists
+
         cmds = _mock_cmds()
         cmds.objExists.return_value = False
         err = validate_node_exists(cmds, "nonexistent_mesh")
@@ -216,6 +220,7 @@ class TestDeformerAdvancedBatchValidation:
 
     def test_create_cluster_missing_objects(self):
         from dcc_mcp_maya.api import batch_validate_nodes
+
         cmds = _mock_cmds()
         cmds.objExists.side_effect = lambda name: name != "missing_obj"
 
@@ -225,6 +230,7 @@ class TestDeformerAdvancedBatchValidation:
 
     def test_create_cluster_all_present(self):
         from dcc_mcp_maya.api import batch_validate_nodes
+
         cmds = _mock_cmds()
         cmds.objExists.return_value = True
 
@@ -233,6 +239,7 @@ class TestDeformerAdvancedBatchValidation:
 
     def test_wire_deformer_missing_curve(self):
         from dcc_mcp_maya.api import batch_validate_nodes
+
         cmds = _mock_cmds()
         cmds.objExists.side_effect = lambda n: n != "missing_curve"
 
@@ -263,6 +270,7 @@ class TestMeshOpsValidation:
 
     def test_apply_subdivision_missing_object(self):
         from dcc_mcp_maya.api import validate_node_exists
+
         cmds = _mock_cmds()
         cmds.objExists.return_value = False
         err = validate_node_exists(cmds, "nonexistent")
@@ -270,6 +278,7 @@ class TestMeshOpsValidation:
 
     def test_merge_vertices_missing_object(self):
         from dcc_mcp_maya.api import validate_node_exists
+
         cmds = _mock_cmds()
         cmds.objExists.return_value = False
         err = validate_node_exists(cmds, "nonexistent")
@@ -277,6 +286,7 @@ class TestMeshOpsValidation:
 
     def test_triangulate_missing_object(self):
         from dcc_mcp_maya.api import validate_node_exists
+
         cmds = _mock_cmds()
         cmds.objExists.return_value = False
         err = validate_node_exists(cmds, "nonexistent")
@@ -301,6 +311,7 @@ class TestRiggingValidation:
 
     def test_create_joint_missing_parent(self):
         from dcc_mcp_maya.api import validate_node_exists
+
         cmds = _mock_cmds()
         cmds.objExists.return_value = False
         err = validate_node_exists(cmds, "missing_parent")

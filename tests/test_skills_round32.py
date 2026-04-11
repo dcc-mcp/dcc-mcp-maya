@@ -121,9 +121,13 @@ class TestRound32Structural:
     def test_no_list_comp_objexists(self, rel_path):
         """No list-comprehension objExists pattern should remain."""
         source = (_SKILLS_ROOT / rel_path).read_text(encoding="utf-8")
-        assert "[" not in source or "for" not in source or "cmds.objExists" not in source or not any(
-            "if not cmds.objExists" in line and "[" in line and "for" in line
-            for line in source.splitlines()
+        assert (
+            "[" not in source
+            or "for" not in source
+            or "cmds.objExists" not in source
+            or not any(
+                "if not cmds.objExists" in line and "[" in line and "for" in line for line in source.splitlines()
+            )
         ), "List-comp objExists pattern still present in {}".format(rel_path)
 
     @pytest.mark.parametrize("rel_path", MIGRATED_FILES)
@@ -134,7 +138,8 @@ class TestRound32Structural:
         if "batch_validate_nodes(cmds," not in source:
             return  # not used (no replacement happened — shouldn't occur)
         bad = [
-            line for line in source.splitlines()
+            line
+            for line in source.splitlines()
             if "from dcc_mcp_maya.api import" in line
             and "batch_validate_nodes" in line
             and line.startswith((" ", "\t"))
@@ -144,15 +149,15 @@ class TestRound32Structural:
     def test_global_objexists_count_below_60(self):
         """Total remaining cmds.objExists calls must be below 60."""
         total = sum(
-            path.read_text(encoding="utf-8").count("cmds.objExists")
-            for path in _SKILLS_ROOT.rglob("scripts/*.py")
+            path.read_text(encoding="utf-8").count("cmds.objExists") for path in _SKILLS_ROOT.rglob("scripts/*.py")
         )
         assert total < 60, "Expected < 60 remaining objExists, got {}".format(total)
 
     def test_batch_validate_nodes_usage_count(self):
         """At least 35 scripts should use batch_validate_nodes."""
         count = sum(
-            1 for path in _SKILLS_ROOT.rglob("scripts/*.py")
+            1
+            for path in _SKILLS_ROOT.rglob("scripts/*.py")
             if "batch_validate_nodes" in path.read_text(encoding="utf-8")
         )
         assert count >= 35, "Expected >= 35 scripts using batch_validate_nodes, got {}".format(count)
@@ -189,14 +194,18 @@ class TestDeformersRound32:
     def test_wire_deformer_missing_curve(self):
         """wire_deformer returns error when curve does not exist."""
         mock_cmds = _missing_cmds("wire1")
-        result = _load_and_call("maya-deformers/scripts/wire_deformer.py", mock_cmds, curves=["wire1"], objects=["pCube1"])
+        result = _load_and_call(
+            "maya-deformers/scripts/wire_deformer.py", mock_cmds, curves=["wire1"], objects=["pCube1"]
+        )
         assert not result["success"]
 
     def test_wire_deformer_missing_object(self):
         """wire_deformer returns error when mesh does not exist."""
         mock_cmds = MagicMock()
         mock_cmds.objExists.side_effect = lambda n: n != "missingMesh"
-        result = _load_and_call("maya-deformers/scripts/wire_deformer.py", mock_cmds, curves=["wireCurve"], objects=["missingMesh"])
+        result = _load_and_call(
+            "maya-deformers/scripts/wire_deformer.py", mock_cmds, curves=["wireCurve"], objects=["missingMesh"]
+        )
         assert not result["success"]
 
     def test_create_lattice_missing_object(self):

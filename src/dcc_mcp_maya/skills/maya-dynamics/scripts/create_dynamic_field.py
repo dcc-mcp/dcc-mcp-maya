@@ -57,7 +57,6 @@ def create_dynamic_field(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-
         create_fn = getattr(cmds, ft, None)
         if create_fn is None:
             return skill_error(
@@ -108,4 +107,5 @@ def main(**kwargs) -> dict:
 
 if __name__ == "__main__":
     from dcc_mcp_core.skill import run_main
+
     run_main(main)
