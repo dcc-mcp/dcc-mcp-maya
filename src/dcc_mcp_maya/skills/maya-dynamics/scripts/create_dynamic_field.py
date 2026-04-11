@@ -9,6 +9,8 @@ from typing import List, Optional
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import batch_validate_nodes
+
 _VALID_FIELD_TYPES = (
     "gravity",
     "turbulence",
@@ -55,6 +57,7 @@ def create_dynamic_field(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
+
         create_fn = getattr(cmds, ft, None)
         if create_fn is None:
             return skill_error(
@@ -77,12 +80,9 @@ def create_dynamic_field(
         # Connect to particle systems
         connected = []
         if objects:
-            missing = [o for o in objects if not cmds.objExists(o)]
-            if missing:
-                return skill_error(
-                    "Object(s) not found: {}".format(", ".join(missing)),
-                    "Ensure all objects exist before connecting the field",
-                )
+            err = batch_validate_nodes(cmds, list(objects))
+            if err:
+                return err
             cmds.connectDynamic(objects, fields=field_node)
             connected = list(objects)
 

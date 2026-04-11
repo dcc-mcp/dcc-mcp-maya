@@ -10,6 +10,8 @@ from typing import List, Optional
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import batch_validate_nodes
+
 
 def export_gpu_cache(
     objects: List[str],
@@ -35,16 +37,14 @@ def export_gpu_cache(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
+
         # Ensure plugin loaded
         if not cmds.pluginInfo("gpuCache", query=True, loaded=True):
             cmds.loadPlugin("gpuCache")
 
-        missing = [o for o in objects if not cmds.objExists(o)]
-        if missing:
-            return skill_error(
-                "Objects not found",
-                "Missing: {}".format(", ".join(missing)),
-            )
+        err = batch_validate_nodes(cmds, list(objects))
+        if err:
+            return err
 
         out_dir = os.path.dirname(os.path.abspath(file_path))
         out_name = os.path.splitext(os.path.basename(file_path))[0]

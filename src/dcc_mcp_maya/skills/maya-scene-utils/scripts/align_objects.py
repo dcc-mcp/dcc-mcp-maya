@@ -9,7 +9,7 @@ from typing import List, Optional
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
-from dcc_mcp_maya.api import validate_node_exists
+from dcc_mcp_maya.api import batch_validate_nodes, validate_node_exists
 
 
 def align_objects(
@@ -49,6 +49,7 @@ def align_objects(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
+
         if not objects or len(objects) < 2:
             return skill_error(
                 "Insufficient objects",
@@ -70,12 +71,9 @@ def align_objects(
             )
 
         # Validate all objects exist
-        missing = [obj for obj in objects if not cmds.objExists(obj)]
-        if missing:
-            return skill_error(
-                "Objects not found: {}".format(missing),
-                "The following objects do not exist: {}".format(missing),
-            )
+        err = batch_validate_nodes(cmds, list(objects))
+        if err:
+            return err
 
         idx = _AXIS_INDEX[axis_lower]
 

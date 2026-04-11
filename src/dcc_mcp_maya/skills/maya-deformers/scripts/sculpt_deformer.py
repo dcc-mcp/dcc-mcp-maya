@@ -9,6 +9,8 @@ from typing import List, Optional
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import batch_validate_nodes
+
 
 def sculpt_deformer(
     objects: List[str],
@@ -49,12 +51,10 @@ def sculpt_deformer(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        missing = [o for o in objects if not cmds.objExists(o)]
-        if missing:
-            return skill_error(
-                "Object(s) not found: {}".format(", ".join(missing)),
-                "Ensure all objects exist in the scene",
-            )
+
+        err = batch_validate_nodes(cmds, list(objects))
+        if err:
+            return err
 
         sculpt_kwargs = {
             "mode": mode_map[mode_lower],

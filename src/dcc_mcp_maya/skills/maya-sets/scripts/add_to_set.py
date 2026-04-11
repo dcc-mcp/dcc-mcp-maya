@@ -9,7 +9,7 @@ from typing import List
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
-from dcc_mcp_maya.api import validate_node_exists
+from dcc_mcp_maya.api import batch_validate_nodes, validate_node_exists
 
 
 def add_to_set(
@@ -30,6 +30,7 @@ def add_to_set(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
+
         if not objects:
             return skill_error("No objects specified", "objects list must not be empty")
 
@@ -43,12 +44,9 @@ def add_to_set(
                 "'{}' is of type '{}', expected 'objectSet'".format(set_name, cmds.objectType(set_name)),
             )
 
-        missing = [obj for obj in objects if not cmds.objExists(obj)]
-        if missing:
-            return skill_error(
-                "Objects not found: {}".format(missing),
-                "The following objects do not exist: {}".format(missing),
-            )
+        err = batch_validate_nodes(cmds, list(objects))
+        if err:
+            return err
 
         cmds.sets(*objects, addElement=set_name)
 
