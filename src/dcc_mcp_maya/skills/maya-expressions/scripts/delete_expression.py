@@ -1,4 +1,4 @@
-"""Delete a Maya expression node by name."""
+"""Delete an expression node from the Maya scene."""
 
 # Import future modules
 from __future__ import annotations
@@ -9,46 +9,46 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def delete_expression(
-    expression_name: str,
-) -> dict:
-    """Delete a Maya expression node by name.
+def delete_expression(name: str) -> dict:
+    """Delete an expression node by name.
 
     Args:
-        expression_name: Name of the expression node to delete.
+        name: Expression node name to delete.
 
     Returns:
-        ActionResultModel dict with ``context.expression_name``.
+        ActionResultModel dict with ``context.expression_name`` confirming deletion.
     """
     from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(expression_name):
+        if not cmds.objExists(name):
             return error_result(
-                "Expression not found: {}".format(expression_name),
-                "'{}' does not exist in the scene".format(expression_name),
+                "Expression node '{}' does not exist".format(name),
+                "Use list_expressions to see available expression nodes.",
             ).to_dict()
 
-        node_type = cmds.objectType(expression_name)
+        # Verify it is actually an expression node
+        node_type = cmds.objectType(name)
         if node_type != "expression":
             return error_result(
-                "Not an expression node: {}".format(expression_name),
-                "'{}' is of type '{}', expected 'expression'".format(expression_name, node_type),
+                "Node '{}' is not an expression (type: {})".format(name, node_type),
+                "Provide an expression node name. Use list_expressions to find them.",
             ).to_dict()
 
-        cmds.delete(expression_name)
-
+        cmds.delete(name)
         return success_result(
-            "Deleted expression '{}'".format(expression_name),
-            expression_name=expression_name,
+            "Expression node '{}' deleted".format(name),
+            prompt="Expression removed. Driven attributes will retain their last evaluated values.",
+            expression_name=name,
+            deleted_node=name,
         ).to_dict()
     except ImportError:
         return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
     except Exception as exc:
         logger.exception("delete_expression failed")
-        return error_result("Failed to delete expression {}".format(expression_name), str(exc)).to_dict()
+        return error_result("Failed to delete expression '{}'".format(name), str(exc)).to_dict()
 
 
 def main(**kwargs):
@@ -57,6 +57,5 @@ def main(**kwargs):
 
 if __name__ == "__main__":
     import json
-
-    result = delete_expression()
+    result = delete_expression("expression1")
     print(json.dumps(result))
