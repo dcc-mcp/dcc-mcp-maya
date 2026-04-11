@@ -75,7 +75,7 @@ from __future__ import annotations
 import contextlib
 import functools
 import logging
-from typing import Any, Callable, Generator, TypeVar
+from typing import Any, Callable, Dict, Generator, List, Optional, TypeVar
 
 logger = logging.getLogger(__name__)
 
@@ -89,7 +89,7 @@ _SENTINEL = object()
 # ---------------------------------------------------------------------------
 
 
-def maya_success(message: str, prompt: str | None = None, **context: Any) -> dict:
+def maya_success(message: str, prompt: Optional[str] = None, **context: Any) -> Dict[str, Any]:
     """Return a success ActionResultModel as a plain dict.
 
     Thin wrapper around ``dcc_mcp_core.success_result`` so skill scripts do
@@ -114,11 +114,11 @@ def maya_success(message: str, prompt: str | None = None, **context: Any) -> dic
 
 def maya_error(
     message: str,
-    error: str,
-    prompt: str | None = None,
-    possible_solutions: list[str] | None = None,
+    error: str = "",
+    prompt: Optional[str] = None,
+    possible_solutions: Optional[List[str]] = None,
     **context: Any,
-) -> dict:
+) -> Dict[str, Any]:
     """Return an error ActionResultModel as a plain dict.
 
     Args:
@@ -153,11 +153,11 @@ def maya_error(
 def maya_from_exception(
     exc: BaseException,
     message: str = "Maya operation failed",
-    prompt: str | None = None,
-    possible_solutions: list[str] | None = None,
+    prompt: Optional[str] = None,
+    possible_solutions: Optional[List[str]] = None,
     include_traceback: bool = True,
     **context: Any,
-) -> dict:
+) -> Dict[str, Any]:
     """Return an error ActionResultModel from a live exception.
 
     Unlike ``maya_error("...", str(exc))``, this captures the full traceback
@@ -364,7 +364,7 @@ def missing_param_error(key: str, **context: Any) -> dict:
 # ---------------------------------------------------------------------------
 
 
-def validate_node_exists(cmds: Any, name: str) -> "str | None":
+def validate_node_exists(cmds: Any, name: str) -> Optional[Dict[str, Any]]:
     """Return an error dict if *name* does not exist in the scene, else None.
 
     Designed for the common guard pattern::
@@ -392,7 +392,7 @@ def validate_node_exists(cmds: Any, name: str) -> "str | None":
     return None
 
 
-def validate_node_type(cmds: Any, name: str, expected_type: str) -> "str | None":
+def validate_node_type(cmds: Any, name: str, expected_type: str) -> Optional[Dict[str, Any]]:
     """Return an error dict if *name* is not of *expected_type*, else None.
 
     Args:
@@ -423,7 +423,7 @@ def validate_node_type(cmds: Any, name: str, expected_type: str) -> "str | None"
     return None
 
 
-def batch_validate_nodes(cmds: Any, names: "list") -> "Any":
+def batch_validate_nodes(cmds: Any, names: List[str]) -> Optional[Dict[str, Any]]:
     """Return an error dict if any node in *names* does not exist, else None.
 
     A convenience wrapper around :func:`validate_node_exists` for the common
@@ -482,7 +482,7 @@ def require_any_param(params: Any, *keys: str) -> Any:
     raise MissingParamError("At least one of {} is required".format(", ".join("'{}'".format(k) for k in keys)))
 
 
-def get_param_list(params: Any, key: str, default: Any = None) -> "list":
+def get_param_list(params: Any, key: str, default: Any = None) -> List[Any]:
     """Extract a list parameter, coercing a bare string to a one-element list.
 
     Many Maya skills accept either a single name or a list of names.  This

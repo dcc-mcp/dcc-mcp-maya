@@ -6,7 +6,7 @@ from __future__ import annotations
 # Import built-in modules
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_maya.api import batch_validate_nodes, maya_error, maya_from_exception, maya_success
 
 
 def disconnect_attr(
@@ -28,17 +28,9 @@ def disconnect_attr(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(source_attr):
-            return maya_error(
-                "Source attribute not found: {}".format(source_attr),
-                "'{}' does not exist".format(source_attr),
-            )
-
-        if not cmds.objExists(dest_attr):
-            return maya_error(
-                "Destination attribute not found: {}".format(dest_attr),
-                "'{}' does not exist".format(dest_attr),
-            )
+        err = batch_validate_nodes(cmds, [source_attr, dest_attr])
+        if err:
+            return err
 
         # Check if actually connected before attempting disconnect
         if not cmds.isConnected(source_attr, dest_attr):
