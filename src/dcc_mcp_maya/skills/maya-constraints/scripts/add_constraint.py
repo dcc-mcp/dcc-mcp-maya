@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_maya.api import batch_validate_nodes, maya_error, maya_from_exception, maya_success
 
 _CONSTRAINT_TYPES = {
     "parent": "parentConstraint",
@@ -47,12 +47,9 @@ def add_constraint(
                 "Supported types: {}".format(", ".join(sorted(_CONSTRAINT_TYPES))),
             )
 
-        for obj in (source, target):
-            if not cmds.objExists(obj):
-                return maya_error(
-                    "Object not found: {}".format(obj),
-                    "'{}' does not exist".format(obj),
-                )
+        err = batch_validate_nodes(cmds, [source, target])
+        if err:
+            return err
 
         cmd_fn = getattr(cmds, _CONSTRAINT_TYPES[constraint_type])
         result = cmd_fn(source, target, maintainOffset=maintain_offset, weight=weight)

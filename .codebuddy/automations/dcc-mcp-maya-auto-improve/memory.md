@@ -541,11 +541,55 @@ No more empty skill dirs.
 - Committed: `c9a534c feat(api): add batch_validate_nodes, require_any_param, get_param_list helpers; refactor skinning-utils to use validate_node_exists`
 - Pushed: `origin/feat/skill-api-improvements` updated
 
-### Next priorities for Round 13
-1. 批量重构更多 skill 脚本（maya-sets、maya-rig-utils、maya-animation 等）使用 validate_node_exists/batch_validate_nodes
-2. 在高频 multi-node skill 中使用 get_param_list 规范化参数处理
-3. 增加 require_any_param 集成示例：重构支持 name/node_name 双参数名的 skill
-4. 考虑将 api.py 中 `str | None` 返回类型注解改为 `Optional[dict]`（更精确）
+---
+
+## 2026-04-11 (Round 13 — api.py Python 3.7 修复 + 14 个 skill 重构)
+
+### State before this round
+- Branch: `feat/skill-api-improvements`
+- Tests: 1869 passed, 27 skipped
+- api.py 中存在 Python 3.10+ 类型注解（`str | None`、`list[str]`）
+- 仍有 404 处手写 `objExists` 守卫分布在各 skill 目录
+
+### Work done
+
+**1. api.py Python 3.7 兼容性修复**：
+- `str | None` → `Optional[str]`/`Optional[dict]`
+- `list[str]` → `List[str]`（从 typing 导入）
+- `dict` 返回类型 → `Dict[str, Any]`
+- `batch_validate_nodes` 参数/返回类型更精确：`List[str]` / `Optional[Dict[str, Any]]`
+
+**2. 重构 14 个 skill 脚本（5 个目录）**：
+- `maya-rigging`（6 脚本）：skin_cluster_bind / create_ik_handle / set_driven_key / set_ik_fk_blend / assign_deformer / set_joint_orient → `validate_node_exists`/`batch_validate_nodes`/`validate_node_type`
+- `maya-dynamics`（2 脚本）：set_ncloth_attribute / set_nrigid_attribute → `validate_node_exists` + `validate_node_type`
+- `maya-node-graph`（2 脚本）：connect_attr / disconnect_attr → `batch_validate_nodes`
+- `maya-mesh-ops`（3 脚本）：apply_subdivision / cleanup_mesh / triangulate → `validate_node_exists`
+- `maya-animation`（2 脚本）：set_keyframe / delete_keyframes → `validate_node_exists`
+
+**3. 修复 3 个受重构影响的旧测试断言**（test_skills_round6.py）
+
+**4. test_skills_round26.py — 61 个新测试，全部通过**：
+- TestApiTypeAnnotations (10): 验证 Python 3.7 兼容性
+- TestSkinClusterBindRefactor (5), TestCreateIkHandleRefactor (4)
+- TestSetDrivenKeyRefactor (4), TestAssignDeformerRefactor (4)
+- TestSetJointOrientRefactor (4), TestSetNClothAttributeRefactor (4)
+- TestSetNRigidAttributeRefactor (4), TestConnectAttrRefactor (4)
+- TestDisconnectAttrRefactor (3), TestApplySubdivisionRefactor (4)
+- TestCleanupMeshRefactor (2), TestTriangulateRefactor (2)
+- TestSetKeyframeRefactor (4), TestDeleteKeyframesRefactor (3)
+
+### State after this round
+- Tests: 1930 passed, 27 skipped (all pass), 0 failures
+- Committed: `043bdd8 refactor(api): fix Python 3.7 type annotations; refactor 14 skill scripts to use validate_node_exists/batch_validate_nodes; add test_skills_round26 (61 tests)`
+- Pushed: `origin/feat/skill-api-improvements` updated
+
+### Next priorities for Round 14
+1. 继续重构剩余高频 objExists 目录（maya-scripting 155处最多，但多为 MEL/execute 场景，需要特殊处理）
+2. 重构 maya-attributes, maya-uv-ops, maya-scene（各 8 处）
+3. 重构 maya-constraints-advanced, maya-deformers（各 7 处）
+4. 为 set_ik_fk_blend.py 的手写 objectType 检查也迁移到 validate_node_type
+
+
 
 
 

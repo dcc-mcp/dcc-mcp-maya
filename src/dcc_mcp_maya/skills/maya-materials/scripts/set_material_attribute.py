@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import Any
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success, validate_node_exists
 
 _SUPPORTED_SHADERS = ("lambert", "blinn", "phong", "phongE", "aiStandardSurface")
 
@@ -30,11 +30,9 @@ def set_material_attribute(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(material_name):
-            return maya_error(
-                "Material not found: {}".format(material_name),
-                "'{}' does not exist".format(material_name),
-            )
+        err = validate_node_exists(cmds, material_name)
+        if err:
+            return err
 
         attr_path = "{}.{}".format(material_name, attribute)
         if isinstance(value, (list, tuple)):

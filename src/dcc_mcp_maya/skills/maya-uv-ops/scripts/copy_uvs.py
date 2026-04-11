@@ -3,11 +3,11 @@
 # Import future modules
 from __future__ import annotations
 
-# Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
-
 # Import built-in modules
 from typing import Optional
+
+# Import local modules
+from dcc_mcp_maya.api import batch_validate_nodes, maya_error, maya_from_exception, maya_success
 
 
 def copy_uvs(
@@ -33,9 +33,9 @@ def copy_uvs(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        for name in (source, target):
-            if not cmds.objExists(name):
-                return maya_error("Object not found: {}".format(name), "'{}' does not exist".format(name))
+        err = batch_validate_nodes(cmds, [source, target])
+        if err:
+            return err
 
         kwargs = {
             "transferUVs": 1,

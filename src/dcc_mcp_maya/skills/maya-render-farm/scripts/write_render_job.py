@@ -3,13 +3,13 @@
 # Import future modules
 from __future__ import annotations
 
-# Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
-
 # Import built-in modules
 import json
 import os
 from typing import Optional
+
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 
 def write_render_job(

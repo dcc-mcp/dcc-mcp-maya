@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success, validate_node_exists
 
 _VALID_TYPES = {
     "float",
@@ -53,11 +53,9 @@ def add_attribute(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(node_name):
-            return maya_error(
-                "Node not found: {}".format(node_name),
-                "'{}' does not exist".format(node_name),
-            )
+        err = validate_node_exists(cmds, node_name)
+        if err:
+            return err
 
         if attr_type not in _VALID_TYPES:
             return maya_error(

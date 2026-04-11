@@ -3,11 +3,11 @@
 # Import future modules
 from __future__ import annotations
 
-# Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
-
 # Import built-in modules
 from typing import Optional
+
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success, validate_node_exists
 
 
 def duplicate_object(
@@ -29,11 +29,9 @@ def duplicate_object(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(object_name):
-            return maya_error(
-                "Object not found: {}".format(object_name),
-                "'{}' does not exist in the scene".format(object_name),
-            )
+        err = validate_node_exists(cmds, object_name)
+        if err:
+            return err
 
         result = cmds.duplicate(object_name, instanceLeaf=instance, returnRootsOnly=True)
         new_obj = result[0]
