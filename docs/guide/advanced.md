@@ -2,197 +2,188 @@
 
 ## Custom Skills
 
-The easiest way to extend `dcc-mcp-maya` is to create a custom skill — a directory containing a `SKILL.md` descriptor and Python action scripts.
+Create your own skill packages and expose them as MCP tools.
 
 ### Skill Directory Structure
 
 ```
-my-studio-tools/
-├── SKILL.md
+my-custom-skill/
+├── SKILL.md           ← required manifest
 └── scripts/
-    ├── setup_shot.py
-    ├── export_alembic.py
-    └── validate_naming.py
+    ├── my_action.py   ← becomes tool: my_custom_skill__my_action
+    └── another.py
 ```
 
 ### SKILL.md Format
 
 ```yaml
 ---
-name: my-studio-tools
-description: "Studio-specific pipeline automation for Hero Studio"
+name: my-custom-skill
+description: "My custom Maya automation skill"
 dcc: maya
 version: "1.0.0"
-tags: [maya, pipeline, studio]
+tags: [maya, custom]
 license: "MIT"
 allowed-tools: ["Bash", "Read"]
 depends: []
 ---
 
-# my-studio-tools
+# my-custom-skill
+
+Describe what this skill does.
 
 ## Scripts
 
-- `setup_shot` — Set up a new shot from the shot template
-- `export_alembic` — Export character cache as Alembic
-- `validate_naming` — Validate object naming conventions
+- `my_action` — Description of this action
 ```
 
-### Action Script Format
-
-Each script in `scripts/` becomes one MCP action. The script must define a function with the same name as the file:
+### Action Script Structure
 
 ```python
-# scripts/setup_shot.py
-"""Set up a new Maya shot from the studio template."""
+"""Module docstring — becomes the MCP tool description."""
+
+# Import built-in modules
+from typing import Any, Dict
+
+# Import third-party modules
+import maya.cmds as cmds
 
 
-def setup_shot(shot_name: str, frame_range: list = None) -> dict:
-    """Set up a new shot by importing the template scene and configuring it.
+def main(
+    object_name: str,
+    value: float = 1.0,
+) -> Dict[str, Any]:
+    """Action docstring — shown in MCP tools/list.
 
     Args:
-        shot_name: The shot identifier, e.g. "SH_0010"
-        frame_range: [start, end] frame range. Defaults to [1001, 1100].
+        object_name: The Maya object to operate on.
+        value: A numeric parameter with a default.
 
     Returns:
-        dict with keys: success (bool), shot_name (str), message (str)
+        dict with 'success' key and optional result data.
     """
-    import maya.cmds as cmds
-
-    if frame_range is None:
-        frame_range = [1001, 1100]
-
-    # Import template
-    template_path = "/pipeline/templates/shot_template.ma"
-    cmds.file(template_path, i=True, type="mayaAscii", ignoreVersion=True)
-
-    # Configure timeline
-    cmds.playbackOptions(min=frame_range[0], max=frame_range[1])
-    cmds.playbackOptions(animationStartTime=frame_range[0], animationEndTime=frame_range[1])
-
-    # Rename root group
-    if cmds.objExists("SHOT_TEMPLATE"):
-        cmds.rename("SHOT_TEMPLATE", shot_name)
-
+    # ... implementation ...
+    result = cmds.getAttr(f"{object_name}.translateY")
     return {
         "success": True,
-        "shot_name": shot_name,
-        "message": f"Shot {shot_name} set up with frames {frame_range[0]}-{frame_range[1]}",
+        "object": object_name,
+        "value": result,
     }
 ```
 
-### Registering Your Skill
+### Register Your Skills
 
-**Option A — Environment variable:**
-```bash
-# Windows
-set DCC_MCP_MAYA_SKILL_PATHS=C:\studio\maya-skills
-
-# macOS/Linux
-export DCC_MCP_MAYA_SKILL_PATHS=/studio/maya-skills
-```
-
-**Option B — Pass at startup:**
 ```python
 import dcc_mcp_maya
+
 handle = dcc_mcp_maya.start_server(
-    extra_skill_paths=["C:/studio/maya-skills"]
+    port=8765,
+    extra_skill_paths=[
+        "/path/to/my-skills-folder",
+        "/another/skills/directory",
+    ]
 )
 ```
 
-**Option C — Multiple paths:**
+Or use the environment variable:
+
 ```bash
-set DCC_MCP_MAYA_SKILL_PATHS=C:\studio\tools;C:\shared\pipeline-skills
+# Semicolon-separated on Windows
+set DCC_MCP_MAYA_SKILL_PATHS=C:\studio\maya-skills;C:\personal\skills
+
+# Colon-separated on Linux/macOS
+export DCC_MCP_MAYA_SKILL_PATHS=/studio/maya-skills:/personal/skills
 ```
 
-### Verifying Registration
+## Main-Thread Scheduling
+
+Maya's UI and cmds operations must run on the **main thread**. `dcc-mcp-maya` handles this automatically — all action scripts are dispatched to the main thread via Maya's `executeInMainThreadWithResult`.
+
+If you write custom code that needs main-thread execution:
 
 ```python
-from dcc_mcp_maya.server import MayaMcpServer
-server = MayaMcpServer()
-server.register_builtin_actions(extra_skill_paths=["C:/studio/maya-skills"])
-# Check registered tools
-for skill in server._server.list_skills():
-    print(skill.name)
+import maya.utils
+
+def _my_operation():
+    import maya.cmds as cmds
+    cmds.polySphere()
+
+# Schedule for next idle on main thread
+maya.utils.executeDeferred(_my_operation)
+
+# Or wait for result (use with caution — can deadlock if called from main thread)
+result = maya.utils.executeInMainThreadWithResult(_my_operation)
 ```
 
-## MayaMcpServer API
+## Server Configuration
 
-For programmatic control:
+### Custom Port and Name
 
 ```python
-from dcc_mcp_maya.server import MayaMcpServer
+import dcc_mcp_maya
 
-# Create with custom config
-server = MayaMcpServer(
+handle = dcc_mcp_maya.start_server(
     port=9000,
-    server_name="my-maya-studio",
-    server_version="2.0.0",
+    server_name="maya-studio-2024",
 )
+print(handle.mcp_url())   # http://127.0.0.1:9000/mcp
+```
 
-# Load only specific skill paths
+### Using MayaMcpServer Directly
+
+For more control, use the class directly:
+
+```python
+from dcc_mcp_maya.server import MayaMcpServer
+
+server = MayaMcpServer(
+    port=8765,
+    server_name="maya-mcp",
+    server_version="1.0.0",
+)
 server.register_builtin_actions(
-    extra_skill_paths=["/studio/skills"]
+    extra_skill_paths=["/my/custom/skills"]
 )
-
-# Start
 handle = server.start()
-print(f"Running at {handle.mcp_url()}")
-print(f"Port: {handle.port}")
 
-# Check status
-if server.is_running:
-    print("Server is running")
-
-# Stop
+# Later:
 server.stop()
 ```
 
-## Main Thread Safety
-
-Maya's API is **not thread-safe** — all `maya.cmds` and `OpenMaya` calls must happen on the main thread.
-
-`dcc-mcp-maya` handles this automatically:
-
-1. The HTTP server runs on a **Tokio worker thread** (inside `dcc-mcp-core`)
-2. When an action is called, it is dispatched to Maya's main thread via `maya.utils.executeDeferred`
-3. A poll callback installed via `maya.utils.executeDeferred` drains the pending queue on every UI tick
-
-This means:
-- Actions are safe to use even from multi-threaded AI host connections
-- You don't need to add any thread guards in your action scripts
-- Long-running operations will occupy the main thread until complete
-
-## Skill Discovery Search Path
-
-Skills are discovered in this priority order (highest to lowest):
-
-1. `extra_skill_paths` passed to `start_server()` or `register_builtin_actions()`
-2. Built-in `skills/` directory shipped in this package
-3. `DCC_MCP_MAYA_SKILL_PATHS` environment variable (Maya-specific)
-4. `DCC_MCP_SKILL_PATHS` environment variable (global fallback)
-5. Platform default skills directory (`dcc_mcp_core.get_skills_dir()`)
-
-## Hot-Reload During Development
-
-When developing custom skills, you can enable the skill watcher for hot-reload (requires `dcc-mcp-core >= 0.12.10`):
+### Check Server Status
 
 ```python
-from dcc_mcp_core import McpHttpServer, ActionRegistry, McpHttpConfig
+from dcc_mcp_maya.server import _server_instance
 
-config = McpHttpConfig(port=8765, server_name="maya-dev")
-registry = ActionRegistry()
-server = McpHttpServer(registry, config)
+if _server_instance and _server_instance.is_running:
+    print(f"Running at: {_server_instance.mcp_url}")
+```
 
-# Enable file watcher
-server.discover(extra_paths=["/studio/my-skill"], dcc_name="maya")
-server.enable_skill_watcher(True)  # hot-reload on file change
-handle = server.start()
+## Inspect Available Tools
+
+Once the server is running, query the MCP endpoint:
+
+```bash
+# List all available tools
+curl http://127.0.0.1:8765/mcp \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'
+```
+
+## Hot-Reload Skills
+
+Skills can be reloaded without restarting the server (requires dcc-mcp-core v0.13+):
+
+```python
+from dcc_mcp_maya.server import _server_instance
+
+# Reload a specific skill
+_server_instance._server.load_skill("my-custom-skill")
 ```
 
 ## Logging
 
-Enable debug logging to trace action calls:
+Enable debug logging for troubleshooting:
 
 ```python
 import logging
@@ -200,18 +191,45 @@ logging.getLogger("dcc_mcp_maya").setLevel(logging.DEBUG)
 logging.getLogger("dcc_mcp_core").setLevel(logging.DEBUG)
 ```
 
-Output goes to Maya's `Output Window` / Script Editor console.
+Or set the environment variable:
 
-## Plugin Mode
+```bash
+set DCC_MCP_LOG_LEVEL=DEBUG
+```
 
-See [Installation — Method 2](/guide/installation#method-2-maya-plugin) for loading as a Maya plugin. The plugin reads `DCC_MCP_MAYA_PORT` from the environment at load time.
+## Production Considerations
 
-To configure the port before loading the plugin:
+### Security
+
+The MCP server listens on `127.0.0.1` (localhost) by default — it is **not accessible from other machines**. If you need network access, use a reverse proxy with authentication.
+
+### Resource Management
+
+The server runs in a background thread and consumes minimal resources when idle. For long-running Maya sessions, monitor the server health via:
 
 ```python
-import os
-os.environ["DCC_MCP_MAYA_PORT"] = "9000"
+import dcc_mcp_maya
+# If handle is alive, server is running
+handle = dcc_mcp_maya.start_server()
+print(handle.port)
+```
 
-import maya.cmds as cmds
-cmds.loadPlugin("dcc_mcp_maya")
+### Studio Integration
+
+For studio deployments, use `userSetup.py` with conditional startup:
+
+```python
+# userSetup.py
+import os
+import maya.utils
+
+def _start_mcp_if_enabled():
+    if os.environ.get("DCC_MCP_MAYA_AUTOSTART", "1") == "0":
+        return
+    import dcc_mcp_maya
+    port = int(os.environ.get("DCC_MCP_MAYA_PORT", "8765"))
+    handle = dcc_mcp_maya.start_server(port=port)
+    print(f"[studio] Maya MCP: {handle.mcp_url()}")
+
+maya.utils.executeDeferred(_start_mcp_if_enabled)
 ```

@@ -1,63 +1,110 @@
 # 安装指南
 
-详细安装说明请参阅英文版 [Installation Guide](/guide/installation)。
+## 系统要求
 
-## 支持的 Maya 版本
+- **Maya**：2020、2022、2023、2024 或 2025
+- **Python**：3.7 – 3.12（Maya 内嵌）
+- **dcc-mcp-core**：≥ 0.12.12（作为依赖自动安装）
 
-| Maya 版本 | Python | 状态 |
-|---|---|---|
-| Maya 2026 | 3.11 | ✅ 完全支持 |
-| Maya 2025 | 3.11 | ✅ 完全支持 |
-| Maya 2024 | 3.10 | ✅ 完全支持 |
-| Maya 2023 | 3.9 | ✅ 完全支持 |
-| Maya 2022 | 3.7 | ✅ 支持 |
-| Maya 2020 | 3.7 | ✅ 支持 |
+## 方式一 — pip 安装到 mayapy
 
-## 方式一：pip 安装到 mayapy（推荐）
+最简单的方式，使用 Maya 自身的 Python 解释器：
 
 ```bash
-# Windows
-"C:\Program Files\Autodesk\Maya2026\bin\mayapy.exe" -m pip install dcc-mcp-maya
+# 通用
+mayapy -m pip install dcc-mcp-maya
 
-# macOS
-/Applications/Autodesk/maya2026/Maya.app/Contents/bin/mayapy -m pip install dcc-mcp-maya
+# Windows — Maya 2024
+"C:\Program Files\Autodesk\Maya2024\bin\mayapy.exe" -m pip install dcc-mcp-maya
 
-# Linux
-/usr/autodesk/maya2026/bin/mayapy -m pip install dcc-mcp-maya
+# macOS — Maya 2024
+/Applications/Autodesk/maya2024/Maya.app/Contents/bin/mayapy -m pip install dcc-mcp-maya
 ```
 
-### 验证安装
+验证安装：
 
 ```bash
 mayapy -c "import dcc_mcp_maya; print(dcc_mcp_maya.__version__)"
 ```
 
-## 方式二：Maya 插件
+## 方式二 — Maya 插件
 
-1. 将 `maya/plugin/dcc_mcp_maya.py` 复制到 `MAYA_PLUG_IN_PATH` 上的目录：
-   - Windows：`%USERPROFILE%\Documents\maya\2026\plug-ins\`
-   - macOS：`~/Library/Preferences/Autodesk/maya/2026/plug-ins/`
-   - Linux：`~/maya/2026/plug-ins/`
+将插件文件复制到 `MAYA_PLUG_IN_PATH` 中的某个目录，然后通过插件管理器加载。
 
-2. 在 Maya 中：**窗口 > 设置/首选项 > 插件管理器**
+1. 将 `maya/plugin/dcc_mcp_maya.py` 复制到 Maya 插件目录，例如：
+   - Windows：`%USERPROFILE%\Documents\maya\2024\plug-ins\`
+   - macOS：`~/Library/Preferences/Autodesk/maya/2024/plug-ins/`
 
-3. 找到 `dcc_mcp_maya` 并勾选**已加载**（可选勾选**自动加载**）
+2. 打开 **窗口 → 设置/首选项 → 插件管理器**
 
-## 方式三：userSetup.py 自动启动
+3. 找到 `dcc_mcp_maya`，勾选 **已加载**（可选：勾选**自动加载**）
+
+插件加载时服务器会自动在默认端口 8765 上启动。
+
+## 方式三 — userSetup.py（自动启动）
+
+如需每次 Maya 启动时自动开启服务器，在 `userSetup.py` 中添加：
 
 ```python
-# ~/maya/scripts/userSetup.py
+# userSetup.py
 import maya.utils
 
-def _start_mcp_server():
-    try:
-        import dcc_mcp_maya
-        handle = dcc_mcp_maya.start_server(port=8765)
-        print(f"[dcc-mcp-maya] 服务器就绪：{handle.mcp_url()}")
-    except Exception as e:
-        print(f"[dcc-mcp-maya] 启动失败：{e}")
+def _start_mcp():
+    import dcc_mcp_maya
+    handle = dcc_mcp_maya.start_server(port=8765)
+    print(f"[dcc-mcp-maya] 服务器已启动：{handle.mcp_url()}")
 
-maya.utils.executeDeferred(_start_mcp_server)
+maya.utils.executeDeferred(_start_mcp)
+```
+
+**文件位置：**
+- Windows：`%USERPROFILE%\Documents\maya\scripts\userSetup.py`
+- macOS：`~/Library/Preferences/Autodesk/maya/scripts/userSetup.py`
+
+## 多 Maya 版本
+
+每个 Maya 版本有独立的 Python 解释器，需分别安装：
+
+```bash
+# Maya 2022
+"C:\Program Files\Autodesk\Maya2022\bin\mayapy.exe" -m pip install dcc-mcp-maya
+
+# Maya 2024
+"C:\Program Files\Autodesk\Maya2024\bin\mayapy.exe" -m pip install dcc-mcp-maya
+
+# Maya 2025
+"C:\Program Files\Autodesk\Maya2025\bin\mayapy.exe" -m pip install dcc-mcp-maya
+```
+
+同时运行多个 Maya 实例时，使用不同的端口：
+
+```python
+# Maya 2022 实例
+handle = dcc_mcp_maya.start_server(port=8762)
+
+# Maya 2024 实例
+handle = dcc_mcp_maya.start_server(port=8764)
+
+# Maya 2025 实例
+handle = dcc_mcp_maya.start_server(port=8765)
+```
+
+在宿主中分别配置：
+
+```json
+{
+  "mcpServers": {
+    "maya-2022": { "url": "http://127.0.0.1:8762/mcp" },
+    "maya-2024": { "url": "http://127.0.0.1:8764/mcp" },
+    "maya-2025": { "url": "http://127.0.0.1:8765/mcp" }
+  }
+}
+```
+
+## 升级
+
+```bash
+mayapy -m pip install --upgrade dcc-mcp-maya
 ```
 
 ## 卸载

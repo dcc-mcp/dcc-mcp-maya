@@ -1,16 +1,16 @@
-# What is dcc-mcp-maya?
+# Introduction
 
-`dcc-mcp-maya` is the **Maya integration layer** for the [DCC-MCP](https://github.com/loonghao/dcc-mcp-core) ecosystem — a framework that lets AI agents control Digital Content Creation (DCC) tools via the [Model Context Protocol](https://modelcontextprotocol.io).
+**dcc-mcp-maya** is the Maya-specific integration layer for the [DCC-MCP](https://github.com/loonghao/dcc-mcp-core) ecosystem.
 
-## The Problem It Solves
+It embeds a standards-compliant **MCP Streamable HTTP server** (2025-03-26 spec) directly inside Maya — no external gateway or separate IPC process required.
 
-Getting AI models to reliably control Maya requires:
+## Who Is This For?
 
-1. A **standard protocol** the AI understands (→ MCP)
-2. A **server running inside Maya** so it can call `maya.cmds` on the main thread
-3. **Pre-built actions** covering common Maya workflows
-
-`dcc-mcp-maya` delivers all three in a single `pip install`.
+| Audience | Use Case |
+|----------|----------|
+| **Maya TD / TA** | Write custom Action scripts that AI agents can call via MCP |
+| **AI Application Developers** | Control Maya programmatically through MCP protocol from LLM hosts |
+| **DCC Integration Developers** | Use this Maya implementation as a reference for other DCC integrations |
 
 ## Architecture
 
@@ -18,38 +18,58 @@ Getting AI models to reliably control Maya requires:
 ┌─────────────────────────────────────────────────────────┐
 │  Maya (embedded Python)                                  │
 │                                                          │
-│  import dcc_mcp_maya                                     │
-│  handle = dcc_mcp_maya.start_server(port=8765)           │
+│  import dcc_mcp_maya                                    │
+│  handle = dcc_mcp_maya.start_server(port=8765)          │
 │                                                          │
-│  ┌─────────────────────────────────────────────────┐    │
-│  │  McpHttpServer  (dcc-mcp-core)                  │    │
-│  │  POST /mcp  ──►  ActionRegistry                 │    │
-│  │  GET  /mcp  ──►  SSE stream                     │    │
-│  └─────────────────────────────────────────────────┘    │
-└─────────────────────────┬───────────────────────────────┘
-                           │  http://127.0.0.1:8765/mcp
-┌─────────────────────────▼───────────────────────────────┐
-│  MCP Host  (Claude Desktop / Cursor / OpenClaw / …)      │
+│  ┌─────────────────────────────────────────────────┐   │
+│  │  McpHttpServer  (dcc-mcp-core)                  │   │
+│  │  POST /mcp  ──►  ActionRegistry                 │   │
+│  │  GET  /mcp  ──►  SSE stream                     │   │
+│  └─────────────────────────────────────────────────┘   │
+└─────────────────────────────┬───────────────────────────┘
+                               │  http://127.0.0.1:8765/mcp
+┌─────────────────────────────▼───────────────────────────┐
+│  MCP Host  (Claude Desktop / OpenClaw / Cursor / …)      │
 └─────────────────────────────────────────────────────────┘
 ```
 
 ## Key Concepts
 
-| Concept | Description |
-|---------|-------------|
-| **Skill** | A directory containing `SKILL.md` + `scripts/`. Defines a group of related actions. |
-| **Action** | A single Python script inside `scripts/`. Becomes one MCP tool. |
-| **MayaMcpServer** | The Python class that wraps `dcc-mcp-core`'s `McpHttpServer`. |
-| **SkillCatalog** | Auto-discovery system that scans directories for `SKILL.md` files. |
+### Skills
 
-## Who Is This For?
+Skills are directory-based packages containing Python action scripts and a `SKILL.md` manifest. Each script becomes an MCP tool automatically.
 
-- **Maya TD/TA** — Write custom Actions to automate your pipeline, then let AI agents call them.
-- **AI App Developers** — Build Claude / GPT / Cursor workflows that create and manipulate Maya scenes.
-- **DCC Integration Developers** — Use this as a reference implementation for other DCC tools in the MCP ecosystem.
+```
+maya-scene/
+├── SKILL.md          ← metadata: name, description, tags
+└── scripts/
+    ├── new_scene.py
+    ├── save_scene.py
+    └── list_objects.py
+```
+
+### Action Naming
+
+Actions follow the convention:
+
+```
+{skill_name.replace("-", "_")}__{script_stem}
+# e.g.  maya_scene__new_scene
+#       maya_primitives__create_sphere
+```
+
+### Skill Search Path
+
+Paths are resolved in order (highest priority first):
+
+1. `extra_skill_paths` argument
+2. Built-in skills shipped with this package
+3. `DCC_MCP_MAYA_SKILL_PATHS` environment variable
+4. `DCC_MCP_SKILL_PATHS` environment variable
+5. Platform default skills directory
 
 ## Next Steps
 
-- [Getting Started](/guide/getting-started) — Install and run your first MCP session in 5 minutes
-- [Available Actions](/guide/actions) — Browse the 200+ built-in actions
-- [Advanced Usage](/guide/advanced) — Custom skills, environment variables, hot-reload
+- [Quick Start](./getting-started) — get Maya talking to Claude Desktop in 5 minutes
+- [Action List](./actions) — full catalogue of built-in MCP tools
+- [Advanced Usage](./advanced) — custom skills, main-thread scheduling

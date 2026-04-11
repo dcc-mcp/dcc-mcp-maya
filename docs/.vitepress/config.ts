@@ -3,9 +3,10 @@ import { defineConfig } from 'vitepress'
 export default defineConfig({
   title: 'dcc-mcp-maya',
   description: 'AI-Powered Maya Automation via MCP Protocol',
-  base: '/dcc-mcp-maya/',
+  base: '/',
+
   head: [
-    ['link', { rel: 'icon', href: '/dcc-mcp-maya/favicon.ico' }],
+    ['link', { rel: 'icon', href: '/favicon.ico' }],
   ],
 
   locales: {
@@ -20,7 +21,7 @@ export default defineConfig({
       themeConfig: {
         nav: [
           { text: '指南', link: '/zh/guide/' },
-          { text: 'API', link: '/zh/api/actions' },
+          { text: 'API 参考', link: '/zh/api/actions' },
           { text: 'GitHub', link: 'https://github.com/loonghao/dcc-mcp-maya' },
         ],
         sidebar: {
@@ -36,10 +37,11 @@ export default defineConfig({
             {
               text: '使用指南',
               items: [
-                { text: 'Action 列表', link: '/zh/guide/actions' },
-                { text: 'MCP Tools', link: '/zh/guide/mcp-tools' },
+                { text: 'MCP Tools 指南', link: '/zh/guide/mcp-tools' },
+                { text: 'Action 完整列表', link: '/zh/guide/actions' },
+                { text: '截图与快照', link: '/zh/guide/snapshot' },
+                { text: '场景信息查询', link: '/zh/guide/scene' },
                 { text: '高级用法', link: '/zh/guide/advanced' },
-                { text: '贡献自定义技能包', link: '/zh/guide/contributing' },
               ],
             },
           ],
@@ -47,11 +49,17 @@ export default defineConfig({
             {
               text: 'API 参考',
               items: [
-                { text: 'Actions', link: '/zh/api/actions' },
-                { text: 'MayaMcpServer', link: '/zh/api/server' },
+                { text: 'Action API', link: '/zh/api/actions' },
+                { text: 'MayaMcpServer', link: '/zh/api/adapter' },
+                { text: '截图 API', link: '/zh/api/snapshot' },
+                { text: '场景信息 API', link: '/zh/api/scene' },
               ],
             },
           ],
+        },
+        footer: {
+          message: '基于 MIT 许可证发布',
+          copyright: 'Copyright © 2024-present Long Hao',
         },
       },
     },
@@ -59,36 +67,31 @@ export default defineConfig({
 
   themeConfig: {
     logo: '/logo.svg',
+
     nav: [
       { text: 'Guide', link: '/guide/' },
-      { text: 'API', link: '/api/actions' },
-      {
-        text: 'v0.3.0',
-        items: [
-          { text: 'Changelog', link: 'https://github.com/loonghao/dcc-mcp-maya/blob/main/CHANGELOG.md' },
-          { text: 'PyPI', link: 'https://pypi.org/project/dcc-mcp-maya/' },
-        ],
-      },
+      { text: 'API Reference', link: '/api/actions' },
       { text: 'GitHub', link: 'https://github.com/loonghao/dcc-mcp-maya' },
     ],
 
     sidebar: {
       '/guide/': [
         {
-          text: 'Introduction',
+          text: 'Getting Started',
           items: [
-            { text: 'What is dcc-mcp-maya?', link: '/guide/' },
-            { text: 'Getting Started', link: '/guide/getting-started' },
+            { text: 'Introduction', link: '/guide/' },
+            { text: 'Quick Start', link: '/guide/getting-started' },
             { text: 'Installation', link: '/guide/installation' },
           ],
         },
         {
-          text: 'Guides',
+          text: 'Usage',
           items: [
-            { text: 'Available Actions', link: '/guide/actions' },
-            { text: 'MCP Tools for Agents', link: '/guide/mcp-tools' },
+            { text: 'MCP Tools Guide', link: '/guide/mcp-tools' },
+            { text: 'Action List', link: '/guide/actions' },
+            { text: 'Viewport Snapshot', link: '/guide/snapshot' },
+            { text: 'Scene Info', link: '/guide/scene' },
             { text: 'Advanced Usage', link: '/guide/advanced' },
-            { text: 'Contributing a Skill', link: '/guide/contributing' },
           ],
         },
       ],
@@ -96,8 +99,10 @@ export default defineConfig({
         {
           text: 'API Reference',
           items: [
-            { text: 'Actions', link: '/api/actions' },
-            { text: 'MayaMcpServer', link: '/api/server' },
+            { text: 'Action API', link: '/api/actions' },
+            { text: 'MayaMcpServer', link: '/api/adapter' },
+            { text: 'Snapshot API', link: '/api/snapshot' },
+            { text: 'Scene API', link: '/api/scene' },
           ],
         },
       ],
@@ -110,11 +115,6 @@ export default defineConfig({
     footer: {
       message: 'Released under the MIT License.',
       copyright: 'Copyright © 2024-present Long Hao',
-    },
-
-    editLink: {
-      pattern: 'https://github.com/loonghao/dcc-mcp-maya/edit/main/docs/:path',
-      text: 'Edit this page on GitHub',
     },
 
     search: {

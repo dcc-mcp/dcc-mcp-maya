@@ -1,172 +1,164 @@
 # Action 完整列表
 
-`dcc-mcp-maya` 内置 **200+ Action**，组织为 39 个技能包。每个 Action 都成为 AI Agent 可直接调用的 MCP 工具。
+所有内置 Action 按 Skill 包组织，命名规则为：
 
-## 命名规则
+```
+{skill_name.replace("-", "_")}__{script_stem}
+```
 
-Action 命名格式：`{技能名_下划线}__{脚本名}`
+## 场景管理（`maya-scene`）
 
-示例：
-- `maya_scene__new_scene`
-- `maya_primitives__create_sphere`
-- `maya_animation__set_keyframe`
+管理 Maya 场景生命周期、对象层次结构和场景状态。
 
-## 技能包列表
+| Action | 工具名称 | 说明 |
+|--------|----------|------|
+| 新建场景 | `maya_scene__new_scene` | 创建新的空 Maya 场景 |
+| 保存场景 | `maya_scene__save_scene` | 将当前场景保存到磁盘 |
+| 打开场景 | `maya_scene__open_scene` | 打开 Maya 场景文件（.ma/.mb） |
+| 导出场景 | `maya_scene__export_scene` | 将整个场景导出到文件 |
+| 列出对象 | `maya_scene__list_objects` | 列出 DAG 对象（支持类型过滤） |
+| 获取选择 | `maya_scene__get_selection` | 返回当前选择列表 |
+| 设置选择 | `maya_scene__set_selection` | 设置当前活动选择 |
+| 按类型选择 | `maya_scene__select_by_type` | 选择指定 Maya 类型的所有对象 |
+| 会话信息 | `maya_scene__get_session_info` | Maya 版本、场景路径、FPS、对象数量 |
+| 场景信息 | `maya_scene__get_scene_info` | 场景的层次 DAG 描述 |
+| 编组对象 | `maya_scene__group_objects` | 将对象编到新组节点下 |
+| 设置父子关系 | `maya_scene__parent_object` | 设置或清除对象的父级 |
+| 复制对象 | `maya_scene__duplicate_object` | 复制场景中的对象 |
+| 冻结变换 | `maya_scene__freeze_transforms` | 冻结对象的变换 |
+| 居中轴心 | `maya_scene__center_pivot` | 将轴心居中到包围盒中心 |
+| 包围盒 | `maya_scene__get_bounding_box` | 查询世界空间包围盒 |
+| 设置可见性 | `maya_scene__set_visibility` | 显示或隐藏对象 |
+| 锁定对象 | `maya_scene__lock_object` | 锁定/解锁变换属性 |
+| 设置帧率 | `maya_scene__set_frame_rate` | 更改场景播放帧率 |
+| 列出摄像机 | `maya_scene__list_cameras` | 列出场景中的所有摄像机 |
+| 创建定位器 | `maya_scene__create_locator` | 创建 Maya 定位器节点 |
 
-### maya-scene（21 个）
+## 几何体与基础体（`maya-primitives`）
 
-场景生命周期、对象管理、层级和基本查询。
+创建多边形基础体并管理对象变换。
 
-| Action | 说明 |
-|--------|------|
-| `maya_scene__new_scene` | 创建新的空 Maya 场景 |
-| `maya_scene__open_scene` | 打开 Maya 场景文件 |
-| `maya_scene__save_scene` | 保存当前场景 |
-| `maya_scene__export_scene` | 导出场景为 FBX/OBJ/Alembic/Maya 格式 |
-| `maya_scene__list_objects` | 列出 DAG 对象（可按类型过滤）|
-| `maya_scene__get_selection` | 获取当前选择 |
-| `maya_scene__set_selection` | 设置活动选择 |
-| `maya_scene__select_by_type` | 按 Maya 节点类型选择所有对象 |
-| `maya_scene__get_session_info` | Maya 版本、场景路径、FPS、对象数量 |
-| `maya_scene__get_scene_info` | 场景的 DAG 层级描述 |
-| `maya_scene__group_objects` | 将对象组合到新组节点下 |
-| `maya_scene__parent_object` | 设置或清除对象的父级 |
-| `maya_scene__duplicate_object` | 复制对象 |
-| `maya_scene__freeze_transforms` | 冻结对象的变换 |
-| `maya_scene__center_pivot` | 将轴心点居中到边界框 |
-| `maya_scene__get_bounding_box` | 查询世界空间边界框 |
-| `maya_scene__set_visibility` | 显示或隐藏对象 |
-| `maya_scene__lock_object` | 锁定/解锁变换属性 |
-| `maya_scene__set_frame_rate` | 更改场景播放帧率 |
-| `maya_scene__list_cameras` | 列出场景中所有摄影机 |
-| `maya_scene__create_locator` | 创建 Maya 定位器节点 |
+| Action | 工具名称 | 说明 |
+|--------|----------|------|
+| 创建球体 | `maya_primitives__create_sphere` | 创建多边形球体 |
+| 创建立方体 | `maya_primitives__create_cube` | 创建多边形立方体 |
+| 创建圆柱体 | `maya_primitives__create_cylinder` | 创建多边形圆柱体 |
+| 创建平面 | `maya_primitives__create_plane` | 创建多边形平面 |
+| 删除对象 | `maya_primitives__delete_objects` | 从场景中删除对象 |
+| 设置变换 | `maya_primitives__set_transform` | 设置对象的位移/旋转/缩放 |
+| 获取变换 | `maya_primitives__get_transform` | 获取对象的位移/旋转/缩放 |
+| 重命名对象 | `maya_primitives__rename_object` | 重命名场景中的对象 |
 
-### maya-primitives（8 个）
+## 动画（`maya-animation`）
 
-多边形基本体创建与变换管理。
+完整动画流水线：关键帧、曲线、时间轴、模拟烘焙。
 
-| Action | 说明 |
-|--------|------|
-| `maya_primitives__create_sphere` | 创建多边形球体 |
-| `maya_primitives__create_cube` | 创建多边形立方体 |
-| `maya_primitives__create_cylinder` | 创建多边形圆柱体 |
-| `maya_primitives__create_plane` | 创建多边形平面 |
-| `maya_primitives__delete_objects` | 从场景中删除对象 |
-| `maya_primitives__set_transform` | 设置平移/旋转/缩放 |
-| `maya_primitives__get_transform` | 获取平移/旋转/缩放 |
-| `maya_primitives__rename_object` | 重命名对象 |
+| Action | 工具名称 | 说明 |
+|--------|----------|------|
+| 打关键帧 | `maya_animation__set_keyframe` | 在指定时间给对象属性打关键帧 |
+| 获取关键帧 | `maya_animation__get_keyframes` | 获取对象/属性的所有关键帧时间 |
+| 设置时间轴 | `maya_animation__set_timeline` | 设置播放和动画范围 |
+| 获取当前时间 | `maya_animation__get_current_time` | 获取当前帧号 |
+| 设置当前时间 | `maya_animation__set_current_time` | 设置当前帧号 |
+| 删除关键帧 | `maya_animation__delete_keyframes` | 删除可选帧范围内的关键帧 |
+| 烘焙模拟 | `maya_animation__bake_simulation` | 将模拟/约束烘焙为关键帧 |
+| 烘焙约束 | `maya_animation__bake_constraints` | 将约束驱动的动画烘焙为关键帧 |
+| 列出动画曲线 | `maya_animation__list_animation_curves` | 列出驱动对象的所有 animCurve 节点 |
+| 设置曲线切线 | `maya_animation__set_animation_curve_tangent` | 设置关键帧的切线类型 |
+| 导出动画曲线 | `maya_animation__export_animation_curves` | 将动画曲线导出为 .anim 文件 |
+| 导入动画曲线 | `maya_animation__import_animation_curves` | 从文件导入动画曲线 |
+| 查询时间信息 | `maya_animation__query_scene_time_info` | 查询当前场景时间和播放设置 |
 
-### maya-animation（13 个）
+## 摄像机（`maya-cameras`）
 
-关键帧、时间轴、曲线、模拟烘焙和动画 I/O。
+创建和配置 Maya 摄像机。
 
-| Action | 说明 |
-|--------|------|
-| `maya_animation__set_keyframe` | 在指定时间设置属性关键帧 |
-| `maya_animation__get_keyframes` | 获取对象/属性的所有关键帧时间 |
-| `maya_animation__delete_keyframes` | 删除指定帧范围内的关键帧 |
-| `maya_animation__set_timeline` | 设置播放和动画时间轴范围 |
-| `maya_animation__get_current_time` | 获取当前帧号 |
-| `maya_animation__set_current_time` | 设置当前帧号 |
-| `maya_animation__query_scene_time_info` | 查询场景时间和播放设置 |
-| `maya_animation__bake_simulation` | 将模拟/约束烘焙为关键帧 |
-| `maya_animation__bake_constraints` | 将约束驱动的动画烘焙为关键帧 |
-| `maya_animation__list_animation_curves` | 列出驱动对象的 animCurve 节点 |
-| `maya_animation__set_animation_curve_tangent` | 设置关键帧切线类型 |
-| `maya_animation__export_animation_curves` | 导出动画曲线到 `.anim` 文件 |
-| `maya_animation__import_animation_curves` | 从文件导入动画曲线 |
+| Action | 工具名称 | 说明 |
+|--------|----------|------|
+| 创建摄像机 | `maya_cameras__create_camera` | 创建带位置、旋转、焦距的摄像机 |
+| 设置摄像机属性 | `maya_cameras__set_camera_attribute` | 设置 focalLength、nearClipPlane 等 |
+| 获取摄像机信息 | `maya_cameras__get_camera_info` | 焦距、裁剪、光圈和变换信息 |
+| 设置活动摄像机 | `maya_cameras__set_active_camera` | 设置视口中的活动摄像机 |
 
-### maya-materials（8 个）
+## 灯光（`maya-lighting`）
 
-着色器创建、指定和属性编辑。
+创建和管理 Maya 灯光。
 
-| Action | 说明 |
-|--------|------|
-| `maya_materials__create_material` | 创建 Lambert/Blinn/Phong/aiStandardSurface 材质 |
-| `maya_materials__assign_material` | 将材质指定给对象 |
-| `maya_materials__set_material_attribute` | 设置颜色、粗糙度、金属度等 |
-| `maya_materials__list_materials` | 列出所有场景材质 |
-| `maya_materials__list_shading_groups` | 列出所有着色组 |
-| `maya_materials__get_material_connections` | 获取材质上的纹理/节点连接 |
-| `maya_materials__get_shader_assignment` | 获取对象上指定的材质 |
-| `maya_materials__reset_to_default_material` | 将对象重置为默认 Lambert 材质 |
+| Action | 工具名称 | 说明 |
+|--------|----------|------|
+| 创建灯光 | `maya_lighting__create_light` | 创建平行光/点光/聚光/面光/环境光 |
+| 设置灯光属性 | `maya_lighting__set_light_attribute` | 设置强度、颜色、阴影属性 |
+| 列出灯光 | `maya_lighting__list_lights` | 列出所有灯光及类型和强度 |
 
-### maya-rigging（12 个）
+## 渲染（`maya-render`）
 
-骨骼、IK、混合形状、蒙皮绑定。
+渲染设置和视口截图。
 
-| Action | 说明 |
-|--------|------|
-| `maya_rigging__create_joint` | 创建关节 |
-| `maya_rigging__skin_cluster_bind` | 将网格平滑绑定到骨骼 |
-| `maya_rigging__create_blend_shape` | 创建混合形状变形器 |
-| `maya_rigging__blend_shape_add_target` | 向已有混合形状添加目标 |
-| `maya_rigging__assign_deformer` | 为网格指定变形器 |
-| `maya_rigging__create_ik_handle` | 创建 IK 手柄 |
-| `maya_rigging__set_ik_fk_blend` | 设置 IK/FK 混合属性 |
-| `maya_rigging__mirror_joints` | 跨轴镜像关节 |
-| `maya_rigging__set_joint_orient` | 设置关节方向 |
-| `maya_rigging__set_joint_limit` | 设置关节旋转限制 |
-| `maya_rigging__set_driven_key` | 创建 Set Driven Key 连接 |
-| `maya_rigging__create_curve` | 创建 NURBS 曲线 |
+| Action | 工具名称 | 说明 |
+|--------|----------|------|
+| 设置渲染设置 | `maya_render__set_render_settings` | 设置分辨率、帧范围、渲染器 |
+| 获取渲染设置 | `maya_render__get_render_settings` | 查询当前渲染设置 |
+| 视口截图 | `maya_render__playblast` | 将视口捕获为 base64 编码的 PNG |
 
-### maya-mesh-ops（12 个）
+## 材质（`maya-materials`）
 
-网格编辑、布尔运算和几何实用程序。
+创建和管理着色材质。
 
-| Action | 说明 |
-|--------|------|
-| `maya_mesh_ops__combine_meshes` | 合并多个网格 |
-| `maya_mesh_ops__separate_mesh` | 将网格分离为多个 shell |
-| `maya_mesh_ops__extract_faces` | 将选中面提取为新网格 |
-| `maya_mesh_ops__mirror_mesh` | 跨轴镜像网格 |
-| `maya_mesh_ops__triangulate` | 三角化多边形网格 |
-| `maya_mesh_ops__apply_subdivision` | 对网格应用细分 |
-| `maya_mesh_ops__cleanup_mesh` | 清理网格几何体（删除无效面等）|
-| `maya_mesh_ops__merge_vertices` | 合并距离阈值内的顶点 |
-| `maya_mesh_ops__get_poly_count` | 获取多边形/顶点/边数量 |
-| `maya_mesh_ops__get_mesh_edge_info` | 获取边连接性和长度 |
-| `maya_mesh_ops__select_by_material` | 选择指定材质的面 |
-| `maya_mesh_ops__create_proxy_mesh` | 创建低精度代理网格 |
+| Action | 工具名称 | 说明 |
+|--------|----------|------|
+| 创建材质 | `maya_materials__create_material` | 创建 Lambert/Blinn/Phong/Arnold 材质 |
+| 赋予材质 | `maya_materials__assign_material` | 将材质赋予对象 |
+| 设置材质属性 | `maya_materials__set_material_attribute` | 设置材质颜色、粗糙度等 |
+| 列出材质 | `maya_materials__list_materials` | 列出所有场景材质 |
 
-### 更多技能包
+## 网格操作（`maya-mesh-ops`）
 
-| 技能包 | 数量 | 功能 |
-|--------|------|------|
-| `maya-uv-ops` | 8 | UV 投影、展开、规格化、UV 集管理 |
-| `maya-render` | 8 | 渲染设置、视口捕捉、文件 I/O、playblast |
-| `maya-node-graph` | 9 | 属性连接、历史、平滑、属性传递 |
-| `maya-cameras` | 5 | 摄影机创建、属性、切换视角 |
-| `maya-lighting` | 4 | 灯光创建、属性和列表 |
-| `maya-deformers` | 5 | 簇、晶格、线框、雕刻变形器 |
-| `maya-constraints` | 4 | 父约束、点约束、方向约束、加权约束 |
-| `maya-dynamics` | 10 | nCloth、nRigid、核子、动力学场 |
-| `maya-attributes` | 5 | 自定义属性管理 |
-| `maya-references` | 6 | Maya 参考文件管理、命名空间 |
-| `maya-scene-utils` | 7 | 对齐、注释、颜色、轴心、着色模式 |
-| `maya-selection` | 5 | 选择转换、扩展、收缩、反转 |
-| `maya-sets` | 4 | Maya 对象集 |
-| `maya-display` | 4 | 显示层管理 |
-| `maya-render-layers` | 5 | 渲染层管理 |
-| `maya-mash` | 5 | MASH 程序效果网络 |
-| `maya-bifrost` | 5 | Bifrost 图表和模拟 |
-| `maya-xgen` | 5 | XGen 描述和属性管理 |
-| `maya-arnold-aov` | 5 | Arnold AOV 管理 |
-| `maya-namespaces` | 3 | 命名空间操作 |
-| `maya-scripting` | 2 | MEL 和 Python 脚本执行 |
-| `maya-expressions` | 3 | Maya 表达式节点 |
-| `maya-vertex-color` | 4 | 顶点颜色操作 |
-| `maya-texture-bake` | 3 | 纹理烘焙、颜色管理配置 |
-| `maya-utility` | 2 | 实用节点创建、场景统计 |
-| `maya-audio` | 5 | 音频节点导入、时间轴同步 |
-| `maya-cache` | 5 | nCache 和 Alembic 缓存管理 |
-| `maya-fluid` | 5 | Maya Fluid Effects 流体模拟 |
-| `maya-grooming` | 5 | XGen 互动梳理毛发管理 |
-| `maya-muscle` | 5 | Maya Muscle 变形系统 |
-| `maya-nparticles` | 5 | nParticle 粒子模拟系统 |
-| `maya-ocean` | 5 | Maya Ocean 海洋模拟 |
-| `maya-paint-effects` | 5 | Paint Effects 笔触和笔刷管理 |
-| `maya-toon` | 5 | 卡通着色器与轮廓线管理 |
+多边形网格操作：细分、布尔、清理等。
 
-完整 Action 参数和示例请参阅 [API 参考](/zh/api/actions)。
+| Action | 工具名称 | 说明 |
+|--------|----------|------|
+| 细分 | `maya_mesh_ops__subdivide` | 细分多边形网格 |
+| 布尔运算 | `maya_mesh_ops__boolean_operation` | 布尔并集/差集/交集 |
+| 清理网格 | `maya_mesh_ops__cleanup_mesh` | 运行多边形清理 |
+| 提取面 | `maya_mesh_ops__extract_face` | 将选中面提取为新网格 |
+| 合并网格 | `maya_mesh_ops__combine_meshes` | 将多个网格合并为一个 |
+| 分离网格 | `maya_mesh_ops__separate_meshes` | 分离合并的网格 |
+| 填补洞 | `maya_mesh_ops__fill_hole` | 填补网格上的开放洞口 |
+| 镜像 | `maya_mesh_ops__mirror_mesh` | 沿轴镜像网格 |
+| 三角化 | `maya_mesh_ops__triangulate` | 将所有面转为三角形 |
+| 四边化 | `maya_mesh_ops__quadrangulate` | 将三角形尽量转为四边形 |
+| 平滑 | `maya_mesh_ops__smooth_mesh` | 应用平滑网格预览 |
+| 多边形信息 | `maya_mesh_ops__get_poly_info` | 查询顶点/边/面数量 |
 
+## UV 操作（`maya-uv-ops`）
+
+UV 布局创建与编辑。
+
+| Action | 工具名称 | 说明 |
+|--------|----------|------|
+| 平面投影 | `maya_uv_ops__planar_projection` | 应用平面 UV 投影 |
+| 柱形投影 | `maya_uv_ops__cylindrical_projection` | 应用柱形 UV 投影 |
+| 球形投影 | `maya_uv_ops__spherical_projection` | 应用球形 UV 投影 |
+| 自动展开 | `maya_uv_ops__auto_unwrap` | 自动 UV 展开 |
+| 规范化 UV | `maya_uv_ops__normalize_uvs` | 将 UV 规范化到 0–1 空间 |
+| 翻转 UV | `maya_uv_ops__flip_uvs` | 水平或垂直翻转 UV |
+| 旋转 UV | `maya_uv_ops__rotate_uvs` | 按指定角度旋转 UV |
+| 布局 UV | `maya_uv_ops__layout_uvs` | 将 UV 壳打包到 0–1 区域 |
+
+## 绑定（`maya-rigging`）
+
+骨骼、IK、蒙皮集群和约束。
+
+| Action | 工具名称 | 说明 |
+|--------|----------|------|
+| 创建关节 | `maya_rigging__create_joint` | 在指定位置创建关节 |
+| 关节父子关系 | `maya_rigging__parent_joint` | 将一个关节放到另一个下面 |
+| 创建 IK 手柄 | `maya_rigging__create_ik_handle` | 在关节之间创建 IK 手柄 |
+| 绑定蒙皮 | `maya_rigging__bind_skin` | 将网格绑定到骨骼 |
+| 解绑蒙皮 | `maya_rigging__unbind_skin` | 分离蒙皮集群 |
+| 设置蒙皮权重 | `maya_rigging__set_skin_weights` | 设置顶点的蒙皮权重 |
+| 获取蒙皮权重 | `maya_rigging__get_skin_weights` | 查询顶点的蒙皮权重 |
+| 创建约束 | `maya_rigging__create_constraint` | 创建父级/点/朝向/缩放约束 |
+| 删除约束 | `maya_rigging__remove_constraint` | 删除对象上的约束 |
+| 创建混合变形 | `maya_rigging__create_blend_shape` | 创建混合变形变形器 |
+| 设置混合变形权重 | `maya_rigging__set_blend_shape_weight` | 设置混合变形目标权重 |

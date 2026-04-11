@@ -2,9 +2,9 @@
 layout: home
 
 hero:
-  name: "dcc-mcp-maya"
-  text: "AI 驱动的 Maya 自动化"
-  tagline: 将标准 MCP 服务器直接嵌入 Maya — 无需网关，无需额外进程。
+  name: dcc-mcp-maya
+  text: AI 驱动的 Maya 自动化
+  tagline: 将符合标准的 MCP 服务器直接嵌入 Maya — 让 AI Agent 完整控制你的三维工作流。
   image:
     src: /logo.svg
     alt: dcc-mcp-maya
@@ -13,31 +13,26 @@ hero:
       text: 快速开始
       link: /zh/guide/getting-started
     - theme: alt
-      text: 在 GitHub 上查看
+      text: 在 GitHub 查看
       link: https://github.com/loonghao/dcc-mcp-maya
 
 features:
   - icon: 🤖
-    title: MCP 协议原生支持
-    details: 实现 2025-03-26 版本的 MCP Streamable HTTP 规范。任何兼容 MCP 的 AI 客户端（Claude Desktop、Cursor、OpenClaw）均可直接控制 Maya。
-
+    title: 原生 MCP 协议
+    details: 实现 2025-03-26 版 MCP Streamable HTTP 规范，兼容 Claude Desktop、Cursor、OpenClaw 及任意 MCP 宿主。
   - icon: 🎬
-    title: 200+ 内置 Action
-    details: 场景管理、几何体创建、材质、动画、绑定、动力学、渲染、UV、XGen、Bifrost — 组织为 28+ 个技能包。
-
-  - icon: ⚡
-    title: 零外部进程
-    details: HTTP 服务器运行在 Maya 自身的 Python 解释器中，通过 Tokio 工作线程驱动。Maya API 调用通过 maya.utils 安全分发至主线程。
-
+    title: 60+ 内置 Action
+    details: 场景管理、几何体创建、材质、动画、灯光、渲染、绑定、UV 操作等，全部开箱即用。
+  - icon: 📸
+    title: 视口截图
+    details: 一次 MCP 调用即可将任意 Maya 视口捕获为 base64 编码的 PNG 图像，完美支持 AI 视觉反馈循环。
   - icon: 🔌
-    title: 可扩展技能系统
-    details: 在 DCC_MCP_MAYA_SKILL_PATHS 任意目录下放置 SKILL.md + scripts/ 即可注册自定义 Action，无需修改核心包。
-
-  - icon: 🏗️
-    title: 支持 Maya 2020+
-    details: 兼容 Maya 2020 至 2026（Python 3.7–3.12）。通过 mayapy pip 安装或以 Maya 插件方式加载。
-
-  - icon: 🌐
-    title: 多客户端就绪
-    details: 一个服务器，多个客户端同时连接。Claude Desktop、Cursor 等任意 MCP 兼容客户端均可同时使用。
+    title: 零外部依赖
+    details: 无需网关进程，无需 IPC 桥接 — HTTP 服务器直接运行在 Maya 内嵌的 Python 解释器中。
+  - icon: ⚡
+    title: Skill 架构
+    details: 热重载 Skill 包。通过 DCC_MCP_MAYA_SKILL_PATHS 发布自定义 Skill，无需修改核心代码。
+  - icon: 🐍
+    title: Maya 2020+ / Python 3.7+
+    details: 已在 Maya 2020、2022、2023、2024、2025 上测试，支持 Python 3.7 至 3.12。
 ---

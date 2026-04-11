@@ -29,13 +29,448 @@
 - Committed: `ed2010c feat(skills): add group_objects, parent_object, select_by_type scene hierarchy actions`
 - Pushed: `origin/auto-improve` updated (force-with-lease after rebase)
 
-### Remaining gaps for next round
-- `server.py` lines 34, 104-105, 120-121, 127-128, 230 — only coverable with real Maya runtime
-- Missing actions to consider:
-  - `lock_object` / `unlock_object` — lock/unlock transform attributes
-  - `duplicate_object` — duplicate with optional instance
-  - `freeze_transforms` — apply transforms to shape
-  - `center_pivot` — center object pivot point
-  - `get_bounding_box` — query world-space bounding box
-  - `set_visibility` — show/hide objects
-  - `get_scene_info` (detailed) — full DAG hierarchy query
+---
+
+## 2026-04-11 (Round 2 — 5 new Skills implemented)
+
+### State before this round
+- Branch: `chore/update-dcc-mcp-core-latest-api` (workspace on this branch)
+- Architecture: fully migrated to Skills-based system (Skills in `src/dcc_mcp_maya/skills/`)
+- Tests: 995 passed, 1 skipped
+- Empty skill dirs: 33 directories with `scripts/` but no `.py` files
+
+### Work done
+Implemented 5 previously-empty Skill domains (20 scripts total):
+
+**maya-annotation** (4 scripts):
+- `create_annotation` — create text annotation at position or attached to object
+- `list_annotations` — list all `annotationShape` nodes
+- `update_annotation` — change text/position of existing annotation
+- `delete_annotation` — delete annotation shape + transform
+
+**maya-audio** (4 scripts):
+- `import_audio` — import WAV/AIFF and create sound node
+- `list_audio` — list all `audio` nodes with file_path/offset
+- `set_timeline_audio` — attach sound node to Maya timeline via `timeControl`
+- `remove_audio` — delete sound node
+
+**maya-cache** (4 scripts):
+- `create_geometry_cache` — bake deformations via `doCreateGeometryCache` MEL
+- `attach_geometry_cache` — attach existing XML cache via `doAttachCache` MEL
+- `list_geometry_caches` — list `cacheFile` nodes (optionally per mesh)
+- `delete_geometry_cache` — delete node + optional disk file cleanup
+
+**maya-color-grading** (4 scripts):
+- `get_color_management_info` — query enabled/rendering_space/view_transform/ocio_config
+- `set_rendering_space` — change rendering color space (ACES, sRGB, etc.)
+- `set_view_transform` — change viewport view LUT
+- `apply_gamma_correction` — insert `gammaCorrect` node between file texture and material
+
+**maya-constraints-advanced** (4 scripts):
+- `add_pole_vector_constraint` — pole vector from locator to IK handle
+- `bake_constraint` — `bakeResults` + optional constraint deletion
+- `get_constraint_weights` — query per-driver blend weights
+- `set_constraint_weight` — set one driver's weight for space switching
+
+**Tests**: `test_skills_round15.py` — 70 new tests, all pass.
+
+### State after this round
+- Tests: 1065 passed, 1 skipped (all pass)
+- Committed on `main`: `1b3389a feat(skills): add maya-annotation, maya-audio, maya-cache, maya-color-grading, maya-constraints-advanced skills`
+- All 5 SKILL.md files use new format (allowed-tools, license, depends)
+
+### Remaining empty skills for next round
+Still-empty: maya-blend-shape-utils, maya-camera-sequence, maya-cloth-sim,
+maya-export-preset, maya-expressions, maya-fluid, maya-gpu-cache, maya-grooming,
+maya-hdri, maya-instancer, maya-light-rig, maya-material-library, maya-mocap,
+maya-muscle, maya-namespaces (dir), maya-nparticles, maya-ocean, maya-paint-effects,
+maya-pipeline, maya-pose-library, maya-proxy-mesh, maya-render-farm, maya-render-passes,
+maya-rig-utils, maya-scene-assembly, maya-scripting (dir), maya-shot-export,
+maya-skinning-utils, maya-spline-ik, maya-toon, maya-utility (dir), maya-xform-utils
+
+Priority candidates for next round: maya-expressions, maya-blend-shape-utils,
+maya-gpu-cache, maya-spline-ik, maya-xform-utils
+
+---
+
+## 2026-04-11 (Round 3 — 5 new Skills implemented)
+
+### State before this round
+- Branch: `main`
+- Tests: 1065 passed, 1 skipped
+- Empty skill dirs: 28 (maya-expressions was already filled before this round)
+
+### Work done
+Implemented 5 Skill domains (20 scripts total):
+
+**maya-blend-shape-utils** (4 scripts):
+- `create_blend_shape` — create blendShape deformer with one or more targets
+- `list_blend_shapes` — list all blendShape nodes (optionally filtered by mesh)
+- `set_blend_shape_weight` — set target weight by index or alias name
+- `get_blend_shape_weights` — query all target names + current weights
+
+**maya-xform-utils** (4 scripts):
+- `freeze_transforms` — makeIdentity on translate/rotate/scale with dry-run support
+- `reset_pivot` — move pivot to bbox_center, world_origin, or bottom
+- `match_transforms` — snap source to match target's world-space xforms
+- `bake_transforms` — bakeResults over frame range (collapses constraints)
+
+**maya-spline-ik** (4 scripts):
+- `create_spline_ik` — ikSplineSolver handle with auto or provided curve
+- `set_spline_ik_twist` — configure dTwistControlEnable + up vector
+- `add_stretch_to_spline_ik` — curveInfo → multiplyDivide → joint scale stretch rig
+- `list_spline_ik_handles` — list all ikSplineSolver handles
+
+**maya-gpu-cache** (4 scripts):
+- `export_gpu_cache` — cmds.gpuCache export to .abc via gpuCache plugin
+- `import_gpu_cache` — create gpuCache shape node from .abc file
+- `list_gpu_caches` — list all gpuCache nodes with file paths
+- `refresh_gpu_cache` — toggle refreshAll to force reload from disk
+
+**maya-instancer** (4 scripts):
+- `create_instancer` — particleInstancer with geometry list
+- `add_instance_object` — add geometry to existing instancer
+- `set_instancer_attribute` — map per-particle attr to instancer field
+- `list_instancers` — list all instancer nodes with linked particles/geometry
+
+**Tests**: `test_skills_round16.py` — 66 new tests, all pass.
+
+### State after this round
+- Tests: 1131 passed, 1 skipped (all pass), 0 failures
+- Committed on `main`: `0e04fb6 feat(skills): add maya-blend-shape-utils, maya-xform-utils, maya-spline-ik, maya-gpu-cache, maya-instancer skills`
+
+### Remaining empty skills (23 left)
+maya-camera-sequence, maya-cloth-sim, maya-export-preset, maya-fluid,
+maya-grooming, maya-hdri, maya-light-rig, maya-material-library, maya-mocap,
+maya-muscle, maya-namespaces, maya-nparticles, maya-ocean, maya-paint-effects,
+maya-pipeline, maya-pose-library, maya-proxy-mesh, maya-render-farm, maya-render-passes,
+maya-rig-utils, maya-scene-assembly, maya-shot-export, maya-skinning-utils,
+maya-toon
+
+Priority candidates for next round: maya-skinning-utils, maya-rig-utils,
+maya-render-passes, maya-pose-library, maya-light-rig
+
+---
+
+## 2026-04-11 (Round 4 — 5 new Skills implemented)
+
+### State before this round
+- Branch: `main`
+- Tests: 1131 passed, 1 skipped
+- Empty skill dirs: 23 (priority: maya-skinning-utils, maya-rig-utils, maya-render-passes, maya-pose-library, maya-light-rig)
+
+### Work done
+Implemented 5 Skill domains (20 scripts total):
+
+**maya-skinning-utils** (4 scripts):
+- `copy_skin_weights` — copySkinWeights between source and target mesh, auto-creates skinCluster on target if needed
+- `normalize_skin_weights` — setAttr normalizeWeights + skinPercent normalize=True
+- `mirror_skin_weights` — copySkinWeights with mirrorMode (YZ/XZ/XY)
+- `prune_skin_weights` — skinPercent pruneWeights threshold
+
+**maya-rig-utils** (4 scripts):
+- `create_control_curve` — 5 preset nurbs shapes (circle, square, triangle, arrow, diamond) with scale/color override
+- `lock_hide_attributes` — lock + hide channel box attrs per node
+- `add_space_switch` — parentConstraint + enum attr + setDrivenKeyframe space switching
+- `connect_attributes` — batch connectAttr with force/error reporting
+
+**maya-render-passes** (4 scripts):
+- `create_render_pass` — renderPass node (Maya Software) or aiAOV node (Arnold)
+- `list_render_passes` — list renderPass + aiAOV nodes with enabled/name info
+- `enable_render_pass` — toggle renderable/enabled attr
+- `set_render_pass_output` — set fileNamePrefix/outputPrefix + imageFormat/dataType attrs
+
+**maya-pose-library** (4 scripts):
+- `save_pose` — JSON snapshot of tx/ty/tz/rx/ry/rz/sx/sy/sz per control
+- `load_pose` — apply JSON pose with namespace support, skip_missing option
+- `list_poses` — walk directory for .json pose files with control_count
+- `mirror_pose` — L_/R_ prefix swap + negate tx/ry/rz, output to file or apply to scene
+
+**maya-light-rig** (4 scripts):
+- `create_three_point_rig` — key/fill/rim directional rig with intensity/color params
+- `create_hdri_dome` — aiSkyDomeLight (Arnold) or ambientLight fallback + file texture
+- `list_light_rigs` — group light shapes by parent rig transform with intensity info
+- `set_light_rig_intensity` — absolute or multiply mode for all lights in a rig group
+
+**Tests**: `test_skills_round17.py` — 97 new tests, all pass.
+
+### State after this round
+- Tests: 1228 passed, 1 skipped (all pass), 0 failures
+- Committed on `main`: `63efa00 feat(skills): add maya-skinning-utils, maya-rig-utils, maya-render-passes, maya-pose-library, maya-light-rig skills`
+
+### Remaining empty skills (18 left)
+maya-camera-sequence, maya-cloth-sim, maya-export-preset, maya-fluid,
+maya-grooming, maya-hdri, maya-material-library, maya-mocap,
+maya-muscle, maya-nparticles, maya-ocean, maya-paint-effects,
+maya-pipeline, maya-proxy-mesh, maya-render-farm,
+maya-scene-assembly, maya-shot-export, maya-toon
+
+Priority candidates for next round: maya-shot-export, maya-material-library,
+maya-render-farm, maya-nparticles, maya-toon
+
+---
+
+## 2026-04-11 (Round 5 — 5 new Skills implemented)
+
+### State before this round
+- Branch: `main`
+- Tests: 1228 passed, 1 skipped
+- Empty skill dirs: 18 (priority: maya-shot-export, maya-material-library, maya-toon, maya-nparticles, maya-render-farm)
+
+### Work done
+Implemented 5 Skill domains (20 scripts total):
+
+**maya-shot-export** (4 scripts):
+- `export_shot_fbx` — Export selected geometry within a frame range to FBX (uses FBXExport MEL)
+- `export_shot_alembic` — Export selected objects as Alembic (.abc) via AbcExport plugin
+- `export_camera` — Export a shot camera to FBX or Maya ASCII (MA format avoids mel import)
+- `get_shot_info` — Query scene name, frame range, active camera, all cameras
+
+**maya-material-library** (4 scripts):
+- `save_material` — Serialize shading node attributes to JSON preset file
+- `load_material` — Recreate material from JSON preset + optional mesh assignment
+- `list_materials` — List all .json preset files in a library directory
+- `delete_material_preset` — Remove a JSON preset file from the library
+
+**maya-toon** (4 scripts):
+- `add_toon_outline` — Add pfxToon outline stroke via `assignNewPfxToon` MEL
+- `create_toon_shader` — Create rampShader node with 3-band colour ramp + shading group
+- `set_outline_width` — Set lineWidth (and optionally profileLineWidth) on pfxToon node
+- `list_toon_outlines` — List all pfxToon nodes with line width and connected meshes
+
+**maya-nparticles** (4 scripts):
+- `create_nparticle_emitter` — Create nParticle system via `nParticle` MEL with nucleus wiring
+- `set_nparticle_attribute` — Set scalar attribute on nParticle shape node
+- `add_field_to_nparticles` — Create dynamic field (gravity/turbulence/drag/etc.) and connect to particles
+- `list_nparticle_systems` — List all nParticle + nucleus nodes with particle count / settings
+
+**maya-render-farm** (4 scripts):
+- `validate_scene_for_farm` — Check for unsaved scene, missing textures, unloaded refs, bad frame range
+- `write_render_job` — Write JSON render job spec from current scene render globals
+- `submit_to_deadline` — Submit scene to Thinkbox Deadline via deadlinecommand CLI
+- `get_render_job_status` — Query Deadline job status by job ID via deadlinecommand -GetJobDetails
+
+**Tests**: `test_skills_round18.py` — 73 new tests, all pass.
+
+### State after this round
+- Tests: 1301 passed, 1 skipped (all pass), 0 failures
+- Committed on `main`: `7ef3d78 feat(skills): add maya-shot-export, maya-material-library, maya-toon, maya-nparticles, maya-render-farm skills`
+- Pushed: `origin/main` updated
+
+### Remaining empty skills (13 left)
+maya-camera-sequence, maya-cloth-sim, maya-export-preset, maya-fluid,
+maya-grooming, maya-hdri, maya-mocap, maya-muscle, maya-namespaces,
+maya-ocean, maya-paint-effects, maya-pipeline, maya-proxy-mesh,
+maya-scene-assembly, maya-scripting, maya-texture-bake, maya-utility
+
+Priority candidates for next round: maya-paint-effects, maya-hdri,
+maya-texture-bake, maya-camera-sequence, maya-namespaces
+
+---
+
+## 2026-04-11 (Round 6 — 5 new Skills implemented)
+
+### State before this round
+- Branch: `main`
+- Tests: 1301 passed, 1 skipped
+- Empty skill dirs: 13 (priority from Round 5: maya-paint-effects, maya-hdri, maya-camera-sequence, maya-namespaces, maya-texture-bake)
+
+### Work done
+Implemented 5 Skill domains (20 scripts total):
+
+**maya-paint-effects** (4 scripts):
+- `create_stroke` — Create standalone Paint Effects stroke in world space via curve + brush preset
+- `attach_stroke_to_surface` — Scatter brush strokes on NURBS/polygon surface
+- `list_strokes` — List all pfxToon/stroke nodes with brush linkage and visibility
+- `delete_stroke` — Delete one or all Paint Effects stroke nodes
+
+**maya-hdri** (4 scripts):
+- `load_hdri` — Load HDR image as Arnold aiSkyDomeLight (or native ambient fallback)
+- `set_hdri_exposure` — Set aiExposure / intensity on dome nodes
+- `set_hdri_rotation` — Set Y-axis rotation on dome light transform
+- `list_hdri_nodes` — List all aiSkyDomeLight / ambientLight / directionalLight nodes
+
+**maya-camera-sequence** (4 scripts):
+- `create_shot` — Create Maya shot node with camera + frame range
+- `list_shots` — List shots sorted by sequence_start_frame
+- `set_shot_range` — Update start/end/sequence timing of a shot node
+- `delete_shot` — Delete a shot node
+
+**maya-namespaces** (4 scripts):
+- `create_namespace` — Create namespace (with empty-name guard)
+- `list_namespaces` — List non-default namespaces with object counts
+- `rename_namespace` — Rename namespace (with :prefix format, protected-ns check)
+- `remove_namespace` — Remove namespace + force-merge objects to parent
+
+**maya-texture-bake** (4 scripts):
+- `bake_lighting` — Bake diffuse+shadow via convertLightmap
+- `bake_ambient_occlusion` — Bake AO via mib_amb_occlusion + convertSolidTx
+- `transfer_maps` — Transfer normals/displacement/diffuse from high-res to low-res
+- `list_bake_sets` — List objectSet nodes with bakeResolutionX attribute
+
+**Tests**: `test_skills_round19.py` — 77 new tests, all pass.
+- Fixed: rename_namespace uses `:name` prefix format (consistent with round3 expectations)
+
+### State after this round
+- Tests: 1378 passed, 1 skipped (all pass), 0 failures
+- Committed on `main`: `5b20538 feat(skills): add maya-paint-effects, maya-hdri, maya-camera-sequence, maya-namespaces, maya-texture-bake skills`
+- Pushed: `origin/main` updated
+
+### Remaining empty skills (8 left)
+maya-cloth-sim, maya-export-preset, maya-fluid, maya-grooming,
+maya-mocap, maya-muscle, maya-ocean, maya-proxy-mesh,
+maya-scene-assembly, maya-scripting, maya-utility
+
+Priority candidates for next round: maya-fluid, maya-ocean, maya-cloth-sim,
+maya-grooming, maya-export-preset
+
+---
+
+## 2026-04-11 (Round 7 — 5 new Skills implemented)
+
+### State before this round
+- Branch: `main`
+- Tests: 1378 passed, 1 skipped
+- Empty skill dirs: priority from Round 6: maya-fluid, maya-ocean, maya-cloth-sim, maya-grooming, maya-export-preset
+
+### Work done
+Implemented 5 Skill domains (20 scripts total):
+
+**maya-fluid** (4 scripts): create_fluid_container, set_fluid_attribute, list_fluid_containers, delete_fluid_container
+**maya-ocean** (4 scripts): create_ocean (polyPlane + oceanShader), set_ocean_attribute, add_ocean_wake, list_ocean_surfaces
+**maya-cloth-sim** (4 scripts): create_ncloth (4 presets), set_ncloth_attribute, bake_cloth_cache (MEL), list_ncloth_objects
+**maya-grooming** (4 scripts): create_nhair_system (MEL), set_nhair_attribute, list_hair_systems, add_nhair_cache (MEL)
+**maya-export-preset** (4 scripts): save_export_preset (JSON), load_export_preset, list_export_presets, delete_export_preset
+
+**Tests**: `test_skills_round20.py` — 70 new tests, all pass.
+
+### State after this round
+- Tests: 1448 passed, 1 skipped (all pass), 0 failures
+- Committed on `main`: `30f3283 feat(skills): add maya-fluid, maya-ocean, maya-cloth-sim, maya-grooming, maya-export-preset skills`
+- Pushed: `origin/main` updated
+
+### Remaining empty skills
+maya-mocap, maya-muscle, maya-pipeline, maya-proxy-mesh, maya-scene-assembly, maya-scripting, maya-utility
+
+Priority candidates for next round: maya-mocap, maya-muscle, maya-scene-assembly, maya-proxy-mesh, maya-utility
+
+---
+
+## 2026-04-11 (Round 8 — 5 new Skills implemented)
+
+### State before this round
+- Branch: `main`
+- Tests: 1448 passed, 1 skipped
+- Empty skill dirs (priority): maya-expressions (scripts missing), maya-mocap, maya-muscle, maya-scene-assembly, maya-proxy-mesh
+
+### Work done
+Implemented 5 Skill domains (20 scripts total):
+
+**maya-expressions** (4 scripts): create_expression, list_expressions, delete_expression, edit_expression (rewritten for Round 3 compat + new edit script)
+**maya-mocap** (4 scripts): import_mocap, create_hik_definition, bake_mocap_to_rig, clean_mocap_keys
+**maya-muscle** (4 scripts): create_muscle_capsule, list_muscles, set_muscle_attribute, apply_muscle_skin
+**maya-scene-assembly** (4 scripts): create_assembly_definition, add_assembly_representation, create_assembly_reference, list_assemblies
+**maya-proxy-mesh** (4 scripts): create_proxy, swap_proxy, list_proxies, set_proxy_attribute
+
+**Tests**: `test_skills_round21.py` — 93 tests, all pass.
+Key fix: maya-expressions backward-compatible with Round 3 tests (expression_name context key, type validation).
+
+### State after this round
+- Tests: 1541 passed, 1 skipped (all pass), 0 failures
+- Committed on `main`: `2e9a699`
+- Pushed: `origin/main` updated
+
+### Remaining empty skills (3 left)
+maya-pipeline, maya-scripting, maya-utility
+
+Priority candidates for next round: maya-pipeline, maya-scripting, maya-utility — then E2E/CI improvements
+
+---
+
+## 2026-04-11 (Round 9 — 3 remaining Skills filled + backward compat fixes)
+
+### State before this round
+- Branch: `main`
+- Tests: 1541 passed, 1 skipped
+- Empty skill dirs: maya-pipeline (no SKILL.md), maya-scripting (SKILL.md only), maya-utility (SKILL.md only)
+
+### Work done
+Implemented 3 final Skill domains (12 scripts total):
+
+**maya-scripting** (4 scripts): execute_mel, execute_python, list_mel_procedures, get_script_node
+**maya-utility** (4 scripts): create_utility_node, get_scene_statistics, list_node_connections, clean_scene
+**maya-pipeline** (SKILL.md + 4 scripts): set_project, publish_asset, tag_asset_metadata, get_asset_metadata
+
+Backward compatibility fixes vs Round3 tests:
+- execute_mel: context key output (was return_value) + script key added
+- execute_python: pre-injects cmds in exec namespace; exposes result variable → output
+- create_utility_node: shadingNode(no name) then rename() (was shadingNode with name=)
+- get_scene_statistics: added scene_file key
+
+**Tests**: test_skills_round22.py — 63 tests, all pass.
+
+### State after this round
+- Tests: 1604 passed, 1 skipped, 0 failures
+- Committed on `main`: `0a2aabd feat(skills): add maya-scripting, maya-utility, maya-pipeline skills`
+- Pushed: origin/main updated
+
+### All skill directories now populated
+No more empty skill dirs.
+
+### Next priorities
+1. E2E test infrastructure (tests/e2e/ + conftest.py + GitHub Actions e2e.yml)
+2. Python 3.7+ compatibility audit across all skill scripts
+3. Coverage improvements for server.py edge cases
+
+---
+
+## 2026-04-11 (Round 10 — E2E infrastructure + Round 23 edge-case tests)
+
+### State before this round
+- Branch: `main`
+- Tests: 1604 passed, 1 skipped
+- All 34+ Skill domains populated (Rounds 1-9 complete)
+- e2e.yml already existed; no structured tests/e2e/ directory
+
+### Work done
+
+**Python 3.7+ compatibility audit**: Scanned all 344 skill scripts. Zero issues found.
+
+**E2E test infrastructure** (`tests/e2e/` directory):
+- `tests/e2e/__init__.py` — package marker
+- `tests/e2e/conftest.py` — pytest_configure + pytest_collection_modifyitems that auto-skips when maya.standalone unavailable
+- `tests/e2e/test_scene_e2e.py` — TestSceneSkillsE2E (6 tests), TestPrimitivesSkillsE2E (8 tests)
+- `tests/e2e/test_animation_e2e.py` — TestAnimationSkillsE2E (8 tests)
+- `tests/e2e/test_material_e2e.py` — TestMaterialsE2E (6 tests), TestUvOpsE2E (3 tests)
+- `tests/e2e/test_scripting_e2e.py` — TestScriptingE2E (6 tests), TestUtilityE2E (4 tests), TestPipelineE2E (3 tests)
+
+**test_skills_round23.py** — 78 tests (all pass):
+- TestToonAddOutline (10): no-objects error, mesh-shape happy path, set_outline_width type-check
+- TestFluidSkills (8): create/list/set_attribute/delete with correct param names
+- TestOceanSkills (8): create/list/set_ocean_attribute(shader=) / add_ocean_wake(shader=)
+- TestClothSimSkills (9): 4 presets + set_ncloth_attribute(ncloth_shape=) / list
+- TestMocapSkills (6): file-not-found, unsupported format, HIK definition, clean_keys(joints=)
+- TestSceneAssemblySkills (6): create/add(assembly=)/list(context.definitions+references)
+- TestProxyMeshSkills (10): create/keep_visible/custom_name/list/swap_proxy(proxy=)/set_proxy_attribute(proxy=)
+- TestMuscleSkillEdgeCases (5): capsule(start_joint+end_joint required), list, missing-node errors
+- TestExportPresetSkills (8): save/list/load/delete with correct param names (preset_dir, preset_path)
+- TestPipelineEdgeCases (8): set_project(path=), tag/get(node=), publish_asset(publish_dir=)
+
+**Bug fixed**: `clean_mocap_keys` mock fixed — `keyframeCount=True` returns int not list.
+
+### State after this round
+- Tests: 1682 passed, 5 skipped (E2E skipped without mayapy), 0 failures
+- Committed: `540e79e test(e2e): add tests/e2e/ structured directory + round23 unit tests`
+- Pushed: `origin/main` updated
+
+### Next priorities for Round 11
+1. grooming/paint-effects/toon render E2E tests (headless-safe)
+2. maya-display + maya-annotation + maya-audio unit tests edge cases
+3. Server coverage: McpServerHandle lifecycle, hot-reload SkillWatcher mock tests
+4. CI: verify e2e.yml matrix actually triggers on new commits (review workflow logs)
+
+
+
+
+
+

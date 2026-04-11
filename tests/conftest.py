@@ -11,11 +11,13 @@ from __future__ import annotations
 
 # Import built-in modules
 import importlib.util
+import sys
 from pathlib import Path
 from typing import Dict, Optional, Tuple
 from unittest.mock import MagicMock
 
 # Import third-party modules
+import pytest
 
 SKILLS_ROOT = Path(__file__).parent.parent / "src" / "dcc_mcp_maya" / "skills"
 
@@ -37,7 +39,9 @@ def load_skill_script(skill_dir: str, script_name: str):
     """
     _MOD_COUNTER[0] += 1
     script_path = SKILLS_ROOT / skill_dir / "scripts" / "{}.py".format(script_name)
-    module_name = "skill_{}_{}_{}".format(skill_dir.replace("-", "_"), script_name, _MOD_COUNTER[0])
+    module_name = "skill_{}_{}_{}" .format(
+        skill_dir.replace("-", "_"), script_name, _MOD_COUNTER[0]
+    )
     spec = importlib.util.spec_from_file_location(module_name, str(script_path))
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)

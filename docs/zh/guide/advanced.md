@@ -1,171 +1,142 @@
 # 高级用法
 
-## 自定义技能
+## 自定义 Skill
 
-扩展 `dcc-mcp-maya` 最简便的方式是创建自定义技能 — 包含 `SKILL.md` 描述文件和 Python Action 脚本的目录。
+创建自己的 Skill 包并将其暴露为 MCP 工具。
 
-### 技能目录结构
+### Skill 目录结构
 
 ```
-my-studio-tools/
-├── SKILL.md
+my-custom-skill/
+├── SKILL.md           ← 必须的清单文件
 └── scripts/
-    ├── setup_shot.py
-    ├── export_alembic.py
-    └── validate_naming.py
+    ├── my_action.py   ← 成为工具：my_custom_skill__my_action
+    └── another.py
 ```
 
 ### SKILL.md 格式
 
 ```yaml
 ---
-name: my-studio-tools
-description: "Hero Studio 专属流程自动化工具"
+name: my-custom-skill
+description: "我的自定义 Maya 自动化 Skill"
 dcc: maya
 version: "1.0.0"
-tags: [maya, pipeline, studio]
+tags: [maya, custom]
 license: "MIT"
 allowed-tools: ["Bash", "Read"]
 depends: []
 ---
 
-# my-studio-tools
+# my-custom-skill
 
-## Scripts
-
-- `setup_shot` — 从镜头模板设置新镜头
-- `export_alembic` — 将角色缓存导出为 Alembic
-- `validate_naming` — 验证对象命名规范
+描述此 Skill 的功能。
 ```
 
-### Action 脚本格式
-
-`scripts/` 中的每个脚本成为一个 MCP Action，脚本必须定义与文件名相同的函数：
+### Action 脚本结构
 
 ```python
-# scripts/setup_shot.py
-"""从工作室模板设置新的 Maya 镜头。"""
+"""模块文档字符串 — 成为 MCP 工具描述。"""
+
+from typing import Any, Dict
+import maya.cmds as cmds
 
 
-def setup_shot(shot_name: str, frame_range: list = None) -> dict:
-    """从模板场景设置新镜头并配置。
+def main(
+    object_name: str,
+    value: float = 1.0,
+) -> Dict[str, Any]:
+    """Action 文档字符串 — 显示在 MCP tools/list 中。
 
     Args:
-        shot_name: 镜头标识符，如 "SH_0010"
-        frame_range: [开始帧, 结束帧]。默认为 [1001, 1100]。
+        object_name: 要操作的 Maya 对象。
+        value: 带默认值的数值参数。
 
     Returns:
-        dict，包含 success (bool)、shot_name (str)、message (str)
+        包含 'success' 键和可选结果数据的字典。
     """
-    import maya.cmds as cmds
-
-    if frame_range is None:
-        frame_range = [1001, 1100]
-
-    template_path = "/pipeline/templates/shot_template.ma"
-    cmds.file(template_path, i=True, type="mayaAscii", ignoreVersion=True)
-
-    cmds.playbackOptions(min=frame_range[0], max=frame_range[1])
-
-    if cmds.objExists("SHOT_TEMPLATE"):
-        cmds.rename("SHOT_TEMPLATE", shot_name)
-
+    result = cmds.getAttr(f"{object_name}.translateY")
     return {
         "success": True,
-        "shot_name": shot_name,
-        "message": f"镜头 {shot_name} 已设置，帧范围 {frame_range[0]}-{frame_range[1]}",
+        "object": object_name,
+        "value": result,
     }
 ```
 
-### 注册自定义技能
+### 注册自定义 Skill
 
-**方式 A — 环境变量：**
-```powershell
-# Windows
-set DCC_MCP_MAYA_SKILL_PATHS=C:\studio\maya-skills
-```
-
-**方式 B — 启动时传入：**
 ```python
 import dcc_mcp_maya
+
 handle = dcc_mcp_maya.start_server(
-    extra_skill_paths=["C:/studio/maya-skills"]
+    port=8765,
+    extra_skill_paths=[
+        "/path/to/my-skills-folder",
+        "/another/skills/directory",
+    ]
 )
 ```
 
-**方式 C — 多路径：**
-```powershell
-set DCC_MCP_MAYA_SKILL_PATHS=C:\studio\tools;C:\shared\pipeline-skills
+或使用环境变量：
+
+```bash
+# Windows（分号分隔）
+set DCC_MCP_MAYA_SKILL_PATHS=C:\studio\maya-skills;C:\personal\skills
+
+# Linux/macOS（冒号分隔）
+export DCC_MCP_MAYA_SKILL_PATHS=/studio/maya-skills:/personal/skills
 ```
 
-## MayaMcpServer API
+## 主线程调度
 
-编程控制服务器：
+Maya 的 UI 和 `cmds` 操作必须在**主线程**运行。`dcc-mcp-maya` 会自动通过 `executeInMainThreadWithResult` 将所有 action 脚本派发到主线程。
+
+如果你的自定义代码需要主线程执行：
+
+```python
+import maya.utils
+
+def _my_operation():
+    import maya.cmds as cmds
+    cmds.polySphere()
+
+# 在主线程下一个空闲时调度
+maya.utils.executeDeferred(_my_operation)
+
+# 等待结果（谨慎使用 — 在主线程调用可能死锁）
+result = maya.utils.executeInMainThreadWithResult(_my_operation)
+```
+
+## 服务器配置
+
+### 自定义端口和名称
+
+```python
+import dcc_mcp_maya
+
+handle = dcc_mcp_maya.start_server(
+    port=9000,
+    server_name="maya-studio-2024",
+)
+print(handle.mcp_url())   # http://127.0.0.1:9000/mcp
+```
+
+### 直接使用 MayaMcpServer
 
 ```python
 from dcc_mcp_maya.server import MayaMcpServer
 
-server = MayaMcpServer(
-    port=9000,
-    server_name="my-maya-studio",
-)
-server.register_builtin_actions(
-    extra_skill_paths=["/studio/skills"]
-)
+server = MayaMcpServer(port=8765, server_name="maya-mcp")
+server.register_builtin_actions(extra_skill_paths=["/my/custom/skills"])
 handle = server.start()
-print(f"运行于 {handle.mcp_url()}")
 
-# 检查状态
-if server.is_running:
-    print("服务器运行中")
-
+# 停止时：
 server.stop()
 ```
 
-## 主线程安全
+## 日志
 
-Maya 的 API **非线程安全** — 所有 `maya.cmds` 和 `OpenMaya` 调用必须在主线程执行。
-
-`dcc-mcp-maya` 自动处理此问题：
-
-1. HTTP 服务器运行在 **Tokio 工作线程**（在 `dcc-mcp-core` 内部）
-2. 当 Action 被调用时，通过 `maya.utils.executeDeferred` 分发到 Maya 主线程
-3. 通过 `maya.utils.executeDeferred` 安装的轮询回调在每个 UI 帧排空待处理队列
-
-这意味着：
-- Action 即使来自多线程 AI 客户端连接也是安全的
-- Action 脚本中不需要添加任何线程保护
-- 耗时操作会占用主线程直到完成
-
-## 技能发现搜索路径
-
-技能按以下优先级顺序发现（从高到低）：
-
-1. 传给 `start_server()` 或 `register_builtin_actions()` 的 `extra_skill_paths`
-2. 本包内置的 `skills/` 目录
-3. `DCC_MCP_MAYA_SKILL_PATHS` 环境变量（Maya 专用）
-4. `DCC_MCP_SKILL_PATHS` 环境变量（全局备用）
-5. 平台默认技能目录（`dcc_mcp_core.get_skills_dir()`）
-
-## 开发时热重载
-
-开发自定义技能时，可启用技能监视器实现热重载（需要 `dcc-mcp-core >= 0.12.10`）：
-
-```python
-from dcc_mcp_core import McpHttpServer, ActionRegistry, McpHttpConfig
-
-config = McpHttpConfig(port=8765, server_name="maya-dev")
-registry = ActionRegistry()
-server = McpHttpServer(registry, config)
-
-server.discover(extra_paths=["/studio/my-skill"], dcc_name="maya")
-server.enable_skill_watcher(True)  # 文件变更时热重载
-handle = server.start()
-```
-
-## 日志调试
-
-启用调试日志以追踪 Action 调用：
+启用调试日志进行故障排查：
 
 ```python
 import logging
@@ -173,18 +144,28 @@ logging.getLogger("dcc_mcp_maya").setLevel(logging.DEBUG)
 logging.getLogger("dcc_mcp_core").setLevel(logging.DEBUG)
 ```
 
-输出到 Maya 的输出窗口/脚本编辑器控制台。
+## 生产环境注意事项
 
-## 插件模式
+### 安全
 
-参阅[安装指南 — 方式二](/zh/guide/installation)了解如何以 Maya 插件方式加载。插件在加载时从环境变量读取 `DCC_MCP_MAYA_PORT`。
+MCP 服务器默认监听 `127.0.0.1`（本地回环）— **无法从其他机器访问**。如需网络访问，请使用带认证的反向代理。
 
-加载插件前配置端口：
+### 工作室部署
+
+在 `userSetup.py` 中使用条件启动：
 
 ```python
+# userSetup.py
 import os
-os.environ["DCC_MCP_MAYA_PORT"] = "9000"
+import maya.utils
 
-import maya.cmds as cmds
-cmds.loadPlugin("dcc_mcp_maya")
+def _start_mcp_if_enabled():
+    if os.environ.get("DCC_MCP_MAYA_AUTOSTART", "1") == "0":
+        return
+    import dcc_mcp_maya
+    port = int(os.environ.get("DCC_MCP_MAYA_PORT", "8765"))
+    handle = dcc_mcp_maya.start_server(port=port)
+    print(f"[studio] Maya MCP: {handle.mcp_url()}")
+
+maya.utils.executeDeferred(_start_mcp_if_enabled)
 ```

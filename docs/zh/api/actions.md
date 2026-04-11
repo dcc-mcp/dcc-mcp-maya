@@ -1,64 +1,110 @@
-# Action API 参考（中文）
+# Action API 参考
 
-参阅英文版 [Actions API Reference](/api/actions) 获取完整文档。
+详见英文文档 [Action API Reference](/api/actions)，下方为中文摘要说明。
 
-本页提供中文说明补充。
+## 命名规则
 
-## Action 脚本规范
-
-每个 `scripts/` 下的 `.py` 文件必须定义一个**与文件名相同的顶层函数**。
-
-### 最小示例
-
-```python
-# scripts/create_sphere.py
-"""在 Maya 场景中创建多边形球体。"""
-
-
-def create_sphere(
-    name: str = "pSphere1",
-    radius: float = 1.0,
-    subdivisions_x: int = 20,
-    subdivisions_y: int = 20,
-    translate: list = None,
-) -> dict:
-    """创建多边形球体。
-
-    Args:
-        name: 新球体的名称。
-        radius: 球体半径（场景单位）。
-        subdivisions_x: 经度细分数。
-        subdivisions_y: 纬度细分数。
-        translate: [x, y, z] 位置，默认 [0, 0, 0]。
-
-    Returns:
-        dict: ``{"name": str, "success": bool, "message": str}``
-    """
-    import maya.cmds as cmds
-
-    if translate is None:
-        translate = [0.0, 0.0, 0.0]
-
-    sphere, _ = cmds.polySphere(
-        name=name,
-        radius=radius,
-        subdivisionsX=subdivisions_x,
-        subdivisionsY=subdivisions_y,
-    )
-    cmds.move(*translate, sphere)
-
-    return {
-        "name": sphere,
-        "success": True,
-        "message": f"在 {translate} 创建了球体 '{sphere}'",
-    }
+```
+{skill_name.replace("-", "_")}__{script_stem}
 ```
 
-## 关键规则
+| Skill 包 | MCP 工具前缀 |
+|----------|-------------|
+| `maya-scene` | `maya_scene__` |
+| `maya-primitives` | `maya_primitives__` |
+| `maya-animation` | `maya_animation__` |
+| `maya-cameras` | `maya_cameras__` |
+| `maya-lighting` | `maya_lighting__` |
+| `maya-render` | `maya_render__` |
+| `maya-materials` | `maya_materials__` |
+| `maya-mesh-ops` | `maya_mesh_ops__` |
+| `maya-uv-ops` | `maya_uv_ops__` |
+| `maya-rigging` | `maya_rigging__` |
 
-1. **延迟导入** — 在函数内部导入 `maya.cmds`，不在模块级别导入
-2. **返回可序列化的 dict** — 包含 `success` 和 `message` 字段
-3. **用异常表示错误** — `dcc-mcp-core` 会捕获并返回 MCP 错误响应
-4. **模块文档字符串** — 第一行成为 MCP 工具描述
+## 关键 Action 速览
 
-详细规范见英文 [Actions API Reference](/api/actions)。
+### `maya_scene__new_scene`
+
+创建新的空 Maya 场景。
+
+**参数：** 无
+
+**返回值：**
+
+```json
+{ "success": true }
+```
+
+---
+
+### `maya_primitives__create_sphere`
+
+创建多边形球体。
+
+**参数：**
+
+| 名称 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `name` | str | `"pSphere1"` | 节点名称 |
+| `radius` | float | `1.0` | 球体半径 |
+| `subdiv_x` | int | `20` | X 方向细分数 |
+| `subdiv_y` | int | `20` | Y 方向细分数 |
+
+---
+
+### `maya_animation__set_keyframe`
+
+在指定时间给对象属性打关键帧。
+
+**参数：**
+
+| 名称 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `object_name` | str | — | 目标对象 |
+| `time` | float | — | 帧号 |
+| `attribute` | str | `null` | 属性名（如 `"translateY"`）；省略则打所有属性 |
+| `value` | float | `null` | 要设置的值；省略则使用当前值 |
+
+---
+
+### `maya_render__playblast`
+
+将活动视口捕获为 base64 编码的 PNG。
+
+**参数：**
+
+| 名称 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `width` | int | `960` | 图像宽度 |
+| `height` | int | `540` | 图像高度 |
+| `camera` | str | _(活动摄像机)_ | 摄像机名称 |
+| `display_mode` | str | `"smoothShaded"` | 显示模式 |
+
+**返回值：**
+
+```json
+{
+  "image": "iVBORw0KGgoAAAANSUhEUgA...",
+  "width": 960,
+  "height": 540,
+  "format": "png",
+  "encoding": "base64"
+}
+```
+
+---
+
+### `maya_lighting__create_light`
+
+创建 Maya 灯光。
+
+**参数：**
+
+| 名称 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `light_type` | str | `"directionalLight"` | 灯光类型 |
+| `name` | str | `null` | 节点名称 |
+| `intensity` | float | `1.0` | 灯光强度 |
+| `color` | list[float] | `[1, 1, 1]` | RGB 颜色（0–1） |
+| `position` | list[float] | `[0, 0, 0]` | 世界空间位置 |
+| `rotation` | list[float] | `[0, 0, 0]` | 世界空间旋转（度） |

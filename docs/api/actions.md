@@ -1,176 +1,256 @@
-# Actions API Reference
+# Action API Reference
 
-This page documents the action script interface contract — what every action script must implement to be registered as an MCP tool.
-
-## Action Script Contract
-
-Each `.py` file inside a skill's `scripts/` directory must define a **top-level function with the same name as the file stem**.
-
-### Minimal Example
-
-```python
-# scripts/create_sphere.py
-"""Create a polygon sphere in the Maya scene."""
-
-
-def create_sphere(
-    name: str = "pSphere1",
-    radius: float = 1.0,
-    subdivisions_x: int = 20,
-    subdivisions_y: int = 20,
-    translate: list = None,
-) -> dict:
-    """Create a polygon sphere.
-
-    Args:
-        name: Name for the new sphere.
-        radius: Sphere radius in scene units.
-        subdivisions_x: Longitude subdivisions.
-        subdivisions_y: Latitude subdivisions.
-        translate: [x, y, z] position. Defaults to [0, 0, 0].
-
-    Returns:
-        dict: ``{"name": str, "success": bool, "message": str}``
-    """
-    import maya.cmds as cmds
-
-    if translate is None:
-        translate = [0.0, 0.0, 0.0]
-
-    sphere, _ = cmds.polySphere(
-        name=name,
-        radius=radius,
-        subdivisionsX=subdivisions_x,
-        subdivisionsY=subdivisions_y,
-    )
-    cmds.move(*translate, sphere)
-
-    return {
-        "name": sphere,
-        "success": True,
-        "message": f"Created sphere '{sphere}' at {translate}",
-    }
-```
+Technical reference for all built-in actions. Each action is a Python module with a `main()` function.
 
 ## Naming Convention
 
-| Component | Rule |
-|-----------|------|
-| File name | `snake_case.py` |
-| Function name | Must match file stem exactly |
-| MCP tool name | `{skill_name.replace("-","_")}__{script_stem}` |
+```
+{skill_name.replace("-", "_")}__{script_stem}
+```
 
-Example: skill `maya-primitives`, script `create_sphere.py` → MCP tool `maya_primitives__create_sphere`
+| Skill Package | MCP Tool Prefix |
+|---------------|-----------------|
+| `maya-scene` | `maya_scene__` |
+| `maya-primitives` | `maya_primitives__` |
+| `maya-animation` | `maya_animation__` |
+| `maya-cameras` | `maya_cameras__` |
+| `maya-lighting` | `maya_lighting__` |
+| `maya-render` | `maya_render__` |
+| `maya-materials` | `maya_materials__` |
+| `maya-mesh-ops` | `maya_mesh_ops__` |
+| `maya-uv-ops` | `maya_uv_ops__` |
+| `maya-rigging` | `maya_rigging__` |
 
-## Parameter Types
+## Scene Actions
 
-MCP serializes all parameters as JSON. Supported Python type annotations:
+### `maya_scene__new_scene`
 
-| Python Type | JSON | Example |
-|-------------|------|---------|
-| `str` | string | `"pSphere1"` |
-| `int` | number | `20` |
-| `float` | number | `1.5` |
-| `bool` | boolean | `true` |
-| `list` | array | `[0, 1, 0]` |
-| `dict` | object | `{"key": "val"}` |
-| `Optional[str]` | string or null | `null` |
+Create a new empty Maya scene.
 
-## Return Value
+**Parameters:** none
 
-Actions **must** return a JSON-serializable value. The recommended convention is a `dict` with at minimum:
+**Returns:**
 
-```python
+```json
+{ "success": true }
+```
+
+---
+
+### `maya_scene__save_scene`
+
+Save the current scene.
+
+**Parameters:**
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `file_path` | str | _(current)_ | Save path; if omitted, saves to current file |
+| `file_type` | str | `"mayaAscii"` | `"mayaAscii"` or `"mayaBinary"` |
+
+**Returns:**
+
+```json
+{ "success": true, "path": "/path/to/scene.ma" }
+```
+
+---
+
+### `maya_scene__open_scene`
+
+Open a Maya scene file.
+
+**Parameters:**
+
+| Name | Type | Description |
+|------|------|-------------|
+| `file_path` | str | Path to `.ma` or `.mb` file |
+
+---
+
+### `maya_scene__list_objects`
+
+List scene objects.
+
+**Parameters:**
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `type_filter` | str | `""` | Maya node type filter (e.g. `"mesh"`, `"joint"`) |
+| `long_names` | bool | `false` | Return full DAG paths |
+
+**Returns:**
+
+```json
+{ "objects": ["pSphere1", "pCube1"], "count": 2 }
+```
+
+---
+
+### `maya_scene__get_session_info`
+
+Get Maya session information.
+
+**Returns:**
+
+```json
 {
-    "success": True,   # or False
-    "message": "Human-readable result description",
+  "maya_version": "2024.1",
+  "scene_path": "/path/scene.ma",
+  "fps": 24.0,
+  "start_frame": 1,
+  "end_frame": 120,
+  "object_count": 42
 }
 ```
 
-Additional fields are passed through to the MCP host as-is.
+---
 
-### Error Handling
+### `maya_scene__get_bounding_box`
 
-Raise a standard Python exception for errors — `dcc-mcp-core` catches it and returns an MCP error response:
+Query the world-space bounding box of an object.
 
-```python
-def set_keyframe(object_name: str, attribute: str, time: float, value: float) -> dict:
-    import maya.cmds as cmds
+**Parameters:**
 
-    if not cmds.objExists(object_name):
-        raise ValueError(f"Object '{object_name}' does not exist")
+| Name | Type | Description |
+|------|------|-------------|
+| `object_name` | str | Maya object name |
 
-    cmds.setKeyframe(object_name, attribute=attribute, time=time, value=value)
-    return {"success": True, "message": f"Keyframe set at time {time}"}
+**Returns:**
+
+```json
+{
+  "min": [-1.0, -1.0, -1.0],
+  "max": [1.0, 1.0, 1.0],
+  "center": [0.0, 0.0, 0.0],
+  "size": [2.0, 2.0, 2.0]
+}
 ```
 
-## Module-Level Docstring
+## Primitive Actions
 
-The module-level docstring (first line) becomes the MCP tool description shown to the AI host:
+### `maya_primitives__create_sphere`
 
-```python
-"""Create a polygon sphere in the Maya scene."""  # ← This becomes the tool description
+Create a polygon sphere.
 
-def create_sphere(...) -> dict:
-    ...
+**Parameters:**
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `name` | str | `"pSphere1"` | Node name |
+| `radius` | float | `1.0` | Sphere radius |
+| `subdiv_x` | int | `20` | Subdivisions along X |
+| `subdiv_y` | int | `20` | Subdivisions along Y |
+
+**Returns:**
+
+```json
+{ "success": true, "name": "pSphere1", "shape": "pSphereShape1" }
 ```
 
-## Lazy Imports
+---
 
-Always import `maya.cmds` (and other Maya modules) **inside the function**, not at module level. This allows the scripts to be imported and parsed during skill discovery without requiring a running Maya session:
+### `maya_primitives__set_transform`
 
-```python
-# ✅ Correct
-def create_sphere(...):
-    import maya.cmds as cmds
-    cmds.polySphere(...)
+Set translate/rotate/scale on an object.
 
-# ❌ Incorrect — fails during discovery outside Maya
-import maya.cmds as cmds
+**Parameters:**
 
-def create_sphere(...):
-    cmds.polySphere(...)
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `object_name` | str | — | Target object |
+| `translate` | list[float] | `null` | `[tx, ty, tz]` |
+| `rotate` | list[float] | `null` | `[rx, ry, rz]` in degrees |
+| `scale` | list[float] | `null` | `[sx, sy, sz]` |
+
+## Animation Actions
+
+### `maya_animation__set_keyframe`
+
+Set a keyframe on an object at a given time.
+
+**Parameters:**
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `object_name` | str | — | Target object |
+| `time` | float | — | Frame number |
+| `attribute` | str | `null` | Attribute name (e.g. `"translateY"`); all if omitted |
+| `value` | float | `null` | Value to set; current value if omitted |
+
+---
+
+### `maya_animation__bake_simulation`
+
+Bake simulation or constraints to keyframes.
+
+**Parameters:**
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `objects` | list[str] | — | Objects to bake |
+| `start_frame` | float | — | Bake start frame |
+| `end_frame` | float | — | Bake end frame |
+| `step` | float | `1.0` | Sample every N frames |
+| `simulation` | bool | `true` | Include simulation evaluation |
+
+## Render Actions
+
+### `maya_render__playblast`
+
+Capture the active viewport as a base64-encoded PNG.
+
+**Parameters:**
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `width` | int | `960` | Image width |
+| `height` | int | `540` | Image height |
+| `camera` | str | _(active)_ | Camera name |
+| `display_mode` | str | `"smoothShaded"` | Display mode |
+
+**Returns:**
+
+```json
+{
+  "image": "iVBORw0KGgoAAAANSUhEUgA...",
+  "width": 960,
+  "height": 540,
+  "format": "png",
+  "encoding": "base64"
+}
 ```
 
-## Complete Example: get_session_info
+---
 
-```python
-"""Return Maya version, scene path, and basic session statistics."""
+### `maya_render__set_render_settings`
 
+Configure render settings.
 
-def get_session_info() -> dict:
-    """Return Maya version, current scene path, FPS, and object counts.
+**Parameters:**
 
-    Returns:
-        dict with keys:
-            - maya_version (str): Maya version string, e.g. "2026"
-            - scene_path (str): Absolute path to current scene, or "" if unsaved
-            - fps (float): Frames per second
-            - total_objects (int): Total DAG object count
-            - mesh_count (int): Number of polygon meshes
-            - camera_count (int): Number of cameras
-    """
-    import maya.cmds as cmds
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `width` | int | `null` | Render width |
+| `height` | int | `null` | Render height |
+| `start_frame` | float | `null` | Start frame |
+| `end_frame` | float | `null` | End frame |
+| `renderer` | str | `null` | `"arnold"`, `"vray"`, `"redshift"`, `"mayaHardware2"` |
+| `image_format` | str | `null` | `"png"`, `"exr"`, `"jpg"` |
 
-    scene_path = cmds.file(query=True, sceneName=True) or ""
-    fps_map = {
-        "film": 24.0, "pal": 25.0, "ntsc": 30.0,
-        "show": 48.0, "palf": 50.0, "ntscf": 60.0,
-        "game": 15.0,
-    }
-    fps_name = cmds.currentUnit(query=True, time=True)
-    fps = fps_map.get(fps_name, 24.0)
+## Lighting Actions
 
-    all_objects = cmds.ls(dag=True, long=True) or []
-    meshes = cmds.ls(type="mesh", long=True) or []
-    cameras = cmds.ls(type="camera", long=True) or []
+### `maya_lighting__create_light`
 
-    return {
-        "maya_version": cmds.about(version=True),
-        "scene_path": scene_path,
-        "fps": fps,
-        "total_objects": len(all_objects),
-        "mesh_count": len(meshes),
-        "camera_count": len(cameras),
-    }
-```
+Create a Maya light.
+
+**Parameters:**
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `light_type` | str | `"directionalLight"` | `directionalLight`, `pointLight`, `spotLight`, `areaLight`, `ambientLight` |
+| `name` | str | `null` | Node name |
+| `intensity` | float | `1.0` | Light intensity |
+| `color` | list[float] | `[1, 1, 1]` | RGB color (0–1) |
+| `position` | list[float] | `[0, 0, 0]` | World position |
+| `rotation` | list[float] | `[0, 0, 0]` | World rotation in degrees |

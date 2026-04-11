@@ -1,69 +1,44 @@
-# Getting Started
+# Quick Start
 
-Get `dcc-mcp-maya` running and connected to an AI host in under 5 minutes.
+Get Maya talking to an MCP host in under 5 minutes.
 
 ## Prerequisites
 
 - Maya 2020 or later (Python 3.7+)
-- An MCP-compatible AI host: [Claude Desktop](https://claude.ai/download), [Cursor](https://cursor.com), or [OpenClaw](https://github.com/loonghao/openclaw)
+- An MCP-compatible host: [Claude Desktop](https://claude.ai/download), [Cursor](https://cursor.sh/), or [OpenClaw](https://github.com/loonghao/openclaw)
 
-## Step 1 — Install the Package
+## Step 1 — Install
 
-Open a terminal and install into Maya's Python:
+Install into Maya's Python interpreter:
 
 ```bash
-# Using mayapy directly
 mayapy -m pip install dcc-mcp-maya
-
-# Or using the full path (Windows example)
-"C:\Program Files\Autodesk\Maya2026\bin\mayapy.exe" -m pip install dcc-mcp-maya
 ```
 
-::: tip Maya 2020–2022
-These ship with Python 3.7. The package is compatible, but you may need to upgrade `pip` first:
+For a specific Maya version (Windows example):
+
 ```bash
-mayapy -m pip install --upgrade pip
+"C:\Program Files\Autodesk\Maya2024\bin\mayapy.exe" -m pip install dcc-mcp-maya
 ```
-:::
 
-## Step 2 — Start the MCP Server
+## Step 2 — Start the Server
 
-Inside Maya's **Script Editor** (Python tab), run:
+Open Maya's **Script Editor** (Python tab) and run:
 
 ```python
 import dcc_mcp_maya
 
 handle = dcc_mcp_maya.start_server(port=8765)
-print(handle.mcp_url())  # http://127.0.0.1:8765/mcp
+print(handle.mcp_url())   # http://127.0.0.1:8765/mcp
 ```
 
-You should see output like:
-```
-http://127.0.0.1:8765/mcp
-```
+The server starts immediately in a background thread. Maya remains fully interactive.
 
-The server is now running. Maya continues to work normally — the server runs on a background thread.
-
-### Auto-start via userSetup.py
-
-To start the server every time Maya launches, add to your `userSetup.py`:
-
-```python
-import maya.utils
-
-def _start_mcp():
-    import dcc_mcp_maya
-    dcc_mcp_maya.start_server(port=8765)
-
-maya.utils.executeDeferred(_start_mcp)
-```
-
-## Step 3 — Configure Your AI Host
+## Step 3 — Configure Your MCP Host
 
 ### Claude Desktop
 
-Edit `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) or
-`%APPDATA%\Claude\claude_desktop_config.json` (Windows):
+Add to `claude_desktop_config.json`:
 
 ```json
 {
@@ -75,11 +50,15 @@ Edit `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) o
 }
 ```
 
-Restart Claude Desktop. You should see **maya** listed as a connected MCP server.
+**File locations:**
+- macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
+- Windows: `%APPDATA%\Claude\claude_desktop_config.json`
+
+Restart Claude Desktop after editing.
 
 ### Cursor
 
-In Cursor settings → MCP → Add server:
+In Cursor settings → MCP Servers, add:
 
 ```json
 {
@@ -89,67 +68,43 @@ In Cursor settings → MCP → Add server:
 }
 ```
 
-### Any MCP-Compatible Host
+### Any MCP Client
 
-Point it at:
+The server exposes a single endpoint:
+
 ```
 http://127.0.0.1:8765/mcp
 ```
 
-## Step 4 — Run Your First Action
+## Step 4 — Execute Your First Action
 
-In Claude Desktop, type:
+In Claude Desktop (or your MCP host), try:
 
-> Create a red polygon sphere named "hero_ball" at position (0, 5, 0)
+> **"Create a red sphere in Maya"**
 
-Claude will call:
-1. `maya_primitives__create_sphere` to create the sphere
-2. `maya_materials__create_material` to create a red Lambert material
-3. `maya_materials__assign_material` to assign it
-4. `maya_scene__set_transform` (or `maya_primitives__set_transform`) to position it
+Claude will call the `maya_primitives__create_sphere` and `maya_materials__create_material` tools automatically.
 
-You'll see the sphere appear in your Maya viewport in real time.
+Or be more specific:
 
-## Step 5 — Stop the Server
+> **"Create a polygon sphere with radius 2 at position (0, 1, 0) and name it 'ball'"**
+
+## Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `DCC_MCP_MAYA_PORT` | `8765` | TCP port for the MCP server |
+| `DCC_MCP_MAYA_SERVER_NAME` | `maya-mcp` | Name shown in MCP `initialize` response |
+| `DCC_MCP_MAYA_SKILL_PATHS` | _(empty)_ | Extra skill directories (colon/semicolon separated) |
+
+## Stop the Server
 
 ```python
 import dcc_mcp_maya
 dcc_mcp_maya.stop_server()
 ```
 
-## Environment Variables
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `DCC_MCP_MAYA_PORT` | `8765` | TCP port |
-| `DCC_MCP_MAYA_SERVER_NAME` | `maya-mcp` | Name shown in MCP `initialize` |
-| `DCC_MCP_MAYA_SKILL_PATHS` | — | Extra skill directories (`;`-separated) |
-| `DCC_MCP_SKILL_PATHS` | — | Global fallback skill paths |
-
-## Troubleshooting
-
-**Port already in use:**
-```python
-handle = dcc_mcp_maya.start_server(port=0)  # random available port
-print(handle.mcp_url())
-```
-
-**Server not found by host:**
-Check Maya's Script Editor output for startup errors. The server logs at `INFO` level:
-```
-Maya MCP server started at http://127.0.0.1:8765/mcp
-```
-
-**Actions not loading:**
-```python
-import logging
-logging.basicConfig(level=logging.DEBUG)
-import dcc_mcp_maya
-dcc_mcp_maya.start_server()
-```
-
 ## Next Steps
 
-- [Available Actions](/guide/actions) — Full list of built-in MCP tools
-- [MCP Tools Guide](/guide/mcp-tools) — How to use tools from the AI side
-- [Advanced Usage](/guide/advanced) — Custom skills, plugin mode, hot-reload
+- [Installation Guide](./installation) — plugin mode, userSetup.py, multi-Maya setup
+- [MCP Tools Guide](./mcp-tools) — full list of available tools with examples
+- [Advanced Usage](./advanced) — custom skills, main-thread scheduling

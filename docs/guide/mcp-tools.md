@@ -1,110 +1,151 @@
-# MCP Tools for AI Agents
+# MCP Tools Guide
 
-This guide is for **AI Agent users** (non-developers) who want to use natural language to control Maya via Claude Desktop, Cursor, or any MCP-compatible host.
+This guide is for users who want to control Maya using natural language through an AI assistant (Claude, Cursor, etc.). No Python knowledge required.
 
 ## How It Works
 
-Once `dcc-mcp-maya` is running inside Maya and your AI host is configured, you can describe tasks in plain English. The AI model translates your request into one or more MCP tool calls.
+Once the `dcc-mcp-maya` server is running inside Maya, your AI assistant gains access to **60+ Maya tools**. Just describe what you want in plain English.
 
-You don't need to know the action names — just describe what you want.
+## Scene Operations
 
-## Example Conversations
+### Create and Manage Scenes
 
-### Creating Objects
+```
+"Create a new empty scene"
+"Save the current scene to /projects/my_scene.ma"
+"Open the file /projects/character.mb"
+"What's the current frame rate? Change it to 30fps"
+```
 
-> **You:** Create a polygon sphere named "planet" with 40 subdivisions, radius 3, at position (0, 0, 0)
+### Browse the Scene
 
-The AI calls `maya_primitives__create_sphere` with the appropriate parameters.
+```
+"List all objects in the scene"
+"Show me the scene hierarchy"
+"How many objects are in the scene?"
+"Select all mesh objects"
+"What is selected right now?"
+```
 
----
+## Creating Objects
 
-> **You:** Make a grid of 5x5 cubes, each 1 unit apart
+### Basic Geometry
 
-The AI calls `maya_primitives__create_cube` in a loop (via `maya_expressions__execute_python`).
+```
+"Create a sphere"
+"Create a cube with width 2 and name it 'table'"
+"Make a ground plane, scale it to 10x10"
+"Create a cylinder at position (3, 0, 0)"
+```
 
-### Materials and Shading
+### Transforms
 
-> **You:** Create a gold metallic material and apply it to all selected objects
+```
+"Move pSphere1 to position (0, 5, 0)"
+"Rotate the cube 45 degrees on the Y axis"
+"Scale pPlane1 to 5 on X and Z"
+"Freeze the transforms on all selected objects"
+"Center the pivot on my_mesh"
+```
 
-The AI calls:
-1. `maya_materials__create_material` (aiStandardSurface)
-2. `maya_materials__set_material_attribute` (metalness=1, base_color=warm gold)
-3. `maya_materials__assign_material` (to selected objects)
+### Object Management
 
----
+```
+"Rename pSphere1 to 'ball'"
+"Duplicate the cube and move it 3 units to the right"
+"Delete pCone1"
+"Group sphere1, cube1, and cylinder1 into a group called 'objects'"
+"Parent sphere1 under group1"
+"Hide the camera_rig group"
+"Lock the transform of ground_plane"
+```
 
-> **You:** Make the hero_ball object red and shiny
+## Materials and Shading
 
-### Animation
+```
+"Create a red Lambert material called 'redMat'"
+"Make a shiny gold material"
+"Assign redMat to pSphere1"
+"Create a transparent material and assign it to the glass object"
+"List all materials in the scene"
+"Change the color of material1 to blue"
+```
 
-> **You:** Animate the "camera1" to orbit around the origin over 120 frames
+## Animation
 
-> **You:** Bake all constraints on the character rig to keyframes
+```
+"Set a keyframe on pSphere1 at frame 1"
+"Set the translate Y of ball to 0 at frame 1, then 5 at frame 24, then 0 at frame 48"
+"Set the timeline from frame 1 to 120"
+"Go to frame 50"
+"What frame am I on?"
+"Bake the simulation on pCloth1 from frame 1 to 100"
+"Delete all keyframes on pSphere1 between frames 20 and 40"
+"Export animation curves from character_ctrl to /exports/walk_cycle.anim"
+```
 
-> **You:** Export the animation for "char_root" as an .anim file to C:/exports/
+## Lighting
 
-### Scene Management
+```
+"Add a directional light pointing down"
+"Create a point light at position (5, 10, 5) with intensity 2"
+"Make the directional light warmer (orange-ish)"
+"List all lights in the scene"
+"Turn off shadows on light1"
+```
 
-> **You:** Take a screenshot of the current viewport
+## Cameras
 
-The AI calls `maya_render__capture_viewport` and returns the image.
+```
+"Create a camera at position (10, 5, 10) looking at the origin"
+"Set the focal length of camera1 to 85mm"
+"Switch the viewport to the render camera"
+"List all cameras in the scene"
+```
 
----
+## Render and Capture
 
-> **You:** Save the scene to "C:/projects/hero_shot/v003.ma"
+```
+"Take a screenshot of the current view"
+"Capture the scene from the front camera"
+"Set the render resolution to 1920x1080"
+"Set the renderer to Arnold"
+"What are the current render settings?"
+```
 
-> **You:** What objects are in the scene? List them by type.
+## Advanced Workflows
 
-### Rigging
+### Full Asset Creation
 
-> **You:** Bind "hero_mesh" to the skeleton starting from "root_jnt"
+```
+"Create a table: a flat cube for the top (scale 4x0.2x2) at height 2,
+ and 4 cylinder legs (scale 0.1x1x0.1) at each corner.
+ Apply a brown wood material to everything."
+```
 
-> **You:** Copy skin weights from "hero_mesh_v1" to "hero_mesh_v2"
+### Animation Setup
 
-### Rendering
+```
+"I need a bouncing ball animation:
+ - Create a sphere called 'ball' at (0,0,0)
+ - Set keyframes: Y=0 at frame 1, Y=5 at frame 12, Y=0 at frame 24
+ - Set the timeline to 1-48
+ - Take a screenshot of the result"
+```
 
-> **You:** Set the render resolution to 1920x1080 and frame range to 1-240
+### Scene Inspection
 
-> **You:** Add a Z-depth AOV to the Arnold render settings
+```
+"Give me a full report on the current scene:
+ - How many objects are there?
+ - What materials are used?
+ - What are the render settings?
+ - Show me a screenshot"
+```
 
-## Prompt Tips
+## Tips
 
-### Be Specific About Names
-
-Instead of:
-> Move the ball up
-
-Say:
-> Move "hero_ball" up by 5 units (translate Y += 5)
-
-### Reference Object Types
-
-> Select all polygon meshes in the scene
-
-> Create an aiStandardSurface material (not Lambert)
-
-### Combine Operations
-
-> Import the file "C:/assets/tree.fbx", rename it "bg_tree_01", place it at (10, 0, 5), and assign the "bark_mat" material to it
-
-The AI decomposes this into 4 sequential tool calls.
-
-### Ask for Information First
-
-> What's in the current scene? Then create a group called "environment" and put all static meshes in it.
-
-## Supported AI Hosts
-
-| Host | Status | Notes |
-|------|--------|-------|
-| [Claude Desktop](https://claude.ai/download) | ✅ Recommended | Best multi-tool reasoning |
-| [Cursor](https://cursor.com) | ✅ | Good for scripting workflows |
-| [OpenClaw](https://github.com/loonghao/openclaw) | ✅ | Lightweight CLI host |
-| Any OpenAI-compatible host | ⚠️ | Must support MCP Streamable HTTP |
-
-## Limitations
-
-- Actions run on **Maya's main thread** — very long operations may briefly pause the UI
-- `capture_viewport` returns a **base64-encoded PNG** — not all hosts render images inline
-- MEL/Python execution (`execute_mel`, `execute_python`) gives the AI full Maya access — use in trusted environments only
-- Undo is available in Maya but not tracked by the MCP server
+1. **Be specific about object names** — use the exact name Maya shows (e.g. `pSphere1`, not just `sphere`)
+2. **Chain operations** — you can describe multi-step workflows in one message
+3. **Ask for confirmation** — "show me a screenshot" after operations to verify results
+4. **Use natural units** — "1 unit" = 1 Maya unit (typically 1 cm or 1 m depending on your scene scale)

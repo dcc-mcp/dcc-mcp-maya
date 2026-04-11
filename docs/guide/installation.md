@@ -1,99 +1,74 @@
-# Installation
-
-Detailed installation instructions for all supported Maya versions.
+# Installation Guide
 
 ## Requirements
 
-| Maya Version | Python | Status |
-|---|---|---|
-| Maya 2026 | 3.11 | ✅ Fully supported |
-| Maya 2025 | 3.11 | ✅ Fully supported |
-| Maya 2024 | 3.10 | ✅ Fully supported |
-| Maya 2023 | 3.9 | ✅ Fully supported |
-| Maya 2022 | 3.7 | ✅ Supported |
-| Maya 2020 | 3.7 | ✅ Supported |
+- **Maya**: 2020, 2022, 2023, 2024, or 2025
+- **Python**: 3.7 – 3.12 (embedded in Maya)
+- **dcc-mcp-core**: ≥ 0.12.12 (auto-installed as dependency)
 
-## Method 1: pip into mayapy (Recommended)
+## Method 1 — pip into mayapy
 
-This is the simplest method. It installs `dcc-mcp-maya` into Maya's own Python environment.
+The simplest approach. Use Maya's own Python interpreter:
 
-### Windows
-
-```powershell
-# Default Maya 2026 location
-& "C:\Program Files\Autodesk\Maya2026\bin\mayapy.exe" -m pip install dcc-mcp-maya
-
-# Or if mayapy is on PATH
+```bash
+# Generic
 mayapy -m pip install dcc-mcp-maya
+
+# Windows — Maya 2024
+"C:\Program Files\Autodesk\Maya2024\bin\mayapy.exe" -m pip install dcc-mcp-maya
+
+# macOS — Maya 2024
+/Applications/Autodesk/maya2024/Maya.app/Contents/bin/mayapy -m pip install dcc-mcp-maya
 ```
 
-### macOS
-
-```bash
-/Applications/Autodesk/maya2026/Maya.app/Contents/bin/mayapy -m pip install dcc-mcp-maya
-```
-
-### Linux
-
-```bash
-/usr/autodesk/maya2026/bin/mayapy -m pip install dcc-mcp-maya
-```
-
-### Upgrading
-
-```bash
-mayapy -m pip install --upgrade dcc-mcp-maya
-```
-
-### Verifying the Installation
+Verify installation:
 
 ```bash
 mayapy -c "import dcc_mcp_maya; print(dcc_mcp_maya.__version__)"
 ```
 
-## Method 2: Maya Plugin
+## Method 2 — Maya Plugin
 
-Load the server as a Maya plugin for automatic startup.
+Copy the plugin file to a directory on `MAYA_PLUG_IN_PATH`, then load it through the Plug-in Manager.
 
-### Setup
+1. Copy `maya/plugin/dcc_mcp_maya.py` to your Maya plugins folder, e.g.:
+   - Windows: `%USERPROFILE%\Documents\maya\2024\plug-ins\`
+   - macOS: `~/Library/Preferences/Autodesk/maya/2024/plug-ins/`
 
-1. Copy `maya/plugin/dcc_mcp_maya.py` from the repository to a directory on `MAYA_PLUG_IN_PATH`.
+2. Open **Window → Settings/Preferences → Plug-in Manager**
 
-   Common paths:
-   - Windows: `%USERPROFILE%\Documents\maya\2026\plug-ins\`
-   - macOS: `~/Library/Preferences/Autodesk/maya/2026/plug-ins/`
-   - Linux: `~/maya/2026/plug-ins/`
+3. Find `dcc_mcp_maya` and check **Loaded** (and optionally **Auto load**)
 
-2. In Maya: **Window > Settings/Preferences > Plug-in Manager**
+The server starts automatically on plugin load using the default port 8765.
 
-3. Find `dcc_mcp_maya` in the list and check **Loaded** (and optionally **Auto load**).
+## Method 3 — userSetup.py (Auto-start)
 
-The server starts automatically when the plugin loads on port `8765` (or the value of `DCC_MCP_MAYA_PORT`).
-
-## Method 3: userSetup.py Auto-start
-
-For a lightweight setup without the plugin:
+To start the server automatically every time Maya opens, add to `userSetup.py`:
 
 ```python
-# ~/maya/scripts/userSetup.py
+# userSetup.py
 import maya.utils
 
-def _start_mcp_server():
-    try:
-        import dcc_mcp_maya
-        handle = dcc_mcp_maya.start_server(port=8765)
-        print(f"[dcc-mcp-maya] Server ready at {handle.mcp_url()}")
-    except Exception as e:
-        print(f"[dcc-mcp-maya] Failed to start: {e}")
+def _start_mcp():
+    import dcc_mcp_maya
+    handle = dcc_mcp_maya.start_server(port=8765)
+    print(f"[dcc-mcp-maya] Server started: {handle.mcp_url()}")
 
-maya.utils.executeDeferred(_start_mcp_server)
+maya.utils.executeDeferred(_start_mcp)
 ```
 
-## Installing in a Specific Maya Version
+**File location:**
+- Windows: `%USERPROFILE%\Documents\maya\scripts\userSetup.py`
+- macOS: `~/Library/Preferences/Autodesk/maya/scripts/userSetup.py`
 
-If you have multiple Maya versions:
+## Multiple Maya Versions
+
+Each Maya version has its own Python interpreter. Install separately per version:
 
 ```bash
+# Maya 2022
+"C:\Program Files\Autodesk\Maya2022\bin\mayapy.exe" -m pip install dcc-mcp-maya
+
 # Maya 2024
 "C:\Program Files\Autodesk\Maya2024\bin\mayapy.exe" -m pip install dcc-mcp-maya
 
@@ -101,31 +76,36 @@ If you have multiple Maya versions:
 "C:\Program Files\Autodesk\Maya2025\bin\mayapy.exe" -m pip install dcc-mcp-maya
 ```
 
-Each Maya version has its own Python environment.
+If running multiple Maya instances simultaneously, use different ports:
 
-## Offline / Air-gapped Installation
+```python
+# Maya 2022 instance
+handle = dcc_mcp_maya.start_server(port=8762)
 
-Download the wheel first on a connected machine:
+# Maya 2024 instance
+handle = dcc_mcp_maya.start_server(port=8764)
 
-```bash
-pip download dcc-mcp-maya --dest ./offline-pkgs
+# Maya 2025 instance
+handle = dcc_mcp_maya.start_server(port=8765)
 ```
 
-Then install on the offline machine:
+Then configure each as a separate MCP server in your host:
 
-```bash
-mayapy -m pip install --no-index --find-links ./offline-pkgs dcc-mcp-maya
+```json
+{
+  "mcpServers": {
+    "maya-2022": { "url": "http://127.0.0.1:8762/mcp" },
+    "maya-2024": { "url": "http://127.0.0.1:8764/mcp" },
+    "maya-2025": { "url": "http://127.0.0.1:8765/mcp" }
+  }
+}
 ```
 
-## Dependencies
+## Upgrading
 
-`dcc-mcp-maya` has a single runtime dependency:
-
-| Package | Version | Purpose |
-|---------|---------|---------|
-| `dcc-mcp-core` | `>=0.12.12,<1.0.0` | MCP server, action registry, skill catalog |
-
-`dcc-mcp-core` includes a compiled Rust/Tokio HTTP server (`axum`) distributed as a Python wheel. No additional system dependencies are required.
+```bash
+mayapy -m pip install --upgrade dcc-mcp-maya
+```
 
 ## Uninstalling
 
