@@ -24,7 +24,7 @@ class TestExportShotFbx:
     """Tests for export_shot_fbx script."""
 
     def _make_cmds(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.ls.return_value = ["pSphere1"]
         mock_cmds.playbackOptions.side_effect = lambda **kw: 1.0 if kw.get("minTime") else 24.0
         mock_cmds.pluginInfo.return_value = True
@@ -46,7 +46,7 @@ class TestExportShotFbx:
         assert "fbx" in result["message"].lower() or result["context"]["file_path"] == out
 
     def test_export_no_selection(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.ls.return_value = []
         mock_mel = MagicMock()
         with tempfile.TemporaryDirectory() as tmp:
@@ -98,7 +98,7 @@ class TestExportShotAlembic:
     """Tests for export_shot_alembic script."""
 
     def _make_cmds(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.ls.return_value = ["pCube1"]
         mock_cmds.playbackOptions.side_effect = lambda **kw: 1.0 if kw.get("minTime") else 24.0
         mock_cmds.pluginInfo.return_value = True
@@ -116,7 +116,7 @@ class TestExportShotAlembic:
         assert result["context"]["objects"] == ["pCube1"]
 
     def test_no_selection(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.ls.return_value = []
         with tempfile.TemporaryDirectory() as tmp:
             out = os.path.join(tmp, "empty.abc")
@@ -136,7 +136,7 @@ class TestExportCamera:
     """Tests for export_camera script."""
 
     def _make_cmds(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         mock_cmds.objectType.return_value = "transform"
         mock_cmds.pluginInfo.return_value = True
@@ -173,7 +173,7 @@ class TestExportCamera:
         assert result["success"] is True
 
     def test_camera_not_found(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = False
         mock_mel = MagicMock()
         with tempfile.TemporaryDirectory() as tmp:
@@ -211,7 +211,7 @@ class TestGetShotInfo:
     """Tests for get_shot_info script."""
 
     def test_shot_info_success(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.file.return_value = "/path/to/shot_001.ma"
         mock_cmds.playbackOptions.side_effect = lambda **kw: 1.0 if kw.get("minTime") else 120.0
         mock_cmds.currentTime.return_value = 50.0
@@ -228,7 +228,7 @@ class TestGetShotInfo:
         assert result["context"]["end_frame"] == 120.0
 
     def test_untitled_scene(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.file.return_value = ""
         mock_cmds.playbackOptions.return_value = 1.0
         mock_cmds.currentTime.return_value = 1.0
@@ -256,7 +256,7 @@ class TestSaveMaterial:
     """Tests for save_material script."""
 
     def test_save_success(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         mock_cmds.objectType.return_value = "lambert"
         mock_cmds.listAttr.return_value = ["color", "transparency"]
@@ -269,7 +269,7 @@ class TestSaveMaterial:
         assert "lambert1" in result["message"]
 
     def test_material_not_found(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = False
         with tempfile.TemporaryDirectory() as lib_dir:
             with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
@@ -278,7 +278,7 @@ class TestSaveMaterial:
         assert result["success"] is False
 
     def test_no_overwrite_existing(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         mock_cmds.objectType.return_value = "blinn"
         mock_cmds.listAttr.return_value = []
@@ -294,7 +294,7 @@ class TestSaveMaterial:
         assert "already exists" in result["message"].lower()
 
     def test_custom_preset_name(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         mock_cmds.objectType.return_value = "phong"
         mock_cmds.listAttr.return_value = ["cosinePower"]
@@ -317,7 +317,7 @@ class TestLoadMaterial:
     """Tests for load_material script."""
 
     def test_load_success(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.shadingNode.return_value = "lambert2"
         mock_cmds.sets.return_value = "lambert2_SG"
         mock_cmds.connectAttr.return_value = None
@@ -333,14 +333,14 @@ class TestLoadMaterial:
         assert result["context"]["material"] == "lambert2"
 
     def test_file_not_found(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             mod = load_skill_script("maya-material-library", "load_material")
             result = mod.load_material("/nonexistent/preset.json")
         assert result["success"] is False
 
     def test_assign_on_load(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.shadingNode.return_value = "phong2"
         mock_cmds.sets.return_value = "phong2_SG"
         mock_cmds.connectAttr.return_value = None
@@ -370,7 +370,7 @@ class TestListMaterials:
     """Tests for list_materials script."""
 
     def test_list_success(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         with tempfile.TemporaryDirectory() as lib_dir:
             for name in ["mat_a", "mat_b"]:
                 with open(os.path.join(lib_dir, "{}.json".format(name)), "w") as fh:
@@ -382,14 +382,14 @@ class TestListMaterials:
         assert result["context"]["count"] == 2
 
     def test_missing_dir(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             mod = load_skill_script("maya-material-library", "list_materials")
             result = mod.list_materials("/nonexistent/lib_dir")
         assert result["success"] is False
 
     def test_empty_dir(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         with tempfile.TemporaryDirectory() as lib_dir:
             with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
                 mod = load_skill_script("maya-material-library", "list_materials")
@@ -402,7 +402,7 @@ class TestDeleteMaterialPreset:
     """Tests for delete_material_preset script."""
 
     def test_delete_success(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         with tempfile.TemporaryDirectory() as lib_dir:
             preset = os.path.join(lib_dir, "old_mat.json")
             with open(preset, "w") as fh:
@@ -414,7 +414,7 @@ class TestDeleteMaterialPreset:
         assert not os.path.exists(preset)
 
     def test_file_not_found(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             mod = load_skill_script("maya-material-library", "delete_material_preset")
             result = mod.delete_material_preset("/nonexistent/mat.json")
@@ -430,7 +430,7 @@ class TestAddToonOutline:
     """Tests for add_toon_outline script."""
 
     def _make_cmds(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_mel = MagicMock()
         mock_cmds.ls.return_value = ["pSphere1"]
         mock_cmds.objectType.return_value = "mesh"
@@ -490,7 +490,7 @@ class TestCreateToonShader:
     """Tests for create_toon_shader script."""
 
     def test_create_success(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.shadingNode.return_value = "rampShader1"
         mock_cmds.sets.return_value = "rampShader1_SG"
         mock_cmds.connectAttr.return_value = None
@@ -502,7 +502,7 @@ class TestCreateToonShader:
         assert result["context"]["shader"] == "rampShader1"
 
     def test_create_with_assignment(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.shadingNode.return_value = "rampShader2"
         mock_cmds.sets.return_value = "rampShader2_SG"
         mock_cmds.connectAttr.return_value = None
@@ -524,7 +524,7 @@ class TestSetOutlineWidth:
     """Tests for set_outline_width script."""
 
     def test_set_width_success(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         mock_cmds.objectType.return_value = "pfxToon"
         mock_cmds.setAttr.return_value = None
@@ -536,7 +536,7 @@ class TestSetOutlineWidth:
         assert result["context"]["line_width"] == 2.5
 
     def test_node_not_found(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = False
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             mod = load_skill_script("maya-toon", "set_outline_width")
@@ -544,7 +544,7 @@ class TestSetOutlineWidth:
         assert result["success"] is False
 
     def test_wrong_node_type(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         mock_cmds.objectType.return_value = "transform"
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
@@ -563,7 +563,7 @@ class TestListToonOutlines:
     """Tests for list_toon_outlines script."""
 
     def test_list_success(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.ls.return_value = ["pfxToon1", "pfxToon2"]
         mock_cmds.getAttr.return_value = 1.5
         mock_cmds.listConnections.return_value = ["pSphereShape1"]
@@ -574,7 +574,7 @@ class TestListToonOutlines:
         assert result["context"]["count"] == 2
 
     def test_no_outlines(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.ls.return_value = []
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             mod = load_skill_script("maya-toon", "list_toon_outlines")
@@ -598,7 +598,7 @@ class TestCreateNParticleEmitter:
     """Tests for create_nparticle_emitter script."""
 
     def _make_cmds(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_mel = MagicMock()
         mock_cmds.ls.side_effect = [
             ["nParticleShape1"],  # ls(type="nParticle") — particle created
@@ -622,7 +622,7 @@ class TestCreateNParticleEmitter:
         assert result["success"] is True
 
     def test_no_particle_created(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_mel = MagicMock()
         mock_cmds.ls.return_value = []  # no nParticle found
         with patch.dict(
@@ -644,7 +644,7 @@ class TestSetNParticleAttribute:
     """Tests for set_nparticle_attribute script."""
 
     def test_set_success(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         mock_cmds.objectType.return_value = "nParticle"
         mock_cmds.attributeQuery.return_value = True
@@ -658,7 +658,7 @@ class TestSetNParticleAttribute:
         assert result["context"]["value"] == 0.2
 
     def test_node_not_found(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = False
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             mod = load_skill_script("maya-nparticles", "set_nparticle_attribute")
@@ -666,7 +666,7 @@ class TestSetNParticleAttribute:
         assert result["success"] is False
 
     def test_wrong_node_type(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         mock_cmds.objectType.return_value = "transform"
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
@@ -675,7 +675,7 @@ class TestSetNParticleAttribute:
         assert result["success"] is False
 
     def test_attribute_not_found(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.objExists.return_value = True
         mock_cmds.objectType.return_value = "nParticle"
         mock_cmds.attributeQuery.return_value = False
@@ -695,7 +695,7 @@ class TestAddFieldToNParticles:
     """Tests for add_field_to_nparticles script."""
 
     def _make_cmds(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.ls.return_value = ["nParticleShape1"]
         mock_cmds.gravity.return_value = ["gravityField1"]
         mock_cmds.turbulence.return_value = ["turbulenceField1"]
@@ -718,14 +718,14 @@ class TestAddFieldToNParticles:
         assert result["success"] is True
 
     def test_invalid_field_type(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             mod = load_skill_script("maya-nparticles", "add_field_to_nparticles")
             result = mod.add_field_to_nparticles(field_type="unknown_field")
         assert result["success"] is False
 
     def test_no_particle_shapes(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.ls.return_value = []
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             mod = load_skill_script("maya-nparticles", "add_field_to_nparticles")
@@ -743,7 +743,7 @@ class TestListNParticleSystems:
     """Tests for list_nparticle_systems script."""
 
     def test_list_success(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.ls.side_effect = [
             ["nParticleShape1"],
             ["nucleus1"],
@@ -759,7 +759,7 @@ class TestListNParticleSystems:
         assert result["context"]["system_count"] == 1
 
     def test_no_particles(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.ls.return_value = []
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             mod = load_skill_script("maya-nparticles", "list_nparticle_systems")
@@ -783,7 +783,7 @@ class TestValidateSceneForFarm:
     """Tests for validate_scene_for_farm script."""
 
     def test_valid_scene(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.file.return_value = "/path/to/scene.ma"
         mock_cmds.ls.return_value = []  # no file texture nodes
         mock_cmds.referenceQuery.return_value = True
@@ -798,7 +798,7 @@ class TestValidateSceneForFarm:
         assert result["context"]["valid"] is True
 
     def test_unsaved_scene(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.file.return_value = ""
         mock_cmds.ls.return_value = []
         mock_cmds.getAttr.side_effect = lambda attr: (
@@ -813,7 +813,7 @@ class TestValidateSceneForFarm:
         assert any("unsaved" in issue.lower() for issue in result["context"]["issues"])
 
     def test_missing_texture(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.file.return_value = "/path/to/scene.ma"
         mock_cmds.ls.return_value = ["file1"]
         mock_cmds.getAttr.side_effect = lambda attr: (
@@ -843,7 +843,7 @@ class TestWriteRenderJob:
     """Tests for write_render_job script."""
 
     def test_write_success(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.file.return_value = "/path/scene_001.ma"
         mock_cmds.getAttr.side_effect = lambda attr: (
             1.0 if "startFrame" in attr else 100.0 if "endFrame" in attr else "arnold"
@@ -857,7 +857,7 @@ class TestWriteRenderJob:
             assert os.path.isfile(result["context"]["job_file"])
 
     def test_frame_count_calculated(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.file.return_value = "/path/scene.ma"
         mock_cmds.getAttr.side_effect = lambda attr: (
             1.0 if "startFrame" in attr else 100.0 if "endFrame" in attr else "vray"
@@ -881,7 +881,7 @@ class TestSubmitToDeadline:
     """Tests for submit_to_deadline script."""
 
     def test_no_scene_saved(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.file.return_value = ""
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             mod = load_skill_script("maya-render-farm", "submit_to_deadline")
@@ -890,7 +890,7 @@ class TestSubmitToDeadline:
         assert "save" in result["message"].lower() or "saved" in result["message"].lower()
 
     def test_deadline_not_found(self):
-        mock_maya, mock_cmds = make_mock_maya()
+        mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.file.return_value = "/path/scene.ma"
         mock_cmds.getAttr.side_effect = lambda attr: (
             1.0 if "startFrame" in attr else 100.0 if "endFrame" in attr else "arnold"

@@ -41,7 +41,7 @@ def _load(skill_dir: str, script_name: str):
     _MOD_COUNTER[0] += 1
     path = _SKILLS_ROOT / skill_dir / "scripts" / "{}.py".format(script_name)
     spec = importlib.util.spec_from_file_location(
-        "e2e_{}_{}_{}" .format(skill_dir.replace("-", "_"), script_name, _MOD_COUNTER[0]),
+        "e2e_{}_{}_{}".format(skill_dir.replace("-", "_"), script_name, _MOD_COUNTER[0]),
         str(path),
     )
     mod = importlib.util.module_from_spec(spec)
