@@ -51,20 +51,30 @@ def create_annotation(
             annotation_node = result if isinstance(result, str) else result[0]
             transform_node = cmds.listRelatives(annotation_node, parent=True)[0]
         else:
-            # World-space annotation: needs a temporary anchor object.
-            # cmds.annotate requires at least one transform to annotate.
-            loc = cmds.spaceLocator(name="_ann_loc_tmp")[0]
-            try:
-                cmds.move(pos[0], pos[1], pos[2], loc, absolute=True)
-                result = cmds.annotate(loc, text=text, point=pos)
-                annotation_node = result if isinstance(result, str) else result[0]
-                ann_parent = cmds.listRelatives(annotation_node, parent=True)[0]
-                # Re-parent to world so annotation survives locator deletion
-                cmds.parent(ann_parent, world=True)
-                transform_node = ann_parent
-            finally:
-                if cmds.objExists(loc):
-                    cmds.delete(loc)
+            # World-space annotation.
+            # In Maya standalone (batch mode), cmds.annotate may not be available;
+            # detect this by checking for the command's existence first.
+            if not hasattr(cmds, "annotate") or not callable(getattr(cmds, "annotate", None)):
+                # Fallback for Maya standalone: use createNode
+                xform_name = name or "annotation1"
+                transform_node = cmds.createNode("transform", name=xform_name)
+                annotation_node = cmds.createNode("annotationShape", parent=transform_node)
+                cmds.setAttr("{}.text".format(annotation_node), text, type="string")
+                cmds.move(pos[0], pos[1], pos[2], transform_node, absolute=True)
+                name = None  # already applied above, skip rename below
+            else:
+                # Interactive Maya: use locator as anchor, then re-parent to world
+                loc = cmds.spaceLocator(name="_ann_loc_tmp")[0]
+                try:
+                    cmds.move(pos[0], pos[1], pos[2], loc, absolute=True)
+                    result = cmds.annotate(loc, text=text, point=pos)
+                    annotation_node = result if isinstance(result, str) else result[0]
+                    ann_parent = cmds.listRelatives(annotation_node, parent=True)[0]
+                    cmds.parent(ann_parent, world=True)
+                    transform_node = ann_parent
+                finally:
+                    if cmds.objExists(loc):
+                        cmds.delete(loc)
 
         if name and transform_node and cmds.objExists(transform_node):
             try:
