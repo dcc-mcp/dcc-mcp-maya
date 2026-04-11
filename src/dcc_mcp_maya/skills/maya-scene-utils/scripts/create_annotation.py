@@ -80,7 +80,8 @@ def create_annotation(
         return error_result("Failed to create annotation on '{}'".format(object_name), str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`create_annotation`."""
     return create_annotation(**kwargs)
 
 

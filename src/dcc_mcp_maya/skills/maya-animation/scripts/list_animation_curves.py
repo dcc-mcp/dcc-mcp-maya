@@ -80,7 +80,8 @@ def list_animation_curves(
         return error_result("Failed to list animation curves for '{}'".format(object_name), str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`list_animation_curves`."""
     return list_animation_curves(**kwargs)
 
 

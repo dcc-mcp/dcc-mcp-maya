@@ -76,7 +76,8 @@ def set_ik_fk_blend(
         return error_result("Failed to set IK/FK blend on '{}'".format(ik_handle), str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`set_ik_fk_blend`."""
     return set_ik_fk_blend(**kwargs)
 
 

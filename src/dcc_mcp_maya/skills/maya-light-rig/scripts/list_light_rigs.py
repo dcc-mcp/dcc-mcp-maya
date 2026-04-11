@@ -9,9 +9,16 @@ import logging
 logger = logging.getLogger(__name__)
 
 _LIGHT_TYPES = [
-    "directionalLight", "pointLight", "spotLight", "areaLight",
-    "ambientLight", "volumeLight", "aiSkyDomeLight", "aiAreaLight",
-    "aiMeshLight", "aiPhotometricLight",
+    "directionalLight",
+    "pointLight",
+    "spotLight",
+    "areaLight",
+    "ambientLight",
+    "volumeLight",
+    "aiSkyDomeLight",
+    "aiAreaLight",
+    "aiMeshLight",
+    "aiPhotometricLight",
 ]
 
 

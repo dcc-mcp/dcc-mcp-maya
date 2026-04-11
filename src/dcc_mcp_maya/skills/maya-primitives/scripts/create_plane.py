@@ -47,7 +47,8 @@ def create_plane(
         return error_result("Failed to create plane", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`create_plane`."""
     return create_plane(**kwargs)
 
 

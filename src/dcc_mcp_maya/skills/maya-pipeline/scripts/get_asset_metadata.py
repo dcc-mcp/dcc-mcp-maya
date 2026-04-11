@@ -42,9 +42,7 @@ def get_asset_metadata(node: str) -> dict:
         tagged = [k for k, v in metadata.items() if v]
         return success_result(
             "Retrieved metadata from '{}' ({} tagged)".format(node, len(tagged)),
-            prompt=(
-                "Metadata retrieved. Use tag_asset_metadata to update any empty fields before publishing."
-            ),
+            prompt=("Metadata retrieved. Use tag_asset_metadata to update any empty fields before publishing."),
             node=node,
             metadata=metadata,
             tagged_count=len(tagged),
@@ -62,5 +60,6 @@ def main(**kwargs):
 
 if __name__ == "__main__":
     import json
+
     result = get_asset_metadata("pSphere1")
     print(json.dumps(result))

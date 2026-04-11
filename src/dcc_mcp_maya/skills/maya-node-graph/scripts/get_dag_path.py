@@ -61,7 +61,8 @@ def get_dag_path(
         return error_result("Failed to get DAG path for {}".format(object_name), str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`get_dag_path`."""
     return get_dag_path(**kwargs)
 
 

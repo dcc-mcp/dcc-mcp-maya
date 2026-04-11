@@ -87,7 +87,8 @@ def sculpt_deformer(
         return error_result("Failed to create sculpt deformer", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`sculpt_deformer`."""
     return sculpt_deformer(**kwargs)
 
 

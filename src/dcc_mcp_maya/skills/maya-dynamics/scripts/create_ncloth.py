@@ -98,7 +98,8 @@ def create_ncloth(
         return error_result("Failed to create nCloth on '{}'".format(mesh), str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`create_ncloth`."""
     return create_ncloth(**kwargs)
 
 

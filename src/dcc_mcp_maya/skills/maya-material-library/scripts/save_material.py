@@ -12,8 +12,16 @@ from typing import List, Optional
 logger = logging.getLogger(__name__)
 
 # Attributes to skip during serialization (read-only / computed)
-_SKIP_ATTRS = {"message", "caching", "frozen", "isHistoricallyInteresting", "nodeState",
-               "binMembership", "hyperLayout", "identification"}
+_SKIP_ATTRS = {
+    "message",
+    "caching",
+    "frozen",
+    "isHistoricallyInteresting",
+    "nodeState",
+    "binMembership",
+    "hyperLayout",
+    "identification",
+}
 
 
 def save_material(

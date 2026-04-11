@@ -57,7 +57,8 @@ def set_material_attribute(
         return error_result("Failed to set material attribute", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`set_material_attribute`."""
     return set_material_attribute(**kwargs)
 
 

@@ -36,6 +36,7 @@ def list_bifrost_graphs() -> dict:
 
 
 def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`list_bifrost_graphs`."""
     return list_bifrost_graphs(**kwargs)
 
 

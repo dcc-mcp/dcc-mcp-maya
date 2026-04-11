@@ -65,7 +65,8 @@ def disconnect_attr(
         ).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`disconnect_attr`."""
     return disconnect_attr(**kwargs)
 
 

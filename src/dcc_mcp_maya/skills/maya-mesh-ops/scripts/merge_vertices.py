@@ -53,7 +53,8 @@ def merge_vertices(
         return error_result("Failed to merge vertices", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`merge_vertices`."""
     return merge_vertices(**kwargs)
 
 

@@ -84,7 +84,8 @@ def project_uvs(
         return error_result("Failed to project UVs", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`project_uvs`."""
     return project_uvs(**kwargs)
 
 

@@ -68,7 +68,8 @@ def normalize_uvs(
         return error_result("Failed to normalize UVs on '{}'".format(object_name), str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`normalize_uvs`."""
     return normalize_uvs(**kwargs)
 
 

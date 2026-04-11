@@ -38,7 +38,7 @@ def create_stroke(
         ep = end_point or [1.0, 0.0, 0.0]
 
         # Load the preset brush
-        mel.eval('getDefaultBrush;')
+        mel.eval("getDefaultBrush;")
         brush_nodes = cmds.ls(type="brush") or []
         brush_before = set(brush_nodes)
 

@@ -41,11 +41,13 @@ def list_namespaces(include_defaults: bool = False) -> dict:
             except Exception:
                 obj_count = 0
 
-            namespaces.append({
-                "name": base,
-                "full_path": full_path,
-                "object_count": obj_count,
-            })
+            namespaces.append(
+                {
+                    "name": base,
+                    "full_path": full_path,
+                    "object_count": obj_count,
+                }
+            )
 
         return success_result(
             "Found {} namespace(s)".format(len(namespaces)),

@@ -83,7 +83,8 @@ def blend_shape_add_target(
         return error_result("Failed to add blend shape target", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`blend_shape_add_target`."""
     return blend_shape_add_target(**kwargs)
 
 

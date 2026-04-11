@@ -78,5 +78,6 @@ def main(**kwargs):
 
 if __name__ == "__main__":
     import json
+
     result = create_muscle_capsule("shoulder_jnt", "elbow_jnt")
     print(json.dumps(result))

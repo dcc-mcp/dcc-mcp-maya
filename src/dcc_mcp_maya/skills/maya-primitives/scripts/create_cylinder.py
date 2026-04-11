@@ -47,7 +47,8 @@ def create_cylinder(
         return error_result("Failed to create cylinder", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`create_cylinder`."""
     return create_cylinder(**kwargs)
 
 

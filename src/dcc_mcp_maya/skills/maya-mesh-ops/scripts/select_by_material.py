@@ -86,7 +86,8 @@ def select_by_material(material_name: str) -> dict:
         return error_result("Failed to select by material", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`select_by_material`."""
     return select_by_material(**kwargs)
 
 

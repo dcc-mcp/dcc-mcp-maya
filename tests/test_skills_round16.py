@@ -10,14 +10,12 @@ import sys
 from unittest.mock import MagicMock, patch
 
 # Import third-party modules
-import pytest
-
 from tests.conftest import load_skill_script, make_mock_maya
-
 
 # ---------------------------------------------------------------------------
 # maya-blend-shape-utils
 # ---------------------------------------------------------------------------
+
 
 class TestBlendShapeCreate:
     """Tests for create_blend_shape script."""
@@ -74,7 +72,7 @@ class TestBlendShapeList:
         mock_maya, mock_cmds = make_mock_maya()
         mock_cmds.ls.return_value = ["blendShape1"]
         mock_cmds.blendShape.side_effect = [
-            [0.0, 0.5],   # weight query
+            [0.0, 0.5],  # weight query
             ["pSphere1"],  # geometry query
         ]
         mock_cmds.aliasAttr.return_value = []
@@ -183,6 +181,7 @@ class TestBlendShapeGetWeights:
 # maya-xform-utils
 # ---------------------------------------------------------------------------
 
+
 class TestFreezeTransforms:
     """Tests for freeze_transforms script."""
 
@@ -286,13 +285,13 @@ class TestMatchTransforms:
         # 6. final query source rotate
         # 7. final query source scale
         mock_cmds.xform.side_effect = [
-            [1.0, 2.0, 3.0],   # get target translate
-            None,               # set source translate
-            [10.0, 20.0, 30.0], # get target rotate
-            None,               # set source rotate
-            [1.0, 2.0, 3.0],   # final query translate
-            [10.0, 20.0, 30.0], # final query rotate
-            [1.0, 1.0, 1.0],   # final query scale
+            [1.0, 2.0, 3.0],  # get target translate
+            None,  # set source translate
+            [10.0, 20.0, 30.0],  # get target rotate
+            None,  # set source rotate
+            [1.0, 2.0, 3.0],  # final query translate
+            [10.0, 20.0, 30.0],  # final query rotate
+            [1.0, 1.0, 1.0],  # final query scale
         ]
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             mod = load_skill_script("maya-xform-utils", "match_transforms")
@@ -359,6 +358,7 @@ class TestBakeTransforms:
 # ---------------------------------------------------------------------------
 # maya-spline-ik
 # ---------------------------------------------------------------------------
+
 
 class TestCreateSplineIk:
     """Tests for create_spline_ik script."""
@@ -442,9 +442,7 @@ class TestAddStretchToSplineIk:
         mock_cmds.getAttr.return_value = 10.0
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             mod = load_skill_script("maya-spline-ik", "add_stretch_to_spline_ik")
-            result = mod.add_stretch_to_spline_ik(
-                "ikHandle1", ["spine_01", "spine_02"], "spineCurve"
-            )
+            result = mod.add_stretch_to_spline_ik("ikHandle1", ["spine_01", "spine_02"], "spineCurve")
         assert result["success"] is True
         assert result["context"]["rest_length"] == 10.0
 
@@ -454,9 +452,7 @@ class TestAddStretchToSplineIk:
         mock_cmds.listRelatives.return_value = []  # no shape
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             mod = load_skill_script("maya-spline-ik", "add_stretch_to_spline_ik")
-            result = mod.add_stretch_to_spline_ik(
-                "ikHandle1", ["spine_01"], "spineCurve"
-            )
+            result = mod.add_stretch_to_spline_ik("ikHandle1", ["spine_01"], "spineCurve")
         assert result["success"] is False
 
     def test_invalid_stretch_axis(self):
@@ -465,9 +461,7 @@ class TestAddStretchToSplineIk:
         mock_cmds.listRelatives.return_value = ["curveShape1"]
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             mod = load_skill_script("maya-spline-ik", "add_stretch_to_spline_ik")
-            result = mod.add_stretch_to_spline_ik(
-                "ikHandle1", ["spine_01"], "spineCurve", stretch_axis="q"
-            )
+            result = mod.add_stretch_to_spline_ik("ikHandle1", ["spine_01"], "spineCurve", stretch_axis="q")
         assert result["success"] is False
 
 
@@ -479,8 +473,8 @@ class TestListSplineIkHandles:
         mock_cmds.ls.return_value = ["ikHandle1"]
         mock_cmds.ikHandle.side_effect = [
             "ikSplineSolver",  # solver query
-            "spine_01",        # startJoint
-            "effector1",       # endEffector
+            "spine_01",  # startJoint
+            "effector1",  # endEffector
         ]
         mock_cmds.listConnections.return_value = ["spineCurve"]
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
@@ -519,6 +513,7 @@ class TestListSplineIkHandles:
 # ---------------------------------------------------------------------------
 # maya-gpu-cache
 # ---------------------------------------------------------------------------
+
 
 class TestExportGpuCache:
     """Tests for export_gpu_cache script."""
@@ -639,6 +634,7 @@ class TestRefreshGpuCache:
 # maya-instancer
 # ---------------------------------------------------------------------------
 
+
 class TestCreateInstancer:
     """Tests for create_instancer script."""
 
@@ -704,9 +700,7 @@ class TestSetInstancerAttribute:
         mock_cmds.objExists.return_value = True
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             mod = load_skill_script("maya-instancer", "set_instancer_attribute")
-            result = mod.set_instancer_attribute(
-                "nParticle1", "instancer1", "object_index", "objectIndexPP"
-            )
+            result = mod.set_instancer_attribute("nParticle1", "instancer1", "object_index", "objectIndexPP")
         assert result["success"] is True
         assert result["context"]["particle_attribute"] == "objectIndexPP"
 
@@ -715,9 +709,7 @@ class TestSetInstancerAttribute:
         mock_cmds.objExists.return_value = True
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             mod = load_skill_script("maya-instancer", "set_instancer_attribute")
-            result = mod.set_instancer_attribute(
-                "nParticle1", "instancer1", "invalid_field", "some_attr"
-            )
+            result = mod.set_instancer_attribute("nParticle1", "instancer1", "invalid_field", "some_attr")
         assert result["success"] is False
 
     def test_clear_attribute(self):
@@ -725,9 +717,7 @@ class TestSetInstancerAttribute:
         mock_cmds.objExists.return_value = True
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             mod = load_skill_script("maya-instancer", "set_instancer_attribute")
-            result = mod.set_instancer_attribute(
-                "nParticle1", "instancer1", "rotation", None
-            )
+            result = mod.set_instancer_attribute("nParticle1", "instancer1", "rotation", None)
         assert result["success"] is True
         assert result["context"]["particle_attribute"] is None
 

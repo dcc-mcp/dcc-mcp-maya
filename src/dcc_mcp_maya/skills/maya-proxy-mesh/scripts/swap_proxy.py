@@ -49,9 +49,7 @@ def swap_proxy(proxy: str, show_proxy: Optional[bool] = None) -> dict:
             source_vis = not bool(show_proxy)
 
         return success_result(
-            "Proxy='{}' visibility={}, Source='{}' visibility={}".format(
-                proxy, show_proxy, source, source_vis
-            ),
+            "Proxy='{}' visibility={}, Source='{}' visibility={}".format(proxy, show_proxy, source, source_vis),
             prompt="Visibility swapped. Use swap_proxy again to toggle back.",
             proxy=proxy,
             proxy_visible=bool(show_proxy),
@@ -71,5 +69,6 @@ def main(**kwargs):
 
 if __name__ == "__main__":
     import json
+
     result = swap_proxy("pSphere1_proxy")
     print(json.dumps(result))

@@ -46,15 +46,11 @@ def list_shots() -> dict:
             except Exception:
                 pass
             try:
-                info["sequence_start_frame"] = float(
-                    cmds.shot(sn, query=True, sequenceStartTime=True)
-                )
+                info["sequence_start_frame"] = float(cmds.shot(sn, query=True, sequenceStartTime=True))
             except Exception:
                 pass
             try:
-                info["sequence_end_frame"] = float(
-                    cmds.shot(sn, query=True, sequenceEndTime=True)
-                )
+                info["sequence_end_frame"] = float(cmds.shot(sn, query=True, sequenceEndTime=True))
             except Exception:
                 pass
             shots.append(info)

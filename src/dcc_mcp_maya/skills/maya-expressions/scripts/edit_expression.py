@@ -60,5 +60,6 @@ def main(**kwargs):
 
 if __name__ == "__main__":
     import json
+
     result = edit_expression("expression1", "pSphere1.ty = cos(time);")
     print(json.dumps(result))

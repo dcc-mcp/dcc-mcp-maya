@@ -64,7 +64,8 @@ def create_color_set(
         return error_result("Failed to create color set", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`create_color_set`."""
     return create_color_set(**kwargs)
 
 

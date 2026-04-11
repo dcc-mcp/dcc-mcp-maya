@@ -46,8 +46,7 @@ def create_ncloth(
 
         nucleus_nodes = cmds.ls(type="nucleus") or []
         nucleus_node = (
-            nucleus if (nucleus and cmds.objExists(nucleus))
-            else (nucleus_nodes[-1] if nucleus_nodes else "")
+            nucleus if (nucleus and cmds.objExists(nucleus)) else (nucleus_nodes[-1] if nucleus_nodes else "")
         )
 
         presets = {
@@ -67,9 +66,7 @@ def create_ncloth(
             "nCloth created on '{}'".format(mesh),
             prompt=(
                 "nCloth '{}' created with '{}' preset. "
-                "Use set_ncloth_attribute to fine-tune, then bake_cloth_cache to record.".format(
-                    ncloth_shape, preset
-                )
+                "Use set_ncloth_attribute to fine-tune, then bake_cloth_cache to record.".format(ncloth_shape, preset)
             ),
             ncloth_shape=ncloth_shape,
             nucleus=nucleus_node,
@@ -88,5 +85,6 @@ def main(**kwargs):
 
 if __name__ == "__main__":
     import json
+
     result = create_ncloth("pPlane1")
     print(json.dumps(result))

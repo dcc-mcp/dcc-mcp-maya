@@ -98,7 +98,8 @@ def get_mesh_edge_info(
         return error_result("Failed to get edge info", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`get_mesh_edge_info`."""
     return get_mesh_edge_info(**kwargs)
 
 

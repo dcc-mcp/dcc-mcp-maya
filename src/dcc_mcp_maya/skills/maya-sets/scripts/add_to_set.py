@@ -65,7 +65,8 @@ def add_to_set(
         return error_result("Failed to add objects to set '{}'".format(set_name), str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`add_to_set`."""
     return add_to_set(**kwargs)
 
 

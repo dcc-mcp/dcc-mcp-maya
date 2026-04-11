@@ -49,7 +49,8 @@ def reset_to_default_material(object_name: str) -> dict:
         return error_result("Failed to reset material for '{}'".format(object_name), str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`reset_to_default_material`."""
     return reset_to_default_material(**kwargs)
 
 

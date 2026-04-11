@@ -62,9 +62,7 @@ def list_hdri_nodes() -> dict:
                 try:
                     conns = cmds.listConnections("{}.color".format(shape), type="file") or []
                     if conns:
-                        info["file_path"] = cmds.getAttr(
-                            "{}.fileTextureName".format(conns[0])
-                        ) or ""
+                        info["file_path"] = cmds.getAttr("{}.fileTextureName".format(conns[0])) or ""
                 except Exception:
                     pass
 

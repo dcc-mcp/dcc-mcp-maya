@@ -45,9 +45,7 @@ def create_proxy(
         reduction = max(0.0, min(100.0, float(reduction)))
         percentage = (100.0 - reduction) / 100.0
 
-        dup = cmds.duplicate(
-            source, name=proxy_name if proxy_name else source + "_proxy"
-        )[0]
+        dup = cmds.duplicate(source, name=proxy_name if proxy_name else source + "_proxy")[0]
 
         shapes = cmds.listRelatives(dup, shapes=True, type="mesh") or []
         if shapes:
@@ -87,5 +85,6 @@ def main(**kwargs):
 
 if __name__ == "__main__":
     import json
+
     result = create_proxy("pSphere1")
     print(json.dumps(result))

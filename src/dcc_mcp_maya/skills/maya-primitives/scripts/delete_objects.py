@@ -41,7 +41,8 @@ def delete_objects(object_names: List[str]) -> dict:
         return error_result("Failed to delete objects", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`delete_objects`."""
     return delete_objects(**kwargs)
 
 

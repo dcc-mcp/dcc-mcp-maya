@@ -77,5 +77,6 @@ def main(**kwargs):
 
 if __name__ == "__main__":
     import json
+
     result = apply_muscle_skin("pSphere1")
     print(json.dumps(result))

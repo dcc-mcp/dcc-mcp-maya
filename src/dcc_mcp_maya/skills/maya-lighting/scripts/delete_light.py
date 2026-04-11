@@ -54,7 +54,8 @@ def delete_light(light_name: str) -> dict:
         return error_result("Failed to delete light", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`delete_light`."""
     return delete_light(**kwargs)
 
 

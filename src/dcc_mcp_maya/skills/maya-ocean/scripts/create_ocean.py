@@ -5,7 +5,6 @@ from __future__ import annotations
 
 # Import built-in modules
 import logging
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -42,9 +41,7 @@ def create_ocean(
         )
         ocean_transform = plane_result[0]
 
-        shader = cmds.shadingNode(
-            "oceanShader", asShader=True, name="{}_shader".format(name)
-        )
+        shader = cmds.shadingNode("oceanShader", asShader=True, name="{}_shader".format(name))
         shading_group = cmds.sets(
             renderable=True,
             noSurfaceShader=True,
@@ -62,9 +59,7 @@ def create_ocean(
             "Ocean surface created",
             prompt=(
                 "Ocean surface '{}' created with shader '{}'. "
-                "Use set_ocean_attribute to adjust wave parameters.".format(
-                    ocean_transform, shader
-                )
+                "Use set_ocean_attribute to adjust wave parameters.".format(ocean_transform, shader)
             ),
             ocean_transform=ocean_transform,
             shader_name=shader,
@@ -83,5 +78,6 @@ def main(**kwargs):
 
 if __name__ == "__main__":
     import json
+
     result = create_ocean()
     print(json.dumps(result))

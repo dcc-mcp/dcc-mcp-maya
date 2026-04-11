@@ -94,7 +94,8 @@ def create_proxy_mesh(
         return error_result("Failed to create proxy mesh from '{}'".format(object_name), str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`create_proxy_mesh`."""
     return create_proxy_mesh(**kwargs)
 
 

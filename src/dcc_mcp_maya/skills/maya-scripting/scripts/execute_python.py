@@ -69,11 +69,13 @@ def execute_python(code: str, capture_output: bool = False) -> dict:
         return error_result("Python execution failed", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`execute_python`."""
     return execute_python(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = execute_python("result = 'hello'")
     print(json.dumps(result))

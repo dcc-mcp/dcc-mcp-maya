@@ -50,6 +50,7 @@ def create_bifrost_graph(name: Optional[str] = None) -> dict:
 
 
 def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`create_bifrost_graph`."""
     return create_bifrost_graph(**kwargs)
 
 

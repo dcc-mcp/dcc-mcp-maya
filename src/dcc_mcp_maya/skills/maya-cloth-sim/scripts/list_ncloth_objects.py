@@ -31,18 +31,18 @@ def list_ncloth_objects() -> dict:
             nucleus = nucleus_conn[0] if nucleus_conn else None
 
             input_mesh = None
-            input_conns = cmds.listConnections(
-                "{}.inputMesh".format(shape), source=True, destination=False
-            ) or []
+            input_conns = cmds.listConnections("{}.inputMesh".format(shape), source=True, destination=False) or []
             if input_conns:
                 input_mesh = input_conns[0]
 
-            cloth_objects.append({
-                "shape": shape,
-                "transform": transform,
-                "input_mesh": input_mesh,
-                "nucleus": nucleus,
-            })
+            cloth_objects.append(
+                {
+                    "shape": shape,
+                    "transform": transform,
+                    "input_mesh": input_mesh,
+                    "nucleus": nucleus,
+                }
+            )
 
         nucleus_nodes = cmds.ls(type="nucleus") or []
 
@@ -66,5 +66,6 @@ def main(**kwargs):
 
 if __name__ == "__main__":
     import json
+
     result = list_ncloth_objects()
     print(json.dumps(result))

@@ -84,7 +84,8 @@ def set_pivot(
         return error_result("Failed to set pivot on '{}'".format(object_name), str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`set_pivot`."""
     return set_pivot(**kwargs)
 
 

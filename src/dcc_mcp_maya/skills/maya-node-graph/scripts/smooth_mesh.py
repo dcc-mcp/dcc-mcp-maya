@@ -89,7 +89,8 @@ def smooth_mesh(
         return error_result("Failed to smooth mesh {}".format(object_name), str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`smooth_mesh`."""
     return smooth_mesh(**kwargs)
 
 

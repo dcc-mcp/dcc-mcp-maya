@@ -54,7 +54,8 @@ def list_materials(shader_type: Optional[str] = None) -> dict:
         return error_result("Failed to list materials", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`list_materials`."""
     return list_materials(**kwargs)
 
 

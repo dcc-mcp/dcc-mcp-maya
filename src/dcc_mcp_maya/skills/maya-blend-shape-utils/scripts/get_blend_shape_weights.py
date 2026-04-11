@@ -46,11 +46,13 @@ def get_blend_shape_weights(blend_shape_node: str) -> dict:
 
         targets = []
         for idx, w in enumerate(weights):
-            targets.append({
-                "index": idx,
-                "name": index_to_name.get(idx, "target_{}".format(idx)),
-                "weight": w,
-            })
+            targets.append(
+                {
+                    "index": idx,
+                    "name": index_to_name.get(idx, "target_{}".format(idx)),
+                    "weight": w,
+                }
+            )
 
         return success_result(
             "Queried {} target(s) on '{}'".format(len(targets), blend_shape_node),

@@ -61,6 +61,7 @@ def export_camera(
             )
         else:
             import maya.mel as mel  # noqa: PLC0415
+
             if not cmds.pluginInfo("fbxmaya", q=True, loaded=True):
                 cmds.loadPlugin("fbxmaya")
             cmds.select(cam_transform, replace=True)

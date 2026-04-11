@@ -82,7 +82,8 @@ def extract_faces(
         return error_result("Failed to extract faces from '{}'".format(object_name), str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`extract_faces`."""
     return extract_faces(**kwargs)
 
 

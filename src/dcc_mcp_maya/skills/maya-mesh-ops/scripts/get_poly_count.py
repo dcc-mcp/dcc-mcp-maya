@@ -82,7 +82,8 @@ def get_poly_count(object_name: Optional[str] = None) -> dict:
         return error_result("Failed to get poly count", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`get_poly_count`."""
     return get_poly_count(**kwargs)
 
 

@@ -36,7 +36,6 @@ def export_gpu_cache(
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
-        import maya.mel as mel  # noqa: PLC0415
 
         # Ensure plugin loaded
         if not cmds.pluginInfo("gpuCache", query=True, loaded=True):

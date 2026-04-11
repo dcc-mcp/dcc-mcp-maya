@@ -64,7 +64,8 @@ def copy_uvs(
         return error_result("Failed to copy UVs", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`copy_uvs`."""
     return copy_uvs(**kwargs)
 
 

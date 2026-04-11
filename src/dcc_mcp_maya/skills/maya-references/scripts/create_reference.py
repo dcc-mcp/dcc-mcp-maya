@@ -69,7 +69,8 @@ def create_reference(
         return error_result("Failed to reference file '{}'".format(file_path), str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`create_reference`."""
     return create_reference(**kwargs)
 
 

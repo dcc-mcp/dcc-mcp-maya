@@ -6,7 +6,6 @@ from __future__ import annotations
 # Import built-in modules
 import logging
 import os
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -84,9 +83,7 @@ def load_hdri(
             backend = "native"
 
         return success_result(
-            "HDRI loaded from '{}' using {} backend".format(
-                os.path.basename(file_path), backend
-            ),
+            "HDRI loaded from '{}' using {} backend".format(os.path.basename(file_path), backend),
             prompt="Use set_hdri_exposure or set_hdri_rotation to fine-tune the environment.",
             light_node=light_transform,
             file_node=file_node,

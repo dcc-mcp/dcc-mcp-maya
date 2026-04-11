@@ -37,10 +37,7 @@ def create_nhair_system(
             ).to_dict()
 
         cmds.select(mesh)
-        cmds.mel.eval(
-            "assignNewHairSystem;"
-            "makeHairCurves 0 {0} {0} 0 0 0 0 0 0 0 1 1;".format(uv_density)
-        )
+        cmds.mel.eval("assignNewHairSystem;makeHairCurves 0 {0} {0} 0 0 0 0 0 0 0 1 1;".format(uv_density))
 
         hair_systems = cmds.ls(type="hairSystem") or []
         hair_system = hair_systems[-1] if hair_systems else ""
@@ -57,8 +54,7 @@ def create_nhair_system(
         return success_result(
             "nHair system created on '{}'".format(mesh),
             prompt=(
-                "Hair system '{}' created with {} follicles. "
-                "Use set_nhair_attribute to adjust dynamics.".format(
+                "Hair system '{}' created with {} follicles. Use set_nhair_attribute to adjust dynamics.".format(
                     hair_system, follicle_count
                 )
             ),
@@ -79,5 +75,6 @@ def main(**kwargs):
 
 if __name__ == "__main__":
     import json
+
     result = create_nhair_system("pSphere1")
     print(json.dumps(result))

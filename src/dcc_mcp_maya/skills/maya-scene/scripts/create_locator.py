@@ -50,7 +50,8 @@ def create_locator(name: Optional[str] = None, position: Optional[List[float]] =
         return error_result("Failed to create locator", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`create_locator`."""
     return create_locator(**kwargs)
 
 

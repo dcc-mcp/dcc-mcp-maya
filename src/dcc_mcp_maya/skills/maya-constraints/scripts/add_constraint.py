@@ -77,7 +77,8 @@ def add_constraint(
         return error_result("Failed to add constraint", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`add_constraint`."""
     return add_constraint(**kwargs)
 
 

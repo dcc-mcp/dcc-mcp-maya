@@ -49,18 +49,17 @@ def list_blend_shapes(mesh: Optional[str] = None) -> dict:
             base_geos = cmds.blendShape(node, query=True, geometry=True) or []
             base_mesh = base_geos[0] if base_geos else ""
 
-            results.append({
-                "node": node,
-                "base_mesh": base_mesh,
-                "target_count": target_count,
-            })
+            results.append(
+                {
+                    "node": node,
+                    "base_mesh": base_mesh,
+                    "target_count": target_count,
+                }
+            )
 
         return success_result(
             "Found {} blend shape node(s)".format(len(results)),
-            prompt=(
-                "Use get_blend_shape_weights to inspect targets, "
-                "or set_blend_shape_weight to animate them."
-            ),
+            prompt=("Use get_blend_shape_weights to inspect targets, or set_blend_shape_weight to animate them."),
             blend_shapes=results,
             count=len(results),
         ).to_dict()

@@ -39,9 +39,7 @@ def get_constraint_weights(constraint_node: str) -> dict:
         weight_attrs = [a for a in weight_attrs if a.endswith("W0") or "W" in a]
 
         # Use constraint-specific weight query
-        target_list = cmds.listConnections(
-            constraint_node + ".target", source=True, destination=False
-        ) or []
+        target_list = cmds.listConnections(constraint_node + ".target", source=True, destination=False) or []
 
         weights = []
         for i, driver in enumerate(target_list):

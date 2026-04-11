@@ -44,7 +44,8 @@ def set_visibility(object_name: str, visible: bool) -> dict:
         return error_result("Failed to set visibility on '{}'".format(object_name), str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`set_visibility`."""
     return set_visibility(**kwargs)
 
 

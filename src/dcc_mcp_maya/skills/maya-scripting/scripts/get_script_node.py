@@ -89,5 +89,6 @@ def main(**kwargs):
 
 if __name__ == "__main__":
     import json
+
     result = get_script_node("myScript", action="get")
     print(json.dumps(result))

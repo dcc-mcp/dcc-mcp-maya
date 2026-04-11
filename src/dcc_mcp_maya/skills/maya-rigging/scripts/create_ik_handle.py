@@ -83,7 +83,8 @@ def create_ik_handle(
         return error_result("Failed to create IK handle", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`create_ik_handle`."""
     return create_ik_handle(**kwargs)
 
 

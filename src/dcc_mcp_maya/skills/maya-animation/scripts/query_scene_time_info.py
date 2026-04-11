@@ -48,7 +48,8 @@ def query_scene_time_info() -> dict:
         return error_result("Failed to query scene time info", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`query_scene_time_info`."""
     return query_scene_time_info(**kwargs)
 
 

@@ -33,7 +33,8 @@ def get_selection() -> dict:
         return error_result("Failed to get selection", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`get_selection`."""
     return get_selection(**kwargs)
 
 

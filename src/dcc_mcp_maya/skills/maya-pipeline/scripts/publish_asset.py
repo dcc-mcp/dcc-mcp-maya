@@ -105,5 +105,6 @@ def main(**kwargs):
 
 if __name__ == "__main__":
     import json
+
     result = publish_asset("hero_character", "/path/to/publish", format="ma")
     print(json.dumps(result))

@@ -76,6 +76,7 @@ def connect_bifrost_ports(
 
 
 def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`connect_bifrost_ports`."""
     return connect_bifrost_ports(**kwargs)
 
 

@@ -53,7 +53,8 @@ def list_all_cameras(include_default: bool = True) -> dict:
         return error_result("Failed to list cameras", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`list_all_cameras`."""
     return list_all_cameras(**kwargs)
 
 

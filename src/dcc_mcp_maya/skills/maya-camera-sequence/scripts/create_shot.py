@@ -57,9 +57,7 @@ def create_shot(
         shot_node = cmds.shot(**shot_kwargs)
 
         return success_result(
-            "Created shot '{}' for camera '{}' [{}-{}]".format(
-                shot_node, camera, start_frame, end_frame
-            ),
+            "Created shot '{}' for camera '{}' [{}-{}]".format(shot_node, camera, start_frame, end_frame),
             prompt="Use list_shots to view sequence order or set_shot_range to adjust timing.",
             shot_node=shot_node,
             camera=camera,

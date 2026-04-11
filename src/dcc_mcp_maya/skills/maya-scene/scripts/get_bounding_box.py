@@ -51,7 +51,8 @@ def get_bounding_box(object_name: str) -> dict:
         return error_result("Failed to get bounding box of '{}'".format(object_name), str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`get_bounding_box`."""
     return get_bounding_box(**kwargs)
 
 

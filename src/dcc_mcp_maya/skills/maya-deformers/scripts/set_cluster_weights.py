@@ -84,7 +84,8 @@ def set_cluster_weights(
         return error_result("Failed to set cluster weights", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`set_cluster_weights`."""
     return set_cluster_weights(**kwargs)
 
 

@@ -44,7 +44,8 @@ def freeze_transforms(object_name: str) -> dict:
         return error_result("Failed to freeze transforms on '{}'".format(object_name), str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`freeze_transforms`."""
     return freeze_transforms(**kwargs)
 
 

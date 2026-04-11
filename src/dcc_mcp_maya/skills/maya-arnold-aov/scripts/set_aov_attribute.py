@@ -79,6 +79,7 @@ def set_aov_attribute(name: str, attribute: str, value: object) -> dict:
 
 
 def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`set_aov_attribute`."""
     return set_aov_attribute(**kwargs)
 
 

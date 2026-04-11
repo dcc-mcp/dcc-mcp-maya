@@ -61,7 +61,8 @@ def connect_attr(
         ).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`connect_attr`."""
     return connect_attr(**kwargs)
 
 

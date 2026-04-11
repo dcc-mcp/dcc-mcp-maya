@@ -51,11 +51,13 @@ def delete_expression(name: str) -> dict:
         return error_result("Failed to delete expression '{}'".format(name), str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`delete_expression`."""
     return delete_expression(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = delete_expression("expression1")
     print(json.dumps(result))

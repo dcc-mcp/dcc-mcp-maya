@@ -70,7 +70,8 @@ def delete_namespace(
         return error_result("Failed to delete namespace '{}'".format(namespace), str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`delete_namespace`."""
     return delete_namespace(**kwargs)
 
 

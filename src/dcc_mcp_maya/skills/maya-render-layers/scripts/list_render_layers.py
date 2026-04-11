@@ -60,7 +60,8 @@ def list_render_layers(include_default: bool = True) -> dict:
         return error_result("Failed to list render layers", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`list_render_layers`."""
     return list_render_layers(**kwargs)
 
 

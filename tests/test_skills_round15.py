@@ -2,8 +2,7 @@
 maya-color-grading and maya-constraints-advanced Skill domains.
 
 All tests use importlib.util to load scripts from hyphenated directories and
-mock maya.cmds / maya.mel APIs.
-"""
+mock maya.cmds / maya.mel APIs."""
 
 # Import built-in modules
 import importlib.util
@@ -154,7 +153,6 @@ class TestListAnnotations:
     def test_list_annotations_exception(self):
         mock_maya, mock_cmds = _make_mock_maya()
         mock_cmds.ls.side_effect = RuntimeError("scene locked")
-
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             mod = _load_script("maya-annotation", "list_annotations")
             result = mod.list_annotations()
@@ -215,7 +213,6 @@ class TestUpdateAnnotation:
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             mod = _load_script("maya-annotation", "update_annotation")
             result = mod.update_annotation("annotation1", text="text")
-
         assert result["success"] is True
 
 
@@ -336,7 +333,6 @@ class TestListAudio:
         mock_maya, mock_cmds = _make_mock_maya()
         mock_cmds.ls.return_value = ["sound1", "sound2"]
         mock_cmds.getAttr.side_effect = ["/audio/a.wav", 0.0, "/audio/b.wav", 5.0]
-
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             mod = _load_script("maya-audio", "list_audio")
             result = mod.list_audio()
@@ -349,7 +345,6 @@ class TestListAudio:
     def test_list_audio_exception(self):
         mock_maya, mock_cmds = _make_mock_maya()
         mock_cmds.ls.side_effect = RuntimeError("scene error")
-
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             mod = _load_script("maya-audio", "list_audio")
             result = mod.list_audio()
@@ -461,9 +456,7 @@ class TestCreateGeometryCache:
             {"maya": mock_maya, "maya.cmds": mock_cmds, "maya.mel": mock_mel},
         ):
             mod = _load_script("maya-cache", "create_geometry_cache")
-            result = mod.create_geometry_cache(
-                ["pSphere1"], str(tmp_path), cache_name="test_cache"
-            )
+            result = mod.create_geometry_cache(["pSphere1"], str(tmp_path), cache_name="test_cache")
 
         assert result["success"] is True
         assert result["context"]["cache_name"] == "test_cache"
@@ -497,8 +490,10 @@ class TestCreateGeometryCache:
         ):
             mod = _load_script("maya-cache", "create_geometry_cache")
             result = mod.create_geometry_cache(
-                ["pSphere1"], str(tmp_path),
-                start_frame=10.0, end_frame=25.0,
+                ["pSphere1"],
+                str(tmp_path),
+                start_frame=10.0,
+                end_frame=25.0,
             )
 
         assert result["success"] is True
@@ -561,10 +556,15 @@ class TestListGeometryCaches:
         mock_maya, mock_cmds = _make_mock_maya()
         mock_cmds.ls.return_value = ["cacheFile1", "cacheFile2"]
         mock_cmds.getAttr.side_effect = [
-            "/cache/", "sphere_cache", 1, 50,
-            "/cache/", "cube_cache", 1, 25,
+            "/cache/",
+            "sphere_cache",
+            1,
+            50,
+            "/cache/",
+            "cube_cache",
+            1,
+            25,
         ]
-
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             mod = _load_script("maya-cache", "list_geometry_caches")
             result = mod.list_geometry_caches()
@@ -579,7 +579,6 @@ class TestListGeometryCaches:
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             mod = _load_script("maya-cache", "list_geometry_caches")
             result = mod.list_geometry_caches()
-
         assert result["success"] is True
         assert result["context"]["count"] == 0
 
@@ -646,9 +645,7 @@ class TestGetColorManagementInfo:
 
     def test_get_color_info_enabled(self):
         mock_maya, mock_cmds = _make_mock_maya()
-        mock_cmds.colorManagementPrefs.side_effect = [
-            True, "ACEScg", "ACES 1.0 SDR-video", "sRGB", "/ocio/config.ocio"
-        ]
+        mock_cmds.colorManagementPrefs.side_effect = [True, "ACEScg", "ACES 1.0 SDR-video", "sRGB", "/ocio/config.ocio"]
 
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             mod = _load_script("maya-color-grading", "get_color_management_info")
@@ -1026,5 +1023,4 @@ class TestSetConstraintWeight:
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             mod = _load_script("maya-constraints-advanced", "set_constraint_weight")
             result = mod.set_constraint_weight("parentConstraint1", driver_index=0, weight=0.0)
-
         assert result["success"] is False

@@ -95,7 +95,8 @@ def add_attribute(
         return error_result("Failed to add attribute", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`add_attribute`."""
     return add_attribute(**kwargs)
 
 

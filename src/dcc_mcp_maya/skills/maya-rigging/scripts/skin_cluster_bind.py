@@ -86,7 +86,8 @@ def skin_cluster_bind(
         return error_result("Failed to bind skin cluster on {}".format(mesh), str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`skin_cluster_bind`."""
     return skin_cluster_bind(**kwargs)
 
 

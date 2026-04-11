@@ -61,7 +61,8 @@ def list_sets(include_internal: bool = False) -> dict:
         return error_result("Failed to list object sets", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`list_sets`."""
     return list_sets(**kwargs)
 
 

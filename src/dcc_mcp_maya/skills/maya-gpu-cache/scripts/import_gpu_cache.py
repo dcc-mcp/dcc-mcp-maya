@@ -48,7 +48,7 @@ def import_gpu_cache(
         return success_result(
             "Imported GPU cache '{}' as '{}'".format(os.path.basename(file_path), transform),
             prompt="Use refresh_gpu_cache if the file changes on disk. "
-                   "Use list_gpu_caches to inspect all loaded caches.",
+            "Use list_gpu_caches to inspect all loaded caches.",
             transform_node=transform,
             cache_node=cache_node,
             file_path=file_path,

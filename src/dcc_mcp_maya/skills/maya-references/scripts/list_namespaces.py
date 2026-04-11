@@ -47,7 +47,8 @@ def list_namespaces(root_only: bool = False) -> dict:
         return error_result("Failed to list namespaces", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`list_namespaces`."""
     return list_namespaces(**kwargs)
 
 

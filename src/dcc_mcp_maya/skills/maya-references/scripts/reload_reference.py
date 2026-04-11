@@ -58,7 +58,8 @@ def reload_reference(reference_node: str) -> dict:
         return error_result("Failed to reload reference '{}'".format(reference_node), str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`reload_reference`."""
     return reload_reference(**kwargs)
 
 

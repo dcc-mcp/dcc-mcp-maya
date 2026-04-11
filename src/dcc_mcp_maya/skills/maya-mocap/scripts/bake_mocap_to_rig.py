@@ -92,5 +92,6 @@ def main(**kwargs):
 
 if __name__ == "__main__":
     import json
+
     result = bake_mocap_to_rig("srcChar", "tgtChar")
     print(json.dumps(result))

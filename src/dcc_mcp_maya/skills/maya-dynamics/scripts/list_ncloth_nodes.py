@@ -72,7 +72,8 @@ def list_ncloth_nodes() -> dict:
         return error_result("Failed to list nCloth nodes", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`list_ncloth_nodes`."""
     return list_ncloth_nodes(**kwargs)
 
 

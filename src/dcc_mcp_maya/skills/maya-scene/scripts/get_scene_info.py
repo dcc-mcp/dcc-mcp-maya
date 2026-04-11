@@ -58,7 +58,8 @@ def get_scene_info(include_transforms: bool = True) -> dict:
         return error_result("Failed to get scene info", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`get_scene_info`."""
     return get_scene_info(**kwargs)
 
 

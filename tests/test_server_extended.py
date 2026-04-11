@@ -53,7 +53,7 @@ class TestServerStopEdgeCases:
         """stop() on a server that was never started is safe."""
         srv_mod = _import_server()
         server = srv_mod.MayaMcpServer(port=0)
-        server.stop()
+        server.stop()  # handle is None — should not raise
         assert not server.is_running
 
     def test_stop_server_when_none(self):

@@ -57,7 +57,8 @@ def get_uv_info(object_name: str, uv_set: Optional[str] = None) -> dict:
         return error_result("Failed to get UV info", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`get_uv_info`."""
     return get_uv_info(**kwargs)
 
 
