@@ -233,6 +233,36 @@ Pushed to `origin/auto-improve`
 2. GitHub Dependabot flagged 2 moderate vulnerabilities — check `pyproject.toml` deps
 3. Once `feat/skill-api-improvements` merges to main, run merge + rebase cycle to keep auto-improve current
 
+---
+
+### Run 9 — 2026-04-12 00:19
+
+**Branch**: auto-improve worktree at `G:\PycharmProjects\github\dcc-mcp-maya-auto-improve`
+
+**Baseline before**: 2068 passed, 1 skipped (Run 8)
+
+**New in feat/skill-api-improvements** (3 commits ahead of auto-improve):
+- `69ee591` — 44 scripts: `cmds.objExists` → `validate_node_exists/batch_validate_nodes` + `test_skills_round30` (36 tests)
+- `06cbf40` — 18 scripts: `cmds.objExists` → `validate_node_exists` + `test_skills_round31` (70 tests)
+- Various test file sync: `conftest.py`, `test_api.py`, `test_skills_round22/24/27/28/29`, `tools/` migration scripts
+
+**Actions taken**:
+1. **Absorbed feat branch** — `git checkout origin/feat/skill-api-improvements -- src/ tests/test_skills_round30.py tests/test_skills_round31.py tests/conftest.py tests/test_api.py tests/test_skills_round22.py tests/test_skills_round24.py tests/test_skills_round27.py tests/test_skills_round28.py tests/test_skills_round29.py tools/`
+2. **ruff format**: 337 files reformatted; **ruff check --fix**: All checks passed ✅
+3. **Python compat scan (UP045)**: 362 `Optional[X]` usages flagged — confirmed intentional, project targets py37 (`target-version = "py37"`, UP rules not in default select set). No action needed.
+4. **T201 scan (print statements)**: All checks passed ✅ (no debug prints outside `__main__` blocks)
+
+**Quality gate**:
+- `ruff check src/ tests/` → **All checks passed!** ✅
+- `pytest tests/ --ignore=tests/e2e` → **2152 passed, 1 skipped** ✅ (+84 from baseline 2068)
+
+**Commit**: `55dbc6e` pushed to `origin/auto-improve`
+
+**Next priorities for future runs**:
+1. `server.py:164` dead branch — investigate if it can be covered or documented as unreachable
+2. GitHub Dependabot flagged 2 moderate vulnerabilities — check `pyproject.toml` deps
+3. Once `feat/skill-api-improvements` merges to main, run final merge + rebase cycle
+
 
 **Branch**: auto-improve worktree at `G:\PycharmProjects\github\dcc-mcp-maya-auto-improve`
 

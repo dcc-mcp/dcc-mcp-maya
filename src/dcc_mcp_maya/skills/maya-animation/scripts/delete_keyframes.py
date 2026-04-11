@@ -15,8 +15,11 @@ from dcc_mcp_maya.api import validate_node_exists
 def delete_keyframes(
     object_name: str,
     attributes: Optional[List[str]] = None,
+    attribute: Optional[str] = None,
     start_frame: Optional[float] = None,
     end_frame: Optional[float] = None,
+    start_time: Optional[float] = None,
+    end_time: Optional[float] = None,
 ) -> dict:
     """Delete keyframes from an object within an optional frame range.
 
@@ -24,14 +27,25 @@ def delete_keyframes(
         object_name: Name of the object whose keyframes will be deleted.
         attributes: List of attribute names to affect (e.g. ``["tx", "ry"]``).
             If None, all keyable attributes are targeted.
+        attribute: Single attribute name (alias for ``attributes=[attribute]``).
         start_frame: First frame of the range to delete.  If None and
             *end_frame* is also None, all keyframes are deleted.
         end_frame: Last frame of the range to delete.  If None and
             *start_frame* is also None, all keyframes are deleted.
+        start_time: Alias for ``start_frame``.
+        end_time: Alias for ``end_frame``.
 
     Returns:
         ActionResultModel dict with ``context.deleted_count``.
     """
+    # Resolve aliases
+    if attribute is not None and not attributes:
+        attributes = [attribute]
+    if start_time is not None and start_frame is None:
+        start_frame = start_time
+    if end_time is not None and end_frame is None:
+        end_frame = end_time
+
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 

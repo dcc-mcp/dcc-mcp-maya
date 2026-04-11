@@ -9,29 +9,29 @@ from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_
 # Import built-in modules
 
 
-def execute_mel(code: str) -> dict:
+def execute_mel(script: str) -> dict:
     """Execute a MEL expression and return its string result.
 
     Args:
-        code: MEL code to execute.
+        script: MEL code to execute.
 
     Returns:
         ActionResultModel dict with ``context.output`` (str) and ``context.script``.
     """
 
-    if not code or not code.strip():
-        return skill_error("No MEL code provided", "Provide 'code' with valid MEL.")
+    if not script or not script.strip():
+        return skill_error("No MEL code provided", "Provide 'script' with valid MEL.")
 
     try:
         import maya.mel as mel  # noqa: PLC0415
 
-        raw = mel.eval(code)
+        raw = mel.eval(script)
         output = str(raw) if raw is not None else ""
         return skill_success(
             "MEL executed successfully",
             prompt="MEL script finished. Check 'output' for any return value.",
             output=output,
-            script=code,
+            script=script,
         )
     except ImportError:
         return skill_error("Maya not available", "maya.mel could not be imported")

@@ -42,7 +42,7 @@ def list_materials(shader_type: Optional[str] = None) -> dict:
 
         return skill_success(
             "Found {} material(s)".format(len(materials)),
-            materials=materials,
+            materials=[{"name": m} for m in materials],
             count=len(materials),
             prompt="Use assign_material or set_material_attribute to manage the listed shaders.",
         )

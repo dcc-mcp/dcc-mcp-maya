@@ -10,11 +10,11 @@ from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_
 from dcc_mcp_maya.api import validate_node_exists
 
 
-def delete_expression(name: str) -> dict:
+def delete_expression(expression_name: str) -> dict:
     """Delete an expression node by name.
 
     Args:
-        name: Expression node name to delete.
+        expression_name: Expression node name to delete.
 
     Returns:
         ActionResultModel dict with ``context.expression_name`` confirming deletion.
@@ -22,29 +22,29 @@ def delete_expression(name: str) -> dict:
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        err = validate_node_exists(cmds, name)
+        err = validate_node_exists(cmds, expression_name)
         if err:
             return err
 
         # Verify it is actually an expression node
-        node_type = cmds.objectType(name)
+        node_type = cmds.objectType(expression_name)
         if node_type != "expression":
             return skill_error(
-                "Node '{}' is not an expression (type: {})".format(name, node_type),
+                "Node '{}' is not an expression (type: {})".format(expression_name, node_type),
                 "Provide an expression node name. Use list_expressions to find them.",
             )
 
-        cmds.delete(name)
+        cmds.delete(expression_name)
         return skill_success(
-            "Expression node '{}' deleted".format(name),
+            "Expression node '{}' deleted".format(expression_name),
             prompt="Expression removed. Driven attributes will retain their last evaluated values.",
-            expression_name=name,
-            deleted_node=name,
+            expression_name=expression_name,
+            deleted_node=expression_name,
         )
     except ImportError:
         return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return skill_exception(exc, message="Failed to delete expression '{}'".format(name))
+        return skill_exception(exc, message="Failed to delete expression '{}'".format(expression_name))
 
 
 @skill_entry
