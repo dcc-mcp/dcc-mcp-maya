@@ -610,8 +610,53 @@ No more empty skill dirs.
 - Committed: `d2f93b7 refactor(skills): migrate maya-mash, maya-selection, maya-xgen 15 scripts to skill_entry style; update test_skills_round13; add test_skills_round28 (49 tests)`
 - Pushed: `origin/feat/skill-api-improvements` updated
 
+
+---
+
+## 2026-04-11 (Round 15 — bulk validate_node_exists migration)
+
+### State before this round
+- Branch: `feat/skill-api-improvements`
+- Tests: 2021 passed, 27 skipped
+- 353 raw `cmds.objExists` guard patterns across 193 files
+- dcc-mcp-core: v0.12.x, new APIs include register_batch, TransportManager.bind_and_register, create_skill_manager
+
+### Work done
+
+**1. tools/migrate_objexists.py** — AST-safe regex migration tool:
+- Converts `if not cmds.objExists(X): return skill_error(...)` → `err = validate_node_exists(cmds, X); if err: return err`
+- Dry-run mode; handles single-line and multi-line skill_error patterns
+- 212 replacements across 136 files
+
+**2. tools/fix_bad_imports.py** + **tools/fix_missing_imports.py** — repair tools:
+- Detected and fixed 133 files where import was inserted inside `if __name__` block (IndentationError)
+- Ensures `from dcc_mcp_maya.api import validate_node_exists` is at top-level after dcc_mcp_core imports
+
+**3. ruff auto-fix** — sorted 133 import blocks (I001), added noqa: E402 to 2 edge cases
+
+**4. test_skills_round21 fix** — updated 1 test assertion from `"not exist"` → `"not found"` to match validate_node_exists message
+
+**5. tests/test_skills_round29.py** — 25 new tests:
+- TestMigrationStructural (5): no missing imports, no syntax errors, imports at top-level, guard count < 150, usage count >= 140
+- TestValidateNodeExistsHelper (6): None/error/node-name/solutions/batch short-circuit/batch-all-exist
+- TestGetTransformMigrated (3): success/missing-node/import-present
+- TestGetKeyframesMigrated (3): empty/with-keys/missing-node
+- TestGetBlendShapeWeightsMigrated (2): success/missing-node
+- TestDeleteAnnotationMigrated (3): shape-delete/missing/import-structure
+- TestFreezeTransformsMigrated (2): success/missing-object
+- TestBatchValidateImports (1): structural check
+
+### State after this round
+- Tests: 2046 passed (+25), 27 skipped, 0 failures
+- ruff: All checks passed
+- objExists guards: 353 → ~95 (complex patterns remain, not auto-migratable)
+- validate_node_exists: used in 174 files (up from 39), all properly imported
+- Committed: `ee06ec6 refactor(skills): bulk migrate 136 scripts from cmds.objExists to validate_node_exists; add test_skills_round29 (25 tests)`
+- Pushed: `origin/feat/skill-api-improvements` updated
+
 ### Next priorities
-1. Continue `objExists` → `validate_node_exists` refactoring in remaining skill dirs
-2. Add more E2E tests to `tests/e2e/` covering xgen/mash/selection scenarios
-3. Check dcc-mcp-core for new APIs at https://github.com/loonghao/dcc-mcp-core/blob/main/llms-full.txt
-4. Python 3.7 type annotation audit on newly-migrated scripts
+1. Migrate remaining ~95 complex `objExists` patterns (multi-node checks → batch_validate_nodes)
+2. Integration of dcc-mcp-core new APIs: `create_skill_manager()`, `TransportManager.bind_and_register`, `resolve_dependencies`
+3. server.py update: use `create_skill_manager()` for one-step setup
+4. E2E tests: add more coverage for skill dirs added in Rounds 2-9
+

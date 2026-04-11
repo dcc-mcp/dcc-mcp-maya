@@ -9,7 +9,7 @@ from typing import List, Optional
 # Import local modules
 from dcc_mcp_core.skill import skill_error, skill_exception, skill_success
 
-from dcc_mcp_maya.api import validate_node_exists
+from dcc_mcp_maya.api import batch_validate_nodes, validate_node_exists
 
 _VALID_FIELD_TYPES = (
     "gravity",
@@ -203,12 +203,9 @@ def create_dynamic_field(
         # Connect to particle systems
         connected = []
         if objects:
-            missing = [o for o in objects if not cmds.objExists(o)]
-            if missing:
-                return skill_error(
-                    "Object(s) not found: {}".format(", ".join(missing)),
-                    "Ensure all objects exist before connecting the field",
-                )
+            err = batch_validate_nodes(cmds, list(objects))
+            if err:
+                return err
             cmds.connectDynamic(objects, fields=field_node)
             connected = list(objects)
 
@@ -259,12 +256,9 @@ def connect_field_to_objects(
         if err:
             return err
 
-        missing = [o for o in objects if not cmds.objExists(o)]
-        if missing:
-            return skill_error(
-                "Object(s) not found: {}".format(", ".join(missing)),
-                "Ensure all objects exist before connecting the field",
-            )
+        err = batch_validate_nodes(cmds, list(objects))
+        if err:
+            return err
 
         cmds.connectDynamic(objects, fields=field_node)
 
@@ -316,11 +310,10 @@ def create_ncloth(
                 "'{}' is not a polygon mesh or transform".format(mesh),
             )
 
-        if nucleus and not cmds.objExists(nucleus):
-            return skill_error(
-                "Nucleus node not found: {}".format(nucleus),
-                "'{}' does not exist in the scene".format(nucleus),
-            )
+        if nucleus:
+            err = validate_node_exists(cmds, nucleus)
+            if err:
+                return err
 
         # Select the mesh and create nCloth
         cmds.select(mesh, replace=True)
@@ -388,11 +381,10 @@ def create_nrigid(
                 "'{}' is not a polygon mesh or transform".format(mesh),
             )
 
-        if nucleus and not cmds.objExists(nucleus):
-            return skill_error(
-                "Nucleus node not found: {}".format(nucleus),
-                "'{}' does not exist in the scene".format(nucleus),
-            )
+        if nucleus:
+            err = validate_node_exists(cmds, nucleus)
+            if err:
+                return err
 
         cmds.select(mesh, replace=True)
         nrigid_kwargs = {}
