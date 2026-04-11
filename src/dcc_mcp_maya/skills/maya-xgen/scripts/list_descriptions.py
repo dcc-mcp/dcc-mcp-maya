@@ -1,29 +1,31 @@
 """List all XGen descriptions in the scene."""
 
+# Import future modules
+from __future__ import annotations
+
+from typing import Optional
+
 # Import local modules
-from dcc_mcp_core.skill import skill_error, skill_success
+from dcc_mcp_core.skill import skill_entry, skill_exception, skill_success
 
 
-def run(params):
+def list_descriptions(collection: Optional[str] = None) -> dict:
     """List XGen descriptions, optionally filtered by collection.
 
     Args:
-        params: dict with keys:
-            - collection (str, optional): Limit results to this collection.
+        collection: Limit results to this collection. Lists all collections
+            when omitted.
 
     Returns:
-        ActionResultModel
+        ActionResultModel dict with ``context.descriptions`` and ``context.count``.
     """
-    import maya.cmds as cmds  # noqa: F401 — ensure maya is importable
-
     try:
-        import xgenm as xg
+        import xgenm as xg  # noqa: PLC0415
 
-        collection_filter = params.get("collection")
         palettes = xg.palettes()
         result = []
         for palette in palettes:
-            if collection_filter and palette != collection_filter:
+            if collection and palette != collection:
                 continue
             for desc in xg.descriptions(palette):
                 bound = list(xg.boundGeometry(palette, desc))
@@ -42,8 +44,20 @@ def run(params):
             count=len(result),
         )
     except Exception as exc:
-        return skill_error(
-            "Failed to list XGen descriptions",
-            str(exc),
+        return skill_exception(
+            exc,
+            message="Failed to list XGen descriptions",
             prompt="Ensure XGen plugin is loaded: cmds.loadPlugin('xgenToolkit').",
         )
+
+
+@skill_entry
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`list_descriptions`."""
+    return list_descriptions(**kwargs)
+
+
+if __name__ == "__main__":
+    from dcc_mcp_core.skill import run_main
+
+    run_main(main)
