@@ -3,11 +3,10 @@
 # Import future modules
 from __future__ import annotations
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 # Import built-in modules
-import logging
-
-logger = logging.getLogger(__name__)
-
 
 def clean_scene(
     remove_unknown_nodes: bool = True,
@@ -29,7 +28,6 @@ def clean_scene(
     Returns:
         ActionResultModel dict with ``context.removed`` and ``context.flagged`` lists.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
@@ -95,24 +93,21 @@ def clean_scene(
                             flagged.append("render_layer_locked:{}".format(layer))
 
         action_str = "dry-run" if dry_run else "cleaned"
-        return success_result(
+        return maya_success(
             "Scene {} — {} items removed, {} flagged".format(action_str, len(removed), len(flagged)),
             prompt="Clean complete. Run validate_scene_for_farm to check render readiness.",
             removed=removed,
             flagged=flagged,
             removed_count=len(removed),
             flagged_count=len(flagged),
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("clean_scene failed")
-        return error_result("Failed to clean scene", str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to clean scene")
 
 def main(**kwargs):
     return clean_scene(**kwargs)
-
 
 if __name__ == "__main__":
     import json

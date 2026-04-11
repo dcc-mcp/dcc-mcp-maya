@@ -4,9 +4,10 @@
 from __future__ import annotations
 
 # Import built-in modules
-import logging
 
-logger = logging.getLogger(__name__)
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 
 
 def list_annotations() -> dict:
@@ -17,8 +18,6 @@ def list_annotations() -> dict:
         with ``annotation_node``, ``transform_node``, ``text``) and
         ``context.count``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
@@ -36,17 +35,16 @@ def list_annotations() -> dict:
                 }
             )
 
-        return success_result(
+        return maya_success(
             "Found {} annotation(s)".format(len(annotations)),
             prompt="Use update_annotation to change text, or delete_annotation to remove one.",
             annotations=annotations,
             count=len(annotations),
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("list_annotations failed")
-        return error_result("Failed to list annotations", str(exc)).to_dict()
+        return maya_from_exception(exc, "Failed to list annotations")
 
 
 def main(**kwargs):

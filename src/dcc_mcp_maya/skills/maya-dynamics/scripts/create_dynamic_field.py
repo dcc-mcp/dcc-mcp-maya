@@ -4,10 +4,10 @@
 from __future__ import annotations
 
 # Import built-in modules
-import logging
 from typing import List, Optional
 
-logger = logging.getLogger(__name__)
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 _VALID_FIELD_TYPES = (
     "gravity",
@@ -45,24 +45,22 @@ def create_dynamic_field(
         ActionResultModel dict with ``context.field_node``,
         ``context.field_type``, ``context.magnitude``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     ft = field_type.lower()
     if ft not in _VALID_FIELD_TYPES:
-        return error_result(
+        return maya_error(
             "Invalid field type: {}".format(field_type),
             "Supported types: {}".format(", ".join(_VALID_FIELD_TYPES)),
-        ).to_dict()
+        )
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         create_fn = getattr(cmds, ft, None)
         if create_fn is None:
-            return error_result(
+            return maya_error(
                 "Field type not available: {}".format(ft),
                 "cmds.{} is not accessible in this Maya version".format(ft),
-            ).to_dict()
+            )
 
         field_kwargs = {}
         if name:
@@ -81,25 +79,24 @@ def create_dynamic_field(
         if objects:
             missing = [o for o in objects if not cmds.objExists(o)]
             if missing:
-                return error_result(
+                return maya_error(
                     "Object(s) not found: {}".format(", ".join(missing)),
                     "Ensure all objects exist before connecting the field",
-                ).to_dict()
+                )
             cmds.connectDynamic(objects, fields=field_node)
             connected = list(objects)
 
-        return success_result(
+        return maya_success(
             "Created {} field '{}'".format(ft, field_node),
             field_node=field_node,
             field_type=ft,
             magnitude=magnitude,
             connected_objects=connected,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("create_dynamic_field failed")
-        return error_result("Failed to create dynamic field", str(exc)).to_dict()
+        return maya_from_exception(exc, "Failed to create dynamic field")
 
 
 def main(**kwargs) -> dict:

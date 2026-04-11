@@ -3,12 +3,11 @@
 # Import future modules
 from __future__ import annotations
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 # Import built-in modules
-import logging
 from typing import Optional
-
-logger = logging.getLogger(__name__)
-
 
 def get_uv_shell_info(object_name: str, uv_set: Optional[str] = None) -> dict:
     """Get UV shell information for a polygon mesh.
@@ -25,24 +24,23 @@ def get_uv_shell_info(object_name: str, uv_set: Optional[str] = None) -> dict:
         ``context.shells`` (list of dicts with ``u_min``, ``v_min``,
         ``u_max``, ``v_max``, ``uv_indices``).
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return error_result(
+            return maya_error(
                 "Object not found: {}".format(object_name), "'{}' does not exist".format(object_name)
-            ).to_dict()
+            )
 
         # Resolve UV set
         if uv_set:
             existing = cmds.polyUVSet(object_name, query=True, allUVSets=True) or []
             if uv_set not in existing:
-                return error_result(
+                return maya_error(
                     "UV set '{}' not found on '{}'".format(uv_set, object_name),
                     "Available UV sets: {}".format(existing),
-                ).to_dict()
+                )
             cmds.polyUVSet(object_name, currentUVSet=True, uvSet=uv_set)
 
         active_set = cmds.polyUVSet(object_name, query=True, currentUVSet=True)
@@ -80,24 +78,21 @@ def get_uv_shell_info(object_name: str, uv_set: Optional[str] = None) -> dict:
             else:
                 shells.append({"shell_id": sid, "uv_count": len(indices)})
 
-        return success_result(
+        return maya_success(
             "UV shell info for '{}' (UV set: {})".format(object_name, active_set),
             object_name=object_name,
             uv_set=active_set,
             shell_count=len(shells),
             shells=shells,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("get_uv_shell_info failed")
-        return error_result("Failed to get UV shell info", str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to get UV shell info")
 
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`get_uv_shell_info`."""
     return get_uv_shell_info(**kwargs)
-
 
 if __name__ == "__main__":
     import json

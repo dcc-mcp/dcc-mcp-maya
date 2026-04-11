@@ -3,13 +3,12 @@
 # Import future modules
 from __future__ import annotations
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 # Import built-in modules
-import logging
 import subprocess
 from typing import Optional
-
-logger = logging.getLogger(__name__)
-
 
 def get_render_job_status(
     job_id: str,
@@ -25,7 +24,6 @@ def get_render_job_status(
     Returns:
         ActionResultModel dict with job status, progress, and task summary.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import os  # noqa: PLC0415
@@ -40,10 +38,10 @@ def get_render_job_status(
                     cmd = candidate
                     break
         if not cmd:
-            return error_result(
+            return maya_error(
                 "deadlinecommand not found",
                 "Install Thinkbox Deadline client and ensure it is on PATH",
-            ).to_dict()
+            )
 
         proc = subprocess.run(
             [cmd, "-GetJobDetails", job_id],
@@ -53,10 +51,10 @@ def get_render_job_status(
         )
 
         if proc.returncode != 0:
-            return error_result(
+            return maya_error(
                 "Failed to query job '{}'".format(job_id),
                 proc.stderr.strip() or proc.stdout.strip(),
-            ).to_dict()
+            )
 
         # Parse key=value output
         status_info = {}  # type: dict
@@ -70,7 +68,7 @@ def get_render_job_status(
         total = status_info.get("TaskCount", "0")
         errors = status_info.get("FailedChunks", "0")
 
-        return success_result(
+        return maya_success(
             "Job '{}' status: {} ({}/{} tasks)".format(job_id, job_status, completed, total),
             prompt="Check again later or use submit_to_deadline to resubmit if failed.",
             job_id=job_id,
@@ -79,17 +77,14 @@ def get_render_job_status(
             total_tasks=total,
             failed_tasks=errors,
             raw=status_info,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("get_render_job_status failed")
-        return error_result("Failed to query job status", str(exc)).to_dict()
-
+        return maya_from_exception(exc, "Failed to query job status")
 
 def main(**kwargs):
     return get_render_job_status(**kwargs)
-
 
 if __name__ == "__main__":
     import json

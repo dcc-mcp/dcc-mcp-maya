@@ -4,10 +4,10 @@
 from __future__ import annotations
 
 # Import built-in modules
-import logging
 from typing import List, Optional
 
-logger = logging.getLogger(__name__)
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 
 def get_mesh_edge_info(
@@ -25,27 +25,25 @@ def get_mesh_edge_info(
         ActionResultModel dict with ``context.edges`` (list of dicts with
         ``index``, ``length``, ``vertices``), ``context.edge_count``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return error_result("Object not found: {}".format(object_name)).to_dict()
+            return maya_error("Object not found: {}".format(object_name), "")
 
         total_edges = cmds.polyEvaluate(object_name, edge=True)
         if not isinstance(total_edges, int) or total_edges == 0:
-            return error_result("'{}' has no edges — ensure it is a polygon mesh".format(object_name)).to_dict()
+            return maya_error("'{}' has no edges — ensure it is a polygon mesh".format(object_name), "")
 
         if edge_indices is None:
             indices = list(range(total_edges))
         else:
             invalid = [i for i in edge_indices if not (0 <= i < total_edges)]
             if invalid:
-                return error_result(
+                return maya_error(
                     "Invalid edge indices: {}".format(invalid),
                     "Valid range is 0 to {}".format(total_edges - 1),
-                ).to_dict()
+                )
             indices = list(edge_indices)
 
         edges = []
@@ -84,18 +82,17 @@ def get_mesh_edge_info(
 
             edges.append({"index": idx, "length": length, "vertices": verts})
 
-        return success_result(
+        return maya_success(
             "Edge info for '{}' ({} edge(s) queried)".format(object_name, len(edges)),
             object_name=object_name,
             edges=edges,
             edge_count=len(edges),
             total_edges=total_edges,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("get_mesh_edge_info failed")
-        return error_result("Failed to get edge info", str(exc)).to_dict()
+        return maya_from_exception(exc, "Failed to get edge info")
 
 
 def main(**kwargs) -> dict:

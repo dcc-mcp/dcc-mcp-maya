@@ -3,12 +3,11 @@
 # Import future modules
 from __future__ import annotations
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 # Import built-in modules
-import logging
 from typing import Optional
-
-logger = logging.getLogger(__name__)
-
 
 def swap_proxy(proxy: str, show_proxy: Optional[bool] = None) -> dict:
     """Swap visibility between proxy and high-res mesh.
@@ -21,16 +20,15 @@ def swap_proxy(proxy: str, show_proxy: Optional[bool] = None) -> dict:
     Returns:
         ActionResultModel dict with ``context.proxy_visible`` and ``context.source_visible``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(proxy):
-            return error_result(
+            return maya_error(
                 "Proxy mesh '{}' not found".format(proxy),
                 "Use list_proxies to find available proxy meshes.",
-            ).to_dict()
+            )
 
         source = ""
         if cmds.attributeQuery("proxySource", node=proxy, exists=True):
@@ -48,24 +46,21 @@ def swap_proxy(proxy: str, show_proxy: Optional[bool] = None) -> dict:
             cmds.setAttr("{}.visibility".format(source), not bool(show_proxy))
             source_vis = not bool(show_proxy)
 
-        return success_result(
+        return maya_success(
             "Proxy='{}' visibility={}, Source='{}' visibility={}".format(proxy, show_proxy, source, source_vis),
             prompt="Visibility swapped. Use swap_proxy again to toggle back.",
             proxy=proxy,
             proxy_visible=bool(show_proxy),
             source=source,
             source_visible=source_vis,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("swap_proxy failed")
-        return error_result("Failed to swap proxy visibility", str(exc)).to_dict()
-
+        return maya_from_exception(exc, "Failed to swap proxy visibility")
 
 def main(**kwargs):
     return swap_proxy(**kwargs)
-
 
 if __name__ == "__main__":
     import json

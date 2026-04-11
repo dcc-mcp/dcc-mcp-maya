@@ -3,12 +3,11 @@
 # Import future modules
 from __future__ import annotations
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_success
+
 # Import built-in modules
-import logging
 from typing import Optional
-
-logger = logging.getLogger(__name__)
-
 
 def copy_skin_weights(
     source_mesh: str,
@@ -33,24 +32,23 @@ def copy_skin_weights(
     Returns:
         ActionResultModel dict with ``context.skin_cluster_name``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         for mesh in (source_mesh, target_mesh):
             if not cmds.objExists(mesh):
-                return error_result(
+                return maya_error(
                     "Object not found: {}".format(mesh),
                     "'{}' does not exist in the scene".format(mesh),
-                ).to_dict()
+                )
 
         src_clusters = cmds.ls(cmds.listHistory(source_mesh) or [], type="skinCluster")
         if not src_clusters:
-            return error_result(
+            return maya_error(
                 "No skin cluster on source: {}".format(source_mesh),
                 "Source mesh has no skinCluster in its history",
-            ).to_dict()
+            )
 
         src_sc = src_clusters[0]
         src_joints = cmds.skinCluster(src_sc, query=True, influence=True) or []
@@ -78,27 +76,24 @@ def copy_skin_weights(
             normalize=normalize,
         )
 
-        return success_result(
+        return maya_success(
             "Copied skin weights from '{}' to '{}'".format(source_mesh, target_mesh),
             prompt="Use normalize_skin_weights if blending is needed, or check prune_skin_weights.",
             source_mesh=source_mesh,
             target_mesh=target_mesh,
             skin_cluster_name=tgt_sc,
             joint_count=len(src_joints),
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("copy_skin_weights failed")
-        return error_result(
+        return maya_error(
             "Failed to copy skin weights from '{}' to '{}'".format(source_mesh, target_mesh),
             str(exc),
-        ).to_dict()
-
+        )
 
 def main(**kwargs):
     return copy_skin_weights(**kwargs)
-
 
 if __name__ == "__main__":
     import json

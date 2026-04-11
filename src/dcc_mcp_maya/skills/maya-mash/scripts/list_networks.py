@@ -1,6 +1,7 @@
 """List all MASH networks in the scene."""
 
-from dcc_mcp_core import error_result, success_result
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_success
 
 
 def run(params):  # noqa: ARG001
@@ -27,11 +28,11 @@ def run(params):  # noqa: ARG001
                 }
             )
 
-        return success_result(
+        return maya_success(
             "Found {} MASH network(s)".format(len(networks)),
             prompt="Use add_node or set_mash_attribute to modify networks.",
             networks=networks,
             count=len(networks),
         )
     except Exception as exc:
-        return error_result("Failed to list MASH networks", str(exc))
+        return maya_error("Failed to list MASH networks", str(exc))

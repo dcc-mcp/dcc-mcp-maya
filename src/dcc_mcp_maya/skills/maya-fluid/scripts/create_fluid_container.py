@@ -4,11 +4,10 @@
 from __future__ import annotations
 
 # Import built-in modules
-import logging
 from typing import Optional
 
-logger = logging.getLogger(__name__)
-
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 def create_fluid_container(
     name: Optional[str] = None,
@@ -30,8 +29,6 @@ def create_fluid_container(
         ActionResultModel dict with ``context.fluid_transform`` and
         ``context.fluid_shape``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
@@ -55,7 +52,7 @@ def create_fluid_container(
                 shapes = cmds.listRelatives(fluid_transform, shapes=True, fullPath=False) or []
                 fluid_shape = shapes[0] if shapes else fluid_shape
 
-        return success_result(
+        return maya_success(
             "Fluid container created",
             prompt=(
                 "Fluid container '{}' ready. Use set_fluid_attribute to configure "
@@ -63,17 +60,14 @@ def create_fluid_container(
             ),
             fluid_transform=fluid_transform,
             fluid_shape=fluid_shape,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("create_fluid_container failed")
-        return error_result("Failed to create fluid container", str(exc)).to_dict()
-
+        return maya_from_exception(exc, "Failed to create fluid container")
 
 def main(**kwargs):
     return create_fluid_container(**kwargs)
-
 
 if __name__ == "__main__":
     import json

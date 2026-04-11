@@ -3,11 +3,10 @@
 # Import future modules
 from __future__ import annotations
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 # Import built-in modules
-import logging
-
-logger = logging.getLogger(__name__)
-
 
 def list_color_spaces() -> dict:
     """List all available color spaces registered in Maya's color management.
@@ -15,7 +14,6 @@ def list_color_spaces() -> dict:
     Returns:
         ActionResultModel dict with ``context.color_spaces`` list.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
@@ -40,24 +38,21 @@ def list_color_spaces() -> dict:
         except Exception:
             cm_enabled = False
 
-        return success_result(
+        return maya_success(
             "Color space list retrieved",
             color_management_enabled=cm_enabled,
             input_color_spaces=list(spaces),
             rendering_spaces=list(rendering_spaces),
             output_transforms=list(output_transforms),
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("list_color_spaces failed")
-        return error_result("Failed to list color spaces", str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to list color spaces")
 
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`list_color_spaces`."""
     return list_color_spaces(**kwargs)
-
 
 if __name__ == "__main__":
     import json

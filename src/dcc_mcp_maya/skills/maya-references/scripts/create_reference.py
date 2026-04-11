@@ -3,12 +3,11 @@
 # Import future modules
 from __future__ import annotations
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 # Import built-in modules
-import logging
 from typing import Optional
-
-logger = logging.getLogger(__name__)
-
 
 def create_reference(
     file_path: str,
@@ -28,13 +27,12 @@ def create_reference(
         ActionResultModel dict with ``context.reference_node``,
         ``context.namespace``, and ``context.file_path``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not file_path or not file_path.strip():
-            return error_result("Invalid file path", "file_path must not be empty").to_dict()
+            return maya_error("Invalid file path", "file_path must not be empty")
 
         kwargs = {
             "reference": True,
@@ -56,23 +54,20 @@ def create_reference(
         except Exception:
             resolved_ns = namespace or ""
 
-        return success_result(
+        return maya_success(
             "Referenced '{}' as '{}'".format(file_path, resolved_ns),
             reference_node=ref_node,
             namespace=resolved_ns,
             file_path=file_path,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("create_reference failed")
-        return error_result("Failed to reference file '{}'".format(file_path), str(exc)).to_dict()
-
+        return maya_from_exception(exc, "Failed to reference file '{}'".format(file_path))
 
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`create_reference`."""
     return create_reference(**kwargs)
-
 
 if __name__ == "__main__":
     import json

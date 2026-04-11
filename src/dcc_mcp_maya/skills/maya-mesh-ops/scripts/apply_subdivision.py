@@ -3,10 +3,8 @@
 # Import future modules
 from __future__ import annotations
 
-# Import built-in modules
-import logging
-
-logger = logging.getLogger(__name__)
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 
 def apply_subdivision(
@@ -26,26 +24,24 @@ def apply_subdivision(
     Returns:
         ActionResultModel dict.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     if method not in ("preview", "subdivide"):
-        return error_result(
+        return maya_error(
             "Invalid method: {}".format(method),
             "Use 'preview' or 'subdivide'",
-        ).to_dict()
+        )
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return error_result("Object not found: {}".format(object_name)).to_dict()
+            return maya_error("Object not found: {}".format(object_name), "")
 
         shapes = cmds.listRelatives(object_name, shapes=True, type="mesh") or []
         if not shapes:
             if cmds.objectType(object_name) == "mesh":
                 shapes = [object_name]
             else:
-                return error_result("'{}' has no polygon mesh shape".format(object_name)).to_dict()
+                return maya_error("'{}' has no polygon mesh shape".format(object_name), "")
 
         shape = shapes[0]
 
@@ -55,17 +51,16 @@ def apply_subdivision(
         else:
             cmds.polySubdivideFacet(object_name, dv=level)
 
-        return success_result(
+        return maya_success(
             "Subdivision applied to '{}' (method={}, level={})".format(object_name, method, level),
             object_name=object_name,
             method=method,
             level=level,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("apply_subdivision failed")
-        return error_result("Failed to apply subdivision", str(exc)).to_dict()
+        return maya_from_exception(exc, "Failed to apply subdivision")
 
 
 def main(**kwargs) -> dict:

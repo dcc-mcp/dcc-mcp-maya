@@ -4,10 +4,10 @@
 from __future__ import annotations
 
 # Import built-in modules
-import logging
 from typing import Optional
 
-logger = logging.getLogger(__name__)
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 
 def list_geometry_caches(mesh: Optional[str] = None) -> dict:
@@ -22,16 +22,14 @@ def list_geometry_caches(mesh: Optional[str] = None) -> dict:
         with ``node``, ``cache_path``, ``start_frame``, ``end_frame``) and
         ``context.count``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if mesh and not cmds.objExists(mesh):
-            return error_result(
+            return maya_error(
                 "Mesh not found: {}".format(mesh),
                 "'{}' does not exist in the scene".format(mesh),
-            ).to_dict()
+            )
 
         all_cache_nodes = cmds.ls(type="cacheFile") or []
 
@@ -61,17 +59,16 @@ def list_geometry_caches(mesh: Optional[str] = None) -> dict:
                 }
             )
 
-        return success_result(
+        return maya_success(
             "Found {} cache node(s)".format(len(result)),
             prompt="Use delete_geometry_cache to remove a cache, or attach_geometry_cache to add one.",
             cache_nodes=result,
             count=len(result),
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("list_geometry_caches failed")
-        return error_result("Failed to list geometry caches", str(exc)).to_dict()
+        return maya_from_exception(exc, "Failed to list geometry caches")
 
 
 def main(**kwargs):

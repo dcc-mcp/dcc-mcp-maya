@@ -3,12 +3,11 @@
 # Import future modules
 from __future__ import annotations
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 # Import built-in modules
-import logging
 from typing import Optional
-
-logger = logging.getLogger(__name__)
-
 
 def set_render_settings(
     width: Optional[int] = None,
@@ -34,7 +33,6 @@ def set_render_settings(
     Returns:
         ActionResultModel dict with applied settings.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
@@ -82,24 +80,21 @@ def set_render_settings(
             applied["output_path"] = output_path
 
         if not applied:
-            return error_result("No settings provided", "Specify at least one render setting to update").to_dict()
+            return maya_error("No settings provided", "Specify at least one render setting to update")
 
-        return success_result(
+        return maya_success(
             "Updated render settings: {}".format(", ".join(applied.keys())),
             prompt="Use render_frame or playblast to render with the new settings.",
             **applied,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("set_render_settings failed")
-        return error_result("Failed to set render settings", str(exc)).to_dict()
-
+        return maya_from_exception(exc, "Failed to set render settings")
 
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`set_render_settings`."""
     return set_render_settings(**kwargs)
-
 
 if __name__ == "__main__":
     import json

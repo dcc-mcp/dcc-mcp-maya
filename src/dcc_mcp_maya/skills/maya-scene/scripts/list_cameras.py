@@ -3,11 +3,8 @@
 # Import future modules
 from __future__ import annotations
 
-# Import built-in modules
-import logging
-
-logger = logging.getLogger(__name__)
-
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 def list_cameras(include_default: bool = True) -> dict:
     """List all cameras in the scene with their basic attributes.
@@ -21,7 +18,6 @@ def list_cameras(include_default: bool = True) -> dict:
         ActionResultModel dict with ``context.cameras`` (list of dicts) and
         ``context.count``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     _DEFAULT_CAMERAS = {"persp", "top", "front", "side", "perspShape", "topShape", "frontShape", "sideShape"}
 
@@ -44,22 +40,19 @@ def list_cameras(include_default: bool = True) -> dict:
             }
             cameras.append(cam)
 
-        return success_result(
+        return maya_success(
             "Found {} camera(s)".format(len(cameras)),
             cameras=cameras,
             count=len(cameras),
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("list_cameras failed")
-        return error_result("Failed to list cameras", str(exc)).to_dict()
-
+        return maya_from_exception(exc, "Failed to list cameras")
 
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`list_cameras`."""
     return list_cameras(**kwargs)
-
 
 if __name__ == "__main__":
     import json

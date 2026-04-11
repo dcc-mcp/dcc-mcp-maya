@@ -4,11 +4,10 @@
 from __future__ import annotations
 
 # Import built-in modules
-import logging
 from typing import Optional
 
-logger = logging.getLogger(__name__)
-
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 def list_animation_curves(
     object_name: str,
@@ -25,16 +24,14 @@ def list_animation_curves(
         ActionResultModel dict with ``context.curves`` list of dicts
         containing ``name``, ``type``, ``key_count``, and ``attribute``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return error_result(
+            return maya_error(
                 "Object not found: {}".format(object_name),
                 "'{}' does not exist in the scene".format(object_name),
-            ).to_dict()
+            )
 
         if attribute:
             plug = "{}.{}".format(object_name, attribute)
@@ -66,24 +63,21 @@ def list_animation_curves(
                 }
             )
 
-        return success_result(
+        return maya_success(
             "Found {} animCurve(s) on '{}'".format(len(curves), object_name),
             object_name=object_name,
             attribute=attribute,
             curves=curves,
             count=len(curves),
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("list_animation_curves failed")
-        return error_result("Failed to list animation curves for '{}'".format(object_name), str(exc)).to_dict()
-
+        return maya_from_exception(exc, "Failed to list animation curves for '{}'".format(object_name))
 
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`list_animation_curves`."""
     return list_animation_curves(**kwargs)
-
 
 if __name__ == "__main__":
     import json

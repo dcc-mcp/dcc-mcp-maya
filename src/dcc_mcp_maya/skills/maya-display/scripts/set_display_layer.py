@@ -4,10 +4,10 @@
 from __future__ import annotations
 
 # Import built-in modules
-import logging
 from typing import List
 
-logger = logging.getLogger(__name__)
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 
 def set_display_layer(layer_name: str, objects: List[str]) -> dict:
@@ -20,16 +20,14 @@ def set_display_layer(layer_name: str, objects: List[str]) -> dict:
     Returns:
         ActionResultModel dict with ``context.assigned``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(layer_name):
-            return error_result(
+            return maya_error(
                 "Display layer not found",
                 "Layer '{}' does not exist in the scene".format(layer_name),
-            ).to_dict()
+            )
 
         assigned = []
         missing = []
@@ -44,18 +42,17 @@ def set_display_layer(layer_name: str, objects: List[str]) -> dict:
         if missing:
             msg += "; {} not found: {}".format(len(missing), missing)
 
-        return success_result(
+        return maya_success(
             msg,
             prompt="Use list_display_layers to verify the layer membership.",
             layer_name=layer_name,
             assigned=assigned,
             missing=missing,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("set_display_layer failed")
-        return error_result("Failed to assign objects to layer '{}'".format(layer_name), str(exc)).to_dict()
+        return maya_from_exception(exc, "Failed to assign objects to layer '{}'".format(layer_name))
 
 
 def main(**kwargs) -> dict:

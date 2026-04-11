@@ -4,10 +4,10 @@
 from __future__ import annotations
 
 # Import built-in modules
-import logging
 from typing import List
 
-logger = logging.getLogger(__name__)
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 _SUPPORTED_SHADERS = ("lambert", "blinn", "phong", "phongE", "aiStandardSurface")
 
@@ -22,8 +22,6 @@ def assign_material(material_name: str, objects: List[str]) -> dict:
     Returns:
         ActionResultModel dict.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
@@ -34,32 +32,31 @@ def assign_material(material_name: str, objects: List[str]) -> dict:
                 type="shadingEngine",
             )
             if not connections:
-                return error_result(
+                return maya_error(
                     "No shading group found for '{}'".format(material_name),
                     "Connect material to a shading group first or use assign_material with the SG name",
-                ).to_dict()
+                )
             sg = connections[0]
         else:
             sg = material_name
 
         existing = cmds.ls(objects)
         if not existing:
-            return error_result(
+            return maya_error(
                 "No objects found",
                 "None of the requested objects exist: {}".format(objects),
-            ).to_dict()
+            )
 
         cmds.sets(existing, edit=True, forceElement=sg)
-        return success_result(
+        return maya_success(
             "Assigned '{}' to {} object(s)".format(sg, len(existing)),
             shading_group=sg,
             objects=existing,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("assign_material failed")
-        return error_result("Failed to assign material", str(exc)).to_dict()
+        return maya_from_exception(exc, "Failed to assign material")
 
 
 def main(**kwargs) -> dict:

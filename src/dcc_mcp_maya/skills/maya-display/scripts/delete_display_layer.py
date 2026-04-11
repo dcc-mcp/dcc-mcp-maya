@@ -3,10 +3,8 @@
 # Import future modules
 from __future__ import annotations
 
-# Import built-in modules
-import logging
-
-logger = logging.getLogger(__name__)
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 
 def delete_display_layer(
@@ -25,28 +23,26 @@ def delete_display_layer(
         ActionResultModel dict with ``context.layer_name`` and
         ``context.objects_deleted`` (when ``remove_objects=True``).
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if layer_name == "defaultLayer":
-            return error_result(
+            return maya_error(
                 "Cannot delete defaultLayer",
                 "The built-in 'defaultLayer' cannot be deleted",
-            ).to_dict()
+            )
 
         if not cmds.objExists(layer_name):
-            return error_result(
+            return maya_error(
                 "Display layer not found: {}".format(layer_name),
                 "'{}' does not exist".format(layer_name),
-            ).to_dict()
+            )
 
         if cmds.objectType(layer_name) != "displayLayer":
-            return error_result(
+            return maya_error(
                 "Not a display layer: {}".format(layer_name),
                 "'{}' is not a displayLayer node".format(layer_name),
-            ).to_dict()
+            )
 
         deleted_objects = []
         if remove_objects:
@@ -57,19 +53,18 @@ def delete_display_layer(
 
         cmds.delete(layer_name)
 
-        return success_result(
+        return maya_success(
             "Deleted display layer '{}'{}".format(
                 layer_name,
                 " and {} object(s)".format(len(deleted_objects)) if deleted_objects else "",
             ),
             layer_name=layer_name,
             objects_deleted=deleted_objects,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("delete_display_layer failed")
-        return error_result("Failed to delete display layer '{}'".format(layer_name), str(exc)).to_dict()
+        return maya_from_exception(exc, "Failed to delete display layer '{}'".format(layer_name))
 
 
 def main(**kwargs) -> dict:

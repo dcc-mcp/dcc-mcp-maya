@@ -3,10 +3,8 @@
 # Import future modules
 from __future__ import annotations
 
-# Import built-in modules
-import logging
-
-logger = logging.getLogger(__name__)
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 
 def set_hdri_exposure(
@@ -26,16 +24,14 @@ def set_hdri_exposure(
     Returns:
         ActionResultModel dict with ``light_node``, ``exposure``, ``attribute_set``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(light_node):
-            return error_result(
+            return maya_error(
                 "Light node not found: {}".format(light_node),
                 "Verify the node name with list_hdri_nodes",
-            ).to_dict()
+            )
 
         # Resolve to shape if transform
         shapes = cmds.listRelatives(light_node, shapes=True) or []
@@ -51,23 +47,22 @@ def set_hdri_exposure(
             cmds.setAttr("{}.intensity".format(shape), intensity)
             attr_set = "{}.intensity (mapped from exposure)".format(shape)
         else:
-            return error_result(
+            return maya_error(
                 "Cannot set exposure on node type: {}".format(node_type),
                 "Only aiSkyDomeLight and standard lights are supported",
-            ).to_dict()
+            )
 
-        return success_result(
+        return maya_success(
             "Exposure set to {} on '{}'".format(exposure, light_node),
             prompt="Use set_hdri_rotation to rotate the environment or list_hdri_nodes to inspect.",
             light_node=light_node,
             exposure=exposure,
             attribute_set=attr_set,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("set_hdri_exposure failed")
-        return error_result("Failed to set HDRI exposure", str(exc)).to_dict()
+        return maya_from_exception(exc, "Failed to set HDRI exposure")
 
 
 def main(**kwargs):

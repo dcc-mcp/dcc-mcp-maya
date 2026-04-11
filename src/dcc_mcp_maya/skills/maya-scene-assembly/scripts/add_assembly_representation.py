@@ -3,14 +3,13 @@
 # Import future modules
 from __future__ import annotations
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 # Import built-in modules
-import logging
 from typing import Optional
 
-logger = logging.getLogger(__name__)
-
 _VALID_TYPES = {"Locator", "Cache", "GPU", "Scene"}
-
 
 def add_assembly_representation(
     assembly: str,
@@ -29,22 +28,21 @@ def add_assembly_representation(
     Returns:
         ActionResultModel dict with ``context.rep_node`` and ``context.rep_type``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     if rep_type not in _VALID_TYPES:
-        return error_result(
+        return maya_error(
             "Invalid rep_type '{}'. Valid types: {}".format(rep_type, sorted(_VALID_TYPES)),
             "Choose one of: Locator, Cache, GPU, Scene.",
-        ).to_dict()
+        )
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(assembly):
-            return error_result(
+            return maya_error(
                 "Assembly '{}' not found".format(assembly),
                 "Use list_assemblies or create_assembly_definition first.",
-            ).to_dict()
+            )
 
         kwargs = {"input": assembly, "type": rep_type}
         if rep_name:
@@ -58,24 +56,21 @@ def add_assembly_representation(
             except Exception:
                 pass
 
-        return success_result(
+        return maya_success(
             "Added '{}' representation to '{}'".format(rep_type, assembly),
             prompt="Representation added. Use create_assembly_reference to instance this definition.",
             assembly=assembly,
             rep_node=rep_node,
             rep_type=rep_type,
             file_path=file_path or "",
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("add_assembly_representation failed")
-        return error_result("Failed to add representation", str(exc)).to_dict()
-
+        return maya_from_exception(exc, "Failed to add representation")
 
 def main(**kwargs):
     return add_assembly_representation(**kwargs)
-
 
 if __name__ == "__main__":
     import json

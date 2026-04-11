@@ -10,6 +10,10 @@ from typing import Optional
 logger = logging.getLogger(__name__)
 
 
+
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 def delete_stroke(
     stroke: Optional[str] = None,
     delete_all: bool = False,
@@ -24,7 +28,6 @@ def delete_stroke(
     Returns:
         ActionResultModel dict with ``deleted`` list of removed nodes.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
@@ -33,16 +36,16 @@ def delete_stroke(
             stroke_nodes = cmds.ls(type="stroke") or []
         elif stroke:
             if not cmds.objExists(stroke):
-                return error_result(
+                return maya_error(
                     "Stroke not found: {}".format(stroke),
                     "Verify the stroke node name with list_strokes",
-                ).to_dict()
+                )
             stroke_nodes = [stroke]
         else:
-            return error_result(
+            return maya_error(
                 "No stroke specified",
                 "Provide 'stroke' node name or set 'delete_all=True'",
-            ).to_dict()
+            )
 
         deleted = []
         for sn in stroke_nodes:
@@ -54,17 +57,16 @@ def delete_stroke(
             except Exception as exc:
                 logger.warning("Could not delete %s: %s", target, exc)
 
-        return success_result(
+        return maya_success(
             "Deleted {} Paint Effects stroke(s)".format(len(deleted)),
             prompt="Use list_strokes to confirm deletion or create_stroke to add new ones.",
             deleted=deleted,
             count=len(deleted),
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("delete_stroke failed")
-        return error_result("Failed to delete Paint Effects stroke", str(exc)).to_dict()
+        return maya_from_exception(exc, "Failed to delete Paint Effects stroke")
 
 
 def main(**kwargs):

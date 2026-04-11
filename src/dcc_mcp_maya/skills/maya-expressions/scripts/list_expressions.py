@@ -4,11 +4,10 @@
 from __future__ import annotations
 
 # Import built-in modules
-import logging
 from typing import Optional
 
-logger = logging.getLogger(__name__)
-
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 def list_expressions(
     object: Optional[str] = None,
@@ -25,8 +24,6 @@ def list_expressions(
         ActionResultModel dict with ``context.expressions`` list and ``context.count``.
         Each expression entry has keys ``name``, ``node``, ``expression_str``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     # Normalise filter param
     obj_filter = object_name or object or None
 
@@ -35,10 +32,10 @@ def list_expressions(
 
         # Validate object existence if filter specified
         if obj_filter and not cmds.objExists(obj_filter):
-            return error_result(
+            return maya_error(
                 "Object '{}' not found".format(obj_filter),
                 "Ensure the object exists in the scene.",
-            ).to_dict()
+            )
 
         all_expr = cmds.ls(type="expression") or []
         results = []
@@ -60,23 +57,20 @@ def list_expressions(
                 }
             )
 
-        return success_result(
+        return maya_success(
             "Found {} expression node(s)".format(len(results)),
             prompt="Use create_expression to add more or delete_expression to remove unwanted ones.",
             expressions=results,
             count=len(results),
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("list_expressions failed")
-        return error_result("Failed to list expressions", str(exc)).to_dict()
-
+        return maya_from_exception(exc, "Failed to list expressions")
 
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`list_expressions`."""
     return list_expressions(**kwargs)
-
 
 if __name__ == "__main__":
     import json

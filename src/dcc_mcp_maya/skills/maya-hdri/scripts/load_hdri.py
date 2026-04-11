@@ -4,10 +4,10 @@
 from __future__ import annotations
 
 # Import built-in modules
-import logging
 import os
 
-logger = logging.getLogger(__name__)
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 
 def load_hdri(
@@ -34,16 +34,14 @@ def load_hdri(
     Returns:
         ActionResultModel dict with ``light_node``, ``file_node``, ``backend``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not os.path.isfile(file_path):
-            return error_result(
+            return maya_error(
                 "HDRI file not found: {}".format(file_path),
                 "Ensure the file path is correct and accessible",
-            ).to_dict()
+            )
 
         backend = "native"
         light_transform = ""
@@ -82,19 +80,18 @@ def load_hdri(
             cmds.setAttr("{}.fileTextureName".format(file_node), file_path, type="string")
             backend = "native"
 
-        return success_result(
+        return maya_success(
             "HDRI loaded from '{}' using {} backend".format(os.path.basename(file_path), backend),
             prompt="Use set_hdri_exposure or set_hdri_rotation to fine-tune the environment.",
             light_node=light_transform,
             file_node=file_node,
             backend=backend,
             file_path=file_path,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("load_hdri failed")
-        return error_result("Failed to load HDRI", str(exc)).to_dict()
+        return maya_from_exception(exc, "Failed to load HDRI")
 
 
 def main(**kwargs):

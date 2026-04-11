@@ -3,12 +3,11 @@
 # Import future modules
 from __future__ import annotations
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_success
+
 # Import built-in modules
-import logging
 from typing import Any
-
-logger = logging.getLogger(__name__)
-
 
 def get_attribute(
     object_name: str,
@@ -27,23 +26,22 @@ def get_attribute(
         ActionResultModel dict with ``context.value`` containing the attribute
         value.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return error_result(
+            return maya_error(
                 "Object not found: {}".format(object_name),
                 "'{}' does not exist in the scene".format(object_name),
-            ).to_dict()
+            )
 
         full_attr = "{}.{}".format(object_name, attribute)
         if not cmds.objExists(full_attr):
-            return error_result(
+            return maya_error(
                 "Attribute not found: {}".format(full_attr),
                 "The attribute '{}' does not exist on node '{}'".format(attribute, object_name),
-            ).to_dict()
+            )
 
         raw = cmds.getAttr(full_attr)
 
@@ -53,21 +51,19 @@ def get_attribute(
         else:
             value = raw
 
-        return success_result(
+        return maya_success(
             "Got {}.{} = {}".format(object_name, attribute, value),
             object_name=object_name,
             attribute=attribute,
             value=value,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("get_attribute failed")
-        return error_result(
+        return maya_error(
             "Failed to get attribute {}.{}".format(object_name, attribute),
             str(exc),
-        ).to_dict()
-
+        )
 
 def set_attribute(
     object_name: str,
@@ -93,32 +89,31 @@ def set_attribute(
         ActionResultModel dict with ``context.object_name``,
         ``context.attribute``, ``context.value``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return error_result(
+            return maya_error(
                 "Object not found: {}".format(object_name),
                 "'{}' does not exist in the scene".format(object_name),
-            ).to_dict()
+            )
 
         full_attr = "{}.{}".format(object_name, attribute)
         if not cmds.objExists(full_attr):
-            return error_result(
+            return maya_error(
                 "Attribute not found: {}".format(full_attr),
                 "The attribute '{}' does not exist on node '{}'".format(attribute, object_name),
-            ).to_dict()
+            )
 
         # Check lock state
         is_locked = cmds.getAttr(full_attr, lock=True)
         if is_locked:
             if not force:
-                return error_result(
+                return maya_error(
                     "Attribute is locked: {}".format(full_attr),
                     "Use force=True to unlock and set the attribute",
-                ).to_dict()
+                )
             cmds.setAttr(full_attr, lock=False)
 
         # Set value — handle compound (vector) vs scalar vs string
@@ -133,17 +128,16 @@ def set_attribute(
         if is_locked and force:
             cmds.setAttr(full_attr, lock=True)
 
-        return success_result(
+        return maya_success(
             "Set {}.{} = {}".format(object_name, attribute, value),
             object_name=object_name,
             attribute=attribute,
             value=value,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("set_attribute failed")
-        return error_result(
+        return maya_error(
             "Failed to set attribute {}.{} = {}".format(object_name, attribute, value),
             str(exc),
-        ).to_dict()
+        )

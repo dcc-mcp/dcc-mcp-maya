@@ -3,12 +3,11 @@
 # Import future modules
 from __future__ import annotations
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 # Import built-in modules
-import logging
 from typing import List, Optional
-
-logger = logging.getLogger(__name__)
-
 
 def create_toon_shader(
     name: str = "toonShader1",
@@ -29,7 +28,6 @@ def create_toon_shader(
     Returns:
         ActionResultModel dict with the shader node name and shading group.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
@@ -68,23 +66,20 @@ def create_toon_shader(
                     cmds.sets(obj, edit=True, forceElement=sg)
                     assigned_to.append(obj)
 
-        return success_result(
+        return maya_success(
             "Created toon shader '{}' with shading group '{}'".format(shader, sg),
             prompt="Use add_toon_outline to add ink outlines to the same meshes.",
             shader=shader,
             shading_group=sg,
             assigned_to=assigned_to,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("create_toon_shader failed")
-        return error_result("Failed to create toon shader", str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to create toon shader")
 
 def main(**kwargs):
     return create_toon_shader(**kwargs)
-
 
 if __name__ == "__main__":
     import json

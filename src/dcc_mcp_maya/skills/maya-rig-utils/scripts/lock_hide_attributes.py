@@ -3,6 +3,9 @@
 # Import future modules
 from __future__ import annotations
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 # Import built-in modules
 import logging
 from typing import List, Optional
@@ -10,7 +13,6 @@ from typing import List, Optional
 logger = logging.getLogger(__name__)
 
 _DEFAULT_ATTRS = ["tx", "ty", "tz", "rx", "ry", "rz", "sx", "sy", "sz", "v"]
-
 
 def lock_hide_attributes(
     node: str,
@@ -33,16 +35,15 @@ def lock_hide_attributes(
     Returns:
         ActionResultModel dict with ``context.processed_attributes``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(node):
-            return error_result(
+            return maya_error(
                 "Node not found: {}".format(node),
                 "'{}' does not exist in the scene".format(node),
-            ).to_dict()
+            )
 
         attrs = attributes if attributes is not None else _DEFAULT_ATTRS
         processed = []
@@ -58,7 +59,7 @@ def lock_hide_attributes(
                 cmds.setAttr(full, keyable=False, channelBox=False)
             processed.append(attr)
 
-        return success_result(
+        return maya_success(
             "{} attribute(s) on '{}' (lock={}, hide={})".format(
                 "Locked/hidden" if lock and hide else ("Locked" if lock else "Hidden"),
                 node,
@@ -70,17 +71,14 @@ def lock_hide_attributes(
             processed_attributes=processed,
             lock=lock,
             hide=hide,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("lock_hide_attributes failed")
-        return error_result("Failed to lock/hide attributes on '{}'".format(node), str(exc)).to_dict()
-
+        return maya_from_exception(exc, "Failed to lock/hide attributes on '{}'".format(node))
 
 def main(**kwargs):
     return lock_hide_attributes(**kwargs)
-
 
 if __name__ == "__main__":
     import json

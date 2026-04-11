@@ -4,10 +4,10 @@
 from __future__ import annotations
 
 # Import built-in modules
-import logging
 from typing import Optional
 
-logger = logging.getLogger(__name__)
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 
 def create_three_point_rig(
@@ -38,8 +38,6 @@ def create_three_point_rig(
         ActionResultModel dict with ``context.rig_group``,
         ``context.key_light``, ``context.fill_light``, ``context.rim_light``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
@@ -62,7 +60,7 @@ def create_three_point_rig(
         fill_light = _make_light("{}_fill".format(name), fill_intensity, fill_col, -15, 45)
         rim_light = _make_light("{}_rim".format(name), rim_intensity, rim_col, 0, 180)
 
-        return success_result(
+        return maya_success(
             "Created three-point rig '{}' ({})".format(name, light_type),
             prompt="Use set_light_rig_intensity to adjust brightness or create_hdri_dome for IBL.",
             rig_group=rig_grp,
@@ -70,12 +68,11 @@ def create_three_point_rig(
             fill_light=fill_light,
             rim_light=rim_light,
             light_type=light_type,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("create_three_point_rig failed")
-        return error_result("Failed to create three-point rig '{}'".format(name), str(exc)).to_dict()
+        return maya_from_exception(exc, "Failed to create three-point rig '{}'".format(name))
 
 
 def main(**kwargs):

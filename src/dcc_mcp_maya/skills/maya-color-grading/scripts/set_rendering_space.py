@@ -3,10 +3,8 @@
 # Import future modules
 from __future__ import annotations
 
-# Import built-in modules
-import logging
-
-logger = logging.getLogger(__name__)
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 
 def set_rendering_space(rendering_space: str) -> dict:
@@ -24,8 +22,6 @@ def set_rendering_space(rendering_space: str) -> dict:
     Returns:
         ActionResultModel dict with ``context.rendering_space``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
@@ -37,16 +33,15 @@ def set_rendering_space(rendering_space: str) -> dict:
 
         applied = cmds.colorManagementPrefs(query=True, renderingSpaceName=True) or ""
 
-        return success_result(
+        return maya_success(
             "Set rendering space to '{}'".format(applied),
             prompt="Use get_color_management_info to verify all color settings.",
             rendering_space=applied,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("set_rendering_space failed")
-        return error_result("Failed to set rendering space", str(exc)).to_dict()
+        return maya_from_exception(exc, "Failed to set rendering space")
 
 
 def main(**kwargs):

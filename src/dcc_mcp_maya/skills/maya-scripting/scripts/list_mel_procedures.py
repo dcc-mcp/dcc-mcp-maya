@@ -3,11 +3,10 @@
 # Import future modules
 from __future__ import annotations
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 # Import built-in modules
-import logging
-
-logger = logging.getLogger(__name__)
-
 
 def list_mel_procedures(pattern: str = "", limit: int = 200) -> dict:
     """List MEL global procedures, optionally filtered by a substring pattern.
@@ -20,7 +19,6 @@ def list_mel_procedures(pattern: str = "", limit: int = 200) -> dict:
     Returns:
         ActionResultModel dict with ``context.procedures`` list and ``context.count``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.mel as mel  # noqa: PLC0415
@@ -38,22 +36,19 @@ def list_mel_procedures(pattern: str = "", limit: int = 200) -> dict:
 
         procs = sorted(procs)[: int(limit)]
 
-        return success_result(
+        return maya_success(
             "Found {} MEL procedures".format(len(procs)),
             prompt="Procedures listed. Use execute_mel to call any of them.",
             procedures=procs,
             count=len(procs),
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.mel could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.mel could not be imported")
     except Exception as exc:
-        logger.exception("list_mel_procedures failed")
-        return error_result("Failed to list MEL procedures", str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to list MEL procedures")
 
 def main(**kwargs):
     return list_mel_procedures(**kwargs)
-
 
 if __name__ == "__main__":
     import json

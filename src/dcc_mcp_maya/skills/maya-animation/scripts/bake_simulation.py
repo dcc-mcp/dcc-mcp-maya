@@ -4,10 +4,10 @@
 from __future__ import annotations
 
 # Import built-in modules
-import logging
 from typing import List, Optional
 
-logger = logging.getLogger(__name__)
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 
 def bake_simulation(
@@ -32,8 +32,6 @@ def bake_simulation(
     Returns:
         ActionResultModel dict with ``context.object_count`` and frame range.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
@@ -41,19 +39,19 @@ def bake_simulation(
         if targets:
             missing = [o for o in targets if not cmds.objExists(o)]
             if missing:
-                return error_result(
+                return maya_error(
                     "Objects not found: {}".format(", ".join(missing)),
                     "The following objects do not exist: {}".format(", ".join(missing)),
-                ).to_dict()
+                )
             cmds.select(targets, replace=True)
         else:
             targets = cmds.ls(selection=True) or []
 
         if not targets:
-            return error_result(
+            return maya_error(
                 "No objects to bake",
                 "Provide object names or select objects before baking",
-            ).to_dict()
+            )
 
         cmds.bakeSimulation(
             targets,
@@ -62,19 +60,18 @@ def bake_simulation(
             simulation=True,
             preserveOutsideKeys=True,
         )
-        return success_result(
+        return maya_success(
             "Baked {} object(s) from frame {} to {}".format(len(targets), start_frame, end_frame),
             object_count=len(targets),
             objects=targets,
             start_frame=start_frame,
             end_frame=end_frame,
             sample_by=sample_by,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("bake_simulation failed")
-        return error_result("Failed to bake simulation", str(exc)).to_dict()
+        return maya_from_exception(exc, "Failed to bake simulation")
 
 
 def main(**kwargs) -> dict:

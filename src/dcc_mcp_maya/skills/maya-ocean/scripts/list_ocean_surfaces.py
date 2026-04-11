@@ -4,10 +4,10 @@
 from __future__ import annotations
 
 # Import built-in modules
-import logging
 
-logger = logging.getLogger(__name__)
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 def list_ocean_surfaces() -> dict:
     """List all oceanShader nodes and find their connected geometry.
@@ -16,7 +16,6 @@ def list_ocean_surfaces() -> dict:
         ActionResultModel dict with ``context.surfaces`` (list of dicts)
         and ``context.count``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
@@ -42,22 +41,19 @@ def list_ocean_surfaces() -> dict:
                 }
             )
 
-        return success_result(
+        return maya_success(
             "Found {} ocean surface(s)".format(len(surfaces)),
             prompt="Use set_ocean_attribute to adjust wave parameters.",
             surfaces=surfaces,
             count=len(surfaces),
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("list_ocean_surfaces failed")
-        return error_result("Failed to list ocean surfaces", str(exc)).to_dict()
-
+        return maya_from_exception(exc, "Failed to list ocean surfaces")
 
 def main(**kwargs):
     return list_ocean_surfaces(**kwargs)
-
 
 if __name__ == "__main__":
     import json

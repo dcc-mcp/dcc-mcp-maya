@@ -4,10 +4,10 @@
 from __future__ import annotations
 
 # Import built-in modules
-import logging
 from typing import List, Optional
 
-logger = logging.getLogger(__name__)
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 
 def create_display_layer(
@@ -25,8 +25,6 @@ def create_display_layer(
     Returns:
         ActionResultModel dict with ``context.layer_name``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
@@ -45,18 +43,17 @@ def create_display_layer(
                     cmds.editDisplayLayerMembers(layer_name, obj, noRecurse=True)
                     added.append(obj)
 
-        return success_result(
+        return maya_success(
             "Created display layer '{}'".format(layer_name),
             prompt="Use set_display_layer to add more objects or list_display_layers to see all layers.",
             layer_name=layer_name,
             objects_added=added,
             visibility=visibility,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("create_display_layer failed")
-        return error_result("Failed to create display layer", str(exc)).to_dict()
+        return maya_from_exception(exc, "Failed to create display layer")
 
 
 def main(**kwargs) -> dict:

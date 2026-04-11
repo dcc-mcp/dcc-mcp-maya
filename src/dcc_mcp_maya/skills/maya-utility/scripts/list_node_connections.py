@@ -3,11 +3,10 @@
 # Import future modules
 from __future__ import annotations
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 # Import built-in modules
-import logging
-
-logger = logging.getLogger(__name__)
-
 
 def list_node_connections(
     node: str,
@@ -25,16 +24,15 @@ def list_node_connections(
         ActionResultModel dict with ``context.connections`` list of
         ``{"source": ..., "destination": ...}`` dicts.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     if not node:
-        return error_result("No node provided", "Provide 'node' parameter.").to_dict()
+        return maya_error("No node provided", "Provide 'node' parameter.")
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(node):
-            return error_result("Node not found", "No node named '{}'.".format(node)).to_dict()
+            return maya_error("Node not found", "No node named '{}'.".format(node))
 
         connections = []
 
@@ -56,22 +54,19 @@ def list_node_connections(
                 for dst in raw:
                     connections.append({"source": node, "destination": dst})
 
-        return success_result(
+        return maya_success(
             "{} connections found for '{}'".format(len(connections), node),
             prompt=("Connections listed. Use connectAttr / disconnectAttr actions to modify the shading network."),
             connections=connections,
             count=len(connections),
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("list_node_connections failed")
-        return error_result("Failed to list connections", str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to list connections")
 
 def main(**kwargs):
     return list_node_connections(**kwargs)
-
 
 if __name__ == "__main__":
     import json

@@ -3,12 +3,11 @@
 # Import future modules
 from __future__ import annotations
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 # Import built-in modules
-import logging
 from typing import Optional
-
-logger = logging.getLogger(__name__)
-
 
 def create_proxy(
     source: str,
@@ -31,16 +30,15 @@ def create_proxy(
         ActionResultModel dict with ``context.proxy``, ``context.source``,
         and ``context.proxy_face_count``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(source):
-            return error_result(
+            return maya_error(
                 "Source mesh '{}' not found".format(source),
                 "Verify the mesh name in the Outliner.",
-            ).to_dict()
+            )
 
         reduction = max(0.0, min(100.0, float(reduction)))
         percentage = (100.0 - reduction) / 100.0
@@ -63,7 +61,7 @@ def create_proxy(
 
         proxy_poly = cmds.polyEvaluate(dup, face=True)
 
-        return success_result(
+        return maya_success(
             "Proxy mesh '{}' created from '{}'".format(dup, source),
             prompt="Proxy ready. Use swap_proxy to toggle between proxy and high-res.",
             proxy=dup,
@@ -71,17 +69,14 @@ def create_proxy(
             reduction_percent=reduction,
             proxy_face_count=proxy_poly,
             original_visible=keep_original_visible,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("create_proxy failed")
-        return error_result("Failed to create proxy mesh", str(exc)).to_dict()
-
+        return maya_from_exception(exc, "Failed to create proxy mesh")
 
 def main(**kwargs):
     return create_proxy(**kwargs)
-
 
 if __name__ == "__main__":
     import json

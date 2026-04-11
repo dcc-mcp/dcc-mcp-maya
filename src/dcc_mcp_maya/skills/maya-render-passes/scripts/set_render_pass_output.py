@@ -3,12 +3,11 @@
 # Import future modules
 from __future__ import annotations
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 # Import built-in modules
-import logging
 from typing import Optional
-
-logger = logging.getLogger(__name__)
-
 
 def set_render_pass_output(
     pass_node: str,
@@ -31,16 +30,15 @@ def set_render_pass_output(
         ActionResultModel dict with ``context.pass_node``,
         ``context.output_path``, and ``context.image_format``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(pass_node):
-            return error_result(
+            return maya_error(
                 "Render pass not found: {}".format(pass_node),
                 "'{}' does not exist in the scene".format(pass_node),
-            ).to_dict()
+            )
 
         changes = []
 
@@ -62,32 +60,29 @@ def set_render_pass_output(
                     break
 
         if not changes:
-            return success_result(
+            return maya_success(
                 "No settable output attributes found on '{}'".format(pass_node),
                 prompt="This pass node may not support output path/format overrides.",
                 pass_node=pass_node,
                 output_path=output_path,
                 image_format=image_format,
-            ).to_dict()
+            )
 
-        return success_result(
+        return maya_success(
             "Configured output for '{}': {}".format(pass_node, ", ".join(changes)),
             prompt="Verify render settings and render to confirm the pass outputs correctly.",
             pass_node=pass_node,
             output_path=output_path,
             image_format=image_format,
             applied_changes=changes,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("set_render_pass_output failed")
-        return error_result("Failed to configure output for '{}'".format(pass_node), str(exc)).to_dict()
-
+        return maya_from_exception(exc, "Failed to configure output for '{}'".format(pass_node))
 
 def main(**kwargs):
     return set_render_pass_output(**kwargs)
-
 
 if __name__ == "__main__":
     import json

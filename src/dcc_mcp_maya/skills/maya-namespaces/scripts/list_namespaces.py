@@ -4,12 +4,12 @@
 from __future__ import annotations
 
 # Import built-in modules
-import logging
-
-logger = logging.getLogger(__name__)
 
 _DEFAULT_NAMESPACES = {"UI", "shared"}
 
+
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 def list_namespaces(include_defaults: bool = False) -> dict:
     """List all namespaces in the current scene.
@@ -22,7 +22,6 @@ def list_namespaces(include_defaults: bool = False) -> dict:
         ActionResultModel dict with ``namespaces`` list.  Each entry contains
         ``name``, ``full_path``, and ``object_count``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
@@ -49,22 +48,19 @@ def list_namespaces(include_defaults: bool = False) -> dict:
                 }
             )
 
-        return success_result(
+        return maya_success(
             "Found {} namespace(s)".format(len(namespaces)),
             prompt="Use rename_namespace or remove_namespace to manage them.",
             namespaces=namespaces,
             count=len(namespaces),
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("list_namespaces failed")
-        return error_result("Failed to list namespaces", str(exc)).to_dict()
-
+        return maya_from_exception(exc, "Failed to list namespaces")
 
 def main(**kwargs):
     return list_namespaces(**kwargs)
-
 
 if __name__ == "__main__":
     import json

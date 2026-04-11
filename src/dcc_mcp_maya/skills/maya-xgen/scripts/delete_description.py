@@ -1,7 +1,7 @@
 """Delete an XGen description from the scene."""
 
-from dcc_mcp_core import error_result, success_result
-
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_success
 
 def run(params):
     """Delete an XGen description by collection and description name.
@@ -18,7 +18,7 @@ def run(params):
     description = params.get("description")
 
     if not collection or not description:
-        return error_result(
+        return maya_error(
             "Missing required parameters",
             "Both 'collection' and 'description' are required",
         )
@@ -27,18 +27,18 @@ def run(params):
         import xgenm as xg
 
         if description not in xg.descriptions(collection):
-            return error_result(
+            return maya_error(
                 "Description not found",
                 "'{}' not found in collection '{}'".format(description, collection),
                 prompt="Use list_descriptions to view available descriptions.",
             )
 
         xg.deleteDescription(collection, description)
-        return success_result(
+        return maya_success(
             "Deleted XGen description '{}'".format(description),
             prompt="Use list_descriptions to verify deletion.",
             collection=collection,
             description=description,
         )
     except Exception as exc:
-        return error_result("Failed to delete XGen description", str(exc))
+        return maya_error("Failed to delete XGen description", str(exc))

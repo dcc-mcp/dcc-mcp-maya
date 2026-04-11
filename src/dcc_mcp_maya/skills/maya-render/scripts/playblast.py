@@ -3,15 +3,14 @@
 # Import future modules
 from __future__ import annotations
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 # Import built-in modules
 import base64
-import logging
 import os
 import tempfile
 from typing import Optional
-
-logger = logging.getLogger(__name__)
-
 
 def playblast(
     width: int = 1920,
@@ -34,7 +33,6 @@ def playblast(
         ActionResultModel dict with ``context.image`` (base64 PNG) and
         ``context.frame``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
@@ -72,10 +70,10 @@ def playblast(
                 break
 
         if img_path is None:
-            return error_result(
+            return maya_error(
                 "Playblast file not found",
                 "Could not locate output PNG from playblast",
-            ).to_dict()
+            )
 
         with open(img_path, "rb") as fh:
             img_bytes = fh.read()
@@ -83,25 +81,22 @@ def playblast(
 
         img_b64 = base64.b64encode(img_bytes).decode("ascii")
 
-        return success_result(
+        return maya_success(
             "Viewport captured at frame {} ({}×{})".format(int(frame), width, height),
             prompt="Image captured. Use render_frame for final quality render.",
             image=img_b64,
             frame=frame,
             width=width,
             height=height,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("playblast failed")
-        return error_result("Playblast failed", str(exc)).to_dict()
-
+        return maya_from_exception(exc, "Playblast failed")
 
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`playblast`."""
     return playblast(**kwargs)
-
 
 if __name__ == "__main__":
     import json

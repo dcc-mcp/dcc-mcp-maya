@@ -3,12 +3,11 @@
 # Import future modules
 from __future__ import annotations
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 # Import built-in modules
-import logging
 from typing import Optional
-
-logger = logging.getLogger(__name__)
-
 
 def create_polygon_text(
     text: str,
@@ -35,13 +34,12 @@ def create_polygon_text(
         ActionResultModel dict with ``context.objects`` (list of created
         transform names) and ``context.text``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not text:
-            return error_result("Empty text", "text parameter must not be empty").to_dict()
+            return maya_error("Empty text", "text parameter must not be empty")
 
         kwargs = {"font": font, "text": text}
         if name:
@@ -63,7 +61,7 @@ def create_polygon_text(
                     extruded.append(crv)
             objects = extruded
 
-        return success_result(
+        return maya_success(
             "Created polygon text: '{}'".format(text),
             text=text,
             font=font,
@@ -71,18 +69,15 @@ def create_polygon_text(
             extruded=extrude,
             objects=objects,
             count=len(objects),
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("create_polygon_text failed")
-        return error_result("Failed to create polygon text '{}'".format(text), str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to create polygon text '{}'".format(text))
 
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`create_polygon_text`."""
     return create_polygon_text(**kwargs)
-
 
 if __name__ == "__main__":
     import json

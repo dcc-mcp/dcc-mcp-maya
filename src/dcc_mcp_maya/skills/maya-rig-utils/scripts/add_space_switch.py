@@ -3,12 +3,11 @@
 # Import future modules
 from __future__ import annotations
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 # Import built-in modules
-import logging
 from typing import List
-
-logger = logging.getLogger(__name__)
-
 
 def add_space_switch(
     control: str,
@@ -35,29 +34,28 @@ def add_space_switch(
         ActionResultModel dict with ``context.constraint_node`` and
         ``context.space_attribute``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(control):
-            return error_result(
+            return maya_error(
                 "Control not found: {}".format(control),
                 "'{}' does not exist in the scene".format(control),
-            ).to_dict()
+            )
 
         if len(spaces) != len(space_names):
-            return error_result(
+            return maya_error(
                 "Mismatched spaces/space_names lengths",
                 "spaces ({}) and space_names ({}) must have the same length".format(len(spaces), len(space_names)),
-            ).to_dict()
+            )
 
         missing = [s for s in spaces if not cmds.objExists(s)]
         if missing:
-            return error_result(
+            return maya_error(
                 "Driver nodes not found: {}".format(", ".join(missing)),
                 "The following space drivers do not exist: {}".format(", ".join(missing)),
-            ).to_dict()
+            )
 
         target = offset_node if (offset_node and cmds.objExists(offset_node)) else control
 
@@ -78,24 +76,21 @@ def add_space_switch(
                     value=1.0 if i == j else 0.0,
                 )
 
-        return success_result(
+        return maya_success(
             "Added space switch on '{}' with {} spaces".format(control, len(spaces)),
             prompt="Set {}.space enum to switch between spaces at runtime.".format(control),
             control=control,
             constraint_node=constraint,
             space_attribute="{}.space".format(control),
             spaces=space_names,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("add_space_switch failed")
-        return error_result("Failed to add space switch on '{}'".format(control), str(exc)).to_dict()
-
+        return maya_from_exception(exc, "Failed to add space switch on '{}'".format(control))
 
 def main(**kwargs):
     return add_space_switch(**kwargs)
-
 
 if __name__ == "__main__":
     import json

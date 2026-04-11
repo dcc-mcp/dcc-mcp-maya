@@ -4,10 +4,7 @@
 from __future__ import annotations
 
 # Import built-in modules
-import logging
 from typing import Dict
-
-logger = logging.getLogger(__name__)
 
 # Minimal HumanIK slot -> slot ID mapping
 _HIK_SLOTS = {
@@ -36,6 +33,9 @@ _HIK_SLOTS = {
 }
 
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 def create_hik_definition(
     character_name: str,
     joint_mapping: Dict[str, str],
@@ -51,12 +51,11 @@ def create_hik_definition(
         ActionResultModel dict with ``context.character_node``, ``context.mapped``,
         ``context.skipped``, and ``context.mapped_count``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     if not character_name:
-        return error_result("Missing parameter", "'character_name' is required").to_dict()
+        return maya_error("Missing parameter", "'character_name' is required")
     if not joint_mapping:
-        return error_result("Missing parameter", "'joint_mapping' is required").to_dict()
+        return maya_error("Missing parameter", "'joint_mapping' is required")
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
@@ -82,24 +81,21 @@ def create_hik_definition(
 
         mel.eval("hikUpdateDefinitionUI")
 
-        return success_result(
+        return maya_success(
             "HIK character '{}' created with {} mapped joints".format(char_node, len(mapped)),
             prompt="HIK definition ready. Use bake_mocap_to_rig to retarget the motion.",
             character_node=char_node,
             mapped=mapped,
             skipped=skipped,
             mapped_count=len(mapped),
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("create_hik_definition failed")
-        return error_result("Failed to create HIK definition", str(exc)).to_dict()
-
+        return maya_from_exception(exc, "Failed to create HIK definition")
 
 def main(**kwargs):
     return create_hik_definition(**kwargs)
-
 
 if __name__ == "__main__":
     import json

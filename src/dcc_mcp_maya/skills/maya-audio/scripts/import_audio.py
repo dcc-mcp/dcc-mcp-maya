@@ -4,11 +4,11 @@
 from __future__ import annotations
 
 # Import built-in modules
-import logging
 import os
 from typing import Optional
 
-logger = logging.getLogger(__name__)
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 
 def import_audio(
@@ -29,16 +29,14 @@ def import_audio(
     Returns:
         ActionResultModel dict with ``context.sound_node`` and ``context.file_path``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not os.path.isfile(file_path):
-            return error_result(
+            return maya_error(
                 "Audio file not found: {}".format(file_path),
                 "Ensure the file exists and the path is correct.",
-            ).to_dict()
+            )
 
         kwargs = {"file": file_path, "offset": offset}
         if name:
@@ -46,18 +44,17 @@ def import_audio(
 
         sound_node = cmds.sound(**kwargs)
 
-        return success_result(
+        return maya_success(
             "Imported audio '{}'".format(os.path.basename(file_path)),
             prompt="Use set_timeline_audio to attach this sound to the playback timeline.",
             sound_node=sound_node,
             file_path=file_path,
             offset=offset,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("import_audio failed")
-        return error_result("Failed to import audio", str(exc)).to_dict()
+        return maya_from_exception(exc, "Failed to import audio")
 
 
 def main(**kwargs):

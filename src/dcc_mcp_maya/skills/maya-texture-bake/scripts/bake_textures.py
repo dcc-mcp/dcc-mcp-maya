@@ -3,12 +3,14 @@
 # Import future modules
 from __future__ import annotations
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 # Import built-in modules
 import logging
 from typing import List
 
 logger = logging.getLogger(__name__)
-
 
 def bake_textures(
     objects: List[str],
@@ -34,37 +36,36 @@ def bake_textures(
         ActionResultModel dict with ``context.baked_objects`` and
         ``context.file_path``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     valid_types = ("diffuse", "full_render", "normals", "ao")
     if bake_type not in valid_types:
-        return error_result(
+        return maya_error(
             "Invalid bake_type: {}".format(bake_type),
             "Use one of: {}".format(", ".join(valid_types)),
-        ).to_dict()
+        )
 
     valid_renderers = ("mentalRay", "arnold")
     if renderer not in valid_renderers:
-        return error_result(
+        return maya_error(
             "Invalid renderer: {}".format(renderer),
             "Use one of: {}".format(", ".join(valid_renderers)),
-        ).to_dict()
+        )
 
     if not objects:
-        return error_result("No objects specified for baking", "objects list must not be empty").to_dict()
+        return maya_error("No objects specified for baking", "objects list must not be empty")
 
     if resolution < 1:
-        return error_result(
+        return maya_error(
             "Invalid resolution: {}".format(resolution),
             "Resolution must be >= 1",
-        ).to_dict()
+        )
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         missing = [obj for obj in objects if not cmds.objExists(obj)]
         if missing:
-            return error_result("Objects not found: {}".format(", ".join(missing))).to_dict()
+            return maya_error("Objects not found: {}".format(", ".join(missing)))
 
         bake_type_map = {
             "diffuse": "diffuse",
@@ -96,7 +97,7 @@ def bake_textures(
             except Exception as bake_exc:
                 logger.warning("Bake skipped for '%s': %s", obj, bake_exc)
 
-        return success_result(
+        return maya_success(
             "Baked {} object(s) to '{}'".format(len(baked_files), file_path),
             objects=objects,
             baked_count=len(baked_files),
@@ -104,18 +105,15 @@ def bake_textures(
             resolution=resolution,
             bake_type=bake_type,
             renderer=renderer,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("bake_textures failed")
-        return error_result("Failed to bake textures", str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to bake textures")
 
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`bake_textures`."""
     return bake_textures(**kwargs)
-
 
 if __name__ == "__main__":
     import json

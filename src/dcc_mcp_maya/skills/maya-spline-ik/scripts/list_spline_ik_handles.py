@@ -3,11 +3,10 @@
 # Import future modules
 from __future__ import annotations
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 # Import built-in modules
-import logging
-
-logger = logging.getLogger(__name__)
-
 
 def list_spline_ik_handles() -> dict:
     """List all spline IK handles in the current scene.
@@ -17,7 +16,6 @@ def list_spline_ik_handles() -> dict:
         ``name``, ``start_joint``, ``end_effector``, and ``curve`` keys)
         and ``context.count``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
@@ -44,22 +42,19 @@ def list_spline_ik_handles() -> dict:
             except Exception:
                 results.append({"name": h, "start_joint": "", "end_effector": "", "curve": ""})
 
-        return success_result(
+        return maya_success(
             "Found {} spline IK handle(s)".format(len(results)),
             prompt="Use set_spline_ik_twist to configure twist, or add_stretch_to_spline_ik for stretch.",
             handles=results,
             count=len(results),
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("list_spline_ik_handles failed")
-        return error_result("Failed to list spline IK handles", str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to list spline IK handles")
 
 def main(**kwargs):
     return list_spline_ik_handles(**kwargs)
-
 
 if __name__ == "__main__":
     import json

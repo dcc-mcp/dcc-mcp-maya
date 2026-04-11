@@ -3,12 +3,11 @@
 # Import future modules
 from __future__ import annotations
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 # Import built-in modules
-import logging
 from typing import List, Optional
-
-logger = logging.getLogger(__name__)
-
 
 def create_curve(
     points: Optional[List[List[float]]] = None,
@@ -31,7 +30,6 @@ def create_curve(
         ActionResultModel dict with ``context.object_name``,
         ``context.degree``, ``context.point_count``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
@@ -41,10 +39,10 @@ def create_curve(
             points = [[float(i), 0.0, 0.0] for i in range(degree + 2)]
 
         if len(points) < degree + 1:
-            return error_result(
+            return maya_error(
                 "Not enough control points",
                 "Need at least {} points for degree-{} curve, got {}".format(degree + 1, degree, len(points)),
-            ).to_dict()
+            )
 
         point_tuples = [(p[0], p[1], p[2]) for p in points]
         periodic_val = 2 if periodic else 0  # 0=open, 2=periodic
@@ -59,24 +57,21 @@ def create_curve(
 
         result = cmds.curve(**kwargs)
 
-        return success_result(
+        return maya_success(
             "Created NURBS curve '{}'".format(result),
             object_name=result,
             degree=degree,
             point_count=len(points),
             periodic=periodic,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("create_curve failed")
-        return error_result("Failed to create curve", str(exc)).to_dict()
-
+        return maya_from_exception(exc, "Failed to create curve")
 
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`create_curve`."""
     return create_curve(**kwargs)
-
 
 if __name__ == "__main__":
     import json

@@ -4,10 +4,10 @@
 from __future__ import annotations
 
 # Import built-in modules
-import logging
 from typing import List, Optional
 
-logger = logging.getLogger(__name__)
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 
 def create_lattice(
@@ -31,13 +31,11 @@ def create_lattice(
         ``context.lattice_node``, ``context.base_node``,
         ``context.objects``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     if not objects:
-        return error_result(
+        return maya_error(
             "No objects specified",
             "Provide at least one object name in the 'objects' list",
-        ).to_dict()
+        )
 
     divs = divisions if (divisions and len(divisions) == 3) else [2, 5, 2]
 
@@ -46,10 +44,10 @@ def create_lattice(
 
         missing = [o for o in objects if not cmds.objExists(o)]
         if missing:
-            return error_result(
+            return maya_error(
                 "Object(s) not found: {}".format(", ".join(missing)),
                 "Ensure all objects exist before creating a lattice",
-            ).to_dict()
+            )
 
         ffd_kwargs = {
             "divisions": divs,
@@ -68,19 +66,18 @@ def create_lattice(
             cmds.setAttr("{}.sy".format(lattice_node), local_scale[1])
             cmds.setAttr("{}.sz".format(lattice_node), local_scale[2])
 
-        return success_result(
+        return maya_success(
             "Created FFD lattice '{}' ({}) on {} object(s)".format(ffd_node, divs, len(objects)),
             ffd_node=ffd_node,
             lattice_node=lattice_node,
             base_node=base_node,
             objects=objects,
             divisions=divs,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("create_lattice failed")
-        return error_result("Failed to create FFD lattice", str(exc)).to_dict()
+        return maya_from_exception(exc, "Failed to create FFD lattice")
 
 
 def main(**kwargs) -> dict:

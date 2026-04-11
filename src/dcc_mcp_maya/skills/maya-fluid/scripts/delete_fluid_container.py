@@ -4,10 +4,9 @@
 from __future__ import annotations
 
 # Import built-in modules
-import logging
 
-logger = logging.getLogger(__name__)
-
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 def delete_fluid_container(name: str) -> dict:
     """Delete a fluid container transform (and its fluidShape child).
@@ -18,34 +17,29 @@ def delete_fluid_container(name: str) -> dict:
     Returns:
         ActionResultModel dict confirming deletion.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(name):
-            return error_result(
+            return maya_error(
                 "Node not found",
                 "Fluid container '{}' does not exist".format(name),
-            ).to_dict()
+            )
 
         cmds.delete(name)
 
-        return success_result(
+        return maya_success(
             "Fluid container deleted",
             prompt="Container '{}' removed. Use create_fluid_container to add a new one.".format(name),
             deleted=name,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("delete_fluid_container failed")
-        return error_result("Failed to delete fluid container", str(exc)).to_dict()
-
+        return maya_from_exception(exc, "Failed to delete fluid container")
 
 def main(**kwargs):
     return delete_fluid_container(**kwargs)
-
 
 if __name__ == "__main__":
     import json

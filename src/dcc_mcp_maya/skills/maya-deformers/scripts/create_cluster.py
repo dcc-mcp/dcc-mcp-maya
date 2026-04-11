@@ -4,10 +4,10 @@
 from __future__ import annotations
 
 # Import built-in modules
-import logging
 from typing import List, Optional
 
-logger = logging.getLogger(__name__)
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 
 def create_cluster(
@@ -28,23 +28,21 @@ def create_cluster(
         ActionResultModel dict with ``context.cluster_node``,
         ``context.cluster_handle``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     if not objects:
-        return error_result(
+        return maya_error(
             "No objects specified",
             "Provide at least one object name in the 'objects' list",
-        ).to_dict()
+        )
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         missing = [o for o in objects if not cmds.objExists(o)]
         if missing:
-            return error_result(
+            return maya_error(
                 "Object(s) not found: {}".format(", ".join(missing)),
                 "Ensure all objects exist before creating a cluster",
-            ).to_dict()
+            )
 
         kwargs = {"relative": relative}  # type: Dict
         if name:
@@ -55,18 +53,17 @@ def create_cluster(
         cluster_node = result[0] if result else None
         cluster_handle = result[1] if result and len(result) > 1 else None
 
-        return success_result(
+        return maya_success(
             "Created cluster deformer '{}' on {} object(s)".format(cluster_node, len(objects)),
             cluster_node=cluster_node,
             cluster_handle=cluster_handle,
             objects=objects,
             relative=relative,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("create_cluster failed")
-        return error_result("Failed to create cluster deformer", str(exc)).to_dict()
+        return maya_from_exception(exc, "Failed to create cluster deformer")
 
 
 def main(**kwargs) -> dict:

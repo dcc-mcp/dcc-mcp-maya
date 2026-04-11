@@ -4,11 +4,10 @@
 from __future__ import annotations
 
 # Import built-in modules
-import logging
 from typing import Optional
 
-logger = logging.getLogger(__name__)
-
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 def import_animation_curves(
     file_path: str,
@@ -28,18 +27,16 @@ def import_animation_curves(
         ActionResultModel dict with ``context.file_path`` and
         ``context.target_object``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     try:
         import os  # noqa: PLC0415
 
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not os.path.isfile(file_path):
-            return error_result(
+            return maya_error(
                 "File not found: {}".format(file_path),
                 "Cannot import animation curves: path does not exist",
-            ).to_dict()
+            )
 
         import_kwargs = {
             "i": True,
@@ -68,23 +65,20 @@ def import_animation_curves(
                         except Exception:
                             pass
 
-        return success_result(
+        return maya_success(
             "Imported animation curves from '{}'".format(file_path),
             file_path=file_path,
             target_object=target_object,
             merge=merge,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("import_animation_curves failed")
-        return error_result("Failed to import animation curves from '{}'".format(file_path), str(exc)).to_dict()
-
+        return maya_from_exception(exc, "Failed to import animation curves from '{}'".format(file_path))
 
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`import_animation_curves`."""
     return import_animation_curves(**kwargs)
-
 
 if __name__ == "__main__":
     import json

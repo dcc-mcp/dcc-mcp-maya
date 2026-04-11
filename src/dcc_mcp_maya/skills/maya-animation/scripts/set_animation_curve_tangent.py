@@ -4,11 +4,10 @@
 from __future__ import annotations
 
 # Import built-in modules
-import logging
 from typing import Optional
 
-logger = logging.getLogger(__name__)
-
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 def set_animation_curve_tangent(
     object_name: str,
@@ -36,39 +35,37 @@ def set_animation_curve_tangent(
         ActionResultModel dict with ``context.object_name``,
         ``context.attribute``, ``context.frame``, ``context.tangent_type``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     _VALID_TANGENTS = ("auto", "linear", "flat", "step", "spline", "clamped", "plateau", "stepnext")
 
     in_type = (in_tangent_type or tangent_type).lower()
     out_type = (out_tangent_type or tangent_type).lower()
 
     if in_type not in _VALID_TANGENTS:
-        return error_result(
+        return maya_error(
             "Invalid in_tangent_type: {}".format(in_type),
             "Must be one of: {}".format(", ".join(_VALID_TANGENTS)),
-        ).to_dict()
+        )
     if out_type not in _VALID_TANGENTS:
-        return error_result(
+        return maya_error(
             "Invalid out_tangent_type: {}".format(out_type),
             "Must be one of: {}".format(", ".join(_VALID_TANGENTS)),
-        ).to_dict()
+        )
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return error_result(
+            return maya_error(
                 "Object not found: {}".format(object_name),
                 "'{}' does not exist in the scene".format(object_name),
-            ).to_dict()
+            )
 
         plug = "{}.{}".format(object_name, attribute)
         if not cmds.objExists(plug):
-            return error_result(
+            return maya_error(
                 "Attribute not found: {}".format(plug),
                 "'{}.{}' does not exist".format(object_name, attribute),
-            ).to_dict()
+            )
 
         kwargs = {
             "attribute": attribute,
@@ -80,25 +77,22 @@ def set_animation_curve_tangent(
 
         cmds.keyTangent(object_name, edit=True, **kwargs)
 
-        return success_result(
+        return maya_success(
             "Set tangent type on '{}.{}' (frame={})".format(object_name, attribute, frame),
             object_name=object_name,
             attribute=attribute,
             frame=frame,
             in_tangent_type=in_type,
             out_tangent_type=out_type,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("set_animation_curve_tangent failed")
-        return error_result("Failed to set tangent on '{}.{}'".format(object_name, attribute), str(exc)).to_dict()
-
+        return maya_from_exception(exc, "Failed to set tangent on '{}.{}'".format(object_name, attribute))
 
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`set_animation_curve_tangent`."""
     return set_animation_curve_tangent(**kwargs)
-
 
 if __name__ == "__main__":
     import json

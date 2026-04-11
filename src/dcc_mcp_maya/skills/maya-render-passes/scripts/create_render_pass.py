@@ -3,11 +3,11 @@
 # Import future modules
 from __future__ import annotations
 
-# Import built-in modules
-import logging
-from typing import Optional
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
-logger = logging.getLogger(__name__)
+# Import built-in modules
+from typing import Optional
 
 _PASS_TYPES = {
     "beauty": "renderPassBeauty",
@@ -19,7 +19,6 @@ _PASS_TYPES = {
     "normal": "renderPassNormal",
     "uv": "renderPassUV",
 }
-
 
 def create_render_pass(
     pass_type: str = "beauty",
@@ -43,7 +42,6 @@ def create_render_pass(
         ActionResultModel dict with ``context.pass_node`` and
         ``context.pass_type``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
@@ -61,23 +59,20 @@ def create_render_pass(
                 pass_contribution = _PASS_TYPES.get(pass_type, "renderPassBeauty")
                 cmds.setAttr("{}.passContribution".format(pass_node), pass_contribution, type="string")
 
-        return success_result(
+        return maya_success(
             "Created render pass '{}' (type={}, renderer={})".format(pass_node, pass_type, renderer),
             prompt="Use enable_render_pass to activate and set_render_pass_output to configure the output path.",
             pass_node=pass_node,
             pass_type=pass_type,
             renderer=renderer,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("create_render_pass failed")
-        return error_result("Failed to create render pass '{}'".format(pass_type), str(exc)).to_dict()
-
+        return maya_from_exception(exc, "Failed to create render pass '{}'".format(pass_type))
 
 def main(**kwargs):
     return create_render_pass(**kwargs)
-
 
 if __name__ == "__main__":
     import json

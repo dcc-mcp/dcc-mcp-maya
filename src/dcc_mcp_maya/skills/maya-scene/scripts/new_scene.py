@@ -3,11 +3,8 @@
 # Import future modules
 from __future__ import annotations
 
-# Import built-in modules
-import logging
-
-logger = logging.getLogger(__name__)
-
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 def new_scene(force: bool = False) -> dict:
     """Create a new Maya scene.
@@ -18,24 +15,20 @@ def new_scene(force: bool = False) -> dict:
     Returns:
         ActionResultModel dict.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         cmds.file(new=True, force=force)
-        return success_result("New scene created").to_dict()
+        return maya_success("New scene created")
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("new_scene failed")
-        return error_result("Failed to create new scene", str(exc)).to_dict()
-
+        return maya_from_exception(exc, "Failed to create new scene")
 
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`new_scene`."""
     return new_scene(**kwargs)
-
 
 if __name__ == "__main__":
     import json

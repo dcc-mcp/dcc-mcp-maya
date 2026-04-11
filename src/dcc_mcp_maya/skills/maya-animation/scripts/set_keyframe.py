@@ -4,11 +4,10 @@
 from __future__ import annotations
 
 # Import built-in modules
-import logging
 from typing import List, Optional
 
-logger = logging.getLogger(__name__)
-
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 def set_keyframe(
     object_name: str,
@@ -32,16 +31,14 @@ def set_keyframe(
     Returns:
         ActionResultModel dict with ``context.keyframe_count``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return error_result(
+            return maya_error(
                 "Object not found: {}".format(object_name),
                 "'{}' does not exist in the scene".format(object_name),
-            ).to_dict()
+            )
 
         kwargs = {}
         # Normalise: single `attribute` string takes priority over `attributes` list
@@ -54,24 +51,21 @@ def set_keyframe(
                 cmds.setAttr("{}.{}".format(object_name, attr_list[0]), value)
 
         count = cmds.setKeyframe(object_name, **kwargs)
-        return success_result(
+        return maya_success(
             "Set {} keyframe(s) on {}".format(count, object_name),
             object_name=object_name,
             keyframe_count=count,
             time=time,
             attributes=attr_list,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("set_keyframe failed")
-        return error_result("Failed to set keyframe on {}".format(object_name), str(exc)).to_dict()
-
+        return maya_from_exception(exc, "Failed to set keyframe on {}".format(object_name))
 
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`set_keyframe`."""
     return set_keyframe(**kwargs)
-
 
 if __name__ == "__main__":
     import json

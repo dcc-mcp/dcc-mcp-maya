@@ -1,9 +1,9 @@
 """Select objects with similar topology or material."""
 
-from dcc_mcp_core import error_result, success_result
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_success
 
 _CRITERIA = ("topology", "material", "type", "name_prefix")
-
 
 def run(params):
     """Select objects similar to the current selection.
@@ -24,14 +24,14 @@ def run(params):
 
     criteria = params.get("criteria", "topology")
     if criteria not in _CRITERIA:
-        return error_result(
+        return maya_error(
             "Invalid criteria",
             "'{}' is not valid. Choose from: {}".format(criteria, ", ".join(_CRITERIA)),
         )
 
     current = cmds.ls(selection=True) or []
     if not current:
-        return error_result(
+        return maya_error(
             "Nothing selected",
             "Select at least one object before calling select_similar",
             prompt="Use set_selection (maya-scene) to set an initial selection.",
@@ -102,7 +102,7 @@ def run(params):
         if similar:
             cmds.select(similar)
 
-        return success_result(
+        return maya_success(
             "Selected {} similar object(s) by {}".format(len(similar), criteria),
             prompt="Use get_selection (maya-scene) to inspect the full selection list.",
             criteria=criteria,
@@ -110,4 +110,4 @@ def run(params):
             objects=similar,
         )
     except Exception as exc:
-        return error_result("Failed to select similar objects", str(exc))
+        return maya_error("Failed to select similar objects", str(exc))

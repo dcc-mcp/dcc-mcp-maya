@@ -3,12 +3,11 @@
 # Import future modules
 from __future__ import annotations
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 # Import built-in modules
-import logging
 from typing import List, Optional
-
-logger = logging.getLogger(__name__)
-
 
 def get_poly_count(object_name: Optional[str] = None) -> dict:
     """Query polygon statistics for an object or the entire scene.
@@ -21,14 +20,13 @@ def get_poly_count(object_name: Optional[str] = None) -> dict:
         ActionResultModel dict with ``context.faces``, ``context.vertices``,
         ``context.edges``, and ``context.triangles``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if object_name:
             if not cmds.objExists(object_name):
-                return error_result("Object not found: {}".format(object_name)).to_dict()
+                return maya_error("Object not found: {}".format(object_name))
             targets = [object_name]
         else:
             targets = cmds.ls(type="mesh") or []
@@ -74,13 +72,11 @@ def get_poly_count(object_name: Optional[str] = None) -> dict:
         if object_name:
             result_kwargs["objects"] = per_object
 
-        return success_result(label, **result_kwargs).to_dict()
+        return maya_success(label, **result_kwargs)
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("get_poly_count failed")
-        return error_result("Failed to get poly count", str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to get poly count")
 
 def apply_subdivision(
     object_name: str,
@@ -99,26 +95,25 @@ def apply_subdivision(
     Returns:
         ActionResultModel dict.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     if method not in ("preview", "subdivide"):
-        return error_result(
+        return maya_error(
             "Invalid method: {}".format(method),
             "Use 'preview' or 'subdivide'",
-        ).to_dict()
+        )
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return error_result("Object not found: {}".format(object_name)).to_dict()
+            return maya_error("Object not found: {}".format(object_name))
 
         shapes = cmds.listRelatives(object_name, shapes=True, type="mesh") or []
         if not shapes:
             if cmds.objectType(object_name) == "mesh":
                 shapes = [object_name]
             else:
-                return error_result("'{}' has no polygon mesh shape".format(object_name)).to_dict()
+                return maya_error("'{}' has no polygon mesh shape".format(object_name))
 
         shape = shapes[0]
 
@@ -128,18 +123,16 @@ def apply_subdivision(
         else:
             cmds.polySubdivideFacet(object_name, dv=level)
 
-        return success_result(
+        return maya_success(
             "Subdivision applied to '{}' (method={}, level={})".format(object_name, method, level),
             object_name=object_name,
             method=method,
             level=level,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("apply_subdivision failed")
-        return error_result("Failed to apply subdivision", str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to apply subdivision")
 
 def merge_vertices(
     object_name: str,
@@ -154,13 +147,12 @@ def merge_vertices(
     Returns:
         ActionResultModel dict with ``context.merged_count`` (approximate).
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return error_result("Object not found: {}".format(object_name)).to_dict()
+            return maya_error("Object not found: {}".format(object_name))
 
         before = cmds.polyEvaluate(object_name, vertex=True)
         cmds.polyMergeVertex(object_name, distance=threshold, ch=False)
@@ -170,20 +162,18 @@ def merge_vertices(
         after_count = after if isinstance(after, int) else 0
         merged = before_count - after_count
 
-        return success_result(
+        return maya_success(
             "Merged {} vertices on '{}' (threshold={})".format(merged, object_name, threshold),
             object_name=object_name,
             merged_count=merged,
             vertex_count_before=before_count,
             vertex_count_after=after_count,
             threshold=threshold,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("merge_vertices failed")
-        return error_result("Failed to merge vertices", str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to merge vertices")
 
 def triangulate(object_name: str) -> dict:
     """Triangulate all faces of a polygon mesh.
@@ -194,13 +184,12 @@ def triangulate(object_name: str) -> dict:
     Returns:
         ActionResultModel dict with face counts before and after.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return error_result("Object not found: {}".format(object_name)).to_dict()
+            return maya_error("Object not found: {}".format(object_name))
 
         before = cmds.polyEvaluate(object_name, face=True)
         cmds.polyTriangulate(object_name)
@@ -209,18 +198,16 @@ def triangulate(object_name: str) -> dict:
         before_count = before if isinstance(before, int) else 0
         after_count = after if isinstance(after, int) else 0
 
-        return success_result(
+        return maya_success(
             "Triangulated '{}': {} -> {} faces".format(object_name, before_count, after_count),
             object_name=object_name,
             face_count_before=before_count,
             face_count_after=after_count,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("triangulate failed")
-        return error_result("Failed to triangulate", str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to triangulate")
 
 def cleanup_mesh(
     object_name: str,
@@ -240,13 +227,12 @@ def cleanup_mesh(
     Returns:
         ActionResultModel dict.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return error_result("Object not found: {}".format(object_name)).to_dict()
+            return maya_error("Object not found: {}".format(object_name))
 
         kwargs = {
             "selectOnly": False,
@@ -256,19 +242,17 @@ def cleanup_mesh(
         }
         cmds.polyClean(object_name, **kwargs)
 
-        return success_result(
+        return maya_success(
             "Cleaned mesh '{}'".format(object_name),
             object_name=object_name,
             non_manifold=non_manifold,
             lamina_faces=lamina_faces,
             invalid_components=invalid_components,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("cleanup_mesh failed")
-        return error_result("Failed to clean mesh", str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to clean mesh")
 
 def get_mesh_edge_info(
     object_name: str,
@@ -285,27 +269,26 @@ def get_mesh_edge_info(
         ActionResultModel dict with ``context.edges`` (list of dicts with
         ``index``, ``length``, ``vertices``), ``context.edge_count``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return error_result("Object not found: {}".format(object_name)).to_dict()
+            return maya_error("Object not found: {}".format(object_name))
 
         total_edges = cmds.polyEvaluate(object_name, edge=True)
         if not isinstance(total_edges, int) or total_edges == 0:
-            return error_result("'{}' has no edges — ensure it is a polygon mesh".format(object_name)).to_dict()
+            return maya_error("'{}' has no edges — ensure it is a polygon mesh".format(object_name))
 
         if edge_indices is None:
             indices = list(range(total_edges))
         else:
             invalid = [i for i in edge_indices if not (0 <= i < total_edges)]
             if invalid:
-                return error_result(
+                return maya_error(
                     "Invalid edge indices: {}".format(invalid),
                     "Valid range is 0 to {}".format(total_edges - 1),
-                ).to_dict()
+                )
             indices = list(edge_indices)
 
         edges = []
@@ -343,19 +326,17 @@ def get_mesh_edge_info(
 
             edges.append({"index": idx, "length": length, "vertices": verts})
 
-        return success_result(
+        return maya_success(
             "Edge info for '{}' ({} edge(s) queried)".format(object_name, len(edges)),
             object_name=object_name,
             edges=edges,
             edge_count=len(edges),
             total_edges=total_edges,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("get_mesh_edge_info failed")
-        return error_result("Failed to get edge info", str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to get edge info")
 
 def select_by_material(material_name: str) -> dict:
     """Select all objects in the scene that use a given material.
@@ -371,16 +352,15 @@ def select_by_material(material_name: str) -> dict:
         ActionResultModel dict with ``context.objects`` (list of selected
         object names), ``context.count``, ``context.material``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(material_name):
-            return error_result(
+            return maya_error(
                 "Material not found: {}".format(material_name),
                 "'{}' does not exist in the scene".format(material_name),
-            ).to_dict()
+            )
 
         # Find all shading engines connected to this material
         shading_engines = (
@@ -388,12 +368,12 @@ def select_by_material(material_name: str) -> dict:
         )
 
         if not shading_engines:
-            return success_result(
+            return maya_success(
                 "Material '{}' is not assigned to any objects".format(material_name),
                 objects=[],
                 count=0,
                 material=material_name,
-            ).to_dict()
+            )
 
         # Collect all mesh members from shading groups
         objects = []
@@ -421,18 +401,16 @@ def select_by_material(material_name: str) -> dict:
         if objects:
             cmds.select(objects, replace=True)
 
-        return success_result(
+        return maya_success(
             "Selected {} object(s) with material '{}'".format(len(objects), material_name),
             objects=objects,
             count=len(objects),
             material=material_name,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("select_by_material failed")
-        return error_result("Failed to select by material", str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to select by material")
 
 def create_proxy_mesh(
     object_name: str,
@@ -458,25 +436,24 @@ def create_proxy_mesh(
         ``context.original``, ``context.reduction``,
         ``context.face_count_before``, ``context.face_count_after``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     if not (0.0 <= reduction < 1.0):
-        return error_result(
+        return maya_error(
             "Invalid reduction: {}".format(reduction),
             "reduction must be in range [0.0, 1.0)",
-        ).to_dict()
+        )
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return error_result("Object not found: {}".format(object_name)).to_dict()
+            return maya_error("Object not found: {}".format(object_name))
 
         shapes = cmds.listRelatives(object_name, shapes=True, type="mesh") or []
         if not shapes:
             obj_type = cmds.objectType(object_name)
             if obj_type != "mesh":
-                return error_result("'{}' has no polygon mesh shape".format(object_name)).to_dict()
+                return maya_error("'{}' has no polygon mesh shape".format(object_name))
 
         # Record original face count
         face_count_before = cmds.polyEvaluate(object_name, face=True)
@@ -489,7 +466,7 @@ def create_proxy_mesh(
         dup_result = cmds.duplicate(object_name, **dup_kwargs)
         proxy = dup_result[0] if dup_result else None
         if not proxy:
-            return error_result("Failed to duplicate '{}'".format(object_name)).to_dict()
+            return maya_error("Failed to duplicate '{}'".format(object_name))
 
         # Apply polyReduce
         percentage = (1.0 - reduction) * 100.0
@@ -503,20 +480,18 @@ def create_proxy_mesh(
         face_count_after = cmds.polyEvaluate(proxy, face=True)
         face_count_after = face_count_after if isinstance(face_count_after, int) else 0
 
-        return success_result(
+        return maya_success(
             "Created proxy mesh '{}' from '{}' (reduction={})".format(proxy, object_name, reduction),
             proxy_mesh=proxy,
             original=object_name,
             reduction=reduction,
             face_count_before=face_count_before,
             face_count_after=face_count_after,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("create_proxy_mesh failed")
-        return error_result("Failed to create proxy mesh from '{}'".format(object_name), str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to create proxy mesh from '{}'".format(object_name))
 
 def combine_meshes(
     objects,  # type: List[str]
@@ -536,23 +511,22 @@ def combine_meshes(
         ActionResultModel dict with ``context.combined_mesh`` (name of the
         result) and ``context.input_count``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     if not objects or len(objects) < 2:
-        return error_result(
+        return maya_error(
             "At least two objects are required for combine_meshes",
             "Provide a list of two or more polygon mesh names",
-        ).to_dict()
+        )
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         for obj in objects:
             if not cmds.objExists(obj):
-                return error_result(
+                return maya_error(
                     "Object not found: {}".format(obj),
                     "'{}' does not exist in the scene".format(obj),
-                ).to_dict()
+                )
 
         kwargs = {}
         if name:
@@ -560,22 +534,20 @@ def combine_meshes(
         result = cmds.polyUnite(*objects, constructionHistory=False, **kwargs) or []
         combined = result[0] if result else None
         if not combined:
-            return error_result(
+            return maya_error(
                 "polyUnite returned no result",
                 "polyUnite did not produce any output mesh",
-            ).to_dict()
+            )
 
-        return success_result(
+        return maya_success(
             "Combined {} meshes into '{}'".format(len(objects), combined),
             combined_mesh=combined,
             input_count=len(objects),
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("combine_meshes failed")
-        return error_result("Failed to combine meshes", str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to combine meshes")
 
 def separate_mesh(
     object_name,  # type: str
@@ -593,22 +565,21 @@ def separate_mesh(
         ActionResultModel dict with ``context.separated_meshes`` (list of
         result transform names) and ``context.count``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     if not object_name:
-        return error_result(
+        return maya_error(
             "object_name is required",
             "Provide a non-empty polygon mesh name",
-        ).to_dict()
+        )
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return error_result(
+            return maya_error(
                 "Object not found: {}".format(object_name),
                 "'{}' does not exist in the scene".format(object_name),
-            ).to_dict()
+            )
 
         result = cmds.polySeparate(object_name, constructionHistory=False) or []
         # polySeparate returns shape nodes; get their parent transforms
@@ -629,17 +600,15 @@ def separate_mesh(
                 seen.add(s)
                 unique.append(s)
 
-        return success_result(
+        return maya_success(
             "Separated '{}' into {} meshes".format(object_name, len(unique)),
             separated_meshes=unique,
             count=len(unique),
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("separate_mesh failed")
-        return error_result("Failed to separate mesh '{}'".format(object_name), str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to separate mesh '{}'".format(object_name))
 
 def extract_faces(
     object_name,  # type: str
@@ -665,27 +634,26 @@ def extract_faces(
         ActionResultModel dict with ``context.extracted_mesh`` and
         ``context.face_count``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     if not object_name:
-        return error_result(
+        return maya_error(
             "object_name is required",
             "Provide a non-empty polygon mesh name",
-        ).to_dict()
+        )
     if not face_indices:
-        return error_result(
+        return maya_error(
             "face_indices is required",
             "Provide a non-empty list of integer face indices",
-        ).to_dict()
+        )
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return error_result(
+            return maya_error(
                 "Object not found: {}".format(object_name),
                 "'{}' does not exist in the scene".format(object_name),
-            ).to_dict()
+            )
 
         face_components = ["{}.f[{}]".format(object_name, idx) for idx in face_indices]
 
@@ -702,17 +670,15 @@ def extract_faces(
                     parents = cmds.listRelatives(last, parent=True, fullPath=False) or []
                     extracted = parents[0] if parents else object_name
 
-        return success_result(
+        return maya_success(
             "Extracted {} face(s) from '{}'".format(len(face_indices), object_name),
             extracted_mesh=extracted,
             face_count=len(face_indices),
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("extract_faces failed")
-        return error_result("Failed to extract faces from '{}'".format(object_name), str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to extract faces from '{}'".format(object_name))
 
 def mirror_mesh(
     object_name,  # type: str
@@ -742,20 +708,19 @@ def mirror_mesh(
         ActionResultModel dict with ``context.object_name``, ``context.axis``,
         ``context.cut_position``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     axis_lower = (axis or "x").lower()
     if axis_lower not in ("x", "y", "z"):
-        return error_result(
+        return maya_error(
             "Invalid axis: {}".format(axis),
             "axis must be one of 'x', 'y', 'z'",
-        ).to_dict()
+        )
 
     if not object_name:
-        return error_result(
+        return maya_error(
             "object_name is required",
             "Provide a non-empty polygon mesh name",
-        ).to_dict()
+        )
 
     # polyMirrorFace axis indices: 0=X, 1=Y, 2=Z
     axis_index = {"x": 0, "y": 1, "z": 2}[axis_lower]
@@ -764,10 +729,10 @@ def mirror_mesh(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return error_result(
+            return maya_error(
                 "Object not found: {}".format(object_name),
                 "'{}' does not exist in the scene".format(object_name),
-            ).to_dict()
+            )
 
         cmds.polyMirrorFace(
             object_name,
@@ -782,14 +747,13 @@ def mirror_mesh(
             mergeThreshold=merge_threshold,
         )
 
-        return success_result(
+        return maya_success(
             "Mirrored '{}' along {} axis at {}".format(object_name, axis_lower, cut_position),
             object_name=object_name,
             axis=axis_lower,
             cut_position=cut_position,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("mirror_mesh failed")
-        return error_result("Failed to mirror mesh '{}'".format(object_name), str(exc)).to_dict()
+                return maya_from_exception(exc, "Failed to mirror mesh '{}'".format(object_name))

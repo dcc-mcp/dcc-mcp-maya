@@ -4,11 +4,10 @@
 from __future__ import annotations
 
 # Import built-in modules
-import logging
 from typing import List, Optional
 
-logger = logging.getLogger(__name__)
-
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 def delete_keyframes(
     object_name: str,
@@ -30,16 +29,14 @@ def delete_keyframes(
     Returns:
         ActionResultModel dict with ``context.deleted_count``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return error_result(
+            return maya_error(
                 "Object not found: {}".format(object_name),
                 "'{}' does not exist in the scene".format(object_name),
-            ).to_dict()
+            )
 
         kwargs = {}  # type: Dict
         if attributes:
@@ -52,25 +49,22 @@ def delete_keyframes(
             kwargs["time"] = (end_frame, end_frame)
 
         deleted = cmds.cutKey(object_name, clear=True, **kwargs)
-        return success_result(
+        return maya_success(
             "Deleted {} keyframe(s) from {}".format(deleted, object_name),
             object_name=object_name,
             deleted_count=deleted,
             attributes=attributes,
             start_frame=start_frame,
             end_frame=end_frame,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("delete_keyframes failed")
-        return error_result("Failed to delete keyframes from {}".format(object_name), str(exc)).to_dict()
-
+        return maya_from_exception(exc, "Failed to delete keyframes from {}".format(object_name))
 
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`delete_keyframes`."""
     return delete_keyframes(**kwargs)
-
 
 if __name__ == "__main__":
     import json

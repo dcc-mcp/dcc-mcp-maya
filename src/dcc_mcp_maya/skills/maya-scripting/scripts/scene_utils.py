@@ -7,12 +7,11 @@ helpers that are commonly needed by an AI Agent.
 # Import future modules
 from __future__ import annotations
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 # Import built-in modules
-import logging
 from typing import List, Optional
-
-logger = logging.getLogger(__name__)
-
 
 def set_pivot(
     object_name: str,
@@ -35,7 +34,6 @@ def set_pivot(
         ActionResultModel dict with ``context.object_name``,
         ``context.position``, ``context.pivot_type``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     _VALID_PIVOT_TYPES = ("rotate", "scale", "both")
 
@@ -43,23 +41,23 @@ def set_pivot(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return error_result(
+            return maya_error(
                 "Object not found: {}".format(object_name),
                 "'{}' does not exist in the scene".format(object_name),
-            ).to_dict()
+            )
 
         if pivot_type not in _VALID_PIVOT_TYPES:
-            return error_result(
+            return maya_error(
                 "Invalid pivot_type: {}".format(pivot_type),
                 "pivot_type must be one of {}".format(_VALID_PIVOT_TYPES),
-            ).to_dict()
+            )
 
         if position is not None:
             if len(position) != 3:
-                return error_result(
+                return maya_error(
                     "Invalid position: {}".format(position),
                     "position must be a list of exactly 3 floats [x, y, z]",
-                ).to_dict()
+                )
 
             px, py, pz = float(position[0]), float(position[1]), float(position[2])
             space_flag = {"worldSpace": True} if world_space else {}
@@ -73,20 +71,18 @@ def set_pivot(
         rp = list(cmds.xform(object_name, query=True, rotatePivot=True, worldSpace=True))
         sp = list(cmds.xform(object_name, query=True, scalePivot=True, worldSpace=True))
 
-        return success_result(
+        return maya_success(
             "Set pivot on '{}' ({})".format(object_name, pivot_type),
             object_name=object_name,
             pivot_type=pivot_type,
             rotate_pivot=rp,
             scale_pivot=sp,
             world_space=world_space,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("set_pivot failed")
-        return error_result("Failed to set pivot on '{}'".format(object_name), str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to set pivot on '{}'".format(object_name))
 
 def align_objects(
     objects: List[str],
@@ -117,7 +113,6 @@ def align_objects(
         ActionResultModel dict with ``context.objects``, ``context.axis``,
         ``context.mode``, ``context.target_value``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     _VALID_AXES = ("x", "y", "z")
     _VALID_MODES = ("min", "center", "max")
@@ -127,41 +122,41 @@ def align_objects(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not objects or len(objects) < 2:
-            return error_result(
+            return maya_error(
                 "Insufficient objects",
                 "align_objects requires at least 2 objects",
-            ).to_dict()
+            )
 
         axis_lower = axis.lower()
         if axis_lower not in _VALID_AXES:
-            return error_result(
+            return maya_error(
                 "Invalid axis: {}".format(axis),
                 "axis must be one of {}".format(_VALID_AXES),
-            ).to_dict()
+            )
 
         mode_lower = mode.lower()
         if mode_lower not in _VALID_MODES:
-            return error_result(
+            return maya_error(
                 "Invalid mode: {}".format(mode),
                 "mode must be one of {}".format(_VALID_MODES),
-            ).to_dict()
+            )
 
         # Validate all objects exist
         missing = [obj for obj in objects if not cmds.objExists(obj)]
         if missing:
-            return error_result(
+            return maya_error(
                 "Objects not found: {}".format(missing),
                 "The following objects do not exist: {}".format(missing),
-            ).to_dict()
+            )
 
         idx = _AXIS_INDEX[axis_lower]
 
         if reference:
             if not cmds.objExists(reference):
-                return error_result(
+                return maya_error(
                     "Reference object not found: {}".format(reference),
                     "'{}' does not exist".format(reference),
-                ).to_dict()
+                )
             ref_bb = cmds.exactWorldBoundingBox(reference)
             # bb = [xmin, ymin, zmin, xmax, ymax, zmax]
             if mode_lower == "min":
@@ -200,19 +195,17 @@ def align_objects(
             cmds.setAttr("{}.{}".format(obj, translate_attr), current_t + delta)
             aligned.append(obj)
 
-        return success_result(
+        return maya_success(
             "Aligned {} object(s) along {} axis ({} mode)".format(len(aligned), axis_lower, mode_lower),
             objects=aligned,
             axis=axis_lower,
             mode=mode_lower,
             target_value=target_value,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("align_objects failed")
-        return error_result("Failed to align objects", str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to align objects")
 
 def create_annotation(
     object_name: str,
@@ -234,30 +227,29 @@ def create_annotation(
         ActionResultModel dict with ``context.annotation_transform``,
         ``context.object_name``, ``context.text``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return error_result(
+            return maya_error(
                 "Object not found: {}".format(object_name),
                 "'{}' does not exist in the scene".format(object_name),
-            ).to_dict()
+            )
 
         if not text:
-            return error_result(
+            return maya_error(
                 "Empty annotation text",
                 "text must be a non-empty string",
-            ).to_dict()
+            )
 
         # Determine annotation position
         if position is not None:
             if len(position) != 3:
-                return error_result(
+                return maya_error(
                     "Invalid position: {}".format(position),
                     "position must be a list of exactly 3 floats [x, y, z]",
-                ).to_dict()
+                )
             ann_pos = [float(v) for v in position]
         else:
             # Default: slightly above the object pivot
@@ -269,20 +261,18 @@ def create_annotation(
         ann_parent = cmds.listRelatives(ann_transform, parent=True, fullPath=False)
         ann_transform_name = ann_parent[0] if ann_parent else ann_transform
 
-        return success_result(
+        return maya_success(
             "Created annotation '{}' on '{}'".format(text, object_name),
             annotation_transform=ann_transform_name,
             annotation_shape=ann_transform,
             object_name=object_name,
             text=text,
             position=ann_pos,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("create_annotation failed")
-        return error_result("Failed to create annotation on '{}'".format(object_name), str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to create annotation on '{}'".format(object_name))
 
 def set_object_color(
     object_name: str,
@@ -305,22 +295,21 @@ def set_object_color(
         ActionResultModel dict with ``context.object_name``,
         ``context.color_index``, ``context.use_default``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     if not (0 <= color_index <= 31):
-        return error_result(
+        return maya_error(
             "Invalid color_index: {}".format(color_index),
             "color_index must be between 0 and 31",
-        ).to_dict()
+        )
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return error_result(
+            return maya_error(
                 "Object not found: {}".format(object_name),
                 "'{}' does not exist in the scene".format(object_name),
-            ).to_dict()
+            )
 
         if use_default or color_index == 0:
             cmds.setAttr("{}.overrideEnabled".format(object_name), False)
@@ -331,18 +320,16 @@ def set_object_color(
             cmds.setAttr("{}.overrideColor".format(object_name), color_index)
             effective_index = color_index
 
-        return success_result(
+        return maya_success(
             "Set wireframe color on '{}' to index {}".format(object_name, effective_index),
             object_name=object_name,
             color_index=effective_index,
             use_default=use_default,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("set_object_color failed")
-        return error_result("Failed to set object color on '{}'".format(object_name), str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to set object color on '{}'".format(object_name))
 
 def toggle_gpu_override(
     object_name: str,
@@ -368,16 +355,15 @@ def toggle_gpu_override(
         ActionResultModel dict with ``context.object_name``,
         ``context.enabled``, ``context.display_type``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return error_result(
+            return maya_error(
                 "Object not found: {}".format(object_name),
                 "'{}' does not exist in the scene".format(object_name),
-            ).to_dict()
+            )
 
         if enabled:
             # 2 = bounding box display type
@@ -389,18 +375,16 @@ def toggle_gpu_override(
             cmds.setAttr("{}.overrideDisplayType".format(object_name), 0)
             display_type = 0
 
-        return success_result(
+        return maya_success(
             "{} GPU override on '{}'".format("Enabled" if enabled else "Disabled", object_name),
             object_name=object_name,
             enabled=enabled,
             display_type=display_type,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("toggle_gpu_override failed")
-        return error_result("Failed to toggle GPU override on '{}'".format(object_name), str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to toggle GPU override on '{}'".format(object_name))
 
 def create_polygon_text(
     text: str,
@@ -427,13 +411,12 @@ def create_polygon_text(
         ActionResultModel dict with ``context.objects`` (list of created
         transform names) and ``context.text``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not text:
-            return error_result("Empty text", "text parameter must not be empty").to_dict()
+            return maya_error("Empty text", "text parameter must not be empty")
 
         kwargs = {"font": font, "text": text}
         if name:
@@ -455,7 +438,7 @@ def create_polygon_text(
                     extruded.append(crv)
             objects = extruded
 
-        return success_result(
+        return maya_success(
             "Created polygon text: '{}'".format(text),
             text=text,
             font=font,
@@ -463,13 +446,11 @@ def create_polygon_text(
             extruded=extrude,
             objects=objects,
             count=len(objects),
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("create_polygon_text failed")
-        return error_result("Failed to create polygon text '{}'".format(text), str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to create polygon text '{}'".format(text))
 
 def set_shading_mode(
     mode: str = "smooth",
@@ -494,7 +475,6 @@ def set_shading_mode(
     Returns:
         ActionResultModel dict with ``context.mode``, ``context.panel``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     _MODE_MAP = {
         "wireframe": ("wireframeOnShaded", False),
@@ -506,10 +486,10 @@ def set_shading_mode(
 
     mode_lower = mode.lower()
     if mode_lower not in _MODE_MAP:
-        return error_result(
+        return maya_error(
             "Invalid mode: {}".format(mode),
             "mode must be one of {}".format(sorted(_MODE_MAP.keys())),
-        ).to_dict()
+        )
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
@@ -517,18 +497,18 @@ def set_shading_mode(
         # Resolve target panel
         if panel:
             if not cmds.modelPanel(panel, query=True, exists=True):
-                return error_result(
+                return maya_error(
                     "Panel not found: {}".format(panel),
                     "'{}' is not a valid model panel".format(panel),
-                ).to_dict()
+                )
             target_panel = panel
         else:
             panels = cmds.getPanel(type="modelPanel") or []
             if not panels:
-                return error_result(
+                return maya_error(
                     "No model panels found",
                     "Could not locate any Maya model view panel",
-                ).to_dict()
+                )
             target_panel = panels[0]
 
         # Apply the shading mode
@@ -543,13 +523,12 @@ def set_shading_mode(
         elif mode_lower == "bounding_box":
             cmds.modelEditor(target_panel, edit=True, displayAppearance="boundingBox", displayTextures=False)
 
-        return success_result(
+        return maya_success(
             "Set shading mode to '{}' on panel '{}'".format(mode_lower, target_panel),
             mode=mode_lower,
             panel=target_panel,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("set_shading_mode failed")
-        return error_result("Failed to set shading mode", str(exc)).to_dict()
+                return maya_from_exception(exc, "Failed to set shading mode")

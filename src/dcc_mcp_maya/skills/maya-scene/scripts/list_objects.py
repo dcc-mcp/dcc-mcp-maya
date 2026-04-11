@@ -3,12 +3,11 @@
 # Import future modules
 from __future__ import annotations
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 # Import built-in modules
-import logging
 from typing import Optional
-
-logger = logging.getLogger(__name__)
-
 
 def list_objects(object_type: Optional[str] = None, dag: bool = True) -> dict:
     """List objects in the current Maya scene.
@@ -20,7 +19,6 @@ def list_objects(object_type: Optional[str] = None, dag: bool = True) -> dict:
     Returns:
         ActionResultModel dict with ``context.objects`` list.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
@@ -29,22 +27,19 @@ def list_objects(object_type: Optional[str] = None, dag: bool = True) -> dict:
         if object_type:
             kwargs["type"] = object_type
         objects = cmds.ls(**kwargs) or []
-        return success_result(
+        return maya_success(
             f"Found {len(objects)} objects",
             objects=objects,
             count=len(objects),
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("list_objects failed")
-        return error_result("Failed to list objects", str(exc)).to_dict()
-
+        return maya_from_exception(exc, "Failed to list objects")
 
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`list_objects`."""
     return list_objects(**kwargs)
-
 
 if __name__ == "__main__":
     import json

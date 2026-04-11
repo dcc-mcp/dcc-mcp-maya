@@ -3,10 +3,8 @@
 # Import future modules
 from __future__ import annotations
 
-# Import built-in modules
-import logging
-
-logger = logging.getLogger(__name__)
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 _CONSTRAINT_NODE_TYPES = [
     "parentConstraint",
@@ -30,16 +28,14 @@ def list_constraints(target: str) -> dict:
         ActionResultModel dict with ``context.constraints`` — list of dicts
         with ``node``, ``type``, and ``sources``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(target):
-            return error_result(
+            return maya_error(
                 "Object not found: {}".format(target),
                 "'{}' does not exist".format(target),
-            ).to_dict()
+            )
 
         constraints = []
         seen = set()
@@ -59,18 +55,17 @@ def list_constraints(target: str) -> dict:
                     }
                 )
 
-        return success_result(
+        return maya_success(
             "Found {} constraint(s) on '{}'".format(len(constraints), target),
             prompt="Use remove_constraint to delete constraints or add_constraint to add new ones.",
             target=target,
             constraints=constraints,
             count=len(constraints),
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("list_constraints failed")
-        return error_result("Failed to list constraints on '{}'".format(target), str(exc)).to_dict()
+        return maya_from_exception(exc, "Failed to list constraints on '{}'".format(target))
 
 
 def main(**kwargs) -> dict:

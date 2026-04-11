@@ -1,6 +1,7 @@
 """Create a MASH network for an object."""
 
-from dcc_mcp_core import error_result, success_result
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_success
 
 
 def run(params):
@@ -19,10 +20,10 @@ def run(params):
 
     object_name = params.get("object_name")
     if not object_name:
-        return error_result("Missing required parameter", "'object_name' is required")
+        return maya_error("Missing required parameter", "'object_name' is required")
 
     if not cmds.objExists(object_name):
-        return error_result(
+        return maya_error(
             "Object not found",
             "Object '{}' does not exist".format(object_name),
             prompt="Use list_objects to find valid object names.",
@@ -40,7 +41,7 @@ def run(params):
         else:
             mash.createNetwork(object_name, geometryType=geometry_type)
 
-        return success_result(
+        return maya_success(
             "Created MASH network for '{}'".format(object_name),
             prompt="Use add_node to add MASH nodes like Distribute, Random, or Dynamics.",
             network_name=mash.meshName,
@@ -48,7 +49,7 @@ def run(params):
             waiter=mash.waiter,
         )
     except Exception as exc:
-        return error_result(
+        return maya_error(
             "Failed to create MASH network",
             str(exc),
             prompt="Ensure MASH plugin is loaded: cmds.loadPlugin('MASH').",

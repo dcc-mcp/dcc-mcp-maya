@@ -3,10 +3,8 @@
 # Import future modules
 from __future__ import annotations
 
-# Import built-in modules
-import logging
-
-logger = logging.getLogger(__name__)
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 
 def list_hair_systems() -> dict:
@@ -16,8 +14,6 @@ def list_hair_systems() -> dict:
         ActionResultModel dict with ``context.hair_systems`` (list of dicts)
         and ``context.count``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
@@ -45,17 +41,16 @@ def list_hair_systems() -> dict:
                 }
             )
 
-        return success_result(
+        return maya_success(
             "Found {} hair system(s)".format(len(result)),
             prompt="Use set_nhair_attribute to tune dynamics or add_nhair_cache to bake.",
             hair_systems=result,
             count=len(result),
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("list_hair_systems failed")
-        return error_result("Failed to list hair systems", str(exc)).to_dict()
+        return maya_from_exception(exc, "Failed to list hair systems")
 
 
 def main(**kwargs):

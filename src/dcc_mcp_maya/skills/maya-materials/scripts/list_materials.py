@@ -4,10 +4,10 @@
 from __future__ import annotations
 
 # Import built-in modules
-import logging
-from typing import Optional
+from typing import List, Optional
 
-logger = logging.getLogger(__name__)
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 _SUPPORTED_SHADERS = ("lambert", "blinn", "phong", "phongE", "aiStandardSurface")
 
@@ -21,8 +21,6 @@ def list_materials(shader_type: Optional[str] = None) -> dict:
     Returns:
         ActionResultModel dict with ``context.materials`` list.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
@@ -42,16 +40,15 @@ def list_materials(shader_type: Optional[str] = None) -> dict:
                     seen.add(m)
                     materials.append(m)
 
-        return success_result(
+        return maya_success(
             "Found {} material(s)".format(len(materials)),
             materials=materials,
             count=len(materials),
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("list_materials failed")
-        return error_result("Failed to list materials", str(exc)).to_dict()
+        return maya_from_exception(exc, "Failed to list materials")
 
 
 def main(**kwargs) -> dict:

@@ -3,15 +3,14 @@
 # Import future modules
 from __future__ import annotations
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 # Import built-in modules
-import logging
 import os
 import subprocess
 import tempfile
 from typing import Optional
-
-logger = logging.getLogger(__name__)
-
 
 def submit_to_deadline(
     job_name: Optional[str] = None,
@@ -40,17 +39,16 @@ def submit_to_deadline(
     Returns:
         ActionResultModel dict with the Deadline job ID on success.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         scene_path = cmds.file(q=True, sceneName=True) or ""
         if not scene_path:
-            return error_result(
+            return maya_error(
                 "Scene must be saved before submitting",
                 "Save the scene first with save_scene",
-            ).to_dict()
+            )
 
         scene_stem = os.path.splitext(os.path.basename(scene_path))[0]
         name = job_name or scene_stem
@@ -69,10 +67,10 @@ def submit_to_deadline(
                     cmd = candidate
                     break
         if not cmd:
-            return error_result(
+            return maya_error(
                 "deadlinecommand not found",
                 "Install Thinkbox Deadline client and ensure it is on PATH",
-            ).to_dict()
+            )
 
         # Build minimal job info files
         job_info = {
@@ -108,10 +106,10 @@ def submit_to_deadline(
             )
 
         if proc.returncode != 0:
-            return error_result(
+            return maya_error(
                 "Deadline submission failed",
                 proc.stderr.strip() or proc.stdout.strip(),
-            ).to_dict()
+            )
 
         # Parse job ID from output
         job_id = ""
@@ -122,24 +120,21 @@ def submit_to_deadline(
                     job_id = parts[1].strip()
                     break
 
-        return success_result(
+        return maya_success(
             "Submitted '{}' to Deadline (job ID: {})".format(name, job_id or "unknown"),
             prompt="Use get_render_job_status with the job ID to monitor progress.",
             job_id=job_id,
             name=name,
             pool=pool,
             frame_range="{}-{}".format(sf, ef),
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("submit_to_deadline failed")
-        return error_result("Failed to submit to Deadline", str(exc)).to_dict()
-
+        return maya_from_exception(exc, "Failed to submit to Deadline")
 
 def main(**kwargs):
     return submit_to_deadline(**kwargs)
-
 
 if __name__ == "__main__":
     import json as _json

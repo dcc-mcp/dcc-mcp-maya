@@ -3,10 +3,8 @@
 # Import future modules
 from __future__ import annotations
 
-# Import built-in modules
-import logging
-
-logger = logging.getLogger(__name__)
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 
 def combine_meshes(
@@ -27,23 +25,21 @@ def combine_meshes(
         ActionResultModel dict with ``context.combined_mesh`` (name of the
         result) and ``context.input_count``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     if not objects or len(objects) < 2:
-        return error_result(
+        return maya_error(
             "At least two objects are required for combine_meshes",
             "Provide a list of two or more polygon mesh names",
-        ).to_dict()
+        )
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         for obj in objects:
             if not cmds.objExists(obj):
-                return error_result(
+                return maya_error(
                     "Object not found: {}".format(obj),
                     "'{}' does not exist in the scene".format(obj),
-                ).to_dict()
+                )
 
         kwargs = {}
         if name:
@@ -51,21 +47,20 @@ def combine_meshes(
         result = cmds.polyUnite(*objects, constructionHistory=False, **kwargs) or []
         combined = result[0] if result else None
         if not combined:
-            return error_result(
+            return maya_error(
                 "polyUnite returned no result",
                 "polyUnite did not produce any output mesh",
-            ).to_dict()
+            )
 
-        return success_result(
+        return maya_success(
             "Combined {} meshes into '{}'".format(len(objects), combined),
             combined_mesh=combined,
             input_count=len(objects),
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("combine_meshes failed")
-        return error_result("Failed to combine meshes", str(exc)).to_dict()
+        return maya_from_exception(exc, "Failed to combine meshes")
 
 
 def main(**kwargs) -> dict:

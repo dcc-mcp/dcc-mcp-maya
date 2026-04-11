@@ -3,11 +3,10 @@
 # Import future modules
 from __future__ import annotations
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 # Import built-in modules
-import logging
-
-logger = logging.getLogger(__name__)
-
 
 def mirror_skin_weights(
     mesh: str,
@@ -32,23 +31,22 @@ def mirror_skin_weights(
     Returns:
         ActionResultModel dict with ``context.skin_cluster_name``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(mesh):
-            return error_result(
+            return maya_error(
                 "Mesh not found: {}".format(mesh),
                 "'{}' does not exist in the scene".format(mesh),
-            ).to_dict()
+            )
 
         sc_list = cmds.ls(cmds.listHistory(mesh) or [], type="skinCluster")
         if not sc_list:
-            return error_result(
+            return maya_error(
                 "No skin cluster on: {}".format(mesh),
                 "'{}' has no skinCluster in its history".format(mesh),
-            ).to_dict()
+            )
 
         sc = sc_list[0]
 
@@ -67,24 +65,21 @@ def mirror_skin_weights(
             mesh, mirrorMode=mirror_mode, **{k: v for k, v in mirror_kwargs.items() if k != "mirrorMode"}
         )
 
-        return success_result(
+        return maya_success(
             "Mirrored skin weights on '{}' across {} plane".format(mesh, mirror_mode),
             prompt="Check the mirrored side in the component editor to verify weight accuracy.",
             mesh=mesh,
             skin_cluster_name=sc,
             mirror_mode=mirror_mode,
             positive_to_negative=positive_to_negative,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("mirror_skin_weights failed")
-        return error_result("Failed to mirror skin weights on '{}'".format(mesh), str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to mirror skin weights on '{}'".format(mesh))
 
 def main(**kwargs):
     return mirror_skin_weights(**kwargs)
-
 
 if __name__ == "__main__":
     import json

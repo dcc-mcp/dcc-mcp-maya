@@ -4,10 +4,9 @@
 from __future__ import annotations
 
 # Import built-in modules
-import logging
 
-logger = logging.getLogger(__name__)
-
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 def smooth_mesh(
     object_name: str,
@@ -34,7 +33,6 @@ def smooth_mesh(
         ActionResultModel dict with ``context.object_name``,
         ``context.divisions``, ``context.method``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     _VALID_METHODS = ("preview", "subdivide")
 
@@ -42,22 +40,22 @@ def smooth_mesh(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return error_result(
+            return maya_error(
                 "Object not found: {}".format(object_name),
                 "'{}' does not exist in the scene".format(object_name),
-            ).to_dict()
+            )
 
         if method not in _VALID_METHODS:
-            return error_result(
+            return maya_error(
                 "Invalid method: {}".format(method),
                 "method must be one of {}".format(_VALID_METHODS),
-            ).to_dict()
+            )
 
         if divisions < 0:
-            return error_result(
+            return maya_error(
                 "Invalid divisions: {}".format(divisions),
                 "divisions must be >= 0",
-            ).to_dict()
+            )
 
         if method == "preview":
             # Enable smooth mesh preview — attribute lives on the shape node
@@ -65,34 +63,31 @@ def smooth_mesh(
             target = shapes[0] if shapes else object_name
             cmds.setAttr("{}.displaySmoothMesh".format(target), 2)  # 2 = smooth + cage
             cmds.setAttr("{}.smoothLevel".format(target), divisions)
-            return success_result(
+            return maya_success(
                 "Enabled smooth mesh preview on '{}' (level {})".format(object_name, divisions),
                 object_name=object_name,
                 divisions=divisions,
                 method=method,
-            ).to_dict()
+            )
 
         # method == "subdivide"
         result = cmds.polySmooth(object_name, divisions=divisions)
         node_name = result[0] if result else "polySmoothFace1"
-        return success_result(
+        return maya_success(
             "Subdivided '{}' with {} iteration(s)".format(object_name, divisions),
             object_name=object_name,
             divisions=divisions,
             method=method,
             poly_smooth_node=node_name,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("smooth_mesh failed")
-        return error_result("Failed to smooth mesh {}".format(object_name), str(exc)).to_dict()
-
+        return maya_from_exception(exc, "Failed to smooth mesh {}".format(object_name))
 
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`smooth_mesh`."""
     return smooth_mesh(**kwargs)
-
 
 if __name__ == "__main__":
     import json

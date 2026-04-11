@@ -3,12 +3,14 @@
 # Import future modules
 from __future__ import annotations
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 # Import built-in modules
 import logging
 from typing import Optional
 
 logger = logging.getLogger(__name__)
-
 
 def set_color_management(
     enabled: bool = True,
@@ -30,7 +32,6 @@ def set_color_management(
     Returns:
         ActionResultModel dict with current color management configuration.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
@@ -72,24 +73,21 @@ def set_color_management(
         except Exception:
             current_output = output_transform
 
-        return success_result(
+        return maya_success(
             "Color management {}".format("enabled" if enabled else "disabled"),
             enabled=cm_enabled,
             rendering_space=current_rendering,
             output_transform=current_output,
             input_color_space=input_color_space,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("set_color_management failed")
-        return error_result("Failed to set color management", str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to set color management")
 
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`set_color_management`."""
     return set_color_management(**kwargs)
-
 
 if __name__ == "__main__":
     import json
