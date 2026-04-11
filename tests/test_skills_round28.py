@@ -565,9 +565,7 @@ class TestXGenGetAttribute:
     def test_happy_path(self):
         _, cmds, mods = _make_maya_env()
         mods["xgenm"] = _make_xgenm_mock()
-        result = _success(
-            self._call(mods, collection="myCollection", description="desc1", attribute="density")
-        )
+        result = _success(self._call(mods, collection="myCollection", description="desc1", attribute="density"))
         assert result["context"]["value"] == "5.0"
         assert result["context"]["attribute"] == "density"
 
@@ -589,9 +587,7 @@ class TestXGenGetAttribute:
         xg = _make_xgenm_mock()
         xg.getAttr.side_effect = RuntimeError("attribute not found")
         mods["xgenm"] = xg
-        result = _fail(
-            self._call(mods, collection="myCollection", description="desc1", attribute="bad_attr")
-        )
+        result = _fail(self._call(mods, collection="myCollection", description="desc1", attribute="bad_attr"))
         assert not result["success"]
 
 
@@ -664,9 +660,7 @@ class TestNoLegacyRunSignature:
         """All 369 skill scripts must use the new skill_entry style."""
         import ast
 
-        skills_root = (
-            Path(__file__).parent.parent / "src" / "dcc_mcp_maya" / "skills"
-        )
+        skills_root = Path(__file__).parent.parent / "src" / "dcc_mcp_maya" / "skills"
         violations = []
         for py_file in skills_root.rglob("*.py"):
             try:

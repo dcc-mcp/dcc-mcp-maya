@@ -27,9 +27,7 @@ def _load_script(skill_dir: str, script_name: str):
     """Load a skill script module by path (unique module name per call)."""
     _load_script._counter = getattr(_load_script, "_counter", 0) + 1
     script_path = SKILLS_ROOT / skill_dir / "scripts" / "{}.py".format(script_name)
-    module_name = "r24_{}_{}_{}" .format(
-        skill_dir.replace("-", "_"), script_name, _load_script._counter
-    )
+    module_name = "r24_{}_{}_{}".format(skill_dir.replace("-", "_"), script_name, _load_script._counter)
     spec = importlib.util.spec_from_file_location(module_name, str(script_path))
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)

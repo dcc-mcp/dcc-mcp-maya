@@ -22,7 +22,7 @@ def _load_script(skill_dir, script_name):
     """Load a skill script via file path (handles hyphenated dirs)."""
     _MOD_COUNTER[0] += 1
     path = _SKILLS_ROOT / skill_dir / "scripts" / "{}.py".format(script_name)
-    mod_name = "r27_{}_{}_{}" .format(skill_dir.replace("-", "_"), script_name, _MOD_COUNTER[0])
+    mod_name = "r27_{}_{}_{}".format(skill_dir.replace("-", "_"), script_name, _MOD_COUNTER[0])
     spec = importlib.util.spec_from_file_location(mod_name, str(path))
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
@@ -51,9 +51,11 @@ def _make_env(exists=True, exists_fn=None, **overrides):
 # maya-attributes
 # ---------------------------------------------------------------------------
 
+
 class TestAddAttributeRefactor:
     def test_node_not_found_returns_error(self):
         from dcc_mcp_maya.api import validate_node_exists
+
         cmds, mods = _make_env(exists=False)
         err = validate_node_exists(cmds, "pSphere1")
         assert err is not None
@@ -78,6 +80,7 @@ class TestAddAttributeRefactor:
 
     def test_delete_attribute_node_missing(self):
         from dcc_mcp_maya.api import validate_node_exists
+
         cmds, _ = _make_env(exists=False)
         err = validate_node_exists(cmds, "missingNode")
         assert err is not None
@@ -85,6 +88,7 @@ class TestAddAttributeRefactor:
 
     def test_get_attribute_node_missing(self):
         from dcc_mcp_maya.api import validate_node_exists
+
         cmds, _ = _make_env(exists=False)
         err = validate_node_exists(cmds, "ghostNode")
         assert err["success"] is False
@@ -111,9 +115,11 @@ class TestAddAttributeRefactor:
 # maya-scene
 # ---------------------------------------------------------------------------
 
+
 class TestSceneRefactor:
     def _check_vne(self, name, exists=True):
         from dcc_mcp_maya.api import validate_node_exists
+
         cmds, _ = _make_env(exists=exists)
         return validate_node_exists(cmds, name)
 
@@ -167,6 +173,7 @@ class TestSceneRefactor:
 # maya-uv-ops
 # ---------------------------------------------------------------------------
 
+
 class TestUvOpsRefactor:
     def test_batch_validate_nodes_source_missing(self):
         from dcc_mcp_maya.api import batch_validate_nodes
@@ -181,6 +188,7 @@ class TestUvOpsRefactor:
 
     def test_batch_validate_nodes_both_exist(self):
         from dcc_mcp_maya.api import batch_validate_nodes
+
         cmds, _ = _make_env(exists=True)
         err = batch_validate_nodes(cmds, ["source_mesh", "target_mesh"])
         assert err is None
@@ -245,6 +253,7 @@ class TestUvOpsRefactor:
     def test_copy_uvs_both_missing_short_circuits(self):
         """batch_validate_nodes returns first-missing error without checking all."""
         from dcc_mcp_maya.api import batch_validate_nodes
+
         cmds, _ = _make_env(exists=False)
         err = batch_validate_nodes(cmds, ["miss1", "miss2"])
         assert err is not None
@@ -254,6 +263,7 @@ class TestUvOpsRefactor:
 # ---------------------------------------------------------------------------
 # maya-constraints
 # ---------------------------------------------------------------------------
+
 
 class TestConstraintsRefactor:
     def test_add_constraint_source_missing(self):
@@ -279,12 +289,14 @@ class TestConstraintsRefactor:
 
     def test_add_constraint_both_exist(self):
         from dcc_mcp_maya.api import batch_validate_nodes
+
         cmds, _ = _make_env(exists=True)
         err = batch_validate_nodes(cmds, ["pSphere1", "pCube1"])
         assert err is None
 
     def test_remove_constraint_target_missing(self):
         from dcc_mcp_maya.api import validate_node_exists
+
         cmds, _ = _make_env(exists=False)
         err = validate_node_exists(cmds, "missingTgt")
         assert err is not None
@@ -335,6 +347,7 @@ class TestConstraintsRefactor:
 # ---------------------------------------------------------------------------
 # maya-materials
 # ---------------------------------------------------------------------------
+
 
 class TestMaterialsRefactor:
     def test_set_material_attribute_missing_node(self):
