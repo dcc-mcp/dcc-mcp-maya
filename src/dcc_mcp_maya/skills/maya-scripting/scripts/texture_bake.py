@@ -10,6 +10,8 @@ from typing import List, Optional
 # Import local modules
 from dcc_mcp_core.skill import skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import batch_validate_nodes
+
 logger = logging.getLogger(__name__)
 
 
@@ -64,9 +66,10 @@ def bake_textures(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        missing = [obj for obj in objects if not cmds.objExists(obj)]
-        if missing:
-            return skill_error("Objects not found: {}".format(", ".join(missing)))
+
+        err = batch_validate_nodes(cmds, list(objects))
+        if err:
+            return err
 
         bake_type_map = {
             "diffuse": "diffuse",

@@ -9,6 +9,8 @@ from typing import List, Optional
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import batch_validate_nodes
+
 
 def wire_deformer(
     curves: List[str],
@@ -43,19 +45,14 @@ def wire_deformer(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        missing_curves = [c for c in curves if not cmds.objExists(c)]
-        if missing_curves:
-            return skill_error(
-                "Curve(s) not found: {}".format(", ".join(missing_curves)),
-                "Ensure all curves exist in the scene",
-            )
 
-        missing_objects = [o for o in objects if not cmds.objExists(o)]
-        if missing_objects:
-            return skill_error(
-                "Object(s) not found: {}".format(", ".join(missing_objects)),
-                "Ensure all objects exist in the scene",
-            )
+        err = batch_validate_nodes(cmds, list(curves))
+        if err:
+            return err
+
+        err = batch_validate_nodes(cmds, list(objects))
+        if err:
+            return err
 
         wire_kwargs = {
             "wire": curves,
