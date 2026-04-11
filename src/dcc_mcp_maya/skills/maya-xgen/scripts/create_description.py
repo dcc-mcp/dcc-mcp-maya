@@ -1,7 +1,7 @@
 """Create an XGen description on a mesh."""
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_success
+from dcc_mcp_core.skill import skill_error, skill_success
 
 
 def run(params):
@@ -21,7 +21,7 @@ def run(params):
 
     mesh = params.get("mesh")
     if not mesh:
-        return maya_error("Missing required parameter", "'mesh' is required")
+        return skill_error("Missing required parameter", "'mesh' is required")
 
     collection = params.get("collection", "xgenCollection1")
     description = params.get("description", "description1")
@@ -29,7 +29,7 @@ def run(params):
 
     try:
         if not cmds.objExists(mesh):
-            return maya_error(
+            return skill_error(
                 "Mesh not found",
                 "Object '{}' does not exist in the scene".format(mesh),
                 prompt="Use list_objects to find valid mesh names.",
@@ -40,7 +40,7 @@ def run(params):
 
         palette = xg.createPalette(collection)
         desc = xg.createDescription(palette, description, primitive, mesh)
-        return maya_success(
+        return skill_success(
             "Created XGen description '{}' on '{}'".format(desc, mesh),
             prompt="Use set_xgen_attribute to configure density, length, and other parameters.",
             collection=palette,
@@ -49,7 +49,7 @@ def run(params):
             primitive=primitive,
         )
     except Exception as exc:
-        return maya_error(
+        return skill_error(
             "Failed to create XGen description",
             str(exc),
             prompt="Ensure XGen plugin is loaded: cmds.loadPlugin('xgenToolkit').",

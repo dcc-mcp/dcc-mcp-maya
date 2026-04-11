@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def create_proxy(
@@ -36,7 +36,7 @@ def create_proxy(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(source):
-            return maya_error(
+            return skill_error(
                 "Source mesh '{}' not found".format(source),
                 "Verify the mesh name in the Outliner.",
             )
@@ -62,7 +62,7 @@ def create_proxy(
 
         proxy_poly = cmds.polyEvaluate(dup, face=True)
 
-        return maya_success(
+        return skill_success(
             "Proxy mesh '{}' created from '{}'".format(dup, source),
             prompt="Proxy ready. Use swap_proxy to toggle between proxy and high-res.",
             proxy=dup,
@@ -72,17 +72,16 @@ def create_proxy(
             original_visible=keep_original_visible,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to create proxy mesh")
+        return skill_exception(exc, message="Failed to create proxy mesh")
 
 
+@skill_entry
 def main(**kwargs):
     return create_proxy(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = create_proxy("pSphere1")
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

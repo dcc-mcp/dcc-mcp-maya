@@ -5,7 +5,9 @@ from __future__ import annotations
 
 # Import built-in modules
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success, validate_node_exists
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
+
+from dcc_mcp_maya.api import validate_node_exists
 
 
 def get_attribute(node_name: str, attribute: str) -> dict:
@@ -27,7 +29,7 @@ def get_attribute(node_name: str, attribute: str) -> dict:
 
         full_attr = "{}.{}".format(node_name, attribute)
         if not cmds.objExists(full_attr):
-            return maya_error(
+            return skill_error(
                 "Attribute not found: {}".format(full_attr),
                 "'{}.{}' does not exist on this node".format(node_name, attribute),
             )
@@ -39,7 +41,7 @@ def get_attribute(node_name: str, attribute: str) -> dict:
         else:
             value = raw
 
-        return maya_success(
+        return skill_success(
             "{}.{} = {}".format(node_name, attribute, value),
             prompt="Use set_attribute to change the value.",
             node_name=node_name,
@@ -47,18 +49,17 @@ def get_attribute(node_name: str, attribute: str) -> dict:
             value=value,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to get attribute")
+        return skill_exception(exc, message="Failed to get attribute")
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`get_attribute`."""
     return get_attribute(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = get_attribute("pSphere1", "translateX")
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

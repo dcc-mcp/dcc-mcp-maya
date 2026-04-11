@@ -7,7 +7,7 @@ from __future__ import annotations
 import os
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def export_camera(
@@ -34,7 +34,7 @@ def export_camera(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(camera):
-            return maya_error(
+            return skill_error(
                 "Camera '{}' not found".format(camera),
                 "Use list_cameras to find available cameras",
             )
@@ -69,7 +69,7 @@ def export_camera(
             mel.eval("FBXExportBakeComplexEnd -v {};".format(int(end_frame)))
             mel.eval('FBXExport -f "{}" -s;'.format(file_path.replace("\\", "/")))
 
-        return maya_success(
+        return skill_success(
             "Exported camera '{}' to '{}'".format(cam_transform, file_path),
             prompt="Import this camera file in your compositing or lighting application.",
             file_path=file_path,
@@ -77,16 +77,16 @@ def export_camera(
             file_format=file_format,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to export camera '{}'".format(camera))
+        return skill_exception(exc, message="Failed to export camera '{}'".format(camera))
 
 
+@skill_entry
 def main(**kwargs):
     return export_camera(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    print(json.dumps(export_camera("persp", "/tmp/cam.fbx")))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

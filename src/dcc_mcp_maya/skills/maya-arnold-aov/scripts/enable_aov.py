@@ -5,7 +5,7 @@ from __future__ import annotations
 
 # Import built-in modules
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def enable_aov(name: str, enabled: bool = True) -> dict:
@@ -22,7 +22,7 @@ def enable_aov(name: str, enabled: bool = True) -> dict:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not name:
-            return maya_error("AOV name is required", "Provide a non-empty AOV name")
+            return skill_error("AOV name is required", "Provide a non-empty AOV name")
 
         nodes = cmds.ls(type="aiAOV") or []
         target_node = None
@@ -35,14 +35,14 @@ def enable_aov(name: str, enabled: bool = True) -> dict:
                 pass
 
         if target_node is None:
-            return maya_error(
+            return skill_error(
                 "AOV '{}' not found".format(name),
                 "No aiAOV node with name '{}' exists in the scene".format(name),
             )
 
         cmds.setAttr("{}.enabled".format(target_node), enabled)
         state_label = "enabled" if enabled else "disabled"
-        return maya_success(
+        return skill_success(
             "Arnold AOV '{}' {}".format(name, state_label),
             prompt="Use list_aovs to verify the AOV state.",
             aov_node=target_node,
@@ -50,18 +50,17 @@ def enable_aov(name: str, enabled: bool = True) -> dict:
             enabled=enabled,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to set AOV state for '{}'".format(name))
+        return skill_exception(exc, message="Failed to set AOV state for '{}'".format(name))
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`enable_aov`."""
     return enable_aov(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = enable_aov("diffuse", True)
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

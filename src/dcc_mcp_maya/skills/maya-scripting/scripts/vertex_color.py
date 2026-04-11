@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import List, Optional, Tuple
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_error, skill_exception, skill_success
 
 
 def set_vertex_color(
@@ -35,7 +35,7 @@ def set_vertex_color(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return maya_error("Object not found: {}".format(object_name))
+            return skill_error("Object not found: {}".format(object_name))
 
         r, g, b = float(color[0]), float(color[1]), float(color[2])
         a = float(alpha)
@@ -58,7 +58,7 @@ def set_vertex_color(
             total = cmds.polyEvaluate(object_name, vertex=True)
             colored_count = total if isinstance(total, int) else 0
 
-        return maya_success(
+        return skill_success(
             "Set vertex color on '{}' ({} vertices)".format(object_name, colored_count),
             object_name=object_name,
             color=[r, g, b],
@@ -67,9 +67,9 @@ def set_vertex_color(
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to set vertex color")
+        return skill_exception(exc, message="Failed to set vertex color")
 
 
 def get_vertex_color(
@@ -93,7 +93,7 @@ def get_vertex_color(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return maya_error("Object not found: {}".format(object_name))
+            return skill_error("Object not found: {}".format(object_name))
 
         color_sets = cmds.polyColorSet(object_name, query=True, allColorSets=True) or []
         current_set = cmds.polyColorSet(object_name, query=True, currentColorSet=True)
@@ -108,7 +108,7 @@ def get_vertex_color(
         if vertex_index is not None:
             component = "{}.vtx[{}]".format(object_name, vertex_index)
             if not cmds.objExists(component):
-                return maya_error("Vertex {} not found on '{}'".format(vertex_index, object_name))
+                return skill_error("Vertex {} not found on '{}'".format(vertex_index, object_name))
 
             query_kwargs = {}  # type: dict
             if color_set:
@@ -124,15 +124,15 @@ def get_vertex_color(
                 result_kwargs["color"] = [1.0, 1.0, 1.0]
                 result_kwargs["alpha"] = 1.0
 
-        return maya_success(
+        return skill_success(
             "Vertex color info for '{}'".format(object_name),
             **result_kwargs,
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to get vertex color")
+        return skill_exception(exc, message="Failed to get vertex color")
 
 
 def create_color_set(
@@ -154,7 +154,7 @@ def create_color_set(
 
     valid_reps = ("RGB", "RGBA")
     if representation not in valid_reps:
-        return maya_error(
+        return skill_error(
             "Invalid representation: {}".format(representation),
             "Use one of: {}".format(", ".join(valid_reps)),
         )
@@ -163,11 +163,11 @@ def create_color_set(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return maya_error("Object not found: {}".format(object_name))
+            return skill_error("Object not found: {}".format(object_name))
 
         existing = cmds.polyColorSet(object_name, query=True, allColorSets=True) or []
         if color_set_name in existing:
-            return maya_error("Color set '{}' already exists on '{}'".format(color_set_name, object_name))
+            return skill_error("Color set '{}' already exists on '{}'".format(color_set_name, object_name))
 
         cmds.polyColorSet(
             object_name,
@@ -176,7 +176,7 @@ def create_color_set(
             representation=representation,
         )
 
-        return maya_success(
+        return skill_success(
             "Created color set '{}' on '{}'".format(color_set_name, object_name),
             object_name=object_name,
             color_set_name=color_set_name,
@@ -184,9 +184,9 @@ def create_color_set(
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to create color set")
+        return skill_exception(exc, message="Failed to create color set")
 
 
 def remove_vertex_colors(object_name: str, color_set: Optional[str] = None) -> dict:
@@ -205,12 +205,12 @@ def remove_vertex_colors(object_name: str, color_set: Optional[str] = None) -> d
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return maya_error("Object not found: {}".format(object_name))
+            return skill_error("Object not found: {}".format(object_name))
 
         if color_set:
             existing = cmds.polyColorSet(object_name, query=True, allColorSets=True) or []
             if color_set not in existing:
-                return maya_error("Color set '{}' not found on '{}'".format(color_set, object_name))
+                return skill_error("Color set '{}' not found on '{}'".format(color_set, object_name))
             cmds.polyColorSet(object_name, delete=True, colorSet=color_set)
             removed = [color_set]
         else:
@@ -219,13 +219,13 @@ def remove_vertex_colors(object_name: str, color_set: Optional[str] = None) -> d
                 cmds.polyColorSet(object_name, delete=True, colorSet=cs)
             removed = list(all_sets)
 
-        return maya_success(
+        return skill_success(
             "Removed vertex colors from '{}'".format(object_name),
             object_name=object_name,
             removed_color_sets=removed,
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to remove vertex colors")
+        return skill_exception(exc, message="Failed to remove vertex colors")

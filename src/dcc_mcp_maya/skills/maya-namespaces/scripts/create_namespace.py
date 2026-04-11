@@ -5,7 +5,7 @@ from __future__ import annotations
 
 # Import built-in modules
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def create_namespace(
@@ -29,14 +29,14 @@ def create_namespace(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not name:
-            return maya_error("Namespace name cannot be empty", "Provide a valid name")
+            return skill_error("Namespace name cannot be empty", "Provide a valid name")
 
         previous = cmds.namespaceInfo(currentNamespace=True)
         cmds.namespace(setNamespace=parent)
 
         if cmds.namespace(exists=name):
             cmds.namespace(setNamespace=previous)
-            return maya_error(
+            return skill_error(
                 "Namespace already exists: {}".format(name),
                 "Use rename_namespace or choose a different name",
             )
@@ -49,7 +49,7 @@ def create_namespace(
         else:
             cmds.namespace(setNamespace=previous)
 
-        return maya_success(
+        return skill_success(
             "Created namespace '{}'".format(full_path),
             prompt="Use list_namespaces to verify or rename_namespace to adjust the name.",
             namespace=name,
@@ -57,16 +57,16 @@ def create_namespace(
             full_path=full_path,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to create namespace")
+        return skill_exception(exc, message="Failed to create namespace")
 
 
+@skill_entry
 def main(**kwargs):
     return create_namespace(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    print(json.dumps(create_namespace("char_hero")))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

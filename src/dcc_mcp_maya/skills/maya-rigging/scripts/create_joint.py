@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import List, Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def create_joint(
@@ -38,14 +38,14 @@ def create_joint(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if parent and not cmds.objExists(parent):
-            return maya_error(
+            return skill_error(
                 "Parent not found: {}".format(parent),
                 "'{}' does not exist in the scene".format(parent),
             )
 
         pos = position or [0.0, 0.0, 0.0]
         if len(pos) != 3:
-            return maya_error(
+            return skill_error(
                 "Invalid position",
                 "position must be a list of 3 floats, got: {}".format(pos),
             )
@@ -62,7 +62,7 @@ def create_joint(
 
         joint_name = cmds.joint(**kwargs)
 
-        return maya_success(
+        return skill_success(
             "Created joint '{}'".format(joint_name),
             object_name=joint_name,
             position=pos,
@@ -70,18 +70,17 @@ def create_joint(
             prompt="Use bind_skin or add_ik_handle to complete the rig.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to create joint")
+        return skill_exception(exc, message="Failed to create joint")
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`create_joint`."""
     return create_joint(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = create_joint()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

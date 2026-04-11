@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import List, Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def create_display_layer(
@@ -43,7 +43,7 @@ def create_display_layer(
                     cmds.editDisplayLayerMembers(layer_name, obj, noRecurse=True)
                     added.append(obj)
 
-        return maya_success(
+        return skill_success(
             "Created display layer '{}'".format(layer_name),
             prompt="Use set_display_layer to add more objects or list_display_layers to see all layers.",
             layer_name=layer_name,
@@ -51,18 +51,17 @@ def create_display_layer(
             visibility=visibility,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to create display layer")
+        return skill_exception(exc, message="Failed to create display layer")
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`create_display_layer`."""
     return create_display_layer(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = create_display_layer()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import List, Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def create_annotation(
@@ -38,7 +38,7 @@ def create_annotation(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if target_object and not cmds.objExists(target_object):
-            return maya_error(
+            return skill_error(
                 "Object not found: {}".format(target_object),
                 "'{}' does not exist in the scene".format(target_object),
             )
@@ -56,7 +56,7 @@ def create_annotation(
         if name:
             transform_node = cmds.rename(transform_node, name)
 
-        return maya_success(
+        return skill_success(
             "Created annotation '{}'".format(text[:40]),
             prompt="Use update_annotation to change the text, or list_annotations to see all annotations.",
             annotation_node=annotation_node,
@@ -65,17 +65,16 @@ def create_annotation(
             position=pos,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to create annotation")
+        return skill_exception(exc, message="Failed to create annotation")
 
 
+@skill_entry
 def main(**kwargs):
     return create_annotation(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = create_annotation("Hello, Maya!", position=[0.0, 2.0, 0.0])
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

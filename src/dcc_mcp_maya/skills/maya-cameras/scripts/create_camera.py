@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import List, Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def create_camera(
@@ -43,7 +43,7 @@ def create_camera(
         if rotation and len(rotation) == 3:
             cmds.rotate(rotation[0], rotation[1], rotation[2], transform)
 
-        return maya_success(
+        return skill_success(
             "Created camera '{}'".format(transform),
             prompt="Use set_camera_attribute to change focal length, clipping planes, or film gate.",
             transform=transform,
@@ -51,18 +51,17 @@ def create_camera(
             focal_length=focal_length,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to create camera")
+        return skill_exception(exc, message="Failed to create camera")
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`create_camera`."""
     return create_camera(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = create_camera()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

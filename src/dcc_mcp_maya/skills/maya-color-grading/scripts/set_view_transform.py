@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def set_view_transform(view_transform: str) -> dict:
@@ -34,23 +34,22 @@ def set_view_transform(view_transform: str) -> dict:
 
         applied = cmds.colorManagementPrefs(query=True, viewTransformName=True) or ""
 
-        return maya_success(
+        return skill_success(
             "Set view transform to '{}'".format(applied),
             prompt="Use get_color_management_info to verify all color settings.",
             view_transform=applied,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to set view transform")
+        return skill_exception(exc, message="Failed to set view transform")
 
 
+@skill_entry
 def main(**kwargs):
     return set_view_transform(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = set_view_transform("sRGB gamma")
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

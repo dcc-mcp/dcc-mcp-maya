@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def list_objects(object_type: Optional[str] = None, dag: bool = True) -> dict:
@@ -28,25 +28,24 @@ def list_objects(object_type: Optional[str] = None, dag: bool = True) -> dict:
         if object_type:
             kwargs["type"] = object_type
         objects = cmds.ls(**kwargs) or []
-        return maya_success(
+        return skill_success(
             f"Found {len(objects)} objects",
             objects=objects,
             count=len(objects),
             prompt="Check the result with list_scene or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to list objects")
+        return skill_exception(exc, message="Failed to list objects")
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`list_objects`."""
     return list_objects(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = list_objects()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

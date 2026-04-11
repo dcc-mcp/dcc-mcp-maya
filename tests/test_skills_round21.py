@@ -14,7 +14,7 @@ from tests.conftest import load_skill_script, make_mock_maya
 
 class TestCreateExpression:
     def test_missing_expression(self):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         mc.expression.return_value = "expression1"
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
             mod = load_skill_script("maya-expressions", "create_expression")
@@ -22,14 +22,14 @@ class TestCreateExpression:
         assert result["success"] is False
 
     def test_whitespace_only_expression(self):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
             mod = load_skill_script("maya-expressions", "create_expression")
             result = mod.create_expression("   ")
         assert result["success"] is False
 
     def test_create_basic(self):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         mc.expression.return_value = "expression1"
         mc.objExists.return_value = True
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
@@ -39,7 +39,7 @@ class TestCreateExpression:
         assert result["context"]["expression_name"] == "expression1"
 
     def test_create_with_name(self):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         mc.expression.return_value = "myExpr"
         mc.objExists.return_value = True
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
@@ -49,7 +49,7 @@ class TestCreateExpression:
         assert result["context"]["node"] == "myExpr"
 
     def test_create_exception(self):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         mc.expression.side_effect = RuntimeError("bad expr")
         mc.objExists.return_value = True
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
@@ -64,7 +64,7 @@ class TestCreateExpression:
         assert result["success"] is False
 
     def test_invalid_unit_conversion_type(self):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
             mod = load_skill_script("maya-expressions", "create_expression")
             result = mod.create_expression("tx = 1;", unit_conversion=99)
@@ -73,7 +73,7 @@ class TestCreateExpression:
 
 class TestListExpressions:
     def test_list_empty(self):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         mc.ls.return_value = []
         mc.objExists.return_value = True
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
@@ -83,7 +83,7 @@ class TestListExpressions:
         assert result["context"]["count"] == 0
 
     def test_list_nodes(self):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         mc.ls.return_value = ["expression1", "expression2"]
         mc.objExists.return_value = True
         mc.expression.side_effect = lambda node, **kw: "" if kw.get("object") else "pSphere1.tx = sin(time);"
@@ -94,7 +94,7 @@ class TestListExpressions:
         assert result["context"]["count"] == 2
 
     def test_list_with_filter(self):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         mc.ls.return_value = ["expression1"]
         mc.objExists.return_value = True
         mc.expression.side_effect = lambda node, **kw: "" if kw.get("object") else "pCube1.tx = 0;"
@@ -105,7 +105,7 @@ class TestListExpressions:
         assert result["context"]["count"] == 0
 
     def test_list_exception(self):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         mc.objExists.return_value = True
         mc.ls.side_effect = RuntimeError("scene error")
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
@@ -116,7 +116,7 @@ class TestListExpressions:
 
 class TestDeleteExpression:
     def test_node_not_found(self):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         mc.objExists.return_value = False
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
             mod = load_skill_script("maya-expressions", "delete_expression")
@@ -125,7 +125,7 @@ class TestDeleteExpression:
         assert "not exist" in result["message"]
 
     def test_delete_success(self):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         mc.objExists.return_value = True
         mc.objectType.return_value = "expression"
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
@@ -136,7 +136,7 @@ class TestDeleteExpression:
         mc.delete.assert_called_once_with("expr1")
 
     def test_wrong_type_fails(self):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         mc.objExists.return_value = True
         mc.objectType.return_value = "transform"
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
@@ -145,7 +145,7 @@ class TestDeleteExpression:
         assert result["success"] is False
 
     def test_delete_exception(self):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         mc.objExists.return_value = True
         mc.objectType.return_value = "expression"
         mc.delete.side_effect = RuntimeError("locked")
@@ -163,7 +163,7 @@ class TestDeleteExpression:
 
 class TestEditExpression:
     def test_node_not_found(self):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         mc.objExists.return_value = False
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
             mod = load_skill_script("maya-expressions", "edit_expression")
@@ -171,7 +171,7 @@ class TestEditExpression:
         assert result["success"] is False
 
     def test_edit_success(self):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         mc.objExists.return_value = True
         mc.expression.return_value = "expr1"
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
@@ -181,7 +181,7 @@ class TestEditExpression:
         assert result["context"]["node"] == "expr1"
 
     def test_edit_with_unit_conversion(self):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         mc.objExists.return_value = True
         mc.expression.return_value = "expr1"
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
@@ -190,7 +190,7 @@ class TestEditExpression:
         assert result["success"] is True
 
     def test_exception_handling(self):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         mc.objExists.return_value = True
         mc.expression.side_effect = RuntimeError("bad syntax")
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
@@ -206,14 +206,14 @@ class TestEditExpression:
 
 class TestImportMocap:
     def test_missing_file_path(self):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
             mod = load_skill_script("maya-mocap", "import_mocap")
             result = mod.import_mocap("")
         assert result["success"] is False
 
     def test_file_not_found(self, tmp_path):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
             mod = load_skill_script("maya-mocap", "import_mocap")
             result = mod.import_mocap(str(tmp_path / "nonexistent.bvh"))
@@ -221,7 +221,7 @@ class TestImportMocap:
         assert "not found" in result["message"].lower()
 
     def test_unsupported_extension(self, tmp_path):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         fake_file = tmp_path / "test.abc"
         fake_file.write_text("data")
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
@@ -231,7 +231,7 @@ class TestImportMocap:
         assert "Unsupported" in result["message"]
 
     def test_import_bvh_success(self, tmp_path):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         fake_file = tmp_path / "mocap.bvh"
         fake_file.write_text("HIERARCHY ROOT Hips {}")
         mc.ls.side_effect = [
@@ -246,7 +246,7 @@ class TestImportMocap:
         assert result["context"]["joint_count"] == 2
 
     def test_import_fbx_success(self, tmp_path):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         fake_file = tmp_path / "mocap.fbx"
         fake_file.write_text("FBX data")
         mc.ls.side_effect = [[], ["ns:Root", "ns:Hips"]]
@@ -267,7 +267,7 @@ class TestImportMocap:
 
 class TestCreateHikDefinition:
     def test_missing_character_name(self):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         mock_mel = MagicMock()
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc, "maya.mel": mock_mel}):
             mod = load_skill_script("maya-mocap", "create_hik_definition")
@@ -275,7 +275,7 @@ class TestCreateHikDefinition:
         assert result["success"] is False
 
     def test_missing_joint_mapping(self):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         mock_mel = MagicMock()
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc, "maya.mel": mock_mel}):
             mod = load_skill_script("maya-mocap", "create_hik_definition")
@@ -283,7 +283,7 @@ class TestCreateHikDefinition:
         assert result["success"] is False
 
     def test_create_success(self):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         mock_mel = MagicMock()
         mock_mel.eval.side_effect = lambda expr: "HIKChar1" if "hikCreateCharacter" in expr else None
         mc.objExists.return_value = True
@@ -294,7 +294,7 @@ class TestCreateHikDefinition:
         assert result["context"]["mapped_count"] == 2
 
     def test_unknown_slot_skipped(self):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         mock_mel = MagicMock()
         mock_mel.eval.side_effect = lambda expr: "HIKChar1" if "hikCreateCharacter" in expr else None
         mc.objExists.return_value = True
@@ -305,7 +305,7 @@ class TestCreateHikDefinition:
         assert len(result["context"]["skipped"]) == 1
 
     def test_joint_not_found_skipped(self):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         mock_mel = MagicMock()
         mock_mel.eval.side_effect = lambda expr: "HIKChar1" if "hikCreateCharacter" in expr else None
         mc.objExists.return_value = False
@@ -318,7 +318,7 @@ class TestCreateHikDefinition:
 
 class TestBakeMocapToRig:
     def test_missing_params(self):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         mock_mel = MagicMock()
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc, "maya.mel": mock_mel}):
             mod = load_skill_script("maya-mocap", "bake_mocap_to_rig")
@@ -326,7 +326,7 @@ class TestBakeMocapToRig:
         assert result["success"] is False
 
     def test_no_joints_in_scene(self):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         mock_mel = MagicMock()
         mc.ls.return_value = []
         mc.playbackOptions.return_value = 1
@@ -337,7 +337,7 @@ class TestBakeMocapToRig:
         assert "joints" in result["message"].lower() or "No joints" in result["message"]
 
     def test_bake_success(self):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         mock_mel = MagicMock()
         mc.ls.return_value = ["jnt1", "jnt2"]
         mc.playbackOptions.return_value = 1
@@ -348,7 +348,7 @@ class TestBakeMocapToRig:
         assert result["context"]["baked_joints"] == 2
 
     def test_default_frame_range(self):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         mock_mel = MagicMock()
         mc.ls.return_value = ["jnt1"]
         mc.playbackOptions.return_value = 24
@@ -361,7 +361,7 @@ class TestBakeMocapToRig:
 
 class TestCleanMocapKeys:
     def test_no_joints_in_scene(self):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         mc.ls.return_value = []
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
             mod = load_skill_script("maya-mocap", "clean_mocap_keys")
@@ -369,7 +369,7 @@ class TestCleanMocapKeys:
         assert result["success"] is False
 
     def test_clean_success(self):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         mc.ls.return_value = ["jnt1", "jnt2"]
         mc.objExists.return_value = True
         mc.keyframe.side_effect = [500, 120]
@@ -380,7 +380,7 @@ class TestCleanMocapKeys:
         assert result["context"]["keys_removed"] == 380
 
     def test_clean_with_frame_range(self):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         mc.ls.return_value = ["jnt1"]
         mc.objExists.return_value = True
         mc.keyframe.side_effect = [200, 80]
@@ -390,7 +390,7 @@ class TestCleanMocapKeys:
         assert result["success"] is True
 
     def test_exception_handling(self):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         mc.ls.return_value = ["jnt1"]
         mc.objExists.return_value = True
         mc.keyframe.side_effect = RuntimeError("no curves")
@@ -400,7 +400,7 @@ class TestCleanMocapKeys:
         assert result["success"] is False
 
     def test_joints_filtered_by_objexists(self):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         mc.objExists.side_effect = lambda n: n == "jnt1"
         mc.keyframe.side_effect = [100, 40]
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
@@ -417,7 +417,7 @@ class TestCleanMocapKeys:
 
 class TestCreateMuscleCapsule:
     def test_missing_start_joint(self):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         mock_mel = MagicMock()
         mc.objExists.return_value = False
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc, "maya.mel": mock_mel}):
@@ -427,7 +427,7 @@ class TestCreateMuscleCapsule:
         assert "not found" in result["message"].lower()
 
     def test_create_success(self):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         mock_mel = MagicMock()
         mc.objExists.return_value = True
         mc.ls.return_value = ["cMuscleObject1"]
@@ -439,7 +439,7 @@ class TestCreateMuscleCapsule:
         assert result["context"]["radius"] == 2.0
 
     def test_create_with_name(self):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         mock_mel = MagicMock()
         mc.objExists.return_value = True
         mc.ls.return_value = ["cMuscleObject1"]
@@ -450,7 +450,7 @@ class TestCreateMuscleCapsule:
         assert result["success"] is True
 
     def test_exception_handling(self):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         mock_mel = MagicMock()
         mc.objExists.return_value = True
         mc.loadPlugin.side_effect = RuntimeError("plugin not found")
@@ -468,7 +468,7 @@ class TestCreateMuscleCapsule:
 
 class TestListMuscles:
     def test_list_empty(self):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         mc.ls.return_value = []
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
             mod = load_skill_script("maya-muscle", "list_muscles")
@@ -477,7 +477,7 @@ class TestListMuscles:
         assert result["context"]["count"] == 0
 
     def test_list_nodes(self):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         mc.ls.return_value = ["cMuscleObject1", "cMuscleObject2"]
         mc.listRelatives.return_value = ["muscle_transform"]
         mc.getAttr.return_value = 1.0
@@ -488,7 +488,7 @@ class TestListMuscles:
         assert result["context"]["count"] == 2
 
     def test_exception_handling(self):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         mc.loadPlugin.side_effect = RuntimeError("plugin error")
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
             mod = load_skill_script("maya-muscle", "list_muscles")
@@ -498,7 +498,7 @@ class TestListMuscles:
 
 class TestSetMuscleAttribute:
     def test_node_not_found(self):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         mc.objExists.return_value = False
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
             mod = load_skill_script("maya-muscle", "set_muscle_attribute")
@@ -506,7 +506,7 @@ class TestSetMuscleAttribute:
         assert result["success"] is False
 
     def test_set_success(self):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         mc.objExists.return_value = True
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
             mod = load_skill_script("maya-muscle", "set_muscle_attribute")
@@ -515,7 +515,7 @@ class TestSetMuscleAttribute:
         mc.setAttr.assert_called_once_with("m1.stiffness", 0.7)
 
     def test_setattr_exception(self):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         mc.objExists.return_value = True
         mc.setAttr.side_effect = RuntimeError("locked")
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
@@ -532,7 +532,7 @@ class TestSetMuscleAttribute:
 
 class TestApplyMuscleSkin:
     def test_mesh_not_found(self):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         mock_mel = MagicMock()
         mc.objExists.return_value = False
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc, "maya.mel": mock_mel}):
@@ -541,7 +541,7 @@ class TestApplyMuscleSkin:
         assert result["success"] is False
 
     def test_no_muscles_available(self):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         mock_mel = MagicMock()
         mc.objExists.return_value = True
         mc.ls.return_value = []
@@ -552,7 +552,7 @@ class TestApplyMuscleSkin:
         assert "No muscle" in result["message"]
 
     def test_apply_success(self):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         mock_mel = MagicMock()
         mc.objExists.return_value = True
         mc.ls.side_effect = [["cMuscleSystem1"]]
@@ -564,7 +564,7 @@ class TestApplyMuscleSkin:
         assert result["context"]["muscles_connected"] == 1
 
     def test_auto_discover_muscles(self):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         mock_mel = MagicMock()
         mc.objExists.return_value = True
         mc.ls.side_effect = [["cMuscleObject1", "cMuscleObject2"], ["cMuscleSystem1"]]
@@ -583,7 +583,7 @@ class TestApplyMuscleSkin:
 
 class TestCreateAssemblyDefinition:
     def test_create_default(self):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         mc.assembly.return_value = "assemblyDefinition1"
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
             mod = load_skill_script("maya-scene-assembly", "create_assembly_definition")
@@ -592,7 +592,7 @@ class TestCreateAssemblyDefinition:
         assert "assemblyDefinition1" in result["context"]["node"]
 
     def test_create_with_name(self):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         mc.assembly.return_value = "myAssembly"
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
             mod = load_skill_script("maya-scene-assembly", "create_assembly_definition")
@@ -601,7 +601,7 @@ class TestCreateAssemblyDefinition:
         assert result["context"]["node"] == "myAssembly"
 
     def test_exception_handling(self):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         mc.assembly.side_effect = RuntimeError("plugin not found")
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
             mod = load_skill_script("maya-scene-assembly", "create_assembly_definition")
@@ -617,7 +617,7 @@ class TestCreateAssemblyDefinition:
 
 class TestAddAssemblyRepresentation:
     def test_invalid_rep_type(self):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         mc.objExists.return_value = True
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
             mod = load_skill_script("maya-scene-assembly", "add_assembly_representation")
@@ -626,7 +626,7 @@ class TestAddAssemblyRepresentation:
         assert "Invalid" in result["message"]
 
     def test_assembly_not_found(self):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         mc.objExists.return_value = False
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
             mod = load_skill_script("maya-scene-assembly", "add_assembly_representation")
@@ -634,7 +634,7 @@ class TestAddAssemblyRepresentation:
         assert result["success"] is False
 
     def test_add_locator_rep(self):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         mc.objExists.return_value = True
         mc.assembly.return_value = "rep_locator"
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
@@ -644,7 +644,7 @@ class TestAddAssemblyRepresentation:
         assert result["context"]["rep_type"] == "Locator"
 
     def test_add_scene_rep_with_file(self):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         mc.objExists.return_value = True
         mc.assembly.return_value = "rep_scene"
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
@@ -654,7 +654,7 @@ class TestAddAssemblyRepresentation:
         assert result["context"]["file_path"] == "/path/to/scene.ma"
 
     def test_all_valid_types(self):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         mc.objExists.return_value = True
         mc.assembly.return_value = "rep_node"
         for rep_type in ("Locator", "Cache", "GPU", "Scene"):
@@ -666,14 +666,14 @@ class TestAddAssemblyRepresentation:
 
 class TestCreateAssemblyReference:
     def test_missing_definition(self):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
             mod = load_skill_script("maya-scene-assembly", "create_assembly_reference")
             result = mod.create_assembly_reference("")
         assert result["success"] is False
 
     def test_create_success(self):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         mc.assembly.return_value = "assemblyReference1"
         mc.objExists.return_value = True
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
@@ -683,7 +683,7 @@ class TestCreateAssemblyReference:
         assert result["context"]["ref_node"] == "assemblyReference1"
 
     def test_create_with_active_rep(self):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         mc.assembly.return_value = "assemblyReference1"
         mc.objExists.return_value = True
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
@@ -693,7 +693,7 @@ class TestCreateAssemblyReference:
         assert result["context"]["active_rep"] == "LOD_high"
 
     def test_exception_handling(self):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         mc.assembly.side_effect = RuntimeError("plugin error")
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
             mod = load_skill_script("maya-scene-assembly", "create_assembly_reference")
@@ -703,7 +703,7 @@ class TestCreateAssemblyReference:
 
 class TestListAssemblies:
     def test_list_empty(self):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         mc.ls.return_value = []
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
             mod = load_skill_script("maya-scene-assembly", "list_assemblies")
@@ -712,7 +712,7 @@ class TestListAssemblies:
         assert result["context"]["count"] == 0
 
     def test_list_definitions_only(self):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         mc.ls.side_effect = lambda type=None, **kw: ["asm1"] if type == "assemblyDefinition" else []
         mc.assembly.return_value = ["Locator", "Scene"]
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
@@ -722,7 +722,7 @@ class TestListAssemblies:
         assert len(result["context"]["definitions"]) == 1
 
     def test_list_all(self):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         mc.ls.side_effect = lambda type=None, **kw: (
             ["asm1"] if type == "assemblyDefinition" else (["ref1"] if type == "assemblyReference" else [])
         )
@@ -734,7 +734,7 @@ class TestListAssemblies:
         assert result["context"]["count"] == 2
 
     def test_exception_handling(self):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         mc.ls.side_effect = RuntimeError("scene error")
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
             mod = load_skill_script("maya-scene-assembly", "list_assemblies")
@@ -749,7 +749,7 @@ class TestListAssemblies:
 
 class TestCreateProxy:
     def test_source_not_found(self):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         mc.objExists.return_value = False
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
             mod = load_skill_script("maya-proxy-mesh", "create_proxy")
@@ -757,7 +757,7 @@ class TestCreateProxy:
         assert result["success"] is False
 
     def test_create_success(self):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         mc.objExists.return_value = True
         mc.duplicate.return_value = ["pSphere1_proxy"]
         mc.listRelatives.return_value = ["pSphereShape_proxy"]
@@ -771,7 +771,7 @@ class TestCreateProxy:
         assert result["context"]["source"] == "pSphere1"
 
     def test_custom_proxy_name(self):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         mc.objExists.return_value = True
         mc.duplicate.return_value = ["my_proxy"]
         mc.listRelatives.return_value = []
@@ -784,7 +784,7 @@ class TestCreateProxy:
         assert result["context"]["proxy"] == "my_proxy"
 
     def test_reduction_clamped_above_100(self):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         mc.objExists.return_value = True
         mc.duplicate.return_value = ["proxy1"]
         mc.listRelatives.return_value = ["proxyShape"]
@@ -797,7 +797,7 @@ class TestCreateProxy:
         assert result["context"]["reduction_percent"] == 100.0
 
     def test_keep_original_visible(self):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         mc.objExists.return_value = True
         mc.duplicate.return_value = ["pSphere1_proxy"]
         mc.listRelatives.return_value = []
@@ -810,7 +810,7 @@ class TestCreateProxy:
         assert result["context"]["original_visible"] is True
 
     def test_exception_handling(self):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         mc.objExists.return_value = True
         mc.duplicate.side_effect = RuntimeError("cannot duplicate")
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
@@ -821,7 +821,7 @@ class TestCreateProxy:
 
 class TestSwapProxy:
     def test_proxy_not_found(self):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         mc.objExists.return_value = False
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
             mod = load_skill_script("maya-proxy-mesh", "swap_proxy")
@@ -829,7 +829,7 @@ class TestSwapProxy:
         assert result["success"] is False
 
     def test_show_proxy_true(self):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         mc.objExists.return_value = True
         mc.attributeQuery.return_value = True
         mc.getAttr.side_effect = lambda attr, **kw: "pSphere1" if "proxySource" in attr else False
@@ -841,7 +841,7 @@ class TestSwapProxy:
         assert result["context"]["source_visible"] is False
 
     def test_show_proxy_false(self):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         mc.objExists.return_value = True
         mc.attributeQuery.return_value = True
         mc.getAttr.side_effect = lambda attr, **kw: "pSphere1" if "proxySource" in attr else True
@@ -852,7 +852,7 @@ class TestSwapProxy:
         assert result["context"]["proxy_visible"] is False
 
     def test_toggle_auto(self):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         mc.objExists.return_value = True
         mc.attributeQuery.return_value = False
         mc.getAttr.return_value = False  # current proxy not visible
@@ -863,7 +863,7 @@ class TestSwapProxy:
         assert result["context"]["proxy_visible"] is True
 
     def test_exception_handling(self):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         mc.objExists.return_value = True
         mc.attributeQuery.return_value = True
         mc.getAttr.side_effect = RuntimeError("locked attr")
@@ -875,7 +875,7 @@ class TestSwapProxy:
 
 class TestListProxies:
     def test_list_empty(self):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         mc.ls.return_value = []
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
             mod = load_skill_script("maya-proxy-mesh", "list_proxies")
@@ -884,7 +884,7 @@ class TestListProxies:
         assert result["context"]["count"] == 0
 
     def test_list_with_proxies(self):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         mc.ls.return_value = ["proxy1", "proxy2", "nonProxy"]
 
         def mock_attr_query(attr_name, node=None, longName=None, exists=None):
@@ -914,7 +914,7 @@ class TestListProxies:
         assert result["context"]["count"] == 2
 
     def test_exception_handling(self):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         mc.ls.side_effect = RuntimeError("scene error")
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
             mod = load_skill_script("maya-proxy-mesh", "list_proxies")
@@ -930,7 +930,7 @@ class TestListProxies:
 
 class TestSetProxyAttribute:
     def test_proxy_not_found(self):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         mc.objExists.return_value = False
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
             mod = load_skill_script("maya-proxy-mesh", "set_proxy_attribute")
@@ -938,7 +938,7 @@ class TestSetProxyAttribute:
         assert result["success"] is False
 
     def test_set_bool_attr(self):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         mc.objExists.return_value = True
         mc.getAttr.return_value = "bool"
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
@@ -948,7 +948,7 @@ class TestSetProxyAttribute:
         mc.setAttr.assert_called_once_with("proxy1.castsShadows", False)
 
     def test_set_int_attr(self):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         mc.objExists.return_value = True
         mc.getAttr.return_value = "long"
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
@@ -958,7 +958,7 @@ class TestSetProxyAttribute:
         mc.setAttr.assert_called_once_with("proxy1.overrideDisplayType", 2)
 
     def test_set_float_attr(self):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         mc.objExists.return_value = True
         mc.getAttr.return_value = "double"
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):
@@ -968,7 +968,7 @@ class TestSetProxyAttribute:
         mc.setAttr.assert_called_once_with("proxy1.lodVisibility", 0.5)
 
     def test_exception_handling(self):
-        mock_maya, mc = make_mock_maya()
+        mock_maya, mc, _ = make_mock_maya()
         mc.objExists.return_value = True
         mc.getAttr.side_effect = RuntimeError("no attr")
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mc}):

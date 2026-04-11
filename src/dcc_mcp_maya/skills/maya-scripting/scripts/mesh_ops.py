@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import List, Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_error, skill_exception, skill_success
 
 
 def get_poly_count(object_name: Optional[str] = None) -> dict:
@@ -27,7 +27,7 @@ def get_poly_count(object_name: Optional[str] = None) -> dict:
 
         if object_name:
             if not cmds.objExists(object_name):
-                return maya_error("Object not found: {}".format(object_name))
+                return skill_error("Object not found: {}".format(object_name))
             targets = [object_name]
         else:
             targets = cmds.ls(type="mesh") or []
@@ -73,13 +73,13 @@ def get_poly_count(object_name: Optional[str] = None) -> dict:
         if object_name:
             result_kwargs["objects"] = per_object
 
-        return maya_success(
+        return skill_success(
             label, **result_kwargs, prompt="Check the result with list_scripting or use related actions to continue."
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to get poly count")
+        return skill_exception(exc, message="Failed to get poly count")
 
 
 def apply_subdivision(
@@ -101,7 +101,7 @@ def apply_subdivision(
     """
 
     if method not in ("preview", "subdivide"):
-        return maya_error(
+        return skill_error(
             "Invalid method: {}".format(method),
             "Use 'preview' or 'subdivide'",
         )
@@ -110,14 +110,14 @@ def apply_subdivision(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return maya_error("Object not found: {}".format(object_name))
+            return skill_error("Object not found: {}".format(object_name))
 
         shapes = cmds.listRelatives(object_name, shapes=True, type="mesh") or []
         if not shapes:
             if cmds.objectType(object_name) == "mesh":
                 shapes = [object_name]
             else:
-                return maya_error("'{}' has no polygon mesh shape".format(object_name))
+                return skill_error("'{}' has no polygon mesh shape".format(object_name))
 
         shape = shapes[0]
 
@@ -127,7 +127,7 @@ def apply_subdivision(
         else:
             cmds.polySubdivideFacet(object_name, dv=level)
 
-        return maya_success(
+        return skill_success(
             "Subdivision applied to '{}' (method={}, level={})".format(object_name, method, level),
             object_name=object_name,
             method=method,
@@ -135,9 +135,9 @@ def apply_subdivision(
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to apply subdivision")
+        return skill_exception(exc, message="Failed to apply subdivision")
 
 
 def merge_vertices(
@@ -158,7 +158,7 @@ def merge_vertices(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return maya_error("Object not found: {}".format(object_name))
+            return skill_error("Object not found: {}".format(object_name))
 
         before = cmds.polyEvaluate(object_name, vertex=True)
         cmds.polyMergeVertex(object_name, distance=threshold, ch=False)
@@ -168,7 +168,7 @@ def merge_vertices(
         after_count = after if isinstance(after, int) else 0
         merged = before_count - after_count
 
-        return maya_success(
+        return skill_success(
             "Merged {} vertices on '{}' (threshold={})".format(merged, object_name, threshold),
             object_name=object_name,
             merged_count=merged,
@@ -178,9 +178,9 @@ def merge_vertices(
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to merge vertices")
+        return skill_exception(exc, message="Failed to merge vertices")
 
 
 def triangulate(object_name: str) -> dict:
@@ -197,7 +197,7 @@ def triangulate(object_name: str) -> dict:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return maya_error("Object not found: {}".format(object_name))
+            return skill_error("Object not found: {}".format(object_name))
 
         before = cmds.polyEvaluate(object_name, face=True)
         cmds.polyTriangulate(object_name)
@@ -206,7 +206,7 @@ def triangulate(object_name: str) -> dict:
         before_count = before if isinstance(before, int) else 0
         after_count = after if isinstance(after, int) else 0
 
-        return maya_success(
+        return skill_success(
             "Triangulated '{}': {} -> {} faces".format(object_name, before_count, after_count),
             object_name=object_name,
             face_count_before=before_count,
@@ -214,9 +214,9 @@ def triangulate(object_name: str) -> dict:
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to triangulate")
+        return skill_exception(exc, message="Failed to triangulate")
 
 
 def cleanup_mesh(
@@ -242,7 +242,7 @@ def cleanup_mesh(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return maya_error("Object not found: {}".format(object_name))
+            return skill_error("Object not found: {}".format(object_name))
 
         kwargs = {
             "selectOnly": False,
@@ -252,7 +252,7 @@ def cleanup_mesh(
         }
         cmds.polyClean(object_name, **kwargs)
 
-        return maya_success(
+        return skill_success(
             "Cleaned mesh '{}'".format(object_name),
             object_name=object_name,
             non_manifold=non_manifold,
@@ -261,9 +261,9 @@ def cleanup_mesh(
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to clean mesh")
+        return skill_exception(exc, message="Failed to clean mesh")
 
 
 def get_mesh_edge_info(
@@ -286,18 +286,18 @@ def get_mesh_edge_info(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return maya_error("Object not found: {}".format(object_name))
+            return skill_error("Object not found: {}".format(object_name))
 
         total_edges = cmds.polyEvaluate(object_name, edge=True)
         if not isinstance(total_edges, int) or total_edges == 0:
-            return maya_error("'{}' has no edges — ensure it is a polygon mesh".format(object_name))
+            return skill_error("'{}' has no edges — ensure it is a polygon mesh".format(object_name))
 
         if edge_indices is None:
             indices = list(range(total_edges))
         else:
             invalid = [i for i in edge_indices if not (0 <= i < total_edges)]
             if invalid:
-                return maya_error(
+                return skill_error(
                     "Invalid edge indices: {}".format(invalid),
                     "Valid range is 0 to {}".format(total_edges - 1),
                 )
@@ -338,7 +338,7 @@ def get_mesh_edge_info(
 
             edges.append({"index": idx, "length": length, "vertices": verts})
 
-        return maya_success(
+        return skill_success(
             "Edge info for '{}' ({} edge(s) queried)".format(object_name, len(edges)),
             object_name=object_name,
             edges=edges,
@@ -347,9 +347,9 @@ def get_mesh_edge_info(
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to get edge info")
+        return skill_exception(exc, message="Failed to get edge info")
 
 
 def select_by_material(material_name: str) -> dict:
@@ -371,7 +371,7 @@ def select_by_material(material_name: str) -> dict:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(material_name):
-            return maya_error(
+            return skill_error(
                 "Material not found: {}".format(material_name),
                 "'{}' does not exist in the scene".format(material_name),
             )
@@ -382,7 +382,7 @@ def select_by_material(material_name: str) -> dict:
         )
 
         if not shading_engines:
-            return maya_success(
+            return skill_success(
                 "Material '{}' is not assigned to any objects".format(material_name),
                 objects=[],
                 count=0,
@@ -416,7 +416,7 @@ def select_by_material(material_name: str) -> dict:
         if objects:
             cmds.select(objects, replace=True)
 
-        return maya_success(
+        return skill_success(
             "Selected {} object(s) with material '{}'".format(len(objects), material_name),
             objects=objects,
             count=len(objects),
@@ -424,9 +424,9 @@ def select_by_material(material_name: str) -> dict:
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to select by material")
+        return skill_exception(exc, message="Failed to select by material")
 
 
 def create_proxy_mesh(
@@ -455,7 +455,7 @@ def create_proxy_mesh(
     """
 
     if not (0.0 <= reduction < 1.0):
-        return maya_error(
+        return skill_error(
             "Invalid reduction: {}".format(reduction),
             "reduction must be in range [0.0, 1.0)",
         )
@@ -464,13 +464,13 @@ def create_proxy_mesh(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return maya_error("Object not found: {}".format(object_name))
+            return skill_error("Object not found: {}".format(object_name))
 
         shapes = cmds.listRelatives(object_name, shapes=True, type="mesh") or []
         if not shapes:
             obj_type = cmds.objectType(object_name)
             if obj_type != "mesh":
-                return maya_error("'{}' has no polygon mesh shape".format(object_name))
+                return skill_error("'{}' has no polygon mesh shape".format(object_name))
 
         # Record original face count
         face_count_before = cmds.polyEvaluate(object_name, face=True)
@@ -483,7 +483,7 @@ def create_proxy_mesh(
         dup_result = cmds.duplicate(object_name, **dup_kwargs)
         proxy = dup_result[0] if dup_result else None
         if not proxy:
-            return maya_error("Failed to duplicate '{}'".format(object_name))
+            return skill_error("Failed to duplicate '{}'".format(object_name))
 
         # Apply polyReduce
         percentage = (1.0 - reduction) * 100.0
@@ -497,7 +497,7 @@ def create_proxy_mesh(
         face_count_after = cmds.polyEvaluate(proxy, face=True)
         face_count_after = face_count_after if isinstance(face_count_after, int) else 0
 
-        return maya_success(
+        return skill_success(
             "Created proxy mesh '{}' from '{}' (reduction={})".format(proxy, object_name, reduction),
             proxy_mesh=proxy,
             original=object_name,
@@ -507,9 +507,9 @@ def create_proxy_mesh(
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to create proxy mesh from '{}'".format(object_name))
+        return skill_exception(exc, message="Failed to create proxy mesh from '{}'".format(object_name))
 
 
 def combine_meshes(
@@ -532,7 +532,7 @@ def combine_meshes(
     """
 
     if not objects or len(objects) < 2:
-        return maya_error(
+        return skill_error(
             "At least two objects are required for combine_meshes",
             "Provide a list of two or more polygon mesh names",
         )
@@ -542,7 +542,7 @@ def combine_meshes(
 
         for obj in objects:
             if not cmds.objExists(obj):
-                return maya_error(
+                return skill_error(
                     "Object not found: {}".format(obj),
                     "'{}' does not exist in the scene".format(obj),
                 )
@@ -553,21 +553,21 @@ def combine_meshes(
         result = cmds.polyUnite(*objects, constructionHistory=False, **kwargs) or []
         combined = result[0] if result else None
         if not combined:
-            return maya_error(
+            return skill_error(
                 "polyUnite returned no result",
                 "polyUnite did not produce any output mesh",
             )
 
-        return maya_success(
+        return skill_success(
             "Combined {} meshes into '{}'".format(len(objects), combined),
             combined_mesh=combined,
             input_count=len(objects),
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to combine meshes")
+        return skill_exception(exc, message="Failed to combine meshes")
 
 
 def separate_mesh(
@@ -588,7 +588,7 @@ def separate_mesh(
     """
 
     if not object_name:
-        return maya_error(
+        return skill_error(
             "object_name is required",
             "Provide a non-empty polygon mesh name",
         )
@@ -597,7 +597,7 @@ def separate_mesh(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return maya_error(
+            return skill_error(
                 "Object not found: {}".format(object_name),
                 "'{}' does not exist in the scene".format(object_name),
             )
@@ -621,16 +621,16 @@ def separate_mesh(
                 seen.add(s)
                 unique.append(s)
 
-        return maya_success(
+        return skill_success(
             "Separated '{}' into {} meshes".format(object_name, len(unique)),
             separated_meshes=unique,
             count=len(unique),
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to separate mesh '{}'".format(object_name))
+        return skill_exception(exc, message="Failed to separate mesh '{}'".format(object_name))
 
 
 def extract_faces(
@@ -659,12 +659,12 @@ def extract_faces(
     """
 
     if not object_name:
-        return maya_error(
+        return skill_error(
             "object_name is required",
             "Provide a non-empty polygon mesh name",
         )
     if not face_indices:
-        return maya_error(
+        return skill_error(
             "face_indices is required",
             "Provide a non-empty list of integer face indices",
         )
@@ -673,7 +673,7 @@ def extract_faces(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return maya_error(
+            return skill_error(
                 "Object not found: {}".format(object_name),
                 "'{}' does not exist in the scene".format(object_name),
             )
@@ -693,16 +693,16 @@ def extract_faces(
                     parents = cmds.listRelatives(last, parent=True, fullPath=False) or []
                     extracted = parents[0] if parents else object_name
 
-        return maya_success(
+        return skill_success(
             "Extracted {} face(s) from '{}'".format(len(face_indices), object_name),
             extracted_mesh=extracted,
             face_count=len(face_indices),
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to extract faces from '{}'".format(object_name))
+        return skill_exception(exc, message="Failed to extract faces from '{}'".format(object_name))
 
 
 def mirror_mesh(
@@ -736,13 +736,13 @@ def mirror_mesh(
 
     axis_lower = (axis or "x").lower()
     if axis_lower not in ("x", "y", "z"):
-        return maya_error(
+        return skill_error(
             "Invalid axis: {}".format(axis),
             "axis must be one of 'x', 'y', 'z'",
         )
 
     if not object_name:
-        return maya_error(
+        return skill_error(
             "object_name is required",
             "Provide a non-empty polygon mesh name",
         )
@@ -754,7 +754,7 @@ def mirror_mesh(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return maya_error(
+            return skill_error(
                 "Object not found: {}".format(object_name),
                 "'{}' does not exist in the scene".format(object_name),
             )
@@ -772,7 +772,7 @@ def mirror_mesh(
             mergeThreshold=merge_threshold,
         )
 
-        return maya_success(
+        return skill_success(
             "Mirrored '{}' along {} axis at {}".format(object_name, axis_lower, cut_position),
             object_name=object_name,
             axis=axis_lower,
@@ -780,6 +780,6 @@ def mirror_mesh(
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to mirror mesh '{}'".format(object_name))
+        return skill_exception(exc, message="Failed to mirror mesh '{}'".format(object_name))

@@ -9,7 +9,7 @@ import os
 from typing import List, Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 # Attributes to skip during serialization (read-only / computed)
 _SKIP_ATTRS = {
@@ -50,7 +50,7 @@ def save_material(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(material):
-            return maya_error(
+            return skill_error(
                 "Material '{}' not found".format(material),
                 "Use list_shaders or list_materials_in_scene to find material names",
             )
@@ -61,7 +61,7 @@ def save_material(
 
         os.makedirs(library_dir, exist_ok=True)
         if not overwrite and os.path.exists(file_path):
-            return maya_error(
+            return skill_error(
                 "Preset '{}' already exists".format(file_path),
                 "Set overwrite=True to replace it",
             )
@@ -97,7 +97,7 @@ def save_material(
         with open(file_path, "w") as fh:
             json.dump(preset_data, fh, indent=2)
 
-        return maya_success(
+        return skill_success(
             "Saved material '{}' preset to '{}'".format(material, file_path),
             prompt="Use load_material to apply this preset in another scene.",
             file_path=file_path,
@@ -105,16 +105,16 @@ def save_material(
             attribute_count=len(data),
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to save material preset")
+        return skill_exception(exc, message="Failed to save material preset")
 
 
+@skill_entry
 def main(**kwargs):
     return save_material(**kwargs)
 
 
 if __name__ == "__main__":
-    import json as _json
-
-    print(_json.dumps(save_material("lambert1", "/tmp/mat_lib")))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

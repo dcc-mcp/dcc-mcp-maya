@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import Any, List, Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_error, skill_exception, skill_success
 
 _SUPPORTED_SHADERS = ("lambert", "blinn", "phong", "phongE", "aiStandardSurface")
 
@@ -36,7 +36,7 @@ def create_material(
             mat = cmds.rename(mat, name)
         sg = cmds.sets(renderable=True, noSurfaceShader=True, empty=True, name="{}_SG".format(mat))
         cmds.connectAttr("{}.outColor".format(mat), "{}.surfaceShader".format(sg), force=True)
-        return maya_success(
+        return skill_success(
             "Created material: {}".format(mat),
             material_name=mat,
             shader_type=shader_type,
@@ -44,9 +44,9 @@ def create_material(
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to create material")
+        return skill_exception(exc, message="Failed to create material")
 
 
 def assign_material(material_name: str, objects: List[str]) -> dict:
@@ -70,7 +70,7 @@ def assign_material(material_name: str, objects: List[str]) -> dict:
                 type="shadingEngine",
             )
             if not connections:
-                return maya_error(
+                return skill_error(
                     "No shading group found for '{}'".format(material_name),
                     "Connect material to a shading group first or use assign_material with the SG name",
                 )
@@ -80,22 +80,22 @@ def assign_material(material_name: str, objects: List[str]) -> dict:
 
         existing = cmds.ls(objects)
         if not existing:
-            return maya_error(
+            return skill_error(
                 "No objects found",
                 "None of the requested objects exist: {}".format(objects),
             )
 
         cmds.sets(existing, edit=True, forceElement=sg)
-        return maya_success(
+        return skill_success(
             "Assigned '{}' to {} object(s)".format(sg, len(existing)),
             shading_group=sg,
             objects=existing,
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to assign material")
+        return skill_exception(exc, message="Failed to assign material")
 
 
 def set_material_attribute(
@@ -118,7 +118,7 @@ def set_material_attribute(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(material_name):
-            return maya_error(
+            return skill_error(
                 "Material not found: {}".format(material_name),
                 "'{}' does not exist".format(material_name),
             )
@@ -129,7 +129,7 @@ def set_material_attribute(
         else:
             cmds.setAttr(attr_path, value)
 
-        return maya_success(
+        return skill_success(
             "Set {}.{} = {}".format(material_name, attribute, value),
             material_name=material_name,
             attribute=attribute,
@@ -137,9 +137,9 @@ def set_material_attribute(
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to set material attribute")
+        return skill_exception(exc, message="Failed to set material attribute")
 
 
 def list_materials(shader_type: Optional[str] = None) -> dict:
@@ -171,16 +171,16 @@ def list_materials(shader_type: Optional[str] = None) -> dict:
                     seen.add(m)
                     materials.append(m)
 
-        return maya_success(
+        return skill_success(
             "Found {} material(s)".format(len(materials)),
             materials=materials,
             count=len(materials),
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to list materials")
+        return skill_exception(exc, message="Failed to list materials")
 
 
 def get_shader_assignment(object_name: str) -> dict:
@@ -199,7 +199,7 @@ def get_shader_assignment(object_name: str) -> dict:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return maya_error(
+            return skill_error(
                 "Object not found: {}".format(object_name),
                 "'{}' does not exist in the scene".format(object_name),
             )
@@ -224,7 +224,7 @@ def get_shader_assignment(object_name: str) -> dict:
                 material = shaders[0] if shaders else ""
                 shading_groups.append({"shading_group": sg, "material": material})
 
-        return maya_success(
+        return skill_success(
             "Found {} shading group(s) on '{}'".format(len(shading_groups), object_name),
             object_name=object_name,
             shading_groups=shading_groups,
@@ -232,9 +232,9 @@ def get_shader_assignment(object_name: str) -> dict:
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to get shader assignment for '{}'".format(object_name))
+        return skill_exception(exc, message="Failed to get shader assignment for '{}'".format(object_name))
 
 
 def get_material_connections(material_name: str) -> dict:
@@ -256,7 +256,7 @@ def get_material_connections(material_name: str) -> dict:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(material_name):
-            return maya_error(
+            return skill_error(
                 "Material not found: {}".format(material_name),
                 "'{}' does not exist in the scene".format(material_name),
             )
@@ -295,7 +295,7 @@ def get_material_connections(material_name: str) -> dict:
             )
             i += 2
 
-        return maya_success(
+        return skill_success(
             "Found {} connection(s) into material '{}'".format(len(connections), material_name),
             material_name=material_name,
             connections=connections,
@@ -303,9 +303,9 @@ def get_material_connections(material_name: str) -> dict:
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to get connections for material '{}'".format(material_name))
+        return skill_exception(exc, message="Failed to get connections for material '{}'".format(material_name))
 
 
 def list_shading_groups() -> dict:
@@ -343,16 +343,16 @@ def list_shading_groups() -> dict:
                 }
             )
 
-        return maya_success(
+        return skill_success(
             "Found {} shading group(s)".format(len(result)),
             shading_groups=result,
             count=len(result),
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to list shading groups")
+        return skill_exception(exc, message="Failed to list shading groups")
 
 
 def reset_to_default_material(object_name: str) -> dict:
@@ -372,14 +372,14 @@ def reset_to_default_material(object_name: str) -> dict:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return maya_error(
+            return skill_error(
                 "Object not found: {}".format(object_name),
                 "'{}' does not exist in the scene".format(object_name),
             )
 
         cmds.sets(object_name, edit=True, forceElement="initialShadingGroup")
 
-        return maya_success(
+        return skill_success(
             "Reset '{}' to default material (lambert1)".format(object_name),
             object_name=object_name,
             shading_group="initialShadingGroup",
@@ -387,6 +387,6 @@ def reset_to_default_material(object_name: str) -> dict:
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to reset material for '{}'".format(object_name))
+        return skill_exception(exc, message="Failed to reset material for '{}'".format(object_name))

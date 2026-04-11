@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def create_three_point_rig(
@@ -60,7 +60,7 @@ def create_three_point_rig(
         fill_light = _make_light("{}_fill".format(name), fill_intensity, fill_col, -15, 45)
         rim_light = _make_light("{}_rim".format(name), rim_intensity, rim_col, 0, 180)
 
-        return maya_success(
+        return skill_success(
             "Created three-point rig '{}' ({})".format(name, light_type),
             prompt="Use set_light_rig_intensity to adjust brightness or create_hdri_dome for IBL.",
             rig_group=rig_grp,
@@ -70,17 +70,16 @@ def create_three_point_rig(
             light_type=light_type,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to create three-point rig '{}'".format(name))
+        return skill_exception(exc, message="Failed to create three-point rig '{}'".format(name))
 
 
+@skill_entry
 def main(**kwargs):
     return create_three_point_rig(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = create_three_point_rig(name="hero_rig")
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

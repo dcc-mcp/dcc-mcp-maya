@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import List, Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def create_instancer(
@@ -38,14 +38,14 @@ def create_instancer(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(particle_system):
-            return maya_error(
+            return skill_error(
                 "Particle system not found: {}".format(particle_system),
                 "'{}' does not exist".format(particle_system),
             )
 
         missing = [o for o in instance_objects if not cmds.objExists(o)]
         if missing:
-            return maya_error(
+            return skill_error(
                 "Instance objects not found",
                 "Missing: {}".format(", ".join(missing)),
             )
@@ -60,7 +60,7 @@ def create_instancer(
 
         node = cmds.particleInstancer(particle_system, **kwargs)
 
-        return maya_success(
+        return skill_success(
             "Created instancer '{}' with {} object(s)".format(node, len(instance_objects)),
             prompt=(
                 "Use add_instance_object to add more geometry, "
@@ -71,16 +71,16 @@ def create_instancer(
             instance_objects=instance_objects,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to create instancer")
+        return skill_exception(exc, message="Failed to create instancer")
 
 
+@skill_entry
 def main(**kwargs):
     return create_instancer(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    print(json.dumps(create_instancer("nParticle1", ["pSphere1"]), indent=2))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

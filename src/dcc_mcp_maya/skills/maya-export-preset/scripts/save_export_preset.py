@@ -9,7 +9,7 @@ import os
 from typing import Dict, List, Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def save_export_preset(
@@ -67,7 +67,7 @@ def save_export_preset(
         with open(preset_path, "w") as fh:
             json.dump(preset_data, fh, indent=2)
 
-        return maya_success(
+        return skill_success(
             "Export preset saved",
             prompt=(
                 "Preset '{}' saved to '{}'. Use load_export_preset to restore these settings.".format(
@@ -78,17 +78,16 @@ def save_export_preset(
             preset_data=preset_data,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to save export preset")
+        return skill_exception(exc, message="Failed to save export preset")
 
 
+@skill_entry
 def main(**kwargs):
     return save_export_preset(**kwargs)
 
 
 if __name__ == "__main__":
-    import json as _json
-
-    result = save_export_preset("my_fbx_preset")
-    print(_json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

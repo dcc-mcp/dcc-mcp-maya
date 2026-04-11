@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 # Mapping of friendly names to Maya instancer attribute fields
 ATTRIBUTE_MAP = {
@@ -50,13 +50,13 @@ def set_instancer_attribute(
 
         for name in (particle_system, instancer_node):
             if not cmds.objExists(name):
-                return maya_error(
+                return skill_error(
                     "Node not found: {}".format(name),
                     "'{}' does not exist".format(name),
                 )
 
         if attribute not in ATTRIBUTE_MAP:
-            return maya_error(
+            return skill_error(
                 "Unknown attribute: {}".format(attribute),
                 "Choose from: {}".format(", ".join(sorted(ATTRIBUTE_MAP.keys()))),
             )
@@ -69,7 +69,7 @@ def set_instancer_attribute(
         }
         cmds.particleInstancer(particle_system, **edit_kwargs)
 
-        return maya_success(
+        return skill_success(
             "Set instancer '{}' field '{}' → '{}'".format(
                 instancer_node, instancer_field, particle_attribute or "(cleared)"
             ),
@@ -79,17 +79,16 @@ def set_instancer_attribute(
             particle_attribute=particle_attribute,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to set instancer attribute")
+        return skill_exception(exc, message="Failed to set instancer attribute")
 
 
+@skill_entry
 def main(**kwargs):
     return set_instancer_attribute(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = set_instancer_attribute("nParticle1", "instancer1", "object_index", "objectIndexPP")
-    print(json.dumps(result, indent=2))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

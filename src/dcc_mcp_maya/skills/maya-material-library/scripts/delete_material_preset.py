@@ -7,7 +7,7 @@ from __future__ import annotations
 import os
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def delete_material_preset(file_path: str) -> dict:
@@ -21,7 +21,7 @@ def delete_material_preset(file_path: str) -> dict:
     """
     try:
         if not os.path.isfile(file_path):
-            return maya_error(
+            return skill_error(
                 "Preset file not found: '{}'".format(file_path),
                 "Use list_materials to find available preset paths",
             )
@@ -29,23 +29,23 @@ def delete_material_preset(file_path: str) -> dict:
         os.remove(file_path)
         name = os.path.splitext(os.path.basename(file_path))[0]
 
-        return maya_success(
+        return skill_success(
             "Deleted material preset '{}'".format(name),
             prompt="Use list_materials to verify the preset has been removed.",
             file_path=file_path,
             preset_name=name,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to delete preset '{}'".format(file_path))
+        return skill_exception(exc, message="Failed to delete preset '{}'".format(file_path))
 
 
+@skill_entry
 def main(**kwargs):
     return delete_material_preset(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    print(json.dumps(delete_material_preset("/tmp/mat_lib/lambert1.json")))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

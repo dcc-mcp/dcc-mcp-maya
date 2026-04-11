@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def set_render_pass_output(
@@ -36,7 +36,7 @@ def set_render_pass_output(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(pass_node):
-            return maya_error(
+            return skill_error(
                 "Render pass not found: {}".format(pass_node),
                 "'{}' does not exist in the scene".format(pass_node),
             )
@@ -61,7 +61,7 @@ def set_render_pass_output(
                     break
 
         if not changes:
-            return maya_success(
+            return skill_success(
                 "No settable output attributes found on '{}'".format(pass_node),
                 prompt="This pass node may not support output path/format overrides.",
                 pass_node=pass_node,
@@ -69,7 +69,7 @@ def set_render_pass_output(
                 image_format=image_format,
             )
 
-        return maya_success(
+        return skill_success(
             "Configured output for '{}': {}".format(pass_node, ", ".join(changes)),
             prompt="Verify render settings and render to confirm the pass outputs correctly.",
             pass_node=pass_node,
@@ -78,17 +78,16 @@ def set_render_pass_output(
             applied_changes=changes,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to configure output for '{}'".format(pass_node))
+        return skill_exception(exc, message="Failed to configure output for '{}'".format(pass_node))
 
 
+@skill_entry
 def main(**kwargs):
     return set_render_pass_output(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = set_render_pass_output("diffuse_pass", output_path="images/diffuse", image_format="exr")
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

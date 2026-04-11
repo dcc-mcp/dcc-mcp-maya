@@ -5,7 +5,7 @@ from __future__ import annotations
 
 # Import built-in modules
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_success
 
 
 def transfer_attributes(
@@ -46,19 +46,19 @@ def transfer_attributes(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(source):
-            return maya_error(
+            return skill_error(
                 "Source not found: {}".format(source),
                 "'{}' does not exist in the scene".format(source),
             )
 
         if not cmds.objExists(target):
-            return maya_error(
+            return skill_error(
                 "Target not found: {}".format(target),
                 "'{}' does not exist in the scene".format(target),
             )
 
         if sample_space not in _VALID_SPACES:
-            return maya_error(
+            return skill_error(
                 "Invalid sample_space: {}".format(sample_space),
                 "sample_space must be one of {} (0=World, 1=Local, 4=UV, 5=Component)".format(_VALID_SPACES),
             )
@@ -74,7 +74,7 @@ def transfer_attributes(
         )
         node_name = result[0] if result else "transferAttributes1"
 
-        return maya_success(
+        return skill_success(
             "Transferred attributes from '{}' to '{}'".format(source, target),
             source=source,
             target=target,
@@ -87,18 +87,17 @@ def transfer_attributes(
             prompt="Check the result with list_node_graph or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_error("Failed to transfer attributes from '{}' to '{}'".format(source, target), str(exc))
+        return skill_error("Failed to transfer attributes from '{}' to '{}'".format(source, target), str(exc))
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`transfer_attributes`."""
     return transfer_attributes(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = transfer_attributes()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

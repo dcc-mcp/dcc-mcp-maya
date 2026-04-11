@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def list_ncloth_objects() -> dict:
@@ -42,7 +42,7 @@ def list_ncloth_objects() -> dict:
 
         nucleus_nodes = cmds.ls(type="nucleus") or []
 
-        return maya_success(
+        return skill_success(
             "Found {} nCloth object(s)".format(len(cloth_objects)),
             prompt="Use set_ncloth_attribute or bake_cloth_cache to modify cloth behavior.",
             cloth_objects=cloth_objects,
@@ -50,17 +50,16 @@ def list_ncloth_objects() -> dict:
             count=len(cloth_objects),
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to list nCloth objects")
+        return skill_exception(exc, message="Failed to list nCloth objects")
 
 
+@skill_entry
 def main(**kwargs):
     return list_ncloth_objects(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = list_ncloth_objects()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

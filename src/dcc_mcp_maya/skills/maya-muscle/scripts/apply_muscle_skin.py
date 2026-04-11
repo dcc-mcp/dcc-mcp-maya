@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import List, Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def apply_muscle_skin(
@@ -29,7 +29,7 @@ def apply_muscle_skin(
         import maya.mel as mel  # noqa: PLC0415
 
         if not cmds.objExists(mesh):
-            return maya_error(
+            return skill_error(
                 "Mesh '{}' not found".format(mesh),
                 "Verify the mesh name in the Outliner.",
             )
@@ -40,7 +40,7 @@ def apply_muscle_skin(
             muscles = cmds.ls(type="cMuscleObject") or []
 
         if not muscles:
-            return maya_error(
+            return skill_error(
                 "No muscle objects found or specified",
                 "Create muscles first with create_muscle_capsule.",
             )
@@ -56,7 +56,7 @@ def apply_muscle_skin(
         sys_nodes = cmds.ls(type="cMuscleSystem") or []
         sys_node = sys_nodes[-1] if sys_nodes else ""
 
-        return maya_success(
+        return skill_success(
             "cMuscleSystem '{}' applied to '{}'".format(sys_node, mesh),
             prompt="Muscle skin applied. Simulate or scrub the timeline to see secondary motion.",
             system_node=sys_node,
@@ -64,17 +64,16 @@ def apply_muscle_skin(
             muscles_connected=len(muscles),
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to apply muscle skin to '{}'".format(mesh))
+        return skill_exception(exc, message="Failed to apply muscle skin to '{}'".format(mesh))
 
 
+@skill_entry
 def main(**kwargs):
     return apply_muscle_skin(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = apply_muscle_skin("pSphere1")
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

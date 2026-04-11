@@ -8,7 +8,7 @@ import logging
 from typing import List, Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_error, skill_exception, skill_success
 
 logger = logging.getLogger(__name__)
 
@@ -40,23 +40,23 @@ def bake_textures(
 
     valid_types = ("diffuse", "full_render", "normals", "ao")
     if bake_type not in valid_types:
-        return maya_error(
+        return skill_error(
             "Invalid bake_type: {}".format(bake_type),
             "Use one of: {}".format(", ".join(valid_types)),
         )
 
     valid_renderers = ("mentalRay", "arnold")
     if renderer not in valid_renderers:
-        return maya_error(
+        return skill_error(
             "Invalid renderer: {}".format(renderer),
             "Use one of: {}".format(", ".join(valid_renderers)),
         )
 
     if not objects:
-        return maya_error("No objects specified for baking")
+        return skill_error("No objects specified for baking")
 
     if resolution < 1:
-        return maya_error(
+        return skill_error(
             "Invalid resolution: {}".format(resolution),
             "Resolution must be >= 1",
         )
@@ -66,7 +66,7 @@ def bake_textures(
 
         missing = [obj for obj in objects if not cmds.objExists(obj)]
         if missing:
-            return maya_error("Objects not found: {}".format(", ".join(missing)))
+            return skill_error("Objects not found: {}".format(", ".join(missing)))
 
         bake_type_map = {
             "diffuse": "diffuse",
@@ -98,7 +98,7 @@ def bake_textures(
             except Exception as bake_exc:
                 logger.warning("Bake skipped for '%s': %s", obj, bake_exc)
 
-        return maya_success(
+        return skill_success(
             "Baked {} object(s) to '{}'".format(len(baked_files), file_path),
             objects=objects,
             baked_count=len(baked_files),
@@ -109,9 +109,9 @@ def bake_textures(
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to bake textures")
+        return skill_exception(exc, message="Failed to bake textures")
 
 
 def set_color_management(
@@ -175,7 +175,7 @@ def set_color_management(
         except Exception:
             current_output = output_transform
 
-        return maya_success(
+        return skill_success(
             "Color management {}".format("enabled" if enabled else "disabled"),
             enabled=cm_enabled,
             rendering_space=current_rendering,
@@ -184,9 +184,9 @@ def set_color_management(
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to set color management")
+        return skill_exception(exc, message="Failed to set color management")
 
 
 def list_color_spaces() -> dict:
@@ -219,7 +219,7 @@ def list_color_spaces() -> dict:
         except Exception:
             cm_enabled = False
 
-        return maya_success(
+        return skill_success(
             "Color space list retrieved",
             color_management_enabled=cm_enabled,
             input_color_spaces=list(spaces),
@@ -228,6 +228,6 @@ def list_color_spaces() -> dict:
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to list color spaces")
+        return skill_exception(exc, message="Failed to list color spaces")

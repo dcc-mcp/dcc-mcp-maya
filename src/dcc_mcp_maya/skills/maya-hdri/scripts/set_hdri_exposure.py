@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def set_hdri_exposure(
@@ -28,7 +28,7 @@ def set_hdri_exposure(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(light_node):
-            return maya_error(
+            return skill_error(
                 "Light node not found: {}".format(light_node),
                 "Verify the node name with list_hdri_nodes",
             )
@@ -47,12 +47,12 @@ def set_hdri_exposure(
             cmds.setAttr("{}.intensity".format(shape), intensity)
             attr_set = "{}.intensity (mapped from exposure)".format(shape)
         else:
-            return maya_error(
+            return skill_error(
                 "Cannot set exposure on node type: {}".format(node_type),
                 "Only aiSkyDomeLight and standard lights are supported",
             )
 
-        return maya_success(
+        return skill_success(
             "Exposure set to {} on '{}'".format(exposure, light_node),
             prompt="Use set_hdri_rotation to rotate the environment or list_hdri_nodes to inspect.",
             light_node=light_node,
@@ -60,16 +60,16 @@ def set_hdri_exposure(
             attribute_set=attr_set,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to set HDRI exposure")
+        return skill_exception(exc, message="Failed to set HDRI exposure")
 
 
+@skill_entry
 def main(**kwargs):
     return set_hdri_exposure(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    print(json.dumps(set_hdri_exposure("hdriDome1", 1.0)))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

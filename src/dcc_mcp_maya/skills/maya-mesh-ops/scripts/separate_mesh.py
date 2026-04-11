@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def separate_mesh(
@@ -24,7 +24,7 @@ def separate_mesh(
         result transform names) and ``context.count``.
     """
     if not object_name:
-        return maya_error(
+        return skill_error(
             "object_name is required",
             "Provide a non-empty polygon mesh name",
         )
@@ -33,7 +33,7 @@ def separate_mesh(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return maya_error(
+            return skill_error(
                 "Object not found: {}".format(object_name),
                 "'{}' does not exist in the scene".format(object_name),
             )
@@ -57,25 +57,24 @@ def separate_mesh(
                 seen.add(s)
                 unique.append(s)
 
-        return maya_success(
+        return skill_success(
             "Separated '{}' into {} meshes".format(object_name, len(unique)),
             separated_meshes=unique,
             count=len(unique),
             prompt="Use combine_meshes to undo or cleanup_mesh on each piece.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to separate mesh '{}'".format(object_name))
+        return skill_exception(exc, message="Failed to separate mesh '{}'".format(object_name))
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`separate_mesh`."""
     return separate_mesh(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = separate_mesh()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

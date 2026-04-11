@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def add_instance_object(
@@ -30,7 +30,7 @@ def add_instance_object(
 
         for name in (particle_system, instancer_node, object_name):
             if not cmds.objExists(name):
-                return maya_error(
+                return skill_error(
                     "Node not found: {}".format(name),
                     "'{}' does not exist".format(name),
                 )
@@ -43,24 +43,23 @@ def add_instance_object(
             name=instancer_node,
         )
 
-        return maya_success(
+        return skill_success(
             "Added '{}' to instancer '{}'".format(object_name, instancer_node),
             prompt="Set a per-particle objectIndex attribute to control which shape each particle uses.",
             instancer_node=instancer_node,
             added_object=object_name,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to add instance object")
+        return skill_exception(exc, message="Failed to add instance object")
 
 
+@skill_entry
 def main(**kwargs):
     return add_instance_object(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = add_instance_object("nParticle1", "instancer1", "pCube1")
-    print(json.dumps(result, indent=2))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

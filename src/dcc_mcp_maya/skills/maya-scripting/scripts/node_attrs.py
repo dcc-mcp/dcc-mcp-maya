@@ -15,7 +15,7 @@ from __future__ import annotations
 from typing import Any, Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_error, skill_exception, skill_success
 
 # Supported attribute type tokens for addAttr -attributeType / -dataType
 _SCALAR_TYPES = ("bool", "byte", "short", "long", "float", "double", "angle", "time")
@@ -62,13 +62,13 @@ def add_attribute(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return maya_error(
+            return skill_error(
                 "Object not found: {}".format(object_name),
                 "'{}' does not exist in the scene".format(object_name),
             )
 
         if cmds.objExists("{}.{}".format(object_name, long_name)):
-            return maya_error(
+            return skill_error(
                 "Attribute already exists: {}.{}".format(object_name, long_name),
                 "Delete the existing attribute first or use a different long_name",
             )
@@ -85,7 +85,7 @@ def add_attribute(
             cmds.addAttr(object_name, longName=long_name, shortName=sn, attributeType=attr_type)
         else:
             if attr_type not in _SCALAR_TYPES:
-                return maya_error(
+                return skill_error(
                     "Unsupported attribute type: {}".format(attr_type),
                     "Supported types: {}".format(
                         ", ".join(list(_SCALAR_TYPES) + list(_STRING_TYPES) + list(_VECTOR_TYPES))
@@ -106,7 +106,7 @@ def add_attribute(
         if cmds.objExists(full_attr):
             cmds.setAttr(full_attr, keyable=keyable)
 
-        return maya_success(
+        return skill_success(
             "Added attribute '{}.{}'".format(object_name, long_name),
             object_name=object_name,
             long_name=long_name,
@@ -116,9 +116,9 @@ def add_attribute(
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to add attribute '{}.{}'".format(object_name, long_name))
+        return skill_exception(exc, message="Failed to add attribute '{}.{}'".format(object_name, long_name))
 
 
 def delete_attribute(
@@ -142,14 +142,14 @@ def delete_attribute(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return maya_error(
+            return skill_error(
                 "Object not found: {}".format(object_name),
                 "'{}' does not exist in the scene".format(object_name),
             )
 
         full_attr = "{}.{}".format(object_name, attribute)
         if not cmds.objExists(full_attr):
-            return maya_error(
+            return skill_error(
                 "Attribute not found: {}".format(full_attr),
                 "The attribute '{}' does not exist on '{}'".format(attribute, object_name),
             )
@@ -157,22 +157,22 @@ def delete_attribute(
         # Only user-defined attributes have userData / dynamic flag
         user_defined = cmds.listAttr(object_name, userDefined=True) or []
         if attribute not in user_defined:
-            return maya_error(
+            return skill_error(
                 "Cannot delete built-in attribute: {}.{}".format(object_name, attribute),
                 "Only user-defined (custom) attributes can be deleted",
             )
 
         cmds.deleteAttr(full_attr)
-        return maya_success(
+        return skill_success(
             "Deleted attribute '{}.{}'".format(object_name, attribute),
             object_name=object_name,
             attribute=attribute,
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to delete attribute '{}.{}'".format(object_name, attribute))
+        return skill_exception(exc, message="Failed to delete attribute '{}.{}'".format(object_name, attribute))
 
 
 def list_attributes(
@@ -201,7 +201,7 @@ def list_attributes(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return maya_error(
+            return skill_error(
                 "Object not found: {}".format(object_name),
                 "'{}' does not exist in the scene".format(object_name),
             )
@@ -255,7 +255,7 @@ def list_attributes(
             except Exception:
                 result.append({"name": attr_name, "type": "unknown", "value": None, "keyable": False, "locked": False})
 
-        return maya_success(
+        return skill_success(
             "Found {} attribute(s) on '{}'".format(len(result), object_name),
             object_name=object_name,
             attributes=result,
@@ -265,6 +265,6 @@ def list_attributes(
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to list attributes on '{}'".format(object_name))
+        return skill_exception(exc, message="Failed to list attributes on '{}'".format(object_name))

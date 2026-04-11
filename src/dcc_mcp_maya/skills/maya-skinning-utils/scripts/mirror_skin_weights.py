@@ -4,7 +4,9 @@
 from __future__ import annotations
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success, validate_node_exists
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
+
+from dcc_mcp_maya.api import validate_node_exists
 
 # Import built-in modules
 
@@ -42,7 +44,7 @@ def mirror_skin_weights(
 
         sc_list = cmds.ls(cmds.listHistory(mesh) or [], type="skinCluster")
         if not sc_list:
-            return maya_error(
+            return skill_error(
                 "No skin cluster on: {}".format(mesh),
                 "'{}' has no skinCluster in its history".format(mesh),
             )
@@ -64,7 +66,7 @@ def mirror_skin_weights(
             mesh, mirrorMode=mirror_mode, **{k: v for k, v in mirror_kwargs.items() if k != "mirrorMode"}
         )
 
-        return maya_success(
+        return skill_success(
             "Mirrored skin weights on '{}' across {} plane".format(mesh, mirror_mode),
             prompt="Check the mirrored side in the component editor to verify weight accuracy.",
             mesh=mesh,
@@ -73,17 +75,16 @@ def mirror_skin_weights(
             positive_to_negative=positive_to_negative,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to mirror skin weights on '{}'".format(mesh))
+        return skill_exception(exc, message="Failed to mirror skin weights on '{}'".format(mesh))
 
 
+@skill_entry
 def main(**kwargs):
     return mirror_skin_weights(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = mirror_skin_weights("pSphere1")
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

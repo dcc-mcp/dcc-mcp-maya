@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import Any
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_success
+from dcc_mcp_core.skill import skill_error, skill_success
 
 
 def get_attribute(
@@ -32,14 +32,14 @@ def get_attribute(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return maya_error(
+            return skill_error(
                 "Object not found: {}".format(object_name),
                 "'{}' does not exist in the scene".format(object_name),
             )
 
         full_attr = "{}.{}".format(object_name, attribute)
         if not cmds.objExists(full_attr):
-            return maya_error(
+            return skill_error(
                 "Attribute not found: {}".format(full_attr),
                 "The attribute '{}' does not exist on node '{}'".format(attribute, object_name),
             )
@@ -52,7 +52,7 @@ def get_attribute(
         else:
             value = raw
 
-        return maya_success(
+        return skill_success(
             "Got {}.{} = {}".format(object_name, attribute, value),
             object_name=object_name,
             attribute=attribute,
@@ -60,9 +60,9 @@ def get_attribute(
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_error(
+        return skill_error(
             "Failed to get attribute {}.{}".format(object_name, attribute),
             str(exc),
         )
@@ -97,14 +97,14 @@ def set_attribute(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return maya_error(
+            return skill_error(
                 "Object not found: {}".format(object_name),
                 "'{}' does not exist in the scene".format(object_name),
             )
 
         full_attr = "{}.{}".format(object_name, attribute)
         if not cmds.objExists(full_attr):
-            return maya_error(
+            return skill_error(
                 "Attribute not found: {}".format(full_attr),
                 "The attribute '{}' does not exist on node '{}'".format(attribute, object_name),
             )
@@ -113,7 +113,7 @@ def set_attribute(
         is_locked = cmds.getAttr(full_attr, lock=True)
         if is_locked:
             if not force:
-                return maya_error(
+                return skill_error(
                     "Attribute is locked: {}".format(full_attr),
                     "Use force=True to unlock and set the attribute",
                 )
@@ -131,7 +131,7 @@ def set_attribute(
         if is_locked and force:
             cmds.setAttr(full_attr, lock=True)
 
-        return maya_success(
+        return skill_success(
             "Set {}.{} = {}".format(object_name, attribute, value),
             object_name=object_name,
             attribute=attribute,
@@ -139,9 +139,9 @@ def set_attribute(
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_error(
+        return skill_error(
             "Failed to set attribute {}.{} = {}".format(object_name, attribute, value),
             str(exc),
         )

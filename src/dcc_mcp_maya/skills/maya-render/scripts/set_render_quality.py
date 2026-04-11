@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 # Import built-in modules
 
@@ -65,7 +65,7 @@ def set_render_quality(preset: str = "medium") -> dict:
 
     preset_key = preset.lower()
     if preset_key not in _RENDER_QUALITY_PRESETS:
-        return maya_error(
+        return skill_error(
             "Invalid preset: {}".format(preset),
             "Supported presets: {}".format(", ".join(sorted(_RENDER_QUALITY_PRESETS))),
         )
@@ -83,25 +83,24 @@ def set_render_quality(preset: str = "medium") -> dict:
                 cmds.setAttr(plug, value)
                 applied[attr_name] = value
 
-        return maya_success(
+        return skill_success(
             "Applied '{}' render quality preset".format(preset_key),
             preset=preset_key,
             applied=applied,
             prompt="Check the result with list_render or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to set render quality preset '{}'".format(preset))
+        return skill_exception(exc, message="Failed to set render quality preset '{}'".format(preset))
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`set_render_quality`."""
     return set_render_quality(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = set_render_quality()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 _SUPPORTED_SHADERS = ("lambert", "blinn", "phong", "phongE", "aiStandardSurface")
 
@@ -40,25 +40,24 @@ def list_materials(shader_type: Optional[str] = None) -> dict:
                     seen.add(m)
                     materials.append(m)
 
-        return maya_success(
+        return skill_success(
             "Found {} material(s)".format(len(materials)),
             materials=materials,
             count=len(materials),
             prompt="Use assign_material or set_material_attribute to manage the listed shaders.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to list materials")
+        return skill_exception(exc, message="Failed to list materials")
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`list_materials`."""
     return list_materials(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = list_materials()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

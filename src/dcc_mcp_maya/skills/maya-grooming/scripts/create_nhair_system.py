@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def create_nhair_system(
@@ -27,7 +27,7 @@ def create_nhair_system(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(mesh):
-            return maya_error(
+            return skill_error(
                 "Node not found",
                 "Mesh '{}' does not exist".format(mesh),
             )
@@ -47,7 +47,7 @@ def create_nhair_system(
             except Exception:
                 pass
 
-        return maya_success(
+        return skill_success(
             "nHair system created on '{}'".format(mesh),
             prompt=(
                 "Hair system '{}' created with {} follicles. Use set_nhair_attribute to adjust dynamics.".format(
@@ -59,17 +59,16 @@ def create_nhair_system(
             mesh=mesh,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to create nHair system")
+        return skill_exception(exc, message="Failed to create nHair system")
 
 
+@skill_entry
 def main(**kwargs):
     return create_nhair_system(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = create_nhair_system("pSphere1")
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

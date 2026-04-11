@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def create_reference(
@@ -33,7 +33,7 @@ def create_reference(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not file_path or not file_path.strip():
-            return maya_error("Invalid file path", "file_path must not be empty")
+            return skill_error("Invalid file path", "file_path must not be empty")
 
         kwargs = {
             "reference": True,
@@ -55,7 +55,7 @@ def create_reference(
         except Exception:
             resolved_ns = namespace or ""
 
-        return maya_success(
+        return skill_success(
             "Referenced '{}' as '{}'".format(file_path, resolved_ns),
             reference_node=ref_node,
             namespace=resolved_ns,
@@ -63,18 +63,17 @@ def create_reference(
             prompt="Use list_references to verify or reload_reference if the file changes.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to reference file '{}'".format(file_path))
+        return skill_exception(exc, message="Failed to reference file '{}'".format(file_path))
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`create_reference`."""
     return create_reference(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = create_reference()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

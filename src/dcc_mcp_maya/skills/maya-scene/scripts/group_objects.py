@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import List, Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def group_objects(objects: List[str], group_name: Optional[str] = None, world: bool = False) -> dict:
@@ -26,11 +26,11 @@ def group_objects(objects: List[str], group_name: Optional[str] = None, world: b
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not objects:
-            return maya_error("No objects provided", "objects list must not be empty")
+            return skill_error("No objects provided", "objects list must not be empty")
 
         existing = cmds.ls(objects) or []
         if not existing:
-            return maya_error(
+            return skill_error(
                 "No objects found",
                 "None of the requested objects exist: {}".format(objects),
             )
@@ -42,7 +42,7 @@ def group_objects(objects: List[str], group_name: Optional[str] = None, world: b
         if group_name:
             grp = cmds.rename(grp, group_name)
 
-        return maya_success(
+        return skill_success(
             "Grouped {} object(s) into '{}'".format(len(existing), grp),
             group_name=grp,
             objects=existing,
@@ -50,18 +50,17 @@ def group_objects(objects: List[str], group_name: Optional[str] = None, world: b
             prompt="Check the result with list_scene or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to group objects")
+        return skill_exception(exc, message="Failed to group objects")
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`group_objects`."""
     return group_objects(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = group_objects()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

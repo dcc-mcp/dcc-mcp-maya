@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import List
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def connect_attributes(
@@ -33,7 +33,7 @@ def connect_attributes(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not connections:
-            return maya_error(
+            return skill_error(
                 "No connections specified",
                 "connections list must contain at least one [source, dest] pair",
             )
@@ -56,12 +56,12 @@ def connect_attributes(
                 failed.append({"pair": [src, dst], "error": str(exc)})
 
         if not connected and failed:
-            return maya_error(
+            return skill_error(
                 "All {} connection(s) failed".format(len(failed)),
                 "; ".join(f["error"] for f in failed),
             )
 
-        return maya_success(
+        return skill_success(
             "Connected {}/{} attribute pair(s)".format(len(connected), len(connections)),
             prompt="Use lock_hide_attributes if driven attrs should not be keyable.",
             connected_count=len(connected),
@@ -69,17 +69,16 @@ def connect_attributes(
             failed_connections=failed,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to connect attributes")
+        return skill_exception(exc, message="Failed to connect attributes")
 
 
+@skill_entry
 def main(**kwargs):
     return connect_attributes(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = connect_attributes([["sourceNode.tx", "destNode.tx"]])
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 # Import built-in modules
 
@@ -48,25 +48,24 @@ def list_sets(include_internal: bool = False) -> dict:
                 }
             )
 
-        return maya_success(
+        return skill_success(
             "Found {} object set(s)".format(len(result)),
             sets=result,
             count=len(result),
             prompt="Use add_to_set or delete_set to manage the listed sets.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to list object sets")
+        return skill_exception(exc, message="Failed to list object sets")
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`list_sets`."""
     return list_sets(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = list_sets()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

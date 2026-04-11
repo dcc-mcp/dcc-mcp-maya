@@ -5,7 +5,7 @@ from __future__ import annotations
 
 # Import built-in modules
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 _VALID_FIELD_TYPES = (
     "gravity",
@@ -43,21 +43,21 @@ def set_nucleus_attribute(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(nucleus):
-            return maya_error(
+            return skill_error(
                 "Nucleus node not found: {}".format(nucleus),
                 "'{}' does not exist in the scene".format(nucleus),
             )
 
         node_type = cmds.objectType(nucleus)
         if node_type != "nucleus":
-            return maya_error(
+            return skill_error(
                 "Not a nucleus node: {}".format(nucleus),
                 "Expected node type 'nucleus', got '{}'".format(node_type),
             )
 
         plug = "{}.{}".format(nucleus, attribute)
         if not cmds.objExists(plug):
-            return maya_error(
+            return skill_error(
                 "Attribute not found: {}".format(plug),
                 "'{}' does not have attribute '{}'".format(nucleus, attribute),
             )
@@ -69,7 +69,7 @@ def set_nucleus_attribute(
         else:
             cmds.setAttr(plug, value)
 
-        return maya_success(
+        return skill_success(
             "Set '{}.{}' = {}".format(nucleus, attribute, value),
             nucleus=nucleus,
             attribute=attribute,
@@ -77,18 +77,17 @@ def set_nucleus_attribute(
             prompt="Check the result with list_dynamics or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to set attribute on nucleus '{}'".format(nucleus))
+        return skill_exception(exc, message="Failed to set attribute on nucleus '{}'".format(nucleus))
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`set_nucleus_attribute`."""
     return set_nucleus_attribute(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = set_nucleus_attribute()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

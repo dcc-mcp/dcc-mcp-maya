@@ -7,7 +7,9 @@ from __future__ import annotations
 from typing import Optional
 
 # Import local modules
-from dcc_mcp_maya.api import batch_validate_nodes, maya_error, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_success
+
+from dcc_mcp_maya.api import batch_validate_nodes
 
 
 def copy_skin_weights(
@@ -43,7 +45,7 @@ def copy_skin_weights(
 
         src_clusters = cmds.ls(cmds.listHistory(source_mesh) or [], type="skinCluster")
         if not src_clusters:
-            return maya_error(
+            return skill_error(
                 "No skin cluster on source: {}".format(source_mesh),
                 "Source mesh has no skinCluster in its history",
             )
@@ -74,7 +76,7 @@ def copy_skin_weights(
             normalize=normalize,
         )
 
-        return maya_success(
+        return skill_success(
             "Copied skin weights from '{}' to '{}'".format(source_mesh, target_mesh),
             prompt="Use normalize_skin_weights if blending is needed, or check prune_skin_weights.",
             source_mesh=source_mesh,
@@ -83,20 +85,19 @@ def copy_skin_weights(
             joint_count=len(src_joints),
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_error(
+        return skill_error(
             "Failed to copy skin weights from '{}' to '{}'".format(source_mesh, target_mesh),
             str(exc),
         )
 
 
+@skill_entry
 def main(**kwargs):
     return copy_skin_weights(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = copy_skin_weights("sourceMesh", "targetMesh")
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

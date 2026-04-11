@@ -10,7 +10,7 @@ import tempfile
 from typing import Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_error, skill_exception, skill_success
 
 
 def set_render_settings(
@@ -53,15 +53,15 @@ def set_render_settings(
             cmds.setAttr("defaultRenderGlobals.currentRenderer", renderer, type="string")
             applied["renderer"] = renderer
 
-        return maya_success(
+        return skill_success(
             "Render settings applied ({}x{})".format(width, height),
             **applied,
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to set render settings")
+        return skill_exception(exc, message="Failed to set render settings")
 
 
 def capture_viewport(
@@ -116,7 +116,7 @@ def capture_viewport(
         os.unlink(img_path)
 
         encoded = base64.b64encode(img_bytes).decode("ascii")
-        return maya_success(
+        return skill_success(
             "Viewport captured ({}x{} @ frame {})".format(width, height, frame),
             image=encoded,
             width=width,
@@ -125,9 +125,9 @@ def capture_viewport(
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to capture viewport")
+        return skill_exception(exc, message="Failed to capture viewport")
 
 
 def import_file(
@@ -160,7 +160,7 @@ def import_file(
 
         cmds.file(file_path, **kwargs)
         imported = cmds.ls(importedNodes=True) or []
-        return maya_success(
+        return skill_success(
             "Imported {} node(s) from {}".format(len(imported), file_path),
             file_path=file_path,
             imported_nodes=imported,
@@ -168,9 +168,9 @@ def import_file(
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to import file: {}".format(file_path))
+        return skill_exception(exc, message="Failed to import file: {}".format(file_path))
 
 
 def export_selection(
@@ -198,16 +198,16 @@ def export_selection(
             type=file_type,
             force=True,
         )
-        return maya_success(
+        return skill_success(
             "Selection exported to {}".format(saved),
             file_path=saved,
             file_type=file_type,
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to export selection")
+        return skill_exception(exc, message="Failed to export selection")
 
 
 # Render quality preset mappings
@@ -265,7 +265,7 @@ def set_render_quality(preset: str = "medium") -> dict:
 
     preset_key = preset.lower()
     if preset_key not in _RENDER_QUALITY_PRESETS:
-        return maya_error(
+        return skill_error(
             "Invalid preset: {}".format(preset),
             "Supported presets: {}".format(", ".join(sorted(_RENDER_QUALITY_PRESETS))),
         )
@@ -283,16 +283,16 @@ def set_render_quality(preset: str = "medium") -> dict:
                 cmds.setAttr(plug, value)
                 applied[attr_name] = value
 
-        return maya_success(
+        return skill_success(
             "Applied '{}' render quality preset".format(preset_key),
             preset=preset_key,
             applied=applied,
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to set render quality preset '{}'".format(preset))
+        return skill_exception(exc, message="Failed to set render quality preset '{}'".format(preset))
 
 
 def get_scene_render_stats() -> dict:
@@ -336,7 +336,7 @@ def get_scene_render_stats() -> dict:
             if cmds.objExists(plug):
                 quality[attr_name] = cmds.getAttr(plug)
 
-        return maya_success(
+        return skill_success(
             "Scene render stats: {} @ {}x{}".format(renderer, width, height),
             renderer=renderer,
             width=width,
@@ -348,6 +348,6 @@ def get_scene_render_stats() -> dict:
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to query scene render stats")
+        return skill_exception(exc, message="Failed to query scene render stats")

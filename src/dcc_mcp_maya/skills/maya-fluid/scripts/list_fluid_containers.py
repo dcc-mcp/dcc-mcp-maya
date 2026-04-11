@@ -5,7 +5,7 @@ from __future__ import annotations
 
 # Import built-in modules
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def list_fluid_containers() -> dict:
@@ -35,24 +35,23 @@ def list_fluid_containers() -> dict:
                 }
             )
 
-        return maya_success(
+        return skill_success(
             "Found {} fluid container(s)".format(len(containers)),
             prompt="Use set_fluid_attribute to adjust simulation parameters.",
             containers=containers,
             count=len(containers),
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to list fluid containers")
+        return skill_exception(exc, message="Failed to list fluid containers")
 
 
+@skill_entry
 def main(**kwargs):
     return list_fluid_containers(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = list_fluid_containers()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

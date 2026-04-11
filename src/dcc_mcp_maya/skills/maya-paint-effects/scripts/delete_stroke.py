@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success  # noqa: E402
 
 
 def delete_stroke(
@@ -36,13 +36,13 @@ def delete_stroke(
             stroke_nodes = cmds.ls(type="stroke") or []
         elif stroke:
             if not cmds.objExists(stroke):
-                return maya_error(
+                return skill_error(
                     "Stroke not found: {}".format(stroke),
                     "Verify the stroke node name with list_strokes",
                 )
             stroke_nodes = [stroke]
         else:
-            return maya_error(
+            return skill_error(
                 "No stroke specified",
                 "Provide 'stroke' node name or set 'delete_all=True'",
             )
@@ -57,23 +57,23 @@ def delete_stroke(
             except Exception as exc:
                 logger.warning("Could not delete %s: %s", target, exc)
 
-        return maya_success(
+        return skill_success(
             "Deleted {} Paint Effects stroke(s)".format(len(deleted)),
             prompt="Use list_strokes to confirm deletion or create_stroke to add new ones.",
             deleted=deleted,
             count=len(deleted),
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to delete Paint Effects stroke")
+        return skill_exception(exc, message="Failed to delete Paint Effects stroke")
 
 
+@skill_entry
 def main(**kwargs):
     return delete_stroke(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    print(json.dumps(delete_stroke(delete_all=True)))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

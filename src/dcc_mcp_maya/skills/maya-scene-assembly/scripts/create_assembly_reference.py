@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def create_assembly_reference(
@@ -27,7 +27,7 @@ def create_assembly_reference(
     """
 
     if not definition:
-        return maya_error(
+        return skill_error(
             "Missing parameter",
             "'definition' is required — provide an assembly definition node name or file path.",
         )
@@ -49,7 +49,7 @@ def create_assembly_reference(
             except Exception:
                 pass
 
-        return maya_success(
+        return skill_success(
             "Assembly reference '{}' created".format(ref_node),
             prompt="Reference instantiated. Use list_assemblies to manage LOD switching.",
             ref_node=ref_node,
@@ -57,17 +57,16 @@ def create_assembly_reference(
             active_rep=active_rep or "",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to create assembly reference")
+        return skill_exception(exc, message="Failed to create assembly reference")
 
 
+@skill_entry
 def main(**kwargs):
     return create_assembly_reference(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = create_assembly_reference("myAssembly")
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

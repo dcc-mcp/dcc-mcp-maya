@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import List, Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def create_toon_shader(
@@ -67,7 +67,7 @@ def create_toon_shader(
                     cmds.sets(obj, edit=True, forceElement=sg)
                     assigned_to.append(obj)
 
-        return maya_success(
+        return skill_success(
             "Created toon shader '{}' with shading group '{}'".format(shader, sg),
             prompt="Use add_toon_outline to add ink outlines to the same meshes.",
             shader=shader,
@@ -75,16 +75,16 @@ def create_toon_shader(
             assigned_to=assigned_to,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to create toon shader")
+        return skill_exception(exc, message="Failed to create toon shader")
 
 
+@skill_entry
 def main(**kwargs):
     return create_toon_shader(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    print(json.dumps(create_toon_shader()))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

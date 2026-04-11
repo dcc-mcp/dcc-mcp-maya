@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def bake_mocap_to_rig(
@@ -31,7 +31,7 @@ def bake_mocap_to_rig(
     """
 
     if not source_character or not target_character:
-        return maya_error(
+        return skill_error(
             "Missing parameters",
             "'source_character' and 'target_character' are required",
         )
@@ -51,7 +51,7 @@ def bake_mocap_to_rig(
 
         target_joints = cmds.ls(type="joint") or []
         if not target_joints:
-            return maya_error(
+            return skill_error(
                 "No joints found in scene to bake onto",
                 "Ensure the target rig skeleton is present in the scene.",
             )
@@ -67,7 +67,7 @@ def bake_mocap_to_rig(
             sparseAnimCurveBake=False,
         )
 
-        return maya_success(
+        return skill_success(
             "Baked motion from '{}' onto '{}' ({}-{})".format(
                 source_character, target_character, start_frame, end_frame
             ),
@@ -79,17 +79,16 @@ def bake_mocap_to_rig(
             baked_joints=len(target_joints),
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to bake mocap motion")
+        return skill_exception(exc, message="Failed to bake mocap motion")
 
 
+@skill_entry
 def main(**kwargs):
     return bake_mocap_to_rig(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = bake_mocap_to_rig("srcChar", "tgtChar")
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

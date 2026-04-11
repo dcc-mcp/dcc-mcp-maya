@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import List, Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 _VALID_FIELD_TYPES = (
     "gravity",
@@ -73,7 +73,7 @@ def create_nucleus(
         if not cmds.isConnected("{}.outTime".format(time_node), "{}.currentTime".format(nucleus_node)):
             cmds.connectAttr("{}.outTime".format(time_node), "{}.currentTime".format(nucleus_node))
 
-        return maya_success(
+        return skill_success(
             "Created nucleus solver '{}'".format(nucleus_node),
             nucleus_node=nucleus_node,
             gravity=gravity,
@@ -82,18 +82,17 @@ def create_nucleus(
             prompt="Use create_ncloth or create_nparticle_emitter to attach solvers.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to create nucleus solver")
+        return skill_exception(exc, message="Failed to create nucleus solver")
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`create_nucleus`."""
     return create_nucleus(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = create_nucleus()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

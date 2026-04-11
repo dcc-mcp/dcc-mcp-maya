@@ -4,7 +4,9 @@
 from __future__ import annotations
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success, validate_node_exists
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
+
+from dcc_mcp_maya.api import validate_node_exists
 
 # Import built-in modules
 
@@ -33,7 +35,7 @@ def get_bounding_box(object_name: str) -> dict:
         bb_max = [bb[3], bb[4], bb[5]]
         center = [(bb[0] + bb[3]) / 2.0, (bb[1] + bb[4]) / 2.0, (bb[2] + bb[5]) / 2.0]
         size = [bb[3] - bb[0], bb[4] - bb[1], bb[5] - bb[2]]
-        return maya_success(
+        return skill_success(
             "Bounding box of '{}'".format(object_name),
             object_name=object_name,
             min=bb_min,
@@ -43,18 +45,17 @@ def get_bounding_box(object_name: str) -> dict:
             prompt="Check the result with list_scene or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to get bounding box of '{}'".format(object_name))
+        return skill_exception(exc, message="Failed to get bounding box of '{}'".format(object_name))
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`get_bounding_box`."""
     return get_bounding_box(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = get_bounding_box()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def set_joint_limit(
@@ -45,21 +45,21 @@ def set_joint_limit(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(joint_name):
-            return maya_error(
+            return skill_error(
                 "Joint not found: {}".format(joint_name),
                 "'{}' does not exist in the scene".format(joint_name),
             )
 
         node_type = cmds.objectType(joint_name)
         if node_type != "joint":
-            return maya_error(
+            return skill_error(
                 "Not a joint: {}".format(joint_name),
                 "'{}' is of type '{}', expected 'joint'".format(joint_name, node_type),
             )
 
         axis_lower = axis.lower()
         if axis_lower not in _VALID_AXES:
-            return maya_error(
+            return skill_error(
                 "Invalid axis: {}".format(axis),
                 "axis must be one of {}".format(_VALID_AXES),
             )
@@ -82,7 +82,7 @@ def set_joint_limit(
         actual_min = cmds.getAttr("{}.{}".format(joint_name, min_attr))
         actual_max = cmds.getAttr("{}.{}".format(joint_name, max_attr))
 
-        return maya_success(
+        return skill_success(
             "Set rotation limit on '{}.{}': [{}, {}]".format(joint_name, axis_lower, actual_min, actual_max),
             joint_name=joint_name,
             axis=axis_lower,
@@ -92,18 +92,17 @@ def set_joint_limit(
             prompt="Check the result with list_rigging or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to set joint limit on {}".format(joint_name))
+        return skill_exception(exc, message="Failed to set joint limit on {}".format(joint_name))
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`set_joint_limit`."""
     return set_joint_limit(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = set_joint_limit()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

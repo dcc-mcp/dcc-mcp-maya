@@ -11,7 +11,7 @@ from __future__ import annotations
 from typing import Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_error, skill_exception, skill_success
 
 
 def connect_attr(
@@ -37,29 +37,29 @@ def connect_attr(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(source_attr):
-            return maya_error(
+            return skill_error(
                 "Source attribute not found: {}".format(source_attr),
                 "'{}' does not exist".format(source_attr),
             )
 
         if not cmds.objExists(dest_attr):
-            return maya_error(
+            return skill_error(
                 "Destination attribute not found: {}".format(dest_attr),
                 "'{}' does not exist".format(dest_attr),
             )
 
         cmds.connectAttr(source_attr, dest_attr, force=force)
 
-        return maya_success(
+        return skill_success(
             "Connected {} -> {}".format(source_attr, dest_attr),
             source_attr=source_attr,
             dest_attr=dest_attr,
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_error(
+        return skill_error(
             "Failed to connect {} -> {}".format(source_attr, dest_attr),
             str(exc),
         )
@@ -85,36 +85,36 @@ def disconnect_attr(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(source_attr):
-            return maya_error(
+            return skill_error(
                 "Source attribute not found: {}".format(source_attr),
                 "'{}' does not exist".format(source_attr),
             )
 
         if not cmds.objExists(dest_attr):
-            return maya_error(
+            return skill_error(
                 "Destination attribute not found: {}".format(dest_attr),
                 "'{}' does not exist".format(dest_attr),
             )
 
         # Check if actually connected before attempting disconnect
         if not cmds.isConnected(source_attr, dest_attr):
-            return maya_error(
+            return skill_error(
                 "Attributes not connected: {} -> {}".format(source_attr, dest_attr),
                 "No connection exists between these attributes",
             )
 
         cmds.disconnectAttr(source_attr, dest_attr)
 
-        return maya_success(
+        return skill_success(
             "Disconnected {} -x-> {}".format(source_attr, dest_attr),
             source_attr=source_attr,
             dest_attr=dest_attr,
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_error(
+        return skill_error(
             "Failed to disconnect {} -> {}".format(source_attr, dest_attr),
             str(exc),
         )
@@ -145,14 +145,14 @@ def list_connections(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return maya_error(
+            return skill_error(
                 "Object not found: {}".format(object_name),
                 "'{}' does not exist in the scene".format(object_name),
             )
 
         query_target = "{}.{}".format(object_name, attribute) if attribute else object_name
         if attribute and not cmds.objExists(query_target):
-            return maya_error(
+            return skill_error(
                 "Attribute not found: {}".format(query_target),
                 "The attribute '{}' does not exist on '{}'".format(attribute, object_name),
             )
@@ -175,7 +175,7 @@ def list_connections(
         for a, b in zip(it, it):
             pairs.append({"from": a, "to": b})
 
-        return maya_success(
+        return skill_success(
             "Found {} connection(s) on '{}'".format(len(pairs), query_target),
             object_name=object_name,
             attribute=attribute,
@@ -184,9 +184,9 @@ def list_connections(
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to list connections on {}".format(object_name))
+        return skill_exception(exc, message="Failed to list connections on {}".format(object_name))
 
 
 def get_dag_path(
@@ -209,7 +209,7 @@ def get_dag_path(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return maya_error(
+            return skill_error(
                 "Object not found: {}".format(object_name),
                 "'{}' does not exist in the scene".format(object_name),
             )
@@ -217,7 +217,7 @@ def get_dag_path(
         # ls -long returns full DAG paths
         full_paths = cmds.ls(object_name, long=True)
         if not full_paths:
-            return maya_error(
+            return skill_error(
                 "Could not resolve DAG path for: {}".format(object_name),
                 "cmds.ls returned empty list",
             )
@@ -226,7 +226,7 @@ def get_dag_path(
         node_type = cmds.objectType(object_name)
         short_name = dag_path.split("|")[-1]
 
-        return maya_success(
+        return skill_success(
             "DAG path for '{}': {}".format(object_name, dag_path),
             dag_path=dag_path,
             short_name=short_name,
@@ -235,9 +235,9 @@ def get_dag_path(
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to get DAG path for {}".format(object_name))
+        return skill_exception(exc, message="Failed to get DAG path for {}".format(object_name))
 
 
 def smooth_mesh(
@@ -272,19 +272,19 @@ def smooth_mesh(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return maya_error(
+            return skill_error(
                 "Object not found: {}".format(object_name),
                 "'{}' does not exist in the scene".format(object_name),
             )
 
         if method not in _VALID_METHODS:
-            return maya_error(
+            return skill_error(
                 "Invalid method: {}".format(method),
                 "method must be one of {}".format(_VALID_METHODS),
             )
 
         if divisions < 0:
-            return maya_error(
+            return skill_error(
                 "Invalid divisions: {}".format(divisions),
                 "divisions must be >= 0",
             )
@@ -295,7 +295,7 @@ def smooth_mesh(
             target = shapes[0] if shapes else object_name
             cmds.setAttr("{}.displaySmoothMesh".format(target), 2)  # 2 = smooth + cage
             cmds.setAttr("{}.smoothLevel".format(target), divisions)
-            return maya_success(
+            return skill_success(
                 "Enabled smooth mesh preview on '{}' (level {})".format(object_name, divisions),
                 object_name=object_name,
                 divisions=divisions,
@@ -306,7 +306,7 @@ def smooth_mesh(
         # method == "subdivide"
         result = cmds.polySmooth(object_name, divisions=divisions)
         node_name = result[0] if result else "polySmoothFace1"
-        return maya_success(
+        return skill_success(
             "Subdivided '{}' with {} iteration(s)".format(object_name, divisions),
             object_name=object_name,
             divisions=divisions,
@@ -315,9 +315,9 @@ def smooth_mesh(
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to smooth mesh {}".format(object_name))
+        return skill_exception(exc, message="Failed to smooth mesh {}".format(object_name))
 
 
 def list_history(
@@ -344,7 +344,7 @@ def list_history(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return maya_error(
+            return skill_error(
                 "Object not found: {}".format(object_name),
                 "'{}' does not exist in the scene".format(object_name),
             )
@@ -357,7 +357,7 @@ def list_history(
 
         history = [{"name": node, "type": cmds.objectType(node)} for node in history_nodes if node != object_name]
 
-        return maya_success(
+        return skill_success(
             "Found {} history node(s) for '{}'".format(len(history), object_name),
             object_name=object_name,
             history=history,
@@ -366,9 +366,9 @@ def list_history(
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to list history for {}".format(object_name))
+        return skill_exception(exc, message="Failed to list history for {}".format(object_name))
 
 
 def delete_history(
@@ -391,22 +391,22 @@ def delete_history(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return maya_error(
+            return skill_error(
                 "Object not found: {}".format(object_name),
                 "'{}' does not exist in the scene".format(object_name),
             )
 
         cmds.delete(object_name, constructionHistory=True)
 
-        return maya_success(
+        return skill_success(
             "Deleted construction history on '{}'".format(object_name),
             object_name=object_name,
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to delete history for {}".format(object_name))
+        return skill_exception(exc, message="Failed to delete history for {}".format(object_name))
 
 
 def apply_symmetry(
@@ -438,14 +438,14 @@ def apply_symmetry(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return maya_error(
+            return skill_error(
                 "Object not found: {}".format(object_name),
                 "'{}' does not exist in the scene".format(object_name),
             )
 
         axis_lower = axis.lower()
         if axis_lower not in _VALID_AXES:
-            return maya_error(
+            return skill_error(
                 "Invalid axis: {}".format(axis),
                 "axis must be one of {}".format(_VALID_AXES),
             )
@@ -461,7 +461,7 @@ def apply_symmetry(
                 about=space,
             )
 
-        return maya_success(
+        return skill_success(
             "Applied {} symmetry on '{}' ({} space)".format(
                 axis_lower, object_name, "world" if world_space else "object"
             ),
@@ -471,9 +471,9 @@ def apply_symmetry(
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to apply symmetry on {}".format(object_name))
+        return skill_exception(exc, message="Failed to apply symmetry on {}".format(object_name))
 
 
 def transfer_attributes(
@@ -514,19 +514,19 @@ def transfer_attributes(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(source):
-            return maya_error(
+            return skill_error(
                 "Source not found: {}".format(source),
                 "'{}' does not exist in the scene".format(source),
             )
 
         if not cmds.objExists(target):
-            return maya_error(
+            return skill_error(
                 "Target not found: {}".format(target),
                 "'{}' does not exist in the scene".format(target),
             )
 
         if sample_space not in _VALID_SPACES:
-            return maya_error(
+            return skill_error(
                 "Invalid sample_space: {}".format(sample_space),
                 "sample_space must be one of {} (0=World, 1=Local, 4=UV, 5=Component)".format(_VALID_SPACES),
             )
@@ -542,7 +542,7 @@ def transfer_attributes(
         )
         node_name = result[0] if result else "transferAttributes1"
 
-        return maya_success(
+        return skill_success(
             "Transferred attributes from '{}' to '{}'".format(source, target),
             source=source,
             target=target,
@@ -555,6 +555,6 @@ def transfer_attributes(
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_error("Failed to transfer attributes from '{}' to '{}'".format(source, target), str(exc))
+        return skill_error("Failed to transfer attributes from '{}' to '{}'".format(source, target), str(exc))

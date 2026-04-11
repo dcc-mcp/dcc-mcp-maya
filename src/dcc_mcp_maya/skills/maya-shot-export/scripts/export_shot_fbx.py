@@ -8,7 +8,7 @@ import os
 from typing import List, Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def export_shot_fbx(
@@ -38,7 +38,7 @@ def export_shot_fbx(
         if objects:
             cmds.select(objects, replace=True)
         elif not cmds.ls(selection=True):
-            return maya_error(
+            return skill_error(
                 "Nothing selected",
                 "Provide 'objects' or select nodes in Maya",
             )
@@ -58,7 +58,7 @@ def export_shot_fbx(
         mel.eval("FBXExportBakeComplexEnd -v {};".format(int(ef)))
         mel.eval('FBXExport -f "{}" -s;'.format(file_path.replace("\\", "/")))
 
-        return maya_success(
+        return skill_success(
             "Exported FBX to '{}'".format(file_path),
             prompt="Use import_file or export_shot_alembic for alternative formats.",
             file_path=file_path,
@@ -66,16 +66,16 @@ def export_shot_fbx(
             end_frame=ef,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to export FBX")
+        return skill_exception(exc, message="Failed to export FBX")
 
 
+@skill_entry
 def main(**kwargs):
     return export_shot_fbx(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    print(json.dumps(export_shot_fbx("/tmp/shot_001.fbx")))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

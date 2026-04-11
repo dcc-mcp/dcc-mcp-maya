@@ -4,7 +4,9 @@
 from __future__ import annotations
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success, validate_node_exists
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
+
+from dcc_mcp_maya.api import validate_node_exists
 
 # Import built-in modules
 
@@ -30,7 +32,7 @@ def unfold_uvs(
     """
 
     if iterations < 1 or iterations > 100:
-        return maya_error(
+        return skill_error(
             "Invalid iterations: {}".format(iterations),
             "iterations must be between 1 and 100",
         )
@@ -55,7 +57,7 @@ def unfold_uvs(
         if optimize_scale:
             cmds.u3dOptimize(object_name, iterations=1, power=1, resultScale=1)
 
-        return maya_success(
+        return skill_success(
             "Unfolded UVs on '{}' ({} iteration(s))".format(object_name, iterations),
             object_name=object_name,
             iterations=iterations,
@@ -63,18 +65,17 @@ def unfold_uvs(
             prompt="Use export_uv_snapshot to preview or layout_uvs to arrange.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to unfold UVs on '{}'".format(object_name))
+        return skill_exception(exc, message="Failed to unfold UVs on '{}'".format(object_name))
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`unfold_uvs`."""
     return unfold_uvs(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = unfold_uvs()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

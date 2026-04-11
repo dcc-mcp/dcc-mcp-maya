@@ -5,7 +5,9 @@ from __future__ import annotations
 
 # Import built-in modules
 # Import local modules
-from dcc_mcp_maya.api import batch_validate_nodes, maya_error, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_success
+
+from dcc_mcp_maya.api import batch_validate_nodes
 
 
 def connect_attr(
@@ -36,28 +38,27 @@ def connect_attr(
 
         cmds.connectAttr(source_attr, dest_attr, force=force)
 
-        return maya_success(
+        return skill_success(
             "Connected {} -> {}".format(source_attr, dest_attr),
             source_attr=source_attr,
             dest_attr=dest_attr,
             prompt="Check the result with list_node_graph or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_error(
+        return skill_error(
             "Failed to connect {} -> {}".format(source_attr, dest_attr),
             str(exc),
         )
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`connect_attr`."""
     return connect_attr(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = connect_attr()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

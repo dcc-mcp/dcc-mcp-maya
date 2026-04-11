@@ -10,7 +10,7 @@ import tempfile
 from typing import Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def playblast(
@@ -71,7 +71,7 @@ def playblast(
                 break
 
         if img_path is None:
-            return maya_error(
+            return skill_error(
                 "Playblast file not found",
                 "Could not locate output PNG from playblast",
             )
@@ -82,7 +82,7 @@ def playblast(
 
         img_b64 = base64.b64encode(img_bytes).decode("ascii")
 
-        return maya_success(
+        return skill_success(
             "Viewport captured at frame {} ({}×{})".format(int(frame), width, height),
             prompt="Image captured. Use render_frame for final quality render.",
             image=img_b64,
@@ -91,18 +91,17 @@ def playblast(
             height=height,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Playblast failed")
+        return skill_exception(exc, message="Playblast failed")
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`playblast`."""
     return playblast(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = playblast(width=1280, height=720)
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

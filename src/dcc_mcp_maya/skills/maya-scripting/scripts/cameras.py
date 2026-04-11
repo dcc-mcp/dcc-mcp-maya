@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import List, Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_error, skill_exception, skill_success
 
 
 def create_camera(
@@ -61,7 +61,7 @@ def create_camera(
                 type="double3",
             )
 
-        return maya_success(
+        return skill_success(
             "Created camera '{}'".format(transform),
             camera_name=transform,
             camera_shape=shape,
@@ -69,9 +69,9 @@ def create_camera(
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to create camera")
+        return skill_exception(exc, message="Failed to create camera")
 
 
 def set_camera_attribute(
@@ -98,7 +98,7 @@ def set_camera_attribute(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(camera_name):
-            return maya_error("Camera not found: {}".format(camera_name))
+            return skill_error("Camera not found: {}".format(camera_name))
 
         shapes = cmds.listRelatives(camera_name, shapes=True) or []
         shape = shapes[0] if shapes else camera_name
@@ -107,7 +107,7 @@ def set_camera_attribute(
         if not cmds.objExists(full_attr):
             full_attr = "{}.{}".format(camera_name, attribute)
         if not cmds.objExists(full_attr):
-            return maya_error("Attribute '{}' not found on camera '{}'".format(attribute, camera_name))
+            return skill_error("Attribute '{}' not found on camera '{}'".format(attribute, camera_name))
 
         if isinstance(value, str):
             cmds.setAttr(full_attr, value, type="string")
@@ -116,7 +116,7 @@ def set_camera_attribute(
         else:
             cmds.setAttr(full_attr, value)
 
-        return maya_success(
+        return skill_success(
             "Set {}.{} = {}".format(camera_name, attribute, value),
             camera_name=camera_name,
             attribute=attribute,
@@ -124,9 +124,9 @@ def set_camera_attribute(
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to set camera attribute")
+        return skill_exception(exc, message="Failed to set camera attribute")
 
 
 def get_camera_info(camera_name: str) -> dict:
@@ -144,7 +144,7 @@ def get_camera_info(camera_name: str) -> dict:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(camera_name):
-            return maya_error("Camera not found: {}".format(camera_name))
+            return skill_error("Camera not found: {}".format(camera_name))
 
         shapes = cmds.listRelatives(camera_name, shapes=True) or []
         if not shapes:
@@ -154,7 +154,7 @@ def get_camera_info(camera_name: str) -> dict:
                 transform_list = cmds.listRelatives(camera_name, parent=True) or [camera_name]
                 transform = transform_list[0]
             else:
-                return maya_error("'{}' is not a camera".format(camera_name))
+                return skill_error("'{}' is not a camera".format(camera_name))
         else:
             shape = shapes[0]
             transform = camera_name
@@ -177,15 +177,15 @@ def get_camera_info(camera_name: str) -> dict:
             except Exception:
                 info[axis_attr] = [0.0, 0.0, 0.0]
 
-        return maya_success(
+        return skill_success(
             "Camera info for '{}'".format(transform),
             **info,
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to get camera info")
+        return skill_exception(exc, message="Failed to get camera info")
 
 
 def list_all_cameras(include_default: bool = True) -> dict:
@@ -219,13 +219,13 @@ def list_all_cameras(include_default: bool = True) -> dict:
                     entry[attr] = None
             results.append(entry)
 
-        return maya_success(
+        return skill_success(
             "Found {} camera(s)".format(len(results)),
             cameras=results,
             count=len(results),
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to list cameras")
+        return skill_exception(exc, message="Failed to list cameras")

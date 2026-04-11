@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def add_ocean_wake(
@@ -30,7 +30,7 @@ def add_ocean_wake(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(shader):
-            return maya_error(
+            return skill_error(
                 "Node not found",
                 "oceanShader '{}' does not exist".format(shader),
             )
@@ -41,7 +41,7 @@ def add_ocean_wake(
         if wake_object and cmds.objExists(wake_object):
             cmds.parentConstraint(wake_object, locator_transform, maintainOffset=False)
 
-        return maya_success(
+        return skill_success(
             "Ocean wake added",
             prompt=(
                 "Wake locator '{}' created. Animate the locator to simulate a moving vessel.".format(locator_transform)
@@ -51,17 +51,16 @@ def add_ocean_wake(
             wake_size=wake_size,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to add ocean wake")
+        return skill_exception(exc, message="Failed to add ocean wake")
 
 
+@skill_entry
 def main(**kwargs):
     return add_ocean_wake(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = add_ocean_wake("oceanShader1")
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)
