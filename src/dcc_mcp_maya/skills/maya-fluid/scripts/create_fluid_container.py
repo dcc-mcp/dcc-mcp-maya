@@ -1,0 +1,81 @@
+"""Create a 3D fluid container in the Maya scene."""
+
+# Import future modules
+from __future__ import annotations
+
+# Import built-in modules
+import logging
+from typing import Optional
+
+logger = logging.getLogger(__name__)
+
+
+def create_fluid_container(
+    name: Optional[str] = None,
+    size_x: float = 10.0,
+    size_y: float = 10.0,
+    size_z: float = 10.0,
+    resolution: int = 10,
+) -> dict:
+    """Create a Maya 3D fluid container (fluidShape).
+
+    Args:
+        name: Optional name for the fluid container transform.
+        size_x: X dimension of the fluid grid. Default ``10.0``.
+        size_y: Y dimension of the fluid grid. Default ``10.0``.
+        size_z: Z dimension of the fluid grid. Default ``10.0``.
+        resolution: Voxel resolution along each axis. Default ``10``.
+
+    Returns:
+        ActionResultModel dict with ``context.fluid_transform`` and
+        ``context.fluid_shape``.
+    """
+    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
+
+    try:
+        import maya.cmds as cmds  # noqa: PLC0415
+
+        cmds.create3dFluid(
+            resolutionW=resolution,
+            resolutionH=resolution,
+            resolutionD=resolution,
+            sizeX=size_x,
+            sizeY=size_y,
+            sizeZ=size_z,
+        )
+
+        fluid_shapes = cmds.ls(type="fluidShape") or []
+        fluid_shape = fluid_shapes[-1] if fluid_shapes else ""
+        fluid_transform = ""
+        if fluid_shape:
+            parents = cmds.listRelatives(fluid_shape, parent=True, fullPath=False) or [fluid_shape]
+            fluid_transform = parents[0]
+            if name:
+                fluid_transform = cmds.rename(fluid_transform, name)
+                shapes = cmds.listRelatives(fluid_transform, shapes=True, fullPath=False) or []
+                fluid_shape = shapes[0] if shapes else fluid_shape
+
+        return success_result(
+            "Fluid container created",
+            prompt=(
+                "Fluid container '{}' ready. Use set_fluid_attribute to configure "
+                "density/velocity, then run simulation.".format(fluid_transform)
+            ),
+            fluid_transform=fluid_transform,
+            fluid_shape=fluid_shape,
+        ).to_dict()
+    except ImportError:
+        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+    except Exception as exc:
+        logger.exception("create_fluid_container failed")
+        return error_result("Failed to create fluid container", str(exc)).to_dict()
+
+
+def main(**kwargs):
+    return create_fluid_container(**kwargs)
+
+
+if __name__ == "__main__":
+    import json
+    result = create_fluid_container()
+    print(json.dumps(result))
