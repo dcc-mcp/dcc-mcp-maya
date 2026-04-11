@@ -18,7 +18,6 @@ CI::
 from __future__ import annotations
 
 # Import built-in modules
-import sys
 from pathlib import Path
 
 # Import third-party modules
@@ -100,7 +99,7 @@ class TestDisplayLayerE2E:
         result = mod.list_display_layers()
 
         assert result["success"] is True
-        names = [l["name"] for l in result["context"]["layers"]]
+        names = [layer["name"] for layer in result["context"]["layers"]]
         assert "defaultLayer" in names
 
     def test_delete_default_layer_rejected(self):
