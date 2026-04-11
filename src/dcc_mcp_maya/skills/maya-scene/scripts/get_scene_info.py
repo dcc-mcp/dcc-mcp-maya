@@ -3,10 +3,8 @@
 # Import future modules
 from __future__ import annotations
 
-# Import built-in modules
-import logging
-
-logger = logging.getLogger(__name__)
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 
 def get_scene_info(include_transforms: bool = True) -> dict:
@@ -24,8 +22,6 @@ def get_scene_info(include_transforms: bool = True) -> dict:
         ActionResultModel dict with ``context.nodes`` (list of dicts) and
         ``context.count``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
@@ -46,16 +42,15 @@ def get_scene_info(include_transforms: bool = True) -> dict:
                 node["scale"] = list(cmds.getAttr("{}.scale".format(long_name))[0])
             nodes.append(node)
 
-        return success_result(
+        return maya_success(
             "Scene info: {} transform node(s)".format(len(nodes)),
             nodes=nodes,
             count=len(nodes),
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("get_scene_info failed")
-        return error_result("Failed to get scene info", str(exc)).to_dict()
+        return maya_from_exception(exc, "Failed to get scene info")
 
 
 def main(**kwargs) -> dict:
