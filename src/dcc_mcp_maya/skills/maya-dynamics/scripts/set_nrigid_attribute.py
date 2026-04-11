@@ -6,7 +6,7 @@ from __future__ import annotations
 # Import built-in modules
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_success
+from dcc_mcp_maya.api import maya_error, maya_success, validate_node_exists, validate_node_type
 
 _VALID_FIELD_TYPES = (
     "gravity",
@@ -49,21 +49,17 @@ def set_nrigid_attribute(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(nrigid_node):
-            return maya_error(
-                "nRigid node not found: {}".format(nrigid_node),
-                "'{}' does not exist in the scene".format(nrigid_node),
-            )
+        err = validate_node_exists(cmds, nrigid_node)
+        if err:
+            return err
 
-        node_type = cmds.objectType(nrigid_node)
-        if node_type != "nRigid":
-            return maya_error(
-                "Not an nRigid node: {}".format(nrigid_node),
-                "Expected node type 'nRigid', got '{}'".format(node_type),
-            )
+        err = validate_node_type(cmds, nrigid_node, "nRigid")
+        if err:
+            return err
 
         attr_path = "{}.{}".format(nrigid_node, attribute)
-        if not cmds.objExists(attr_path):
+        err = validate_node_exists(cmds, attr_path)
+        if err:
             return maya_error(
                 "Attribute not found: {}".format(attr_path),
                 "'{}' does not have attribute '{}'".format(nrigid_node, attribute),
