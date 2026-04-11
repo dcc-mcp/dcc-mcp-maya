@@ -241,8 +241,11 @@ class TestCreateOcean:
             result = mod.create_ocean(name="myOcean", subdivisions_x=100, scale=200.0)
 
         assert result["success"] is True
-        call_kwargs = mc.polyPlane.call_args
-        assert call_kwargs.kwargs.get("subdivisionsX") == 100 or 100 in call_kwargs.args
+        call_args = mc.polyPlane.call_args
+        # Python 3.7 compat: call_args[1] is kwargs dict, call_args[0] is args tuple
+        call_kw = call_args[1] if call_args[1] else {}
+        call_pos = call_args[0] if call_args[0] else ()
+        assert call_kw.get("subdivisionsX") == 100 or 100 in call_pos
 
     def test_create_exception(self):
         mock_maya, mc, _ = _make_mock_maya()

@@ -889,11 +889,11 @@ class TestPipelineEdgeCases:
         assert result["success"] is True
 
     def test_get_asset_metadata_node_missing(self):
-        """get_asset_metadata uses param 'node', not 'node_name'."""
+        """get_asset_metadata uses param 'node_name'."""
         mock_cmds, _ = _mock_maya()
         mock_cmds.objExists.return_value = False
         mod = load_skill_script("maya-pipeline", "get_asset_metadata")
-        result = mod.get_asset_metadata(node="missing")
+        result = mod.get_asset_metadata(node_name="missing")
         assert result["success"] is False
 
     def test_get_asset_metadata_success(self):
@@ -902,7 +902,7 @@ class TestPipelineEdgeCases:
         mock_cmds.attributeQuery.return_value = True
         mock_cmds.getAttr.side_effect = ["TestAsset", "default", "1.0.0", "prop"]
         mod = load_skill_script("maya-pipeline", "get_asset_metadata")
-        result = mod.get_asset_metadata(node="pSphere1")
+        result = mod.get_asset_metadata(node_name="pSphere1")
         assert result["success"] is True
 
     def test_publish_asset_success(self, tmp_path):
