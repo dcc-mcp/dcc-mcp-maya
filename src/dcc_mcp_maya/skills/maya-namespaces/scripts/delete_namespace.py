@@ -9,7 +9,7 @@ from __future__ import annotations
 _PROTECTED_NS = frozenset({"UI", "shared", ":"})
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success  # noqa: E402
 
 
 def delete_namespace(
@@ -38,16 +38,16 @@ def delete_namespace(
         ns = namespace.strip(":")
 
         if not ns:
-            return maya_error("Cannot delete root namespace", "namespace must not be empty or ':'")
+            return skill_error("Cannot delete root namespace", "namespace must not be empty or ':'")
 
         if ns in _PROTECTED_NS:
-            return maya_error(
+            return skill_error(
                 "Cannot delete protected namespace: {}".format(ns),
                 "Protected namespaces: {}".format(", ".join(sorted(_PROTECTED_NS))),
             )
 
         if not cmds.namespace(exists=":{}".format(ns)):
-            return maya_error(
+            return skill_error(
                 "Namespace does not exist: {}".format(ns),
                 "Nothing to delete",
             )
@@ -57,25 +57,24 @@ def delete_namespace(
         else:
             cmds.namespace(removeNamespace=":{}".format(ns))
 
-        return maya_success(
+        return skill_success(
             "Deleted namespace '{}'".format(ns),
             namespace=ns,
             merged_with_root=merge_with_root,
             prompt="Check the result with list_namespaces or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to delete namespace '{}'".format(namespace))
+        return skill_exception(exc, message="Failed to delete namespace '{}'".format(namespace))
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`delete_namespace`."""
     return delete_namespace(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = delete_namespace()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

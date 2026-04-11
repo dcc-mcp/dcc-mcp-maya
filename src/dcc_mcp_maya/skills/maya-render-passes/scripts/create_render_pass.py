@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 _PASS_TYPES = {
     "beauty": "renderPassBeauty",
@@ -60,7 +60,7 @@ def create_render_pass(
                 pass_contribution = _PASS_TYPES.get(pass_type, "renderPassBeauty")
                 cmds.setAttr("{}.passContribution".format(pass_node), pass_contribution, type="string")
 
-        return maya_success(
+        return skill_success(
             "Created render pass '{}' (type={}, renderer={})".format(pass_node, pass_type, renderer),
             prompt="Use enable_render_pass to activate and set_render_pass_output to configure the output path.",
             pass_node=pass_node,
@@ -68,17 +68,16 @@ def create_render_pass(
             renderer=renderer,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to create render pass '{}'".format(pass_type))
+        return skill_exception(exc, message="Failed to create render pass '{}'".format(pass_type))
 
 
+@skill_entry
 def main(**kwargs):
     return create_render_pass(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = create_render_pass(pass_type="diffuse", name="diffuse_pass")
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def apply_gamma_correction(
@@ -36,14 +36,14 @@ def apply_gamma_correction(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(texture_node):
-            return maya_error(
+            return skill_error(
                 "Texture node not found: {}".format(texture_node),
                 "'{}' does not exist in the scene".format(texture_node),
             )
 
         node_type = cmds.objectType(texture_node)
         if node_type != "file":
-            return maya_error(
+            return skill_error(
                 "Expected a 'file' texture node, got '{}'".format(node_type),
                 "Provide the file texture node name (not the shading group).",
             )
@@ -61,7 +61,7 @@ def apply_gamma_correction(
             force=True,
         )
 
-        return maya_success(
+        return skill_success(
             "Applied gamma {} to '{}'".format(gamma, texture_node),
             prompt="Connect {}.outValue to a material's color attribute.".format(gamma_node),
             gamma_node=gamma_node,
@@ -69,17 +69,16 @@ def apply_gamma_correction(
             gamma=gamma,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to apply gamma correction")
+        return skill_exception(exc, message="Failed to apply gamma correction")
 
 
+@skill_entry
 def main(**kwargs):
     return apply_gamma_correction(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = apply_gamma_correction("file1", gamma=2.2)
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import List
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def set_display_layer(layer_name: str, objects: List[str]) -> dict:
@@ -24,7 +24,7 @@ def set_display_layer(layer_name: str, objects: List[str]) -> dict:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(layer_name):
-            return maya_error(
+            return skill_error(
                 "Display layer not found",
                 "Layer '{}' does not exist in the scene".format(layer_name),
             )
@@ -42,7 +42,7 @@ def set_display_layer(layer_name: str, objects: List[str]) -> dict:
         if missing:
             msg += "; {} not found: {}".format(len(missing), missing)
 
-        return maya_success(
+        return skill_success(
             msg,
             prompt="Use list_display_layers to verify the layer membership.",
             layer_name=layer_name,
@@ -50,18 +50,17 @@ def set_display_layer(layer_name: str, objects: List[str]) -> dict:
             missing=missing,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to assign objects to layer '{}'".format(layer_name))
+        return skill_exception(exc, message="Failed to assign objects to layer '{}'".format(layer_name))
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`set_display_layer`."""
     return set_display_layer(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = set_display_layer("defaultLayer", ["pSphere1"])
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

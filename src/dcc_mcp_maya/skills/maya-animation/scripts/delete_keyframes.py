@@ -7,7 +7,9 @@ from __future__ import annotations
 from typing import List, Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success, validate_node_exists
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
+
+from dcc_mcp_maya.api import validate_node_exists
 
 
 def delete_keyframes(
@@ -48,7 +50,7 @@ def delete_keyframes(
             kwargs["time"] = (end_frame, end_frame)
 
         deleted = cmds.cutKey(object_name, clear=True, **kwargs)
-        return maya_success(
+        return skill_success(
             "Deleted {} keyframe(s) from {}".format(deleted, object_name),
             object_name=object_name,
             deleted_count=deleted,
@@ -58,18 +60,17 @@ def delete_keyframes(
             prompt="Use set_keyframe to add new keys, or get_keyframes to verify the result.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to delete keyframes from {}".format(object_name))
+        return skill_exception(exc, message="Failed to delete keyframes from {}".format(object_name))
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`delete_keyframes`."""
     return delete_keyframes(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = delete_keyframes()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

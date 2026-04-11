@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import List, Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def sculpt_deformer(
@@ -35,13 +35,13 @@ def sculpt_deformer(
     mode_map = {"stretch": 0, "project": 1, "flip": 2}
     mode_lower = mode.lower()
     if mode_lower not in mode_map:
-        return maya_error(
+        return skill_error(
             "Invalid mode: {}".format(mode),
             "Valid modes: {}".format(", ".join(mode_map.keys())),
         )
 
     if not objects:
-        return maya_error(
+        return skill_error(
             "No objects specified",
             "Provide at least one mesh name in 'objects'",
         )
@@ -51,7 +51,7 @@ def sculpt_deformer(
 
         missing = [o for o in objects if not cmds.objExists(o)]
         if missing:
-            return maya_error(
+            return skill_error(
                 "Object(s) not found: {}".format(", ".join(missing)),
                 "Ensure all objects exist in the scene",
             )
@@ -69,7 +69,7 @@ def sculpt_deformer(
         sculpt_sphere = result[1] if result and len(result) > 1 else None
         sculpt_origin = result[2] if result and len(result) > 2 else None
 
-        return maya_success(
+        return skill_success(
             "Created sculpt deformer '{}' (mode='{}') on {} object(s)".format(sculpt_node, mode_lower, len(objects)),
             sculpt_node=sculpt_node,
             sculpt_sphere=sculpt_sphere,
@@ -80,18 +80,17 @@ def sculpt_deformer(
             prompt="Check the result with list_deformers or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to create sculpt deformer")
+        return skill_exception(exc, message="Failed to create sculpt deformer")
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`sculpt_deformer`."""
     return sculpt_deformer(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = sculpt_deformer()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

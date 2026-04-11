@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 # Import built-in modules
 
@@ -43,23 +43,23 @@ def list_spline_ik_handles() -> dict:
             except Exception:
                 results.append({"name": h, "start_joint": "", "end_effector": "", "curve": ""})
 
-        return maya_success(
+        return skill_success(
             "Found {} spline IK handle(s)".format(len(results)),
             prompt="Use set_spline_ik_twist to configure twist, or add_stretch_to_spline_ik for stretch.",
             handles=results,
             count=len(results),
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to list spline IK handles")
+        return skill_exception(exc, message="Failed to list spline IK handles")
 
 
+@skill_entry
 def main(**kwargs):
     return list_spline_ik_handles(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    print(json.dumps(list_spline_ik_handles(), indent=2))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

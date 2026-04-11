@@ -4,13 +4,9 @@
 from __future__ import annotations
 
 # Import local modules
-from dcc_mcp_maya.api import (
-    maya_error,
-    maya_from_exception,
-    maya_success,
-    validate_node_exists,
-    validate_node_type,
-)
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
+
+from dcc_mcp_maya.api import validate_node_exists, validate_node_type
 
 
 def delete_display_layer(
@@ -33,7 +29,7 @@ def delete_display_layer(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if layer_name == "defaultLayer":
-            return maya_error(
+            return skill_error(
                 "Cannot delete defaultLayer",
                 "The built-in 'defaultLayer' cannot be deleted",
             )
@@ -55,7 +51,7 @@ def delete_display_layer(
 
         cmds.delete(layer_name)
 
-        return maya_success(
+        return skill_success(
             "Deleted display layer '{}'{}".format(
                 layer_name,
                 " and {} object(s)".format(len(deleted_objects)) if deleted_objects else "",
@@ -65,18 +61,17 @@ def delete_display_layer(
             prompt="Use list_display_layers to confirm deletion.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to delete display layer '{}'".format(layer_name))
+        return skill_exception(exc, message="Failed to delete display layer '{}'".format(layer_name))
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`delete_display_layer`."""
     return delete_display_layer(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = delete_display_layer()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

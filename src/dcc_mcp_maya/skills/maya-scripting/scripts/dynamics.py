@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import List, Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_error, skill_exception, skill_success
 
 _VALID_FIELD_TYPES = (
     "gravity",
@@ -74,7 +74,7 @@ def create_nucleus(
         if not cmds.isConnected("{}.outTime".format(time_node), "{}.currentTime".format(nucleus_node)):
             cmds.connectAttr("{}.outTime".format(time_node), "{}.currentTime".format(nucleus_node))
 
-        return maya_success(
+        return skill_success(
             "Created nucleus solver '{}'".format(nucleus_node),
             nucleus_node=nucleus_node,
             gravity=gravity,
@@ -83,9 +83,9 @@ def create_nucleus(
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to create nucleus solver")
+        return skill_exception(exc, message="Failed to create nucleus solver")
 
 
 def set_nucleus_attribute(
@@ -111,21 +111,21 @@ def set_nucleus_attribute(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(nucleus):
-            return maya_error(
+            return skill_error(
                 "Nucleus node not found: {}".format(nucleus),
                 "'{}' does not exist in the scene".format(nucleus),
             )
 
         node_type = cmds.objectType(nucleus)
         if node_type != "nucleus":
-            return maya_error(
+            return skill_error(
                 "Not a nucleus node: {}".format(nucleus),
                 "Expected node type 'nucleus', got '{}'".format(node_type),
             )
 
         plug = "{}.{}".format(nucleus, attribute)
         if not cmds.objExists(plug):
-            return maya_error(
+            return skill_error(
                 "Attribute not found: {}".format(plug),
                 "'{}' does not have attribute '{}'".format(nucleus, attribute),
             )
@@ -137,7 +137,7 @@ def set_nucleus_attribute(
         else:
             cmds.setAttr(plug, value)
 
-        return maya_success(
+        return skill_success(
             "Set '{}.{}' = {}".format(nucleus, attribute, value),
             nucleus=nucleus,
             attribute=attribute,
@@ -145,9 +145,9 @@ def set_nucleus_attribute(
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to set attribute on nucleus '{}'".format(nucleus))
+        return skill_exception(exc, message="Failed to set attribute on nucleus '{}'".format(nucleus))
 
 
 def create_dynamic_field(
@@ -175,7 +175,7 @@ def create_dynamic_field(
 
     ft = field_type.lower()
     if ft not in _VALID_FIELD_TYPES:
-        return maya_error(
+        return skill_error(
             "Invalid field type: {}".format(field_type),
             "Supported types: {}".format(", ".join(_VALID_FIELD_TYPES)),
         )
@@ -185,7 +185,7 @@ def create_dynamic_field(
 
         create_fn = getattr(cmds, ft, None)
         if create_fn is None:
-            return maya_error(
+            return skill_error(
                 "Field type not available: {}".format(ft),
                 "cmds.{} is not accessible in this Maya version".format(ft),
             )
@@ -207,14 +207,14 @@ def create_dynamic_field(
         if objects:
             missing = [o for o in objects if not cmds.objExists(o)]
             if missing:
-                return maya_error(
+                return skill_error(
                     "Object(s) not found: {}".format(", ".join(missing)),
                     "Ensure all objects exist before connecting the field",
                 )
             cmds.connectDynamic(objects, fields=field_node)
             connected = list(objects)
 
-        return maya_success(
+        return skill_success(
             "Created {} field '{}'".format(ft, field_node),
             field_node=field_node,
             field_type=ft,
@@ -223,9 +223,9 @@ def create_dynamic_field(
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to create dynamic field")
+        return skill_exception(exc, message="Failed to create dynamic field")
 
 
 def connect_field_to_objects(
@@ -249,7 +249,7 @@ def connect_field_to_objects(
     """
 
     if not objects:
-        return maya_error(
+        return skill_error(
             "No objects specified",
             "Provide at least one dynamic object name",
         )
@@ -258,30 +258,30 @@ def connect_field_to_objects(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(field_node):
-            return maya_error(
+            return skill_error(
                 "Field node not found: {}".format(field_node),
                 "'{}' does not exist in the scene".format(field_node),
             )
 
         missing = [o for o in objects if not cmds.objExists(o)]
         if missing:
-            return maya_error(
+            return skill_error(
                 "Object(s) not found: {}".format(", ".join(missing)),
                 "Ensure all objects exist before connecting the field",
             )
 
         cmds.connectDynamic(objects, fields=field_node)
 
-        return maya_success(
+        return skill_success(
             "Connected field '{}' to {} object(s)".format(field_node, len(objects)),
             field_node=field_node,
             connected_objects=list(objects),
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to connect field '{}' to objects".format(field_node))
+        return skill_exception(exc, message="Failed to connect field '{}' to objects".format(field_node))
 
 
 def create_ncloth(
@@ -310,20 +310,20 @@ def create_ncloth(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(mesh):
-            return maya_error(
+            return skill_error(
                 "Mesh not found: {}".format(mesh),
                 "'{}' does not exist in the scene".format(mesh),
             )
 
         mesh_type = cmds.objectType(mesh)
         if mesh_type not in ("transform", "mesh"):
-            return maya_error(
+            return skill_error(
                 "Invalid mesh type: {}".format(mesh_type),
                 "'{}' is not a polygon mesh or transform".format(mesh),
             )
 
         if nucleus and not cmds.objExists(nucleus):
-            return maya_error(
+            return skill_error(
                 "Nucleus node not found: {}".format(nucleus),
                 "'{}' does not exist in the scene".format(nucleus),
             )
@@ -345,7 +345,7 @@ def create_ncloth(
             )
 
         used_nucleus = nucleus or "default"
-        return maya_success(
+        return skill_success(
             "Created nCloth '{}' on mesh '{}'".format(ncloth_node, mesh),
             ncloth_node=ncloth_node,
             mesh=mesh,
@@ -353,9 +353,9 @@ def create_ncloth(
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to create nCloth on '{}'".format(mesh))
+        return skill_exception(exc, message="Failed to create nCloth on '{}'".format(mesh))
 
 
 def create_nrigid(
@@ -384,20 +384,20 @@ def create_nrigid(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(mesh):
-            return maya_error(
+            return skill_error(
                 "Mesh not found: {}".format(mesh),
                 "'{}' does not exist in the scene".format(mesh),
             )
 
         mesh_type = cmds.objectType(mesh)
         if mesh_type not in ("transform", "mesh"):
-            return maya_error(
+            return skill_error(
                 "Invalid mesh type: {}".format(mesh_type),
                 "'{}' is not a polygon mesh or transform".format(mesh),
             )
 
         if nucleus and not cmds.objExists(nucleus):
-            return maya_error(
+            return skill_error(
                 "Nucleus node not found: {}".format(nucleus),
                 "'{}' does not exist in the scene".format(nucleus),
             )
@@ -417,7 +417,7 @@ def create_nrigid(
             )
 
         used_nucleus = nucleus or "default"
-        return maya_success(
+        return skill_success(
             "Created nRigid '{}' on mesh '{}'".format(nrigid_node, mesh),
             nrigid_node=nrigid_node,
             mesh=mesh,
@@ -425,9 +425,9 @@ def create_nrigid(
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to create nRigid on '{}'".format(mesh))
+        return skill_exception(exc, message="Failed to create nRigid on '{}'".format(mesh))
 
 
 def set_ncloth_attribute(
@@ -456,21 +456,21 @@ def set_ncloth_attribute(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(ncloth_node):
-            return maya_error(
+            return skill_error(
                 "nCloth node not found: {}".format(ncloth_node),
                 "'{}' does not exist in the scene".format(ncloth_node),
             )
 
         node_type = cmds.objectType(ncloth_node)
         if node_type != "nCloth":
-            return maya_error(
+            return skill_error(
                 "Not an nCloth node: {}".format(ncloth_node),
                 "Expected node type 'nCloth', got '{}'".format(node_type),
             )
 
         plug = "{}.{}".format(ncloth_node, attribute)
         if not cmds.objExists(plug):
-            return maya_error(
+            return skill_error(
                 "Attribute not found: {}".format(plug),
                 "'{}' does not have attribute '{}'".format(ncloth_node, attribute),
             )
@@ -482,7 +482,7 @@ def set_ncloth_attribute(
         else:
             cmds.setAttr(plug, value)
 
-        return maya_success(
+        return skill_success(
             "Set '{}.{}' = {}".format(ncloth_node, attribute, value),
             ncloth_node=ncloth_node,
             attribute=attribute,
@@ -490,9 +490,9 @@ def set_ncloth_attribute(
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to set attribute on nCloth '{}'".format(ncloth_node))
+        return skill_exception(exc, message="Failed to set attribute on nCloth '{}'".format(ncloth_node))
 
 
 def list_ncloth_nodes() -> dict:
@@ -532,16 +532,16 @@ def list_ncloth_nodes() -> dict:
                 }
             )
 
-        return maya_success(
+        return skill_success(
             "Found {} nCloth node(s) in scene".format(len(nodes)),
             nodes=nodes,
             count=len(nodes),
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to list nCloth nodes")
+        return skill_exception(exc, message="Failed to list nCloth nodes")
 
 
 def set_nrigid_attribute(
@@ -564,7 +564,7 @@ def set_nrigid_attribute(
     """
 
     if not nrigid_node or not attribute:
-        return maya_error(
+        return skill_error(
             "nrigid_node and attribute are required",
             "Provide non-empty nrigid_node and attribute strings",
         )
@@ -573,21 +573,21 @@ def set_nrigid_attribute(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(nrigid_node):
-            return maya_error(
+            return skill_error(
                 "nRigid node not found: {}".format(nrigid_node),
                 "'{}' does not exist in the scene".format(nrigid_node),
             )
 
         node_type = cmds.objectType(nrigid_node)
         if node_type != "nRigid":
-            return maya_error(
+            return skill_error(
                 "Not an nRigid node: {}".format(nrigid_node),
                 "Expected node type 'nRigid', got '{}'".format(node_type),
             )
 
         attr_path = "{}.{}".format(nrigid_node, attribute)
         if not cmds.objExists(attr_path):
-            return maya_error(
+            return skill_error(
                 "Attribute not found: {}".format(attr_path),
                 "'{}' does not have attribute '{}'".format(nrigid_node, attribute),
             )
@@ -599,7 +599,7 @@ def set_nrigid_attribute(
         else:
             cmds.setAttr(attr_path, value)
 
-        return maya_success(
+        return skill_success(
             "Set {}.{} = {}".format(nrigid_node, attribute, value),
             nrigid_node=nrigid_node,
             attribute=attribute,
@@ -607,9 +607,9 @@ def set_nrigid_attribute(
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_error(
+        return skill_error(
             "Failed to set attribute '{}' on '{}'".format(attribute, nrigid_node),
             str(exc),
         )
@@ -649,13 +649,13 @@ def list_nrigid_nodes():
                 }
             )
 
-        return maya_success(
+        return skill_success(
             "Found {} nRigid node(s) in scene".format(len(nodes)),
             nodes=nodes,
             count=len(nodes),
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to list nRigid nodes")
+        return skill_exception(exc, message="Failed to list nRigid nodes")

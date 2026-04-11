@@ -275,7 +275,7 @@ class TestListDisplayLayers:
 
         assert result["success"] is True
         assert result["context"]["count"] == 2
-        layer_names = [l["name"] for l in result["context"]["layers"]]
+        layer_names = [layer["name"] for layer in result["context"]["layers"]]
         assert "defaultLayer" in layer_names
         assert "myLayer" in layer_names
 

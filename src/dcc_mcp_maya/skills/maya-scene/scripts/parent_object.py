@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def parent_object(child: str, parent: Optional[str] = None, world: bool = False) -> dict:
@@ -27,14 +27,14 @@ def parent_object(child: str, parent: Optional[str] = None, world: bool = False)
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(child):
-            return maya_error(
+            return skill_error(
                 "Child not found: {}".format(child),
                 "'{}' does not exist in the scene".format(child),
             )
 
         if world or parent is None:
             cmds.parent(child, world=True)
-            return maya_success(
+            return skill_success(
                 "Parented '{}' to world".format(child),
                 child=child,
                 parent=None,
@@ -42,31 +42,30 @@ def parent_object(child: str, parent: Optional[str] = None, world: bool = False)
             )
 
         if not cmds.objExists(parent):
-            return maya_error(
+            return skill_error(
                 "Parent not found: {}".format(parent),
                 "'{}' does not exist in the scene".format(parent),
             )
 
         cmds.parent(child, parent)
-        return maya_success(
+        return skill_success(
             "Parented '{}' under '{}'".format(child, parent),
             child=child,
             parent=parent,
             prompt="Check the result with list_scene or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to parent '{}'".format(child))
+        return skill_exception(exc, message="Failed to parent '{}'".format(child))
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`parent_object`."""
     return parent_object(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = parent_object()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

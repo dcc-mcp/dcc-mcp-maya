@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 _LIGHT_TYPES = [
     "directionalLight",
@@ -63,24 +63,23 @@ def list_light_rigs() -> dict:
 
             rigs.setdefault(group_key, []).append(light_info)
 
-        return maya_success(
+        return skill_success(
             "Found {} light(s) across {} rig group(s)".format(len(all_lights), len(rigs)),
             prompt="Use set_light_rig_intensity to adjust all lights in a rig group.",
             rigs=rigs,
             total_lights=len(all_lights),
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to list light rigs")
+        return skill_exception(exc, message="Failed to list light rigs")
 
 
+@skill_entry
 def main(**kwargs):
     return list_light_rigs(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = list_light_rigs()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

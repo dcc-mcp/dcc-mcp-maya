@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def bake_cloth_cache(
@@ -30,7 +30,7 @@ def bake_cloth_cache(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(ncloth_shape):
-            return maya_error(
+            return skill_error(
                 "Node not found",
                 "nCloth shape '{}' does not exist".format(ncloth_shape),
             )
@@ -48,7 +48,7 @@ def bake_cloth_cache(
         cmds.select(mesh_transform)
         cmds.mel.eval('doCreateNclothCache 5 {{ "{}" }};'.format(ncloth_shape))
 
-        return maya_success(
+        return skill_success(
             "nCloth cache baked ({}-{})".format(start_frame, end_frame),
             prompt=(
                 "Cloth cache baked for frames {}-{}. Playback is now deterministic without re-simulating.".format(
@@ -60,17 +60,16 @@ def bake_cloth_cache(
             end_frame=end_frame,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to bake cloth cache")
+        return skill_exception(exc, message="Failed to bake cloth cache")
 
 
+@skill_entry
 def main(**kwargs):
     return bake_cloth_cache(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = bake_cloth_cache("nCloth1")
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

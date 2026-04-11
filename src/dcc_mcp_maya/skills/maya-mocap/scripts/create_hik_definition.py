@@ -34,7 +34,7 @@ _HIK_SLOTS = {
 
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success  # noqa: E402
 
 
 def create_hik_definition(
@@ -54,9 +54,9 @@ def create_hik_definition(
     """
 
     if not character_name:
-        return maya_error("Missing parameter", "'character_name' is required")
+        return skill_error("Missing parameter", "'character_name' is required")
     if not joint_mapping:
-        return maya_error("Missing parameter", "'joint_mapping' is required")
+        return skill_error("Missing parameter", "'joint_mapping' is required")
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
@@ -82,7 +82,7 @@ def create_hik_definition(
 
         mel.eval("hikUpdateDefinitionUI")
 
-        return maya_success(
+        return skill_success(
             "HIK character '{}' created with {} mapped joints".format(char_node, len(mapped)),
             prompt="HIK definition ready. Use bake_mocap_to_rig to retarget the motion.",
             character_node=char_node,
@@ -91,17 +91,16 @@ def create_hik_definition(
             mapped_count=len(mapped),
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to create HIK definition")
+        return skill_exception(exc, message="Failed to create HIK definition")
 
 
+@skill_entry
 def main(**kwargs):
     return create_hik_definition(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = create_hik_definition("myChar", {"Hips": "Hips"})
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

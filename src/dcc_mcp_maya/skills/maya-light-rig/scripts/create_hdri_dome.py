@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def create_hdri_dome(
@@ -69,7 +69,7 @@ def create_hdri_dome(
             file_node = cmds.createNode("file", name="{}_texture".format(node_name))
             cmds.setAttr("{}.fileTextureName".format(file_node), hdri_path, type="string")
 
-        return maya_success(
+        return skill_success(
             "Created HDRI dome '{}' from '{}'".format(dome_transform, hdri_path),
             prompt="Adjust intensity with set_light_rig_intensity or rotate the dome to change HDRI orientation.",
             dome_node=dome_transform,
@@ -80,17 +80,16 @@ def create_hdri_dome(
             rotation=rotation,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to create HDRI dome from '{}'".format(hdri_path))
+        return skill_exception(exc, message="Failed to create HDRI dome from '{}'".format(hdri_path))
 
 
+@skill_entry
 def main(**kwargs):
     return create_hdri_dome(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = create_hdri_dome("/path/to/environment.hdr", name="env_dome")
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

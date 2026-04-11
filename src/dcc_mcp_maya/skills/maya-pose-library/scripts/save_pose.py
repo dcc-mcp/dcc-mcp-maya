@@ -15,7 +15,7 @@ _POSE_ATTRS = ["tx", "ty", "tz", "rx", "ry", "rz", "sx", "sy", "sz"]
 
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success  # noqa: E402
 
 
 def save_pose(
@@ -45,7 +45,7 @@ def save_pose(
 
         nodes = controls if controls else (cmds.ls(selection=True) or [])
         if not nodes:
-            return maya_error(
+            return skill_error(
                 "No controls specified",
                 "Provide 'controls' or select nodes in Maya",
             )
@@ -53,7 +53,7 @@ def save_pose(
         attrs = attributes if attributes else _POSE_ATTRS
 
         if not overwrite and os.path.exists(file_path):
-            return maya_error(
+            return skill_error(
                 "File already exists: {}".format(file_path),
                 "Set overwrite=True to replace the existing pose file",
             )
@@ -77,7 +77,7 @@ def save_pose(
         with open(file_path, "w") as fh:
             json.dump(pose_data, fh, indent=2)
 
-        return maya_success(
+        return skill_success(
             "Saved pose for {} control(s) to '{}'".format(len(pose_data), file_path),
             prompt="Use load_pose to apply this pose back to the rig.",
             file_path=file_path,
@@ -85,17 +85,16 @@ def save_pose(
             controls=list(pose_data.keys()),
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to save pose to '{}'".format(file_path))
+        return skill_exception(exc, message="Failed to save pose to '{}'".format(file_path))
 
 
+@skill_entry
 def main(**kwargs):
     return save_pose(**kwargs)
 
 
 if __name__ == "__main__":
-    import json as _json
-
-    result = save_pose("/tmp/my_pose.json")
-    print(_json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

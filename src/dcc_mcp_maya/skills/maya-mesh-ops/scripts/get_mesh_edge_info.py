@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import List, Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def get_mesh_edge_info(
@@ -29,18 +29,18 @@ def get_mesh_edge_info(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return maya_error("Object not found: {}".format(object_name), "")
+            return skill_error("Object not found: {}".format(object_name), "")
 
         total_edges = cmds.polyEvaluate(object_name, edge=True)
         if not isinstance(total_edges, int) or total_edges == 0:
-            return maya_error("'{}' has no edges — ensure it is a polygon mesh".format(object_name), "")
+            return skill_error("'{}' has no edges — ensure it is a polygon mesh".format(object_name), "")
 
         if edge_indices is None:
             indices = list(range(total_edges))
         else:
             invalid = [i for i in edge_indices if not (0 <= i < total_edges)]
             if invalid:
-                return maya_error(
+                return skill_error(
                     "Invalid edge indices: {}".format(invalid),
                     "Valid range is 0 to {}".format(total_edges - 1),
                 )
@@ -82,7 +82,7 @@ def get_mesh_edge_info(
 
             edges.append({"index": idx, "length": length, "vertices": verts})
 
-        return maya_success(
+        return skill_success(
             "Edge info for '{}' ({} edge(s) queried)".format(object_name, len(edges)),
             object_name=object_name,
             edges=edges,
@@ -91,18 +91,17 @@ def get_mesh_edge_info(
             prompt="Use merge_vertices or cleanup_mesh to fix edge issues.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to get edge info")
+        return skill_exception(exc, message="Failed to get edge info")
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`get_mesh_edge_info`."""
     return get_mesh_edge_info(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = get_mesh_edge_info()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

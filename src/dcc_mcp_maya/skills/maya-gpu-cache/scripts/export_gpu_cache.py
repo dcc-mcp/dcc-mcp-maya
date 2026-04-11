@@ -8,7 +8,7 @@ import os
 from typing import List, Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def export_gpu_cache(
@@ -41,7 +41,7 @@ def export_gpu_cache(
 
         missing = [o for o in objects if not cmds.objExists(o)]
         if missing:
-            return maya_error(
+            return skill_error(
                 "Objects not found",
                 "Missing: {}".format(", ".join(missing)),
             )
@@ -50,7 +50,7 @@ def export_gpu_cache(
         out_name = os.path.splitext(os.path.basename(file_path))[0]
 
         if not os.path.isdir(out_dir):
-            return maya_error(
+            return skill_error(
                 "Output directory does not exist: {}".format(out_dir),
                 "Create the directory first.",
             )
@@ -70,7 +70,7 @@ def export_gpu_cache(
             fileName=out_name,
         )
 
-        return maya_success(
+        return skill_success(
             "Exported GPU cache to '{}'".format(file_path),
             prompt="Use import_gpu_cache to reload the file, or list_gpu_caches to verify.",
             file_path=file_path,
@@ -78,17 +78,16 @@ def export_gpu_cache(
             frame_range=[s, e],
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to export GPU cache")
+        return skill_exception(exc, message="Failed to export GPU cache")
 
 
+@skill_entry
 def main(**kwargs):
     return export_gpu_cache(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = export_gpu_cache(["pSphere1"], "/tmp/test_cache.abc")
-    print(json.dumps(result, indent=2))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

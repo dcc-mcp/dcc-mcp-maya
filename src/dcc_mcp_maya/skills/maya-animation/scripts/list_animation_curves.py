@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def list_animation_curves(
@@ -29,7 +29,7 @@ def list_animation_curves(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return maya_error(
+            return skill_error(
                 "Object not found: {}".format(object_name),
                 "'{}' does not exist in the scene".format(object_name),
             )
@@ -64,7 +64,7 @@ def list_animation_curves(
                 }
             )
 
-        return maya_success(
+        return skill_success(
             "Found {} animCurve(s) on '{}'".format(len(curves), object_name),
             object_name=object_name,
             attribute=attribute,
@@ -73,18 +73,17 @@ def list_animation_curves(
             prompt="Use export_animation_curves to save or delete_keyframes to clean up.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to list animation curves for '{}'".format(object_name))
+        return skill_exception(exc, message="Failed to list animation curves for '{}'".format(object_name))
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`list_animation_curves`."""
     return list_animation_curves(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = list_animation_curves()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

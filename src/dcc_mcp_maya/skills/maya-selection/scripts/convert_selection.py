@@ -1,7 +1,7 @@
 """Convert the current selection to a different component type."""
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_success
+from dcc_mcp_core.skill import skill_error, skill_success
 
 _CONVERT_FLAGS = {
     "vertex": {"toVertex": True},
@@ -28,7 +28,7 @@ def run(params):
 
     target = params.get("target", "").lower()
     if target not in _CONVERT_FLAGS:
-        return maya_error(
+        return skill_error(
             "Invalid target type",
             "'{}' is not a valid target. Choose from: {}".format(target, ", ".join(sorted(_CONVERT_FLAGS.keys()))),
         )
@@ -39,7 +39,7 @@ def run(params):
         # Use polyListComponentConversion for component types
         current = cmds.ls(selection=True) or []
         if not current:
-            return maya_error(
+            return skill_error(
                 "Nothing selected",
                 "Select objects or components before converting",
             )
@@ -52,7 +52,7 @@ def run(params):
                 cmds.select(converted)
 
         result = cmds.ls(selection=True, flatten=True) or []
-        return maya_success(
+        return skill_success(
             "Converted selection to {} ({} items)".format(target, len(result)),
             prompt="Use grow_selection or shrink_selection to refine the component selection.",
             target=target,
@@ -60,4 +60,4 @@ def run(params):
             selection=result,
         )
     except Exception as exc:
-        return maya_error("Failed to convert selection", str(exc))
+        return skill_error("Failed to convert selection", str(exc))

@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import List
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def add_stretch_to_spline_ik(
@@ -39,13 +39,13 @@ def add_stretch_to_spline_ik(
 
         for name in [ik_handle, curve] + joints:
             if not cmds.objExists(name):
-                return maya_error(
+                return skill_error(
                     "Node not found: {}".format(name),
                     "'{}' does not exist".format(name),
                 )
 
         if stretch_axis not in ("x", "y", "z"):
-            return maya_error(
+            return skill_error(
                 "Invalid stretch_axis: {}".format(stretch_axis),
                 "Choose 'x', 'y', or 'z'.",
             )
@@ -53,7 +53,7 @@ def add_stretch_to_spline_ik(
         # Get shape from curve transform
         shape = cmds.listRelatives(curve, shapes=True, type="nurbsCurve")
         if not shape:
-            return maya_error(
+            return skill_error(
                 "No NURBS curve shape under '{}'".format(curve),
                 "Provide the transform of a NURBS curve.",
             )
@@ -80,7 +80,7 @@ def add_stretch_to_spline_ik(
         for jnt in joints:
             cmds.connectAttr("{}.outputX".format(md), "{}.{}".format(jnt, scale_attr), force=True)
 
-        return maya_success(
+        return skill_success(
             "Added stretch to {} joint(s) via '{}'".format(len(joints), ci),
             prompt="Animate the curve's CVs to see the joints stretch. "
             "Use bake_transforms to collapse the result before export.",
@@ -91,21 +91,16 @@ def add_stretch_to_spline_ik(
             stretch_axis=stretch_axis,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to add stretch")
+        return skill_exception(exc, message="Failed to add stretch")
 
 
+@skill_entry
 def main(**kwargs):
     return add_stretch_to_spline_ik(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = add_stretch_to_spline_ik(
-        "ikHandle1",
-        ["spine_01", "spine_02", "spine_03"],
-        "curve1",
-    )
-    print(json.dumps(result, indent=2))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

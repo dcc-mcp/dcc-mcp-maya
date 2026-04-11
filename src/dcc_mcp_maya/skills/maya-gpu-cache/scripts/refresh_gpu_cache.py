@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def refresh_gpu_cache(cache_node: str) -> dict:
@@ -24,14 +24,14 @@ def refresh_gpu_cache(cache_node: str) -> dict:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(cache_node):
-            return maya_error(
+            return skill_error(
                 "GPU cache node not found: {}".format(cache_node),
                 "'{}' does not exist in the scene".format(cache_node),
             )
 
         node_type = cmds.objectType(cache_node)
         if node_type != "gpuCache":
-            return maya_error(
+            return skill_error(
                 "Not a gpuCache node: {}".format(cache_node),
                 "Expected type 'gpuCache', got '{}'".format(node_type),
             )
@@ -42,23 +42,23 @@ def refresh_gpu_cache(cache_node: str) -> dict:
         cmds.setAttr("{}.refreshAll".format(cache_node), True)
         cmds.setAttr("{}.refreshAll".format(cache_node), False)
 
-        return maya_success(
+        return skill_success(
             "Refreshed GPU cache node '{}'".format(cache_node),
             prompt="If the cache still looks outdated, check that the file path is correct with list_gpu_caches.",
             cache_node=cache_node,
             file_path=file_path,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to refresh GPU cache")
+        return skill_exception(exc, message="Failed to refresh GPU cache")
 
 
+@skill_entry
 def main(**kwargs):
     return refresh_gpu_cache(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    print(json.dumps(refresh_gpu_cache("gpuCacheShape1"), indent=2))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

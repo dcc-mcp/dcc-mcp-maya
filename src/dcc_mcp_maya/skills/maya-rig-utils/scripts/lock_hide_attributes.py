@@ -8,7 +8,7 @@ import logging
 from typing import List, Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +41,7 @@ def lock_hide_attributes(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(node):
-            return maya_error(
+            return skill_error(
                 "Node not found: {}".format(node),
                 "'{}' does not exist in the scene".format(node),
             )
@@ -60,7 +60,7 @@ def lock_hide_attributes(
                 cmds.setAttr(full, keyable=False, channelBox=False)
             processed.append(attr)
 
-        return maya_success(
+        return skill_success(
             "{} attribute(s) on '{}' (lock={}, hide={})".format(
                 "Locked/hidden" if lock and hide else ("Locked" if lock else "Hidden"),
                 node,
@@ -74,17 +74,16 @@ def lock_hide_attributes(
             hide=hide,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to lock/hide attributes on '{}'".format(node))
+        return skill_exception(exc, message="Failed to lock/hide attributes on '{}'".format(node))
 
 
+@skill_entry
 def main(**kwargs):
     return lock_hide_attributes(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = lock_hide_attributes("ctrl_root", attributes=["sx", "sy", "sz", "v"])
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

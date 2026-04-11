@@ -8,7 +8,7 @@ import subprocess
 from typing import Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def get_render_job_status(
@@ -39,7 +39,7 @@ def get_render_job_status(
                     cmd = candidate
                     break
         if not cmd:
-            return maya_error(
+            return skill_error(
                 "deadlinecommand not found",
                 "Install Thinkbox Deadline client and ensure it is on PATH",
             )
@@ -52,7 +52,7 @@ def get_render_job_status(
         )
 
         if proc.returncode != 0:
-            return maya_error(
+            return skill_error(
                 "Failed to query job '{}'".format(job_id),
                 proc.stderr.strip() or proc.stdout.strip(),
             )
@@ -69,7 +69,7 @@ def get_render_job_status(
         total = status_info.get("TaskCount", "0")
         errors = status_info.get("FailedChunks", "0")
 
-        return maya_success(
+        return skill_success(
             "Job '{}' status: {} ({}/{} tasks)".format(job_id, job_status, completed, total),
             prompt="Check again later or use submit_to_deadline to resubmit if failed.",
             job_id=job_id,
@@ -80,16 +80,16 @@ def get_render_job_status(
             raw=status_info,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to query job status")
+        return skill_exception(exc, message="Failed to query job status")
 
 
+@skill_entry
 def main(**kwargs):
     return get_render_job_status(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    print(json.dumps(get_render_job_status("abc-123")))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

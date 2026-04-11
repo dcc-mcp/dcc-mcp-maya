@@ -12,7 +12,7 @@ full namespace lifecycle management:
 from __future__ import annotations
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_error, skill_exception, skill_success
 
 # Import built-in modules
 
@@ -43,7 +43,7 @@ def set_namespace(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return maya_error(
+            return skill_error(
                 "Object not found: {}".format(object_name),
                 "'{}' does not exist in the scene".format(object_name),
             )
@@ -56,7 +56,7 @@ def set_namespace(
             exists = cmds.namespace(exists=":{}".format(ns))
             if not exists:
                 if not create_if_missing:
-                    return maya_error(
+                    return skill_error(
                         "Namespace does not exist: {}".format(ns),
                         "Set create_if_missing=True to create it automatically",
                     )
@@ -69,7 +69,7 @@ def set_namespace(
             bare = object_name.split(":")[-1]
             new_name = cmds.rename(object_name, bare)
 
-        return maya_success(
+        return skill_success(
             "Moved '{}' to namespace '{}'".format(object_name, ns or ":"),
             object_name=object_name,
             namespace=ns or ":",
@@ -77,9 +77,9 @@ def set_namespace(
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to set namespace for '{}'".format(object_name))
+        return skill_exception(exc, message="Failed to set namespace for '{}'".format(object_name))
 
 
 def rename_namespace(
@@ -104,38 +104,38 @@ def rename_namespace(
         new_ns = new_name.strip(":")
 
         if not old_ns:
-            return maya_error("Cannot rename root namespace", "old_name must not be empty or ':'")
+            return skill_error("Cannot rename root namespace", "old_name must not be empty or ':'")
 
         if old_ns in _PROTECTED_NS:
-            return maya_error(
+            return skill_error(
                 "Cannot rename protected namespace: {}".format(old_ns),
                 "Protected namespaces: {}".format(", ".join(sorted(_PROTECTED_NS))),
             )
 
         if not cmds.namespace(exists=":{}".format(old_ns)):
-            return maya_error(
+            return skill_error(
                 "Namespace does not exist: {}".format(old_ns),
                 "Create the namespace first or check the name",
             )
 
         if cmds.namespace(exists=":{}".format(new_ns)):
-            return maya_error(
+            return skill_error(
                 "Namespace already exists: {}".format(new_ns),
                 "Choose a different new_name",
             )
 
         cmds.namespace(rename=[":{}".format(old_ns), new_ns])
 
-        return maya_success(
+        return skill_success(
             "Renamed namespace '{}' → '{}'".format(old_ns, new_ns),
             old_name=old_ns,
             new_name=new_ns,
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to rename namespace '{}' to '{}'".format(old_name, new_name))
+        return skill_exception(exc, message="Failed to rename namespace '{}' to '{}'".format(old_name, new_name))
 
 
 def delete_namespace(
@@ -164,16 +164,16 @@ def delete_namespace(
         ns = namespace.strip(":")
 
         if not ns:
-            return maya_error("Cannot delete root namespace", "namespace must not be empty or ':'")
+            return skill_error("Cannot delete root namespace", "namespace must not be empty or ':'")
 
         if ns in _PROTECTED_NS:
-            return maya_error(
+            return skill_error(
                 "Cannot delete protected namespace: {}".format(ns),
                 "Protected namespaces: {}".format(", ".join(sorted(_PROTECTED_NS))),
             )
 
         if not cmds.namespace(exists=":{}".format(ns)):
-            return maya_error(
+            return skill_error(
                 "Namespace does not exist: {}".format(ns),
                 "Nothing to delete",
             )
@@ -183,13 +183,13 @@ def delete_namespace(
         else:
             cmds.namespace(removeNamespace=":{}".format(ns))
 
-        return maya_success(
+        return skill_success(
             "Deleted namespace '{}'".format(ns),
             namespace=ns,
             merged_with_root=merge_with_root,
             prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to delete namespace '{}'".format(namespace))
+        return skill_exception(exc, message="Failed to delete namespace '{}'".format(namespace))

@@ -8,7 +8,7 @@ import json
 import os
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def list_materials(library_dir: str) -> dict:
@@ -22,7 +22,7 @@ def list_materials(library_dir: str) -> dict:
     """
     try:
         if not os.path.isdir(library_dir):
-            return maya_error(
+            return skill_error(
                 "Library directory not found: '{}'".format(library_dir),
                 "Create the directory or run save_material first",
             )
@@ -46,7 +46,7 @@ def list_materials(library_dir: str) -> dict:
                 pass
             presets.append(info)
 
-        return maya_success(
+        return skill_success(
             "Found {} material preset(s) in '{}'".format(len(presets), library_dir),
             prompt="Use load_material with a file_path to apply a preset.",
             presets=presets,
@@ -54,16 +54,16 @@ def list_materials(library_dir: str) -> dict:
             library_dir=library_dir,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to list material presets")
+        return skill_exception(exc, message="Failed to list material presets")
 
 
+@skill_entry
 def main(**kwargs):
     return list_materials(**kwargs)
 
 
 if __name__ == "__main__":
-    import json as _json
-
-    print(_json.dumps(list_materials("/tmp/mat_lib")))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

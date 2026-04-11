@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 _FORMAT_NAMES = {
     0: "gif",
@@ -44,7 +44,7 @@ def get_render_settings() -> dict:
         image_format = _FORMAT_NAMES.get(fmt_code, str(fmt_code))
         output_path = cmds.getAttr("defaultRenderGlobals.imageFilePrefix") or ""
 
-        return maya_success(
+        return skill_success(
             "Render settings: {}×{} | {} | frames {}-{} | format {}".format(
                 width, height, renderer, int(start_frame), int(end_frame), image_format
             ),
@@ -58,18 +58,17 @@ def get_render_settings() -> dict:
             output_path=output_path,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to get render settings")
+        return skill_exception(exc, message="Failed to get render settings")
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`get_render_settings`."""
     return get_render_settings(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = get_render_settings()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

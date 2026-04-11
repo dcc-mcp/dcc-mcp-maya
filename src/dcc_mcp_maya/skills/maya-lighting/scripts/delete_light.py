@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 # Supported Maya light types and their corresponding command/node names
 _LIGHT_TYPE_MAP = {
@@ -29,7 +29,7 @@ def delete_light(light_name: str) -> dict:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(light_name):
-            return maya_error(
+            return skill_error(
                 "Light not found: {}".format(light_name),
                 "'{}' does not exist in the scene".format(light_name),
             )
@@ -42,24 +42,23 @@ def delete_light(light_name: str) -> dict:
                 light_name = parents[0]
 
         cmds.delete(light_name)
-        return maya_success(
+        return skill_success(
             "Deleted light '{}'".format(light_name),
             light_name=light_name,
             prompt="Use list_lights to confirm deletion.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to delete light")
+        return skill_exception(exc, message="Failed to delete light")
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`delete_light`."""
     return delete_light(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = delete_light()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

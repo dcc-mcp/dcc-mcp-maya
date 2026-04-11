@@ -4,7 +4,9 @@
 from __future__ import annotations
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success, validate_node_exists
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
+
+from dcc_mcp_maya.api import validate_node_exists
 
 # Import built-in modules
 
@@ -33,7 +35,7 @@ def normalize_skin_weights(
 
         sc_list = cmds.ls(cmds.listHistory(mesh) or [], type="skinCluster")
         if not sc_list:
-            return maya_error(
+            return skill_error(
                 "No skin cluster on: {}".format(mesh),
                 "'{}' has no skinCluster in its history".format(mesh),
             )
@@ -42,7 +44,7 @@ def normalize_skin_weights(
         cmds.setAttr("{}.normalizeWeights".format(sc), normalize_weights)
         cmds.skinPercent(sc, mesh, normalize=True)
 
-        return maya_success(
+        return skill_success(
             "Normalized skin weights on '{}' (cluster: '{}')".format(mesh, sc),
             prompt="Use prune_skin_weights to remove low-influence joints after normalizing.",
             mesh=mesh,
@@ -50,17 +52,16 @@ def normalize_skin_weights(
             normalize_weights=normalize_weights,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to normalize skin weights on '{}'".format(mesh))
+        return skill_exception(exc, message="Failed to normalize skin weights on '{}'".format(mesh))
 
 
+@skill_entry
 def main(**kwargs):
     return normalize_skin_weights(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = normalize_skin_weights("pSphere1")
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

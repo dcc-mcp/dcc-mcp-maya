@@ -5,7 +5,7 @@ from __future__ import annotations
 
 # Import built-in modules
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def delete_fluid_container(name: str) -> dict:
@@ -21,30 +21,29 @@ def delete_fluid_container(name: str) -> dict:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(name):
-            return maya_error(
+            return skill_error(
                 "Node not found",
                 "Fluid container '{}' does not exist".format(name),
             )
 
         cmds.delete(name)
 
-        return maya_success(
+        return skill_success(
             "Fluid container deleted",
             prompt="Container '{}' removed. Use create_fluid_container to add a new one.".format(name),
             deleted=name,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to delete fluid container")
+        return skill_exception(exc, message="Failed to delete fluid container")
 
 
+@skill_entry
 def main(**kwargs):
     return delete_fluid_container(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = delete_fluid_container("fluid1")
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

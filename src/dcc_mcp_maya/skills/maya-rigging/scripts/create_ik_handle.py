@@ -7,7 +7,9 @@ from __future__ import annotations
 from typing import Optional
 
 # Import local modules
-from dcc_mcp_maya.api import batch_validate_nodes, maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
+
+from dcc_mcp_maya.api import batch_validate_nodes
 
 
 def create_ik_handle(
@@ -42,7 +44,7 @@ def create_ik_handle(
             return err
 
         if solver not in _VALID_SOLVERS:
-            return maya_error(
+            return skill_error(
                 "Invalid solver: {}".format(solver),
                 "solver must be one of {}".format(_VALID_SOLVERS),
             )
@@ -59,7 +61,7 @@ def create_ik_handle(
         handle_name = result[0]
         effector_name = result[1]
 
-        return maya_success(
+        return skill_success(
             "Created IK handle '{}'".format(handle_name),
             handle_name=handle_name,
             effector_name=effector_name,
@@ -69,18 +71,17 @@ def create_ik_handle(
             prompt="Check the result with list_rigging or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to create IK handle")
+        return skill_exception(exc, message="Failed to create IK handle")
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`create_ik_handle`."""
     return create_ik_handle(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = create_ik_handle()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

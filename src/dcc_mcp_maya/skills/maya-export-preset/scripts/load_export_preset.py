@@ -8,7 +8,7 @@ import json
 import os
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def load_export_preset(preset_path: str, apply_frame_range: bool = True) -> dict:
@@ -27,7 +27,7 @@ def load_export_preset(preset_path: str, apply_frame_range: bool = True) -> dict
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not os.path.isfile(preset_path):
-            return maya_error(
+            return skill_error(
                 "File not found",
                 "Preset file '{}' does not exist".format(preset_path),
             )
@@ -44,7 +44,7 @@ def load_export_preset(preset_path: str, apply_frame_range: bool = True) -> dict
                 animationEndTime=end,
             )
 
-        return maya_success(
+        return skill_success(
             "Export preset loaded",
             prompt=(
                 "Preset '{}' loaded. format={}, frame_range={}.".format(
@@ -57,17 +57,16 @@ def load_export_preset(preset_path: str, apply_frame_range: bool = True) -> dict
             applied_frame_range=apply_frame_range,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to load export preset")
+        return skill_exception(exc, message="Failed to load export preset")
 
 
+@skill_entry
 def main(**kwargs):
     return load_export_preset(**kwargs)
 
 
 if __name__ == "__main__":
-    import json as _json
-
-    result = load_export_preset("/path/to/preset.json")
-    print(_json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

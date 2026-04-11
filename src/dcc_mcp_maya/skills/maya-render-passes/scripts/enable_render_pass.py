@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 # Import built-in modules
 
@@ -28,7 +28,7 @@ def enable_render_pass(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(pass_node):
-            return maya_error(
+            return skill_error(
                 "Render pass not found: {}".format(pass_node),
                 "'{}' does not exist in the scene".format(pass_node),
             )
@@ -43,29 +43,28 @@ def enable_render_pass(
                 break
 
         if not toggled:
-            return maya_error(
+            return skill_error(
                 "Cannot toggle pass: {}".format(pass_node),
                 "Node has neither 'renderable' nor 'enabled' attribute",
             )
 
-        return maya_success(
+        return skill_success(
             "{} render pass '{}'".format("Enabled" if enabled else "Disabled", pass_node),
             prompt="Use list_render_passes to review all active passes.",
             pass_node=pass_node,
             enabled=enabled,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to toggle render pass '{}'".format(pass_node))
+        return skill_exception(exc, message="Failed to toggle render pass '{}'".format(pass_node))
 
 
+@skill_entry
 def main(**kwargs):
     return enable_render_pass(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = enable_render_pass("diffuse_pass", enabled=True)
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

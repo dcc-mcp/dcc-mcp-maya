@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def set_ncloth_attribute(ncloth_shape: str, attribute: str, value: float) -> dict:
@@ -22,14 +22,14 @@ def set_ncloth_attribute(ncloth_shape: str, attribute: str, value: float) -> dic
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(ncloth_shape):
-            return maya_error(
+            return skill_error(
                 "Node not found",
                 "nCloth shape '{}' does not exist".format(ncloth_shape),
             )
 
         cmds.setAttr("{}.{}".format(ncloth_shape, attribute), value)
 
-        return maya_success(
+        return skill_success(
             "nCloth attribute set",
             prompt="nCloth {}.{} = {}. Run simulation to see effect.".format(ncloth_shape, attribute, value),
             ncloth_shape=ncloth_shape,
@@ -37,17 +37,16 @@ def set_ncloth_attribute(ncloth_shape: str, attribute: str, value: float) -> dic
             value=value,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to set nCloth attribute")
+        return skill_exception(exc, message="Failed to set nCloth attribute")
 
 
+@skill_entry
 def main(**kwargs):
     return set_ncloth_attribute(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = set_ncloth_attribute("nCloth1", "thickness", 0.1)
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 # Import built-in modules
 
@@ -94,7 +94,7 @@ def clean_scene(
                             flagged.append("render_layer_locked:{}".format(layer))
 
         action_str = "dry-run" if dry_run else "cleaned"
-        return maya_success(
+        return skill_success(
             "Scene {} — {} items removed, {} flagged".format(action_str, len(removed), len(flagged)),
             prompt="Clean complete. Run validate_scene_for_farm to check render readiness.",
             removed=removed,
@@ -103,17 +103,16 @@ def clean_scene(
             flagged_count=len(flagged),
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to clean scene")
+        return skill_exception(exc, message="Failed to clean scene")
 
 
+@skill_entry
 def main(**kwargs):
     return clean_scene(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = clean_scene(dry_run=True)
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

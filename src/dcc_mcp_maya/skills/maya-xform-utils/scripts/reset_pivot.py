@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import List
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def reset_pivot(
@@ -31,18 +31,18 @@ def reset_pivot(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not objects:
-            return maya_error("No objects provided", "Pass at least one object name.")
+            return skill_error("No objects provided", "Pass at least one object name.")
 
         missing = [o for o in objects if not cmds.objExists(o)]
         if missing:
-            return maya_error(
+            return skill_error(
                 "Objects not found",
                 "Missing: {}".format(", ".join(missing)),
             )
 
         valid_modes = {"bbox_center", "world_origin", "bottom"}
         if mode not in valid_modes:
-            return maya_error(
+            return skill_error(
                 "Invalid mode: {}".format(mode),
                 "Choose from: {}".format(", ".join(sorted(valid_modes))),
             )
@@ -65,22 +65,22 @@ def reset_pivot(
             cmds.xform(obj, worldSpace=True, pivots=pivot)
             updated.append({"name": obj, "pivot": pivot})
 
-        return maya_success(
+        return skill_success(
             "Reset pivot for {} object(s) (mode={})".format(len(objects), mode),
             prompt="After adjusting the pivot, use freeze_transforms if you want to bake the new position.",
             updated_objects=updated,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to reset pivot")
+        return skill_exception(exc, message="Failed to reset pivot")
 
 
+@skill_entry
 def main(**kwargs):
     return reset_pivot(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    print(json.dumps(reset_pivot(["pSphere1"], mode="bottom"), indent=2))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

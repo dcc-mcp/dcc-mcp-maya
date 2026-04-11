@@ -10,7 +10,7 @@ import tempfile
 from typing import Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def capture_viewport(
@@ -65,7 +65,7 @@ def capture_viewport(
         os.unlink(img_path)
 
         encoded = base64.b64encode(img_bytes).decode("ascii")
-        return maya_success(
+        return skill_success(
             "Viewport captured ({}x{} @ frame {})".format(width, height, frame),
             image=encoded,
             width=width,
@@ -74,18 +74,17 @@ def capture_viewport(
             prompt="Use render_frame for final-quality output.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to capture viewport")
+        return skill_exception(exc, message="Failed to capture viewport")
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`capture_viewport`."""
     return capture_viewport(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = capture_viewport()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

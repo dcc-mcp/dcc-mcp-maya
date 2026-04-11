@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import List, Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def create_cluster(
@@ -29,7 +29,7 @@ def create_cluster(
         ``context.cluster_handle``.
     """
     if not objects:
-        return maya_error(
+        return skill_error(
             "No objects specified",
             "Provide at least one object name in the 'objects' list",
         )
@@ -39,7 +39,7 @@ def create_cluster(
 
         missing = [o for o in objects if not cmds.objExists(o)]
         if missing:
-            return maya_error(
+            return skill_error(
                 "Object(s) not found: {}".format(", ".join(missing)),
                 "Ensure all objects exist before creating a cluster",
             )
@@ -53,7 +53,7 @@ def create_cluster(
         cluster_node = result[0] if result else None
         cluster_handle = result[1] if result and len(result) > 1 else None
 
-        return maya_success(
+        return skill_success(
             "Created cluster deformer '{}' on {} object(s)".format(cluster_node, len(objects)),
             cluster_node=cluster_node,
             cluster_handle=cluster_handle,
@@ -62,18 +62,17 @@ def create_cluster(
             prompt="Check the result with list_deformers or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to create cluster deformer")
+        return skill_exception(exc, message="Failed to create cluster deformer")
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`create_cluster`."""
     return create_cluster(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = create_cluster()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

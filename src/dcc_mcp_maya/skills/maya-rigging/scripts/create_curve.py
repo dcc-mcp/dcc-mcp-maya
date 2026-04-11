@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import List, Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def create_curve(
@@ -40,7 +40,7 @@ def create_curve(
             points = [[float(i), 0.0, 0.0] for i in range(degree + 2)]
 
         if len(points) < degree + 1:
-            return maya_error(
+            return skill_error(
                 "Not enough control points",
                 "Need at least {} points for degree-{} curve, got {}".format(degree + 1, degree, len(points)),
             )
@@ -58,7 +58,7 @@ def create_curve(
 
         result = cmds.curve(**kwargs)
 
-        return maya_success(
+        return skill_success(
             "Created NURBS curve '{}'".format(result),
             object_name=result,
             degree=degree,
@@ -67,18 +67,17 @@ def create_curve(
             prompt="Check the result with list_rigging or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to create curve")
+        return skill_exception(exc, message="Failed to create curve")
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`create_curve`."""
     return create_curve(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = create_curve()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

@@ -10,7 +10,7 @@ import tempfile
 from typing import Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def submit_to_deadline(
@@ -46,7 +46,7 @@ def submit_to_deadline(
 
         scene_path = cmds.file(q=True, sceneName=True) or ""
         if not scene_path:
-            return maya_error(
+            return skill_error(
                 "Scene must be saved before submitting",
                 "Save the scene first with save_scene",
             )
@@ -68,7 +68,7 @@ def submit_to_deadline(
                     cmd = candidate
                     break
         if not cmd:
-            return maya_error(
+            return skill_error(
                 "deadlinecommand not found",
                 "Install Thinkbox Deadline client and ensure it is on PATH",
             )
@@ -107,7 +107,7 @@ def submit_to_deadline(
             )
 
         if proc.returncode != 0:
-            return maya_error(
+            return skill_error(
                 "Deadline submission failed",
                 proc.stderr.strip() or proc.stdout.strip(),
             )
@@ -121,7 +121,7 @@ def submit_to_deadline(
                     job_id = parts[1].strip()
                     break
 
-        return maya_success(
+        return skill_success(
             "Submitted '{}' to Deadline (job ID: {})".format(name, job_id or "unknown"),
             prompt="Use get_render_job_status with the job ID to monitor progress.",
             job_id=job_id,
@@ -130,16 +130,16 @@ def submit_to_deadline(
             frame_range="{}-{}".format(sf, ef),
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to submit to Deadline")
+        return skill_exception(exc, message="Failed to submit to Deadline")
 
 
+@skill_entry
 def main(**kwargs):
     return submit_to_deadline(**kwargs)
 
 
 if __name__ == "__main__":
-    import json as _json
-
-    print(_json.dumps(submit_to_deadline()))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

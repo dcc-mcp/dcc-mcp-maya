@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def blend_shape_add_target(
@@ -32,7 +32,7 @@ def blend_shape_add_target(
     """
 
     if not (0.0 <= weight <= 1.0):
-        return maya_error(
+        return skill_error(
             "Invalid weight: {}".format(weight),
             "weight must be between 0.0 and 1.0",
         )
@@ -41,14 +41,14 @@ def blend_shape_add_target(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(blend_shape):
-            return maya_error("Blend shape not found: {}".format(blend_shape))
+            return skill_error("Blend shape not found: {}".format(blend_shape))
 
         node_type = cmds.objectType(blend_shape)
         if node_type != "blendShape":
-            return maya_error("'{}' is not a blendShape node (type: {})".format(blend_shape, node_type))
+            return skill_error("'{}' is not a blendShape node (type: {})".format(blend_shape, node_type))
 
         if not cmds.objExists(target_mesh):
-            return maya_error("Target mesh not found: {}".format(target_mesh))
+            return skill_error("Target mesh not found: {}".format(target_mesh))
 
         # Determine target index
         if index is None:
@@ -68,7 +68,7 @@ def blend_shape_add_target(
             ),
         )
 
-        return maya_success(
+        return skill_success(
             "Added target '{}' to blend shape '{}' at index {}".format(target_mesh, blend_shape, target_index),
             blend_shape=blend_shape,
             target_mesh=target_mesh,
@@ -77,18 +77,17 @@ def blend_shape_add_target(
             prompt="Check the result with list_rigging or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to add blend shape target")
+        return skill_exception(exc, message="Failed to add blend shape target")
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`blend_shape_add_target`."""
     return blend_shape_add_target(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = blend_shape_add_target()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

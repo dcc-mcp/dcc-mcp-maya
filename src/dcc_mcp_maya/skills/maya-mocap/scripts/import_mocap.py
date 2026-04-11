@@ -7,7 +7,7 @@ from __future__ import annotations
 import os
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def import_mocap(
@@ -27,10 +27,10 @@ def import_mocap(
     """
 
     if not file_path:
-        return maya_error("Missing parameter", "'file_path' is required")
+        return skill_error("Missing parameter", "'file_path' is required")
 
     if not os.path.isfile(file_path):
-        return maya_error(
+        return skill_error(
             "File not found: {}".format(file_path),
             "Verify the file path and ensure the file exists.",
         )
@@ -64,7 +64,7 @@ def import_mocap(
                 options="fbx" + merge_mode,
             )
         else:
-            return maya_error(
+            return skill_error(
                 "Unsupported file type: {}".format(ext),
                 "Supported formats: .bvh, .fbx. Convert your file first.",
             )
@@ -73,7 +73,7 @@ def import_mocap(
         new_joints = sorted(after - before)
         roots = [j for j in new_joints if not cmds.listRelatives(j, parent=True, type="joint")]
 
-        return maya_success(
+        return skill_success(
             "Imported mocap from '{}' ({} joints)".format(os.path.basename(file_path), len(new_joints)),
             prompt="Mocap skeleton imported. Use create_hik_definition to set up retargeting.",
             file=file_path,
@@ -82,18 +82,16 @@ def import_mocap(
             root_joints=roots,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to import mocap file")
+        return skill_exception(exc, message="Failed to import mocap file")
 
 
+@skill_entry
 def main(**kwargs):
     return import_mocap(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-    import sys
-
-    result = import_mocap(sys.argv[1] if len(sys.argv) > 1 else "")
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

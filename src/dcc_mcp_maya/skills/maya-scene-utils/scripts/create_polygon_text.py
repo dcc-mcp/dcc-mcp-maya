@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def create_polygon_text(
@@ -40,7 +40,7 @@ def create_polygon_text(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not text:
-            return maya_error("Empty text", "text parameter must not be empty")
+            return skill_error("Empty text", "text parameter must not be empty")
 
         kwargs = {"font": font, "text": text}
         if name:
@@ -62,7 +62,7 @@ def create_polygon_text(
                     extruded.append(crv)
             objects = extruded
 
-        return maya_success(
+        return skill_success(
             "Created polygon text: '{}'".format(text),
             text=text,
             font=font,
@@ -73,18 +73,17 @@ def create_polygon_text(
             prompt="Check the result with list_scene_utils or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to create polygon text '{}'".format(text))
+        return skill_exception(exc, message="Failed to create polygon text '{}'".format(text))
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`create_polygon_text`."""
     return create_polygon_text(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = create_polygon_text()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

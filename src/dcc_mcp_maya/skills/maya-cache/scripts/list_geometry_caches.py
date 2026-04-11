@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def list_geometry_caches(mesh: Optional[str] = None) -> dict:
@@ -26,7 +26,7 @@ def list_geometry_caches(mesh: Optional[str] = None) -> dict:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if mesh and not cmds.objExists(mesh):
-            return maya_error(
+            return skill_error(
                 "Mesh not found: {}".format(mesh),
                 "'{}' does not exist in the scene".format(mesh),
             )
@@ -59,24 +59,23 @@ def list_geometry_caches(mesh: Optional[str] = None) -> dict:
                 }
             )
 
-        return maya_success(
+        return skill_success(
             "Found {} cache node(s)".format(len(result)),
             prompt="Use delete_geometry_cache to remove a cache, or attach_geometry_cache to add one.",
             cache_nodes=result,
             count=len(result),
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to list geometry caches")
+        return skill_exception(exc, message="Failed to list geometry caches")
 
 
+@skill_entry
 def main(**kwargs):
     return list_geometry_caches(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = list_geometry_caches()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

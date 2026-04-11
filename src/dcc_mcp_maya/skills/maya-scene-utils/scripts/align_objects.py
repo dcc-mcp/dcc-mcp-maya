@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import List, Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def align_objects(
@@ -48,21 +48,21 @@ def align_objects(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not objects or len(objects) < 2:
-            return maya_error(
+            return skill_error(
                 "Insufficient objects",
                 "align_objects requires at least 2 objects",
             )
 
         axis_lower = axis.lower()
         if axis_lower not in _VALID_AXES:
-            return maya_error(
+            return skill_error(
                 "Invalid axis: {}".format(axis),
                 "axis must be one of {}".format(_VALID_AXES),
             )
 
         mode_lower = mode.lower()
         if mode_lower not in _VALID_MODES:
-            return maya_error(
+            return skill_error(
                 "Invalid mode: {}".format(mode),
                 "mode must be one of {}".format(_VALID_MODES),
             )
@@ -70,7 +70,7 @@ def align_objects(
         # Validate all objects exist
         missing = [obj for obj in objects if not cmds.objExists(obj)]
         if missing:
-            return maya_error(
+            return skill_error(
                 "Objects not found: {}".format(missing),
                 "The following objects do not exist: {}".format(missing),
             )
@@ -79,7 +79,7 @@ def align_objects(
 
         if reference:
             if not cmds.objExists(reference):
-                return maya_error(
+                return skill_error(
                     "Reference object not found: {}".format(reference),
                     "'{}' does not exist".format(reference),
                 )
@@ -121,7 +121,7 @@ def align_objects(
             cmds.setAttr("{}.{}".format(obj, translate_attr), current_t + delta)
             aligned.append(obj)
 
-        return maya_success(
+        return skill_success(
             "Aligned {} object(s) along {} axis ({} mode)".format(len(aligned), axis_lower, mode_lower),
             objects=aligned,
             axis=axis_lower,
@@ -130,18 +130,17 @@ def align_objects(
             prompt="Check the result with list_scene_utils or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to align objects")
+        return skill_exception(exc, message="Failed to align objects")
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`align_objects`."""
     return align_objects(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = align_objects()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

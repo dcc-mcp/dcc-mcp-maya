@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def set_shading_mode(
@@ -44,7 +44,7 @@ def set_shading_mode(
 
     mode_lower = mode.lower()
     if mode_lower not in _MODE_MAP:
-        return maya_error(
+        return skill_error(
             "Invalid mode: {}".format(mode),
             "mode must be one of {}".format(sorted(_MODE_MAP.keys())),
         )
@@ -55,7 +55,7 @@ def set_shading_mode(
         # Resolve target panel
         if panel:
             if not cmds.modelPanel(panel, query=True, exists=True):
-                return maya_error(
+                return skill_error(
                     "Panel not found: {}".format(panel),
                     "'{}' is not a valid model panel".format(panel),
                 )
@@ -63,7 +63,7 @@ def set_shading_mode(
         else:
             panels = cmds.getPanel(type="modelPanel") or []
             if not panels:
-                return maya_error(
+                return skill_error(
                     "No model panels found",
                     "Could not locate any Maya model view panel",
                 )
@@ -81,25 +81,24 @@ def set_shading_mode(
         elif mode_lower == "bounding_box":
             cmds.modelEditor(target_panel, edit=True, displayAppearance="boundingBox", displayTextures=False)
 
-        return maya_success(
+        return skill_success(
             "Set shading mode to '{}' on panel '{}'".format(mode_lower, target_panel),
             mode=mode_lower,
             panel=target_panel,
             prompt="Check the result with list_scene_utils or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to set shading mode")
+        return skill_exception(exc, message="Failed to set shading mode")
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`set_shading_mode`."""
     return set_shading_mode(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = set_shading_mode()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

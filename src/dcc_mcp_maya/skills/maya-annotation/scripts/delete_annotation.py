@@ -5,7 +5,7 @@ from __future__ import annotations
 
 # Import built-in modules
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def delete_annotation(annotation_node: str) -> dict:
@@ -23,7 +23,7 @@ def delete_annotation(annotation_node: str) -> dict:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(annotation_node):
-            return maya_error(
+            return skill_error(
                 "Annotation not found: {}".format(annotation_node),
                 "'{}' does not exist".format(annotation_node),
             )
@@ -37,23 +37,22 @@ def delete_annotation(annotation_node: str) -> dict:
 
         cmds.delete(to_delete)
 
-        return maya_success(
+        return skill_success(
             "Deleted annotation '{}'".format(annotation_node),
             prompt="Use list_annotations to confirm deletion.",
             deleted_node=annotation_node,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to delete annotation")
+        return skill_exception(exc, message="Failed to delete annotation")
 
 
+@skill_entry
 def main(**kwargs):
     return delete_annotation(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = delete_annotation("annotationShape1")
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

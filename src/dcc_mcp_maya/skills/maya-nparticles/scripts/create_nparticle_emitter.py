@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def create_nparticle_emitter(
@@ -46,7 +46,7 @@ def create_nparticle_emitter(
         # Get the last created nParticle shape
         particle_shapes = cmds.ls(type="nParticle") or []
         if not particle_shapes:
-            return maya_error(
+            return skill_error(
                 "Failed to create nParticle",
                 "No nParticle node found after creation",
             )
@@ -81,7 +81,7 @@ def create_nparticle_emitter(
             nucleus if nucleus and cmds.objExists(nucleus) else (nucleus_nodes[-1] if nucleus_nodes else None)
         )
 
-        return maya_success(
+        return skill_success(
             "Created nParticle '{}' with emitter '{}'".format(particle_shape, emitter_node),
             prompt="Use add_field_to_nparticles to attach gravity or turbulence fields.",
             particle_shape=particle_shape,
@@ -91,16 +91,16 @@ def create_nparticle_emitter(
             speed=speed,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to create nParticle emitter")
+        return skill_exception(exc, message="Failed to create nParticle emitter")
 
 
+@skill_entry
 def main(**kwargs):
     return create_nparticle_emitter(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    print(json.dumps(create_nparticle_emitter()))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

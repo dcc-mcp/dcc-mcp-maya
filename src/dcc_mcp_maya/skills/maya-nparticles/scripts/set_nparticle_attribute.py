@@ -5,7 +5,7 @@ from __future__ import annotations
 
 # Import built-in modules
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def set_nparticle_attribute(
@@ -31,20 +31,20 @@ def set_nparticle_attribute(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(particle_shape):
-            return maya_error(
+            return skill_error(
                 "nParticle shape '{}' not found".format(particle_shape),
                 "Use list_nparticle_systems to find available nParticle nodes",
             )
 
         if cmds.objectType(particle_shape) != "nParticle":
-            return maya_error(
+            return skill_error(
                 "'{}' is not an nParticle node".format(particle_shape),
                 "Provide the name of an nParticle shape node",
             )
 
         full_attr = "{}.{}".format(particle_shape, attribute)
         if not cmds.attributeQuery(attribute, node=particle_shape, exists=True):
-            return maya_error(
+            return skill_error(
                 "Attribute '{}' does not exist on '{}'".format(attribute, particle_shape),
                 "Check attribute name spelling",
             )
@@ -52,7 +52,7 @@ def set_nparticle_attribute(
         cmds.setAttr(full_attr, value)
         actual = cmds.getAttr(full_attr)
 
-        return maya_success(
+        return skill_success(
             "Set {}.{} = {}".format(particle_shape, attribute, value),
             prompt="Use list_nparticle_systems to inspect all particle node settings.",
             particle_shape=particle_shape,
@@ -60,16 +60,16 @@ def set_nparticle_attribute(
             value=actual,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to set attribute '{}'".format(attribute))
+        return skill_exception(exc, message="Failed to set attribute '{}'".format(attribute))
 
 
+@skill_entry
 def main(**kwargs):
     return set_nparticle_attribute(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    print(json.dumps(set_nparticle_attribute("nParticleShape1", "radius", 0.2)))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

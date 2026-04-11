@@ -9,7 +9,7 @@ import re
 from typing import List, Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def _next_version(publish_dir: str, asset_name: str, fmt: str) -> int:
@@ -45,9 +45,9 @@ def publish_asset(
     """
 
     if not asset_name:
-        return maya_error("No asset_name provided", "Provide 'asset_name' parameter.")
+        return skill_error("No asset_name provided", "Provide 'asset_name' parameter.")
     if not publish_dir:
-        return maya_error("No publish_dir provided", "Provide 'publish_dir' parameter.")
+        return skill_error("No publish_dir provided", "Provide 'publish_dir' parameter.")
 
     fmt = format.lower()
 
@@ -57,7 +57,7 @@ def publish_asset(
 
         selection = cmds.ls(selection=True)
         if not selection:
-            return maya_error("Nothing selected", "Select at least one object before publishing.")
+            return skill_error("Nothing selected", "Select at least one object before publishing.")
 
         if not os.path.isdir(publish_dir):
             os.makedirs(publish_dir)
@@ -82,9 +82,9 @@ def publish_asset(
                 force=True,
             )
         else:
-            return maya_error("Unsupported format '{}'".format(fmt), "Use 'fbx' or 'ma'.")
+            return skill_error("Unsupported format '{}'".format(fmt), "Use 'fbx' or 'ma'.")
 
-        return maya_success(
+        return skill_success(
             "Published {} v{:03d} to {}".format(asset_name, ver, publish_path),
             prompt="Asset published. Tag it with tag_asset_metadata for pipeline tracking.",
             publish_path=publish_path,
@@ -92,17 +92,16 @@ def publish_asset(
             asset_name=asset_name,
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Publish failed")
+        return skill_exception(exc, message="Publish failed")
 
 
+@skill_entry
 def main(**kwargs):
     return publish_asset(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = publish_asset("hero_character", "/path/to/publish", format="ma")
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)

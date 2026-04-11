@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
 def export_selection(
@@ -32,25 +32,24 @@ def export_selection(
             type=file_type,
             force=True,
         )
-        return maya_success(
+        return skill_success(
             "Selection exported to {}".format(saved),
             file_path=saved,
             file_type=file_type,
             prompt="Check the result with list_render or use related actions to continue.",
         )
     except ImportError:
-        return maya_error("Maya not available", "maya.cmds could not be imported")
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to export selection")
+        return skill_exception(exc, message="Failed to export selection")
 
 
+@skill_entry
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`export_selection`."""
     return export_selection(**kwargs)
 
 
 if __name__ == "__main__":
-    import json
-
-    result = export_selection()
-    print(json.dumps(result))
+    from dcc_mcp_core.skill import run_main
+    run_main(main)
