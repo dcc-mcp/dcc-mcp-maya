@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_maya.api import batch_validate_nodes, maya_error, maya_from_exception, maya_success, validate_node_exists
 
 # Import built-in modules
 from typing import List
@@ -65,13 +65,14 @@ def set_driven_key(
         import maya.cmds as cmds  # noqa: PLC0415
 
         driver_obj = driver_attr.rsplit(".", 1)[0]
-        if not cmds.objExists(driver_obj):
-            return maya_error("Driver object not found: {}".format(driver_obj))
+        err = validate_node_exists(cmds, driver_obj)
+        if err:
+            return err
 
-        for da in driven_attrs:
-            da_obj = da.rsplit(".", 1)[0]
-            if not cmds.objExists(da_obj):
-                return maya_error("Driven object not found: {}".format(da_obj))
+        driven_objs = list({da.rsplit(".", 1)[0] for da in driven_attrs})
+        err = batch_validate_nodes(cmds, driven_objs)
+        if err:
+            return err
 
         keys_set = 0
         for i, drv_val in enumerate(driver_values):

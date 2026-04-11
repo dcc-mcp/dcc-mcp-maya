@@ -6,7 +6,7 @@ from __future__ import annotations
 # Import built-in modules
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success, validate_node_exists, validate_node_type
 
 _VALID_FIELD_TYPES = (
     "gravity",
@@ -46,21 +46,17 @@ def set_ncloth_attribute(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(ncloth_node):
-            return maya_error(
-                "nCloth node not found: {}".format(ncloth_node),
-                "'{}' does not exist in the scene".format(ncloth_node),
-            )
+        err = validate_node_exists(cmds, ncloth_node)
+        if err:
+            return err
 
-        node_type = cmds.objectType(ncloth_node)
-        if node_type != "nCloth":
-            return maya_error(
-                "Not an nCloth node: {}".format(ncloth_node),
-                "Expected node type 'nCloth', got '{}'".format(node_type),
-            )
+        err = validate_node_type(cmds, ncloth_node, "nCloth")
+        if err:
+            return err
 
         plug = "{}.{}".format(ncloth_node, attribute)
-        if not cmds.objExists(plug):
+        err = validate_node_exists(cmds, plug)
+        if err:
             return maya_error(
                 "Attribute not found: {}".format(plug),
                 "'{}' does not have attribute '{}'".format(ncloth_node, attribute),
