@@ -46,6 +46,8 @@ def get_script_node(
                 "scriptNode retrieved",
                 prompt="Inspect 'script_node' for the stored script body.",
                 script_node={"name": node_name, "script": body, "script_type": stype},
+                script=body,
+                node_name=node_name,
             )
 
         elif action == "create":
