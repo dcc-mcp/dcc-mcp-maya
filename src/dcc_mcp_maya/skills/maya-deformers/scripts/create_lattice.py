@@ -44,7 +44,6 @@ def create_lattice(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-
         err = batch_validate_nodes(cmds, list(objects))
         if err:
             return err
@@ -89,4 +88,5 @@ def main(**kwargs) -> dict:
 
 if __name__ == "__main__":
     from dcc_mcp_core.skill import run_main
+
     run_main(main)

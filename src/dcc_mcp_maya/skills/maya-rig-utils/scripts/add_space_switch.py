@@ -41,7 +41,6 @@ def add_space_switch(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-
         err = validate_node_exists(cmds, control)
         if err:
             return err
@@ -96,4 +95,5 @@ def main(**kwargs):
 
 if __name__ == "__main__":
     from dcc_mcp_core.skill import run_main
+
     run_main(main)

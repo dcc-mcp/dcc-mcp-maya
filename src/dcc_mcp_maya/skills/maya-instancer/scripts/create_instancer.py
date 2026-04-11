@@ -39,7 +39,6 @@ def create_instancer(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-
         err = validate_node_exists(cmds, particle_system)
         if err:
             return err
@@ -81,4 +80,5 @@ def main(**kwargs):
 
 if __name__ == "__main__":
     from dcc_mcp_core.skill import run_main
+
     run_main(main)
