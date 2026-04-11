@@ -705,9 +705,135 @@ No more empty skill dirs.
 - Committed: `69ee591 refactor(skills): migrate 44 cmds.objExists guards to validate_node_exists/batch_validate_nodes; add test_skills_round30 (36 tests)`
 - Pushed: `origin/feat/skill-api-improvements` updated
 
+
+
+---
+
+## 2026-04-11 (Round 17 — 18 cmds.objExists guards migrated + test_skills_round31)
+
+### State before this round
+- Branch: `feat/skill-api-improvements`
+- Tests: 2082 passed, 1 skipped
+- cmds.objExists remaining: 98 across 84 files
+
+### Work done
+
+**1. Analysis of remaining 98 cmds.objExists instances**:
+- Attribute probes (node.attr): 3 — kept intentionally
+- Positive checks (if cmds.objExists): 21 — kept (logic guards, not error returns)
+- List comprehensions ([o for o if not cmds.objExists]): 37 — complex, future work
+- Inline/conditional: 19 — kept
+
+**2. tools/migrate_remaining_objexists.py** — new migration tool:
+- Targets `if not cmds.objExists(VAR):` + `return ...` two-line patterns
+- Skips api.py (validate_node_exists implementation), attribute probes (full_attr variables)
+- 18 replacements across 16 files
+
+**3. Files migrated** (18 guards → validate_node_exists):
+- maya-mesh-ops: create_proxy_mesh, get_mesh_edge_info, get_poly_count, merge_vertices
+- maya-pipeline: get_asset_metadata, tag_asset_metadata
+- maya-rigging: blend_shape_add_target (2 guards: blend_shape + target_mesh nodes)
+- maya-scripting: cameras, get_script_node, lighting
+- maya-utility: list_node_connections
+- maya-uv-ops: get_uv_shell_info
+- maya-vertex-color: create_color_set, get_vertex_color (2 guards), remove_vertex_colors, set_vertex_color
+
+**4. ruff fixes**:
+- E402: noqa added to validate_node_exists imports in get_asset_metadata.py, tag_asset_metadata.py
+- E741: renamed `l` → `line`/`ln` in test_skills_round30.py
+
+**5. test_skills_round31.py** — 70 new tests, all pass:
+- TestStructural (52): parametrized × 16 files × 3 checks (no raw guard, import present, no syntax error) + 1 global count < 85
+- TestMeshOpsRound31 (4): missing node tests for 4 scripts
+- TestVertexColorRound31 (6): missing node + success + vtx_index query
+- TestRiggingRound31 (5): blend_shape + target_mesh guards, wrong type, invalid weight
+- TestPipelineRound31 (2): missing node for get/tag asset metadata
+- TestUvOpsRound31 (2): missing node + success with shell_count
+- TestCamerasLightingRound31 (2): missing node for set_*_attribute
+
+### State after this round
+- Tests: 2152 passed (+70), 1 skipped, 0 failures
+- cmds.objExists: 98 → 80 (18 migrated)
+- ruff: All checks passed
+- Committed: `06cbf40 refactor(skills): migrate 18 cmds.objExists guards to validate_node_exists; add test_skills_round31 (70 tests); fix ruff E741 in test_round30`
+- Pushed: `origin/feat/skill-api-improvements` updated
+
+
+---
+
+## 2026-04-12 (Round 18 — 26 list-comp objExists migrated to batch_validate_nodes)
+
+### State before this round
+- Branch: `feat/skill-api-improvements`
+- Tests: 2152 passed, 27 skipped
+- cmds.objExists remaining: 80 (categorized: 29 list-comp, 17 positive-guard, 2 attr-probe, 32 other)
+
+### Work done
+
+**Migrated 26 list-comprehension `cmds.objExists` patterns → `batch_validate_nodes`**:
+
+Target pattern:
+```python
+missing = [o for o in objects if not cmds.objExists(o)]
+if missing:
+    return skill_error(...)
+```
+→
+```python
+err = batch_validate_nodes(cmds, list(objects))
+if err:
+    return err
+```
+
+Files migrated (25 individual scripts + scene_utils.py which already had top-level import):
+- maya-animation: bake_constraints, bake_simulation (2)
+- maya-blend-shape-utils: create_blend_shape (1)
+- maya-deformers: create_cluster, create_lattice, sculpt_deformer, wire_deformer×2 (5)
+- maya-dynamics: connect_field_to_objects, create_dynamic_field (2)
+- maya-gpu-cache: export_gpu_cache (1)
+- maya-instancer: create_instancer (1)
+- maya-render-layers: create_render_layer (1)
+- maya-rig-utils: add_space_switch (1)
+- maya-rigging: create_blend_shape (1)
+- maya-scene-utils: align_objects (1)
+- maya-scripting: display, render_layers, scene_utils, texture_bake (4)
+- maya-sets: add_to_set, create_set (2)
+- maya-texture-bake: bake_textures (1)
+- maya-xform-utils: bake_transforms, freeze_transforms, reset_pivot (3)
+
+**3 tools added** (to tools/): migrate_listcomp_objexists.py, fix_batch_validate_imports.py, fix_inline_batch_imports_to_top.py
+
+**test_skills_round32.py** — 76 tests, all pass:
+- TestRound32Structural (54): parametrized × 25 files × 2 checks + global count <60 + usage count >=35
+- TestDeformersRound32 (7): create_cluster (missing/happy/empty), wire_deformer (missing curve/mesh), create_lattice/sculpt_deformer missing
+- TestXFormUtilsRound32 (4): freeze_transforms (missing/happy), reset_pivot, bake_transforms missing
+- TestAnimationRound32 (2), TestBlendShapeRound32 (1), TestDynamicsRound32 (2)
+- TestGpuCacheRound32 (1), TestInstancerRound32 (1), TestRenderLayersRound32 (1)
+- TestRigUtilsRound32 (1), TestSceneUtilsRound32 (1), TestSetsRound32 (2), TestTextureBakeRound32 (1)
+
+**Key fix**: `_load_and_call` helper keeps `patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds})` active during both module load AND function call; `mock_maya.cmds = mock_cmds` ensures `import maya.cmds as cmds` gets the correct mock.
+
+### State after this round
+- Tests: 2228 passed (+76), 27 skipped, 0 failures
+- cmds.objExists: 80 → 54 (26 migrated; 3 skipped: positive-filter patterns in clean_mocap_keys, sets.py×2)
+- batch_validate_nodes usage: 39 scripts
+- ruff: All checks passed
+- Committed: `1c4f500 refactor(skills): migrate 26 list-comp cmds.objExists to batch_validate_nodes; add test_skills_round32 (76 tests)`
+- Pushed: `origin/feat/skill-api-improvements` updated
+
+### Remaining cmds.objExists (54 total)
+- **Positive-filter list-comp** (3): clean_mocap_keys (keep existing joints), sets/remove_from_set, scripting/sets (skip non-existent gracefully)
+- **Positive guards** (17): arnold-aov, constraints, display, dynamics, render, toon — keep (logic guards)
+- **Attr probes** (2): list_connections, node_graph — keep
+- **Other conditional** (32): inline conditions, nucleus checks, expression guards — keep or future work
+
 ### Next priorities
-1. 继续迁移剩余 ~98 处 cmds.objExists（优先 lighting.py / cameras.py 的属性检查模式、node_attrs.py）
-2. 覆盖更多 skill 目录的 E2E 测试（目前 tests/e2e/ 只有 scene/animation/material/scripting）
-3. 考虑对 remaining `cmds.objExists` 做最终分类：attribute-probe（保留） vs node-existence（迁移）
+1. Investigate if the remaining 32 "other" conditionals have any migratable patterns
+2. Add `_load_and_call` helper pattern to shared conftest.py for reuse across future test files
+3. Check dcc-mcp-core for new API updates
+4. Consider E2E test expansion for deformers/xform-utils
+
+
+
 
 
