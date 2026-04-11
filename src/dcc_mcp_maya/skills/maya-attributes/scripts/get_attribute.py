@@ -9,7 +9,6 @@ from __future__ import annotations
 from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 
-
 def get_attribute(node_name: str, attribute: str) -> dict:
     """Get the value of an attribute on a Maya node.
 

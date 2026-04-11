@@ -9,6 +9,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 # Import built-in modules
 from typing import Optional
 
+
 def set_render_settings(
     width: Optional[int] = None,
     height: Optional[int] = None,
@@ -92,9 +93,11 @@ def set_render_settings(
     except Exception as exc:
         return maya_from_exception(exc, "Failed to set render settings")
 
+
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`set_render_settings`."""
     return set_render_settings(**kwargs)
+
 
 if __name__ == "__main__":
     import json

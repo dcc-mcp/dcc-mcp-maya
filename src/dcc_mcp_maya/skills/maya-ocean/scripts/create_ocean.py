@@ -9,6 +9,7 @@ from __future__ import annotations
 # Import local modules
 from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
+
 def create_ocean(
     name: str = "ocean_surface",
     subdivisions_x: int = 50,
@@ -69,8 +70,10 @@ def create_ocean(
     except Exception as exc:
         return maya_from_exception(exc, "Failed to create ocean surface")
 
+
 def main(**kwargs):
     return create_ocean(**kwargs)
+
 
 if __name__ == "__main__":
     import json

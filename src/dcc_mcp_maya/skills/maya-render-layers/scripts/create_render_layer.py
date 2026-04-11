@@ -9,6 +9,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 # Import built-in modules
 from typing import List, Optional
 
+
 def create_render_layer(
     name: str,
     objects: Optional[List[str]] = None,
@@ -52,15 +53,18 @@ def create_render_layer(
             layer_name=layer,
             objects_added=objects_to_add,
             is_current=make_current,
+            prompt="Use add_to_render_layer to populate or set_render_layer_attribute to adjust.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
         return maya_from_exception(exc, "Failed to create render layer '{}'".format(name))
 
+
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`create_render_layer`."""
     return create_render_layer(**kwargs)
+
 
 if __name__ == "__main__":
     import json

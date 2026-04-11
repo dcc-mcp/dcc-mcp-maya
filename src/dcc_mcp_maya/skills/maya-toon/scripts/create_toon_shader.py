@@ -9,6 +9,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 # Import built-in modules
 from typing import List, Optional
 
+
 def create_toon_shader(
     name: str = "toonShader1",
     color_ramp: Optional[List[List[float]]] = None,
@@ -76,10 +77,12 @@ def create_toon_shader(
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to create toon shader")
+        return maya_from_exception(exc, "Failed to create toon shader")
+
 
 def main(**kwargs):
     return create_toon_shader(**kwargs)
+
 
 if __name__ == "__main__":
     import json

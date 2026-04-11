@@ -9,6 +9,7 @@ from typing import List, Optional
 # Import local modules
 from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
+
 def apply_muscle_skin(
     mesh: str,
     muscles: Optional[List[str]] = None,
@@ -67,8 +68,10 @@ def apply_muscle_skin(
     except Exception as exc:
         return maya_from_exception(exc, "Failed to apply muscle skin to '{}'".format(mesh))
 
+
 def main(**kwargs):
     return apply_muscle_skin(**kwargs)
+
 
 if __name__ == "__main__":
     import json

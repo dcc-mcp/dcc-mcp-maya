@@ -13,6 +13,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 # Import built-in modules
 from typing import Optional
 
+
 def connect_attr(
     source_attr: str,
     dest_attr: str,
@@ -53,6 +54,7 @@ def connect_attr(
             "Connected {} -> {}".format(source_attr, dest_attr),
             source_attr=source_attr,
             dest_attr=dest_attr,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
@@ -61,6 +63,7 @@ def connect_attr(
             "Failed to connect {} -> {}".format(source_attr, dest_attr),
             str(exc),
         )
+
 
 def disconnect_attr(
     source_attr: str,
@@ -106,6 +109,7 @@ def disconnect_attr(
             "Disconnected {} -x-> {}".format(source_attr, dest_attr),
             source_attr=source_attr,
             dest_attr=dest_attr,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
@@ -114,6 +118,7 @@ def disconnect_attr(
             "Failed to disconnect {} -> {}".format(source_attr, dest_attr),
             str(exc),
         )
+
 
 def list_connections(
     object_name: str,
@@ -176,11 +181,13 @@ def list_connections(
             attribute=attribute,
             connections=pairs,
             count=len(pairs),
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to list connections on {}".format(object_name))
+        return maya_from_exception(exc, "Failed to list connections on {}".format(object_name))
+
 
 def get_dag_path(
     object_name: str,
@@ -225,11 +232,13 @@ def get_dag_path(
             short_name=short_name,
             node_type=node_type,
             object_name=object_name,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to get DAG path for {}".format(object_name))
+        return maya_from_exception(exc, "Failed to get DAG path for {}".format(object_name))
+
 
 def smooth_mesh(
     object_name: str,
@@ -291,6 +300,7 @@ def smooth_mesh(
                 object_name=object_name,
                 divisions=divisions,
                 method=method,
+                prompt="Check the result with list_scripting or use related actions to continue.",
             )
 
         # method == "subdivide"
@@ -302,11 +312,13 @@ def smooth_mesh(
             divisions=divisions,
             method=method,
             poly_smooth_node=node_name,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to smooth mesh {}".format(object_name))
+        return maya_from_exception(exc, "Failed to smooth mesh {}".format(object_name))
+
 
 def list_history(
     object_name: str,
@@ -351,11 +363,13 @@ def list_history(
             history=history,
             count=len(history),
             future=future,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to list history for {}".format(object_name))
+        return maya_from_exception(exc, "Failed to list history for {}".format(object_name))
+
 
 def delete_history(
     object_name: str,
@@ -387,11 +401,13 @@ def delete_history(
         return maya_success(
             "Deleted construction history on '{}'".format(object_name),
             object_name=object_name,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to delete history for {}".format(object_name))
+        return maya_from_exception(exc, "Failed to delete history for {}".format(object_name))
+
 
 def apply_symmetry(
     object_name: str,
@@ -452,11 +468,13 @@ def apply_symmetry(
             object_name=object_name,
             axis=axis_lower,
             world_space=world_space,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to apply symmetry on {}".format(object_name))
+        return maya_from_exception(exc, "Failed to apply symmetry on {}".format(object_name))
+
 
 def transfer_attributes(
     source: str,
@@ -534,10 +552,9 @@ def transfer_attributes(
             transfer_normals=transfer_normals,
             transfer_uvs=transfer_uvs,
             transfer_colors=transfer_colors,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_error(
-            "Failed to transfer attributes from '{}' to '{}'".format(source, target), str(exc)
-        )
+        return maya_error("Failed to transfer attributes from '{}' to '{}'".format(source, target), str(exc))

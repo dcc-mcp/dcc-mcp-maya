@@ -8,6 +8,7 @@ from __future__ import annotations
 # Import local modules
 from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
+
 def get_camera_info(camera_name: str) -> dict:
     """Return settings for a Maya camera.
 
@@ -63,9 +64,11 @@ def get_camera_info(camera_name: str) -> dict:
     except Exception as exc:
         return maya_from_exception(exc, "Failed to get camera info for '{}'".format(camera_name))
 
+
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`get_camera_info`."""
     return get_camera_info(**kwargs)
+
 
 if __name__ == "__main__":
     import json

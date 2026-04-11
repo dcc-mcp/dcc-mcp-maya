@@ -9,6 +9,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 # Import built-in modules
 from typing import Optional
 
+
 def create_proxy(
     source: str,
     reduction: float = 90.0,
@@ -75,8 +76,10 @@ def create_proxy(
     except Exception as exc:
         return maya_from_exception(exc, "Failed to create proxy mesh")
 
+
 def main(**kwargs):
     return create_proxy(**kwargs)
+
 
 if __name__ == "__main__":
     import json

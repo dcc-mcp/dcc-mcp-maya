@@ -8,6 +8,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 # Import built-in modules
 
+
 def lock_object(object_name: str, lock: bool = True) -> dict:
     """Lock or unlock the transform attributes of an object.
 
@@ -49,15 +50,18 @@ def lock_object(object_name: str, lock: bool = True) -> dict:
             "Transform attributes {} on '{}'".format(state, object_name),
             object_name=object_name,
             locked=lock,
+            prompt="Check the result with list_scene or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
         return maya_from_exception(exc, "Failed to {} '{}'".format("lock" if lock else "unlock", object_name))
 
+
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`lock_object`."""
     return lock_object(**kwargs)
+
 
 if __name__ == "__main__":
     import json

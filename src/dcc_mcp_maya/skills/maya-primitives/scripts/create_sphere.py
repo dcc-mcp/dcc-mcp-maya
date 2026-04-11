@@ -27,7 +27,12 @@ def create_sphere(radius: float = 1.0, name: Optional[str] = None) -> dict:
         obj = result[0]
         if name:
             obj = cmds.rename(obj, name)
-        return maya_success(f"Created sphere: {obj}", object_name=obj, radius=radius)
+        return maya_success(
+            f"Created sphere: {obj}",
+            object_name=obj,
+            radius=radius,
+            prompt="Use set_transform to position or assign_material to shade.",
+        )
     except ImportError:
         return maya_error(
             "Maya not available",

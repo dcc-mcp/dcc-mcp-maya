@@ -12,6 +12,7 @@ _META_ATTRS = ["asset_name", "asset_variant", "asset_version", "pipeline_step"]
 # Import local modules
 from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
+
 def tag_asset_metadata(
     node: str,
     asset_name: Optional[str] = None,
@@ -70,8 +71,10 @@ def tag_asset_metadata(
     except Exception as exc:
         return maya_from_exception(exc, "Failed to tag metadata")
 
+
 def main(**kwargs):
     return tag_asset_metadata(**kwargs)
+
 
 if __name__ == "__main__":
     import json

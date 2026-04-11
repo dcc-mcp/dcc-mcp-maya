@@ -9,6 +9,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 # Import built-in modules
 from typing import Optional
 
+
 def save_scene(file_path: Optional[str] = None, file_type: str = "mayaBinary") -> dict:
     """Save the current Maya scene.
 
@@ -27,17 +28,18 @@ def save_scene(file_path: Optional[str] = None, file_type: str = "mayaBinary") -
             cmds.file(rename=file_path)
         saved = cmds.file(save=True, type=file_type)
         return maya_success(
-            f"Scene saved to {saved}",
-            file_path=saved,
+            f"Scene saved to {saved}", file_path=saved, prompt="Use export_selection to share individual assets."
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
         return maya_from_exception(exc, "Failed to save scene")
 
+
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`save_scene`."""
     return save_scene(**kwargs)
+
 
 if __name__ == "__main__":
     import json

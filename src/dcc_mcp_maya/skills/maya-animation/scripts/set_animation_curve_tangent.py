@@ -9,6 +9,7 @@ from typing import Optional
 # Import local modules
 from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
+
 def set_animation_curve_tangent(
     object_name: str,
     attribute: str,
@@ -84,15 +85,18 @@ def set_animation_curve_tangent(
             frame=frame,
             in_tangent_type=in_type,
             out_tangent_type=out_type,
+            prompt="Use bake_simulation to flatten or get_keyframes to inspect.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
         return maya_from_exception(exc, "Failed to set tangent on '{}.{}'".format(object_name, attribute))
 
+
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`set_animation_curve_tangent`."""
     return set_animation_curve_tangent(**kwargs)
+
 
 if __name__ == "__main__":
     import json

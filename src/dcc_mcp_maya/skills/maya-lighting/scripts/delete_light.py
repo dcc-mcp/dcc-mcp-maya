@@ -42,7 +42,11 @@ def delete_light(light_name: str) -> dict:
                 light_name = parents[0]
 
         cmds.delete(light_name)
-        return maya_success("Deleted light '{}'".format(light_name), light_name=light_name)
+        return maya_success(
+            "Deleted light '{}'".format(light_name),
+            light_name=light_name,
+            prompt="Use list_lights to confirm deletion.",
+        )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:

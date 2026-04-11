@@ -11,6 +11,7 @@ _PROTECTED_NS = frozenset({"UI", "shared", ":"})
 # Import local modules
 from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
+
 def delete_namespace(
     namespace: str,
     merge_with_root: bool = True,
@@ -60,15 +61,18 @@ def delete_namespace(
             "Deleted namespace '{}'".format(ns),
             namespace=ns,
             merged_with_root=merge_with_root,
+            prompt="Check the result with list_namespaces or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
         return maya_from_exception(exc, "Failed to delete namespace '{}'".format(namespace))
 
+
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`delete_namespace`."""
     return delete_namespace(**kwargs)
+
 
 if __name__ == "__main__":
     import json

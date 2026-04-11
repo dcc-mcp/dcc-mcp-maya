@@ -9,6 +9,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 # Import built-in modules
 from typing import List, Optional
 
+
 def get_poly_count(object_name: Optional[str] = None) -> dict:
     """Query polygon statistics for an object or the entire scene.
 
@@ -72,11 +73,14 @@ def get_poly_count(object_name: Optional[str] = None) -> dict:
         if object_name:
             result_kwargs["objects"] = per_object
 
-        return maya_success(label, **result_kwargs)
+        return maya_success(
+            label, **result_kwargs, prompt="Check the result with list_scripting or use related actions to continue."
+        )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to get poly count")
+        return maya_from_exception(exc, "Failed to get poly count")
+
 
 def apply_subdivision(
     object_name: str,
@@ -128,11 +132,13 @@ def apply_subdivision(
             object_name=object_name,
             method=method,
             level=level,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to apply subdivision")
+        return maya_from_exception(exc, "Failed to apply subdivision")
+
 
 def merge_vertices(
     object_name: str,
@@ -169,11 +175,13 @@ def merge_vertices(
             vertex_count_before=before_count,
             vertex_count_after=after_count,
             threshold=threshold,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to merge vertices")
+        return maya_from_exception(exc, "Failed to merge vertices")
+
 
 def triangulate(object_name: str) -> dict:
     """Triangulate all faces of a polygon mesh.
@@ -203,11 +211,13 @@ def triangulate(object_name: str) -> dict:
             object_name=object_name,
             face_count_before=before_count,
             face_count_after=after_count,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to triangulate")
+        return maya_from_exception(exc, "Failed to triangulate")
+
 
 def cleanup_mesh(
     object_name: str,
@@ -248,11 +258,13 @@ def cleanup_mesh(
             non_manifold=non_manifold,
             lamina_faces=lamina_faces,
             invalid_components=invalid_components,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to clean mesh")
+        return maya_from_exception(exc, "Failed to clean mesh")
+
 
 def get_mesh_edge_info(
     object_name: str,
@@ -332,11 +344,13 @@ def get_mesh_edge_info(
             edges=edges,
             edge_count=len(edges),
             total_edges=total_edges,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to get edge info")
+        return maya_from_exception(exc, "Failed to get edge info")
+
 
 def select_by_material(material_name: str) -> dict:
     """Select all objects in the scene that use a given material.
@@ -373,6 +387,7 @@ def select_by_material(material_name: str) -> dict:
                 objects=[],
                 count=0,
                 material=material_name,
+                prompt="Check the result with list_scripting or use related actions to continue.",
             )
 
         # Collect all mesh members from shading groups
@@ -406,11 +421,13 @@ def select_by_material(material_name: str) -> dict:
             objects=objects,
             count=len(objects),
             material=material_name,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to select by material")
+        return maya_from_exception(exc, "Failed to select by material")
+
 
 def create_proxy_mesh(
     object_name: str,
@@ -487,11 +504,13 @@ def create_proxy_mesh(
             reduction=reduction,
             face_count_before=face_count_before,
             face_count_after=face_count_after,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to create proxy mesh from '{}'".format(object_name))
+        return maya_from_exception(exc, "Failed to create proxy mesh from '{}'".format(object_name))
+
 
 def combine_meshes(
     objects,  # type: List[str]
@@ -543,11 +562,13 @@ def combine_meshes(
             "Combined {} meshes into '{}'".format(len(objects), combined),
             combined_mesh=combined,
             input_count=len(objects),
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to combine meshes")
+        return maya_from_exception(exc, "Failed to combine meshes")
+
 
 def separate_mesh(
     object_name,  # type: str
@@ -604,11 +625,13 @@ def separate_mesh(
             "Separated '{}' into {} meshes".format(object_name, len(unique)),
             separated_meshes=unique,
             count=len(unique),
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to separate mesh '{}'".format(object_name))
+        return maya_from_exception(exc, "Failed to separate mesh '{}'".format(object_name))
+
 
 def extract_faces(
     object_name,  # type: str
@@ -674,11 +697,13 @@ def extract_faces(
             "Extracted {} face(s) from '{}'".format(len(face_indices), object_name),
             extracted_mesh=extracted,
             face_count=len(face_indices),
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to extract faces from '{}'".format(object_name))
+        return maya_from_exception(exc, "Failed to extract faces from '{}'".format(object_name))
+
 
 def mirror_mesh(
     object_name,  # type: str
@@ -752,8 +777,9 @@ def mirror_mesh(
             object_name=object_name,
             axis=axis_lower,
             cut_position=cut_position,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to mirror mesh '{}'".format(object_name))
+        return maya_from_exception(exc, "Failed to mirror mesh '{}'".format(object_name))

@@ -14,6 +14,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 # Import built-in modules
 from typing import Optional
 
+
 def create_reference(
     file_path: str,
     namespace: Optional[str] = None,
@@ -64,11 +65,13 @@ def create_reference(
             reference_node=ref_node,
             namespace=resolved_ns,
             file_path=file_path,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to reference file '{}'".format(file_path))
+        return maya_from_exception(exc, "Failed to reference file '{}'".format(file_path))
+
 
 def list_references() -> dict:
     """List all file references in the current scene.
@@ -106,11 +109,13 @@ def list_references() -> dict:
             "Found {} reference(s)".format(len(references)),
             references=references,
             count=len(references),
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to list references")
+        return maya_from_exception(exc, "Failed to list references")
+
 
 def remove_reference(
     reference_node: str,
@@ -167,11 +172,13 @@ def remove_reference(
             "Removed reference '{}'".format(reference_node),
             reference_node=reference_node,
             namespace_removed=namespace_removed if remove_namespace else "",
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to remove reference '{}'".format(reference_node))
+        return maya_from_exception(exc, "Failed to remove reference '{}'".format(reference_node))
+
 
 def reload_reference(reference_node: str) -> dict:
     """Reload a previously unloaded (or modified) file reference.
@@ -213,11 +220,13 @@ def reload_reference(reference_node: str) -> dict:
             reference_node=reference_node,
             file_path=file_path,
             loaded=True,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to reload reference '{}'".format(reference_node))
+        return maya_from_exception(exc, "Failed to reload reference '{}'".format(reference_node))
+
 
 def unload_reference(reference_node: str) -> dict:
     """Unload a file reference without removing it from the scene.
@@ -254,11 +263,13 @@ def unload_reference(reference_node: str) -> dict:
             "Unloaded reference '{}'".format(reference_node),
             reference_node=reference_node,
             loaded=False,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to unload reference '{}'".format(reference_node))
+        return maya_from_exception(exc, "Failed to unload reference '{}'".format(reference_node))
+
 
 def list_namespaces(root_only: bool = False) -> dict:
     """List all namespaces in the current scene.
@@ -289,8 +300,9 @@ def list_namespaces(root_only: bool = False) -> dict:
             "Found {} namespace(s)".format(len(namespaces)),
             namespaces=namespaces,
             count=len(namespaces),
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to list namespaces")
+        return maya_from_exception(exc, "Failed to list namespaces")

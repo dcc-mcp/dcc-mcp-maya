@@ -22,6 +22,7 @@ _VALID_FIELD_TYPES = (
 
 _VALID_MIRROR_AXES = ("x", "y", "z")
 
+
 def create_nucleus(
     name: Optional[str] = None,
     gravity: float = -9.8,
@@ -79,11 +80,13 @@ def create_nucleus(
             gravity=gravity,
             wind_speed=wind_speed,
             wind_direction=wind_dir,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to create nucleus solver")
+        return maya_from_exception(exc, "Failed to create nucleus solver")
+
 
 def set_nucleus_attribute(
     nucleus: str,
@@ -139,11 +142,13 @@ def set_nucleus_attribute(
             nucleus=nucleus,
             attribute=attribute,
             value=value,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to set attribute on nucleus '{}'".format(nucleus))
+        return maya_from_exception(exc, "Failed to set attribute on nucleus '{}'".format(nucleus))
+
 
 def create_dynamic_field(
     field_type: str = "gravity",
@@ -215,11 +220,13 @@ def create_dynamic_field(
             field_type=ft,
             magnitude=magnitude,
             connected_objects=connected,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to create dynamic field")
+        return maya_from_exception(exc, "Failed to create dynamic field")
+
 
 def connect_field_to_objects(
     field_node: str,
@@ -269,11 +276,13 @@ def connect_field_to_objects(
             "Connected field '{}' to {} object(s)".format(field_node, len(objects)),
             field_node=field_node,
             connected_objects=list(objects),
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to connect field '{}' to objects".format(field_node))
+        return maya_from_exception(exc, "Failed to connect field '{}' to objects".format(field_node))
+
 
 def create_ncloth(
     mesh: str,
@@ -341,11 +350,13 @@ def create_ncloth(
             ncloth_node=ncloth_node,
             mesh=mesh,
             nucleus=used_nucleus,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to create nCloth on '{}'".format(mesh))
+        return maya_from_exception(exc, "Failed to create nCloth on '{}'".format(mesh))
+
 
 def create_nrigid(
     mesh: str,
@@ -411,11 +422,13 @@ def create_nrigid(
             nrigid_node=nrigid_node,
             mesh=mesh,
             nucleus=used_nucleus,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to create nRigid on '{}'".format(mesh))
+        return maya_from_exception(exc, "Failed to create nRigid on '{}'".format(mesh))
+
 
 def set_ncloth_attribute(
     ncloth_node: str,
@@ -474,11 +487,13 @@ def set_ncloth_attribute(
             ncloth_node=ncloth_node,
             attribute=attribute,
             value=value,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to set attribute on nCloth '{}'".format(ncloth_node))
+        return maya_from_exception(exc, "Failed to set attribute on nCloth '{}'".format(ncloth_node))
+
 
 def list_ncloth_nodes() -> dict:
     """List all nCloth shape nodes in the current Maya scene.
@@ -521,11 +536,13 @@ def list_ncloth_nodes() -> dict:
             "Found {} nCloth node(s) in scene".format(len(nodes)),
             nodes=nodes,
             count=len(nodes),
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to list nCloth nodes")
+        return maya_from_exception(exc, "Failed to list nCloth nodes")
+
 
 def set_nrigid_attribute(
     nrigid_node,  # type: str
@@ -587,6 +604,7 @@ def set_nrigid_attribute(
             nrigid_node=nrigid_node,
             attribute=attribute,
             value=value,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
@@ -595,6 +613,7 @@ def set_nrigid_attribute(
             "Failed to set attribute '{}' on '{}'".format(attribute, nrigid_node),
             str(exc),
         )
+
 
 def list_nrigid_nodes():
     # type: () -> dict
@@ -634,8 +653,9 @@ def list_nrigid_nodes():
             "Found {} nRigid node(s) in scene".format(len(nodes)),
             nodes=nodes,
             count=len(nodes),
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to list nRigid nodes")
+        return maya_from_exception(exc, "Failed to list nRigid nodes")

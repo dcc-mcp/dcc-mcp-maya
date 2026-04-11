@@ -9,7 +9,6 @@ from __future__ import annotations
 from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 
-
 def get_current_time() -> dict:
     """Get the current frame number.
 
@@ -23,6 +22,7 @@ def get_current_time() -> dict:
         return maya_success(
             "Current time: {}".format(current),
             current_time=current,
+            prompt="Use set_current_time to seek to a specific frame.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")

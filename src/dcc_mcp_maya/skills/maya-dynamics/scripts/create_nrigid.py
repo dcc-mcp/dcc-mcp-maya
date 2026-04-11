@@ -86,6 +86,7 @@ def create_nrigid(
             nrigid_node=nrigid_node,
             mesh=mesh,
             nucleus=used_nucleus,
+            prompt="Use list_ncloth_objects to verify or set_ncloth_attribute to tune.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")

@@ -9,6 +9,7 @@ from typing import Optional
 # Import local modules
 from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
+
 def get_keyframes(
     object_name: str,
     attribute: Optional[str] = None,
@@ -43,15 +44,18 @@ def get_keyframes(
             attribute=attribute,
             keyframes=keyframes,
             count=len(keyframes),
+            prompt="Use set_keyframe to modify keys or delete_keyframes to remove them.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
         return maya_from_exception(exc, "Failed to get keyframes for {}".format(object_name))
 
+
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`get_keyframes`."""
     return get_keyframes(**kwargs)
+
 
 if __name__ == "__main__":
     import json

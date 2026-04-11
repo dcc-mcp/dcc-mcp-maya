@@ -10,6 +10,7 @@ from typing import Optional
 # Import local modules
 from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
+
 def create_muscle_capsule(
     start_joint: str,
     end_joint: str,
@@ -69,8 +70,10 @@ def create_muscle_capsule(
     except Exception as exc:
         return maya_from_exception(exc, "Failed to create muscle capsule")
 
+
 def main(**kwargs):
     return create_muscle_capsule(**kwargs)
+
 
 if __name__ == "__main__":
     import json

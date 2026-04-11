@@ -21,6 +21,7 @@ _VALID_FIELD_TYPES = (
 
 _VALID_MIRROR_AXES = ("x", "y", "z")
 
+
 def set_nrigid_attribute(
     nrigid_node,  # type: str
     attribute,  # type: str
@@ -80,6 +81,7 @@ def set_nrigid_attribute(
             nrigid_node=nrigid_node,
             attribute=attribute,
             value=value,
+            prompt="Check the result with list_dynamics or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
@@ -89,9 +91,11 @@ def set_nrigid_attribute(
             str(exc),
         )
 
+
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`set_nrigid_attribute`."""
     return set_nrigid_attribute(**kwargs)
+
 
 if __name__ == "__main__":
     import json

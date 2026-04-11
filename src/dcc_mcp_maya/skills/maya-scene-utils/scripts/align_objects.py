@@ -9,6 +9,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 # Import built-in modules
 from typing import List, Optional
 
+
 def align_objects(
     objects: List[str],
     axis: str = "x",
@@ -126,15 +127,18 @@ def align_objects(
             axis=axis_lower,
             mode=mode_lower,
             target_value=target_value,
+            prompt="Check the result with list_scene_utils or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to align objects")
+        return maya_from_exception(exc, "Failed to align objects")
+
 
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`align_objects`."""
     return align_objects(**kwargs)
+
 
 if __name__ == "__main__":
     import json

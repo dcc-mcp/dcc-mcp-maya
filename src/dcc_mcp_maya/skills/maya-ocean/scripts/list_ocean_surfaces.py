@@ -9,6 +9,7 @@ from __future__ import annotations
 # Import local modules
 from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
+
 def list_ocean_surfaces() -> dict:
     """List all oceanShader nodes and find their connected geometry.
 
@@ -52,8 +53,10 @@ def list_ocean_surfaces() -> dict:
     except Exception as exc:
         return maya_from_exception(exc, "Failed to list ocean surfaces")
 
+
 def main(**kwargs):
     return list_ocean_surfaces(**kwargs)
+
 
 if __name__ == "__main__":
     import json

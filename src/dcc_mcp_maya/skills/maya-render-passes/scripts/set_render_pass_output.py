@@ -9,6 +9,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 # Import built-in modules
 from typing import Optional
 
+
 def set_render_pass_output(
     pass_node: str,
     output_path: Optional[str] = None,
@@ -81,8 +82,10 @@ def set_render_pass_output(
     except Exception as exc:
         return maya_from_exception(exc, "Failed to configure output for '{}'".format(pass_node))
 
+
 def main(**kwargs):
     return set_render_pass_output(**kwargs)
+
 
 if __name__ == "__main__":
     import json

@@ -19,6 +19,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 # Import built-in modules
 from typing import List, Optional
 
+
 def create_render_layer(
     name: str,
     objects: Optional[List[str]] = None,
@@ -62,11 +63,13 @@ def create_render_layer(
             layer_name=layer,
             objects_added=objects_to_add,
             is_current=make_current,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to create render layer '{}'".format(name))
+        return maya_from_exception(exc, "Failed to create render layer '{}'".format(name))
+
 
 def set_render_layer(
     object_name: str,
@@ -110,13 +113,17 @@ def set_render_layer(
             "Assigned '{}' to render layer '{}'".format(object_name, layer_name),
             object_name=object_name,
             layer_name=layer_name,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_from_exception(exc, "Failed to assign '{}' to render layer '{}'".format(object_name, layer_name),
+        return maya_from_exception(
+            exc,
+            "Failed to assign '{}' to render layer '{}'".format(object_name, layer_name),
             str(exc),
         )
+
 
 def list_render_layers(include_default: bool = True) -> dict:
     """List all render layers in the scene.
@@ -160,11 +167,13 @@ def list_render_layers(include_default: bool = True) -> dict:
             layers=layers,
             count=len(layers),
             current_layer=current_layer,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to list render layers")
+        return maya_from_exception(exc, "Failed to list render layers")
+
 
 def delete_render_layer(layer_name: str) -> dict:
     """Delete a render layer from the scene.
@@ -211,11 +220,13 @@ def delete_render_layer(layer_name: str) -> dict:
         return maya_success(
             "Deleted render layer '{}'".format(layer_name),
             layer_name=layer_name,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to delete render layer '{}'".format(layer_name))
+        return maya_from_exception(exc, "Failed to delete render layer '{}'".format(layer_name))
+
 
 def set_render_layer_attribute(
     layer_name: str,
@@ -267,6 +278,7 @@ def set_render_layer_attribute(
             layer_name=layer_name,
             attribute=attribute,
             value=value,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")

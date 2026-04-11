@@ -9,6 +9,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 # Import built-in modules
 from typing import Optional
 
+
 def swap_proxy(proxy: str, show_proxy: Optional[bool] = None) -> dict:
     """Swap visibility between proxy and high-res mesh.
 
@@ -59,8 +60,10 @@ def swap_proxy(proxy: str, show_proxy: Optional[bool] = None) -> dict:
     except Exception as exc:
         return maya_from_exception(exc, "Failed to swap proxy visibility")
 
+
 def main(**kwargs):
     return swap_proxy(**kwargs)
+
 
 if __name__ == "__main__":
     import json

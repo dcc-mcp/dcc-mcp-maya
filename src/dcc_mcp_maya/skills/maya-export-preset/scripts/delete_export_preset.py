@@ -9,6 +9,7 @@ import os
 # Import local modules
 from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
+
 def delete_export_preset(preset_path: str) -> dict:
     """Delete a ``.json`` export preset file from disk.
 
@@ -37,8 +38,10 @@ def delete_export_preset(preset_path: str) -> dict:
     except Exception as exc:
         return maya_from_exception(exc, "Failed to delete export preset")
 
+
 def main(**kwargs):
     return delete_export_preset(**kwargs)
+
 
 if __name__ == "__main__":
     import json

@@ -14,9 +14,9 @@ logger = logging.getLogger(__name__)
 _POSE_ATTRS = ["tx", "ty", "tz", "rx", "ry", "rz", "sx", "sy", "sz"]
 
 
-
 # Import local modules
 from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 
 def save_pose(
     file_path: str,

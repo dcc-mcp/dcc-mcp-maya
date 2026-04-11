@@ -21,6 +21,7 @@ _VALID_FIELD_TYPES = (
 
 _VALID_MIRROR_AXES = ("x", "y", "z")
 
+
 def list_nrigid_nodes():
     # type: () -> dict
     """List all nRigid (passive collider) shape nodes in the current Maya scene.
@@ -58,15 +59,18 @@ def list_nrigid_nodes():
             "Found {} nRigid node(s) in scene".format(len(nodes)),
             nodes=nodes,
             count=len(nodes),
+            prompt="Check the result with list_dynamics or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
         return maya_from_exception(exc, "Failed to list nRigid nodes")
 
+
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`list_nrigid_nodes`."""
     return list_nrigid_nodes(**kwargs)
+
 
 if __name__ == "__main__":
     import json

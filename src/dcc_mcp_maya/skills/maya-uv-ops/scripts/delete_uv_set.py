@@ -8,6 +8,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 # Import built-in modules
 
+
 def delete_uv_set(object_name: str, uv_set_name: str) -> dict:
     """Delete a UV set from a polygon mesh.
 
@@ -23,9 +24,7 @@ def delete_uv_set(object_name: str, uv_set_name: str) -> dict:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return maya_error(
-                "Object not found: {}".format(object_name), "'{}' does not exist".format(object_name)
-            )
+            return maya_error("Object not found: {}".format(object_name), "'{}' does not exist".format(object_name))
 
         existing = cmds.polyUVSet(object_name, query=True, allUVSets=True) or []
         if uv_set_name not in existing:
@@ -46,15 +45,18 @@ def delete_uv_set(object_name: str, uv_set_name: str) -> dict:
             "Deleted UV set '{}' from '{}'".format(uv_set_name, object_name),
             object_name=object_name,
             uv_set_name=uv_set_name,
+            prompt="Check the result with list_uv_ops or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to delete UV set")
+        return maya_from_exception(exc, "Failed to delete UV set")
+
 
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`delete_uv_set`."""
     return delete_uv_set(**kwargs)
+
 
 if __name__ == "__main__":
     import json

@@ -9,6 +9,7 @@ from __future__ import annotations
 # Import local modules
 from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
+
 def rename_namespace(
     old_name: str,
     new_name: str,
@@ -67,9 +68,11 @@ def rename_namespace(
     except Exception as exc:
         return maya_from_exception(exc, "Failed to rename namespace")
 
+
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`rename_namespace`."""
     return rename_namespace(**kwargs)
+
 
 if __name__ == "__main__":
     import json

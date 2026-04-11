@@ -63,9 +63,7 @@ def remove_constraint(
             msg = "Removed {} constraint(s) from '{}'".format(len(removed), target)
 
         return maya_success(
-            msg,
-            target=target,
-            removed=removed,
+            msg, target=target, removed=removed, prompt="Use list_constraints to verify the constraint was removed."
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")

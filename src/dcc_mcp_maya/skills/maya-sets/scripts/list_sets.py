@@ -8,6 +8,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 # Import built-in modules
 
+
 def list_sets(include_internal: bool = False) -> dict:
     """List all Maya object sets in the scene.
 
@@ -51,15 +52,18 @@ def list_sets(include_internal: bool = False) -> dict:
             "Found {} object set(s)".format(len(result)),
             sets=result,
             count=len(result),
+            prompt="Use add_to_set or delete_set to manage the listed sets.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to list object sets")
+        return maya_from_exception(exc, "Failed to list object sets")
+
 
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`list_sets`."""
     return list_sets(**kwargs)
+
 
 if __name__ == "__main__":
     import json

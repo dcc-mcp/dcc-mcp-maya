@@ -9,7 +9,6 @@ from __future__ import annotations
 from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 
-
 def get_blend_shape_weights(blend_shape_node: str) -> dict:
     """Get the weight of every target on a blend shape node.
 

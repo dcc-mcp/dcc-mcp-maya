@@ -9,6 +9,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 # Import built-in modules
 from typing import Optional
 
+
 def parent_object(child: str, parent: Optional[str] = None, world: bool = False) -> dict:
     """Set or clear the parent of an object.
 
@@ -37,6 +38,7 @@ def parent_object(child: str, parent: Optional[str] = None, world: bool = False)
                 "Parented '{}' to world".format(child),
                 child=child,
                 parent=None,
+                prompt="Check the result with list_scene or use related actions to continue.",
             )
 
         if not cmds.objExists(parent):
@@ -50,15 +52,18 @@ def parent_object(child: str, parent: Optional[str] = None, world: bool = False)
             "Parented '{}' under '{}'".format(child, parent),
             child=child,
             parent=parent,
+            prompt="Check the result with list_scene or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
         return maya_from_exception(exc, "Failed to parent '{}'".format(child))
 
+
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`parent_object`."""
     return parent_object(**kwargs)
+
 
 if __name__ == "__main__":
     import json

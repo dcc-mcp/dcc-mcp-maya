@@ -45,6 +45,7 @@ def cleanup_mesh(
             non_manifold=non_manifold,
             lamina_faces=lamina_faces,
             invalid_components=invalid_components,
+            prompt="Use get_poly_count or select_by_material to inspect the result.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")

@@ -12,6 +12,7 @@ import subprocess
 import tempfile
 from typing import Optional
 
+
 def submit_to_deadline(
     job_name: Optional[str] = None,
     pool: str = "maya",
@@ -133,8 +134,10 @@ def submit_to_deadline(
     except Exception as exc:
         return maya_from_exception(exc, "Failed to submit to Deadline")
 
+
 def main(**kwargs):
     return submit_to_deadline(**kwargs)
+
 
 if __name__ == "__main__":
     import json as _json

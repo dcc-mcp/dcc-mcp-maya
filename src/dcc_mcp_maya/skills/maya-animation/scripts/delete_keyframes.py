@@ -9,6 +9,7 @@ from typing import List, Optional
 # Import local modules
 from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
+
 def delete_keyframes(
     object_name: str,
     attributes: Optional[List[str]] = None,
@@ -56,15 +57,18 @@ def delete_keyframes(
             attributes=attributes,
             start_frame=start_frame,
             end_frame=end_frame,
+            prompt="Use set_keyframe to add new keys, or get_keyframes to verify the result.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
         return maya_from_exception(exc, "Failed to delete keyframes from {}".format(object_name))
 
+
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`delete_keyframes`."""
     return delete_keyframes(**kwargs)
+
 
 if __name__ == "__main__":
     import json

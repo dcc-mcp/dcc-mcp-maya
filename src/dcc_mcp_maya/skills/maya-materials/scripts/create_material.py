@@ -45,6 +45,7 @@ def create_material(
             material_name=mat,
             material_type=resolved_type,
             shading_group=sg,
+            prompt="Use assign_material to apply to objects or set_material_attribute to configure.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")

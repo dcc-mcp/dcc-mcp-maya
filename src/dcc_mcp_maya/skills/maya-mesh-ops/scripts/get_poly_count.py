@@ -72,7 +72,9 @@ def get_poly_count(object_name: Optional[str] = None) -> dict:
         if object_name:
             result_kwargs["objects"] = per_object
 
-        return maya_success(label, **result_kwargs)
+        return maya_success(
+            label, **result_kwargs, prompt="Use apply_subdivision or cleanup_mesh to adjust the geometry."
+        )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:

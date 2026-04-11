@@ -10,6 +10,7 @@ from typing import List, Optional
 # Import local modules
 from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
+
 def clean_mocap_keys(
     joints: Optional[List[str]] = None,
     time_tolerance: float = 0.05,
@@ -76,8 +77,10 @@ def clean_mocap_keys(
     except Exception as exc:
         return maya_from_exception(exc, "Failed to clean mocap keys")
 
+
 def main(**kwargs):
     return clean_mocap_keys(**kwargs)
+
 
 if __name__ == "__main__":
     import json

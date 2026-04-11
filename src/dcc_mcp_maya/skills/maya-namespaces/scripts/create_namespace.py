@@ -9,6 +9,7 @@ from __future__ import annotations
 # Import local modules
 from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
+
 def create_namespace(
     name: str,
     parent: str = ":",
@@ -62,8 +63,10 @@ def create_namespace(
     except Exception as exc:
         return maya_from_exception(exc, "Failed to create namespace")
 
+
 def main(**kwargs):
     return create_namespace(**kwargs)
+
 
 if __name__ == "__main__":
     import json

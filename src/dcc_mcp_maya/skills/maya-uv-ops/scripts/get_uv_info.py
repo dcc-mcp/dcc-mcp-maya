@@ -9,6 +9,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 # Import built-in modules
 from typing import Optional
 
+
 def get_uv_info(object_name: str, uv_set: Optional[str] = None) -> dict:
     """Query UV sets and coordinates on a polygon mesh.
 
@@ -47,15 +48,21 @@ def get_uv_info(object_name: str, uv_set: Optional[str] = None) -> dict:
             result_kwargs["uv_count"] = len(u_coords)
             result_kwargs["queried_uv_set"] = uv_set
 
-        return maya_success("UV info for '{}'".format(object_name), **result_kwargs)
+        return maya_success(
+            "UV info for '{}'".format(object_name),
+            **result_kwargs,
+            prompt="Check the result with list_uv_ops or use related actions to continue.",
+        )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to get UV info")
+        return maya_from_exception(exc, "Failed to get UV info")
+
 
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`get_uv_info`."""
     return get_uv_info(**kwargs)
+
 
 if __name__ == "__main__":
     import json

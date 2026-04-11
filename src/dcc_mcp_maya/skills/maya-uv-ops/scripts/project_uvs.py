@@ -8,6 +8,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 # Import built-in modules
 
+
 def project_uvs(
     object_name: str,
     projection_type: str = "planar",
@@ -74,15 +75,18 @@ def project_uvs(
             projection_type=projection_type,
             axis=axis,
             axis_index=axis_index,
+            prompt="Check the result with list_uv_ops or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to project UVs")
+        return maya_from_exception(exc, "Failed to project UVs")
+
 
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`project_uvs`."""
     return project_uvs(**kwargs)
+
 
 if __name__ == "__main__":
     import json

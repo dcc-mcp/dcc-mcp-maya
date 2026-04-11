@@ -9,6 +9,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 # Import built-in modules
 from typing import Optional
 
+
 def set_joint_limit(
     joint_name: str,
     axis: str,
@@ -88,15 +89,18 @@ def set_joint_limit(
             min_angle=actual_min,
             max_angle=actual_max,
             enable=enable,
+            prompt="Check the result with list_rigging or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
         return maya_from_exception(exc, "Failed to set joint limit on {}".format(joint_name))
 
+
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`set_joint_limit`."""
     return set_joint_limit(**kwargs)
+
 
 if __name__ == "__main__":
     import json

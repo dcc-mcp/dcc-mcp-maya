@@ -8,6 +8,7 @@ from __future__ import annotations
 # Import local modules
 from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
+
 def set_nparticle_attribute(
     particle_shape: str,
     attribute: str,
@@ -64,8 +65,10 @@ def set_nparticle_attribute(
     except Exception as exc:
         return maya_from_exception(exc, "Failed to set attribute '{}'".format(attribute))
 
+
 def main(**kwargs):
     return set_nparticle_attribute(**kwargs)
+
 
 if __name__ == "__main__":
     import json

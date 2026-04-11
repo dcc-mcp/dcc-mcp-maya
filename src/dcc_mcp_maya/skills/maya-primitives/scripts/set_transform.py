@@ -9,6 +9,7 @@ from typing import List, Optional
 # Import local modules
 from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
+
 def set_transform(
     object_name: str,
     translate: Optional[List[float]] = None,
@@ -51,15 +52,18 @@ def set_transform(
             f"Transform applied to {object_name}",
             object_name=object_name,
             **applied,
+            prompt="Check the result with list_primitives or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
         return maya_from_exception(exc, f"Failed to set transform on {object_name}")
 
+
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`set_transform`."""
     return set_transform(**kwargs)
+
 
 if __name__ == "__main__":
     import json

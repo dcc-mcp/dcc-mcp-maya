@@ -21,6 +21,7 @@ _VALID_FIELD_TYPES = (
 
 _VALID_MIRROR_AXES = ("x", "y", "z")
 
+
 def set_nucleus_attribute(
     nucleus: str,
     attribute: str,
@@ -74,15 +75,18 @@ def set_nucleus_attribute(
             nucleus=nucleus,
             attribute=attribute,
             value=value,
+            prompt="Check the result with list_dynamics or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
         return maya_from_exception(exc, "Failed to set attribute on nucleus '{}'".format(nucleus))
 
+
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`set_nucleus_attribute`."""
     return set_nucleus_attribute(**kwargs)
+
 
 if __name__ == "__main__":
     import json

@@ -13,6 +13,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 # Import built-in modules
 from typing import List, Optional
 
+
 def set_pivot(
     object_name: str,
     position: Optional[List[float]] = None,
@@ -78,11 +79,13 @@ def set_pivot(
             rotate_pivot=rp,
             scale_pivot=sp,
             world_space=world_space,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to set pivot on '{}'".format(object_name))
+        return maya_from_exception(exc, "Failed to set pivot on '{}'".format(object_name))
+
 
 def align_objects(
     objects: List[str],
@@ -201,11 +204,13 @@ def align_objects(
             axis=axis_lower,
             mode=mode_lower,
             target_value=target_value,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to align objects")
+        return maya_from_exception(exc, "Failed to align objects")
+
 
 def create_annotation(
     object_name: str,
@@ -268,11 +273,13 @@ def create_annotation(
             object_name=object_name,
             text=text,
             position=ann_pos,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to create annotation on '{}'".format(object_name))
+        return maya_from_exception(exc, "Failed to create annotation on '{}'".format(object_name))
+
 
 def set_object_color(
     object_name: str,
@@ -325,11 +332,13 @@ def set_object_color(
             object_name=object_name,
             color_index=effective_index,
             use_default=use_default,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to set object color on '{}'".format(object_name))
+        return maya_from_exception(exc, "Failed to set object color on '{}'".format(object_name))
+
 
 def toggle_gpu_override(
     object_name: str,
@@ -380,11 +389,13 @@ def toggle_gpu_override(
             object_name=object_name,
             enabled=enabled,
             display_type=display_type,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to toggle GPU override on '{}'".format(object_name))
+        return maya_from_exception(exc, "Failed to toggle GPU override on '{}'".format(object_name))
+
 
 def create_polygon_text(
     text: str,
@@ -446,11 +457,13 @@ def create_polygon_text(
             extruded=extrude,
             objects=objects,
             count=len(objects),
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to create polygon text '{}'".format(text))
+        return maya_from_exception(exc, "Failed to create polygon text '{}'".format(text))
+
 
 def set_shading_mode(
     mode: str = "smooth",
@@ -527,8 +540,9 @@ def set_shading_mode(
             "Set shading mode to '{}' on panel '{}'".format(mode_lower, target_panel),
             mode=mode_lower,
             panel=target_panel,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to set shading mode")
+        return maya_from_exception(exc, "Failed to set shading mode")

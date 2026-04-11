@@ -6,6 +6,7 @@ from __future__ import annotations
 # Import local modules
 from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
+
 def get_selection() -> dict:
     """Return the current Maya selection.
 
@@ -21,15 +22,18 @@ def get_selection() -> dict:
             f"{len(selection)} objects selected",
             selection=selection,
             count=len(selection),
+            prompt="Check the result with list_scene or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
         return maya_from_exception(exc, "Failed to get selection")
 
+
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`get_selection`."""
     return get_selection(**kwargs)
+
 
 if __name__ == "__main__":
     import json

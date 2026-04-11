@@ -11,10 +11,15 @@ import pytest
 
 # Import local modules
 from dcc_mcp_maya.api import (
+    MissingParamError,
     is_maya_available,
     maya_error,
     maya_from_exception,
     maya_success,
+    missing_param_error,
+    require_param,
+    validate_node_exists,
+    validate_node_type,
     with_maya,
 )
 
@@ -198,5 +203,139 @@ def test_public_api_reexport():
         "with_maya",
         "get_cmds",
         "require_cmds",
+        "require_param",
+        "missing_param_error",
+        "MissingParamError",
+        "validate_node_exists",
+        "validate_node_type",
     ]:
-        assert hasattr(dcc_mcp_maya, name), f"dcc_mcp_maya.{name} missing"
+        assert hasattr(dcc_mcp_maya, name), "dcc_mcp_maya.{} missing".format(name)
+
+
+# ---------------------------------------------------------------------------
+# require_param
+# ---------------------------------------------------------------------------
+
+
+class TestRequireParam:
+    def test_returns_value_when_present(self):
+        assert require_param({"name": "pSphere1"}, "name") == "pSphere1"
+
+    def test_returns_default_when_absent(self):
+        assert require_param({}, "size", 1.0) == 1.0
+
+    def test_raises_when_absent_no_default(self):
+        with pytest.raises(MissingParamError, match="name"):
+            require_param({}, "name")
+
+    def test_returns_none_value_when_key_present(self):
+        # Explicit None is a valid value
+        result = require_param({"flag": None}, "flag", "fallback")
+        assert result is None
+
+    def test_returns_false_value_when_key_present(self):
+        result = require_param({"enabled": False}, "enabled", True)
+        assert result is False
+
+    def test_returns_zero_value_when_key_present(self):
+        result = require_param({"count": 0}, "count", 99)
+        assert result == 0
+
+    def test_default_can_be_none_explicitly(self):
+        result = require_param({}, "missing", None)
+        assert result is None
+
+
+# ---------------------------------------------------------------------------
+# missing_param_error
+# ---------------------------------------------------------------------------
+
+
+class TestMissingParamError:
+    def test_returns_error_dict(self):
+        result = missing_param_error("radius")
+        assert result["success"] is False
+        assert "radius" in result["message"]
+
+    def test_includes_possible_solutions(self):
+        result = missing_param_error("name")
+        solutions = result["context"]["possible_solutions"]
+        assert any("name" in s for s in solutions)
+
+    def test_accepts_extra_context(self):
+        result = missing_param_error("width", hint="must be positive")
+        assert result["context"]["hint"] == "must be positive"
+
+
+# ---------------------------------------------------------------------------
+# validate_node_exists
+# ---------------------------------------------------------------------------
+
+
+class TestValidateNodeExists:
+    def _make_cmds(self, exists: bool) -> MagicMock:
+        cmds = MagicMock()
+        cmds.objExists.return_value = exists
+        return cmds
+
+    def test_returns_none_when_node_exists(self):
+        cmds = self._make_cmds(True)
+        assert validate_node_exists(cmds, "pSphere1") is None
+
+    def test_returns_error_when_node_missing(self):
+        cmds = self._make_cmds(False)
+        result = validate_node_exists(cmds, "pSphere1")
+        assert result is not None
+        assert result["success"] is False
+        assert "pSphere1" in result["message"]
+
+    def test_error_includes_possible_solutions(self):
+        cmds = self._make_cmds(False)
+        result = validate_node_exists(cmds, "myNode")
+        assert "possible_solutions" in result["context"]
+        assert len(result["context"]["possible_solutions"]) > 0
+
+    def test_calls_obj_exists_with_correct_name(self):
+        cmds = self._make_cmds(True)
+        validate_node_exists(cmds, "joint1")
+        cmds.objExists.assert_called_once_with("joint1")
+
+
+# ---------------------------------------------------------------------------
+# validate_node_type
+# ---------------------------------------------------------------------------
+
+
+class TestValidateNodeType:
+    def _make_cmds(self, actual_type: str) -> MagicMock:
+        cmds = MagicMock()
+        cmds.objectType.return_value = actual_type
+        return cmds
+
+    def test_returns_none_when_type_matches(self):
+        cmds = self._make_cmds("displayLayer")
+        assert validate_node_type(cmds, "layer1", "displayLayer") is None
+
+    def test_returns_error_when_type_mismatch(self):
+        cmds = self._make_cmds("transform")
+        result = validate_node_type(cmds, "pSphere1", "displayLayer")
+        assert result is not None
+        assert result["success"] is False
+        assert "transform" in result["error"]
+        assert "displayLayer" in result["error"]
+
+    def test_error_includes_node_name(self):
+        cmds = self._make_cmds("mesh")
+        result = validate_node_type(cmds, "myMesh", "displayLayer")
+        assert "myMesh" in result["message"]
+
+    def test_error_includes_possible_solutions(self):
+        cmds = self._make_cmds("mesh")
+        result = validate_node_type(cmds, "myMesh", "displayLayer")
+        solutions = result["context"]["possible_solutions"]
+        assert any("displayLayer" in s for s in solutions)
+
+    def test_calls_object_type_with_correct_name(self):
+        cmds = self._make_cmds("transform")
+        validate_node_type(cmds, "pCube1", "transform")
+        cmds.objectType.assert_called_once_with("pCube1")

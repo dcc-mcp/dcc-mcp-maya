@@ -9,7 +9,6 @@ from __future__ import annotations
 from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 
-
 def delete_shot(shot_node: str) -> dict:
     """Delete a shot node from the camera sequencer.
 

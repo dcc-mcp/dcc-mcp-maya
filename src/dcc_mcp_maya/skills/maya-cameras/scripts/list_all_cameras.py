@@ -9,7 +9,6 @@ from __future__ import annotations
 from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 
-
 def list_all_cameras(include_default: bool = True) -> dict:
     """List all cameras in the scene with basic attributes.
 
@@ -44,6 +43,7 @@ def list_all_cameras(include_default: bool = True) -> dict:
             "Found {} camera(s)".format(len(results)),
             cameras=results,
             count=len(results),
+            prompt="Check the result with list_cameras or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")

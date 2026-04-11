@@ -16,6 +16,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 # Import built-in modules
 from typing import Optional
 
+
 def create_utility_node(
     node_type: str,
     name: Optional[str] = None,
@@ -53,11 +54,13 @@ def create_utility_node(
             "Created utility node '{}' of type '{}'".format(node, node_type),
             node_name=node,
             node_type=node_type,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to create utility node of type '{}'".format(node_type))
+        return maya_from_exception(exc, "Failed to create utility node of type '{}'".format(node_type))
+
 
 def get_scene_statistics() -> dict:
     """Query scene-level statistics: polygon counts, node counts and memory.
@@ -130,8 +133,9 @@ def get_scene_statistics() -> dict:
             camera_count=len(cameras),
             light_count=len(lights),
             scene_file=scene_file,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to get scene statistics")
+        return maya_from_exception(exc, "Failed to get scene statistics")

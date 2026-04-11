@@ -20,6 +20,7 @@ _FIELD_TYPES = {
 # Import local modules
 from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
+
 def add_field_to_nparticles(
     particle_shapes: Optional[List[str]] = None,
     field_type: str = "gravity",
@@ -90,8 +91,10 @@ def add_field_to_nparticles(
     except Exception as exc:
         return maya_from_exception(exc, "Failed to add field '{}'".format(field_type))
 
+
 def main(**kwargs):
     return add_field_to_nparticles(**kwargs)
+
 
 if __name__ == "__main__":
     import json

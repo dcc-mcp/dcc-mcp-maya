@@ -9,6 +9,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 # Import built-in modules
 from typing import List, Optional
 
+
 def set_keyframe(
     object_name: str,
     attributes: Optional[List[str]] = None,
@@ -53,11 +54,13 @@ def set_keyframe(
             keyframe_count=count,
             time=time,
             attributes=attributes,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to set keyframe on {}".format(object_name))
+        return maya_from_exception(exc, "Failed to set keyframe on {}".format(object_name))
+
 
 def get_keyframes(
     object_name: str,
@@ -94,11 +97,13 @@ def get_keyframes(
             attribute=attribute,
             keyframes=keyframes,
             count=len(keyframes),
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to get keyframes for {}".format(object_name))
+        return maya_from_exception(exc, "Failed to get keyframes for {}".format(object_name))
+
 
 def set_timeline(
     start_frame: float = 1.0,
@@ -140,11 +145,13 @@ def set_timeline(
             end_frame=end_frame,
             min_frame=min_frame,
             max_frame=max_frame,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to set timeline")
+        return maya_from_exception(exc, "Failed to set timeline")
+
 
 def get_current_time() -> dict:
     """Get the current frame number.
@@ -160,11 +167,13 @@ def get_current_time() -> dict:
         return maya_success(
             "Current time: {}".format(current),
             current_time=current,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to get current time")
+        return maya_from_exception(exc, "Failed to get current time")
+
 
 def set_current_time(frame: float) -> dict:
     """Set the current frame number.
@@ -183,11 +192,13 @@ def set_current_time(frame: float) -> dict:
         return maya_success(
             "Current time set to {}".format(frame),
             current_time=frame,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to set current time")
+        return maya_from_exception(exc, "Failed to set current time")
+
 
 def delete_keyframes(
     object_name: str,
@@ -237,11 +248,13 @@ def delete_keyframes(
             attributes=attributes,
             start_frame=start_frame,
             end_frame=end_frame,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to delete keyframes from {}".format(object_name))
+        return maya_from_exception(exc, "Failed to delete keyframes from {}".format(object_name))
+
 
 def bake_simulation(
     objects: Optional[List[str]] = None,
@@ -301,11 +314,13 @@ def bake_simulation(
             start_frame=start_frame,
             end_frame=end_frame,
             sample_by=sample_by,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to bake simulation")
+        return maya_from_exception(exc, "Failed to bake simulation")
+
 
 def list_animation_curves(
     object_name: str,
@@ -368,11 +383,13 @@ def list_animation_curves(
             attribute=attribute,
             curves=curves,
             count=len(curves),
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to list animation curves for '{}'".format(object_name))
+        return maya_from_exception(exc, "Failed to list animation curves for '{}'".format(object_name))
+
 
 def set_animation_curve_tangent(
     object_name: str,
@@ -450,11 +467,13 @@ def set_animation_curve_tangent(
             frame=frame,
             in_tangent_type=in_type,
             out_tangent_type=out_type,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
         return maya_from_exception(exc, "Failed to set tangent on '{}.{}'".format(object_name, attribute))
+
 
 def bake_constraints(
     objects: Optional[List[str]] = None,
@@ -539,11 +558,13 @@ def bake_constraints(
             end_frame=end_frame,
             sample_by=sample_by,
             removed_constraints=removed_constraints,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to bake constraints")
+        return maya_from_exception(exc, "Failed to bake constraints")
+
 
 def export_animation_curves(
     object_name: str,
@@ -624,11 +645,13 @@ def export_animation_curves(
             curve_count=len(anim_curves),
             start_frame=start_frame,
             end_frame=end_frame,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to export animation curves for '{}'".format(object_name))
+        return maya_from_exception(exc, "Failed to export animation curves for '{}'".format(object_name))
+
 
 def import_animation_curves(
     file_path: str,
@@ -692,11 +715,13 @@ def import_animation_curves(
             file_path=file_path,
             target_object=target_object,
             merge=merge,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to import animation curves from '{}'".format(file_path))
+        return maya_from_exception(exc, "Failed to import animation curves from '{}'".format(file_path))
+
 
 def query_scene_time_info() -> dict:
     """Query the current scene time and playback settings as a single call.
@@ -728,8 +753,9 @@ def query_scene_time_info() -> dict:
             playback_start=pb_start,
             playback_end=pb_end,
             current_time=current,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to query scene time info")
+        return maya_from_exception(exc, "Failed to query scene time info")

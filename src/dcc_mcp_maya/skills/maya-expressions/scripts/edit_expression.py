@@ -9,6 +9,7 @@ from typing import Optional
 # Import local modules
 from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
+
 def edit_expression(
     name: str,
     expression: str,
@@ -49,8 +50,10 @@ def edit_expression(
     except Exception as exc:
         return maya_from_exception(exc, "Failed to edit expression '{}'".format(name))
 
+
 def main(**kwargs):
     return edit_expression(**kwargs)
+
 
 if __name__ == "__main__":
     import json

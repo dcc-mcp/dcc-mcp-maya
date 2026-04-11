@@ -8,6 +8,7 @@ from __future__ import annotations
 # Import local modules
 from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
+
 def smooth_mesh(
     object_name: str,
     divisions: int = 1,
@@ -68,6 +69,7 @@ def smooth_mesh(
                 object_name=object_name,
                 divisions=divisions,
                 method=method,
+                prompt="Check the result with list_node_graph or use related actions to continue.",
             )
 
         # method == "subdivide"
@@ -79,15 +81,18 @@ def smooth_mesh(
             divisions=divisions,
             method=method,
             poly_smooth_node=node_name,
+            prompt="Check the result with list_node_graph or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
         return maya_from_exception(exc, "Failed to smooth mesh {}".format(object_name))
 
+
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`smooth_mesh`."""
     return smooth_mesh(**kwargs)
+
 
 if __name__ == "__main__":
     import json

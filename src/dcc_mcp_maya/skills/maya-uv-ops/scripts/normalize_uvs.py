@@ -8,6 +8,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 # Import built-in modules
 
+
 def normalize_uvs(
     object_name: str,
     layout_u: float = 1.0,
@@ -58,15 +59,18 @@ def normalize_uvs(
             layout_u=layout_u,
             layout_v=layout_v,
             preserve_aspect=preserve_aspect,
+            prompt="Use layout_uvs or export_uv_snapshot to verify.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to normalize UVs on '{}'".format(object_name))
+        return maya_from_exception(exc, "Failed to normalize UVs on '{}'".format(object_name))
+
 
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`normalize_uvs`."""
     return normalize_uvs(**kwargs)
+
 
 if __name__ == "__main__":
     import json

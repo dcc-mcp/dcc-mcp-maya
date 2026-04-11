@@ -8,6 +8,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 # Import built-in modules
 
+
 def unload_reference(reference_node: str) -> dict:
     """Unload a file reference without removing it from the scene.
 
@@ -43,15 +44,18 @@ def unload_reference(reference_node: str) -> dict:
             "Unloaded reference '{}'".format(reference_node),
             reference_node=reference_node,
             loaded=False,
+            prompt="Check the result with list_references or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
         return maya_from_exception(exc, "Failed to unload reference '{}'".format(reference_node))
 
+
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`unload_reference`."""
     return unload_reference(**kwargs)
+
 
 if __name__ == "__main__":
     import json

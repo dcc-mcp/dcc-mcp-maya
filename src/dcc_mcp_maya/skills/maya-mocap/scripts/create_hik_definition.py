@@ -36,6 +36,7 @@ _HIK_SLOTS = {
 # Import local modules
 from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
+
 def create_hik_definition(
     character_name: str,
     joint_mapping: Dict[str, str],
@@ -94,8 +95,10 @@ def create_hik_definition(
     except Exception as exc:
         return maya_from_exception(exc, "Failed to create HIK definition")
 
+
 def main(**kwargs):
     return create_hik_definition(**kwargs)
+
 
 if __name__ == "__main__":
     import json

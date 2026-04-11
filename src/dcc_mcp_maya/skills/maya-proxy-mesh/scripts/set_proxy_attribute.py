@@ -9,6 +9,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 # Import built-in modules
 from typing import Union
 
+
 def set_proxy_attribute(
     proxy: str,
     attribute: str,
@@ -56,8 +57,10 @@ def set_proxy_attribute(
     except Exception as exc:
         return maya_from_exception(exc, "Failed to set attribute '{}.{}'".format(proxy, attribute))
 
+
 def main(**kwargs):
     return set_proxy_attribute(**kwargs)
+
 
 if __name__ == "__main__":
     import json

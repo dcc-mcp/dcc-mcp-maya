@@ -8,6 +8,7 @@ from __future__ import annotations
 # Import local modules
 from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
+
 def apply_symmetry(
     object_name: str,
     axis: str = "x",
@@ -67,15 +68,18 @@ def apply_symmetry(
             object_name=object_name,
             axis=axis_lower,
             world_space=world_space,
+            prompt="Check the result with list_node_graph or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
         return maya_from_exception(exc, "Failed to apply symmetry on {}".format(object_name))
 
+
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`apply_symmetry`."""
     return apply_symmetry(**kwargs)
+
 
 if __name__ == "__main__":
     import json

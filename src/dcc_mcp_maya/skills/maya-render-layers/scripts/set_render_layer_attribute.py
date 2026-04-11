@@ -8,6 +8,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 # Import built-in modules
 
+
 def set_render_layer_attribute(
     layer_name: str,
     attribute: str,
@@ -58,15 +59,18 @@ def set_render_layer_attribute(
             layer_name=layer_name,
             attribute=attribute,
             value=value,
+            prompt="Use list_render_layers to verify the change.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
         return maya_from_exception(exc, "Failed to set attribute '{}.{}'".format(layer_name, attribute))
 
+
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`set_render_layer_attribute`."""
     return set_render_layer_attribute(**kwargs)
+
 
 if __name__ == "__main__":
     import json

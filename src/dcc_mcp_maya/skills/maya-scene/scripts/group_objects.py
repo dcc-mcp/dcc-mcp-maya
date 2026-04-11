@@ -9,6 +9,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 # Import built-in modules
 from typing import List, Optional
 
+
 def group_objects(objects: List[str], group_name: Optional[str] = None, world: bool = False) -> dict:
     """Group a list of objects under a new group node.
 
@@ -46,15 +47,18 @@ def group_objects(objects: List[str], group_name: Optional[str] = None, world: b
             group_name=grp,
             objects=existing,
             count=len(existing),
+            prompt="Check the result with list_scene or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
         return maya_from_exception(exc, "Failed to group objects")
 
+
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`group_objects`."""
     return group_objects(**kwargs)
+
 
 if __name__ == "__main__":
     import json

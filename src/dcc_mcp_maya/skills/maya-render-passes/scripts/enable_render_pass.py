@@ -8,6 +8,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 # Import built-in modules
 
+
 def enable_render_pass(
     pass_node: str,
     enabled: bool = True,
@@ -58,8 +59,10 @@ def enable_render_pass(
     except Exception as exc:
         return maya_from_exception(exc, "Failed to toggle render pass '{}'".format(pass_node))
 
+
 def main(**kwargs):
     return enable_render_pass(**kwargs)
+
 
 if __name__ == "__main__":
     import json

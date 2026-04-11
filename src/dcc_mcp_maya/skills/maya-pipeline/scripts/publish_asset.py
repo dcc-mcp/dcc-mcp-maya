@@ -12,6 +12,7 @@ from typing import List, Optional
 # Import local modules
 from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
+
 def _next_version(publish_dir: str, asset_name: str, fmt: str) -> int:
     """Scan existing publish files and return the next version number."""
     pattern = re.compile(r"^{}_v(\d+)\.{}$".format(re.escape(asset_name), re.escape(fmt)))
@@ -22,6 +23,7 @@ def _next_version(publish_dir: str, asset_name: str, fmt: str) -> int:
             if m:
                 max_ver = max(max_ver, int(m.group(1)))
     return max_ver + 1
+
 
 def publish_asset(
     asset_name: str,
@@ -95,8 +97,10 @@ def publish_asset(
     except Exception as exc:
         return maya_from_exception(exc, "Publish failed")
 
+
 def main(**kwargs):
     return publish_asset(**kwargs)
+
 
 if __name__ == "__main__":
     import json

@@ -78,6 +78,7 @@ def mirror_mesh(
             object_name=object_name,
             axis=axis_lower,
             cut_position=cut_position,
+            prompt="Use freeze_transforms in maya-xform-utils to clean up.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")

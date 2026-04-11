@@ -9,6 +9,7 @@ from typing import Optional
 # Import local modules
 from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
+
 def list_animation_curves(
     object_name: str,
     attribute: Optional[str] = None,
@@ -69,15 +70,18 @@ def list_animation_curves(
             attribute=attribute,
             curves=curves,
             count=len(curves),
+            prompt="Use export_animation_curves to save or delete_keyframes to clean up.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
         return maya_from_exception(exc, "Failed to list animation curves for '{}'".format(object_name))
 
+
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`list_animation_curves`."""
     return list_animation_curves(**kwargs)
+
 
 if __name__ == "__main__":
     import json

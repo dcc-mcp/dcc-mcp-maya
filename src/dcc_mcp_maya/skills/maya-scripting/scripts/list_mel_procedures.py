@@ -8,6 +8,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 # Import built-in modules
 
+
 def list_mel_procedures(pattern: str = "", limit: int = 200) -> dict:
     """List MEL global procedures, optionally filtered by a substring pattern.
 
@@ -45,10 +46,12 @@ def list_mel_procedures(pattern: str = "", limit: int = 200) -> dict:
     except ImportError:
         return maya_error("Maya not available", "maya.mel could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to list MEL procedures")
+        return maya_from_exception(exc, "Failed to list MEL procedures")
+
 
 def main(**kwargs):
     return list_mel_procedures(**kwargs)
+
 
 if __name__ == "__main__":
     import json

@@ -11,6 +11,7 @@ from typing import Optional
 
 _VALID_TYPES = {"Locator", "Cache", "GPU", "Scene"}
 
+
 def add_assembly_representation(
     assembly: str,
     rep_type: str,
@@ -69,8 +70,10 @@ def add_assembly_representation(
     except Exception as exc:
         return maya_from_exception(exc, "Failed to add representation")
 
+
 def main(**kwargs):
     return add_assembly_representation(**kwargs)
+
 
 if __name__ == "__main__":
     import json

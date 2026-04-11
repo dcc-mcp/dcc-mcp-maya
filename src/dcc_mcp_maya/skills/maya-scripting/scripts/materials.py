@@ -11,6 +11,7 @@ from typing import Any, List, Optional
 
 _SUPPORTED_SHADERS = ("lambert", "blinn", "phong", "phongE", "aiStandardSurface")
 
+
 def create_material(
     shader_type: str = "lambert",
     name: Optional[str] = None,
@@ -40,11 +41,13 @@ def create_material(
             material_name=mat,
             shader_type=shader_type,
             shading_group=sg,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to create material")
+        return maya_from_exception(exc, "Failed to create material")
+
 
 def assign_material(material_name: str, objects: List[str]) -> dict:
     """Assign a material to one or more objects.
@@ -87,11 +90,13 @@ def assign_material(material_name: str, objects: List[str]) -> dict:
             "Assigned '{}' to {} object(s)".format(sg, len(existing)),
             shading_group=sg,
             objects=existing,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to assign material")
+        return maya_from_exception(exc, "Failed to assign material")
+
 
 def set_material_attribute(
     material_name: str,
@@ -129,11 +134,13 @@ def set_material_attribute(
             material_name=material_name,
             attribute=attribute,
             value=value,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to set material attribute")
+        return maya_from_exception(exc, "Failed to set material attribute")
+
 
 def list_materials(shader_type: Optional[str] = None) -> dict:
     """List all material nodes in the scene.
@@ -168,11 +175,13 @@ def list_materials(shader_type: Optional[str] = None) -> dict:
             "Found {} material(s)".format(len(materials)),
             materials=materials,
             count=len(materials),
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to list materials")
+        return maya_from_exception(exc, "Failed to list materials")
+
 
 def get_shader_assignment(object_name: str) -> dict:
     """Query which shader (material) is assigned to an object or face set.
@@ -220,11 +229,13 @@ def get_shader_assignment(object_name: str) -> dict:
             object_name=object_name,
             shading_groups=shading_groups,
             count=len(shading_groups),
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to get shader assignment for '{}'".format(object_name))
+        return maya_from_exception(exc, "Failed to get shader assignment for '{}'".format(object_name))
+
 
 def get_material_connections(material_name: str) -> dict:
     """List all nodes connected to a material (textures, utilities, etc.).
@@ -289,11 +300,13 @@ def get_material_connections(material_name: str) -> dict:
             material_name=material_name,
             connections=connections,
             count=len(connections),
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to get connections for material '{}'".format(material_name))
+        return maya_from_exception(exc, "Failed to get connections for material '{}'".format(material_name))
+
 
 def list_shading_groups() -> dict:
     """List all shading engine (shadingEngine) nodes in the current scene.
@@ -334,11 +347,13 @@ def list_shading_groups() -> dict:
             "Found {} shading group(s)".format(len(result)),
             shading_groups=result,
             count=len(result),
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to list shading groups")
+        return maya_from_exception(exc, "Failed to list shading groups")
+
 
 def reset_to_default_material(object_name: str) -> dict:
     """Assign the built-in ``lambert1`` (initialShadingGroup) to an object.
@@ -369,8 +384,9 @@ def reset_to_default_material(object_name: str) -> dict:
             object_name=object_name,
             shading_group="initialShadingGroup",
             material="lambert1",
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to reset material for '{}'".format(object_name))
+        return maya_from_exception(exc, "Failed to reset material for '{}'".format(object_name))

@@ -67,6 +67,7 @@ def bake_simulation(
             start_frame=start_frame,
             end_frame=end_frame,
             sample_by=sample_by,
+            prompt="Use delete_keyframes to trim unwanted frames, or export_animation_curves to save.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")

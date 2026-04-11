@@ -9,6 +9,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 # Import built-in modules
 from typing import List, Optional
 
+
 def get_scene_statistics(
     include_memory: bool = True,
     node_types: Optional[List[str]] = None,
@@ -81,11 +82,13 @@ def get_scene_statistics(
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to get scene statistics")
+        return maya_from_exception(exc, "Failed to get scene statistics")
+
 
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`get_scene_statistics`."""
     return get_scene_statistics(**kwargs)
+
 
 if __name__ == "__main__":
     import json

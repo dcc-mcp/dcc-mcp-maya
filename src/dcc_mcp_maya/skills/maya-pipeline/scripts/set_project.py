@@ -10,6 +10,7 @@ import os
 # Import local modules
 from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
+
 def set_project(path: str, create_if_missing: bool = False) -> dict:
     """Set the Maya project to the specified directory.
 
@@ -54,8 +55,10 @@ def set_project(path: str, create_if_missing: bool = False) -> dict:
     except Exception as exc:
         return maya_from_exception(exc, "Failed to set Maya project")
 
+
 def main(**kwargs):
     return set_project(**kwargs)
+
 
 if __name__ == "__main__":
     import json

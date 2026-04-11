@@ -9,7 +9,6 @@ from __future__ import annotations
 from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 
-
 def set_timeline_audio(sound_node: str) -> dict:
     """Attach a sound node to the Maya timeline for playback.
 

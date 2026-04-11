@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 
 _DEFAULT_ATTRS = ["tx", "ty", "tz", "rx", "ry", "rz", "sx", "sy", "sz", "v"]
 
+
 def lock_hide_attributes(
     node: str,
     attributes: Optional[List[str]] = None,
@@ -77,8 +78,10 @@ def lock_hide_attributes(
     except Exception as exc:
         return maya_from_exception(exc, "Failed to lock/hide attributes on '{}'".format(node))
 
+
 def main(**kwargs):
     return lock_hide_attributes(**kwargs)
+
 
 if __name__ == "__main__":
     import json

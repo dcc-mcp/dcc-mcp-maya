@@ -8,6 +8,7 @@ from __future__ import annotations
 # Import local modules
 from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
+
 def list_history(
     object_name: str,
     future: bool = False,
@@ -51,15 +52,18 @@ def list_history(
             history=history,
             count=len(history),
             future=future,
+            prompt="Check the result with list_node_graph or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
         return maya_from_exception(exc, "Failed to list history for {}".format(object_name))
 
+
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`list_history`."""
     return list_history(**kwargs)
+
 
 if __name__ == "__main__":
     import json
