@@ -568,35 +568,50 @@ No more empty skill dirs.
 
 **3. 修复 3 个受重构影响的旧测试断言**（test_skills_round6.py）
 
-**4. test_skills_round26.py — 61 个新测试，全部通过**：
-- TestApiTypeAnnotations (10): 验证 Python 3.7 兼容性
-- TestSkinClusterBindRefactor (5), TestCreateIkHandleRefactor (4)
-- TestSetDrivenKeyRefactor (4), TestAssignDeformerRefactor (4)
-- TestSetJointOrientRefactor (4), TestSetNClothAttributeRefactor (4)
-- TestSetNRigidAttributeRefactor (4), TestConnectAttrRefactor (4)
-- TestDisconnectAttrRefactor (3), TestApplySubdivisionRefactor (4)
-- TestCleanupMeshRefactor (2), TestTriangulateRefactor (2)
-- TestSetKeyframeRefactor (4), TestDeleteKeyframesRefactor (3)
+**4. test_skills_round26.py — 61 个新测试，全部通过**
 
 ### State after this round
 - Tests: 1930 passed, 27 skipped (all pass), 0 failures
-- Committed: `043bdd8 refactor(api): fix Python 3.7 type annotations; refactor 14 skill scripts to use validate_node_exists/batch_validate_nodes; add test_skills_round26 (61 tests)`
+- Committed: `043bdd8 refactor(api): fix Python 3.7 type annotations; refactor 14 skill scripts; add test_skills_round26 (61 tests)`
 - Pushed: `origin/feat/skill-api-improvements` updated
 
-### Next priorities for Round 14
-1. 继续重构剩余高频 objExists 目录（maya-scripting 155处最多，但多为 MEL/execute 场景，需要特殊处理）
-2. 重构 maya-attributes, maya-uv-ops, maya-scene（各 8 处）
-3. 重构 maya-constraints-advanced, maya-deformers（各 7 处）
-4. 为 set_ik_fk_blend.py 的手写 objectType 检查也迁移到 validate_node_type
+---
 
+## 2026-04-11 (Round 14 — 15 scripts migrated to skill_entry; test_skills_round28 + round13 update)
 
+### State before this round
+- Branch: `feat/skill-api-improvements`
+- Tests: 1972 passed, 27 skipped
+- Latest commit: `2e4a9c2` (migrate all 369 skill scripts to dcc_mcp_core.skill API)
+- 15 scripts still using old `def run(params)` style in maya-mash (5), maya-selection (5), maya-xgen (5)
 
+### Work done
 
+**1. Migrated 15 legacy scripts** from `run(params)` → typed `def func(**kwargs) + @skill_entry main`:
+- **maya-mash** (5): add_node, create_network, delete_network, list_networks, set_mash_attribute
+  - Also uses `validate_node_exists` from `dcc_mcp_maya.api` to replace inline `objExists` guards
+- **maya-selection** (5): convert_selection, grow_selection, invert_selection, select_similar, shrink_selection
+- **maya-xgen** (5): create_description, delete_description, get_xgen_attribute, list_descriptions, set_xgen_attribute
 
+**2. Updated test_skills_round13.py**: Changed all `mod.run({...})` → `mod.main(**{...})` to match new API (64 tests still pass)
 
+**3. Added test_skills_round28.py** — 49 new tests:
+- TestMashCreateNetwork (4), TestMashAddNode (3), TestMashDeleteNetwork (3), TestMashListNetworks (3), TestMashSetAttribute (3)
+- TestGrowSelection (3), TestShrinkSelection (2), TestInvertSelection (2), TestConvertSelection (4), TestSelectSimilar (4)
+- TestXGenCreateDescription (4), TestXGenDeleteDescription (3), TestXGenListDescriptions (4), TestXGenGetAttribute (3), TestXGenSetAttribute (3)
+- TestNoLegacyRunSignature (1) — structural AST check: 0 `run(params)` in all 369 scripts
 
+**4. ruff clean**: Removed unused `pytest` import from test file.
 
+### State after this round
+- Tests: 2021 passed, 27 skipped (all pass), 0 failures
+- 0 `def run(params)` signatures remain in any skill script (confirmed by AST check)
+- 344 scripts have `@skill_entry` decorator (100%)
+- Committed: `d2f93b7 refactor(skills): migrate maya-mash, maya-selection, maya-xgen 15 scripts to skill_entry style; update test_skills_round13; add test_skills_round28 (49 tests)`
+- Pushed: `origin/feat/skill-api-improvements` updated
 
-
-
-
+### Next priorities
+1. Continue `objExists` → `validate_node_exists` refactoring in remaining skill dirs
+2. Add more E2E tests to `tests/e2e/` covering xgen/mash/selection scenarios
+3. Check dcc-mcp-core for new APIs at https://github.com/loonghao/dcc-mcp-core/blob/main/llms-full.txt
+4. Python 3.7 type annotation audit on newly-migrated scripts

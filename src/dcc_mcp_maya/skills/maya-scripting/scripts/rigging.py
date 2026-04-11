@@ -9,6 +9,8 @@ from typing import List, Optional
 # Import local modules
 from dcc_mcp_core.skill import skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 
 def create_joint(
     name: Optional[str] = None,
@@ -162,11 +164,9 @@ def set_joint_orient(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(joint_name):
-            return skill_error(
-                "Joint not found: {}".format(joint_name),
-                "'{}' does not exist in the scene".format(joint_name),
-            )
+        err = validate_node_exists(cmds, joint_name)
+        if err:
+            return err
 
         node_type = cmds.objectType(joint_name)
         if node_type != "joint":
@@ -227,11 +227,9 @@ def mirror_joints(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(joint_name):
-            return skill_error(
-                "Joint not found: {}".format(joint_name),
-                "'{}' does not exist in the scene".format(joint_name),
-            )
+        err = validate_node_exists(cmds, joint_name)
+        if err:
+            return err
 
         if mirror_axis not in _VALID_AXES:
             return skill_error(
@@ -294,17 +292,13 @@ def create_ik_handle(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(start_joint):
-            return skill_error(
-                "Start joint not found: {}".format(start_joint),
-                "'{}' does not exist in the scene".format(start_joint),
-            )
+        err = validate_node_exists(cmds, start_joint)
+        if err:
+            return err
 
-        if not cmds.objExists(end_joint):
-            return skill_error(
-                "End joint not found: {}".format(end_joint),
-                "'{}' does not exist in the scene".format(end_joint),
-            )
+        err = validate_node_exists(cmds, end_joint)
+        if err:
+            return err
 
         if solver not in _VALID_SOLVERS:
             return skill_error(
@@ -362,11 +356,9 @@ def assign_deformer(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(object_name):
-            return skill_error(
-                "Object not found: {}".format(object_name),
-                "'{}' does not exist in the scene".format(object_name),
-            )
+        err = validate_node_exists(cmds, object_name)
+        if err:
+            return err
 
         if deformer_type not in _SUPPORTED:
             return skill_error(
@@ -452,11 +444,9 @@ def create_blend_shape(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(base_mesh):
-            return skill_error(
-                "Base mesh not found: {}".format(base_mesh),
-                "'{}' does not exist in the scene".format(base_mesh),
-            )
+        err = validate_node_exists(cmds, base_mesh)
+        if err:
+            return err
 
         targets = target_meshes or []
         missing = [t for t in targets if not cmds.objExists(t)]
@@ -523,11 +513,9 @@ def skin_cluster_bind(
                 "joints list must contain at least one joint name",
             )
 
-        if not cmds.objExists(mesh):
-            return skill_error(
-                "Mesh not found: {}".format(mesh),
-                "'{}' does not exist in the scene".format(mesh),
-            )
+        err = validate_node_exists(cmds, mesh)
+        if err:
+            return err
 
         missing = [j for j in joints if not cmds.objExists(j)]
         if missing:
@@ -597,11 +585,9 @@ def set_joint_limit(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(joint_name):
-            return skill_error(
-                "Joint not found: {}".format(joint_name),
-                "'{}' does not exist in the scene".format(joint_name),
-            )
+        err = validate_node_exists(cmds, joint_name)
+        if err:
+            return err
 
         node_type = cmds.objectType(joint_name)
         if node_type != "joint":
@@ -848,11 +834,9 @@ def set_ik_fk_blend(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(ik_handle):
-            return skill_error(
-                "IK handle not found: {}".format(ik_handle),
-                "'{}' does not exist in the scene".format(ik_handle),
-            )
+        err = validate_node_exists(cmds, ik_handle)
+        if err:
+            return err
 
         node_type = cmds.objectType(ik_handle)
         if node_type not in ("ikHandle", "transform"):
@@ -862,11 +846,9 @@ def set_ik_fk_blend(
             )
 
         plug = "{}.{}".format(ik_handle, attribute)
-        if not cmds.objExists(plug):
-            return skill_error(
-                "Attribute not found: {}".format(plug),
-                "IK handle '{}' does not have attribute '{}'".format(ik_handle, attribute),
-            )
+        err = validate_node_exists(cmds, plug)
+        if err:
+            return err
 
         cmds.setAttr(plug, blend)
 

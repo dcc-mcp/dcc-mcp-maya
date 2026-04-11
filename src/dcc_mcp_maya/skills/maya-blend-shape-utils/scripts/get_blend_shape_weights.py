@@ -7,6 +7,8 @@ from __future__ import annotations
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 
 def get_blend_shape_weights(blend_shape_node: str) -> dict:
     """Get the weight of every target on a blend shape node.
@@ -21,11 +23,9 @@ def get_blend_shape_weights(blend_shape_node: str) -> dict:
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(blend_shape_node):
-            return skill_error(
-                "Blend shape node not found: {}".format(blend_shape_node),
-                "'{}' does not exist in the scene".format(blend_shape_node),
-            )
+        err = validate_node_exists(cmds, blend_shape_node)
+        if err:
+            return err
 
         weights = cmds.blendShape(blend_shape_node, query=True, weight=True) or []
 

@@ -9,6 +9,8 @@ from typing import Optional
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 
 def set_render_pass_output(
     pass_node: str,
@@ -35,11 +37,9 @@ def set_render_pass_output(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(pass_node):
-            return skill_error(
-                "Render pass not found: {}".format(pass_node),
-                "'{}' does not exist in the scene".format(pass_node),
-            )
+        err = validate_node_exists(cmds, pass_node)
+        if err:
+            return err
 
         changes = []
 

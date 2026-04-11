@@ -9,6 +9,8 @@ from typing import Optional
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 
 def edit_expression(
     name: str,
@@ -28,11 +30,9 @@ def edit_expression(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(name):
-            return skill_error(
-                "Expression node '{}' does not exist".format(name),
-                "Use list_expressions to see available expression nodes.",
-            )
+        err = validate_node_exists(cmds, name)
+        if err:
+            return err
 
         kwargs = {"edit": True, "string": expression}
         if unit_conversion:

@@ -9,6 +9,8 @@ import os
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 
 def delete_geometry_cache(
     cache_node: str,
@@ -31,11 +33,9 @@ def delete_geometry_cache(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(cache_node):
-            return skill_error(
-                "Cache node not found: {}".format(cache_node),
-                "'{}' does not exist in the scene".format(cache_node),
-            )
+        err = validate_node_exists(cmds, cache_node)
+        if err:
+            return err
 
         files_deleted = []
         if delete_files:

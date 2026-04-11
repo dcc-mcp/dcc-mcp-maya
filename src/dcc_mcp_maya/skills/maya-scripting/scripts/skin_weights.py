@@ -16,6 +16,8 @@ from typing import List, Optional
 # Import local modules
 from dcc_mcp_core.skill import skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 
 def _find_skin_cluster(cmds, mesh):
     """Return the first skinCluster node in *mesh*'s history, or None."""
@@ -49,11 +51,9 @@ def get_skin_weights(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(mesh):
-            return skill_error(
-                "Mesh not found: {}".format(mesh),
-                "'{}' does not exist".format(mesh),
-            )
+        err = validate_node_exists(cmds, mesh)
+        if err:
+            return err
 
         sc = skin_cluster or _find_skin_cluster(cmds, mesh)
         if not sc:
@@ -124,17 +124,13 @@ def paint_skin_weights(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(mesh):
-            return skill_error(
-                "Mesh not found: {}".format(mesh),
-                "'{}' does not exist".format(mesh),
-            )
+        err = validate_node_exists(cmds, mesh)
+        if err:
+            return err
 
-        if not cmds.objExists(joint):
-            return skill_error(
-                "Joint not found: {}".format(joint),
-                "'{}' does not exist".format(joint),
-            )
+        err = validate_node_exists(cmds, joint)
+        if err:
+            return err
 
         if not 0.0 <= weight <= 1.0:
             return skill_error(
@@ -206,11 +202,9 @@ def mirror_skin_weights(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(mesh):
-            return skill_error(
-                "Mesh not found: {}".format(mesh),
-                "'{}' does not exist".format(mesh),
-            )
+        err = validate_node_exists(cmds, mesh)
+        if err:
+            return err
 
         if mirror_axis not in _VALID_AXES:
             return skill_error(
@@ -279,11 +273,9 @@ def copy_skin_weights(
         import maya.cmds as cmds  # noqa: PLC0415
 
         for name in (source, target):
-            if not cmds.objExists(name):
-                return skill_error(
-                    "Object not found: {}".format(name),
-                    "'{}' does not exist in the scene".format(name),
-                )
+            err = validate_node_exists(cmds, name)
+            if err:
+                return err
 
         cmds.copySkinWeights(
             source,

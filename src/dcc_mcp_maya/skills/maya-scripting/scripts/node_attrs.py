@@ -17,6 +17,8 @@ from typing import Any, Optional
 # Import local modules
 from dcc_mcp_core.skill import skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 # Supported attribute type tokens for addAttr -attributeType / -dataType
 _SCALAR_TYPES = ("bool", "byte", "short", "long", "float", "double", "angle", "time")
 _STRING_TYPES = ("string",)
@@ -61,11 +63,9 @@ def add_attribute(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(object_name):
-            return skill_error(
-                "Object not found: {}".format(object_name),
-                "'{}' does not exist in the scene".format(object_name),
-            )
+        err = validate_node_exists(cmds, object_name)
+        if err:
+            return err
 
         if cmds.objExists("{}.{}".format(object_name, long_name)):
             return skill_error(
@@ -141,18 +141,14 @@ def delete_attribute(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(object_name):
-            return skill_error(
-                "Object not found: {}".format(object_name),
-                "'{}' does not exist in the scene".format(object_name),
-            )
+        err = validate_node_exists(cmds, object_name)
+        if err:
+            return err
 
         full_attr = "{}.{}".format(object_name, attribute)
-        if not cmds.objExists(full_attr):
-            return skill_error(
-                "Attribute not found: {}".format(full_attr),
-                "The attribute '{}' does not exist on '{}'".format(attribute, object_name),
-            )
+        err = validate_node_exists(cmds, full_attr)
+        if err:
+            return err
 
         # Only user-defined attributes have userData / dynamic flag
         user_defined = cmds.listAttr(object_name, userDefined=True) or []
@@ -200,11 +196,9 @@ def list_attributes(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(object_name):
-            return skill_error(
-                "Object not found: {}".format(object_name),
-                "'{}' does not exist in the scene".format(object_name),
-            )
+        err = validate_node_exists(cmds, object_name)
+        if err:
+            return err
 
         # Build query kwargs
         list_kwargs = {}  # type: dict

@@ -9,6 +9,8 @@ from typing import List, Optional
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 
 def create_instancer(
     particle_system: str,
@@ -37,11 +39,9 @@ def create_instancer(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(particle_system):
-            return skill_error(
-                "Particle system not found: {}".format(particle_system),
-                "'{}' does not exist".format(particle_system),
-            )
+        err = validate_node_exists(cmds, particle_system)
+        if err:
+            return err
 
         missing = [o for o in instance_objects if not cmds.objExists(o)]
         if missing:

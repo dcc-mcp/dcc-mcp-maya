@@ -9,6 +9,8 @@ from typing import List, Optional
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 
 def set_cluster_weights(
     cluster_node: str,
@@ -40,16 +42,12 @@ def set_cluster_weights(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(cluster_node):
-            return skill_error(
-                "Cluster node not found: {}".format(cluster_node),
-                "'{}' does not exist".format(cluster_node),
-            )
-        if not cmds.objExists(mesh):
-            return skill_error(
-                "Mesh not found: {}".format(mesh),
-                "'{}' does not exist".format(mesh),
-            )
+        err = validate_node_exists(cmds, cluster_node)
+        if err:
+            return err
+        err = validate_node_exists(cmds, mesh)
+        if err:
+            return err
 
         vertex_count = cmds.polyEvaluate(mesh, vertex=True)
 

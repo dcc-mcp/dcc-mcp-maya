@@ -9,6 +9,8 @@ from typing import List, Optional
 # Import local modules
 from dcc_mcp_core.skill import skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 
 def add_constraint(
     source: str,
@@ -41,17 +43,13 @@ def add_constraint(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(source):
-            return skill_error(
-                "Source not found: {}".format(source),
-                "'{}' does not exist in the scene".format(source),
-            )
+        err = validate_node_exists(cmds, source)
+        if err:
+            return err
 
-        if not cmds.objExists(target):
-            return skill_error(
-                "Target not found: {}".format(target),
-                "'{}' does not exist in the scene".format(target),
-            )
+        err = validate_node_exists(cmds, target)
+        if err:
+            return err
 
         if constraint_type not in _VALID_TYPES:
             return skill_error(
@@ -117,11 +115,9 @@ def remove_constraint(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(target):
-            return skill_error(
-                "Target not found: {}".format(target),
-                "'{}' does not exist in the scene".format(target),
-            )
+        err = validate_node_exists(cmds, target)
+        if err:
+            return err
 
         if constraint_type is not None and constraint_type not in _TYPE_MAP:
             return skill_error(
@@ -175,11 +171,9 @@ def list_constraints(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(target):
-            return skill_error(
-                "Target not found: {}".format(target),
-                "'{}' does not exist in the scene".format(target),
-            )
+        err = validate_node_exists(cmds, target)
+        if err:
+            return err
 
         constraints = []
         for ct in _CONSTRAINT_TYPES:
@@ -244,18 +238,14 @@ def create_constraint_weighted(
                 "constraint_type must be one of {}".format(_VALID_TYPES),
             )
 
-        if not cmds.objExists(target):
-            return skill_error(
-                "Target not found: {}".format(target),
-                "'{}' does not exist".format(target),
-            )
+        err = validate_node_exists(cmds, target)
+        if err:
+            return err
 
         for src in sources:
-            if not cmds.objExists(src):
-                return skill_error(
-                    "Source not found: {}".format(src),
-                    "'{}' does not exist".format(src),
-                )
+            err = validate_node_exists(cmds, src)
+            if err:
+                return err
 
         # Normalise weights list
         w_list = list(weights) if weights else []

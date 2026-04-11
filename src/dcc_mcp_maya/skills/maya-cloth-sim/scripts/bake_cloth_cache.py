@@ -9,6 +9,8 @@ from typing import Optional
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 
 def bake_cloth_cache(
     ncloth_shape: str,
@@ -29,11 +31,9 @@ def bake_cloth_cache(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(ncloth_shape):
-            return skill_error(
-                "Node not found",
-                "nCloth shape '{}' does not exist".format(ncloth_shape),
-            )
+        err = validate_node_exists(cmds, ncloth_shape)
+        if err:
+            return err
 
         if start_frame is None:
             start_frame = int(cmds.playbackOptions(query=True, minTime=True))
