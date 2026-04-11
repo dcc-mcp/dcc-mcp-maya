@@ -844,13 +844,13 @@ class TestPipelineEdgeCases:
         """set_project uses param 'path', not 'project_path'."""
         _mock_maya()
         mod = load_skill_script("maya-pipeline", "set_project")
-        result = mod.set_project(path="")
+        result = mod.set_project(project_path="")
         assert result["success"] is False
 
     def test_set_project_nonexistent_dir_without_create(self, tmp_path):
         _mock_maya()
         mod = load_skill_script("maya-pipeline", "set_project")
-        result = mod.set_project(path=str(tmp_path / "nonexistent"))
+        result = mod.set_project(project_path=str(tmp_path / "nonexistent"))
         assert result["success"] is False
         assert "not exist" in result["message"] or "Directory not found" in result["message"]
 
@@ -858,7 +858,7 @@ class TestPipelineEdgeCases:
         mock_cmds, _ = _mock_maya()
         new_dir = str(tmp_path / "new_project")
         mod = load_skill_script("maya-pipeline", "set_project")
-        result = mod.set_project(path=new_dir, create_if_missing=True)
+        result = mod.set_project(project_path=new_dir, create_if_missing=True)
         assert result["success"] is True
         import os
 
@@ -870,7 +870,7 @@ class TestPipelineEdgeCases:
         mock_cmds.objExists.return_value = False
         mod = load_skill_script("maya-pipeline", "tag_asset_metadata")
         result = mod.tag_asset_metadata(
-            node="missing",
+            node_name="missing",
             asset_name="TestAsset",
         )
         assert result["success"] is False
@@ -881,7 +881,7 @@ class TestPipelineEdgeCases:
         mock_cmds.attributeQuery.return_value = False
         mod = load_skill_script("maya-pipeline", "tag_asset_metadata")
         result = mod.tag_asset_metadata(
-            node="pSphere1",
+            node_name="pSphere1",
             asset_name="TestAsset",
             asset_variant="default",
             asset_version="1.0.0",

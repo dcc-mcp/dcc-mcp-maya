@@ -12,14 +12,14 @@ from dcc_mcp_maya.api import validate_node_exists
 
 
 def list_node_connections(
-    node: str,
+    node_name: str,
     direction: str = "both",
     plugs: bool = True,
 ) -> dict:
     """List incoming and/or outgoing attribute connections for a node.
 
     Args:
-        node: Name of the node to inspect.
+        node_name: Name of the node to inspect.
         direction: ``"incoming"`` | ``"outgoing"`` | ``"both"``. Default ``"both"``.
         plugs: Whether to include plug names (not just node names). Default True.
 
@@ -28,38 +28,38 @@ def list_node_connections(
         ``{"source": ..., "destination": ...}`` dicts.
     """
 
-    if not node:
-        return skill_error("No node provided", "Provide 'node' parameter.")
+    if not node_name:
+        return skill_error("No node provided", "Provide 'node_name' parameter.")
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        err = validate_node_exists(cmds, node)
+        err = validate_node_exists(cmds, node_name)
         if err:
             return err
 
         connections = []
 
         if direction in ("incoming", "both"):
-            raw = cmds.listConnections(node, source=True, destination=False, plugs=plugs, connections=plugs) or []
+            raw = cmds.listConnections(node_name, source=True, destination=False, plugs=plugs, connections=plugs) or []
             if plugs:
                 for i in range(0, len(raw) - 1, 2):
                     connections.append({"source": raw[i + 1], "destination": raw[i]})
             else:
                 for src in raw:
-                    connections.append({"source": src, "destination": node})
+                    connections.append({"source": src, "destination": node_name})
 
         if direction in ("outgoing", "both"):
-            raw = cmds.listConnections(node, source=False, destination=True, plugs=plugs, connections=plugs) or []
+            raw = cmds.listConnections(node_name, source=False, destination=True, plugs=plugs, connections=plugs) or []
             if plugs:
                 for i in range(0, len(raw) - 1, 2):
                     connections.append({"source": raw[i], "destination": raw[i + 1]})
             else:
                 for dst in raw:
-                    connections.append({"source": node, "destination": dst})
+                    connections.append({"source": node_name, "destination": dst})
 
         return skill_success(
-            "{} connections found for '{}'".format(len(connections), node),
+            "{} connections found for '{}'".format(len(connections), node_name),
             prompt=("Connections listed. Use connectAttr / disconnectAttr actions to modify the shading network."),
             connections=connections,
             count=len(connections),

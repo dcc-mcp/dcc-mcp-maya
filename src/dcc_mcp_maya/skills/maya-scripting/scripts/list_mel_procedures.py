@@ -26,9 +26,13 @@ def list_mel_procedures(pattern: str = "", limit: int = 200) -> dict:
 
         # Warm-up call (result unused)
         mel.eval('whatIs ""')
-        # globalProcs() returns a MEL string array
-        procs = mel.eval("globalProcs()")
-        if not isinstance(procs, list):
+        # globalProcs() returns a MEL string array.
+        # In mayapy standalone, it may not be available — return empty list in that case.
+        try:
+            procs = mel.eval("globalProcs()")
+            if not isinstance(procs, list):
+                procs = []
+        except Exception:
             procs = []
 
         lower_pattern = pattern.lower()
