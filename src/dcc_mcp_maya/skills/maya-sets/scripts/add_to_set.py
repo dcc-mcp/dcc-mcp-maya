@@ -30,7 +30,6 @@ def add_to_set(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-
         if not objects:
             return skill_error("No objects specified", "objects list must not be empty")
 
@@ -70,4 +69,5 @@ def main(**kwargs) -> dict:
 
 if __name__ == "__main__":
     from dcc_mcp_core.skill import run_main
+
     run_main(main)

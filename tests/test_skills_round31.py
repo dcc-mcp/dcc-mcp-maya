@@ -18,6 +18,7 @@ import pytest
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _load_module(rel_path: str, mod_name: str) -> ModuleType:
     """Import a skill script by relative path (under src/)."""
     import importlib.util
@@ -120,17 +121,13 @@ class TestStructural:
             # Heuristic: if variable is named 'full_attr' or 'attr' it's a probe
             attr_probe_names = {"full_attr", "attr", "plug", "w_attr", "query_target"}
             if var not in attr_probe_names:
-                pytest.fail(
-                    "{} still has raw node-existence guard: {}".format(rel, m.group(0))
-                )
+                pytest.fail("{} still has raw node-existence guard: {}".format(rel, m.group(0)))
 
     @pytest.mark.parametrize("rel", _MIGRATED_FILES)
     def test_validate_node_exists_imported(self, rel):
         """Each migrated file must import validate_node_exists."""
         content = open(self._src_path(rel), encoding="utf-8").read()
-        assert "validate_node_exists" in content, (
-            "{} is missing validate_node_exists import".format(rel)
-        )
+        assert "validate_node_exists" in content, "{} is missing validate_node_exists import".format(rel)
 
     @pytest.mark.parametrize("rel", _MIGRATED_FILES)
     def test_no_syntax_errors(self, rel):
@@ -149,9 +146,7 @@ class TestStructural:
 
         total = sum(
             open(os.path.join(r, f), encoding="utf-8", errors="ignore").read().count("cmds.objExists")
-            for r, _d, fs in os.walk(
-                os.path.join(os.path.dirname(os.path.dirname(__file__)), "src")
-            )
+            for r, _d, fs in os.walk(os.path.join(os.path.dirname(os.path.dirname(__file__)), "src"))
             for f in fs
             if f.endswith(".py")
         )
@@ -209,9 +204,7 @@ class TestMeshOpsRound31:
             "get_poly_count.py",
         )
         mock_cmds = self._cmds_get_poly_count(exists=True)
-        mock_cmds.polyEvaluate.side_effect = lambda obj, **kw: (
-            100 if kw.get("f") or kw.get("face") else 50
-        )
+        mock_cmds.polyEvaluate.side_effect = lambda obj, **kw: 100 if kw.get("f") or kw.get("face") else 50
         with _patch_maya(mock_cmds):
             spec = importlib.util.spec_from_file_location("get_poly_count_r31b", path)
             mod = importlib.util.module_from_spec(spec)
@@ -391,12 +384,7 @@ class TestRiggingRound31:
         assert result["success"] is False
         # message could reference 'blendShape', 'not a blend', or generic error
         msg = result["message"].lower()
-        assert (
-            "blendshape" in msg
-            or "not a blend" in msg
-            or "blend" in msg
-            or "failed" in msg
-        )
+        assert "blendshape" in msg or "not a blend" in msg or "blend" in msg or "failed" in msg
 
     def test_missing_target_mesh(self):
         call_count = [0]

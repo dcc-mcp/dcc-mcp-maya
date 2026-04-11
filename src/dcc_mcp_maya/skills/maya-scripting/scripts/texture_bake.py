@@ -66,7 +66,6 @@ def bake_textures(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-
         err = batch_validate_nodes(cmds, list(objects))
         if err:
             return err

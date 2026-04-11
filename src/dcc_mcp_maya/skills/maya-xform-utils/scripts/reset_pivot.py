@@ -32,7 +32,6 @@ def reset_pivot(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-
         if not objects:
             return skill_error("No objects provided", "Pass at least one object name.")
 
@@ -83,4 +82,5 @@ def main(**kwargs):
 
 if __name__ == "__main__":
     from dcc_mcp_core.skill import run_main
+
     run_main(main)

@@ -102,4 +102,5 @@ def main(**kwargs) -> dict:
 
 if __name__ == "__main__":
     from dcc_mcp_core.skill import run_main
+
     run_main(main)
