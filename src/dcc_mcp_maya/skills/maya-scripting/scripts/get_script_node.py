@@ -13,7 +13,7 @@ from dcc_mcp_maya.api import validate_node_exists
 
 
 def get_script_node(
-    name: str,
+    node_name: str,
     action: str = "get",
     script: Optional[str] = None,
     script_type: int = 0,
@@ -21,7 +21,7 @@ def get_script_node(
     """Get, create or delete a Maya scriptNode.
 
     Args:
-        name: scriptNode name.
+        node_name: scriptNode name.
         action: ``"get"`` | ``"create"`` | ``"delete"``. Default ``"get"``.
         script: Script body (required when ``action == "create"``).
         script_type: 0=demand, 1=open/close, 2=ui create, 3=ui delete. Default 0.
@@ -30,22 +30,22 @@ def get_script_node(
         ActionResultModel dict with ``context.script_node`` info dict.
     """
 
-    if not name:
-        return skill_error("No scriptNode name provided", "Provide 'name' parameter.")
+    if not node_name:
+        return skill_error("No scriptNode name provided", "Provide 'node_name' parameter.")
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if action == "get":
-            err = validate_node_exists(cmds, name)
+            err = validate_node_exists(cmds, node_name)
             if err:
                 return err
-            body = cmds.getAttr("{}.before".format(name))
-            stype = cmds.getAttr("{}.scriptType".format(name))
+            body = cmds.getAttr("{}.before".format(node_name))
+            stype = cmds.getAttr("{}.scriptType".format(node_name))
             return skill_success(
                 "scriptNode retrieved",
                 prompt="Inspect 'script_node' for the stored script body.",
-                script_node={"name": name, "script": body, "script_type": stype},
+                script_node={"name": node_name, "script": body, "script_type": stype},
             )
 
         elif action == "create":
@@ -54,7 +54,7 @@ def get_script_node(
             node = cmds.scriptNode(
                 scriptType=script_type,
                 beforeScript=script,
-                name=name,
+                name=node_name,
                 sourceType="python",
             )
             return skill_success(
@@ -64,12 +64,12 @@ def get_script_node(
             )
 
         elif action == "delete":
-            if cmds.objExists(name):
-                cmds.delete(name)
+            if cmds.objExists(node_name):
+                cmds.delete(node_name)
             return skill_success(
-                "scriptNode deleted: {}".format(name),
-                prompt="scriptNode '{}' removed from scene.".format(name),
-                deleted=name,
+                "scriptNode deleted: {}".format(node_name),
+                prompt="scriptNode '{}' removed from scene.".format(node_name),
+                deleted=node_name,
             )
 
         else:
