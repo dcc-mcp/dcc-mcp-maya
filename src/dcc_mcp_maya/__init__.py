@@ -35,12 +35,15 @@ from __future__ import annotations
 from dcc_mcp_maya.__version__ import __version__
 from dcc_mcp_maya.api import (
     MissingParamError,
+    batch_validate_nodes,
     get_cmds,
+    get_param_list,
     is_maya_available,
     maya_error,
     maya_from_exception,
     maya_success,
     missing_param_error,
+    require_any_param,
     require_cmds,
     require_param,
     validate_node_exists,
@@ -65,9 +68,12 @@ __all__ = [
     "with_maya",
     # Parameter helpers
     "require_param",
+    "require_any_param",
+    "get_param_list",
     "missing_param_error",
     "MissingParamError",
     # Node validation helpers
     "validate_node_exists",
     "validate_node_type",
+    "batch_validate_nodes",
 ]

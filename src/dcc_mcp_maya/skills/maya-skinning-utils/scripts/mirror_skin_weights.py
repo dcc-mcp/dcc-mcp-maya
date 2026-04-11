@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success, validate_node_exists
 
 # Import built-in modules
 
@@ -36,11 +36,9 @@ def mirror_skin_weights(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(mesh):
-            return maya_error(
-                "Mesh not found: {}".format(mesh),
-                "'{}' does not exist in the scene".format(mesh),
-            )
+        err = validate_node_exists(cmds, mesh)
+        if err:
+            return err
 
         sc_list = cmds.ls(cmds.listHistory(mesh) or [], type="skinCluster")
         if not sc_list:
