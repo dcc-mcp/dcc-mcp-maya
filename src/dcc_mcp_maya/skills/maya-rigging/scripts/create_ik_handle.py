@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_maya.api import batch_validate_nodes, maya_error, maya_from_exception, maya_success
 
 # Import built-in modules
 from typing import Optional
@@ -37,17 +37,9 @@ def create_ik_handle(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(start_joint):
-            return maya_error(
-                "Start joint not found: {}".format(start_joint),
-                "'{}' does not exist in the scene".format(start_joint),
-            )
-
-        if not cmds.objExists(end_joint):
-            return maya_error(
-                "End joint not found: {}".format(end_joint),
-                "'{}' does not exist in the scene".format(end_joint),
-            )
+        err = batch_validate_nodes(cmds, [start_joint, end_joint])
+        if err:
+            return err
 
         if solver not in _VALID_SOLVERS:
             return maya_error(

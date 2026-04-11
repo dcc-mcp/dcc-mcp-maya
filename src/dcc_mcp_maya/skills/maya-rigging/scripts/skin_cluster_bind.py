@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_maya.api import batch_validate_nodes, maya_error, maya_from_exception, maya_success, validate_node_exists
 
 # Import built-in modules
 from typing import List, Optional
@@ -45,18 +45,13 @@ def skin_cluster_bind(
                 "joints list must contain at least one joint name",
             )
 
-        if not cmds.objExists(mesh):
-            return maya_error(
-                "Mesh not found: {}".format(mesh),
-                "'{}' does not exist in the scene".format(mesh),
-            )
+        err = validate_node_exists(cmds, mesh)
+        if err:
+            return err
 
-        missing = [j for j in joints if not cmds.objExists(j)]
-        if missing:
-            return maya_error(
-                "Joints not found: {}".format(", ".join(missing)),
-                "The following joints do not exist: {}".format(", ".join(missing)),
-            )
+        err = batch_validate_nodes(cmds, joints)
+        if err:
+            return err
 
         objects = list(joints) + [mesh]
         kwargs = {

@@ -134,3 +134,73 @@ Pushed to `origin/auto-improve`
 2. Check remaining round files (round16-19) for inline helpers that weren't yet migrated
 3. Continue `mypy src/` pass for type annotation gaps in `server.py`
 4. Expand error path tests for muscle/mocap/scene-assembly in round21
+
+---
+
+### Run 5 — 2026-04-11 13:46
+
+**Branch**: auto-improve worktree at `G:\PycharmProjects\github\dcc-mcp-maya-auto-improve`
+
+**Baseline before**: 1665 passed (Run 4); **After merge from origin/main**: 1792 passed, 27 skipped
+
+**Merge**: `git merge origin/main` — succeeded clean (no conflicts). Main branch added test rounds 23/24 and 6 new e2e test files.
+
+**27 skipped tests**: All `tests/e2e/` tests requiring a live Maya session — expected/acceptable behavior.
+
+**Actions taken**:
+1. **round24 conftest migration** — Removed `SKILLS_ROOT`, `importlib.util`, inline `_load_script()` and `_make_mock_maya()` from `test_skills_round24.py`. Replaced with `from tests.conftest import load_skill_script as _load_script, make_mock_maya as _make_mock_maya`. Deleted 30 lines of duplicate code.
+2. **round23 fallback cleanup** — Removed the fragile `try: from conftest import ... / if not _CONFTEST_IMPORTED: ... inline fallback` pattern (56 lines). Replaced with direct `from tests.conftest import load_skill_script`. The `_mock_maya()`/`_clear_maya()` helpers are kept (round23 uses setup/teardown pattern with direct sys.modules injection, different from conftest's patch.dict approach).
+3. **ruff format** — 6 e2e test files reformatted (whitespace/trailing-space fixes).
+4. **ruff check** — `src/` + `tests/` all passed with no violations. F401/F811/F841 dead-code checks also clean.
+5. **Python compat scan** — UP007/UP031/UP034/UP035/UP045: all passed. No `X | Y`, `list[str]`, `:=`, `match/case` usage found.
+6. **server.py review** — Uses current `create_skill_manager` + `McpHttpConfig` APIs from `dcc_mcp_core`. No deprecated API usage found.
+
+**Quality gate**:
+- `ruff check src/ tests/` → **All checks passed!** ✅
+- `pytest tests/` → **1792 passed, 27 skipped** ✅ (27 skipped = e2e tests needing live Maya)
+
+**Commit**: `a74eb61` pushed to `origin/auto-improve`
+
+**Next priorities for future runs**:
+1. `mypy src/` pass — annotate any remaining gaps in `server.py` and `__init__.py`
+2. Check `test_skills_round22.py`'s 3-tuple helper pattern consistency; extend conftest `make_mock_maya` to optionally return `mock_mel` as a third value
+3. E2E tests: investigate if any of the 27 skipped tests can be unblocked by improving mock fixtures
+4. Scan `feat/skill-api-improvements` branch animation script changes — once merged to main, auto-improve will need to absorb them
+
+---
+
+### Run 6 — 2026-04-11 15:51
+
+**Branch**: auto-improve worktree at `G:\PycharmProjects\github\dcc-mcp-maya-auto-improve`
+
+**Baseline before**: 1792 passed (Run 5); **After merge from origin/main**: 1829 passed, 27 skipped
+
+**Merge**: `git merge origin/main` — Large merge from `feat/skill-api-improvements` changes landing in main. **593 conflicts across 49 src files + 19 docs files**.
+
+**Root cause of conflicts**: `feat/skill-api-improvements` branch refactored ~200 skill scripts to use new `dcc_mcp_maya.api` helpers (`maya_success`/`maya_error`/`maya_from_exception`/`validate_node_exists`/`validate_node_type`), while auto-improve had old-style versions in its tree.
+
+**Conflict resolution strategy**:
+- Created `tools/resolve_conflicts.py` — regex-based batch resolver that takes `origin/main` (theirs) side for all `<<<<<<< HEAD ... ======= ... >>>>>>> origin/main` patterns
+- src Python/MD files: 49 files, 593 conflicts resolved automatically via script
+- docs files (package.json, *.md, config.ts): 19 files resolved via `git checkout --theirs docs/`
+
+**Test assertion fixes**:
+- `test_skills_round7.py::TestDeleteDisplayLayer::test_not_a_display_layer` — updated assertion: old script returned `"Not a display layer"`, new uses `validate_node_type` returning `"Wrong node type: pSphere1"`
+- `test_skills_round24.py::TestDeleteDisplayLayer::test_delete_wrong_node_type` — same fix
+
+**New in origin/main** (absorbed by this merge):
+- `dcc_mcp_maya.api` module with `maya_success`, `maya_error`, `maya_from_exception`, `validate_node_exists`, `validate_node_type`
+- All existing skill scripts migrated to new API (0 old-style scripts remaining)
+- `__init__.py` updated to export new API symbols
+
+**Quality gate**:
+- `ruff check src/ tests/` → **All checks passed!** ✅
+- `pytest tests/` → **1829 passed, 27 skipped** ✅ (+37 from baseline 1792)
+
+**Commit**: `ec68992` pushed to `origin/auto-improve`
+
+**Next priorities for future runs**:
+1. `tests/test_skills_round25.py` — in `feat/skill-api-improvements` branch (MISSING from auto-improve). Tests `batch_validate_nodes`, `require_any_param`, `get_param_list` new API helpers. Add to auto-improve once `feat` branch merges to main.
+2. `mypy src/` pass — check new `api.py` for type annotation completeness
+3. Consider extending conftest `make_mock_maya` to support `mock_mel` as optional 3rd return value (used in round22 3-tuple pattern)
+4. tools/resolve_conflicts.py — useful utility; keep for future merge conflict resolution

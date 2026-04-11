@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success, validate_node_exists
 
 # Import built-in modules
 
@@ -40,11 +40,9 @@ def set_ik_fk_blend(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(ik_handle):
-            return maya_error(
-                "IK handle not found: {}".format(ik_handle),
-                "'{}' does not exist in the scene".format(ik_handle),
-            )
+        err = validate_node_exists(cmds, ik_handle)
+        if err:
+            return err
 
         node_type = cmds.objectType(ik_handle)
         if node_type not in ("ikHandle", "transform"):
@@ -54,7 +52,8 @@ def set_ik_fk_blend(
             )
 
         plug = "{}.{}".format(ik_handle, attribute)
-        if not cmds.objExists(plug):
+        err = validate_node_exists(cmds, plug)
+        if err:
             return maya_error(
                 "Attribute not found: {}".format(plug),
                 "IK handle '{}' does not have attribute '{}'".format(ik_handle, attribute),
