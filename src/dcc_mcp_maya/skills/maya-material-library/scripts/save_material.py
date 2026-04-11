@@ -11,6 +11,8 @@ from typing import List, Optional
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 # Attributes to skip during serialization (read-only / computed)
 _SKIP_ATTRS = {
     "message",
@@ -49,11 +51,9 @@ def save_material(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(material):
-            return skill_error(
-                "Material '{}' not found".format(material),
-                "Use list_shaders or list_materials_in_scene to find material names",
-            )
+        err = validate_node_exists(cmds, material)
+        if err:
+            return err
 
         node_type = cmds.objectType(material)
         preset = preset_name or material

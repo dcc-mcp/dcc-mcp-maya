@@ -9,6 +9,8 @@ from typing import List
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 
 def add_space_switch(
     control: str,
@@ -39,11 +41,9 @@ def add_space_switch(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(control):
-            return skill_error(
-                "Control not found: {}".format(control),
-                "'{}' does not exist in the scene".format(control),
-            )
+        err = validate_node_exists(cmds, control)
+        if err:
+            return err
 
         if len(spaces) != len(space_names):
             return skill_error(

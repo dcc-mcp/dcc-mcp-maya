@@ -7,6 +7,8 @@ from __future__ import annotations
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 
 def set_camera_attribute(camera_name: str, attribute: str, value: object) -> dict:
     """Set an attribute on a Maya camera node.
@@ -25,11 +27,9 @@ def set_camera_attribute(camera_name: str, attribute: str, value: object) -> dic
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(camera_name):
-            return skill_error(
-                "Camera not found: {}".format(camera_name),
-                "'{}' does not exist".format(camera_name),
-            )
+        err = validate_node_exists(cmds, camera_name)
+        if err:
+            return err
 
         # Resolve shape node if transform was supplied
         node_type = cmds.objectType(camera_name)

@@ -7,6 +7,8 @@ from __future__ import annotations
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 
 def connect_bifrost_ports(
     graph_node: str,
@@ -48,11 +50,9 @@ def connect_bifrost_ports(
                     "Provide a non-empty value for '{}'".format(arg_name),
                 )
 
-        if not cmds.objExists(graph_node):
-            return skill_error(
-                "Graph '{}' not found".format(graph_node),
-                "No node named '{}' exists in the scene".format(graph_node),
-            )
+        err = validate_node_exists(cmds, graph_node)
+        if err:
+            return err
 
         src = "{}.{}".format(source_node_path, source_port)
         dst = "{}.{}".format(target_node_path, target_port)

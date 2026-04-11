@@ -6,6 +6,8 @@ from __future__ import annotations
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 # Import built-in modules
 
 
@@ -34,11 +36,9 @@ def match_transforms(
         import maya.cmds as cmds  # noqa: PLC0415
 
         for name in (source, target):
-            if not cmds.objExists(name):
-                return skill_error(
-                    "Object not found: {}".format(name),
-                    "'{}' does not exist in the scene".format(name),
-                )
+            err = validate_node_exists(cmds, name)
+            if err:
+                return err
 
         if translate:
             pos = cmds.xform(target, query=True, worldSpace=True, translation=True)

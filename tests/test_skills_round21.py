@@ -122,7 +122,7 @@ class TestDeleteExpression:
             mod = load_skill_script("maya-expressions", "delete_expression")
             result = mod.delete_expression("expr1")
         assert result["success"] is False
-        assert "not exist" in result["message"]
+        assert "not found" in result["message"].lower()
 
     def test_delete_success(self):
         mock_maya, mc, _ = make_mock_maya()

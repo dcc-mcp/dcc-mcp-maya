@@ -7,6 +7,8 @@ from __future__ import annotations
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 _VALID_FIELD_TYPES = (
     "gravity",
     "turbulence",
@@ -42,11 +44,9 @@ def set_nucleus_attribute(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(nucleus):
-            return skill_error(
-                "Nucleus node not found: {}".format(nucleus),
-                "'{}' does not exist in the scene".format(nucleus),
-            )
+        err = validate_node_exists(cmds, nucleus)
+        if err:
+            return err
 
         node_type = cmds.objectType(nucleus)
         if node_type != "nucleus":
@@ -56,11 +56,9 @@ def set_nucleus_attribute(
             )
 
         plug = "{}.{}".format(nucleus, attribute)
-        if not cmds.objExists(plug):
-            return skill_error(
-                "Attribute not found: {}".format(plug),
-                "'{}' does not have attribute '{}'".format(nucleus, attribute),
-            )
+        err = validate_node_exists(cmds, plug)
+        if err:
+            return err
 
         if isinstance(value, (list, tuple)) and len(value) == 3:
             cmds.setAttr(plug, value[0], value[1], value[2], type="double3")

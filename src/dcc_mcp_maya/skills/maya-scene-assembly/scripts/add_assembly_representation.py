@@ -9,6 +9,8 @@ from typing import Optional
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 _VALID_TYPES = {"Locator", "Cache", "GPU", "Scene"}
 
 
@@ -39,11 +41,9 @@ def add_assembly_representation(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(assembly):
-            return skill_error(
-                "Assembly '{}' not found".format(assembly),
-                "Use list_assemblies or create_assembly_definition first.",
-            )
+        err = validate_node_exists(cmds, assembly)
+        if err:
+            return err
 
         kwargs = {"input": assembly, "type": rep_type}
         if rep_name:

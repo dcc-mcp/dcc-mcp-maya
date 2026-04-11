@@ -7,6 +7,8 @@ from __future__ import annotations
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 
 def remove_audio(sound_node: str) -> dict:
     """Delete a sound node from the Maya scene.
@@ -20,11 +22,9 @@ def remove_audio(sound_node: str) -> dict:
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(sound_node):
-            return skill_error(
-                "Sound node not found: {}".format(sound_node),
-                "'{}' does not exist in the scene".format(sound_node),
-            )
+        err = validate_node_exists(cmds, sound_node)
+        if err:
+            return err
 
         node_type = cmds.objectType(sound_node)
         if node_type != "audio":

@@ -7,6 +7,8 @@ from __future__ import annotations
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 
 def set_nparticle_attribute(
     particle_shape: str,
@@ -30,11 +32,9 @@ def set_nparticle_attribute(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(particle_shape):
-            return skill_error(
-                "nParticle shape '{}' not found".format(particle_shape),
-                "Use list_nparticle_systems to find available nParticle nodes",
-            )
+        err = validate_node_exists(cmds, particle_shape)
+        if err:
+            return err
 
         if cmds.objectType(particle_shape) != "nParticle":
             return skill_error(

@@ -13,6 +13,8 @@ logger = logging.getLogger(__name__)
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success  # noqa: E402
 
+from dcc_mcp_maya.api import validate_node_exists  # noqa: E402
+
 
 def delete_stroke(
     stroke: Optional[str] = None,
@@ -35,11 +37,9 @@ def delete_stroke(
         if delete_all:
             stroke_nodes = cmds.ls(type="stroke") or []
         elif stroke:
-            if not cmds.objExists(stroke):
-                return skill_error(
-                    "Stroke not found: {}".format(stroke),
-                    "Verify the stroke node name with list_strokes",
-                )
+            err = validate_node_exists(cmds, stroke)
+            if err:
+                return err
             stroke_nodes = [stroke]
         else:
             return skill_error(

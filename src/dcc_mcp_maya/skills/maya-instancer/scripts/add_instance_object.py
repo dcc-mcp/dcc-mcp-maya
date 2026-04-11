@@ -6,6 +6,8 @@ from __future__ import annotations
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 
 def add_instance_object(
     particle_system: str,
@@ -29,11 +31,9 @@ def add_instance_object(
         import maya.cmds as cmds  # noqa: PLC0415
 
         for name in (particle_system, instancer_node, object_name):
-            if not cmds.objExists(name):
-                return skill_error(
-                    "Node not found: {}".format(name),
-                    "'{}' does not exist".format(name),
-                )
+            err = validate_node_exists(cmds, name)
+            if err:
+                return err
 
         cmds.particleInstancer(
             particle_system,

@@ -7,6 +7,8 @@ from __future__ import annotations
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 
 def set_aov_attribute(name: str, attribute: str, value: object) -> dict:
     """Set a named attribute on the Arnold AOV node identified by *name*.
@@ -49,11 +51,9 @@ def set_aov_attribute(name: str, attribute: str, value: object) -> dict:
             )
 
         attr_path = "{}.{}".format(target_node, attribute)
-        if not cmds.objExists(attr_path):
-            return skill_error(
-                "Attribute '{}' not found on AOV node".format(attribute),
-                "The attribute '{}' does not exist on '{}'".format(attribute, target_node),
-            )
+        err = validate_node_exists(cmds, attr_path)
+        if err:
+            return err
 
         if isinstance(value, str):
             cmds.setAttr(attr_path, value, type="string")

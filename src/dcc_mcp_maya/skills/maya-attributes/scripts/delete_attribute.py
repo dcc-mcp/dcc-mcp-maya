@@ -30,11 +30,9 @@ def delete_attribute(node_name: str, attribute: str) -> dict:
             return err
 
         full_attr = "{}.{}".format(node_name, attribute)
-        if not cmds.objExists(full_attr):
-            return skill_error(
-                "Attribute not found: {}".format(full_attr),
-                "'{}.{}' does not exist".format(node_name, attribute),
-            )
+        err = validate_node_exists(cmds, full_attr)
+        if err:
+            return err
 
         if not cmds.attributeQuery(attribute, node=node_name, userDefined=True):
             return skill_error(

@@ -9,6 +9,8 @@ from typing import Optional
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 
 def create_muscle_capsule(
     start_joint: str,
@@ -33,11 +35,9 @@ def create_muscle_capsule(
         import maya.mel as mel  # noqa: PLC0415
 
         for jnt in (start_joint, end_joint):
-            if not cmds.objExists(jnt):
-                return skill_error(
-                    "Joint '{}' not found".format(jnt),
-                    "Verify joint names using the Outliner.",
-                )
+            err = validate_node_exists(cmds, jnt)
+            if err:
+                return err
 
         cmds.loadPlugin("MayaMuscle", quiet=True)
         cmds.select([start_joint, end_joint], replace=True)

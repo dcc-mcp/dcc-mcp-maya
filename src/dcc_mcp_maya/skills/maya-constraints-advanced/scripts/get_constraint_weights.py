@@ -6,6 +6,8 @@ from __future__ import annotations
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 
 def get_constraint_weights(constraint_node: str) -> dict:
     """Query the per-driver weights of a Maya constraint node.
@@ -23,11 +25,9 @@ def get_constraint_weights(constraint_node: str) -> dict:
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(constraint_node):
-            return skill_error(
-                "Constraint not found: {}".format(constraint_node),
-                "'{}' does not exist in the scene".format(constraint_node),
-            )
+        err = validate_node_exists(cmds, constraint_node)
+        if err:
+            return err
 
         constraint_type = cmds.objectType(constraint_node)
 

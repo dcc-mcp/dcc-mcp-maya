@@ -14,6 +14,8 @@ from typing import List, Optional
 # Import local modules
 from dcc_mcp_core.skill import skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 
 def create_set(
     name: str,
@@ -83,11 +85,9 @@ def add_to_set(
         if not objects:
             return skill_error("No objects specified", "objects list must not be empty")
 
-        if not cmds.objExists(set_name):
-            return skill_error(
-                "Set not found: {}".format(set_name),
-                "'{}' does not exist in the scene".format(set_name),
-            )
+        err = validate_node_exists(cmds, set_name)
+        if err:
+            return err
 
         if cmds.objectType(set_name) != "objectSet":
             return skill_error(
@@ -137,11 +137,9 @@ def remove_from_set(
         if not objects:
             return skill_error("No objects specified", "objects list must not be empty")
 
-        if not cmds.objExists(set_name):
-            return skill_error(
-                "Set not found: {}".format(set_name),
-                "'{}' does not exist in the scene".format(set_name),
-            )
+        err = validate_node_exists(cmds, set_name)
+        if err:
+            return err
 
         if cmds.objectType(set_name) != "objectSet":
             return skill_error(

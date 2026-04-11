@@ -7,6 +7,8 @@ from __future__ import annotations
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 
 def delete_fluid_container(name: str) -> dict:
     """Delete a fluid container transform (and its fluidShape child).
@@ -20,11 +22,9 @@ def delete_fluid_container(name: str) -> dict:
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(name):
-            return skill_error(
-                "Node not found",
-                "Fluid container '{}' does not exist".format(name),
-            )
+        err = validate_node_exists(cmds, name)
+        if err:
+            return err
 
         cmds.delete(name)
 

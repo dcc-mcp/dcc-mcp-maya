@@ -9,6 +9,8 @@ from typing import Any, List, Optional
 # Import local modules
 from dcc_mcp_core.skill import skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 _SUPPORTED_SHADERS = ("lambert", "blinn", "phong", "phongE", "aiStandardSurface")
 
 
@@ -117,11 +119,9 @@ def set_material_attribute(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(material_name):
-            return skill_error(
-                "Material not found: {}".format(material_name),
-                "'{}' does not exist".format(material_name),
-            )
+        err = validate_node_exists(cmds, material_name)
+        if err:
+            return err
 
         attr_path = "{}.{}".format(material_name, attribute)
         if isinstance(value, (list, tuple)):
@@ -198,11 +198,9 @@ def get_shader_assignment(object_name: str) -> dict:
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(object_name):
-            return skill_error(
-                "Object not found: {}".format(object_name),
-                "'{}' does not exist in the scene".format(object_name),
-            )
+        err = validate_node_exists(cmds, object_name)
+        if err:
+            return err
 
         # Resolve shading engines connected to the shape(s)
         shapes = cmds.listRelatives(object_name, shapes=True, fullPath=True) or []
@@ -255,11 +253,9 @@ def get_material_connections(material_name: str) -> dict:
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(material_name):
-            return skill_error(
-                "Material not found: {}".format(material_name),
-                "'{}' does not exist in the scene".format(material_name),
-            )
+        err = validate_node_exists(cmds, material_name)
+        if err:
+            return err
 
         # List all source plugs connected into this material
         raw_connections = (
@@ -371,11 +367,9 @@ def reset_to_default_material(object_name: str) -> dict:
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(object_name):
-            return skill_error(
-                "Object not found: {}".format(object_name),
-                "'{}' does not exist in the scene".format(object_name),
-            )
+        err = validate_node_exists(cmds, object_name)
+        if err:
+            return err
 
         cmds.sets(object_name, edit=True, forceElement="initialShadingGroup")
 

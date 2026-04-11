@@ -7,6 +7,8 @@ from __future__ import annotations
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 
 def delete_shot(shot_node: str) -> dict:
     """Delete a shot node from the camera sequencer.
@@ -20,11 +22,9 @@ def delete_shot(shot_node: str) -> dict:
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(shot_node):
-            return skill_error(
-                "Shot not found: {}".format(shot_node),
-                "Verify the shot node name with list_shots",
-            )
+        err = validate_node_exists(cmds, shot_node)
+        if err:
+            return err
 
         cmds.shot(shot_node, edit=True, lock=False)
         cmds.delete(shot_node)
