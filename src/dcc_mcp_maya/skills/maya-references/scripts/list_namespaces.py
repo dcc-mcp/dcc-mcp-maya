@@ -6,6 +6,7 @@ from __future__ import annotations
 # Import local modules
 from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
+
 def list_namespaces(root_only: bool = False) -> dict:
     """List all namespaces in the current scene.
 
@@ -35,15 +36,18 @@ def list_namespaces(root_only: bool = False) -> dict:
             "Found {} namespace(s)".format(len(namespaces)),
             namespaces=namespaces,
             count=len(namespaces),
+            prompt="Check the result with list_references or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
         return maya_from_exception(exc, "Failed to list namespaces")
 
+
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`list_namespaces`."""
     return list_namespaces(**kwargs)
+
 
 if __name__ == "__main__":
     import json

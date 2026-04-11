@@ -9,7 +9,6 @@ from __future__ import annotations
 from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 
-
 def set_aov_attribute(name: str, attribute: str, value: object) -> dict:
     """Set a named attribute on the Arnold AOV node identified by *name*.
 

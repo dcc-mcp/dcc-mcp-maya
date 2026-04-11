@@ -8,6 +8,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 # Import built-in modules
 
+
 def list_bake_sets() -> dict:
     """List all bake set nodes in the current Maya scene.
 
@@ -61,10 +62,12 @@ def list_bake_sets() -> dict:
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to list bake sets")
+        return maya_from_exception(exc, "Failed to list bake sets")
+
 
 def main(**kwargs):
     return list_bake_sets(**kwargs)
+
 
 if __name__ == "__main__":
     import json

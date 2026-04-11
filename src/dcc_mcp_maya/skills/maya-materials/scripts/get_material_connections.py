@@ -71,6 +71,7 @@ def get_material_connections(material_name: str) -> dict:
             material_name=material_name,
             connections=connections,
             count=len(connections),
+            prompt="Use set_material_attribute to modify or assign_material to reassign.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")

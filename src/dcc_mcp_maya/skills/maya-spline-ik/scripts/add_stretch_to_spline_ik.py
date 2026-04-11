@@ -9,6 +9,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 # Import built-in modules
 from typing import List
 
+
 def add_stretch_to_spline_ik(
     ik_handle: str,
     joints: List[str],
@@ -92,10 +93,12 @@ def add_stretch_to_spline_ik(
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to add stretch")
+        return maya_from_exception(exc, "Failed to add stretch")
+
 
 def main(**kwargs):
     return add_stretch_to_spline_ik(**kwargs)
+
 
 if __name__ == "__main__":
     import json

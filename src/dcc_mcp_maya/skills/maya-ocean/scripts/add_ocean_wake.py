@@ -10,6 +10,7 @@ from typing import Optional
 # Import local modules
 from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
+
 def add_ocean_wake(
     shader: str,
     wake_object: Optional[str] = None,
@@ -55,8 +56,10 @@ def add_ocean_wake(
     except Exception as exc:
         return maya_from_exception(exc, "Failed to add ocean wake")
 
+
 def main(**kwargs):
     return add_ocean_wake(**kwargs)
+
 
 if __name__ == "__main__":
     import json

@@ -30,6 +30,7 @@ _STANDARD_AOV_TYPES = {
     "crypto_material": "FLOAT",
 }
 
+
 def add_aov(
     name: str,
     aov_type: Optional[str] = None,
@@ -97,19 +98,23 @@ def add_aov(
     except Exception as exc:
         return maya_from_exception(exc, "Failed to add AOV '{}'".format(name))
 
+
 def _type_to_int(type_str: str) -> int:
     """Map Arnold AOV type string to integer index."""
     _map = {"RGBA": 4, "RGB": 3, "VECTOR": 5, "FLOAT": 1, "INT": 2}
     return _map.get(type_str.upper(), 3)
+
 
 def _get_next_aov_index(cmds) -> int:  # type: ignore[no-untyped-def]
     """Return the next unused index in the Arnold render options AOV list."""
     existing = cmds.getAttr("defaultArnoldRenderOptions.aovList", multiIndices=True) or []
     return max(existing) + 1 if existing else 0
 
+
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`add_aov`."""
     return add_aov(**kwargs)
+
 
 if __name__ == "__main__":
     import json

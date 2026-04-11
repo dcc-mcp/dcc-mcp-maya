@@ -9,6 +9,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 # Import built-in modules
 from typing import List
 
+
 def remove_from_set(
     set_name: str,
     objects: List[str],
@@ -59,15 +60,18 @@ def remove_from_set(
             set_name=set_name,
             objects_removed=existing,
             objects_skipped=skipped,
+            prompt="Use list_set_members to verify removal.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to remove objects from set '{}'".format(set_name))
+        return maya_from_exception(exc, "Failed to remove objects from set '{}'".format(set_name))
+
 
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`remove_from_set`."""
     return remove_from_set(**kwargs)
+
 
 if __name__ == "__main__":
     import json

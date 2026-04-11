@@ -9,6 +9,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 # Import built-in modules
 from typing import List, Optional
 
+
 def create_locator(name: Optional[str] = None, position: Optional[List[float]] = None) -> dict:
     """Create a Maya locator node.
 
@@ -40,15 +41,18 @@ def create_locator(name: Optional[str] = None, position: Optional[List[float]] =
             "Created locator '{}'".format(loc_transform),
             object_name=loc_transform,
             position=pos,
+            prompt="Check the result with list_scene or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
         return maya_from_exception(exc, "Failed to create locator")
 
+
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`create_locator`."""
     return create_locator(**kwargs)
+
 
 if __name__ == "__main__":
     import json

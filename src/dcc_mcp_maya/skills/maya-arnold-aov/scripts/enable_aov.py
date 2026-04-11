@@ -8,6 +8,7 @@ from __future__ import annotations
 # Import local modules
 from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
+
 def enable_aov(name: str, enabled: bool = True) -> dict:
     """Enable or disable an Arnold AOV.
 
@@ -54,9 +55,11 @@ def enable_aov(name: str, enabled: bool = True) -> dict:
     except Exception as exc:
         return maya_from_exception(exc, "Failed to set AOV state for '{}'".format(name))
 
+
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`enable_aov`."""
     return enable_aov(**kwargs)
+
 
 if __name__ == "__main__":
     import json

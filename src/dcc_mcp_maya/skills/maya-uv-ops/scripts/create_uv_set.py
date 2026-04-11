@@ -9,6 +9,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 # Import built-in modules
 from typing import Optional
 
+
 def create_uv_set(object_name: str, uv_set_name: str, copy_from: Optional[str] = None) -> dict:
     """Create a new UV set on a polygon mesh.
 
@@ -43,15 +44,18 @@ def create_uv_set(object_name: str, uv_set_name: str, copy_from: Optional[str] =
             object_name=object_name,
             uv_set_name=uv_set_name,
             copied_from=copy_from,
+            prompt="Check the result with list_uv_ops or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to create UV set")
+        return maya_from_exception(exc, "Failed to create UV set")
+
 
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`create_uv_set`."""
     return create_uv_set(**kwargs)
+
 
 if __name__ == "__main__":
     import json

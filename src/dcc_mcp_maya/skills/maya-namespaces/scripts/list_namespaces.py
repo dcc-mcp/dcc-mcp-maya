@@ -11,6 +11,7 @@ _DEFAULT_NAMESPACES = {"UI", "shared"}
 # Import local modules
 from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
+
 def list_namespaces(include_defaults: bool = False) -> dict:
     """List all namespaces in the current scene.
 
@@ -59,8 +60,10 @@ def list_namespaces(include_defaults: bool = False) -> dict:
     except Exception as exc:
         return maya_from_exception(exc, "Failed to list namespaces")
 
+
 def main(**kwargs):
     return list_namespaces(**kwargs)
+
 
 if __name__ == "__main__":
     import json

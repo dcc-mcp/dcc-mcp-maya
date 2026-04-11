@@ -9,6 +9,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 # Import built-in modules
 from typing import List, Optional
 
+
 def create_set(
     name: str,
     objects: Optional[List[str]] = None,
@@ -48,15 +49,18 @@ def create_set(
             "Created object set '{}' with {} object(s)".format(set_node, len(objects_to_add)),
             set_name=set_node,
             objects_added=objects_to_add,
+            prompt="Use add_to_set to populate or list_sets to review.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to create set '{}'".format(name))
+        return maya_from_exception(exc, "Failed to create set '{}'".format(name))
+
 
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`create_set`."""
     return create_set(**kwargs)
+
 
 if __name__ == "__main__":
     import json

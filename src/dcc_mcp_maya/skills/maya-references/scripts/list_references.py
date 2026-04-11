@@ -6,6 +6,7 @@ from __future__ import annotations
 # Import local modules
 from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
+
 def list_references() -> dict:
     """List all file references in the current scene.
 
@@ -42,15 +43,18 @@ def list_references() -> dict:
             "Found {} reference(s)".format(len(references)),
             references=references,
             count=len(references),
+            prompt="Use reload_reference or remove_reference to manage the listed entries.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
         return maya_from_exception(exc, "Failed to list references")
 
+
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`list_references`."""
     return list_references(**kwargs)
+
 
 if __name__ == "__main__":
     import json

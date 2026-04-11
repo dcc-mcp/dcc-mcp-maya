@@ -9,7 +9,6 @@ from __future__ import annotations
 from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 
-
 def list_bifrost_graphs() -> dict:
     """List all ``bifrostGraph`` nodes present in the scene.
 

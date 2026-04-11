@@ -9,6 +9,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 # Import built-in modules
 from typing import Optional
 
+
 def create_assembly_definition(name: Optional[str] = None) -> dict:
     """Create an assemblyDefinition node.
 
@@ -35,8 +36,10 @@ def create_assembly_definition(name: Optional[str] = None) -> dict:
     except Exception as exc:
         return maya_from_exception(exc, "Failed to create assembly definition")
 
+
 def main(**kwargs):
     return create_assembly_definition(**kwargs)
+
 
 if __name__ == "__main__":
     import json

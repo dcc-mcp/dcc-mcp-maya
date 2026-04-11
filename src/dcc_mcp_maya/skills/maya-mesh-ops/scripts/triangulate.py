@@ -34,6 +34,7 @@ def triangulate(object_name: str) -> dict:
             object_name=object_name,
             face_count_before=before_count,
             face_count_after=after_count,
+            prompt="Use export_shot_fbx or get_poly_count to verify the result.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")

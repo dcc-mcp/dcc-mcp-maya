@@ -11,6 +11,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 _VALID_UNIT_CONVERSIONS = {"none", "angularOnly", "all"}
 
+
 def create_expression(
     expression: str,
     name: Optional[str] = None,
@@ -92,9 +93,11 @@ def create_expression(
     except Exception as exc:
         return maya_from_exception(exc, "Failed to create expression")
 
+
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`create_expression`."""
     return create_expression(**kwargs)
+
 
 if __name__ == "__main__":
     import json

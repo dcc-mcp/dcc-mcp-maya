@@ -8,6 +8,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 # Import built-in modules
 
+
 def execute_mel(code: str) -> dict:
     """Execute a MEL expression and return its string result.
 
@@ -35,11 +36,13 @@ def execute_mel(code: str) -> dict:
     except ImportError:
         return maya_error("Maya not available", "maya.mel could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "MEL execution failed")
+        return maya_from_exception(exc, "MEL execution failed")
+
 
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`execute_mel`."""
     return execute_mel(**kwargs)
+
 
 if __name__ == "__main__":
     import json

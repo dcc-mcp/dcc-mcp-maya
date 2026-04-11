@@ -14,6 +14,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 # Import built-in modules
 from typing import Optional
 
+
 def create_expression(
     expression: str,
     name: Optional[str] = None,
@@ -87,11 +88,13 @@ def create_expression(
             expression_name=expr_name,
             object_name=object_name,
             attribute=attribute,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to create expression")
+        return maya_from_exception(exc, "Failed to create expression")
+
 
 def list_expressions(
     object_name: Optional[str] = None,
@@ -143,11 +146,13 @@ def list_expressions(
             expressions=expressions,
             count=len(expressions),
             object_name=object_name,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to list expressions")
+        return maya_from_exception(exc, "Failed to list expressions")
+
 
 def delete_expression(
     expression_name: str,
@@ -182,8 +187,9 @@ def delete_expression(
         return maya_success(
             "Deleted expression '{}'".format(expression_name),
             expression_name=expression_name,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to delete expression {}".format(expression_name))
+        return maya_from_exception(exc, "Failed to delete expression {}".format(expression_name))

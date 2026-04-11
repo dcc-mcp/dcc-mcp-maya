@@ -9,6 +9,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 # Import built-in modules
 from typing import Optional
 
+
 def duplicate_object(
     object_name: str,
     new_name: Optional[str] = None,
@@ -44,15 +45,18 @@ def duplicate_object(
             object_name=new_obj,
             source=object_name,
             instance=instance,
+            prompt="Check the result with list_scene or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
         return maya_from_exception(exc, "Failed to duplicate '{}'".format(object_name))
 
+
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`duplicate_object`."""
     return duplicate_object(**kwargs)
+
 
 if __name__ == "__main__":
     import json

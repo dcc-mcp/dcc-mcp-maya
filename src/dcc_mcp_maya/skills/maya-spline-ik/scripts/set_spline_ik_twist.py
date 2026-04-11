@@ -18,6 +18,7 @@ WORLD_UP_TYPES = {
     "normal": 4,
 }
 
+
 def set_spline_ik_twist(
     ik_handle: str,
     world_up_type: str = "vector",
@@ -77,10 +78,12 @@ def set_spline_ik_twist(
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to set spline IK twist")
+        return maya_from_exception(exc, "Failed to set spline IK twist")
+
 
 def main(**kwargs):
     return set_spline_ik_twist(**kwargs)
+
 
 if __name__ == "__main__":
     import json

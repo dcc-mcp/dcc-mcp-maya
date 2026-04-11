@@ -14,9 +14,9 @@ logger = logging.getLogger(__name__)
 _NEGATE_ATTRS = {"tx", "ry", "rz"}
 
 
-
 # Import local modules
 from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 
 def mirror_pose(
     file_path: str,

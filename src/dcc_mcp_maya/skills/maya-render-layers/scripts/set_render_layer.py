@@ -8,6 +8,7 @@ from dcc_mcp_maya.api import maya_error, maya_success
 
 # Import built-in modules
 
+
 def set_render_layer(
     object_name: str,
     layer_name: str,
@@ -50,6 +51,7 @@ def set_render_layer(
             "Assigned '{}' to render layer '{}'".format(object_name, layer_name),
             object_name=object_name,
             layer_name=layer_name,
+            prompt="Check the result with list_render_layers or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
@@ -59,9 +61,11 @@ def set_render_layer(
             str(exc),
         )
 
+
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`set_render_layer`."""
     return set_render_layer(**kwargs)
+
 
 if __name__ == "__main__":
     import json

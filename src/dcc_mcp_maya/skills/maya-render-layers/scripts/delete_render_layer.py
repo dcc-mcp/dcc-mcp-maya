@@ -8,6 +8,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 # Import built-in modules
 
+
 def delete_render_layer(layer_name: str) -> dict:
     """Delete a render layer from the scene.
 
@@ -53,15 +54,18 @@ def delete_render_layer(layer_name: str) -> dict:
         return maya_success(
             "Deleted render layer '{}'".format(layer_name),
             layer_name=layer_name,
+            prompt="Use list_render_layers to confirm deletion.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
         return maya_from_exception(exc, "Failed to delete render layer '{}'".format(layer_name))
 
+
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`delete_render_layer`."""
     return delete_render_layer(**kwargs)
+
 
 if __name__ == "__main__":
     import json

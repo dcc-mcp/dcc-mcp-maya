@@ -8,6 +8,7 @@ from __future__ import annotations
 # Import local modules
 from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
+
 def get_transform(object_name: str) -> dict:
     """Get the translate/rotate/scale of an object.
 
@@ -36,15 +37,18 @@ def get_transform(object_name: str) -> dict:
             translate=translate,
             rotate=rotate,
             scale=scale,
+            prompt="Check the result with list_primitives or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
         return maya_from_exception(exc, "Failed to get transform of {}".format(object_name))
 
+
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`get_transform`."""
     return get_transform(**kwargs)
+
 
 if __name__ == "__main__":
     import json

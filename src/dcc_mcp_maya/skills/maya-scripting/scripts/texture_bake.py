@@ -12,6 +12,7 @@ from typing import List, Optional
 
 logger = logging.getLogger(__name__)
 
+
 def bake_textures(
     objects: List[str],
     file_path: str,
@@ -105,11 +106,13 @@ def bake_textures(
             resolution=resolution,
             bake_type=bake_type,
             renderer=renderer,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to bake textures")
+        return maya_from_exception(exc, "Failed to bake textures")
+
 
 def set_color_management(
     enabled: bool = True,
@@ -178,11 +181,13 @@ def set_color_management(
             rendering_space=current_rendering,
             output_transform=current_output,
             input_color_space=input_color_space,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to set color management")
+        return maya_from_exception(exc, "Failed to set color management")
+
 
 def list_color_spaces() -> dict:
     """List all available color spaces registered in Maya's color management.
@@ -220,8 +225,9 @@ def list_color_spaces() -> dict:
             input_color_spaces=list(spaces),
             rendering_spaces=list(rendering_spaces),
             output_transforms=list(output_transforms),
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to list color spaces")
+        return maya_from_exception(exc, "Failed to list color spaces")

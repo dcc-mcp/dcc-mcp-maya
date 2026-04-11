@@ -9,7 +9,6 @@ from __future__ import annotations
 from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 
-
 def connect_bifrost_ports(
     graph_node: str,
     source_node_path: str,

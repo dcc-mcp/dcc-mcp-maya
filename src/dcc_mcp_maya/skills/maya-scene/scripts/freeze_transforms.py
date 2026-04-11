@@ -8,6 +8,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 # Import built-in modules
 
+
 def freeze_transforms(object_name: str) -> dict:
     """Freeze (apply) the transforms of an object.
 
@@ -34,15 +35,18 @@ def freeze_transforms(object_name: str) -> dict:
         return maya_success(
             "Transforms frozen on '{}'".format(object_name),
             object_name=object_name,
+            prompt="Check the result with list_scene or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
         return maya_from_exception(exc, "Failed to freeze transforms on '{}'".format(object_name))
 
+
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`freeze_transforms`."""
     return freeze_transforms(**kwargs)
+
 
 if __name__ == "__main__":
     import json

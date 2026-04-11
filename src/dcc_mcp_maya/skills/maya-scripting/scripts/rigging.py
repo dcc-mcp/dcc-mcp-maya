@@ -9,6 +9,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 # Import built-in modules
 from typing import List, Optional
 
+
 def create_joint(
     name: Optional[str] = None,
     position: Optional[List[float]] = None,
@@ -66,11 +67,13 @@ def create_joint(
             object_name=joint_name,
             position=pos,
             parent=parent,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to create joint")
+        return maya_from_exception(exc, "Failed to create joint")
+
 
 def create_curve(
     points: Optional[List[List[float]]] = None,
@@ -126,11 +129,13 @@ def create_curve(
             degree=degree,
             point_count=len(points),
             periodic=periodic,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to create curve")
+        return maya_from_exception(exc, "Failed to create curve")
+
 
 def set_joint_orient(
     joint_name: str,
@@ -183,11 +188,13 @@ def set_joint_orient(
             "Set joint orient on '{}' to [{}, {}, {}]".format(joint_name, ox, oy, oz),
             object_name=joint_name,
             orient=[ox, oy, oz],
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to set joint orient on {}".format(joint_name))
+        return maya_from_exception(exc, "Failed to set joint orient on {}".format(joint_name))
+
 
 def mirror_joints(
     joint_name: str,
@@ -252,11 +259,13 @@ def mirror_joints(
             source_joint=joint_name,
             mirrored_joints=list(mirrored) if mirrored else [],
             mirror_axis=mirror_axis,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to mirror joints from {}".format(joint_name))
+        return maya_from_exception(exc, "Failed to mirror joints from {}".format(joint_name))
+
 
 def create_ik_handle(
     start_joint: str,
@@ -322,11 +331,13 @@ def create_ik_handle(
             start_joint=start_joint,
             end_joint=end_joint,
             solver=solver,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to create IK handle")
+        return maya_from_exception(exc, "Failed to create IK handle")
+
 
 def assign_deformer(
     object_name: str,
@@ -375,6 +386,7 @@ def assign_deformer(
                 deformer_name=deformer_name,
                 handle_name=handle_name,
                 deformer_type=deformer_type,
+                prompt="Check the result with list_scripting or use related actions to continue.",
             )
 
         if deformer_type == "lattice":
@@ -385,6 +397,7 @@ def assign_deformer(
                 object_name=object_name,
                 deformer_name=deformer_name,
                 deformer_type=deformer_type,
+                prompt="Check the result with list_scripting or use related actions to continue.",
             )
 
         if deformer_type in ("bend", "twist", "flare", "sine", "squash", "wave"):
@@ -397,6 +410,7 @@ def assign_deformer(
                 deformer_name=deformer_name,
                 handle_name=handle_name,
                 deformer_type=deformer_type,
+                prompt="Check the result with list_scripting or use related actions to continue.",
             )
 
         # blendShape / wrap — generic path
@@ -407,11 +421,13 @@ def assign_deformer(
             object_name=object_name,
             deformer_name=deformer_name,
             deformer_type=deformer_type,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to assign deformer to {}".format(object_name))
+        return maya_from_exception(exc, "Failed to assign deformer to {}".format(object_name))
+
 
 def create_blend_shape(
     base_mesh: str,
@@ -464,11 +480,13 @@ def create_blend_shape(
             base_mesh=base_mesh,
             target_count=len(targets),
             targets=targets,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to create blend shape on {}".format(base_mesh))
+        return maya_from_exception(exc, "Failed to create blend shape on {}".format(base_mesh))
+
 
 def skin_cluster_bind(
     joints: List[str],
@@ -537,11 +555,13 @@ def skin_cluster_bind(
             joint_count=len(joints),
             joints=joints,
             max_influences=max_influences,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to bind skin cluster on {}".format(mesh))
+        return maya_from_exception(exc, "Failed to bind skin cluster on {}".format(mesh))
+
 
 def set_joint_limit(
     joint_name: str,
@@ -622,11 +642,13 @@ def set_joint_limit(
             min_angle=actual_min,
             max_angle=actual_max,
             enable=enable,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to set joint limit on {}".format(joint_name))
+        return maya_from_exception(exc, "Failed to set joint limit on {}".format(joint_name))
+
 
 def blend_shape_add_target(
     blend_shape: str,
@@ -692,11 +714,13 @@ def blend_shape_add_target(
             target_mesh=target_mesh,
             target_index=target_index,
             weight=weight,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to add blend shape target")
+        return maya_from_exception(exc, "Failed to add blend shape target")
+
 
 def set_driven_key(
     driver_attr: str,
@@ -785,11 +809,13 @@ def set_driven_key(
             key_count=len(driver_values),
             keys_set=keys_set,
             tangent_type=tangent_type,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to set driven key")
+        return maya_from_exception(exc, "Failed to set driven key")
+
 
 def set_ik_fk_blend(
     ik_handle: str,
@@ -849,8 +875,9 @@ def set_ik_fk_blend(
             ik_handle=ik_handle,
             attribute=attribute,
             blend=blend,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to set IK/FK blend on '{}'".format(ik_handle))
+        return maya_from_exception(exc, "Failed to set IK/FK blend on '{}'".format(ik_handle))

@@ -9,6 +9,7 @@ from typing import Union
 # Import local modules
 from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
+
 def set_muscle_attribute(
     muscle_node: str,
     attribute: str,
@@ -48,8 +49,10 @@ def set_muscle_attribute(
     except Exception as exc:
         return maya_from_exception(exc, "Failed to set attribute '{}'".format(attribute))
 
+
 def main(**kwargs):
     return set_muscle_attribute(**kwargs)
+
 
 if __name__ == "__main__":
     import json

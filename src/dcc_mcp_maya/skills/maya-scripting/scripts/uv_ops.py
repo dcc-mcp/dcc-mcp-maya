@@ -9,6 +9,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 # Import built-in modules
 from typing import Optional
 
+
 def get_uv_info(object_name: str, uv_set: Optional[str] = None) -> dict:
     """Query UV sets and coordinates on a polygon mesh.
 
@@ -46,11 +47,16 @@ def get_uv_info(object_name: str, uv_set: Optional[str] = None) -> dict:
             result_kwargs["uv_count"] = len(u_coords)
             result_kwargs["queried_uv_set"] = uv_set
 
-        return maya_success("UV info for '{}'".format(object_name), **result_kwargs)
+        return maya_success(
+            "UV info for '{}'".format(object_name),
+            **result_kwargs,
+            prompt="Check the result with list_scripting or use related actions to continue.",
+        )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to get UV info")
+        return maya_from_exception(exc, "Failed to get UV info")
+
 
 def create_uv_set(object_name: str, uv_set_name: str, copy_from: Optional[str] = None) -> dict:
     """Create a new UV set on a polygon mesh.
@@ -86,11 +92,13 @@ def create_uv_set(object_name: str, uv_set_name: str, copy_from: Optional[str] =
             object_name=object_name,
             uv_set_name=uv_set_name,
             copied_from=copy_from,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to create UV set")
+        return maya_from_exception(exc, "Failed to create UV set")
+
 
 def delete_uv_set(object_name: str, uv_set_name: str) -> dict:
     """Delete a UV set from a polygon mesh.
@@ -123,11 +131,13 @@ def delete_uv_set(object_name: str, uv_set_name: str) -> dict:
             "Deleted UV set '{}' from '{}'".format(uv_set_name, object_name),
             object_name=object_name,
             uv_set_name=uv_set_name,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to delete UV set")
+        return maya_from_exception(exc, "Failed to delete UV set")
+
 
 def project_uvs(
     object_name: str,
@@ -195,11 +205,13 @@ def project_uvs(
             projection_type=projection_type,
             axis=axis,
             axis_index=axis_index,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to project UVs")
+        return maya_from_exception(exc, "Failed to project UVs")
+
 
 def copy_uvs(
     source: str,
@@ -246,11 +258,13 @@ def copy_uvs(
             target=target,
             source_uv_set=source_uv_set,
             target_uv_set=target_uv_set,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to copy UVs")
+        return maya_from_exception(exc, "Failed to copy UVs")
+
 
 def get_uv_shell_info(object_name: str, uv_set: Optional[str] = None) -> dict:
     """Get UV shell information for a polygon mesh.
@@ -322,11 +336,13 @@ def get_uv_shell_info(object_name: str, uv_set: Optional[str] = None) -> dict:
             uv_set=active_set,
             shell_count=len(shells),
             shells=shells,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to get UV shell info")
+        return maya_from_exception(exc, "Failed to get UV shell info")
+
 
 def unfold_uvs(
     object_name: str,
@@ -378,11 +394,13 @@ def unfold_uvs(
             object_name=object_name,
             iterations=iterations,
             optimize_scale=optimize_scale,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to unfold UVs on '{}'".format(object_name))
+        return maya_from_exception(exc, "Failed to unfold UVs on '{}'".format(object_name))
+
 
 def normalize_uvs(
     object_name: str,
@@ -434,8 +452,9 @@ def normalize_uvs(
             layout_u=layout_u,
             layout_v=layout_v,
             preserve_aspect=preserve_aspect,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to normalize UVs on '{}'".format(object_name))
+        return maya_from_exception(exc, "Failed to normalize UVs on '{}'".format(object_name))

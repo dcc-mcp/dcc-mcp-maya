@@ -9,6 +9,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 # Import built-in modules
 from typing import List, Optional
 
+
 def create_cluster(
     objects: List[str],
     name: Optional[str] = None,
@@ -59,11 +60,13 @@ def create_cluster(
             cluster_handle=cluster_handle,
             objects=objects,
             relative=relative,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to create cluster deformer")
+        return maya_from_exception(exc, "Failed to create cluster deformer")
+
 
 def set_cluster_weights(
     cluster_node: str,
@@ -130,11 +133,13 @@ def set_cluster_weights(
             mesh=mesh,
             vertex_count=len(vertex_indices),
             normalize=normalize,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to set cluster weights")
+        return maya_from_exception(exc, "Failed to set cluster weights")
+
 
 def create_lattice(
     objects: List[str],
@@ -200,11 +205,13 @@ def create_lattice(
             base_node=base_node,
             objects=objects,
             divisions=divs,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to create FFD lattice")
+        return maya_from_exception(exc, "Failed to create FFD lattice")
+
 
 def wire_deformer(
     curves: List[str],
@@ -270,11 +277,13 @@ def wire_deformer(
             curves=list(curves),
             objects=list(objects),
             dropoff_distance=dropoff_distance,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to create wire deformer")
+        return maya_from_exception(exc, "Failed to create wire deformer")
+
 
 def sculpt_deformer(
     objects: List[str],
@@ -344,8 +353,9 @@ def sculpt_deformer(
             objects=list(objects),
             mode=mode_lower,
             max_displacement=max_displacement,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to create sculpt deformer")
+        return maya_from_exception(exc, "Failed to create sculpt deformer")

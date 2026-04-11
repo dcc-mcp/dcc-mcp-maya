@@ -8,6 +8,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 # Import built-in modules
 
+
 def normalize_skin_weights(
     mesh: str,
     normalize_weights: int = 1,
@@ -53,10 +54,12 @@ def normalize_skin_weights(
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to normalize skin weights on '{}'".format(mesh))
+        return maya_from_exception(exc, "Failed to normalize skin weights on '{}'".format(mesh))
+
 
 def main(**kwargs):
     return normalize_skin_weights(**kwargs)
+
 
 if __name__ == "__main__":
     import json

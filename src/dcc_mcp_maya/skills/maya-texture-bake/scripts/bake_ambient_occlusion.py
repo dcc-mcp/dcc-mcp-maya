@@ -10,6 +10,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 import os
 from typing import List, Optional
 
+
 def bake_ambient_occlusion(
     objects: Optional[List[str]] = None,
     output_dir: str = "/tmp",
@@ -112,10 +113,12 @@ def bake_ambient_occlusion(
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to bake ambient occlusion")
+        return maya_from_exception(exc, "Failed to bake ambient occlusion")
+
 
 def main(**kwargs):
     return bake_ambient_occlusion(**kwargs)
+
 
 if __name__ == "__main__":
     import json

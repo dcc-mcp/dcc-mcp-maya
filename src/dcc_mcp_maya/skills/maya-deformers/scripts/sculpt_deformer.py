@@ -77,6 +77,7 @@ def sculpt_deformer(
             objects=list(objects),
             mode=mode_lower,
             max_displacement=max_displacement,
+            prompt="Check the result with list_deformers or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")

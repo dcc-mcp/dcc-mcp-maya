@@ -54,6 +54,7 @@ def get_shader_assignment(object_name: str) -> dict:
             object_name=object_name,
             shading_groups=shading_groups,
             count=len(shading_groups),
+            prompt="Use assign_material to change or set_material_attribute to adjust.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")

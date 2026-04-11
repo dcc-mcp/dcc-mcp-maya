@@ -9,6 +9,7 @@ from __future__ import annotations
 # Import local modules
 from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
+
 def list_muscles() -> dict:
     """List cMuscleObject nodes with their basic attributes.
 
@@ -51,8 +52,10 @@ def list_muscles() -> dict:
     except Exception as exc:
         return maya_from_exception(exc, "Failed to list muscles")
 
+
 def main(**kwargs):
     return list_muscles(**kwargs)
+
 
 if __name__ == "__main__":
     import json

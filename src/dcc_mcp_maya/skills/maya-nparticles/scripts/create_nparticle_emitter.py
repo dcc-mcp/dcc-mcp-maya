@@ -10,6 +10,7 @@ from typing import Optional
 # Import local modules
 from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
+
 def create_nparticle_emitter(
     name: str = "nParticle1",
     emitter_type: str = "omni",
@@ -95,8 +96,10 @@ def create_nparticle_emitter(
     except Exception as exc:
         return maya_from_exception(exc, "Failed to create nParticle emitter")
 
+
 def main(**kwargs):
     return create_nparticle_emitter(**kwargs)
+
 
 if __name__ == "__main__":
     import json

@@ -12,6 +12,7 @@ import os
 import tempfile
 from typing import Optional
 
+
 def playblast(
     width: int = 1920,
     height: int = 1080,
@@ -94,9 +95,11 @@ def playblast(
     except Exception as exc:
         return maya_from_exception(exc, "Playblast failed")
 
+
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`playblast`."""
     return playblast(**kwargs)
+
 
 if __name__ == "__main__":
     import json

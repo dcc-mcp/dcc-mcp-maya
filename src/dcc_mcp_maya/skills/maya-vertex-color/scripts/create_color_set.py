@@ -8,6 +8,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 # Import built-in modules
 
+
 def create_color_set(
     object_name: str,
     color_set_name: str,
@@ -54,15 +55,18 @@ def create_color_set(
             object_name=object_name,
             color_set_name=color_set_name,
             representation=representation,
+            prompt="Check the result with list_vertex_color or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to create color set")
+        return maya_from_exception(exc, "Failed to create color set")
+
 
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`create_color_set`."""
     return create_color_set(**kwargs)
+
 
 if __name__ == "__main__":
     import json

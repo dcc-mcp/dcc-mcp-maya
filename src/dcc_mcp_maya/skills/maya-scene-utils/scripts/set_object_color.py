@@ -8,6 +8,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 # Import built-in modules
 
+
 def set_object_color(
     object_name: str,
     color_index: int,
@@ -59,15 +60,18 @@ def set_object_color(
             object_name=object_name,
             color_index=effective_index,
             use_default=use_default,
+            prompt="Check the result with list_scene_utils or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to set object color on '{}'".format(object_name))
+        return maya_from_exception(exc, "Failed to set object color on '{}'".format(object_name))
+
 
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`set_object_color`."""
     return set_object_color(**kwargs)
+
 
 if __name__ == "__main__":
     import json

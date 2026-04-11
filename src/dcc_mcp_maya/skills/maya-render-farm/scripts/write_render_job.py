@@ -11,6 +11,7 @@ import json
 import os
 from typing import Optional
 
+
 def write_render_job(
     output_dir: str,
     job_name: Optional[str] = None,
@@ -97,8 +98,10 @@ def write_render_job(
     except Exception as exc:
         return maya_from_exception(exc, "Failed to write render job")
 
+
 def main(**kwargs):
     return write_render_job(**kwargs)
+
 
 if __name__ == "__main__":
     import json as _json

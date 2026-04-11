@@ -8,6 +8,7 @@ from __future__ import annotations
 # Import local modules
 from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
+
 def rename_object(object_name: str, new_name: str) -> dict:
     """Rename a Maya object.
 
@@ -33,15 +34,18 @@ def rename_object(object_name: str, new_name: str) -> dict:
             "Renamed '{}' to '{}'".format(object_name, result),
             old_name=object_name,
             object_name=result,
+            prompt="Check the result with list_primitives or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
         return maya_from_exception(exc, "Failed to rename {}".format(object_name))
 
+
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`rename_object`."""
     return rename_object(**kwargs)
+
 
 if __name__ == "__main__":
     import json

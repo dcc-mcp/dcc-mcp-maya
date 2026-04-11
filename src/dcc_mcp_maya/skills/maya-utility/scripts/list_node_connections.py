@@ -8,6 +8,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 # Import built-in modules
 
+
 def list_node_connections(
     node: str,
     direction: str = "both",
@@ -63,10 +64,12 @@ def list_node_connections(
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to list connections")
+        return maya_from_exception(exc, "Failed to list connections")
+
 
 def main(**kwargs):
     return list_node_connections(**kwargs)
+
 
 if __name__ == "__main__":
     import json

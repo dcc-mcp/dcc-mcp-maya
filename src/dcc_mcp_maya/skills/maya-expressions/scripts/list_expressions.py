@@ -9,6 +9,7 @@ from typing import Optional
 # Import local modules
 from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
+
 def list_expressions(
     object: Optional[str] = None,
     object_name: Optional[str] = None,
@@ -68,9 +69,11 @@ def list_expressions(
     except Exception as exc:
         return maya_from_exception(exc, "Failed to list expressions")
 
+
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`list_expressions`."""
     return list_expressions(**kwargs)
+
 
 if __name__ == "__main__":
     import json

@@ -16,12 +16,14 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 # Import built-in modules
 from typing import List, Optional
 
+
 def _find_skin_cluster(cmds, mesh):
     """Return the first skinCluster node in *mesh*'s history, or None."""
     history = cmds.listHistory(mesh) or []
     # cmds.ls with type filter is the most reliable way — avoids objectType mock issues
     skin_clusters = cmds.ls(history, type="skinCluster") or []
     return skin_clusters[0] if skin_clusters else None
+
 
 def get_skin_weights(
     mesh: str,
@@ -88,11 +90,13 @@ def get_skin_weights(
             joint_count=joint_count,
             vertex_count=len(indices),
             weights=weights,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to get skin weights for {}".format(mesh))
+        return maya_from_exception(exc, "Failed to get skin weights for {}".format(mesh))
+
 
 def paint_skin_weights(
     mesh: str,
@@ -164,11 +168,13 @@ def paint_skin_weights(
             weight=weight,
             modified_vertices=len(indices),
             normalize=normalize,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to paint skin weights")
+        return maya_from_exception(exc, "Failed to paint skin weights")
+
 
 def mirror_skin_weights(
     mesh: str,
@@ -231,11 +237,13 @@ def mirror_skin_weights(
             skin_cluster=sc,
             mesh=mesh,
             mirror_axis=mirror_axis,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to mirror skin weights on {}".format(mesh))
+        return maya_from_exception(exc, "Failed to mirror skin weights on {}".format(mesh))
+
 
 def copy_skin_weights(
     source: str,
@@ -293,6 +301,7 @@ def copy_skin_weights(
             surface_association=surface_association,
             influence_association=influence_association,
             normalize=normalize,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")

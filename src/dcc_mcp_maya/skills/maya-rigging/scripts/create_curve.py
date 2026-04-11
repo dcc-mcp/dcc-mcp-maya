@@ -9,6 +9,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 # Import built-in modules
 from typing import List, Optional
 
+
 def create_curve(
     points: Optional[List[List[float]]] = None,
     name: Optional[str] = None,
@@ -63,15 +64,18 @@ def create_curve(
             degree=degree,
             point_count=len(points),
             periodic=periodic,
+            prompt="Check the result with list_rigging or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
         return maya_from_exception(exc, "Failed to create curve")
 
+
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`create_curve`."""
     return create_curve(**kwargs)
+
 
 if __name__ == "__main__":
     import json

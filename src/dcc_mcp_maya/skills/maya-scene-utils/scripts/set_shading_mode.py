@@ -9,6 +9,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 # Import built-in modules
 from typing import Optional
 
+
 def set_shading_mode(
     mode: str = "smooth",
     panel: Optional[str] = None,
@@ -84,15 +85,18 @@ def set_shading_mode(
             "Set shading mode to '{}' on panel '{}'".format(mode_lower, target_panel),
             mode=mode_lower,
             panel=target_panel,
+            prompt="Check the result with list_scene_utils or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to set shading mode")
+        return maya_from_exception(exc, "Failed to set shading mode")
+
 
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`set_shading_mode`."""
     return set_shading_mode(**kwargs)
+
 
 if __name__ == "__main__":
     import json

@@ -9,6 +9,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 # Import built-in modules
 from typing import List, Optional
 
+
 def create_camera(
     name: Optional[str] = None,
     focal_length: float = 35.0,
@@ -65,11 +66,13 @@ def create_camera(
             camera_name=transform,
             camera_shape=shape,
             focal_length=focal_length,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to create camera")
+        return maya_from_exception(exc, "Failed to create camera")
+
 
 def set_camera_attribute(
     camera_name: str,
@@ -118,11 +121,13 @@ def set_camera_attribute(
             camera_name=camera_name,
             attribute=attribute,
             value=value,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to set camera attribute")
+        return maya_from_exception(exc, "Failed to set camera attribute")
+
 
 def get_camera_info(camera_name: str) -> dict:
     """Query detailed information about a camera.
@@ -172,11 +177,16 @@ def get_camera_info(camera_name: str) -> dict:
             except Exception:
                 info[axis_attr] = [0.0, 0.0, 0.0]
 
-        return maya_success("Camera info for '{}'".format(transform), **info)
+        return maya_success(
+            "Camera info for '{}'".format(transform),
+            **info,
+            prompt="Check the result with list_scripting or use related actions to continue.",
+        )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to get camera info")
+        return maya_from_exception(exc, "Failed to get camera info")
+
 
 def list_all_cameras(include_default: bool = True) -> dict:
     """List all cameras in the scene with basic attributes.
@@ -213,8 +223,9 @@ def list_all_cameras(include_default: bool = True) -> dict:
             "Found {} camera(s)".format(len(results)),
             cameras=results,
             count=len(results),
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to list cameras")
+        return maya_from_exception(exc, "Failed to list cameras")

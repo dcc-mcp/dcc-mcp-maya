@@ -6,6 +6,7 @@ from __future__ import annotations
 # Import local modules
 from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
+
 def list_render_passes() -> dict:
     """List all render pass elements (renderPass and aiAOV nodes) in the scene.
 
@@ -43,8 +44,10 @@ def list_render_passes() -> dict:
     except Exception as exc:
         return maya_from_exception(exc, "Failed to list render passes")
 
+
 def main(**kwargs):
     return list_render_passes(**kwargs)
+
 
 if __name__ == "__main__":
     import json

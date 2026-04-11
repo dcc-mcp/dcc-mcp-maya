@@ -9,6 +9,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 # Import built-in modules
 from typing import List
 
+
 def reset_pivot(
     objects: List[str],
     mode: str = "bbox_center",
@@ -72,10 +73,12 @@ def reset_pivot(
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to reset pivot")
+        return maya_from_exception(exc, "Failed to reset pivot")
+
 
 def main(**kwargs):
     return reset_pivot(**kwargs)
+
 
 if __name__ == "__main__":
     import json

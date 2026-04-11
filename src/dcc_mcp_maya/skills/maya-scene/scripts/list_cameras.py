@@ -6,6 +6,7 @@ from __future__ import annotations
 # Import local modules
 from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
+
 def list_cameras(include_default: bool = True) -> dict:
     """List all cameras in the scene with their basic attributes.
 
@@ -44,15 +45,18 @@ def list_cameras(include_default: bool = True) -> dict:
             "Found {} camera(s)".format(len(cameras)),
             cameras=cameras,
             count=len(cameras),
+            prompt="Check the result with list_scene or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
         return maya_from_exception(exc, "Failed to list cameras")
 
+
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`list_cameras`."""
     return list_cameras(**kwargs)
+
 
 if __name__ == "__main__":
     import json

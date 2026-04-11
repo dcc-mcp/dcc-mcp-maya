@@ -88,6 +88,7 @@ def create_ncloth(
             ncloth_node=ncloth_node,
             mesh=mesh,
             nucleus=used_nucleus,
+            prompt="Check the result with list_dynamics or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")

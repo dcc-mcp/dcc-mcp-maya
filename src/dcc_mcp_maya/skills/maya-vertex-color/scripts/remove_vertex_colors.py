@@ -9,6 +9,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 # Import built-in modules
 from typing import Optional
 
+
 def remove_vertex_colors(object_name: str, color_set: Optional[str] = None) -> dict:
     """Remove vertex colors from a polygon mesh.
 
@@ -25,9 +26,7 @@ def remove_vertex_colors(object_name: str, color_set: Optional[str] = None) -> d
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return maya_error(
-                "Object not found: {}".format(object_name), "'{}' does not exist".format(object_name)
-            )
+            return maya_error("Object not found: {}".format(object_name), "'{}' does not exist".format(object_name))
 
         if color_set:
             existing = cmds.polyColorSet(object_name, query=True, allColorSets=True) or []
@@ -48,15 +47,18 @@ def remove_vertex_colors(object_name: str, color_set: Optional[str] = None) -> d
             "Removed vertex colors from '{}'".format(object_name),
             object_name=object_name,
             removed_color_sets=removed,
+            prompt="Check the result with list_vertex_color or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to remove vertex colors")
+        return maya_from_exception(exc, "Failed to remove vertex colors")
+
 
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`remove_vertex_colors`."""
     return remove_vertex_colors(**kwargs)
+
 
 if __name__ == "__main__":
     import json

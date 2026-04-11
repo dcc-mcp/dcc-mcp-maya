@@ -10,6 +10,7 @@ import os
 # Import local modules
 from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
+
 def load_export_preset(preset_path: str, apply_frame_range: bool = True) -> dict:
     """Load a JSON export preset and apply frame range settings.
 
@@ -60,8 +61,10 @@ def load_export_preset(preset_path: str, apply_frame_range: bool = True) -> dict
     except Exception as exc:
         return maya_from_exception(exc, "Failed to load export preset")
 
+
 def main(**kwargs):
     return load_export_preset(**kwargs)
+
 
 if __name__ == "__main__":
     import json as _json

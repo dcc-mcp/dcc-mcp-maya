@@ -41,6 +41,7 @@ def select_by_material(material_name: str) -> dict:
                 objects=[],
                 count=0,
                 material=material_name,
+                prompt="Use assign_material to replace or list_materials to inspect.",
             )
 
         # Collect all mesh members from shading groups
@@ -74,6 +75,7 @@ def select_by_material(material_name: str) -> dict:
             objects=objects,
             count=len(objects),
             material=material_name,
+            prompt="Use assign_material to replace or list_materials to inspect.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")

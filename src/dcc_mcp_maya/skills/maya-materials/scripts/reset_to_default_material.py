@@ -37,6 +37,7 @@ def reset_to_default_material(object_name: str) -> dict:
             object_name=object_name,
             shading_group="initialShadingGroup",
             material="lambert1",
+            prompt="Use create_material and assign_material to set a new shader.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")

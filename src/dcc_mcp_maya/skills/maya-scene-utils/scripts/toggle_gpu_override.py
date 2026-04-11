@@ -8,6 +8,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 # Import built-in modules
 
+
 def toggle_gpu_override(
     object_name: str,
     enabled: bool = True,
@@ -57,15 +58,18 @@ def toggle_gpu_override(
             object_name=object_name,
             enabled=enabled,
             display_type=display_type,
+            prompt="Check the result with list_scene_utils or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to toggle GPU override on '{}'".format(object_name))
+        return maya_from_exception(exc, "Failed to toggle GPU override on '{}'".format(object_name))
+
 
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`toggle_gpu_override`."""
     return toggle_gpu_override(**kwargs)
+
 
 if __name__ == "__main__":
     import json

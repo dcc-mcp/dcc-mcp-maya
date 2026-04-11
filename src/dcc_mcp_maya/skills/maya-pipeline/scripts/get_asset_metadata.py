@@ -11,6 +11,7 @@ _META_ATTRS = ["asset_name", "asset_variant", "asset_version", "pipeline_step"]
 # Import local modules
 from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
+
 def get_asset_metadata(node: str) -> dict:
     """Read pipeline metadata string attributes from a node.
 
@@ -51,8 +52,10 @@ def get_asset_metadata(node: str) -> dict:
     except Exception as exc:
         return maya_from_exception(exc, "Failed to get metadata")
 
+
 def main(**kwargs):
     return get_asset_metadata(**kwargs)
+
 
 if __name__ == "__main__":
     import json

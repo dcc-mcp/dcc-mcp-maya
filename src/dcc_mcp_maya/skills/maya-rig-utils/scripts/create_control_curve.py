@@ -57,6 +57,7 @@ _SHAPES = {
     ],
 }
 
+
 def create_control_curve(
     shape: str = "circle",
     name: Optional[str] = None,
@@ -114,8 +115,10 @@ def create_control_curve(
     except Exception as exc:
         return maya_from_exception(exc, "Failed to create control curve '{}'".format(name or shape))
 
+
 def main(**kwargs):
     return create_control_curve(**kwargs)
+
 
 if __name__ == "__main__":
     import json

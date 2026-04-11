@@ -9,6 +9,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 # Import built-in modules
 from typing import List
 
+
 def connect_attributes(
     connections: List[List[str]],
     force: bool = False,
@@ -72,8 +73,10 @@ def connect_attributes(
     except Exception as exc:
         return maya_from_exception(exc, "Failed to connect attributes")
 
+
 def main(**kwargs):
     return connect_attributes(**kwargs)
+
 
 if __name__ == "__main__":
     import json

@@ -73,6 +73,7 @@ def wire_deformer(
             curves=list(curves),
             objects=list(objects),
             dropoff_distance=dropoff_distance,
+            prompt="Check the result with list_deformers or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")

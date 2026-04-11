@@ -8,6 +8,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 # Import built-in modules
 
+
 def unfold_uvs(
     object_name: str,
     iterations: int = 1,
@@ -58,15 +59,18 @@ def unfold_uvs(
             object_name=object_name,
             iterations=iterations,
             optimize_scale=optimize_scale,
+            prompt="Use export_uv_snapshot to preview or layout_uvs to arrange.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to unfold UVs on '{}'".format(object_name))
+        return maya_from_exception(exc, "Failed to unfold UVs on '{}'".format(object_name))
+
 
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`unfold_uvs`."""
     return unfold_uvs(**kwargs)
+
 
 if __name__ == "__main__":
     import json

@@ -52,6 +52,7 @@ def assign_material(material_name: str, objects: List[str]) -> dict:
             "Assigned '{}' to {} object(s)".format(sg, len(existing)),
             shading_group=sg,
             objects=existing,
+            prompt="Use set_material_attribute to fine-tune the material properties.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")

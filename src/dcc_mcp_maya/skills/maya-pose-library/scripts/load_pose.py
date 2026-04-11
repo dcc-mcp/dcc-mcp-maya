@@ -10,9 +10,9 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-
 # Import local modules
 from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 
 def load_pose(
     file_path: str,

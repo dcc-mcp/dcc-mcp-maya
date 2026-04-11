@@ -10,6 +10,7 @@ from typing import Optional
 # Import local modules
 from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
+
 def bake_mocap_to_rig(
     source_character: str,
     target_character: str,
@@ -83,8 +84,10 @@ def bake_mocap_to_rig(
     except Exception as exc:
         return maya_from_exception(exc, "Failed to bake mocap motion")
 
+
 def main(**kwargs):
     return bake_mocap_to_rig(**kwargs)
+
 
 if __name__ == "__main__":
     import json

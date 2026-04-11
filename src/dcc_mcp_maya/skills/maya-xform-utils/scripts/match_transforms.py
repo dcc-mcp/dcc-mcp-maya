@@ -8,6 +8,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 # Import built-in modules
 
+
 def match_transforms(
     source: str,
     target: str,
@@ -68,10 +69,12 @@ def match_transforms(
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to match transforms")
+        return maya_from_exception(exc, "Failed to match transforms")
+
 
 def main(**kwargs):
     return match_transforms(**kwargs)
+
 
 if __name__ == "__main__":
     import json

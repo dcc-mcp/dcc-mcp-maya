@@ -5,6 +5,7 @@ from dcc_mcp_maya.api import maya_error, maya_success
 
 _CRITERIA = ("topology", "material", "type", "name_prefix")
 
+
 def run(params):
     """Select objects similar to the current selection.
 

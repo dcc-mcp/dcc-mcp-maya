@@ -8,6 +8,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 # Import built-in modules
 
+
 def select_by_type(object_type: str) -> dict:
     """Select all objects of a given Maya type.
 
@@ -33,15 +34,18 @@ def select_by_type(object_type: str) -> dict:
             object_type=object_type,
             selection=objects,
             count=len(objects),
+            prompt="Check the result with list_scene or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
         return maya_from_exception(exc, "Failed to select by type '{}'".format(object_type))
 
+
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`select_by_type`."""
     return select_by_type(**kwargs)
+
 
 if __name__ == "__main__":
     import json

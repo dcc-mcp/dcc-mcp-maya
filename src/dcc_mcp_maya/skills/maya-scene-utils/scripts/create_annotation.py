@@ -9,6 +9,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 # Import built-in modules
 from typing import List, Optional
 
+
 def create_annotation(
     object_name: str,
     text: str,
@@ -70,15 +71,18 @@ def create_annotation(
             object_name=object_name,
             text=text,
             position=ann_pos,
+            prompt="Check the result with list_scene_utils or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to create annotation on '{}'".format(object_name))
+        return maya_from_exception(exc, "Failed to create annotation on '{}'".format(object_name))
+
 
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`create_annotation`."""
     return create_annotation(**kwargs)
+
 
 if __name__ == "__main__":
     import json

@@ -8,6 +8,7 @@ from __future__ import annotations
 # Import local modules
 from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
+
 def delete_history(
     object_name: str,
 ) -> dict:
@@ -38,15 +39,18 @@ def delete_history(
         return maya_success(
             "Deleted construction history on '{}'".format(object_name),
             object_name=object_name,
+            prompt="Check the result with list_node_graph or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
         return maya_from_exception(exc, "Failed to delete history for {}".format(object_name))
 
+
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`delete_history`."""
     return delete_history(**kwargs)
+
 
 if __name__ == "__main__":
     import json

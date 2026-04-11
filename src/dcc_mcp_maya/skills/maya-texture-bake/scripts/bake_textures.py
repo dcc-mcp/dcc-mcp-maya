@@ -12,6 +12,7 @@ from typing import List
 
 logger = logging.getLogger(__name__)
 
+
 def bake_textures(
     objects: List[str],
     file_path: str,
@@ -105,15 +106,18 @@ def bake_textures(
             resolution=resolution,
             bake_type=bake_type,
             renderer=renderer,
+            prompt="Check the result with list_texture_bake or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to bake textures")
+        return maya_from_exception(exc, "Failed to bake textures")
+
 
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`bake_textures`."""
     return bake_textures(**kwargs)
+
 
 if __name__ == "__main__":
     import json

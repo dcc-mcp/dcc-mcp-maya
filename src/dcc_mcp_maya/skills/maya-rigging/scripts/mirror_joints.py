@@ -9,6 +9,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 # Import built-in modules
 from typing import List, Optional
 
+
 def mirror_joints(
     joint_name: str,
     mirror_behavior: bool = True,
@@ -72,15 +73,18 @@ def mirror_joints(
             source_joint=joint_name,
             mirrored_joints=list(mirrored) if mirrored else [],
             mirror_axis=mirror_axis,
+            prompt="Check the result with list_rigging or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
         return maya_from_exception(exc, "Failed to mirror joints from {}".format(joint_name))
 
+
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`mirror_joints`."""
     return mirror_joints(**kwargs)
+
 
 if __name__ == "__main__":
     import json

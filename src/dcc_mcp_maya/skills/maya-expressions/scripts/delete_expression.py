@@ -8,6 +8,7 @@ from __future__ import annotations
 # Import local modules
 from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
+
 def delete_expression(name: str) -> dict:
     """Delete an expression node by name.
 
@@ -46,9 +47,11 @@ def delete_expression(name: str) -> dict:
     except Exception as exc:
         return maya_from_exception(exc, "Failed to delete expression '{}'".format(name))
 
+
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`delete_expression`."""
     return delete_expression(**kwargs)
+
 
 if __name__ == "__main__":
     import json

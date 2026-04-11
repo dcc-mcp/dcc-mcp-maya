@@ -70,6 +70,7 @@ def extract_faces(
             "Extracted {} face(s) from '{}'".format(len(face_indices), object_name),
             extracted_mesh=extracted,
             face_count=len(face_indices),
+            prompt="Use combine_meshes or cleanup_mesh to post-process.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")

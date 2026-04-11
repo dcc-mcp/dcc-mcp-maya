@@ -9,6 +9,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 # Import built-in modules
 from typing import List
 
+
 def freeze_transforms(
     objects: List[str],
     translate: bool = True,
@@ -76,10 +77,12 @@ def freeze_transforms(
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to freeze transforms")
+        return maya_from_exception(exc, "Failed to freeze transforms")
+
 
 def main(**kwargs):
     return freeze_transforms(**kwargs)
+
 
 if __name__ == "__main__":
     import json

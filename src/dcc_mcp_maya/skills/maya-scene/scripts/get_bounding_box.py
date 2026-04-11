@@ -8,6 +8,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 # Import built-in modules
 
+
 def get_bounding_box(object_name: str) -> dict:
     """Query the world-space bounding box of an object.
 
@@ -41,15 +42,18 @@ def get_bounding_box(object_name: str) -> dict:
             max=bb_max,
             center=center,
             size=size,
+            prompt="Check the result with list_scene or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
         return maya_from_exception(exc, "Failed to get bounding box of '{}'".format(object_name))
 
+
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`get_bounding_box`."""
     return get_bounding_box(**kwargs)
+
 
 if __name__ == "__main__":
     import json

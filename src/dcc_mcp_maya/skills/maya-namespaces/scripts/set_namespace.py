@@ -11,6 +11,7 @@ _PROTECTED_NS = frozenset({"UI", "shared", ":"})
 # Import local modules
 from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
+
 def set_namespace(
     object_name: str,
     namespace: str,
@@ -65,15 +66,18 @@ def set_namespace(
             object_name=object_name,
             namespace=ns or ":",
             new_name=new_name,
+            prompt="Check the result with list_namespaces or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
         return maya_from_exception(exc, "Failed to set namespace for '{}'".format(object_name))
 
+
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`set_namespace`."""
     return set_namespace(**kwargs)
+
 
 if __name__ == "__main__":
     import json

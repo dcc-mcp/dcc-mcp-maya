@@ -84,6 +84,7 @@ def create_proxy_mesh(
             reduction=reduction,
             face_count_before=face_count_before,
             face_count_after=face_count_after,
+            prompt="Use swap_proxy in maya-proxy-mesh to toggle between proxy and hi-res.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")

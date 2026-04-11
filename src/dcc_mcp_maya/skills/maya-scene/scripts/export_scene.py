@@ -8,6 +8,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 # Import built-in modules
 
+
 def export_scene(file_path: str, file_type: str = "mayaBinary") -> dict:
     """Export the entire current scene to a file.
 
@@ -33,15 +34,18 @@ def export_scene(file_path: str, file_type: str = "mayaBinary") -> dict:
             "Scene exported to {}".format(saved),
             file_path=saved,
             file_type=file_type,
+            prompt="Check the result with list_scene or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
         return maya_from_exception(exc, "Failed to export scene to '{}'".format(file_path))
 
+
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`export_scene`."""
     return export_scene(**kwargs)
+
 
 if __name__ == "__main__":
     import json

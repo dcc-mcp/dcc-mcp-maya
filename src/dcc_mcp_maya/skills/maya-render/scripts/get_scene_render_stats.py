@@ -6,6 +6,7 @@ from __future__ import annotations
 # Import local modules
 from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
+
 def get_scene_render_stats() -> dict:
     """Query a summary of the current scene render configuration.
 
@@ -56,15 +57,18 @@ def get_scene_render_stats() -> dict:
             end_frame=end_frame,
             output_file_prefix=output_prefix,
             quality=quality,
+            prompt="Check the result with list_render or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
         return maya_from_exception(exc, "Failed to query scene render stats")
 
+
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`get_scene_render_stats`."""
     return get_scene_render_stats(**kwargs)
+
 
 if __name__ == "__main__":
     import json

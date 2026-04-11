@@ -9,6 +9,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 # Import built-in modules
 from typing import Optional
 
+
 def get_script_node(
     name: str,
     action: str = "get",
@@ -77,10 +78,12 @@ def get_script_node(
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "scriptNode operation failed")
+        return maya_from_exception(exc, "scriptNode operation failed")
+
 
 def main(**kwargs):
     return get_script_node(**kwargs)
+
 
 if __name__ == "__main__":
     import json

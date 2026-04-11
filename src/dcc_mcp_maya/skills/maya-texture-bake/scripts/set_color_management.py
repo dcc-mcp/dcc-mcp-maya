@@ -12,6 +12,7 @@ from typing import Optional
 
 logger = logging.getLogger(__name__)
 
+
 def set_color_management(
     enabled: bool = True,
     input_color_space: Optional[str] = None,
@@ -79,15 +80,18 @@ def set_color_management(
             rendering_space=current_rendering,
             output_transform=current_output,
             input_color_space=input_color_space,
+            prompt="Check the result with list_texture_bake or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to set color management")
+        return maya_from_exception(exc, "Failed to set color management")
+
 
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`set_color_management`."""
     return set_color_management(**kwargs)
+
 
 if __name__ == "__main__":
     import json

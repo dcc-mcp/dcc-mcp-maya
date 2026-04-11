@@ -59,6 +59,7 @@ def create_cluster(
             cluster_handle=cluster_handle,
             objects=objects,
             relative=relative,
+            prompt="Check the result with list_deformers or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")

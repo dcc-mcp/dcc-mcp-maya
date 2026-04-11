@@ -11,6 +11,7 @@ from typing import Dict, List, Optional
 # Import local modules
 from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
+
 def save_export_preset(
     preset_name: str,
     preset_dir: Optional[str] = None,
@@ -81,8 +82,10 @@ def save_export_preset(
     except Exception as exc:
         return maya_from_exception(exc, "Failed to save export preset")
 
+
 def main(**kwargs):
     return save_export_preset(**kwargs)
+
 
 if __name__ == "__main__":
     import json as _json

@@ -9,6 +9,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 # Import built-in modules
 from typing import List, Optional, Tuple
 
+
 def set_vertex_color(
     object_name: str,
     color: Tuple[float, float, float],
@@ -63,11 +64,13 @@ def set_vertex_color(
             color=[r, g, b],
             alpha=a,
             colored_count=colored_count,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to set vertex color")
+        return maya_from_exception(exc, "Failed to set vertex color")
+
 
 def get_vertex_color(
     object_name: str,
@@ -121,11 +124,16 @@ def get_vertex_color(
                 result_kwargs["color"] = [1.0, 1.0, 1.0]
                 result_kwargs["alpha"] = 1.0
 
-        return maya_success("Vertex color info for '{}'".format(object_name), **result_kwargs)
+        return maya_success(
+            "Vertex color info for '{}'".format(object_name),
+            **result_kwargs,
+            prompt="Check the result with list_scripting or use related actions to continue.",
+        )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to get vertex color")
+        return maya_from_exception(exc, "Failed to get vertex color")
+
 
 def create_color_set(
     object_name: str,
@@ -173,11 +181,13 @@ def create_color_set(
             object_name=object_name,
             color_set_name=color_set_name,
             representation=representation,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to create color set")
+        return maya_from_exception(exc, "Failed to create color set")
+
 
 def remove_vertex_colors(object_name: str, color_set: Optional[str] = None) -> dict:
     """Remove vertex colors from a polygon mesh.
@@ -213,8 +223,9 @@ def remove_vertex_colors(object_name: str, color_set: Optional[str] = None) -> d
             "Removed vertex colors from '{}'".format(object_name),
             object_name=object_name,
             removed_color_sets=removed,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to remove vertex colors")
+        return maya_from_exception(exc, "Failed to remove vertex colors")
