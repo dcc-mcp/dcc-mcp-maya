@@ -423,6 +423,101 @@ def validate_node_type(cmds: Any, name: str, expected_type: str) -> "str | None"
     return None
 
 
+def batch_validate_nodes(cmds: Any, names: "list") -> "Any":
+    """Return an error dict if any node in *names* does not exist, else None.
+
+    A convenience wrapper around :func:`validate_node_exists` for the common
+    case where a skill function needs to validate multiple nodes before
+    proceeding.
+
+    Args:
+        cmds: The ``maya.cmds`` module (already imported by the caller).
+        names: Sequence of Maya node names to check.
+
+    Returns:
+        ``None`` when **all** nodes exist, otherwise a serialised error dict
+        for the **first** missing node.
+
+    Example::
+
+        err = batch_validate_nodes(cmds, [source_mesh, target_mesh])
+        if err:
+            return err
+    """
+    for name in names:
+        err = validate_node_exists(cmds, name)
+        if err is not None:
+            return err
+    return None
+
+
+# ---------------------------------------------------------------------------
+# Additional parameter helpers
+# ---------------------------------------------------------------------------
+
+
+def require_any_param(params: Any, *keys: str) -> Any:
+    """Return the value of the first key found in *params*.
+
+    Useful when a skill accepts several mutually-exclusive parameter names
+    that map to the same concept (e.g. ``name`` vs ``node_name``).
+
+    Args:
+        params: The ``params`` dict received by the skill ``run`` function.
+        *keys: One or more parameter names to search for, in order.
+
+    Returns:
+        The value associated with the first matching key.
+
+    Raises:
+        MissingParamError: When **none** of the supplied keys exist in *params*.
+
+    Example::
+
+        node = require_any_param(params, "name", "node_name", "object_name")
+    """
+    for key in keys:
+        if key in params:
+            return params[key]
+    raise MissingParamError("At least one of {} is required".format(", ".join("'{}'".format(k) for k in keys)))
+
+
+def get_param_list(params: Any, key: str, default: Any = None) -> "list":
+    """Extract a list parameter, coercing a bare string to a one-element list.
+
+    Many Maya skills accept either a single name or a list of names.  This
+    helper normalises both forms so the skill body only needs to handle lists.
+
+    Args:
+        params: The ``params`` dict received by the skill ``run`` function.
+        key: The parameter name to look up.
+        default: Value to return when *key* is absent.  Defaults to an empty
+            list (``[]``) when ``None`` is given.
+
+    Returns:
+        A list.  If the value is already a list it is returned as-is; if it
+        is a string it is wrapped in ``[value]``; otherwise it is cast with
+        ``list(value)``.
+
+    Example::
+
+        meshes = get_param_list(params, "meshes")          # [] if absent
+        objects = get_param_list(params, "objects", [])    # [] if absent
+        joints = get_param_list(params, "joints")          # handles "joint1" or ["joint1","joint2"]
+    """
+    if default is None:
+        default = []
+    value = params.get(key, default)
+    if isinstance(value, list):
+        return value
+    if isinstance(value, str):
+        return [value]
+    try:
+        return list(value)
+    except TypeError:
+        return [value]
+
+
 # ---------------------------------------------------------------------------
 # Convenience re-exports so callers only need one import
 # ---------------------------------------------------------------------------
@@ -437,9 +532,12 @@ __all__ = [
     "with_maya",
     # Parameter helpers
     "require_param",
+    "require_any_param",
+    "get_param_list",
     "missing_param_error",
     "MissingParamError",
     # Node validation helpers
     "validate_node_exists",
     "validate_node_type",
+    "batch_validate_nodes",
 ]

@@ -180,7 +180,7 @@ class TestDeleteDisplayLayer:
             result = mod.delete_display_layer("pSphere1")
 
         assert result["success"] is False
-        assert "Not a display layer" in result["message"]
+        assert result["message"].lower().startswith("wrong node type")
 
     def test_delete_layer_success(self):
         mock_maya, mock_cmds = _make_mock_maya()

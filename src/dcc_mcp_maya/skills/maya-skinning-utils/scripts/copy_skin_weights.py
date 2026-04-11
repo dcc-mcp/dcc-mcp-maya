@@ -3,11 +3,11 @@
 # Import future modules
 from __future__ import annotations
 
-# Import local modules
-from dcc_mcp_maya.api import maya_error, maya_success
-
 # Import built-in modules
 from typing import Optional
+
+# Import local modules
+from dcc_mcp_maya.api import batch_validate_nodes, maya_error, maya_success
 
 
 def copy_skin_weights(
@@ -37,12 +37,9 @@ def copy_skin_weights(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        for mesh in (source_mesh, target_mesh):
-            if not cmds.objExists(mesh):
-                return maya_error(
-                    "Object not found: {}".format(mesh),
-                    "'{}' does not exist in the scene".format(mesh),
-                )
+        err = batch_validate_nodes(cmds, [source_mesh, target_mesh])
+        if err:
+            return err
 
         src_clusters = cmds.ls(cmds.listHistory(source_mesh) or [], type="skinCluster")
         if not src_clusters:

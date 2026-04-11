@@ -593,7 +593,7 @@ class TestDeleteDisplayLayer:
     def test_not_a_display_layer(self):
         result = self._run({"objectType": MagicMock(return_value="transform")}, layer_name="pSphere1")
         assert result["success"] is False
-        assert "not a display layer" in result["message"].lower()
+        assert result["message"].lower().startswith("wrong node type")
 
     def test_success_remove_objects(self):
         _, cmds_mock, modules = _make_maya_env()
