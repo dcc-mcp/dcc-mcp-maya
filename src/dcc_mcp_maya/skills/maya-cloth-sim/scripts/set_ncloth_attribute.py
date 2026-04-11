@@ -6,6 +6,8 @@ from __future__ import annotations
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 
 def set_ncloth_attribute(ncloth_shape: str, attribute: str, value: float) -> dict:
     """Set a named attribute on an nCloth shape node.
@@ -21,11 +23,9 @@ def set_ncloth_attribute(ncloth_shape: str, attribute: str, value: float) -> dic
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(ncloth_shape):
-            return skill_error(
-                "Node not found",
-                "nCloth shape '{}' does not exist".format(ncloth_shape),
-            )
+        err = validate_node_exists(cmds, ncloth_shape)
+        if err:
+            return err
 
         cmds.setAttr("{}.{}".format(ncloth_shape, attribute), value)
 

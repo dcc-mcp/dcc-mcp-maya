@@ -7,6 +7,8 @@ from __future__ import annotations
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 
 def add_bifrost_node(graph_node: str, compound_name: str) -> dict:
     """Add a Bifrost compound to an existing graph node.
@@ -32,11 +34,9 @@ def add_bifrost_node(graph_node: str, compound_name: str) -> dict:
         if not compound_name:
             return skill_error("compound_name is required", "Provide a Bifrost compound path")
 
-        if not cmds.objExists(graph_node):
-            return skill_error(
-                "Graph '{}' not found".format(graph_node),
-                "No node named '{}' exists in the scene".format(graph_node),
-            )
+        err = validate_node_exists(cmds, graph_node)
+        if err:
+            return err
 
         if cmds.objectType(graph_node) != "bifrostGraph":
             return skill_error(

@@ -9,6 +9,8 @@ from typing import List, Optional
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 
 def mirror_joints(
     joint_name: str,
@@ -41,11 +43,9 @@ def mirror_joints(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(joint_name):
-            return skill_error(
-                "Joint not found: {}".format(joint_name),
-                "'{}' does not exist in the scene".format(joint_name),
-            )
+        err = validate_node_exists(cmds, joint_name)
+        if err:
+            return err
 
         if mirror_axis not in _VALID_AXES:
             return skill_error(

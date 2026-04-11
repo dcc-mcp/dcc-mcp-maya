@@ -7,6 +7,8 @@ from __future__ import annotations
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 
 def transfer_attributes(
     source: str,
@@ -45,17 +47,13 @@ def transfer_attributes(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(source):
-            return skill_error(
-                "Source not found: {}".format(source),
-                "'{}' does not exist in the scene".format(source),
-            )
+        err = validate_node_exists(cmds, source)
+        if err:
+            return err
 
-        if not cmds.objExists(target):
-            return skill_error(
-                "Target not found: {}".format(target),
-                "'{}' does not exist in the scene".format(target),
-            )
+        err = validate_node_exists(cmds, target)
+        if err:
+            return err
 
         if sample_space not in _VALID_SPACES:
             return skill_error(

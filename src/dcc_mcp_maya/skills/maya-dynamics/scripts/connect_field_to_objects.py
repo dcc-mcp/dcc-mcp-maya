@@ -9,6 +9,8 @@ from typing import List
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 _VALID_FIELD_TYPES = (
     "gravity",
     "turbulence",
@@ -51,11 +53,9 @@ def connect_field_to_objects(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(field_node):
-            return skill_error(
-                "Field node not found: {}".format(field_node),
-                "'{}' does not exist in the scene".format(field_node),
-            )
+        err = validate_node_exists(cmds, field_node)
+        if err:
+            return err
 
         missing = [o for o in objects if not cmds.objExists(o)]
         if missing:

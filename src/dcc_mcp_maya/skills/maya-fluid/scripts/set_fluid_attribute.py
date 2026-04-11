@@ -7,6 +7,8 @@ from __future__ import annotations
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 
 def set_fluid_attribute(fluid_shape: str, attribute: str, value: float) -> dict:
     """Set a named attribute on a fluidShape node.
@@ -22,11 +24,9 @@ def set_fluid_attribute(fluid_shape: str, attribute: str, value: float) -> dict:
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(fluid_shape):
-            return skill_error(
-                "Node not found",
-                "fluidShape '{}' does not exist".format(fluid_shape),
-            )
+        err = validate_node_exists(cmds, fluid_shape)
+        if err:
+            return err
 
         cmds.setAttr("{}.{}".format(fluid_shape, attribute), value)
 

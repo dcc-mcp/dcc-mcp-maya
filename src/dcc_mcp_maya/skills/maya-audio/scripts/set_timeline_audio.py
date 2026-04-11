@@ -7,6 +7,8 @@ from __future__ import annotations
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 
 def set_timeline_audio(sound_node: str) -> dict:
     """Attach a sound node to the Maya timeline for playback.
@@ -24,11 +26,9 @@ def set_timeline_audio(sound_node: str) -> dict:
         import maya.cmds as cmds  # noqa: PLC0415
         import maya.mel as mel  # noqa: PLC0415
 
-        if not cmds.objExists(sound_node):
-            return skill_error(
-                "Sound node not found: {}".format(sound_node),
-                "Use import_audio to create a sound node first.",
-            )
+        err = validate_node_exists(cmds, sound_node)
+        if err:
+            return err
 
         node_type = cmds.objectType(sound_node)
         if node_type != "audio":

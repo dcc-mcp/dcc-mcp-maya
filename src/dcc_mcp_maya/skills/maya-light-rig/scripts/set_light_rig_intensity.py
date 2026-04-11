@@ -9,6 +9,8 @@ import logging
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 logger = logging.getLogger(__name__)
 
 _LIGHT_TYPES = [
@@ -46,11 +48,9 @@ def set_light_rig_intensity(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(rig_group):
-            return skill_error(
-                "Rig group not found: {}".format(rig_group),
-                "'{}' does not exist in the scene".format(rig_group),
-            )
+        err = validate_node_exists(cmds, rig_group)
+        if err:
+            return err
 
         descendants = cmds.listRelatives(rig_group, allDescendents=True, type="shape") or []
         light_shapes = [n for n in descendants if cmds.objectType(n) in _LIGHT_TYPES]

@@ -9,6 +9,8 @@ from typing import List, Optional
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 # Maya worldUpType enum values
 WORLD_UP_TYPES = {
     "scene": 0,
@@ -46,11 +48,9 @@ def set_spline_ik_twist(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(ik_handle):
-            return skill_error(
-                "IK handle not found: {}".format(ik_handle),
-                "'{}' does not exist".format(ik_handle),
-            )
+        err = validate_node_exists(cmds, ik_handle)
+        if err:
+            return err
 
         up_vec = up_vector if up_vector and len(up_vector) == 3 else [0.0, 1.0, 0.0]
         up_vec_end = up_vector_end if up_vector_end and len(up_vector_end) == 3 else up_vec

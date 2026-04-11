@@ -7,6 +7,8 @@ from __future__ import annotations
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 
 def set_bifrost_property(
     graph_node: str,
@@ -46,11 +48,9 @@ def set_bifrost_property(
                     "Provide a non-empty value for '{}'".format(arg_name),
                 )
 
-        if not cmds.objExists(graph_node):
-            return skill_error(
-                "Graph '{}' not found".format(graph_node),
-                "No node named '{}' exists in the scene".format(graph_node),
-            )
+        err = validate_node_exists(cmds, graph_node)
+        if err:
+            return err
 
         # Serialise value to string for vnnNode
         if isinstance(value, (list, tuple)):

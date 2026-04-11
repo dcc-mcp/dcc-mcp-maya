@@ -6,6 +6,8 @@ from __future__ import annotations
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 
 def select_by_material(material_name: str) -> dict:
     """Select all objects in the scene that use a given material.
@@ -24,11 +26,9 @@ def select_by_material(material_name: str) -> dict:
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(material_name):
-            return skill_error(
-                "Material not found: {}".format(material_name),
-                "'{}' does not exist in the scene".format(material_name),
-            )
+        err = validate_node_exists(cmds, material_name)
+        if err:
+            return err
 
         # Find all shading engines connected to this material
         shading_engines = (

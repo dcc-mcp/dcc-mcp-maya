@@ -9,6 +9,8 @@ from typing import List, Optional
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 
 def align_objects(
     objects: List[str],
@@ -78,11 +80,9 @@ def align_objects(
         idx = _AXIS_INDEX[axis_lower]
 
         if reference:
-            if not cmds.objExists(reference):
-                return skill_error(
-                    "Reference object not found: {}".format(reference),
-                    "'{}' does not exist".format(reference),
-                )
+            err = validate_node_exists(cmds, reference)
+            if err:
+                return err
             ref_bb = cmds.exactWorldBoundingBox(reference)
             # bb = [xmin, ymin, zmin, xmax, ymax, zmax]
             if mode_lower == "min":

@@ -9,6 +9,8 @@ from typing import Any
 # Import local modules
 from dcc_mcp_core.skill import skill_error, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 
 def get_attribute(
     object_name: str,
@@ -31,18 +33,14 @@ def get_attribute(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(object_name):
-            return skill_error(
-                "Object not found: {}".format(object_name),
-                "'{}' does not exist in the scene".format(object_name),
-            )
+        err = validate_node_exists(cmds, object_name)
+        if err:
+            return err
 
         full_attr = "{}.{}".format(object_name, attribute)
-        if not cmds.objExists(full_attr):
-            return skill_error(
-                "Attribute not found: {}".format(full_attr),
-                "The attribute '{}' does not exist on node '{}'".format(attribute, object_name),
-            )
+        err = validate_node_exists(cmds, full_attr)
+        if err:
+            return err
 
         raw = cmds.getAttr(full_attr)
 
@@ -96,18 +94,14 @@ def set_attribute(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(object_name):
-            return skill_error(
-                "Object not found: {}".format(object_name),
-                "'{}' does not exist in the scene".format(object_name),
-            )
+        err = validate_node_exists(cmds, object_name)
+        if err:
+            return err
 
         full_attr = "{}.{}".format(object_name, attribute)
-        if not cmds.objExists(full_attr):
-            return skill_error(
-                "Attribute not found: {}".format(full_attr),
-                "The attribute '{}' does not exist on node '{}'".format(attribute, object_name),
-            )
+        err = validate_node_exists(cmds, full_attr)
+        if err:
+            return err
 
         # Check lock state
         is_locked = cmds.getAttr(full_attr, lock=True)

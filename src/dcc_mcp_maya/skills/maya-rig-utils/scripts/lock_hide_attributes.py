@@ -10,6 +10,8 @@ from typing import List, Optional
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 logger = logging.getLogger(__name__)
 
 _DEFAULT_ATTRS = ["tx", "ty", "tz", "rx", "ry", "rz", "sx", "sy", "sz", "v"]
@@ -40,11 +42,9 @@ def lock_hide_attributes(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(node):
-            return skill_error(
-                "Node not found: {}".format(node),
-                "'{}' does not exist in the scene".format(node),
-            )
+        err = validate_node_exists(cmds, node)
+        if err:
+            return err
 
         attrs = attributes if attributes is not None else _DEFAULT_ATTRS
         processed = []

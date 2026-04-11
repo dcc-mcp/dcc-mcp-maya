@@ -9,6 +9,8 @@ from typing import Union
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 
 def set_blend_shape_weight(
     blend_shape_node: str,
@@ -30,11 +32,9 @@ def set_blend_shape_weight(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(blend_shape_node):
-            return skill_error(
-                "Blend shape node not found: {}".format(blend_shape_node),
-                "'{}' does not exist in the scene".format(blend_shape_node),
-            )
+        err = validate_node_exists(cmds, blend_shape_node)
+        if err:
+            return err
 
         # Resolve target index
         if isinstance(target, str):

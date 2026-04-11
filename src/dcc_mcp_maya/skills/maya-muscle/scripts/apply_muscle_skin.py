@@ -9,6 +9,8 @@ from typing import List, Optional
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 
 def apply_muscle_skin(
     mesh: str,
@@ -28,11 +30,9 @@ def apply_muscle_skin(
         import maya.cmds as cmds  # noqa: PLC0415
         import maya.mel as mel  # noqa: PLC0415
 
-        if not cmds.objExists(mesh):
-            return skill_error(
-                "Mesh '{}' not found".format(mesh),
-                "Verify the mesh name in the Outliner.",
-            )
+        err = validate_node_exists(cmds, mesh)
+        if err:
+            return err
 
         cmds.loadPlugin("MayaMuscle", quiet=True)
 

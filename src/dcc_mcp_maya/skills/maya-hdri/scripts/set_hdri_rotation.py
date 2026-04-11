@@ -6,6 +6,8 @@ from __future__ import annotations
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 
 def set_hdri_rotation(
     light_node: str,
@@ -26,11 +28,9 @@ def set_hdri_rotation(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(light_node):
-            return skill_error(
-                "Light node not found: {}".format(light_node),
-                "Verify the node name with list_hdri_nodes",
-            )
+        err = validate_node_exists(cmds, light_node)
+        if err:
+            return err
 
         # Resolve transform
         node_type = cmds.objectType(light_node)

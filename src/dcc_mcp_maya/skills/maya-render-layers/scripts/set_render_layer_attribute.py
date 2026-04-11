@@ -6,6 +6,8 @@ from __future__ import annotations
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 # Import built-in modules
 
 
@@ -33,11 +35,9 @@ def set_render_layer_attribute(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(layer_name):
-            return skill_error(
-                "Render layer not found: {}".format(layer_name),
-                "'{}' does not exist".format(layer_name),
-            )
+        err = validate_node_exists(cmds, layer_name)
+        if err:
+            return err
 
         if cmds.objectType(layer_name) != "renderLayer":
             return skill_error(
