@@ -5,6 +5,7 @@ Provides:
 - ``make_mock_maya(cmds_attrs, mel_attrs)`` — build a (mock_maya, mock_cmds, mock_mel) triple
 - ``mock_maya_modules`` — autouse fixture for server tests
 - ``load_and_call(rel_path, mock_cmds, func_name, **kwargs)`` — load + call with mock active
+- ``load_and_call_with_mel(rel_path, mock_cmds, mock_mel, **kwargs)`` — like load_and_call but also patches maya.mel
 """
 
 # Import future modules
@@ -104,6 +105,50 @@ def load_and_call(rel_path: str, mock_cmds: MagicMock, func_name: str = "main", 
     spec = importlib.util.spec_from_file_location(mod_name, str(fpath))
     mod = importlib.util.module_from_spec(spec)
     with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
+        spec.loader.exec_module(mod)
+        fn = getattr(mod, func_name)
+        return fn(**kwargs)
+
+
+def load_and_call_with_mel(
+    rel_path: str,
+    mock_cmds: MagicMock,
+    mock_mel: Optional[MagicMock] = None,
+    func_name: str = "main",
+    **kwargs,
+) -> Any:
+    """Load a skill script and call a function with maya.cmds AND maya.mel mocked.
+
+    Extends :func:`load_and_call` for scripts that also ``import maya.mel as mel``
+    inside the function body.
+
+    Args:
+        rel_path: Path relative to the ``skills/`` root.
+        mock_cmds: The :class:`~unittest.mock.MagicMock` to use as ``maya.cmds``.
+        mock_mel: Optional mock for ``maya.mel``; a new :class:`MagicMock` is
+            created if not provided.
+        func_name: Name of the callable to invoke (default: ``"main"``).
+        **kwargs: Keyword arguments forwarded to the callable.
+
+    Returns:
+        Whatever the skill function returns (typically an ActionResultModel dict).
+    """
+    _LOAD_COUNTER[0] += 1
+    if mock_mel is None:
+        mock_mel = MagicMock()
+    mock_maya = MagicMock()
+    mock_maya.cmds = mock_cmds
+    mock_maya.mel = mock_mel
+
+    fpath = SKILLS_ROOT / rel_path
+    mod_name = "skill_lacm_{}_{}".format(fpath.stem, _LOAD_COUNTER[0])
+    spec = importlib.util.spec_from_file_location(mod_name, str(fpath))
+    mod = importlib.util.module_from_spec(spec)
+    with patch.dict(sys.modules, {
+        "maya": mock_maya,
+        "maya.cmds": mock_cmds,
+        "maya.mel": mock_mel,
+    }):
         spec.loader.exec_module(mod)
         fn = getattr(mod, func_name)
         return fn(**kwargs)
