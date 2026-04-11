@@ -8,6 +8,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 # Import built-in modules
 
+
 def open_scene(file_path: str, force: bool = False) -> dict:
     """Open a Maya scene file.
 
@@ -26,15 +27,18 @@ def open_scene(file_path: str, force: bool = False) -> dict:
         return maya_success(
             f"Opened scene: {file_path}",
             file_path=file_path,
+            prompt="Use get_scene_info to inspect the scene contents.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
         return maya_from_exception(exc, f"Failed to open {file_path}")
 
+
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`open_scene`."""
     return open_scene(**kwargs)
+
 
 if __name__ == "__main__":
     import json

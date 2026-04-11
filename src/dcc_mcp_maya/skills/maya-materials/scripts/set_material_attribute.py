@@ -47,6 +47,7 @@ def set_material_attribute(
             material_name=material_name,
             attribute=attribute,
             value=value,
+            prompt="Use get_material_connections to verify or render_frame to preview.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")

@@ -8,6 +8,7 @@ from __future__ import annotations
 # Import local modules
 from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
+
 def transfer_attributes(
     source: str,
     target: str,
@@ -84,17 +85,18 @@ def transfer_attributes(
             transfer_normals=transfer_normals,
             transfer_uvs=transfer_uvs,
             transfer_colors=transfer_colors,
+            prompt="Check the result with list_node_graph or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return maya_error(
-            "Failed to transfer attributes from '{}' to '{}'".format(source, target), str(exc)
-        )
+        return maya_error("Failed to transfer attributes from '{}' to '{}'".format(source, target), str(exc))
+
 
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`transfer_attributes`."""
     return transfer_attributes(**kwargs)
+
 
 if __name__ == "__main__":
     import json

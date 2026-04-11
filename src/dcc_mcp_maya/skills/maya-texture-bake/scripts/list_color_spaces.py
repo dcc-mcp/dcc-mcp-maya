@@ -8,6 +8,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 # Import built-in modules
 
+
 def list_color_spaces() -> dict:
     """List all available color spaces registered in Maya's color management.
 
@@ -44,15 +45,18 @@ def list_color_spaces() -> dict:
             input_color_spaces=list(spaces),
             rendering_spaces=list(rendering_spaces),
             output_transforms=list(output_transforms),
+            prompt="Check the result with list_texture_bake or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to list color spaces")
+        return maya_from_exception(exc, "Failed to list color spaces")
+
 
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`list_color_spaces`."""
     return list_color_spaces(**kwargs)
+
 
 if __name__ == "__main__":
     import json

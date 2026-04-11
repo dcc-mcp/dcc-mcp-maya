@@ -9,6 +9,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 # Import built-in modules
 from typing import List
 
+
 def set_driven_key(
     driver_attr: str,
     driven_attrs: List[str],
@@ -96,15 +97,18 @@ def set_driven_key(
             key_count=len(driver_values),
             keys_set=keys_set,
             tangent_type=tangent_type,
+            prompt="Check the result with list_rigging or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
         return maya_from_exception(exc, "Failed to set driven key")
 
+
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`set_driven_key`."""
     return set_driven_key(**kwargs)
+
 
 if __name__ == "__main__":
     import json

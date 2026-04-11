@@ -9,6 +9,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 # Import built-in modules
 from typing import List, Optional, Tuple
 
+
 def set_vertex_color(
     object_name: str,
     color: Tuple[float, float, float],
@@ -63,15 +64,18 @@ def set_vertex_color(
             color=[r, g, b],
             alpha=a,
             colored_count=colored_count,
+            prompt="Check the result with list_vertex_color or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to set vertex color")
+        return maya_from_exception(exc, "Failed to set vertex color")
+
 
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`set_vertex_color`."""
     return set_vertex_color(**kwargs)
+
 
 if __name__ == "__main__":
     import json

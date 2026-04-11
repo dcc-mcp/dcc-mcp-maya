@@ -3,6 +3,7 @@
 # Import local modules
 from dcc_mcp_maya.api import maya_error, maya_success
 
+
 def run(params):
     """Delete an XGen description by collection and description name.
 

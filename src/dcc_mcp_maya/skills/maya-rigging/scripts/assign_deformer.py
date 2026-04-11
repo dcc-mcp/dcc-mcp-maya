@@ -8,6 +8,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 # Import built-in modules
 
+
 def assign_deformer(
     object_name: str,
     deformer_type: str = "cluster",
@@ -55,6 +56,7 @@ def assign_deformer(
                 deformer_name=deformer_name,
                 handle_name=handle_name,
                 deformer_type=deformer_type,
+                prompt="Check the result with list_rigging or use related actions to continue.",
             )
 
         if deformer_type == "lattice":
@@ -65,6 +67,7 @@ def assign_deformer(
                 object_name=object_name,
                 deformer_name=deformer_name,
                 deformer_type=deformer_type,
+                prompt="Check the result with list_rigging or use related actions to continue.",
             )
 
         if deformer_type in ("bend", "twist", "flare", "sine", "squash", "wave"):
@@ -77,6 +80,7 @@ def assign_deformer(
                 deformer_name=deformer_name,
                 handle_name=handle_name,
                 deformer_type=deformer_type,
+                prompt="Check the result with list_rigging or use related actions to continue.",
             )
 
         # blendShape / wrap — generic path
@@ -87,15 +91,18 @@ def assign_deformer(
             object_name=object_name,
             deformer_name=deformer_name,
             deformer_type=deformer_type,
+            prompt="Check the result with list_rigging or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
         return maya_from_exception(exc, "Failed to assign deformer to {}".format(object_name))
 
+
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`assign_deformer`."""
     return assign_deformer(**kwargs)
+
 
 if __name__ == "__main__":
     import json

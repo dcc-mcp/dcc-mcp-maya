@@ -6,6 +6,7 @@ from __future__ import annotations
 # Import local modules
 from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
+
 def list_render_layers(include_default: bool = True) -> dict:
     """List all render layers in the scene.
 
@@ -48,15 +49,18 @@ def list_render_layers(include_default: bool = True) -> dict:
             layers=layers,
             count=len(layers),
             current_layer=current_layer,
+            prompt="Use create_render_layer or add_to_render_layer to manage.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
         return maya_from_exception(exc, "Failed to list render layers")
 
+
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`list_render_layers`."""
     return list_render_layers(**kwargs)
+
 
 if __name__ == "__main__":
     import json

@@ -18,6 +18,7 @@ _LIGHT_TYPE_MAP = {
     "ambient": "ambientLight",
 }
 
+
 def create_light(
     light_type: str = "point",
     name: Optional[str] = None,
@@ -82,11 +83,13 @@ def create_light(
             light_type=lt,
             intensity=intensity,
             color=[r, g, b],
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to create light")
+        return maya_from_exception(exc, "Failed to create light")
+
 
 def set_light_attribute(
     light_name: str,
@@ -140,11 +143,13 @@ def set_light_attribute(
             light_name=light_name,
             attribute=attribute,
             value=value,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to set light attribute")
+        return maya_from_exception(exc, "Failed to set light attribute")
+
 
 def list_lights(include_default: bool = False) -> dict:
     """List all lights in the current Maya scene.
@@ -204,11 +209,13 @@ def list_lights(include_default: bool = False) -> dict:
             "Found {} light(s)".format(len(results)),
             lights=results,
             count=len(results),
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to list lights")
+        return maya_from_exception(exc, "Failed to list lights")
+
 
 def delete_light(light_name: str) -> dict:
     """Delete a light from the scene by transform name.
@@ -234,8 +241,12 @@ def delete_light(light_name: str) -> dict:
                 light_name = parents[0]
 
         cmds.delete(light_name)
-        return maya_success("Deleted light '{}'".format(light_name), light_name=light_name)
+        return maya_success(
+            "Deleted light '{}'".format(light_name),
+            light_name=light_name,
+            prompt="Check the result with list_scripting or use related actions to continue.",
+        )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to delete light")
+        return maya_from_exception(exc, "Failed to delete light")

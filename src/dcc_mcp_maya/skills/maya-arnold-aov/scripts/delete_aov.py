@@ -8,6 +8,7 @@ from __future__ import annotations
 # Import local modules
 from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
+
 def delete_aov(name: str) -> dict:
     """Delete the Arnold AOV node whose ``name`` attribute matches *name*.
 
@@ -52,9 +53,11 @@ def delete_aov(name: str) -> dict:
     except Exception as exc:
         return maya_from_exception(exc, "Failed to delete AOV '{}'".format(name))
 
+
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`delete_aov`."""
     return delete_aov(**kwargs)
+
 
 if __name__ == "__main__":
     import json

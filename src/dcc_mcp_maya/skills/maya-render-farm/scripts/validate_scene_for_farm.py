@@ -9,6 +9,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 # Import built-in modules
 import os
 
+
 def validate_scene_for_farm() -> dict:
     """Check the open Maya scene for common farm-submission issues.
 
@@ -92,8 +93,10 @@ def validate_scene_for_farm() -> dict:
     except Exception as exc:
         return maya_from_exception(exc, "Failed to validate scene")
 
+
 def main(**kwargs):
     return validate_scene_for_farm(**kwargs)
+
 
 if __name__ == "__main__":
     import json

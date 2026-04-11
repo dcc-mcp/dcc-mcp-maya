@@ -3,6 +3,7 @@
 # Import local modules
 from dcc_mcp_maya.api import maya_error, maya_success
 
+
 def run(params):  # noqa: ARG001
     """Grow the current component selection.
 

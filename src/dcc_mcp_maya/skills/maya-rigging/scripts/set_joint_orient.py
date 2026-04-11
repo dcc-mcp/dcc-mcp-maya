@@ -9,6 +9,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 # Import built-in modules
 from typing import List, Optional
 
+
 def set_joint_orient(
     joint_name: str,
     orient: Optional[List[float]] = None,
@@ -60,15 +61,18 @@ def set_joint_orient(
             "Set joint orient on '{}' to [{}, {}, {}]".format(joint_name, ox, oy, oz),
             object_name=joint_name,
             orient=[ox, oy, oz],
+            prompt="Check the result with list_rigging or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
         return maya_from_exception(exc, "Failed to set joint orient on {}".format(joint_name))
 
+
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`set_joint_orient`."""
     return set_joint_orient(**kwargs)
+
 
 if __name__ == "__main__":
     import json

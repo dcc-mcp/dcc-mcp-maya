@@ -14,6 +14,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 # Import built-in modules
 from typing import List, Optional
 
+
 def create_set(
     name: str,
     objects: Optional[List[str]] = None,
@@ -53,11 +54,13 @@ def create_set(
             "Created object set '{}' with {} object(s)".format(set_node, len(objects_to_add)),
             set_name=set_node,
             objects_added=objects_to_add,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to create set '{}'".format(name))
+        return maya_from_exception(exc, "Failed to create set '{}'".format(name))
+
 
 def add_to_set(
     set_name: str,
@@ -105,11 +108,13 @@ def add_to_set(
             "Added {} object(s) to set '{}'".format(len(objects), set_name),
             set_name=set_name,
             objects_added=list(objects),
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to add objects to set '{}'".format(set_name))
+        return maya_from_exception(exc, "Failed to add objects to set '{}'".format(set_name))
+
 
 def remove_from_set(
     set_name: str,
@@ -161,11 +166,13 @@ def remove_from_set(
             set_name=set_name,
             objects_removed=existing,
             objects_skipped=skipped,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to remove objects from set '{}'".format(set_name))
+        return maya_from_exception(exc, "Failed to remove objects from set '{}'".format(set_name))
+
 
 def list_sets(include_internal: bool = False) -> dict:
     """List all Maya object sets in the scene.
@@ -210,8 +217,9 @@ def list_sets(include_internal: bool = False) -> dict:
             "Found {} object set(s)".format(len(result)),
             sets=result,
             count=len(result),
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to list object sets")
+        return maya_from_exception(exc, "Failed to list object sets")

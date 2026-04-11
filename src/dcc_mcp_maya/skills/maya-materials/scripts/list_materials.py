@@ -44,6 +44,7 @@ def list_materials(shader_type: Optional[str] = None) -> dict:
             "Found {} material(s)".format(len(materials)),
             materials=materials,
             count=len(materials),
+            prompt="Use assign_material or set_material_attribute to manage the listed shaders.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")

@@ -56,6 +56,7 @@ def combine_meshes(
             "Combined {} meshes into '{}'".format(len(objects), combined),
             combined_mesh=combined,
             input_count=len(objects),
+            prompt="Use cleanup_mesh or assign_material to finalise the combined mesh.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")

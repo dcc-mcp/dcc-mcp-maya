@@ -4,7 +4,13 @@
 from __future__ import annotations
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_maya.api import (
+    maya_error,
+    maya_from_exception,
+    maya_success,
+    validate_node_exists,
+    validate_node_type,
+)
 
 
 def delete_display_layer(
@@ -32,17 +38,13 @@ def delete_display_layer(
                 "The built-in 'defaultLayer' cannot be deleted",
             )
 
-        if not cmds.objExists(layer_name):
-            return maya_error(
-                "Display layer not found: {}".format(layer_name),
-                "'{}' does not exist".format(layer_name),
-            )
+        err = validate_node_exists(cmds, layer_name)
+        if err:
+            return err
 
-        if cmds.objectType(layer_name) != "displayLayer":
-            return maya_error(
-                "Not a display layer: {}".format(layer_name),
-                "'{}' is not a displayLayer node".format(layer_name),
-            )
+        err = validate_node_type(cmds, layer_name, "displayLayer")
+        if err:
+            return err
 
         deleted_objects = []
         if remove_objects:
@@ -60,6 +62,7 @@ def delete_display_layer(
             ),
             layer_name=layer_name,
             objects_deleted=deleted_objects,
+            prompt="Use list_display_layers to confirm deletion.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")

@@ -9,6 +9,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 # Import built-in modules
 from typing import Optional
 
+
 def create_reference(
     file_path: str,
     namespace: Optional[str] = None,
@@ -59,15 +60,18 @@ def create_reference(
             reference_node=ref_node,
             namespace=resolved_ns,
             file_path=file_path,
+            prompt="Use list_references to verify or reload_reference if the file changes.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
         return maya_from_exception(exc, "Failed to reference file '{}'".format(file_path))
 
+
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`create_reference`."""
     return create_reference(**kwargs)
+
 
 if __name__ == "__main__":
     import json

@@ -9,6 +9,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 # Import built-in modules
 import os
 
+
 def export_camera(
     camera: str,
     file_path: str,
@@ -78,10 +79,12 @@ def export_camera(
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to export camera '{}'".format(camera))
+        return maya_from_exception(exc, "Failed to export camera '{}'".format(camera))
+
 
 def main(**kwargs):
     return export_camera(**kwargs)
+
 
 if __name__ == "__main__":
     import json

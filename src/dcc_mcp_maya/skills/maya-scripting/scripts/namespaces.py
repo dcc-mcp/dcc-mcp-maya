@@ -19,6 +19,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 # Built-in namespaces that must never be modified
 _PROTECTED_NS = frozenset({"UI", "shared", ":"})
 
+
 def set_namespace(
     object_name: str,
     namespace: str,
@@ -73,11 +74,13 @@ def set_namespace(
             object_name=object_name,
             namespace=ns or ":",
             new_name=new_name,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to set namespace for '{}'".format(object_name))
+        return maya_from_exception(exc, "Failed to set namespace for '{}'".format(object_name))
+
 
 def rename_namespace(
     old_name: str,
@@ -127,11 +130,13 @@ def rename_namespace(
             "Renamed namespace '{}' → '{}'".format(old_ns, new_ns),
             old_name=old_ns,
             new_name=new_ns,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
         return maya_from_exception(exc, "Failed to rename namespace '{}' to '{}'".format(old_name, new_name))
+
 
 def delete_namespace(
     namespace: str,
@@ -182,8 +187,9 @@ def delete_namespace(
             "Deleted namespace '{}'".format(ns),
             namespace=ns,
             merged_with_root=merge_with_root,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to delete namespace '{}'".format(namespace))
+        return maya_from_exception(exc, "Failed to delete namespace '{}'".format(namespace))

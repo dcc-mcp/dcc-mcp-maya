@@ -9,6 +9,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 # Import built-in modules
 from typing import Optional
 
+
 def create_spline_ik(
     start_joint: str,
     end_joint: str,
@@ -83,10 +84,12 @@ def create_spline_ik(
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to create spline IK")
+        return maya_from_exception(exc, "Failed to create spline IK")
+
 
 def main(**kwargs):
     return create_spline_ik(**kwargs)
+
 
 if __name__ == "__main__":
     import json

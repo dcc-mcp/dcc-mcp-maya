@@ -8,6 +8,7 @@ from __future__ import annotations
 # Import local modules
 from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
+
 def disconnect_attr(
     source_attr: str,
     dest_attr: str,
@@ -52,6 +53,7 @@ def disconnect_attr(
             "Disconnected {} -x-> {}".format(source_attr, dest_attr),
             source_attr=source_attr,
             dest_attr=dest_attr,
+            prompt="Check the result with list_node_graph or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
@@ -61,9 +63,11 @@ def disconnect_attr(
             str(exc),
         )
 
+
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`disconnect_attr`."""
     return disconnect_attr(**kwargs)
+
 
 if __name__ == "__main__":
     import json

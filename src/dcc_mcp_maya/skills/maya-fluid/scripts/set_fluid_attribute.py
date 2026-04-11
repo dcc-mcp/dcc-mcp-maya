@@ -8,6 +8,7 @@ from __future__ import annotations
 # Import local modules
 from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
+
 def set_fluid_attribute(fluid_shape: str, attribute: str, value: float) -> dict:
     """Set a named attribute on a fluidShape node.
 
@@ -42,8 +43,10 @@ def set_fluid_attribute(fluid_shape: str, attribute: str, value: float) -> dict:
     except Exception as exc:
         return maya_from_exception(exc, "Failed to set fluid attribute")
 
+
 def main(**kwargs):
     return set_fluid_attribute(**kwargs)
+
 
 if __name__ == "__main__":
     import json

@@ -22,6 +22,7 @@ _SCALAR_TYPES = ("bool", "byte", "short", "long", "float", "double", "angle", "t
 _STRING_TYPES = ("string",)
 _VECTOR_TYPES = ("float2", "float3", "double2", "double3")
 
+
 def add_attribute(
     object_name: str,
     long_name: str,
@@ -112,11 +113,13 @@ def add_attribute(
             short_name=sn,
             attr_type=attr_type,
             keyable=keyable,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
         return maya_from_exception(exc, "Failed to add attribute '{}.{}'".format(object_name, long_name))
+
 
 def delete_attribute(
     object_name: str,
@@ -164,11 +167,13 @@ def delete_attribute(
             "Deleted attribute '{}.{}'".format(object_name, attribute),
             object_name=object_name,
             attribute=attribute,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
         return maya_from_exception(exc, "Failed to delete attribute '{}.{}'".format(object_name, attribute))
+
 
 def list_attributes(
     object_name: str,
@@ -257,8 +262,9 @@ def list_attributes(
             count=len(result),
             user_defined_only=user_defined,
             keyable_only=keyable,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to list attributes on '{}'".format(object_name))
+        return maya_from_exception(exc, "Failed to list attributes on '{}'".format(object_name))

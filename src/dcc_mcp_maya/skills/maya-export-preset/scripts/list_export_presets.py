@@ -11,6 +11,7 @@ from typing import Optional
 # Import local modules
 from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
+
 def list_export_presets(preset_dir: Optional[str] = None) -> dict:
     """List all ``.json`` export preset files in a directory.
 
@@ -75,8 +76,10 @@ def list_export_presets(preset_dir: Optional[str] = None) -> dict:
     except Exception as exc:
         return maya_from_exception(exc, "Failed to list export presets")
 
+
 def main(**kwargs):
     return list_export_presets(**kwargs)
+
 
 if __name__ == "__main__":
     import json as _json

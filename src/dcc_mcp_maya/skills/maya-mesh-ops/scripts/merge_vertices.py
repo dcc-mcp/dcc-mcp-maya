@@ -41,6 +41,7 @@ def merge_vertices(
             vertex_count_before=before_count,
             vertex_count_after=after_count,
             threshold=threshold,
+            prompt="Use cleanup_mesh to verify or get_poly_count to check the result.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")

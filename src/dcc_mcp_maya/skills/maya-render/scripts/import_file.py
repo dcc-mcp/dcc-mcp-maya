@@ -9,6 +9,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 # Import built-in modules
 from typing import Optional
 
+
 def import_file(
     file_path: str,
     namespace: Optional[str] = None,
@@ -44,15 +45,18 @@ def import_file(
             file_path=file_path,
             imported_nodes=imported,
             count=len(imported),
+            prompt="Check the result with list_render or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
         return maya_from_exception(exc, "Failed to import file: {}".format(file_path))
 
+
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`import_file`."""
     return import_file(**kwargs)
+
 
 if __name__ == "__main__":
     import json

@@ -70,6 +70,7 @@ def connect_field_to_objects(
             "Connected field '{}' to {} object(s)".format(field_node, len(objects)),
             field_node=field_node,
             connected_objects=list(objects),
+            prompt="Check the result with list_dynamics or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")

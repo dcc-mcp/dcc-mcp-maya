@@ -92,6 +92,7 @@ def create_dynamic_field(
             field_type=ft,
             magnitude=magnitude,
             connected_objects=connected,
+            prompt="Check the result with list_dynamics or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")

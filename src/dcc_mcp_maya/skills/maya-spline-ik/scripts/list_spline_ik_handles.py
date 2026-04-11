@@ -8,6 +8,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 # Import built-in modules
 
+
 def list_spline_ik_handles() -> dict:
     """List all spline IK handles in the current scene.
 
@@ -51,10 +52,12 @@ def list_spline_ik_handles() -> dict:
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to list spline IK handles")
+        return maya_from_exception(exc, "Failed to list spline IK handles")
+
 
 def main(**kwargs):
     return list_spline_ik_handles(**kwargs)
+
 
 if __name__ == "__main__":
     import json

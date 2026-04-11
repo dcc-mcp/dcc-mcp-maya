@@ -12,6 +12,7 @@ import os
 import tempfile
 from typing import Optional
 
+
 def capture_viewport(
     width: int = 1920,
     height: int = 1080,
@@ -70,15 +71,18 @@ def capture_viewport(
             width=width,
             height=height,
             frame=frame,
+            prompt="Use render_frame for final-quality output.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
         return maya_from_exception(exc, "Failed to capture viewport")
 
+
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`capture_viewport`."""
     return capture_viewport(**kwargs)
+
 
 if __name__ == "__main__":
     import json

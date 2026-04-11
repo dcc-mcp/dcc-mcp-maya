@@ -9,6 +9,7 @@ from __future__ import annotations
 # Import local modules
 from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
+
 def list_strokes() -> dict:
     """List all Paint Effects stroke nodes in the scene.
 
@@ -52,8 +53,10 @@ def list_strokes() -> dict:
     except Exception as exc:
         return maya_from_exception(exc, "Failed to list Paint Effects strokes")
 
+
 def main(**kwargs):
     return list_strokes(**kwargs)
+
 
 if __name__ == "__main__":
     import json

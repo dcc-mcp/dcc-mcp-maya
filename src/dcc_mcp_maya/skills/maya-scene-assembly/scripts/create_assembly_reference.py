@@ -9,6 +9,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 # Import built-in modules
 from typing import Optional
 
+
 def create_assembly_reference(
     definition: str,
     name: Optional[str] = None,
@@ -60,8 +61,10 @@ def create_assembly_reference(
     except Exception as exc:
         return maya_from_exception(exc, "Failed to create assembly reference")
 
+
 def main(**kwargs):
     return create_assembly_reference(**kwargs)
+
 
 if __name__ == "__main__":
     import json

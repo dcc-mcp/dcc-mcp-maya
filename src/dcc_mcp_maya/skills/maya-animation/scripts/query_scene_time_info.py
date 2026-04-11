@@ -9,7 +9,6 @@ from __future__ import annotations
 from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 
-
 def query_scene_time_info() -> dict:
     """Query the current scene time and playback settings as a single call.
 
@@ -39,6 +38,7 @@ def query_scene_time_info() -> dict:
             playback_start=pb_start,
             playback_end=pb_end,
             current_time=current,
+            prompt="Use set_timeline to adjust the frame range.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")

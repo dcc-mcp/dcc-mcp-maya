@@ -10,6 +10,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 import os
 from typing import List, Optional
 
+
 def export_shot_alembic(
     file_path: str,
     objects: Optional[List[str]] = None,
@@ -80,10 +81,12 @@ def export_shot_alembic(
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to export Alembic")
+        return maya_from_exception(exc, "Failed to export Alembic")
+
 
 def main(**kwargs):
     return export_shot_alembic(**kwargs)
+
 
 if __name__ == "__main__":
     import json

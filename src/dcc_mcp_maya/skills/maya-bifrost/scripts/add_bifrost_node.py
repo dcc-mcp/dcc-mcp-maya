@@ -9,7 +9,6 @@ from __future__ import annotations
 from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 
-
 def add_bifrost_node(graph_node: str, compound_name: str) -> dict:
     """Add a Bifrost compound to an existing graph node.
 

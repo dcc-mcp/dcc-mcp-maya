@@ -8,6 +8,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 # Import built-in modules
 
+
 def set_frame_rate(fps: str = "film") -> dict:
     """Change the scene's playback frame rate.
 
@@ -56,15 +57,18 @@ def set_frame_rate(fps: str = "film") -> dict:
         return maya_success(
             "Frame rate set to '{}'".format(actual),
             fps=actual,
+            prompt="Check the result with list_scene or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
         return maya_from_exception(exc, "Failed to set frame rate to '{}'".format(fps))
 
+
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`set_frame_rate`."""
     return set_frame_rate(**kwargs)
+
 
 if __name__ == "__main__":
     import json

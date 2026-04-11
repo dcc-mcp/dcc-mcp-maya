@@ -9,7 +9,6 @@ from __future__ import annotations
 from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 
-
 def delete_annotation(annotation_node: str) -> dict:
     """Delete an annotation node from the scene.
 

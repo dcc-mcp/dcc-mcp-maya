@@ -10,6 +10,7 @@ import os
 # Import local modules
 from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
+
 def list_poses(
     directory: str,
     recursive: bool = False,
@@ -70,8 +71,10 @@ def list_poses(
     except Exception as exc:
         return maya_from_exception(exc, "Failed to list poses in '{}'".format(directory))
 
+
 def main(**kwargs):
     return list_poses(**kwargs)
+
 
 if __name__ == "__main__":
     import json as _json

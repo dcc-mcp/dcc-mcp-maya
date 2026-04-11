@@ -79,6 +79,7 @@ def create_nucleus(
             gravity=gravity,
             wind_speed=wind_speed,
             wind_direction=wind_dir,
+            prompt="Use create_ncloth or create_nparticle_emitter to attach solvers.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")

@@ -9,6 +9,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 # Import built-in modules
 import sys
 
+
 def get_session_info() -> dict:
     """Return Maya version, scene path, and basic stats.
 
@@ -29,15 +30,19 @@ def get_session_info() -> dict:
             "up_axis": cmds.upAxis(query=True, axis=True),
             "object_count": len(cmds.ls(dag=True) or []),
         }
-        return maya_success("Maya session info", **info)
+        return maya_success(
+            "Maya session info", **info, prompt="Check the result with list_scene or use related actions to continue."
+        )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
         return maya_from_exception(exc, "Failed to get session info")
 
+
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`get_session_info`."""
     return get_session_info(**kwargs)
+
 
 if __name__ == "__main__":
     import json

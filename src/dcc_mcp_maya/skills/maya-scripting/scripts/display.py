@@ -13,6 +13,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 # Import built-in modules
 from typing import List, Optional
 
+
 def create_display_layer(
     name: str,
     objects: Optional[List[str]] = None,
@@ -70,11 +71,13 @@ def create_display_layer(
             objects_added=objects_to_add,
             visible=visible,
             display_type=display_type,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to create display layer '{}'".format(name))
+        return maya_from_exception(exc, "Failed to create display layer '{}'".format(name))
+
 
 def set_display_layer(
     object_name: str,
@@ -119,11 +122,13 @@ def set_display_layer(
             "Assigned '{}' to display layer '{}'".format(object_name, layer_name),
             object_name=object_name,
             layer_name=layer_name,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
         return maya_from_exception(exc, "Failed to assign '{}' to layer '{}'".format(object_name, layer_name))
+
 
 def delete_display_layer(
     layer_name: str,
@@ -179,11 +184,13 @@ def delete_display_layer(
             ),
             layer_name=layer_name,
             objects_deleted=deleted_objects,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to delete display layer '{}'".format(layer_name))
+        return maya_from_exception(exc, "Failed to delete display layer '{}'".format(layer_name))
+
 
 def list_display_layers() -> dict:
     """List all display layers in the scene.
@@ -213,8 +220,9 @@ def list_display_layers() -> dict:
             "Found {} display layer(s)".format(len(layers)),
             layers=layers,
             count=len(layers),
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to list display layers")
+        return maya_from_exception(exc, "Failed to list display layers")

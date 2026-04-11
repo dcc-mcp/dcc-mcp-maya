@@ -6,6 +6,7 @@ from __future__ import annotations
 # Import local modules
 from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
+
 def export_selection(
     file_path: str,
     file_type: str = "FBX export",
@@ -35,15 +36,18 @@ def export_selection(
             "Selection exported to {}".format(saved),
             file_path=saved,
             file_type=file_type,
+            prompt="Check the result with list_render or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
         return maya_from_exception(exc, "Failed to export selection")
 
+
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`export_selection`."""
     return export_selection(**kwargs)
+
 
 if __name__ == "__main__":
     import json

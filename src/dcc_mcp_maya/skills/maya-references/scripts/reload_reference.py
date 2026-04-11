@@ -8,6 +8,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 # Import built-in modules
 
+
 def reload_reference(reference_node: str) -> dict:
     """Reload a previously unloaded (or modified) file reference.
 
@@ -48,15 +49,18 @@ def reload_reference(reference_node: str) -> dict:
             reference_node=reference_node,
             file_path=file_path,
             loaded=True,
+            prompt="Use list_references to confirm the reference status.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
         return maya_from_exception(exc, "Failed to reload reference '{}'".format(reference_node))
 
+
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`reload_reference`."""
     return reload_reference(**kwargs)
+
 
 if __name__ == "__main__":
     import json

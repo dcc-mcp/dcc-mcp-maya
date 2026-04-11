@@ -49,6 +49,7 @@ def set_timeline(
             end_frame=end_frame,
             min_frame=min_frame,
             max_frame=max_frame,
+            prompt="Use set_current_time to navigate the new range.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")

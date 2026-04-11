@@ -9,6 +9,7 @@ from dcc_mcp_maya.api import maya_error, maya_success
 # Import built-in modules
 from typing import Any
 
+
 def get_attribute(
     object_name: str,
     attribute: str,
@@ -56,6 +57,7 @@ def get_attribute(
             object_name=object_name,
             attribute=attribute,
             value=value,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
@@ -64,6 +66,7 @@ def get_attribute(
             "Failed to get attribute {}.{}".format(object_name, attribute),
             str(exc),
         )
+
 
 def set_attribute(
     object_name: str,
@@ -133,6 +136,7 @@ def set_attribute(
             object_name=object_name,
             attribute=attribute,
             value=value,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")

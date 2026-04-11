@@ -9,6 +9,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 # Import built-in modules
 from typing import Optional
 
+
 def copy_uvs(
     source: str,
     target: str,
@@ -54,15 +55,18 @@ def copy_uvs(
             target=target,
             source_uv_set=source_uv_set,
             target_uv_set=target_uv_set,
+            prompt="Use layout_uvs to arrange or export_uv_snapshot to preview.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to copy UVs")
+        return maya_from_exception(exc, "Failed to copy UVs")
+
 
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`copy_uvs`."""
     return copy_uvs(**kwargs)
+
 
 if __name__ == "__main__":
     import json

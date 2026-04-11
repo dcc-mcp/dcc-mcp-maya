@@ -18,6 +18,7 @@ _VALID_MAP_TYPES = {
     "ambientOcclusion",
 }
 
+
 def transfer_maps(
     source: str,
     target: str,
@@ -98,10 +99,12 @@ def transfer_maps(
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to transfer maps")
+        return maya_from_exception(exc, "Failed to transfer maps")
+
 
 def main(**kwargs):
     return transfer_maps(**kwargs)
+
 
 if __name__ == "__main__":
     import json

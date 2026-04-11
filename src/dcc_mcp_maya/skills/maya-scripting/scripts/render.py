@@ -12,6 +12,7 @@ import os
 import tempfile
 from typing import Optional
 
+
 def set_render_settings(
     width: int = 1920,
     height: int = 1080,
@@ -52,11 +53,16 @@ def set_render_settings(
             cmds.setAttr("defaultRenderGlobals.currentRenderer", renderer, type="string")
             applied["renderer"] = renderer
 
-        return maya_success("Render settings applied ({}x{})".format(width, height), **applied)
+        return maya_success(
+            "Render settings applied ({}x{})".format(width, height),
+            **applied,
+            prompt="Check the result with list_scripting or use related actions to continue.",
+        )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to set render settings")
+        return maya_from_exception(exc, "Failed to set render settings")
+
 
 def capture_viewport(
     width: int = 1920,
@@ -116,11 +122,13 @@ def capture_viewport(
             width=width,
             height=height,
             frame=frame,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to capture viewport")
+        return maya_from_exception(exc, "Failed to capture viewport")
+
 
 def import_file(
     file_path: str,
@@ -157,11 +165,13 @@ def import_file(
             file_path=file_path,
             imported_nodes=imported,
             count=len(imported),
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to import file: {}".format(file_path))
+        return maya_from_exception(exc, "Failed to import file: {}".format(file_path))
+
 
 def export_selection(
     file_path: str,
@@ -192,11 +202,13 @@ def export_selection(
             "Selection exported to {}".format(saved),
             file_path=saved,
             file_type=file_type,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to export selection")
+        return maya_from_exception(exc, "Failed to export selection")
+
 
 # Render quality preset mappings
 # Keys map to (globalQuality, shadingQuality, raytracingQuality) tuples
@@ -234,6 +246,7 @@ _RENDER_QUALITY_PRESETS = {
         "refractionRayDepth": 6,
     },
 }
+
 
 def set_render_quality(preset: str = "medium") -> dict:
     """Apply a render quality preset to the Maya Software render globals.
@@ -274,11 +287,13 @@ def set_render_quality(preset: str = "medium") -> dict:
             "Applied '{}' render quality preset".format(preset_key),
             preset=preset_key,
             applied=applied,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to set render quality preset '{}'".format(preset))
+        return maya_from_exception(exc, "Failed to set render quality preset '{}'".format(preset))
+
 
 def get_scene_render_stats() -> dict:
     """Query a summary of the current scene render configuration.
@@ -330,8 +345,9 @@ def get_scene_render_stats() -> dict:
             end_frame=end_frame,
             output_file_prefix=output_prefix,
             quality=quality,
+            prompt="Check the result with list_scripting or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to query scene render stats")
+        return maya_from_exception(exc, "Failed to query scene render stats")

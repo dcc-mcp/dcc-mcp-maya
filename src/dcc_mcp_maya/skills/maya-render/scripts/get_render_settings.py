@@ -22,6 +22,7 @@ _FORMAT_NAMES = {
     40: "exr",
 }
 
+
 def get_render_settings() -> dict:
     """Return the current Maya render settings.
 
@@ -61,9 +62,11 @@ def get_render_settings() -> dict:
     except Exception as exc:
         return maya_from_exception(exc, "Failed to get render settings")
 
+
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`get_render_settings`."""
     return get_render_settings(**kwargs)
+
 
 if __name__ == "__main__":
     import json

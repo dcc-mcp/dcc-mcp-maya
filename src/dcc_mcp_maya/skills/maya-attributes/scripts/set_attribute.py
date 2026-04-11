@@ -9,7 +9,6 @@ from __future__ import annotations
 from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 
-
 def set_attribute(node_name: str, attribute: str, value: object) -> dict:
     """Set the value of an attribute on a Maya node.
 

@@ -8,6 +8,7 @@ from __future__ import annotations
 # Import local modules
 from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
+
 def delete_fluid_container(name: str) -> dict:
     """Delete a fluid container transform (and its fluidShape child).
 
@@ -38,8 +39,10 @@ def delete_fluid_container(name: str) -> dict:
     except Exception as exc:
         return maya_from_exception(exc, "Failed to delete fluid container")
 
+
 def main(**kwargs):
     return delete_fluid_container(**kwargs)
+
 
 if __name__ == "__main__":
     import json

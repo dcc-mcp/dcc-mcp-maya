@@ -9,6 +9,7 @@ from typing import Optional
 # Import local modules
 from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
+
 def create_fluid_container(
     name: Optional[str] = None,
     size_x: float = 10.0,
@@ -66,8 +67,10 @@ def create_fluid_container(
     except Exception as exc:
         return maya_from_exception(exc, "Failed to create fluid container")
 
+
 def main(**kwargs):
     return create_fluid_container(**kwargs)
+
 
 if __name__ == "__main__":
     import json

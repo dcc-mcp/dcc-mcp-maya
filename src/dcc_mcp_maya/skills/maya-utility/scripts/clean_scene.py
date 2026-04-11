@@ -8,6 +8,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 # Import built-in modules
 
+
 def clean_scene(
     remove_unknown_nodes: bool = True,
     remove_unknown_plugins: bool = True,
@@ -104,10 +105,12 @@ def clean_scene(
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to clean scene")
+        return maya_from_exception(exc, "Failed to clean scene")
+
 
 def main(**kwargs):
     return clean_scene(**kwargs)
+
 
 if __name__ == "__main__":
     import json

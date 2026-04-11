@@ -9,6 +9,7 @@ from dcc_mcp_maya.api import maya_error, maya_success
 # Import built-in modules
 from typing import Optional
 
+
 def copy_skin_weights(
     source_mesh: str,
     target_mesh: str,
@@ -92,8 +93,10 @@ def copy_skin_weights(
             str(exc),
         )
 
+
 def main(**kwargs):
     return copy_skin_weights(**kwargs)
+
 
 if __name__ == "__main__":
     import json

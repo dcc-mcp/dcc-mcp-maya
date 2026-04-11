@@ -61,6 +61,7 @@ def separate_mesh(
             "Separated '{}' into {} meshes".format(object_name, len(unique)),
             separated_meshes=unique,
             count=len(unique),
+            prompt="Use combine_meshes to undo or cleanup_mesh on each piece.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")

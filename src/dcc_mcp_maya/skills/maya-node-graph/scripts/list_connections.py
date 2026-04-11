@@ -9,6 +9,7 @@ from typing import Optional
 # Import local modules
 from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
+
 def list_connections(
     object_name: str,
     attribute: Optional[str] = None,
@@ -70,15 +71,18 @@ def list_connections(
             attribute=attribute,
             connections=pairs,
             count=len(pairs),
+            prompt="Check the result with list_node_graph or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
         return maya_from_exception(exc, "Failed to list connections on {}".format(object_name))
 
+
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`list_connections`."""
     return list_connections(**kwargs)
+
 
 if __name__ == "__main__":
     import json

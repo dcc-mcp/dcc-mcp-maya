@@ -9,6 +9,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 # Import built-in modules
 from typing import Optional
 
+
 def create_polygon_text(
     text: str,
     name: Optional[str] = None,
@@ -69,15 +70,18 @@ def create_polygon_text(
             extruded=extrude,
             objects=objects,
             count=len(objects),
+            prompt="Check the result with list_scene_utils or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to create polygon text '{}'".format(text))
+        return maya_from_exception(exc, "Failed to create polygon text '{}'".format(text))
+
 
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`create_polygon_text`."""
     return create_polygon_text(**kwargs)
+
 
 if __name__ == "__main__":
     import json

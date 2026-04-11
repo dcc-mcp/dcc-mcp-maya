@@ -13,6 +13,7 @@ from typing import List, Optional
 
 logger = logging.getLogger(__name__)
 
+
 def bake_lighting(
     objects: Optional[List[str]] = None,
     output_dir: str = "/tmp",
@@ -86,10 +87,12 @@ def bake_lighting(
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to bake lighting")
+        return maya_from_exception(exc, "Failed to bake lighting")
+
 
 def main(**kwargs):
     return bake_lighting(**kwargs)
+
 
 if __name__ == "__main__":
     import json

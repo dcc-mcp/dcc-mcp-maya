@@ -10,6 +10,7 @@ import os
 # Import local modules
 from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
+
 def import_mocap(
     file_path: str,
     namespace: str = "mocap",
@@ -86,8 +87,10 @@ def import_mocap(
     except Exception as exc:
         return maya_from_exception(exc, "Failed to import mocap file")
 
+
 def main(**kwargs):
     return import_mocap(**kwargs)
+
 
 if __name__ == "__main__":
     import json

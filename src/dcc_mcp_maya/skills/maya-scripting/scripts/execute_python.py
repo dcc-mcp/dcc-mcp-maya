@@ -8,6 +8,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 # Import built-in modules
 
+
 def execute_python(code: str, capture_output: bool = False) -> dict:
     """Execute an arbitrary Python snippet with Maya cmds pre-imported.
 
@@ -63,11 +64,13 @@ def execute_python(code: str, capture_output: bool = False) -> dict:
             stdout=captured,
         )
     except Exception as exc:
-                return maya_from_exception(exc, "Python execution failed")
+        return maya_from_exception(exc, "Python execution failed")
+
 
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`execute_python`."""
     return execute_python(**kwargs)
+
 
 if __name__ == "__main__":
     import json

@@ -9,7 +9,6 @@ from __future__ import annotations
 from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 
-
 def delete_attribute(node_name: str, attribute: str) -> dict:
     """Delete a custom (user-defined) attribute from a Maya node.
 
@@ -50,6 +49,7 @@ def delete_attribute(node_name: str, attribute: str) -> dict:
             "Deleted attribute '{}.{}'".format(node_name, attribute),
             node_name=node_name,
             attribute=attribute,
+            prompt="Use list_custom_attributes to verify removal.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")

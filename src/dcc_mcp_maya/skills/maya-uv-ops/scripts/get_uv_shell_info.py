@@ -9,6 +9,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 # Import built-in modules
 from typing import Optional
 
+
 def get_uv_shell_info(object_name: str, uv_set: Optional[str] = None) -> dict:
     """Get UV shell information for a polygon mesh.
 
@@ -29,9 +30,7 @@ def get_uv_shell_info(object_name: str, uv_set: Optional[str] = None) -> dict:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return maya_error(
-                "Object not found: {}".format(object_name), "'{}' does not exist".format(object_name)
-            )
+            return maya_error("Object not found: {}".format(object_name), "'{}' does not exist".format(object_name))
 
         # Resolve UV set
         if uv_set:
@@ -84,15 +83,18 @@ def get_uv_shell_info(object_name: str, uv_set: Optional[str] = None) -> dict:
             uv_set=active_set,
             shell_count=len(shells),
             shells=shells,
+            prompt="Check the result with list_uv_ops or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to get UV shell info")
+        return maya_from_exception(exc, "Failed to get UV shell info")
+
 
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`get_uv_shell_info`."""
     return get_uv_shell_info(**kwargs)
+
 
 if __name__ == "__main__":
     import json

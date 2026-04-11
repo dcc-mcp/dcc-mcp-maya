@@ -9,7 +9,6 @@ from __future__ import annotations
 from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 
-
 def set_current_time(frame: float) -> dict:
     """Set the current frame number.
 
@@ -26,6 +25,7 @@ def set_current_time(frame: float) -> dict:
         return maya_success(
             "Current time set to {}".format(frame),
             current_time=frame,
+            prompt="Use get_current_time to verify or set_keyframe to record the pose.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")

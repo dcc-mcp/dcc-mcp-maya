@@ -20,6 +20,7 @@ _PASS_TYPES = {
     "uv": "renderPassUV",
 }
 
+
 def create_render_pass(
     pass_type: str = "beauty",
     name: Optional[str] = None,
@@ -71,8 +72,10 @@ def create_render_pass(
     except Exception as exc:
         return maya_from_exception(exc, "Failed to create render pass '{}'".format(pass_type))
 
+
 def main(**kwargs):
     return create_render_pass(**kwargs)
+
 
 if __name__ == "__main__":
     import json

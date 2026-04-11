@@ -47,6 +47,7 @@ def list_shading_groups() -> dict:
             "Found {} shading group(s)".format(len(result)),
             shading_groups=result,
             count=len(result),
+            prompt="Use assign_material or get_shader_assignment to inspect.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")

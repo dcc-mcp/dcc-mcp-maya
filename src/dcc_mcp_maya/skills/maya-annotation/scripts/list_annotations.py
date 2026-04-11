@@ -9,7 +9,6 @@ from __future__ import annotations
 from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 
-
 def list_annotations() -> dict:
     """List all annotation nodes in the current Maya scene.
 

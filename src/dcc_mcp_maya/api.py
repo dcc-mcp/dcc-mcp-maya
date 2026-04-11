@@ -81,6 +81,9 @@ logger = logging.getLogger(__name__)
 
 F = TypeVar("F", bound=Callable[..., Any])
 
+# Sentinel used by require_param to detect "no default provided"
+_SENTINEL = object()
+
 # ---------------------------------------------------------------------------
 # Core result helpers
 # ---------------------------------------------------------------------------
@@ -298,6 +301,129 @@ def with_maya(func: F) -> F:
 
 
 # ---------------------------------------------------------------------------
+# Parameter helpers
+# ---------------------------------------------------------------------------
+
+
+class MissingParamError(ValueError):
+    """Raised by :func:`require_param` when a required parameter is absent."""
+
+
+def require_param(params: Any, key: str, default: Any = _SENTINEL) -> Any:
+    """Extract a required (or defaulted) parameter from a *params* dict.
+
+    Args:
+        params: The ``params`` dict received by the skill ``run`` function.
+        key: The parameter name to look up.
+        default: If provided, return this value when *key* is absent.  When
+            omitted the function raises :class:`MissingParamError`.
+
+    Returns:
+        The value associated with *key*, or *default* if supplied.
+
+    Raises:
+        MissingParamError: When *key* is absent and no *default* was given.
+
+    Example::
+
+        name = require_param(params, "name")          # raises if missing
+        size = require_param(params, "size", 1.0)     # returns 1.0 if absent
+    """
+    if key in params:
+        return params[key]
+    if default is not _SENTINEL:
+        return default
+    raise MissingParamError("Required parameter '{}' is missing".format(key))
+
+
+def missing_param_error(key: str, **context: Any) -> dict:
+    """Return a pre-built error dict for a missing required parameter.
+
+    Convenience wrapper so skill scripts can do::
+
+        if "name" not in params:
+            return missing_param_error("name")
+
+    Args:
+        key: The name of the missing parameter.
+        **context: Extra context forwarded to :func:`maya_error`.
+
+    Returns:
+        Serialised ``ActionResultModel`` dict (``success=False``).
+    """
+    return maya_error(
+        "Missing required parameter: '{}'".format(key),
+        "The parameter '{}' must be provided".format(key),
+        possible_solutions=["Pass '{}' in the params dict".format(key)],
+        **context,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Node validation helpers
+# ---------------------------------------------------------------------------
+
+
+def validate_node_exists(cmds: Any, name: str) -> "str | None":
+    """Return an error dict if *name* does not exist in the scene, else None.
+
+    Designed for the common guard pattern::
+
+        err = validate_node_exists(cmds, object_name)
+        if err:
+            return err
+
+    Args:
+        cmds: The ``maya.cmds`` module (already imported by the caller).
+        name: Maya node name to check.
+
+    Returns:
+        ``None`` when the node exists, otherwise a serialised error dict.
+    """
+    if not cmds.objExists(name):
+        return maya_error(
+            "Node not found: {}".format(name),
+            "'{}' does not exist in the scene".format(name),
+            possible_solutions=[
+                "Use get_scene_info or list_scene_nodes to find valid node names",
+                "Check for typos in the node name",
+            ],
+        )
+    return None
+
+
+def validate_node_type(cmds: Any, name: str, expected_type: str) -> "str | None":
+    """Return an error dict if *name* is not of *expected_type*, else None.
+
+    Args:
+        cmds: The ``maya.cmds`` module.
+        name: Maya node name.
+        expected_type: Expected Maya node type string (e.g. ``"transform"``,
+            ``"mesh"``, ``"displayLayer"``).
+
+    Returns:
+        ``None`` when the type matches, otherwise a serialised error dict.
+
+    Example::
+
+        err = validate_node_type(cmds, layer_name, "displayLayer")
+        if err:
+            return err
+    """
+    actual = cmds.objectType(name)
+    if actual != expected_type:
+        return maya_error(
+            "Wrong node type: {}".format(name),
+            "'{}' is a '{}', expected '{}'".format(name, actual, expected_type),
+            possible_solutions=[
+                "Use get_scene_info to inspect the node type",
+                "Provide a '{}' node instead".format(expected_type),
+            ],
+        )
+    return None
+
+
+# ---------------------------------------------------------------------------
 # Convenience re-exports so callers only need one import
 # ---------------------------------------------------------------------------
 
@@ -309,4 +435,11 @@ __all__ = [
     "get_cmds",
     "is_maya_available",
     "with_maya",
+    # Parameter helpers
+    "require_param",
+    "missing_param_error",
+    "MissingParamError",
+    # Node validation helpers
+    "validate_node_exists",
+    "validate_node_type",
 ]

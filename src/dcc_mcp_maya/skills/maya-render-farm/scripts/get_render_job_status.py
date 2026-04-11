@@ -10,6 +10,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 import subprocess
 from typing import Optional
 
+
 def get_render_job_status(
     job_id: str,
     deadline_command: Optional[str] = None,
@@ -83,8 +84,10 @@ def get_render_job_status(
     except Exception as exc:
         return maya_from_exception(exc, "Failed to query job status")
 
+
 def main(**kwargs):
     return get_render_job_status(**kwargs)
+
 
 if __name__ == "__main__":
     import json

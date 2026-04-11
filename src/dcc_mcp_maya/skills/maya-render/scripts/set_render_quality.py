@@ -47,6 +47,7 @@ _RENDER_QUALITY_PRESETS = {
     },
 }
 
+
 def set_render_quality(preset: str = "medium") -> dict:
     """Apply a render quality preset to the Maya Software render globals.
 
@@ -86,15 +87,18 @@ def set_render_quality(preset: str = "medium") -> dict:
             "Applied '{}' render quality preset".format(preset_key),
             preset=preset_key,
             applied=applied,
+            prompt="Check the result with list_render or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
         return maya_from_exception(exc, "Failed to set render quality preset '{}'".format(preset))
 
+
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`set_render_quality`."""
     return set_render_quality(**kwargs)
+
 
 if __name__ == "__main__":
     import json

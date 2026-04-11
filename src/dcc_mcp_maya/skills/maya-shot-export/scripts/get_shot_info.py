@@ -9,6 +9,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 # Import built-in modules
 import os
 
+
 def get_shot_info() -> dict:
     """Query current shot metadata from the open Maya scene.
 
@@ -56,10 +57,12 @@ def get_shot_info() -> dict:
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to get shot info")
+        return maya_from_exception(exc, "Failed to get shot info")
+
 
 def main(**kwargs):
     return get_shot_info(**kwargs)
+
 
 if __name__ == "__main__":
     import json

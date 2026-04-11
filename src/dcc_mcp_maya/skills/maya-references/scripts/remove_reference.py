@@ -8,6 +8,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 # Import built-in modules
 
+
 def remove_reference(
     reference_node: str,
     remove_namespace: bool = True,
@@ -63,15 +64,18 @@ def remove_reference(
             "Removed reference '{}'".format(reference_node),
             reference_node=reference_node,
             namespace_removed=namespace_removed if remove_namespace else "",
+            prompt="Use list_references to verify removal.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
         return maya_from_exception(exc, "Failed to remove reference '{}'".format(reference_node))
 
+
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`remove_reference`."""
     return remove_reference(**kwargs)
+
 
 if __name__ == "__main__":
     import json

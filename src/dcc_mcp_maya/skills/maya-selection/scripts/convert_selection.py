@@ -12,6 +12,7 @@ _CONVERT_FLAGS = {
     "shell": {"toShell": True},
 }
 
+
 def run(params):
     """Convert selection to a different component type.
 

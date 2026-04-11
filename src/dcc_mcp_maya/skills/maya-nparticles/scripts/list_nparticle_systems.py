@@ -9,6 +9,7 @@ from __future__ import annotations
 # Import local modules
 from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
+
 def list_nparticle_systems() -> dict:
     """List all nParticle systems and nucleus solvers in the scene.
 
@@ -79,8 +80,10 @@ def list_nparticle_systems() -> dict:
     except Exception as exc:
         return maya_from_exception(exc, "Failed to list nParticle systems")
 
+
 def main(**kwargs):
     return list_nparticle_systems(**kwargs)
+
 
 if __name__ == "__main__":
     import json

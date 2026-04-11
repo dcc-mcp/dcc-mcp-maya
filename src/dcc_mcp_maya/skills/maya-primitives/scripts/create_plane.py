@@ -10,6 +10,7 @@ from typing import Optional
 # Import local modules
 from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
+
 def create_plane(
     width: float = 1.0,
     height: float = 1.0,
@@ -38,15 +39,18 @@ def create_plane(
             object_name=obj,
             width=width,
             height=height,
+            prompt="Use set_transform to position or assign_material to shade.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
         return maya_from_exception(exc, "Failed to create plane")
 
+
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`create_plane`."""
     return create_plane(**kwargs)
+
 
 if __name__ == "__main__":
     import json

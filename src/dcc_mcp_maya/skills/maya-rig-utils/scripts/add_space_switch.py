@@ -9,6 +9,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 # Import built-in modules
 from typing import List
 
+
 def add_space_switch(
     control: str,
     spaces: List[str],
@@ -89,8 +90,10 @@ def add_space_switch(
     except Exception as exc:
         return maya_from_exception(exc, "Failed to add space switch on '{}'".format(control))
 
+
 def main(**kwargs):
     return add_space_switch(**kwargs)
+
 
 if __name__ == "__main__":
     import json

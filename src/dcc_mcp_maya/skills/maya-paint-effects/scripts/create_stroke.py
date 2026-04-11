@@ -10,6 +10,7 @@ from typing import List, Optional
 # Import local modules
 from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
+
 def create_stroke(
     preset: str = "flowers/daisy.mel",
     start_point: Optional[List[float]] = None,
@@ -87,8 +88,10 @@ def create_stroke(
     except Exception as exc:
         return maya_from_exception(exc, "Failed to create Paint Effects stroke")
 
+
 def main(**kwargs):
     return create_stroke(**kwargs)
+
 
 if __name__ == "__main__":
     import json

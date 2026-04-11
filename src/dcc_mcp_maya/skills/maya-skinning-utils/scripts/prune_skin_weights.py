@@ -8,6 +8,7 @@ from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 # Import built-in modules
 
+
 def prune_skin_weights(
     mesh: str,
     prune_value: float = 0.01,
@@ -54,10 +55,12 @@ def prune_skin_weights(
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-                return maya_from_exception(exc, "Failed to prune skin weights on '{}'".format(mesh))
+        return maya_from_exception(exc, "Failed to prune skin weights on '{}'".format(mesh))
+
 
 def main(**kwargs):
     return prune_skin_weights(**kwargs)
+
 
 if __name__ == "__main__":
     import json

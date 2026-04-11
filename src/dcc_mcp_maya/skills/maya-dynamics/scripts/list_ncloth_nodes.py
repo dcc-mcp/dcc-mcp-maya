@@ -21,6 +21,7 @@ _VALID_FIELD_TYPES = (
 
 _VALID_MIRROR_AXES = ("x", "y", "z")
 
+
 def list_ncloth_nodes() -> dict:
     """List all nCloth shape nodes in the current Maya scene.
 
@@ -61,15 +62,18 @@ def list_ncloth_nodes() -> dict:
             "Found {} nCloth node(s) in scene".format(len(nodes)),
             nodes=nodes,
             count=len(nodes),
+            prompt="Check the result with list_dynamics or use related actions to continue.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
         return maya_from_exception(exc, "Failed to list nCloth nodes")
 
+
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`list_ncloth_nodes`."""
     return list_ncloth_nodes(**kwargs)
+
 
 if __name__ == "__main__":
     import json

@@ -88,6 +88,7 @@ def get_mesh_edge_info(
             edges=edges,
             edge_count=len(edges),
             total_edges=total_edges,
+            prompt="Use merge_vertices or cleanup_mesh to fix edge issues.",
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
