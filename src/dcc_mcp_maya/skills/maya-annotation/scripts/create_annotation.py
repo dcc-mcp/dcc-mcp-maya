@@ -22,6 +22,8 @@ def create_annotation(
     The annotation can be attached to an existing object or placed at a
     specific world-space position.
 
+    Works in both interactive Maya and mayapy standalone (batch mode).
+
     Args:
         text: The annotation text to display.
         target_object: If provided, the annotation will be parented to this
@@ -44,37 +46,39 @@ def create_annotation(
             )
 
         pos = position if position and len(position) == 3 else [0.0, 1.0, 0.0]
+        annotation_node = None
+        transform_node = None
 
         if target_object:
-            # Annotate attached to existing object
+            # Annotate attached to an existing object
             result = cmds.annotate(target_object, text=text, point=pos)
             annotation_node = result if isinstance(result, str) else result[0]
             transform_node = cmds.listRelatives(annotation_node, parent=True)[0]
         else:
-            # World-space annotation.
-            # In Maya standalone (batch mode), cmds.annotate may not be available;
-            # detect this by checking for the command's existence first.
-            if not hasattr(cmds, "annotate") or not callable(getattr(cmds, "annotate", None)):
-                # Fallback for Maya standalone: use createNode
-                xform_name = name or "annotation1"
-                transform_node = cmds.createNode("transform", name=xform_name)
+            # World-space: cmds.annotate requires a target transform.
+            # Use a temporary locator so annotate() works in interactive Maya.
+            # In mayapy standalone, annotate may fail — fall back to createNode.
+            loc = None
+            try:
+                loc = cmds.spaceLocator(name="_ann_loc_tmp")[0]
+                cmds.move(pos[0], pos[1], pos[2], loc, absolute=True)
+                result = cmds.annotate(loc, text=text, point=pos)
+                annotation_node = result if isinstance(result, str) else result[0]
+                ann_xform = cmds.listRelatives(annotation_node, parent=True)[0]
+                # Re-parent to world before deleting the locator
+                cmds.parent(ann_xform, world=True)
+                transform_node = ann_xform
+            except Exception:
+                # Fallback for mayapy standalone / batch mode where annotate is unavailable
+                transform_node = cmds.createNode("transform", name=name or "annotation1")
                 annotation_node = cmds.createNode("annotationShape", parent=transform_node)
                 cmds.setAttr("{}.text".format(annotation_node), text, type="string")
                 cmds.move(pos[0], pos[1], pos[2], transform_node, absolute=True)
-                name = None  # already applied above, skip rename below
-            else:
-                # Interactive Maya: use locator as anchor, then re-parent to world
-                loc = cmds.spaceLocator(name="_ann_loc_tmp")[0]
-                try:
-                    cmds.move(pos[0], pos[1], pos[2], loc, absolute=True)
-                    result = cmds.annotate(loc, text=text, point=pos)
-                    annotation_node = result if isinstance(result, str) else result[0]
-                    ann_parent = cmds.listRelatives(annotation_node, parent=True)[0]
-                    cmds.parent(ann_parent, world=True)
-                    transform_node = ann_parent
-                finally:
-                    if cmds.objExists(loc):
-                        cmds.delete(loc)
+                # name was used for createNode — skip rename below
+                name = None
+            finally:
+                if loc and cmds.objExists(loc):
+                    cmds.delete(loc)
 
         if name and transform_node and cmds.objExists(transform_node):
             try:
