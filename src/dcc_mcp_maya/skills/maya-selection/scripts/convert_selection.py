@@ -30,9 +30,7 @@ def convert_selection(target: str = "") -> dict:
     if target not in _CONVERT_FLAGS:
         return skill_error(
             "Invalid target type",
-            "'{}' is not a valid target. Choose from: {}".format(
-                target, ", ".join(sorted(_CONVERT_FLAGS.keys()))
-            ),
+            "'{}' is not a valid target. Choose from: {}".format(target, ", ".join(sorted(_CONVERT_FLAGS.keys()))),
         )
 
     try:

@@ -133,7 +133,8 @@ class TestMigrationStructural:
     def test_validate_node_exists_usage_count(self):
         """At least 140 skill scripts should call validate_node_exists."""
         count = sum(
-            1 for path in _SKILLS_ROOT.rglob("scripts/*.py")
+            1
+            for path in _SKILLS_ROOT.rglob("scripts/*.py")
             if "validate_node_exists" in path.read_text(encoding="utf-8")
         )
         assert count >= 140, "Expected >= 140 scripts using validate_node_exists, got {}".format(count)
@@ -149,6 +150,7 @@ class TestValidateNodeExistsHelper:
 
     def _get_api(self):
         from dcc_mcp_maya import api  # noqa: PLC0415
+
         return api
 
     def test_returns_none_when_node_exists(self):

@@ -37,7 +37,6 @@ def export_gpu_cache(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-
         # Ensure plugin loaded
         if not cmds.pluginInfo("gpuCache", query=True, loaded=True):
             cmds.loadPlugin("gpuCache")
@@ -90,4 +89,5 @@ def main(**kwargs):
 
 if __name__ == "__main__":
     from dcc_mcp_core.skill import run_main
+
     run_main(main)

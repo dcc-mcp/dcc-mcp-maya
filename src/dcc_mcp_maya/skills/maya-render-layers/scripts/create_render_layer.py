@@ -34,7 +34,6 @@ def create_render_layer(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-
         if not name or not name.strip():
             return skill_error("Invalid layer name", "name must not be empty")
 
@@ -69,4 +68,5 @@ def main(**kwargs) -> dict:
 
 if __name__ == "__main__":
     from dcc_mcp_core.skill import run_main
+
     run_main(main)

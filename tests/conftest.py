@@ -37,9 +37,7 @@ def load_skill_script(skill_dir: str, script_name: str):
     """
     _MOD_COUNTER[0] += 1
     script_path = SKILLS_ROOT / skill_dir / "scripts" / "{}.py".format(script_name)
-    module_name = "skill_{}_{}_{}" .format(
-        skill_dir.replace("-", "_"), script_name, _MOD_COUNTER[0]
-    )
+    module_name = "skill_{}_{}_{}".format(skill_dir.replace("-", "_"), script_name, _MOD_COUNTER[0])
     spec = importlib.util.spec_from_file_location(module_name, str(script_path))
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
@@ -73,4 +71,3 @@ def make_mock_maya(
         for k, v in mel_attrs.items():
             setattr(mock_mel, k, v)
     return mock_maya, mock_cmds, mock_mel
-

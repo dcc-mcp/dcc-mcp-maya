@@ -44,7 +44,6 @@ def create_render_layer(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-
         if not name or not name.strip():
             return skill_error("Invalid layer name", "name must not be empty")
 
