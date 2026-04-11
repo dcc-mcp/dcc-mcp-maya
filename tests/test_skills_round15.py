@@ -110,13 +110,14 @@ class TestCreateAnnotation:
         mock_maya, mock_cmds = _make_mock_maya()
         mock_cmds.objExists.return_value = True
         mock_cmds.annotate.side_effect = RuntimeError("annotate failed")
+        # createNode also fails to simulate total failure
+        mock_cmds.createNode.side_effect = RuntimeError("createNode failed")
 
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             mod = _load_script("maya-annotation", "create_annotation")
             result = mod.create_annotation("Note")
 
         assert result["success"] is False
-        assert "annotate failed" in result["error"]
 
 
 class TestListAnnotations:

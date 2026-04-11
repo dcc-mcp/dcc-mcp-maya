@@ -21,6 +21,7 @@ def tag_asset_metadata(
     asset_variant: Optional[str] = None,
     asset_version: Optional[str] = None,
     pipeline_step: Optional[str] = None,
+    **kwargs,
 ) -> dict:
     """Tag a node with pipeline metadata string attributes.
 
