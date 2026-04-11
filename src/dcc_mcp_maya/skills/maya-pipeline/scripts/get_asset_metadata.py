@@ -14,39 +14,39 @@ from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_
 from dcc_mcp_maya.api import validate_node_exists  # noqa: E402
 
 
-def get_asset_metadata(node: str) -> dict:
+def get_asset_metadata(node_name: str) -> dict:
     """Read pipeline metadata string attributes from a node.
 
     Args:
-        node: Target node name.
+        node_name: Target node name.
 
     Returns:
         ActionResultModel dict with ``context.metadata`` dict.
         Missing attributes are returned as empty strings.
     """
 
-    if not node:
-        return skill_error("No node provided", "Provide 'node' parameter.")
+    if not node_name:
+        return skill_error("No node provided", "Provide 'node_name' parameter.")
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        err = validate_node_exists(cmds, node)
+        err = validate_node_exists(cmds, node_name)
         if err:
             return err
 
         metadata = {}
         for attr in _META_ATTRS:
-            if cmds.attributeQuery(attr, node=node, exists=True):
-                metadata[attr] = cmds.getAttr("{}.{}".format(node, attr)) or ""
+            if cmds.attributeQuery(attr, node=node_name, exists=True):
+                metadata[attr] = cmds.getAttr("{}.{}".format(node_name, attr)) or ""
             else:
                 metadata[attr] = ""
 
         tagged = [k for k, v in metadata.items() if v]
         return skill_success(
-            "Retrieved metadata from '{}' ({} tagged)".format(node, len(tagged)),
+            "Retrieved metadata from '{}' ({} tagged)".format(node_name, len(tagged)),
             prompt=("Metadata retrieved. Use tag_asset_metadata to update any empty fields before publishing."),
-            node=node,
+            node=node_name,
             metadata=metadata,
             tagged_count=len(tagged),
         )
