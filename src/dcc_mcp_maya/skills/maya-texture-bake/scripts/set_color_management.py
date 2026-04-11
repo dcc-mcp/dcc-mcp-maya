@@ -3,12 +3,12 @@
 # Import future modules
 from __future__ import annotations
 
-# Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
-
 # Import built-in modules
 import logging
 from typing import Optional
+
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 logger = logging.getLogger(__name__)
 

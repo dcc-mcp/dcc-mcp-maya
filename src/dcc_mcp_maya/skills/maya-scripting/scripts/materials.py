@@ -3,11 +3,11 @@
 # Import future modules
 from __future__ import annotations
 
-# Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
-
 # Import built-in modules
 from typing import Any, List, Optional
+
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 _SUPPORTED_SHADERS = ("lambert", "blinn", "phong", "phongE", "aiStandardSurface")
 

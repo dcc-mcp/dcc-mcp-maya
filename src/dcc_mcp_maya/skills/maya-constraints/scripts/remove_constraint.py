@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success, validate_node_exists
 
 _CONSTRAINT_NODE_TYPES = [
     "parentConstraint",
@@ -38,11 +38,9 @@ def remove_constraint(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(target):
-            return maya_error(
-                "Object not found: {}".format(target),
-                "'{}' does not exist".format(target),
-            )
+        err = validate_node_exists(cmds, target)
+        if err:
+            return err
 
         types_to_check = [constraint_type] if constraint_type else _CONSTRAINT_NODE_TYPES
         removed = []

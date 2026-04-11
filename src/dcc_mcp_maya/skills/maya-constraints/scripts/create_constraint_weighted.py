@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import List, Optional
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_maya.api import batch_validate_nodes, maya_error, maya_from_exception, maya_success
 
 _CONSTRAINT_TYPES = {
     "parent": "parentConstraint",
@@ -51,12 +51,9 @@ def create_constraint_weighted(
         if len(sources) < 1:
             return maya_error("No sources provided", "At least one source object is required")
 
-        for obj in sources + [target]:
-            if not cmds.objExists(obj):
-                return maya_error(
-                    "Object not found: {}".format(obj),
-                    "'{}' does not exist".format(obj),
-                )
+        err = batch_validate_nodes(cmds, sources + [target])
+        if err:
+            return err
 
         effective_weights = weights if weights and len(weights) == len(sources) else [1.0] * len(sources)
 

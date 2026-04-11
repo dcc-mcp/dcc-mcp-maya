@@ -4,9 +4,8 @@
 from __future__ import annotations
 
 # Import built-in modules
-
 # Import local modules
-from dcc_mcp_maya.api import batch_validate_nodes, maya_error, maya_from_exception, maya_success
+from dcc_mcp_maya.api import batch_validate_nodes, maya_error, maya_success
 
 
 def connect_attr(

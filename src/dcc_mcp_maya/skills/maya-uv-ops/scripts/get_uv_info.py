@@ -3,11 +3,11 @@
 # Import future modules
 from __future__ import annotations
 
-# Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
-
 # Import built-in modules
 from typing import Optional
+
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success, validate_node_exists
 
 
 def get_uv_info(object_name: str, uv_set: Optional[str] = None) -> dict:
@@ -26,8 +26,9 @@ def get_uv_info(object_name: str, uv_set: Optional[str] = None) -> dict:
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(object_name):
-            return maya_error("Object not found: {}".format(object_name))
+        err = validate_node_exists(cmds, object_name)
+        if err:
+            return err
 
         uv_sets = cmds.polyUVSet(object_name, query=True, allUVSets=True) or []
         current_set = cmds.polyUVSet(object_name, query=True, currentUVSet=True)
