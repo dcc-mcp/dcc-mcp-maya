@@ -300,6 +300,33 @@ class MayaMcpServer:
             logger.debug("get_tags failed: %s", exc)
             return []
 
+    def unregister_skill(self, name: str, dcc_name: Optional[str] = None) -> None:
+        """Unregister a skill / action from the server's registry.
+
+        Wraps ``ActionRegistry.unregister`` (v0.12.6+).  Silently ignores
+        errors so callers do not need to guard against missing entries.
+
+        Args:
+            name: The canonical action name (e.g.
+                ``"maya_scene__create_object"``).
+            dcc_name: If given, only unregister for that DCC.  If ``None``,
+                unregisters globally (all DCCs).
+
+        Example::
+
+            server.unregister_skill("maya_scene__create_object")
+            server.unregister_skill("maya_scene__create_object", dcc_name="maya")
+        """
+        registry = self.registry
+        if registry is None:
+            logger.warning("Registry not available; cannot unregister skill %r", name)
+            return
+        try:
+            registry.unregister(name, dcc_name=dcc_name)
+            logger.debug("Unregistered skill %r (dcc=%r)", name, dcc_name)
+        except Exception as exc:
+            logger.debug("unregister(%r) failed: %s", name, exc)
+
     # ── lifecycle ─────────────────────────────────────────────────────────────
 
     def start(self):
