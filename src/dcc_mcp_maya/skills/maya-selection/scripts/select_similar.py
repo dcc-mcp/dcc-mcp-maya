@@ -1,44 +1,50 @@
 """Select objects with similar topology or material."""
 
+# Import future modules
+from __future__ import annotations
+
+from typing import Optional
+
 # Import local modules
-from dcc_mcp_core.skill import skill_error, skill_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 _CRITERIA = ("topology", "material", "type", "name_prefix")
 
 
-def run(params):
+def select_similar(
+    criteria: str = "topology",
+    prefix: Optional[str] = None,
+) -> dict:
     """Select objects similar to the current selection.
 
     Args:
-        params: dict with keys:
-            - criteria (str, optional): Similarity criterion. One of:
-                "topology" — same vertex/edge/face count (default),
-                "material"  — same shader assignment,
-                "type"      — same Maya node type,
-                "name_prefix" — objects sharing the same name prefix (requires "prefix" key).
-            - prefix (str, optional): Name prefix when criteria="name_prefix".
+        criteria: Similarity criterion. One of:
+            "topology" — same vertex/edge/face count (default),
+            "material"  — same shader assignment,
+            "type"      — same Maya node type,
+            "name_prefix" — objects sharing the same name prefix (requires ``prefix``).
+        prefix: Name prefix when ``criteria="name_prefix"``.
 
     Returns:
-        ActionResultModel
+        ActionResultModel dict with ``context.criteria``, ``context.count``.
     """
-    import maya.cmds as cmds
-
-    criteria = params.get("criteria", "topology")
     if criteria not in _CRITERIA:
         return skill_error(
             "Invalid criteria",
             "'{}' is not valid. Choose from: {}".format(criteria, ", ".join(_CRITERIA)),
         )
 
-    current = cmds.ls(selection=True) or []
-    if not current:
-        return skill_error(
-            "Nothing selected",
-            "Select at least one object before calling select_similar",
-            prompt="Use set_selection (maya-scene) to set an initial selection.",
-        )
-
     try:
+        import maya.cmds as cmds  # noqa: PLC0415
+
+        current = cmds.ls(selection=True) or []
+        if not current:
+            return skill_error(
+                "Nothing selected",
+                "Select at least one object before calling select_similar",
+                prompt="Use set_selection (maya-scene) to set an initial selection.",
+            )
+
         similar = []
 
         if criteria == "topology":
@@ -94,11 +100,8 @@ def run(params):
                     similar.append(obj)
 
         elif criteria == "name_prefix":
-            prefix = params.get("prefix", "")
-            if not prefix:
-                # derive from first selected object
-                prefix = current[0].rstrip("0123456789_")
-            similar = [o for o in (cmds.ls() or []) if o.startswith(prefix)]
+            pfx = prefix or current[0].rstrip("0123456789_")
+            similar = [o for o in (cmds.ls() or []) if o.startswith(pfx)]
 
         if similar:
             cmds.select(similar)
@@ -110,5 +113,19 @@ def run(params):
             count=len(similar),
             objects=similar,
         )
+    except ImportError:
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return skill_error("Failed to select similar objects", str(exc))
+        return skill_exception(exc, message="Failed to select similar objects")
+
+
+@skill_entry
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`select_similar`."""
+    return select_similar(**kwargs)
+
+
+if __name__ == "__main__":
+    from dcc_mcp_core.skill import run_main
+
+    run_main(main)

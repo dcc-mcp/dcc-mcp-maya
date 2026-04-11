@@ -1,7 +1,10 @@
 """Convert the current selection to a different component type."""
 
+# Import future modules
+from __future__ import annotations
+
 # Import local modules
-from dcc_mcp_core.skill import skill_error, skill_success
+from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 _CONVERT_FLAGS = {
     "vertex": {"toVertex": True},
@@ -13,30 +16,29 @@ _CONVERT_FLAGS = {
 }
 
 
-def run(params):
+def convert_selection(target: str = "") -> dict:
     """Convert selection to a different component type.
 
     Args:
-        params: dict with keys:
-            - target (str, required): Component type to convert to.
-              One of: "vertex", "edge", "face", "uv", "object", "shell".
+        target: Component type to convert to.
+            One of: "vertex", "edge", "face", "uv", "object", "shell".
 
     Returns:
-        ActionResultModel
+        ActionResultModel dict with ``context.target``, ``context.count``.
     """
-    import maya.cmds as cmds
-
-    target = params.get("target", "").lower()
+    target = target.lower()
     if target not in _CONVERT_FLAGS:
         return skill_error(
             "Invalid target type",
-            "'{}' is not a valid target. Choose from: {}".format(target, ", ".join(sorted(_CONVERT_FLAGS.keys()))),
+            "'{}' is not a valid target. Choose from: {}".format(
+                target, ", ".join(sorted(_CONVERT_FLAGS.keys()))
+            ),
         )
 
     try:
-        flags = _CONVERT_FLAGS[target]
-        cmds.ConvertSelectionToVertices() if target == "vertex" else None
-        # Use polyListComponentConversion for component types
+        import maya.cmds as cmds  # noqa: PLC0415
+
+        flags = _CONVERT_FLAGS[target]  # noqa: F841
         current = cmds.ls(selection=True) or []
         if not current:
             return skill_error(
@@ -47,7 +49,7 @@ def run(params):
         if target == "object":
             cmds.select(cmds.ls(selection=True, objectsOnly=True))
         else:
-            converted = cmds.polyListComponentConversion(current, **flags) or []
+            converted = cmds.polyListComponentConversion(current, **_CONVERT_FLAGS[target]) or []
             if converted:
                 cmds.select(converted)
 
@@ -59,5 +61,19 @@ def run(params):
             count=len(result),
             selection=result,
         )
+    except ImportError:
+        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return skill_error("Failed to convert selection", str(exc))
+        return skill_exception(exc, message="Failed to convert selection")
+
+
+@skill_entry
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`convert_selection`."""
+    return convert_selection(**kwargs)
+
+
+if __name__ == "__main__":
+    from dcc_mcp_core.skill import run_main
+
+    run_main(main)
