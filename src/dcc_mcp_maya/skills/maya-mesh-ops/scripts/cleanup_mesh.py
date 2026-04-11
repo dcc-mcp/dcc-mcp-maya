@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success, validate_node_exists
 
 
 def cleanup_mesh(
@@ -28,8 +28,9 @@ def cleanup_mesh(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(object_name):
-            return maya_error("Object not found: {}".format(object_name), "")
+        err = validate_node_exists(cmds, object_name)
+        if err:
+            return err
 
         kwargs = {
             "selectOnly": False,

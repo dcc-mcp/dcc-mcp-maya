@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success, validate_node_exists, validate_node_type
 
 # Import built-in modules
 from typing import List, Optional
@@ -35,18 +35,13 @@ def set_joint_orient(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(joint_name):
-            return maya_error(
-                "Joint not found: {}".format(joint_name),
-                "'{}' does not exist in the scene".format(joint_name),
-            )
+        err = validate_node_exists(cmds, joint_name)
+        if err:
+            return err
 
-        node_type = cmds.objectType(joint_name)
-        if node_type != "joint":
-            return maya_error(
-                "Not a joint: {}".format(joint_name),
-                "'{}' is of type '{}', expected 'joint'".format(joint_name, node_type),
-            )
+        err = validate_node_type(cmds, joint_name, "joint")
+        if err:
+            return err
 
         ox, oy, oz = (orient or [0.0, 0.0, 0.0])[:3]
         cmds.setAttr("{}.jointOrientX".format(joint_name), ox)
