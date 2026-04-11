@@ -9,6 +9,8 @@ from typing import List, Optional, Tuple
 # Import local modules
 from dcc_mcp_core.skill import skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 
 def set_vertex_color(
     object_name: str,
@@ -34,8 +36,9 @@ def set_vertex_color(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(object_name):
-            return skill_error("Object not found: {}".format(object_name))
+        err = validate_node_exists(cmds, object_name)
+        if err:
+            return err
 
         r, g, b = float(color[0]), float(color[1]), float(color[2])
         a = float(alpha)
@@ -92,8 +95,9 @@ def get_vertex_color(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(object_name):
-            return skill_error("Object not found: {}".format(object_name))
+        err = validate_node_exists(cmds, object_name)
+        if err:
+            return err
 
         color_sets = cmds.polyColorSet(object_name, query=True, allColorSets=True) or []
         current_set = cmds.polyColorSet(object_name, query=True, currentColorSet=True)
@@ -107,7 +111,8 @@ def get_vertex_color(
 
         if vertex_index is not None:
             component = "{}.vtx[{}]".format(object_name, vertex_index)
-            if not cmds.objExists(component):
+            err = validate_node_exists(cmds, component)
+            if err:
                 return skill_error("Vertex {} not found on '{}'".format(vertex_index, object_name))
 
             query_kwargs = {}  # type: dict
@@ -162,8 +167,9 @@ def create_color_set(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(object_name):
-            return skill_error("Object not found: {}".format(object_name))
+        err = validate_node_exists(cmds, object_name)
+        if err:
+            return err
 
         existing = cmds.polyColorSet(object_name, query=True, allColorSets=True) or []
         if color_set_name in existing:
@@ -204,8 +210,9 @@ def remove_vertex_colors(object_name: str, color_set: Optional[str] = None) -> d
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(object_name):
-            return skill_error("Object not found: {}".format(object_name))
+        err = validate_node_exists(cmds, object_name)
+        if err:
+            return err
 
         if color_set:
             existing = cmds.polyColorSet(object_name, query=True, allColorSets=True) or []

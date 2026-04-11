@@ -9,6 +9,8 @@ from typing import Optional
 # Import local modules
 from dcc_mcp_core.skill import skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 
 def get_uv_info(object_name: str, uv_set: Optional[str] = None) -> dict:
     """Query UV sets and coordinates on a polygon mesh.
@@ -26,8 +28,9 @@ def get_uv_info(object_name: str, uv_set: Optional[str] = None) -> dict:
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(object_name):
-            return skill_error("Object not found: {}".format(object_name))
+        err = validate_node_exists(cmds, object_name)
+        if err:
+            return err
 
         uv_sets = cmds.polyUVSet(object_name, query=True, allUVSets=True) or []
         current_set = cmds.polyUVSet(object_name, query=True, currentUVSet=True)
@@ -73,8 +76,9 @@ def create_uv_set(object_name: str, uv_set_name: str, copy_from: Optional[str] =
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(object_name):
-            return skill_error("Object not found: {}".format(object_name))
+        err = validate_node_exists(cmds, object_name)
+        if err:
+            return err
 
         existing = cmds.polyUVSet(object_name, query=True, allUVSets=True) or []
         if uv_set_name in existing:
@@ -114,8 +118,9 @@ def delete_uv_set(object_name: str, uv_set_name: str) -> dict:
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(object_name):
-            return skill_error("Object not found: {}".format(object_name))
+        err = validate_node_exists(cmds, object_name)
+        if err:
+            return err
 
         existing = cmds.polyUVSet(object_name, query=True, allUVSets=True) or []
         if uv_set_name not in existing:
@@ -174,8 +179,9 @@ def project_uvs(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(object_name):
-            return skill_error("Object not found: {}".format(object_name))
+        err = validate_node_exists(cmds, object_name)
+        if err:
+            return err
 
         axis_index = {"x": 0, "y": 1, "z": 2}[axis]
 
@@ -237,8 +243,9 @@ def copy_uvs(
         import maya.cmds as cmds  # noqa: PLC0415
 
         for name in (source, target):
-            if not cmds.objExists(name):
-                return skill_error("Object not found: {}".format(name))
+            err = validate_node_exists(cmds, name)
+            if err:
+                return err
 
         kwargs = {
             "transferUVs": 1,
@@ -285,8 +292,9 @@ def get_uv_shell_info(object_name: str, uv_set: Optional[str] = None) -> dict:
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(object_name):
-            return skill_error("Object not found: {}".format(object_name))
+        err = validate_node_exists(cmds, object_name)
+        if err:
+            return err
 
         # Resolve UV set
         if uv_set:
@@ -373,8 +381,9 @@ def unfold_uvs(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(object_name):
-            return skill_error("Object not found: {}".format(object_name))
+        err = validate_node_exists(cmds, object_name)
+        if err:
+            return err
 
         cmds.u3dUnfold(
             object_name,
@@ -435,8 +444,9 @@ def normalize_uvs(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(object_name):
-            return skill_error("Object not found: {}".format(object_name))
+        err = validate_node_exists(cmds, object_name)
+        if err:
+            return err
 
         cmds.polyNormalizeUV(
             object_name,
