@@ -9,6 +9,8 @@ from typing import Optional
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 
 def get_poly_count(object_name: Optional[str] = None) -> dict:
     """Query polygon statistics for an object or the entire scene.
@@ -25,8 +27,9 @@ def get_poly_count(object_name: Optional[str] = None) -> dict:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if object_name:
-            if not cmds.objExists(object_name):
-                return skill_error("Object not found: {}".format(object_name), "")
+            err = validate_node_exists(cmds, object_name)
+            if err:
+                return err
             targets = [object_name]
         else:
             targets = cmds.ls(type="mesh") or []

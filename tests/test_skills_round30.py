@@ -18,13 +18,12 @@ from __future__ import annotations
 # Import built-in modules
 import ast
 import os
+import sys
 from pathlib import Path
 from unittest.mock import MagicMock
 
 # Import third-party modules
 import pytest
-import sys
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -89,22 +88,22 @@ class TestRound30Structural:
 
     def test_uv_ops_no_raw_objexists(self):
         text = (SKILLS_ROOT / "maya-scripting/scripts/uv_ops.py").read_text(encoding="utf-8")
-        raw = [l for l in text.splitlines() if "cmds.objExists" in l]
+        raw = [line for line in text.splitlines() if "cmds.objExists" in line]
         assert raw == [], "uv_ops.py still has raw cmds.objExists: {}".format(raw)
 
     def test_vertex_color_no_raw_objexists(self):
         text = (SKILLS_ROOT / "maya-scripting/scripts/vertex_color.py").read_text(encoding="utf-8")
-        raw = [l for l in text.splitlines() if "cmds.objExists" in l]
+        raw = [line for line in text.splitlines() if "cmds.objExists" in line]
         assert raw == [], "vertex_color.py still has raw cmds.objExists: {}".format(raw)
 
     def test_deformer_advanced_no_raw_objexists(self):
         text = (SKILLS_ROOT / "maya-scripting/scripts/deformer_advanced.py").read_text(encoding="utf-8")
-        raw = [l for l in text.splitlines() if "cmds.objExists" in l]
+        raw = [line for line in text.splitlines() if "cmds.objExists" in line]
         assert raw == [], "deformer_advanced.py still has raw cmds.objExists: {}".format(raw)
 
     def test_mesh_ops_no_raw_objexists(self):
         text = (SKILLS_ROOT / "maya-scripting/scripts/mesh_ops.py").read_text(encoding="utf-8")
-        raw = [l for l in text.splitlines() if "cmds.objExists" in l]
+        raw = [line for line in text.splitlines() if "cmds.objExists" in line]
         assert raw == [], "mesh_ops.py still has raw cmds.objExists: {}".format(raw)
 
     def test_migrated_files_have_validate_import(self):
@@ -326,7 +325,7 @@ class TestDynamicsConditionalValidation:
         source = (SKILLS_ROOT / "maya-scripting/scripts/dynamics.py").read_text(encoding="utf-8")
         # nucleus guards should use validate_node_exists now
         # Only 1 remaining is the attribute-probe (if cmds.objExists(mag_attr))
-        remaining = [l for l in source.splitlines() if "cmds.objExists" in l and "not cmds.objExists" in l]
+        remaining = [ln for ln in source.splitlines() if "cmds.objExists" in ln and "not cmds.objExists" in ln]
         assert remaining == [], "Found residual not-objExists guards: {}".format(remaining)
 
     def test_dynamics_has_validate_import(self):
@@ -381,7 +380,7 @@ class TestSetsBatchValidation:
     def test_sets_no_raw_guard(self):
         source = (SKILLS_ROOT / "maya-scripting/scripts/sets.py").read_text(encoding="utf-8")
         # Only the best-effort 'existing = [obj for obj in objects if cmds.objExists(obj)]' may remain
-        bad = [l for l in source.splitlines() if "if not cmds.objExists" in l]
+        bad = [ln for ln in source.splitlines() if "if not cmds.objExists" in ln]
         assert bad == [], "Found residual not-objExists guards: {}".format(bad)
 
 

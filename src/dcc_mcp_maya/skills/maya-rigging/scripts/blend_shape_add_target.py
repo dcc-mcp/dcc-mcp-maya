@@ -9,6 +9,8 @@ from typing import Optional
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 
 def blend_shape_add_target(
     blend_shape: str,
@@ -40,15 +42,17 @@ def blend_shape_add_target(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(blend_shape):
-            return skill_error("Blend shape not found: {}".format(blend_shape))
+        err = validate_node_exists(cmds, blend_shape)
+        if err:
+            return err
 
         node_type = cmds.objectType(blend_shape)
         if node_type != "blendShape":
             return skill_error("'{}' is not a blendShape node (type: {})".format(blend_shape, node_type))
 
-        if not cmds.objExists(target_mesh):
-            return skill_error("Target mesh not found: {}".format(target_mesh))
+        err = validate_node_exists(cmds, target_mesh)
+        if err:
+            return err
 
         # Determine target index
         if index is None:
