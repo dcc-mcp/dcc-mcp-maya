@@ -3,11 +3,11 @@
 # Import future modules
 from __future__ import annotations
 
-# Import built-in modules
-import logging
-from typing import Optional
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
-logger = logging.getLogger(__name__)
+# Import built-in modules
+from typing import Optional
 
 _SHAPES = {
     "circle": [
@@ -57,7 +57,6 @@ _SHAPES = {
     ],
 }
 
-
 def create_control_curve(
     shape: str = "circle",
     name: Optional[str] = None,
@@ -77,17 +76,16 @@ def create_control_curve(
     Returns:
         ActionResultModel dict with ``context.curve_name``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         pts = _SHAPES.get(shape)
         if pts is None:
-            return error_result(
+            return maya_error(
                 "Unknown shape: {}".format(shape),
                 "Valid shapes: {}".format(", ".join(sorted(_SHAPES.keys()))),
-            ).to_dict()
+            )
 
         scaled = [(x * scale, y * scale, z * scale) for x, y, z in pts]
         degree = 1
@@ -103,24 +101,21 @@ def create_control_curve(
             cmds.setAttr("{}.overrideEnabled".format(shape_node), True)
             cmds.setAttr("{}.overrideColor".format(shape_node), int(color))
 
-        return success_result(
+        return maya_success(
             "Created control curve '{}' (shape={}, scale={})".format(crv, shape, scale),
             prompt="Use lock_hide_attributes to clean up the control's channel box.",
             curve_name=crv,
             shape=shape,
             scale=scale,
             color=color,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("create_control_curve failed")
-        return error_result("Failed to create control curve '{}'".format(name or shape), str(exc)).to_dict()
-
+        return maya_from_exception(exc, "Failed to create control curve '{}'".format(name or shape))
 
 def main(**kwargs):
     return create_control_curve(**kwargs)
-
 
 if __name__ == "__main__":
     import json

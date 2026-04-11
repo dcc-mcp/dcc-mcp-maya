@@ -3,11 +3,8 @@
 # Import future modules
 from __future__ import annotations
 
-# Import built-in modules
-import logging
-
-logger = logging.getLogger(__name__)
-
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 def list_assemblies(node_type: str = "all") -> dict:
     """List assembly nodes.
@@ -19,7 +16,6 @@ def list_assemblies(node_type: str = "all") -> dict:
         ActionResultModel dict with ``context.definitions``, ``context.references``,
         and ``context.count``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
@@ -60,7 +56,7 @@ def list_assemblies(node_type: str = "all") -> dict:
                 )
 
         all_nodes = definitions + references
-        return success_result(
+        return maya_success(
             "Found {} assembly node(s) ({} definitions, {} references)".format(
                 len(all_nodes), len(definitions), len(references)
             ),
@@ -68,17 +64,14 @@ def list_assemblies(node_type: str = "all") -> dict:
             definitions=definitions,
             references=references,
             count=len(all_nodes),
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("list_assemblies failed")
-        return error_result("Failed to list assemblies", str(exc)).to_dict()
-
+        return maya_from_exception(exc, "Failed to list assemblies")
 
 def main(**kwargs):
     return list_assemblies(**kwargs)
-
 
 if __name__ == "__main__":
     import json

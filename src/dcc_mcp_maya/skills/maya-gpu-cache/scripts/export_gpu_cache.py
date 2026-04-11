@@ -4,11 +4,11 @@
 from __future__ import annotations
 
 # Import built-in modules
-import logging
 import os
 from typing import List, Optional
 
-logger = logging.getLogger(__name__)
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 
 def export_gpu_cache(
@@ -32,8 +32,6 @@ def export_gpu_cache(
     Returns:
         ActionResultModel dict with ``context.file_path`` and ``context.objects``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
@@ -43,19 +41,19 @@ def export_gpu_cache(
 
         missing = [o for o in objects if not cmds.objExists(o)]
         if missing:
-            return error_result(
+            return maya_error(
                 "Objects not found",
                 "Missing: {}".format(", ".join(missing)),
-            ).to_dict()
+            )
 
         out_dir = os.path.dirname(os.path.abspath(file_path))
         out_name = os.path.splitext(os.path.basename(file_path))[0]
 
         if not os.path.isdir(out_dir):
-            return error_result(
+            return maya_error(
                 "Output directory does not exist: {}".format(out_dir),
                 "Create the directory first.",
-            ).to_dict()
+            )
 
         s = start_frame if start_frame is not None else cmds.playbackOptions(query=True, min=True)
         e = end_frame if end_frame is not None else cmds.playbackOptions(query=True, max=True)
@@ -72,18 +70,17 @@ def export_gpu_cache(
             fileName=out_name,
         )
 
-        return success_result(
+        return maya_success(
             "Exported GPU cache to '{}'".format(file_path),
             prompt="Use import_gpu_cache to reload the file, or list_gpu_caches to verify.",
             file_path=file_path,
             objects=objects,
             frame_range=[s, e],
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("export_gpu_cache failed")
-        return error_result("Failed to export GPU cache", str(exc)).to_dict()
+        return maya_from_exception(exc, "Failed to export GPU cache")
 
 
 def main(**kwargs):

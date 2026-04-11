@@ -3,12 +3,11 @@
 # Import future modules
 from __future__ import annotations
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 # Import built-in modules
-import logging
 from typing import Optional
-
-logger = logging.getLogger(__name__)
-
 
 def create_ik_handle(
     start_joint: str,
@@ -31,7 +30,6 @@ def create_ik_handle(
         ActionResultModel dict with ``context.handle_name``,
         ``context.effector_name``, and ``context.solver``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     _VALID_SOLVERS = ("ikRPsolver", "ikSCsolver")
 
@@ -39,22 +37,22 @@ def create_ik_handle(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(start_joint):
-            return error_result(
+            return maya_error(
                 "Start joint not found: {}".format(start_joint),
                 "'{}' does not exist in the scene".format(start_joint),
-            ).to_dict()
+            )
 
         if not cmds.objExists(end_joint):
-            return error_result(
+            return maya_error(
                 "End joint not found: {}".format(end_joint),
                 "'{}' does not exist in the scene".format(end_joint),
-            ).to_dict()
+            )
 
         if solver not in _VALID_SOLVERS:
-            return error_result(
+            return maya_error(
                 "Invalid solver: {}".format(solver),
                 "solver must be one of {}".format(_VALID_SOLVERS),
-            ).to_dict()
+            )
 
         kwargs = {
             "startJoint": start_joint,
@@ -68,25 +66,22 @@ def create_ik_handle(
         handle_name = result[0]
         effector_name = result[1]
 
-        return success_result(
+        return maya_success(
             "Created IK handle '{}'".format(handle_name),
             handle_name=handle_name,
             effector_name=effector_name,
             start_joint=start_joint,
             end_joint=end_joint,
             solver=solver,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("create_ik_handle failed")
-        return error_result("Failed to create IK handle", str(exc)).to_dict()
-
+        return maya_from_exception(exc, "Failed to create IK handle")
 
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`create_ik_handle`."""
     return create_ik_handle(**kwargs)
-
 
 if __name__ == "__main__":
     import json

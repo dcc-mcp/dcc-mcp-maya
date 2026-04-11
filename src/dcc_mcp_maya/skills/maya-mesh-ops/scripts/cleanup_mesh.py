@@ -3,10 +3,8 @@
 # Import future modules
 from __future__ import annotations
 
-# Import built-in modules
-import logging
-
-logger = logging.getLogger(__name__)
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 
 def cleanup_mesh(
@@ -27,13 +25,11 @@ def cleanup_mesh(
     Returns:
         ActionResultModel dict.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return error_result("Object not found: {}".format(object_name)).to_dict()
+            return maya_error("Object not found: {}".format(object_name), "")
 
         kwargs = {
             "selectOnly": False,
@@ -43,18 +39,17 @@ def cleanup_mesh(
         }
         cmds.polyClean(object_name, **kwargs)
 
-        return success_result(
+        return maya_success(
             "Cleaned mesh '{}'".format(object_name),
             object_name=object_name,
             non_manifold=non_manifold,
             lamina_faces=lamina_faces,
             invalid_components=invalid_components,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("cleanup_mesh failed")
-        return error_result("Failed to clean mesh", str(exc)).to_dict()
+        return maya_from_exception(exc, "Failed to clean mesh")
 
 
 def main(**kwargs) -> dict:

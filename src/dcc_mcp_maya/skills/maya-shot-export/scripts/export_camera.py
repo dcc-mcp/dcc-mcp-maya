@@ -3,12 +3,11 @@
 # Import future modules
 from __future__ import annotations
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 # Import built-in modules
-import logging
 import os
-
-logger = logging.getLogger(__name__)
-
 
 def export_camera(
     camera: str,
@@ -29,16 +28,15 @@ def export_camera(
     Returns:
         ActionResultModel dict with ``context.file_path``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(camera):
-            return error_result(
+            return maya_error(
                 "Camera '{}' not found".format(camera),
                 "Use list_cameras to find available cameras",
-            ).to_dict()
+            )
 
         # Resolve transform node
         cam_type = cmds.objectType(camera)
@@ -70,23 +68,20 @@ def export_camera(
             mel.eval("FBXExportBakeComplexEnd -v {};".format(int(end_frame)))
             mel.eval('FBXExport -f "{}" -s;'.format(file_path.replace("\\", "/")))
 
-        return success_result(
+        return maya_success(
             "Exported camera '{}' to '{}'".format(cam_transform, file_path),
             prompt="Import this camera file in your compositing or lighting application.",
             file_path=file_path,
             camera=cam_transform,
             file_format=file_format,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("export_camera failed")
-        return error_result("Failed to export camera '{}'".format(camera), str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to export camera '{}'".format(camera))
 
 def main(**kwargs):
     return export_camera(**kwargs)
-
 
 if __name__ == "__main__":
     import json

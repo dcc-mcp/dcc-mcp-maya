@@ -3,10 +3,8 @@
 # Import future modules
 from __future__ import annotations
 
-# Import built-in modules
-import logging
-
-logger = logging.getLogger(__name__)
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 
 def set_view_transform(view_transform: str) -> dict:
@@ -25,8 +23,6 @@ def set_view_transform(view_transform: str) -> dict:
     Returns:
         ActionResultModel dict with ``context.view_transform``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
@@ -38,16 +34,15 @@ def set_view_transform(view_transform: str) -> dict:
 
         applied = cmds.colorManagementPrefs(query=True, viewTransformName=True) or ""
 
-        return success_result(
+        return maya_success(
             "Set view transform to '{}'".format(applied),
             prompt="Use get_color_management_info to verify all color settings.",
             view_transform=applied,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("set_view_transform failed")
-        return error_result("Failed to set view transform", str(exc)).to_dict()
+        return maya_from_exception(exc, "Failed to set view transform")
 
 
 def main(**kwargs):

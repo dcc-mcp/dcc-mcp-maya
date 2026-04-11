@@ -3,10 +3,8 @@
 # Import future modules
 from __future__ import annotations
 
-# Import built-in modules
-import logging
-
-logger = logging.getLogger(__name__)
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 _FORMAT_NAMES = {
     0: "gif",
@@ -24,7 +22,6 @@ _FORMAT_NAMES = {
     40: "exr",
 }
 
-
 def get_render_settings() -> dict:
     """Return the current Maya render settings.
 
@@ -33,7 +30,6 @@ def get_render_settings() -> dict:
         ``context.renderer``, ``context.start_frame``, ``context.end_frame``,
         ``context.image_format``, and ``context.output_path``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
@@ -47,7 +43,7 @@ def get_render_settings() -> dict:
         image_format = _FORMAT_NAMES.get(fmt_code, str(fmt_code))
         output_path = cmds.getAttr("defaultRenderGlobals.imageFilePrefix") or ""
 
-        return success_result(
+        return maya_success(
             "Render settings: {}×{} | {} | frames {}-{} | format {}".format(
                 width, height, renderer, int(start_frame), int(end_frame), image_format
             ),
@@ -59,18 +55,15 @@ def get_render_settings() -> dict:
             end_frame=end_frame,
             image_format=image_format,
             output_path=output_path,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("get_render_settings failed")
-        return error_result("Failed to get render settings", str(exc)).to_dict()
-
+        return maya_from_exception(exc, "Failed to get render settings")
 
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`get_render_settings`."""
     return get_render_settings(**kwargs)
-
 
 if __name__ == "__main__":
     import json

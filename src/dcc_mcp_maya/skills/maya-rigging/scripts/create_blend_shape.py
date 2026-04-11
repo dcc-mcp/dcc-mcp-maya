@@ -3,12 +3,11 @@
 # Import future modules
 from __future__ import annotations
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 # Import built-in modules
-import logging
 from typing import List, Optional
-
-logger = logging.getLogger(__name__)
-
 
 def create_blend_shape(
     base_mesh: str,
@@ -29,24 +28,23 @@ def create_blend_shape(
         ActionResultModel dict with ``context.blend_shape_name``,
         ``context.target_count``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(base_mesh):
-            return error_result(
+            return maya_error(
                 "Base mesh not found: {}".format(base_mesh),
                 "'{}' does not exist in the scene".format(base_mesh),
-            ).to_dict()
+            )
 
         targets = target_meshes or []
         missing = [t for t in targets if not cmds.objExists(t)]
         if missing:
-            return error_result(
+            return maya_error(
                 "Target meshes not found: {}".format(", ".join(missing)),
                 "The following targets do not exist: {}".format(", ".join(missing)),
-            ).to_dict()
+            )
 
         all_meshes = targets + [base_mesh]
         kwargs = {"origin": origin}  # type: dict
@@ -56,24 +54,21 @@ def create_blend_shape(
         result = cmds.blendShape(*all_meshes, **kwargs)
         bs_name = result[0] if result else (name or "blendShape1")
 
-        return success_result(
+        return maya_success(
             "Created blend shape '{}' on '{}'".format(bs_name, base_mesh),
             blend_shape_name=bs_name,
             base_mesh=base_mesh,
             target_count=len(targets),
             targets=targets,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("create_blend_shape failed")
-        return error_result("Failed to create blend shape on {}".format(base_mesh), str(exc)).to_dict()
-
+        return maya_from_exception(exc, "Failed to create blend shape on {}".format(base_mesh))
 
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`create_blend_shape`."""
     return create_blend_shape(**kwargs)
-
 
 if __name__ == "__main__":
     import json

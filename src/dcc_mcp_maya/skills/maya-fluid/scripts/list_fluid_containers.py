@@ -4,10 +4,9 @@
 from __future__ import annotations
 
 # Import built-in modules
-import logging
 
-logger = logging.getLogger(__name__)
-
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 def list_fluid_containers() -> dict:
     """List all fluidShape nodes with their transform parents.
@@ -16,8 +15,6 @@ def list_fluid_containers() -> dict:
         ActionResultModel dict with ``context.containers`` (list of dicts)
         and ``context.count``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
@@ -38,22 +35,19 @@ def list_fluid_containers() -> dict:
                 }
             )
 
-        return success_result(
+        return maya_success(
             "Found {} fluid container(s)".format(len(containers)),
             prompt="Use set_fluid_attribute to adjust simulation parameters.",
             containers=containers,
             count=len(containers),
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("list_fluid_containers failed")
-        return error_result("Failed to list fluid containers", str(exc)).to_dict()
-
+        return maya_from_exception(exc, "Failed to list fluid containers")
 
 def main(**kwargs):
     return list_fluid_containers(**kwargs)
-
 
 if __name__ == "__main__":
     import json

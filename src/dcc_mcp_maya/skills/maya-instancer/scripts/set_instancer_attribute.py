@@ -4,10 +4,10 @@
 from __future__ import annotations
 
 # Import built-in modules
-import logging
 from typing import Optional
 
-logger = logging.getLogger(__name__)
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 # Mapping of friendly names to Maya instancer attribute fields
 ATTRIBUTE_MAP = {
@@ -45,23 +45,21 @@ def set_instancer_attribute(
         ActionResultModel dict with ``context.instancer_node``,
         ``context.attribute``, and ``context.particle_attribute``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         for name in (particle_system, instancer_node):
             if not cmds.objExists(name):
-                return error_result(
+                return maya_error(
                     "Node not found: {}".format(name),
                     "'{}' does not exist".format(name),
-                ).to_dict()
+                )
 
         if attribute not in ATTRIBUTE_MAP:
-            return error_result(
+            return maya_error(
                 "Unknown attribute: {}".format(attribute),
                 "Choose from: {}".format(", ".join(sorted(ATTRIBUTE_MAP.keys()))),
-            ).to_dict()
+            )
 
         instancer_field = ATTRIBUTE_MAP[attribute]
         edit_kwargs = {
@@ -71,7 +69,7 @@ def set_instancer_attribute(
         }
         cmds.particleInstancer(particle_system, **edit_kwargs)
 
-        return success_result(
+        return maya_success(
             "Set instancer '{}' field '{}' → '{}'".format(
                 instancer_node, instancer_field, particle_attribute or "(cleared)"
             ),
@@ -79,12 +77,11 @@ def set_instancer_attribute(
             instancer_node=instancer_node,
             attribute=instancer_field,
             particle_attribute=particle_attribute,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("set_instancer_attribute failed")
-        return error_result("Failed to set instancer attribute", str(exc)).to_dict()
+        return maya_from_exception(exc, "Failed to set instancer attribute")
 
 
 def main(**kwargs):

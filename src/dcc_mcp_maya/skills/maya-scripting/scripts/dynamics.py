@@ -3,11 +3,11 @@
 # Import future modules
 from __future__ import annotations
 
-# Import built-in modules
-import logging
-from typing import List, Optional
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
-logger = logging.getLogger(__name__)
+# Import built-in modules
+from typing import List, Optional
 
 _VALID_FIELD_TYPES = (
     "gravity",
@@ -21,7 +21,6 @@ _VALID_FIELD_TYPES = (
 )
 
 _VALID_MIRROR_AXES = ("x", "y", "z")
-
 
 def create_nucleus(
     name: Optional[str] = None,
@@ -44,7 +43,6 @@ def create_nucleus(
         ActionResultModel dict with ``context.nucleus_node``,
         ``context.gravity``, ``context.wind_speed``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     wind_dir = wind_direction if (wind_direction and len(wind_direction) == 3) else [0.0, 0.0, 1.0]
 
@@ -75,19 +73,17 @@ def create_nucleus(
         if not cmds.isConnected("{}.outTime".format(time_node), "{}.currentTime".format(nucleus_node)):
             cmds.connectAttr("{}.outTime".format(time_node), "{}.currentTime".format(nucleus_node))
 
-        return success_result(
+        return maya_success(
             "Created nucleus solver '{}'".format(nucleus_node),
             nucleus_node=nucleus_node,
             gravity=gravity,
             wind_speed=wind_speed,
             wind_direction=wind_dir,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("create_nucleus failed")
-        return error_result("Failed to create nucleus solver", str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to create nucleus solver")
 
 def set_nucleus_attribute(
     nucleus: str,
@@ -107,30 +103,29 @@ def set_nucleus_attribute(
         ActionResultModel dict with ``context.nucleus``,
         ``context.attribute``, ``context.value``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(nucleus):
-            return error_result(
+            return maya_error(
                 "Nucleus node not found: {}".format(nucleus),
                 "'{}' does not exist in the scene".format(nucleus),
-            ).to_dict()
+            )
 
         node_type = cmds.objectType(nucleus)
         if node_type != "nucleus":
-            return error_result(
+            return maya_error(
                 "Not a nucleus node: {}".format(nucleus),
                 "Expected node type 'nucleus', got '{}'".format(node_type),
-            ).to_dict()
+            )
 
         plug = "{}.{}".format(nucleus, attribute)
         if not cmds.objExists(plug):
-            return error_result(
+            return maya_error(
                 "Attribute not found: {}".format(plug),
                 "'{}' does not have attribute '{}'".format(nucleus, attribute),
-            ).to_dict()
+            )
 
         if isinstance(value, (list, tuple)) and len(value) == 3:
             cmds.setAttr(plug, value[0], value[1], value[2], type="double3")
@@ -139,18 +134,16 @@ def set_nucleus_attribute(
         else:
             cmds.setAttr(plug, value)
 
-        return success_result(
+        return maya_success(
             "Set '{}.{}' = {}".format(nucleus, attribute, value),
             nucleus=nucleus,
             attribute=attribute,
             value=value,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("set_nucleus_attribute failed")
-        return error_result("Failed to set attribute on nucleus '{}'".format(nucleus), str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to set attribute on nucleus '{}'".format(nucleus))
 
 def create_dynamic_field(
     field_type: str = "gravity",
@@ -174,24 +167,23 @@ def create_dynamic_field(
         ActionResultModel dict with ``context.field_node``,
         ``context.field_type``, ``context.magnitude``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     ft = field_type.lower()
     if ft not in _VALID_FIELD_TYPES:
-        return error_result(
+        return maya_error(
             "Invalid field type: {}".format(field_type),
             "Supported types: {}".format(", ".join(_VALID_FIELD_TYPES)),
-        ).to_dict()
+        )
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         create_fn = getattr(cmds, ft, None)
         if create_fn is None:
-            return error_result(
+            return maya_error(
                 "Field type not available: {}".format(ft),
                 "cmds.{} is not accessible in this Maya version".format(ft),
-            ).to_dict()
+            )
 
         field_kwargs = {}
         if name:
@@ -210,26 +202,24 @@ def create_dynamic_field(
         if objects:
             missing = [o for o in objects if not cmds.objExists(o)]
             if missing:
-                return error_result(
+                return maya_error(
                     "Object(s) not found: {}".format(", ".join(missing)),
                     "Ensure all objects exist before connecting the field",
-                ).to_dict()
+                )
             cmds.connectDynamic(objects, fields=field_node)
             connected = list(objects)
 
-        return success_result(
+        return maya_success(
             "Created {} field '{}'".format(ft, field_node),
             field_node=field_node,
             field_type=ft,
             magnitude=magnitude,
             connected_objects=connected,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("create_dynamic_field failed")
-        return error_result("Failed to create dynamic field", str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to create dynamic field")
 
 def connect_field_to_objects(
     field_node: str,
@@ -250,43 +240,40 @@ def connect_field_to_objects(
         ActionResultModel dict with ``context.field_node`` and
         ``context.connected_objects``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     if not objects:
-        return error_result(
+        return maya_error(
             "No objects specified",
             "Provide at least one dynamic object name",
-        ).to_dict()
+        )
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(field_node):
-            return error_result(
+            return maya_error(
                 "Field node not found: {}".format(field_node),
                 "'{}' does not exist in the scene".format(field_node),
-            ).to_dict()
+            )
 
         missing = [o for o in objects if not cmds.objExists(o)]
         if missing:
-            return error_result(
+            return maya_error(
                 "Object(s) not found: {}".format(", ".join(missing)),
                 "Ensure all objects exist before connecting the field",
-            ).to_dict()
+            )
 
         cmds.connectDynamic(objects, fields=field_node)
 
-        return success_result(
+        return maya_success(
             "Connected field '{}' to {} object(s)".format(field_node, len(objects)),
             field_node=field_node,
             connected_objects=list(objects),
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("connect_field_to_objects failed")
-        return error_result("Failed to connect field '{}' to objects".format(field_node), str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to connect field '{}' to objects".format(field_node))
 
 def create_ncloth(
     mesh: str,
@@ -309,29 +296,28 @@ def create_ncloth(
         ActionResultModel dict with ``context.ncloth_node``,
         ``context.mesh``, ``context.nucleus``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(mesh):
-            return error_result(
+            return maya_error(
                 "Mesh not found: {}".format(mesh),
                 "'{}' does not exist in the scene".format(mesh),
-            ).to_dict()
+            )
 
         mesh_type = cmds.objectType(mesh)
         if mesh_type not in ("transform", "mesh"):
-            return error_result(
+            return maya_error(
                 "Invalid mesh type: {}".format(mesh_type),
                 "'{}' is not a polygon mesh or transform".format(mesh),
-            ).to_dict()
+            )
 
         if nucleus and not cmds.objExists(nucleus):
-            return error_result(
+            return maya_error(
                 "Nucleus node not found: {}".format(nucleus),
                 "'{}' does not exist in the scene".format(nucleus),
-            ).to_dict()
+            )
 
         # Select the mesh and create nCloth
         cmds.select(mesh, replace=True)
@@ -350,18 +336,16 @@ def create_ncloth(
             )
 
         used_nucleus = nucleus or "default"
-        return success_result(
+        return maya_success(
             "Created nCloth '{}' on mesh '{}'".format(ncloth_node, mesh),
             ncloth_node=ncloth_node,
             mesh=mesh,
             nucleus=used_nucleus,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("create_ncloth failed")
-        return error_result("Failed to create nCloth on '{}'".format(mesh), str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to create nCloth on '{}'".format(mesh))
 
 def create_nrigid(
     mesh: str,
@@ -384,29 +368,28 @@ def create_nrigid(
         ActionResultModel dict with ``context.nrigid_node``,
         ``context.mesh``, ``context.nucleus``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(mesh):
-            return error_result(
+            return maya_error(
                 "Mesh not found: {}".format(mesh),
                 "'{}' does not exist in the scene".format(mesh),
-            ).to_dict()
+            )
 
         mesh_type = cmds.objectType(mesh)
         if mesh_type not in ("transform", "mesh"):
-            return error_result(
+            return maya_error(
                 "Invalid mesh type: {}".format(mesh_type),
                 "'{}' is not a polygon mesh or transform".format(mesh),
-            ).to_dict()
+            )
 
         if nucleus and not cmds.objExists(nucleus):
-            return error_result(
+            return maya_error(
                 "Nucleus node not found: {}".format(nucleus),
                 "'{}' does not exist in the scene".format(nucleus),
-            ).to_dict()
+            )
 
         cmds.select(mesh, replace=True)
         nrigid_kwargs = {}
@@ -423,18 +406,16 @@ def create_nrigid(
             )
 
         used_nucleus = nucleus or "default"
-        return success_result(
+        return maya_success(
             "Created nRigid '{}' on mesh '{}'".format(nrigid_node, mesh),
             nrigid_node=nrigid_node,
             mesh=mesh,
             nucleus=used_nucleus,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("create_nrigid failed")
-        return error_result("Failed to create nRigid on '{}'".format(mesh), str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to create nRigid on '{}'".format(mesh))
 
 def set_ncloth_attribute(
     ncloth_node: str,
@@ -457,30 +438,29 @@ def set_ncloth_attribute(
         ActionResultModel dict with ``context.ncloth_node``,
         ``context.attribute``, ``context.value``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(ncloth_node):
-            return error_result(
+            return maya_error(
                 "nCloth node not found: {}".format(ncloth_node),
                 "'{}' does not exist in the scene".format(ncloth_node),
-            ).to_dict()
+            )
 
         node_type = cmds.objectType(ncloth_node)
         if node_type != "nCloth":
-            return error_result(
+            return maya_error(
                 "Not an nCloth node: {}".format(ncloth_node),
                 "Expected node type 'nCloth', got '{}'".format(node_type),
-            ).to_dict()
+            )
 
         plug = "{}.{}".format(ncloth_node, attribute)
         if not cmds.objExists(plug):
-            return error_result(
+            return maya_error(
                 "Attribute not found: {}".format(plug),
                 "'{}' does not have attribute '{}'".format(ncloth_node, attribute),
-            ).to_dict()
+            )
 
         if isinstance(value, (list, tuple)) and len(value) == 3:
             cmds.setAttr(plug, value[0], value[1], value[2], type="double3")
@@ -489,18 +469,16 @@ def set_ncloth_attribute(
         else:
             cmds.setAttr(plug, value)
 
-        return success_result(
+        return maya_success(
             "Set '{}.{}' = {}".format(ncloth_node, attribute, value),
             ncloth_node=ncloth_node,
             attribute=attribute,
             value=value,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("set_ncloth_attribute failed")
-        return error_result("Failed to set attribute on nCloth '{}'".format(ncloth_node), str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to set attribute on nCloth '{}'".format(ncloth_node))
 
 def list_ncloth_nodes() -> dict:
     """List all nCloth shape nodes in the current Maya scene.
@@ -512,7 +490,6 @@ def list_ncloth_nodes() -> dict:
         ActionResultModel dict with ``context.nodes`` (list of dicts) and
         ``context.count``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
@@ -540,17 +517,15 @@ def list_ncloth_nodes() -> dict:
                 }
             )
 
-        return success_result(
+        return maya_success(
             "Found {} nCloth node(s) in scene".format(len(nodes)),
             nodes=nodes,
             count=len(nodes),
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("list_ncloth_nodes failed")
-        return error_result("Failed to list nCloth nodes", str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to list nCloth nodes")
 
 def set_nrigid_attribute(
     nrigid_node,  # type: str
@@ -570,36 +545,35 @@ def set_nrigid_attribute(
         ActionResultModel dict with ``context.nrigid_node``,
         ``context.attribute``, ``context.value``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     if not nrigid_node or not attribute:
-        return error_result(
+        return maya_error(
             "nrigid_node and attribute are required",
             "Provide non-empty nrigid_node and attribute strings",
-        ).to_dict()
+        )
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(nrigid_node):
-            return error_result(
+            return maya_error(
                 "nRigid node not found: {}".format(nrigid_node),
                 "'{}' does not exist in the scene".format(nrigid_node),
-            ).to_dict()
+            )
 
         node_type = cmds.objectType(nrigid_node)
         if node_type != "nRigid":
-            return error_result(
+            return maya_error(
                 "Not an nRigid node: {}".format(nrigid_node),
                 "Expected node type 'nRigid', got '{}'".format(node_type),
-            ).to_dict()
+            )
 
         attr_path = "{}.{}".format(nrigid_node, attribute)
         if not cmds.objExists(attr_path):
-            return error_result(
+            return maya_error(
                 "Attribute not found: {}".format(attr_path),
                 "'{}' does not have attribute '{}'".format(nrigid_node, attribute),
-            ).to_dict()
+            )
 
         if isinstance(value, (list, tuple)) and len(value) == 3:
             cmds.setAttr(attr_path, value[0], value[1], value[2], type="double3")
@@ -608,21 +582,19 @@ def set_nrigid_attribute(
         else:
             cmds.setAttr(attr_path, value)
 
-        return success_result(
+        return maya_success(
             "Set {}.{} = {}".format(nrigid_node, attribute, value),
             nrigid_node=nrigid_node,
             attribute=attribute,
             value=value,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("set_nrigid_attribute failed")
-        return error_result(
+        return maya_error(
             "Failed to set attribute '{}' on '{}'".format(attribute, nrigid_node),
             str(exc),
-        ).to_dict()
-
+        )
 
 def list_nrigid_nodes():
     # type: () -> dict
@@ -632,7 +604,6 @@ def list_nrigid_nodes():
         ActionResultModel dict with ``context.nodes`` (list of dicts with
         ``name``, ``transform``, ``nucleus``) and ``context.count``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
@@ -659,13 +630,12 @@ def list_nrigid_nodes():
                 }
             )
 
-        return success_result(
+        return maya_success(
             "Found {} nRigid node(s) in scene".format(len(nodes)),
             nodes=nodes,
             count=len(nodes),
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("list_nrigid_nodes failed")
-        return error_result("Failed to list nRigid nodes", str(exc)).to_dict()
+                return maya_from_exception(exc, "Failed to list nRigid nodes")

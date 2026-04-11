@@ -3,12 +3,11 @@
 # Import future modules
 from __future__ import annotations
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 # Import built-in modules
-import logging
 from typing import List, Optional
-
-logger = logging.getLogger(__name__)
-
 
 def bake_transforms(
     objects: List[str],
@@ -33,20 +32,19 @@ def bake_transforms(
         ActionResultModel dict with ``context.baked_objects`` and the
         ``context.frame_range`` used.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not objects:
-            return error_result("No objects provided", "Pass at least one object name.").to_dict()
+            return maya_error("No objects provided", "Pass at least one object name.")
 
         missing = [o for o in objects if not cmds.objExists(o)]
         if missing:
-            return error_result(
+            return maya_error(
                 "Objects not found",
                 "Missing: {}".format(", ".join(missing)),
-            ).to_dict()
+            )
 
         s = start_frame if start_frame is not None else cmds.playbackOptions(query=True, min=True)
         e = end_frame if end_frame is not None else cmds.playbackOptions(query=True, max=True)
@@ -65,24 +63,21 @@ def bake_transforms(
             shape=True,
         )
 
-        return success_result(
+        return maya_success(
             "Baked transforms for {} object(s) [{} → {}]".format(len(objects), s, e),
             prompt="You can now delete constraints and export the objects. "
             "Use maya-animation skills to further edit keyframes.",
             baked_objects=objects,
             frame_range=[s, e],
             step=step,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("bake_transforms failed")
-        return error_result("Failed to bake transforms", str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to bake transforms")
 
 def main(**kwargs):
     return bake_transforms(**kwargs)
-
 
 if __name__ == "__main__":
     import json

@@ -1,7 +1,7 @@
 """Shrink the current component selection by one shell ring."""
 
-from dcc_mcp_core import error_result, success_result
-
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_success
 
 def run(params):  # noqa: ARG001
     """Shrink the current component selection.
@@ -22,7 +22,7 @@ def run(params):  # noqa: ARG001
         cmds.ShrinkPolygonSelectionRegion()
         after = cmds.ls(selection=True, flatten=True) or []
         removed = len(before) - len(after)
-        return success_result(
+        return maya_success(
             "Shrank selection: {} -> {} components".format(len(before), len(after)),
             prompt="Use grow_selection to expand again, or convert_selection to change mode.",
             before_count=len(before),
@@ -31,7 +31,7 @@ def run(params):  # noqa: ARG001
             selection=after,
         )
     except Exception as exc:
-        return error_result(
+        return maya_error(
             "Failed to shrink selection",
             str(exc),
             prompt="Ensure a mesh component is selected before calling shrink_selection.",

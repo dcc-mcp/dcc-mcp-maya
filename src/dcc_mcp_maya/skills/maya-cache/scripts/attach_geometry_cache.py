@@ -4,10 +4,10 @@
 from __future__ import annotations
 
 # Import built-in modules
-import logging
 import os
 
-logger = logging.getLogger(__name__)
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 
 def attach_geometry_cache(
@@ -26,41 +26,38 @@ def attach_geometry_cache(
     Returns:
         ActionResultModel dict with ``context.cache_node``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     try:
         import maya.cmds as cmds  # noqa: PLC0415
         import maya.mel as mel  # noqa: PLC0415
 
         if not cmds.objExists(mesh):
-            return error_result(
+            return maya_error(
                 "Mesh not found: {}".format(mesh),
                 "'{}' does not exist in the scene".format(mesh),
-            ).to_dict()
+            )
 
         if not os.path.isfile(cache_xml_path):
-            return error_result(
+            return maya_error(
                 "Cache file not found: {}".format(cache_xml_path),
                 "Ensure the .xml descriptor file exists.",
-            ).to_dict()
+            )
 
         cmds.select(mesh)
         mel.eval('doAttachCache("{}", {{}});'.format(cache_xml_path.replace("\\", "/")))
 
         cache_nodes = cmds.ls(type="cacheFile") or []
 
-        return success_result(
+        return maya_success(
             "Attached cache '{}' to '{}'".format(os.path.basename(cache_xml_path), mesh),
             prompt="Use list_geometry_caches to verify the cache attachment.",
             mesh=mesh,
             cache_xml_path=cache_xml_path,
             cache_nodes=cache_nodes,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("attach_geometry_cache failed")
-        return error_result("Failed to attach geometry cache", str(exc)).to_dict()
+        return maya_from_exception(exc, "Failed to attach geometry cache")
 
 
 def main(**kwargs):

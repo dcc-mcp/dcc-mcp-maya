@@ -3,12 +3,11 @@
 # Import future modules
 from __future__ import annotations
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 # Import built-in modules
-import logging
 from typing import Optional
-
-logger = logging.getLogger(__name__)
-
 
 def import_file(
     file_path: str,
@@ -28,7 +27,6 @@ def import_file(
     Returns:
         ActionResultModel dict with ``context.imported_nodes`` list.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
@@ -41,23 +39,20 @@ def import_file(
 
         cmds.file(file_path, **kwargs)
         imported = cmds.ls(importedNodes=True) or []
-        return success_result(
+        return maya_success(
             "Imported {} node(s) from {}".format(len(imported), file_path),
             file_path=file_path,
             imported_nodes=imported,
             count=len(imported),
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("import_file failed")
-        return error_result("Failed to import file: {}".format(file_path), str(exc)).to_dict()
-
+        return maya_from_exception(exc, "Failed to import file: {}".format(file_path))
 
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`import_file`."""
     return import_file(**kwargs)
-
 
 if __name__ == "__main__":
     import json

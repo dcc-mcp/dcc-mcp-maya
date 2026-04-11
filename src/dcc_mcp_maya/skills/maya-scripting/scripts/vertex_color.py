@@ -3,12 +3,11 @@
 # Import future modules
 from __future__ import annotations
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 # Import built-in modules
-import logging
 from typing import List, Optional, Tuple
-
-logger = logging.getLogger(__name__)
-
 
 def set_vertex_color(
     object_name: str,
@@ -30,13 +29,12 @@ def set_vertex_color(
     Returns:
         ActionResultModel dict with ``context.colored_count``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return error_result("Object not found: {}".format(object_name)).to_dict()
+            return maya_error("Object not found: {}".format(object_name))
 
         r, g, b = float(color[0]), float(color[1]), float(color[2])
         a = float(alpha)
@@ -59,19 +57,17 @@ def set_vertex_color(
             total = cmds.polyEvaluate(object_name, vertex=True)
             colored_count = total if isinstance(total, int) else 0
 
-        return success_result(
+        return maya_success(
             "Set vertex color on '{}' ({} vertices)".format(object_name, colored_count),
             object_name=object_name,
             color=[r, g, b],
             alpha=a,
             colored_count=colored_count,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("set_vertex_color failed")
-        return error_result("Failed to set vertex color", str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to set vertex color")
 
 def get_vertex_color(
     object_name: str,
@@ -89,13 +85,12 @@ def get_vertex_color(
     Returns:
         ActionResultModel dict with color data.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return error_result("Object not found: {}".format(object_name)).to_dict()
+            return maya_error("Object not found: {}".format(object_name))
 
         color_sets = cmds.polyColorSet(object_name, query=True, allColorSets=True) or []
         current_set = cmds.polyColorSet(object_name, query=True, currentColorSet=True)
@@ -110,7 +105,7 @@ def get_vertex_color(
         if vertex_index is not None:
             component = "{}.vtx[{}]".format(object_name, vertex_index)
             if not cmds.objExists(component):
-                return error_result("Vertex {} not found on '{}'".format(vertex_index, object_name)).to_dict()
+                return maya_error("Vertex {} not found on '{}'".format(vertex_index, object_name))
 
             query_kwargs = {}  # type: dict
             if color_set:
@@ -126,13 +121,11 @@ def get_vertex_color(
                 result_kwargs["color"] = [1.0, 1.0, 1.0]
                 result_kwargs["alpha"] = 1.0
 
-        return success_result("Vertex color info for '{}'".format(object_name), **result_kwargs).to_dict()
+        return maya_success("Vertex color info for '{}'".format(object_name), **result_kwargs)
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("get_vertex_color failed")
-        return error_result("Failed to get vertex color", str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to get vertex color")
 
 def create_color_set(
     object_name: str,
@@ -150,24 +143,23 @@ def create_color_set(
     Returns:
         ActionResultModel dict.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     valid_reps = ("RGB", "RGBA")
     if representation not in valid_reps:
-        return error_result(
+        return maya_error(
             "Invalid representation: {}".format(representation),
             "Use one of: {}".format(", ".join(valid_reps)),
-        ).to_dict()
+        )
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return error_result("Object not found: {}".format(object_name)).to_dict()
+            return maya_error("Object not found: {}".format(object_name))
 
         existing = cmds.polyColorSet(object_name, query=True, allColorSets=True) or []
         if color_set_name in existing:
-            return error_result("Color set '{}' already exists on '{}'".format(color_set_name, object_name)).to_dict()
+            return maya_error("Color set '{}' already exists on '{}'".format(color_set_name, object_name))
 
         cmds.polyColorSet(
             object_name,
@@ -176,18 +168,16 @@ def create_color_set(
             representation=representation,
         )
 
-        return success_result(
+        return maya_success(
             "Created color set '{}' on '{}'".format(color_set_name, object_name),
             object_name=object_name,
             color_set_name=color_set_name,
             representation=representation,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("create_color_set failed")
-        return error_result("Failed to create color set", str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to create color set")
 
 def remove_vertex_colors(object_name: str, color_set: Optional[str] = None) -> dict:
     """Remove vertex colors from a polygon mesh.
@@ -200,18 +190,17 @@ def remove_vertex_colors(object_name: str, color_set: Optional[str] = None) -> d
     Returns:
         ActionResultModel dict.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return error_result("Object not found: {}".format(object_name)).to_dict()
+            return maya_error("Object not found: {}".format(object_name))
 
         if color_set:
             existing = cmds.polyColorSet(object_name, query=True, allColorSets=True) or []
             if color_set not in existing:
-                return error_result("Color set '{}' not found on '{}'".format(color_set, object_name)).to_dict()
+                return maya_error("Color set '{}' not found on '{}'".format(color_set, object_name))
             cmds.polyColorSet(object_name, delete=True, colorSet=color_set)
             removed = [color_set]
         else:
@@ -220,13 +209,12 @@ def remove_vertex_colors(object_name: str, color_set: Optional[str] = None) -> d
                 cmds.polyColorSet(object_name, delete=True, colorSet=cs)
             removed = list(all_sets)
 
-        return success_result(
+        return maya_success(
             "Removed vertex colors from '{}'".format(object_name),
             object_name=object_name,
             removed_color_sets=removed,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("remove_vertex_colors failed")
-        return error_result("Failed to remove vertex colors", str(exc)).to_dict()
+                return maya_from_exception(exc, "Failed to remove vertex colors")

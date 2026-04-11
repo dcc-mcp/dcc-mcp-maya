@@ -3,12 +3,11 @@
 # Import future modules
 from __future__ import annotations
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 # Import built-in modules
-import logging
 from typing import List, Optional
-
-logger = logging.getLogger(__name__)
-
 
 def create_render_layer(
     name: str,
@@ -28,44 +27,40 @@ def create_render_layer(
         ActionResultModel dict with ``context.layer_name``,
         ``context.objects_added``, and ``context.is_current``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not name or not name.strip():
-            return error_result("Invalid layer name", "name must not be empty").to_dict()
+            return maya_error("Invalid layer name", "name must not be empty")
 
         objects_to_add = list(objects) if objects else []
         missing = [obj for obj in objects_to_add if not cmds.objExists(obj)]
         if missing:
-            return error_result(
+            return maya_error(
                 "Objects not found: {}".format(missing),
                 "The following objects do not exist: {}".format(missing),
-            ).to_dict()
+            )
 
         if objects_to_add:
             layer = cmds.createRenderLayer(*objects_to_add, name=name, number=1, makeCurrent=make_current)
         else:
             layer = cmds.createRenderLayer(name=name, number=1, empty=True, makeCurrent=make_current)
 
-        return success_result(
+        return maya_success(
             "Created render layer '{}' with {} object(s)".format(layer, len(objects_to_add)),
             layer_name=layer,
             objects_added=objects_to_add,
             is_current=make_current,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("create_render_layer failed")
-        return error_result("Failed to create render layer '{}'".format(name), str(exc)).to_dict()
-
+        return maya_from_exception(exc, "Failed to create render layer '{}'".format(name))
 
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`create_render_layer`."""
     return create_render_layer(**kwargs)
-
 
 if __name__ == "__main__":
     import json

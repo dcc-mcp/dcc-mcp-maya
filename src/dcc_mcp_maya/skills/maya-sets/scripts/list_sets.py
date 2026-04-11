@@ -3,11 +3,10 @@
 # Import future modules
 from __future__ import annotations
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 # Import built-in modules
-import logging
-
-logger = logging.getLogger(__name__)
-
 
 def list_sets(include_internal: bool = False) -> dict:
     """List all Maya object sets in the scene.
@@ -20,7 +19,6 @@ def list_sets(include_internal: bool = False) -> dict:
         ActionResultModel dict with ``context.sets`` — a list of dicts with
         ``name`` and ``member_count``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     # Maya built-in default sets that clutter the result when include_internal=False
     _INTERNAL_SETS = frozenset(
@@ -49,22 +47,19 @@ def list_sets(include_internal: bool = False) -> dict:
                 }
             )
 
-        return success_result(
+        return maya_success(
             "Found {} object set(s)".format(len(result)),
             sets=result,
             count=len(result),
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("list_sets failed")
-        return error_result("Failed to list object sets", str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to list object sets")
 
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`list_sets`."""
     return list_sets(**kwargs)
-
 
 if __name__ == "__main__":
     import json

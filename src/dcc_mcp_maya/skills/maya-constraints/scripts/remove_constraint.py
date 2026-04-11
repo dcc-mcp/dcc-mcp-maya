@@ -4,10 +4,10 @@
 from __future__ import annotations
 
 # Import built-in modules
-import logging
 from typing import Optional
 
-logger = logging.getLogger(__name__)
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 _CONSTRAINT_NODE_TYPES = [
     "parentConstraint",
@@ -35,16 +35,14 @@ def remove_constraint(
     Returns:
         ActionResultModel dict with ``context.removed`` — list of deleted nodes.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(target):
-            return error_result(
+            return maya_error(
                 "Object not found: {}".format(target),
                 "'{}' does not exist".format(target),
-            ).to_dict()
+            )
 
         types_to_check = [constraint_type] if constraint_type else _CONSTRAINT_NODE_TYPES
         removed = []
@@ -64,16 +62,15 @@ def remove_constraint(
         else:
             msg = "Removed {} constraint(s) from '{}'".format(len(removed), target)
 
-        return success_result(
+        return maya_success(
             msg,
             target=target,
             removed=removed,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("remove_constraint failed")
-        return error_result("Failed to remove constraint", str(exc)).to_dict()
+        return maya_from_exception(exc, "Failed to remove constraint")
 
 
 def main(**kwargs) -> dict:

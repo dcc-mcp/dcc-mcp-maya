@@ -4,13 +4,12 @@
 from __future__ import annotations
 
 # Import built-in modules
-import logging
-
-logger = logging.getLogger(__name__)
 
 # Built-in namespaces that must never be modified
 _PROTECTED_NS = frozenset({"UI", "shared", ":"})
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 def delete_namespace(
     namespace: str,
@@ -31,7 +30,6 @@ def delete_namespace(
     Returns:
         ActionResultModel dict with ``context.namespace``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
@@ -39,41 +37,38 @@ def delete_namespace(
         ns = namespace.strip(":")
 
         if not ns:
-            return error_result("Cannot delete root namespace", "namespace must not be empty or ':'").to_dict()
+            return maya_error("Cannot delete root namespace", "namespace must not be empty or ':'")
 
         if ns in _PROTECTED_NS:
-            return error_result(
+            return maya_error(
                 "Cannot delete protected namespace: {}".format(ns),
                 "Protected namespaces: {}".format(", ".join(sorted(_PROTECTED_NS))),
-            ).to_dict()
+            )
 
         if not cmds.namespace(exists=":{}".format(ns)):
-            return error_result(
+            return maya_error(
                 "Namespace does not exist: {}".format(ns),
                 "Nothing to delete",
-            ).to_dict()
+            )
 
         if merge_with_root:
             cmds.namespace(removeNamespace=":{}".format(ns), mergeNamespaceWithRoot=True)
         else:
             cmds.namespace(removeNamespace=":{}".format(ns))
 
-        return success_result(
+        return maya_success(
             "Deleted namespace '{}'".format(ns),
             namespace=ns,
             merged_with_root=merge_with_root,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("delete_namespace failed")
-        return error_result("Failed to delete namespace '{}'".format(namespace), str(exc)).to_dict()
-
+        return maya_from_exception(exc, "Failed to delete namespace '{}'".format(namespace))
 
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`delete_namespace`."""
     return delete_namespace(**kwargs)
-
 
 if __name__ == "__main__":
     import json

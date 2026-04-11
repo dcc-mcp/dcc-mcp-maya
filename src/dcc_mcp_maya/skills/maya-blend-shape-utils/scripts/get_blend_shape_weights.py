@@ -4,9 +4,10 @@
 from __future__ import annotations
 
 # Import built-in modules
-import logging
 
-logger = logging.getLogger(__name__)
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 
 
 def get_blend_shape_weights(blend_shape_node: str) -> dict:
@@ -19,16 +20,14 @@ def get_blend_shape_weights(blend_shape_node: str) -> dict:
         ActionResultModel dict with ``context.targets`` (list of dicts with
         ``index``, ``name``, and ``weight`` keys) and ``context.count``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(blend_shape_node):
-            return error_result(
+            return maya_error(
                 "Blend shape node not found: {}".format(blend_shape_node),
                 "'{}' does not exist in the scene".format(blend_shape_node),
-            ).to_dict()
+            )
 
         weights = cmds.blendShape(blend_shape_node, query=True, weight=True) or []
 
@@ -54,18 +53,17 @@ def get_blend_shape_weights(blend_shape_node: str) -> dict:
                 }
             )
 
-        return success_result(
+        return maya_success(
             "Queried {} target(s) on '{}'".format(len(targets), blend_shape_node),
             prompt="Use set_blend_shape_weight to modify any target's value.",
             blend_shape_node=blend_shape_node,
             targets=targets,
             count=len(targets),
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("get_blend_shape_weights failed")
-        return error_result("Failed to get blend shape weights", str(exc)).to_dict()
+        return maya_from_exception(exc, "Failed to get blend shape weights")
 
 
 def main(**kwargs):

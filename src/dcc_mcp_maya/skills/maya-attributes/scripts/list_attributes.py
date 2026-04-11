@@ -4,9 +4,10 @@
 from __future__ import annotations
 
 # Import built-in modules
-import logging
 
-logger = logging.getLogger(__name__)
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 
 
 def list_attributes(
@@ -24,16 +25,14 @@ def list_attributes(
     Returns:
         ActionResultModel dict with ``context.attributes`` list.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(node_name):
-            return error_result(
+            return maya_error(
                 "Node not found: {}".format(node_name),
                 "'{}' does not exist".format(node_name),
-            ).to_dict()
+            )
 
         kwargs = {}
         if user_defined_only:
@@ -43,18 +42,17 @@ def list_attributes(
 
         attrs = cmds.listAttr(node_name, **kwargs) or []
 
-        return success_result(
+        return maya_success(
             "Found {} attribute(s) on '{}'".format(len(attrs), node_name),
             prompt="Use get_attribute or set_attribute to inspect or modify values.",
             node_name=node_name,
             attributes=attrs,
             count=len(attrs),
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("list_attributes failed")
-        return error_result("Failed to list attributes", str(exc)).to_dict()
+        return maya_from_exception(exc, "Failed to list attributes")
 
 
 def main(**kwargs) -> dict:

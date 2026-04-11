@@ -4,13 +4,13 @@
 from __future__ import annotations
 
 # Import built-in modules
-import logging
 import os
 import re
 from typing import List, Optional
 
-logger = logging.getLogger(__name__)
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 def _next_version(publish_dir: str, asset_name: str, fmt: str) -> int:
     """Scan existing publish files and return the next version number."""
@@ -22,7 +22,6 @@ def _next_version(publish_dir: str, asset_name: str, fmt: str) -> int:
             if m:
                 max_ver = max(max_ver, int(m.group(1)))
     return max_ver + 1
-
 
 def publish_asset(
     asset_name: str,
@@ -43,12 +42,11 @@ def publish_asset(
     Returns:
         ActionResultModel dict with ``context.publish_path`` and ``context.version``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     if not asset_name:
-        return error_result("No asset_name provided", "Provide 'asset_name' parameter.").to_dict()
+        return maya_error("No asset_name provided", "Provide 'asset_name' parameter.")
     if not publish_dir:
-        return error_result("No publish_dir provided", "Provide 'publish_dir' parameter.").to_dict()
+        return maya_error("No publish_dir provided", "Provide 'publish_dir' parameter.")
 
     fmt = format.lower()
 
@@ -58,7 +56,7 @@ def publish_asset(
 
         selection = cmds.ls(selection=True)
         if not selection:
-            return error_result("Nothing selected", "Select at least one object before publishing.").to_dict()
+            return maya_error("Nothing selected", "Select at least one object before publishing.")
 
         if not os.path.isdir(publish_dir):
             os.makedirs(publish_dir)
@@ -83,25 +81,22 @@ def publish_asset(
                 force=True,
             )
         else:
-            return error_result("Unsupported format '{}'".format(fmt), "Use 'fbx' or 'ma'.").to_dict()
+            return maya_error("Unsupported format '{}'".format(fmt), "Use 'fbx' or 'ma'.")
 
-        return success_result(
+        return maya_success(
             "Published {} v{:03d} to {}".format(asset_name, ver, publish_path),
             prompt="Asset published. Tag it with tag_asset_metadata for pipeline tracking.",
             publish_path=publish_path,
             version=ver,
             asset_name=asset_name,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("publish_asset failed")
-        return error_result("Publish failed", str(exc)).to_dict()
-
+        return maya_from_exception(exc, "Publish failed")
 
 def main(**kwargs):
     return publish_asset(**kwargs)
-
 
 if __name__ == "__main__":
     import json

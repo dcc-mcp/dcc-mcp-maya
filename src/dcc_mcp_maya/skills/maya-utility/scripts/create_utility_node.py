@@ -3,12 +3,11 @@
 # Import future modules
 from __future__ import annotations
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 # Import built-in modules
-import logging
 from typing import Optional
-
-logger = logging.getLogger(__name__)
-
 
 def create_utility_node(
     node_type: str,
@@ -33,10 +32,9 @@ def create_utility_node(
     Returns:
         ActionResultModel dict with ``context.node_name`` and ``context.node_type``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     if not node_type:
-        return error_result("No node_type provided", "Provide a valid Maya node type string.").to_dict()
+        return maya_error("No node_type provided", "Provide a valid Maya node type string.")
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
@@ -50,25 +48,22 @@ def create_utility_node(
             dest = "{}.{}".format(node, connect_to_attr)
             cmds.connectAttr(connect_from, dest, force=True)
 
-        return success_result(
+        return maya_success(
             "Created utility node: {}".format(node),
             prompt=(
                 "Node '{}' created. Use set_material_attribute or connectAttr to wire it into your shading network."
             ).format(node),
             node_name=node,
             node_type=node_type,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("create_utility_node failed")
-        return error_result("Failed to create utility node", str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to create utility node")
 
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`create_utility_node`."""
     return create_utility_node(**kwargs)
-
 
 if __name__ == "__main__":
     import json

@@ -3,10 +3,8 @@
 # Import future modules
 from __future__ import annotations
 
-# Import built-in modules
-import logging
-
-logger = logging.getLogger(__name__)
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 
 def get_color_management_info() -> dict:
@@ -20,8 +18,6 @@ def get_color_management_info() -> dict:
         ``context.view_transform``, ``context.output_transform``,
         ``context.ocio_config_path``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
@@ -39,7 +35,7 @@ def get_color_management_info() -> dict:
         except Exception:
             pass
 
-        return success_result(
+        return maya_success(
             "Color management: {} (rendering='{}', view='{}')".format(
                 "enabled" if enabled else "disabled",
                 rendering_space,
@@ -51,12 +47,11 @@ def get_color_management_info() -> dict:
             view_transform=view_transform,
             output_transform=output_transform,
             ocio_config_path=ocio_config,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("get_color_management_info failed")
-        return error_result("Failed to get color management info", str(exc)).to_dict()
+        return maya_from_exception(exc, "Failed to get color management info")
 
 
 def main(**kwargs):

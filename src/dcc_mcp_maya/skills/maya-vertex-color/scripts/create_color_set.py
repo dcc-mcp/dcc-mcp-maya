@@ -3,11 +3,10 @@
 # Import future modules
 from __future__ import annotations
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 # Import built-in modules
-import logging
-
-logger = logging.getLogger(__name__)
-
 
 def create_color_set(
     object_name: str,
@@ -25,24 +24,23 @@ def create_color_set(
     Returns:
         ActionResultModel dict.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     valid_reps = ("RGB", "RGBA")
     if representation not in valid_reps:
-        return error_result(
+        return maya_error(
             "Invalid representation: {}".format(representation),
             "Use one of: {}".format(", ".join(valid_reps)),
-        ).to_dict()
+        )
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return error_result("Object not found: {}".format(object_name)).to_dict()
+            return maya_error("Object not found: {}".format(object_name))
 
         existing = cmds.polyColorSet(object_name, query=True, allColorSets=True) or []
         if color_set_name in existing:
-            return error_result("Color set '{}' already exists on '{}'".format(color_set_name, object_name)).to_dict()
+            return maya_error("Color set '{}' already exists on '{}'".format(color_set_name, object_name))
 
         cmds.polyColorSet(
             object_name,
@@ -51,23 +49,20 @@ def create_color_set(
             representation=representation,
         )
 
-        return success_result(
+        return maya_success(
             "Created color set '{}' on '{}'".format(color_set_name, object_name),
             object_name=object_name,
             color_set_name=color_set_name,
             representation=representation,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("create_color_set failed")
-        return error_result("Failed to create color set", str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to create color set")
 
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`create_color_set`."""
     return create_color_set(**kwargs)
-
 
 if __name__ == "__main__":
     import json

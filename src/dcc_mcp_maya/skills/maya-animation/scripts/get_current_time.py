@@ -4,9 +4,10 @@
 from __future__ import annotations
 
 # Import built-in modules
-import logging
 
-logger = logging.getLogger(__name__)
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 
 
 def get_current_time() -> dict:
@@ -15,21 +16,18 @@ def get_current_time() -> dict:
     Returns:
         ActionResultModel dict with ``context.current_time``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         current = cmds.currentTime(query=True)
-        return success_result(
+        return maya_success(
             "Current time: {}".format(current),
             current_time=current,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("get_current_time failed")
-        return error_result("Failed to get current time", str(exc)).to_dict()
+        return maya_from_exception(exc, "Failed to get current time")
 
 
 def main(**kwargs) -> dict:

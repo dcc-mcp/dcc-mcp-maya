@@ -4,10 +4,10 @@
 from __future__ import annotations
 
 # Import built-in modules
-import logging
 
-logger = logging.getLogger(__name__)
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 def list_nparticle_systems() -> dict:
     """List all nParticle systems and nucleus solvers in the scene.
@@ -15,7 +15,6 @@ def list_nparticle_systems() -> dict:
     Returns:
         ActionResultModel dict with particle systems and nucleus info.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
@@ -68,23 +67,20 @@ def list_nparticle_systems() -> dict:
                 pass
             nucleus_info.append(ninfo)
 
-        return success_result(
+        return maya_success(
             "Found {} nParticle system(s) and {} nucleus solver(s)".format(len(systems), len(nucleus_nodes)),
             prompt="Use set_nparticle_attribute to tune particle properties.",
             systems=systems,
             nucleus_solvers=nucleus_info,
             system_count=len(systems),
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("list_nparticle_systems failed")
-        return error_result("Failed to list nParticle systems", str(exc)).to_dict()
-
+        return maya_from_exception(exc, "Failed to list nParticle systems")
 
 def main(**kwargs):
     return list_nparticle_systems(**kwargs)
-
 
 if __name__ == "__main__":
     import json

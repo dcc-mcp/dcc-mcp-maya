@@ -3,11 +3,11 @@
 # Import future modules
 from __future__ import annotations
 
-# Import built-in modules
-import logging
-from typing import List, Optional
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
-logger = logging.getLogger(__name__)
+# Import built-in modules
+from typing import List, Optional
 
 # Maya worldUpType enum values
 WORLD_UP_TYPES = {
@@ -17,7 +17,6 @@ WORLD_UP_TYPES = {
     "vector": 3,
     "normal": 4,
 }
-
 
 def set_spline_ik_twist(
     ik_handle: str,
@@ -42,16 +41,15 @@ def set_spline_ik_twist(
     Returns:
         ActionResultModel dict with the configured twist parameters.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(ik_handle):
-            return error_result(
+            return maya_error(
                 "IK handle not found: {}".format(ik_handle),
                 "'{}' does not exist".format(ik_handle),
-            ).to_dict()
+            )
 
         up_vec = up_vector if up_vector and len(up_vector) == 3 else [0.0, 1.0, 0.0]
         up_vec_end = up_vector_end if up_vector_end and len(up_vector_end) == 3 else up_vec
@@ -67,7 +65,7 @@ def set_spline_ik_twist(
         twist_type_val = 0 if twist_type.lower() == "linear" else 1
         cmds.setAttr("{}.dTwistValueType".format(ik_handle), twist_type_val)
 
-        return success_result(
+        return maya_success(
             "Configured twist on '{}'".format(ik_handle),
             prompt="Test the twist by rotating joints or keying the twistRamp attribute.",
             ik_handle=ik_handle,
@@ -75,17 +73,14 @@ def set_spline_ik_twist(
             up_vector=up_vec,
             up_vector_end=up_vec_end,
             twist_type=twist_type,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("set_spline_ik_twist failed")
-        return error_result("Failed to set spline IK twist", str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to set spline IK twist")
 
 def main(**kwargs):
     return set_spline_ik_twist(**kwargs)
-
 
 if __name__ == "__main__":
     import json

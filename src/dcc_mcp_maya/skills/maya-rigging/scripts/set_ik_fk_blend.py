@@ -3,11 +3,10 @@
 # Import future modules
 from __future__ import annotations
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 # Import built-in modules
-import logging
-
-logger = logging.getLogger(__name__)
-
 
 def set_ik_fk_blend(
     ik_handle: str,
@@ -30,56 +29,52 @@ def set_ik_fk_blend(
         ActionResultModel dict with ``context.ik_handle``,
         ``context.attribute``, ``context.blend``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     if not (0.0 <= blend <= 1.0):
-        return error_result(
+        return maya_error(
             "blend must be in the range [0.0, 1.0]",
             "Got blend={}".format(blend),
-        ).to_dict()
+        )
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(ik_handle):
-            return error_result(
+            return maya_error(
                 "IK handle not found: {}".format(ik_handle),
                 "'{}' does not exist in the scene".format(ik_handle),
-            ).to_dict()
+            )
 
         node_type = cmds.objectType(ik_handle)
         if node_type not in ("ikHandle", "transform"):
-            return error_result(
+            return maya_error(
                 "Not an IK handle: {}".format(ik_handle),
                 "'{}' is of type '{}'; expected 'ikHandle'".format(ik_handle, node_type),
-            ).to_dict()
+            )
 
         plug = "{}.{}".format(ik_handle, attribute)
         if not cmds.objExists(plug):
-            return error_result(
+            return maya_error(
                 "Attribute not found: {}".format(plug),
                 "IK handle '{}' does not have attribute '{}'".format(ik_handle, attribute),
-            ).to_dict()
+            )
 
         cmds.setAttr(plug, blend)
 
-        return success_result(
+        return maya_success(
             "Set IK/FK blend on '{}' to {}".format(ik_handle, blend),
             ik_handle=ik_handle,
             attribute=attribute,
             blend=blend,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("set_ik_fk_blend failed")
-        return error_result("Failed to set IK/FK blend on '{}'".format(ik_handle), str(exc)).to_dict()
-
+        return maya_from_exception(exc, "Failed to set IK/FK blend on '{}'".format(ik_handle))
 
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`set_ik_fk_blend`."""
     return set_ik_fk_blend(**kwargs)
-
 
 if __name__ == "__main__":
     import json

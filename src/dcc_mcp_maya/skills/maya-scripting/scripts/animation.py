@@ -3,12 +3,11 @@
 # Import future modules
 from __future__ import annotations
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 # Import built-in modules
-import logging
 from typing import List, Optional
-
-logger = logging.getLogger(__name__)
-
 
 def set_keyframe(
     object_name: str,
@@ -29,16 +28,15 @@ def set_keyframe(
     Returns:
         ActionResultModel dict with ``context.keyframe_count``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return error_result(
+            return maya_error(
                 "Object not found: {}".format(object_name),
                 "'{}' does not exist in the scene".format(object_name),
-            ).to_dict()
+            )
 
         kwargs = {}  # type: Dict
         if time is not None:
@@ -49,19 +47,17 @@ def set_keyframe(
                 cmds.setAttr("{}.{}".format(object_name, attributes[0]), value)
 
         count = cmds.setKeyframe(object_name, **kwargs)
-        return success_result(
+        return maya_success(
             "Set {} keyframe(s) on {}".format(count, object_name),
             object_name=object_name,
             keyframe_count=count,
             time=time,
             attributes=attributes,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("set_keyframe failed")
-        return error_result("Failed to set keyframe on {}".format(object_name), str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to set keyframe on {}".format(object_name))
 
 def get_keyframes(
     object_name: str,
@@ -77,35 +73,32 @@ def get_keyframes(
     Returns:
         ActionResultModel dict with ``context.keyframes`` list of frame numbers.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return error_result(
+            return maya_error(
                 "Object not found: {}".format(object_name),
                 "'{}' does not exist in the scene".format(object_name),
-            ).to_dict()
+            )
 
         kwargs = {}  # type: Dict
         if attribute:
             kwargs["attribute"] = attribute
         raw = cmds.keyframe(object_name, query=True, timeChange=True, **kwargs)
         keyframes = list(raw) if raw else []
-        return success_result(
+        return maya_success(
             "Found {} keyframe(s) on {}".format(len(keyframes), object_name),
             object_name=object_name,
             attribute=attribute,
             keyframes=keyframes,
             count=len(keyframes),
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("get_keyframes failed")
-        return error_result("Failed to get keyframes for {}".format(object_name), str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to get keyframes for {}".format(object_name))
 
 def set_timeline(
     start_frame: float = 1.0,
@@ -126,7 +119,6 @@ def set_timeline(
     Returns:
         ActionResultModel dict with timeline range info.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
@@ -142,19 +134,17 @@ def set_timeline(
             animationStartTime=min_frame,
             animationEndTime=max_frame,
         )
-        return success_result(
+        return maya_success(
             "Timeline set: {} - {}".format(start_frame, end_frame),
             start_frame=start_frame,
             end_frame=end_frame,
             min_frame=min_frame,
             max_frame=max_frame,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("set_timeline failed")
-        return error_result("Failed to set timeline", str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to set timeline")
 
 def get_current_time() -> dict:
     """Get the current frame number.
@@ -162,22 +152,19 @@ def get_current_time() -> dict:
     Returns:
         ActionResultModel dict with ``context.current_time``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         current = cmds.currentTime(query=True)
-        return success_result(
+        return maya_success(
             "Current time: {}".format(current),
             current_time=current,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("get_current_time failed")
-        return error_result("Failed to get current time", str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to get current time")
 
 def set_current_time(frame: float) -> dict:
     """Set the current frame number.
@@ -188,22 +175,19 @@ def set_current_time(frame: float) -> dict:
     Returns:
         ActionResultModel dict with ``context.current_time``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         cmds.currentTime(frame, update=True)
-        return success_result(
+        return maya_success(
             "Current time set to {}".format(frame),
             current_time=frame,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("set_current_time failed")
-        return error_result("Failed to set current time", str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to set current time")
 
 def delete_keyframes(
     object_name: str,
@@ -225,16 +209,15 @@ def delete_keyframes(
     Returns:
         ActionResultModel dict with ``context.deleted_count``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return error_result(
+            return maya_error(
                 "Object not found: {}".format(object_name),
                 "'{}' does not exist in the scene".format(object_name),
-            ).to_dict()
+            )
 
         kwargs = {}  # type: Dict
         if attributes:
@@ -247,20 +230,18 @@ def delete_keyframes(
             kwargs["time"] = (end_frame, end_frame)
 
         deleted = cmds.cutKey(object_name, clear=True, **kwargs)
-        return success_result(
+        return maya_success(
             "Deleted {} keyframe(s) from {}".format(deleted, object_name),
             object_name=object_name,
             deleted_count=deleted,
             attributes=attributes,
             start_frame=start_frame,
             end_frame=end_frame,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("delete_keyframes failed")
-        return error_result("Failed to delete keyframes from {}".format(object_name), str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to delete keyframes from {}".format(object_name))
 
 def bake_simulation(
     objects: Optional[List[str]] = None,
@@ -284,7 +265,6 @@ def bake_simulation(
     Returns:
         ActionResultModel dict with ``context.object_count`` and frame range.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
@@ -293,19 +273,19 @@ def bake_simulation(
         if targets:
             missing = [o for o in targets if not cmds.objExists(o)]
             if missing:
-                return error_result(
+                return maya_error(
                     "Objects not found: {}".format(", ".join(missing)),
                     "The following objects do not exist: {}".format(", ".join(missing)),
-                ).to_dict()
+                )
             cmds.select(targets, replace=True)
         else:
             targets = cmds.ls(selection=True) or []
 
         if not targets:
-            return error_result(
+            return maya_error(
                 "No objects to bake",
                 "Provide object names or select objects before baking",
-            ).to_dict()
+            )
 
         cmds.bakeSimulation(
             targets,
@@ -314,20 +294,18 @@ def bake_simulation(
             simulation=True,
             preserveOutsideKeys=True,
         )
-        return success_result(
+        return maya_success(
             "Baked {} object(s) from frame {} to {}".format(len(targets), start_frame, end_frame),
             object_count=len(targets),
             objects=targets,
             start_frame=start_frame,
             end_frame=end_frame,
             sample_by=sample_by,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("bake_simulation failed")
-        return error_result("Failed to bake simulation", str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to bake simulation")
 
 def list_animation_curves(
     object_name: str,
@@ -344,16 +322,15 @@ def list_animation_curves(
         ActionResultModel dict with ``context.curves`` list of dicts
         containing ``name``, ``type``, ``key_count``, and ``attribute``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return error_result(
+            return maya_error(
                 "Object not found: {}".format(object_name),
                 "'{}' does not exist in the scene".format(object_name),
-            ).to_dict()
+            )
 
         if attribute:
             plug = "{}.{}".format(object_name, attribute)
@@ -385,19 +362,17 @@ def list_animation_curves(
                 }
             )
 
-        return success_result(
+        return maya_success(
             "Found {} animCurve(s) on '{}'".format(len(curves), object_name),
             object_name=object_name,
             attribute=attribute,
             curves=curves,
             count=len(curves),
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("list_animation_curves failed")
-        return error_result("Failed to list animation curves for '{}'".format(object_name), str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to list animation curves for '{}'".format(object_name))
 
 def set_animation_curve_tangent(
     object_name: str,
@@ -425,7 +400,6 @@ def set_animation_curve_tangent(
         ActionResultModel dict with ``context.object_name``,
         ``context.attribute``, ``context.frame``, ``context.tangent_type``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     _VALID_TANGENTS = ("auto", "linear", "flat", "step", "spline", "clamped", "plateau", "stepnext")
 
@@ -433,31 +407,31 @@ def set_animation_curve_tangent(
     out_type = (out_tangent_type or tangent_type).lower()
 
     if in_type not in _VALID_TANGENTS:
-        return error_result(
+        return maya_error(
             "Invalid in_tangent_type: {}".format(in_type),
             "Must be one of: {}".format(", ".join(_VALID_TANGENTS)),
-        ).to_dict()
+        )
     if out_type not in _VALID_TANGENTS:
-        return error_result(
+        return maya_error(
             "Invalid out_tangent_type: {}".format(out_type),
             "Must be one of: {}".format(", ".join(_VALID_TANGENTS)),
-        ).to_dict()
+        )
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return error_result(
+            return maya_error(
                 "Object not found: {}".format(object_name),
                 "'{}' does not exist in the scene".format(object_name),
-            ).to_dict()
+            )
 
         plug = "{}.{}".format(object_name, attribute)
         if not cmds.objExists(plug):
-            return error_result(
+            return maya_error(
                 "Attribute not found: {}".format(plug),
                 "'{}.{}' does not exist".format(object_name, attribute),
-            ).to_dict()
+            )
 
         kwargs = {
             "attribute": attribute,
@@ -469,20 +443,18 @@ def set_animation_curve_tangent(
 
         cmds.keyTangent(object_name, edit=True, **kwargs)
 
-        return success_result(
+        return maya_success(
             "Set tangent type on '{}.{}' (frame={})".format(object_name, attribute, frame),
             object_name=object_name,
             attribute=attribute,
             frame=frame,
             in_tangent_type=in_type,
             out_tangent_type=out_type,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("set_animation_curve_tangent failed")
-        return error_result("Failed to set tangent on '{}.{}'".format(object_name, attribute), str(exc)).to_dict()
-
+        return maya_from_exception(exc, "Failed to set tangent on '{}.{}'".format(object_name, attribute))
 
 def bake_constraints(
     objects: Optional[List[str]] = None,
@@ -510,7 +482,6 @@ def bake_constraints(
         ActionResultModel dict with ``context.object_count``,
         ``context.objects``, ``context.removed_constraints``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
@@ -519,19 +490,19 @@ def bake_constraints(
         if targets:
             missing = [o for o in targets if not cmds.objExists(o)]
             if missing:
-                return error_result(
+                return maya_error(
                     "Objects not found: {}".format(", ".join(missing)),
                     "The following objects do not exist: {}".format(", ".join(missing)),
-                ).to_dict()
+                )
             cmds.select(targets, replace=True)
         else:
             targets = cmds.ls(selection=True) or []
 
         if not targets:
-            return error_result(
+            return maya_error(
                 "No objects to bake",
                 "Provide object names or select objects before baking",
-            ).to_dict()
+            )
 
         cmds.bakeSimulation(
             targets,
@@ -560,7 +531,7 @@ def bake_constraints(
                         cmds.delete(node)
                         removed_constraints.append(node)
 
-        return success_result(
+        return maya_success(
             "Baked constraints on {} object(s) from frame {} to {}".format(len(targets), start_frame, end_frame),
             object_count=len(targets),
             objects=targets,
@@ -568,13 +539,11 @@ def bake_constraints(
             end_frame=end_frame,
             sample_by=sample_by,
             removed_constraints=removed_constraints,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("bake_constraints failed")
-        return error_result("Failed to bake constraints", str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to bake constraints")
 
 def export_animation_curves(
     object_name: str,
@@ -602,16 +571,15 @@ def export_animation_curves(
         ActionResultModel dict with ``context.file_path`` and
         ``context.curve_count``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return error_result(
+            return maya_error(
                 "Object not found: {}".format(object_name),
                 "'{}' does not exist in the scene".format(object_name),
-            ).to_dict()
+            )
 
         # Resolve frame range
         if start_frame is None:
@@ -630,10 +598,10 @@ def export_animation_curves(
             anim_curves = filtered
 
         if not anim_curves:
-            return error_result(
+            return maya_error(
                 "No animation curves found on '{}'".format(object_name),
                 "Object has no keyframe data to export",
-            ).to_dict()
+            )
 
         # Export via cmds.select + cmds.file
         cmds.select(anim_curves, replace=True)
@@ -649,20 +617,18 @@ def export_animation_curves(
         cmds.file(file_path, **export_kwargs)
         cmds.select(clear=True)
 
-        return success_result(
+        return maya_success(
             "Exported {} animation curve(s) to '{}'".format(len(anim_curves), file_path),
             file_path=file_path,
             object_name=object_name,
             curve_count=len(anim_curves),
             start_frame=start_frame,
             end_frame=end_frame,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("export_animation_curves failed")
-        return error_result("Failed to export animation curves for '{}'".format(object_name), str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to export animation curves for '{}'".format(object_name))
 
 def import_animation_curves(
     file_path: str,
@@ -682,7 +648,6 @@ def import_animation_curves(
         ActionResultModel dict with ``context.file_path`` and
         ``context.target_object``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import os  # noqa: PLC0415
@@ -690,10 +655,10 @@ def import_animation_curves(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not os.path.isfile(file_path):
-            return error_result(
+            return maya_error(
                 "File not found: {}".format(file_path),
                 "Cannot import animation curves: path does not exist",
-            ).to_dict()
+            )
 
         import_kwargs = {
             "i": True,
@@ -722,18 +687,16 @@ def import_animation_curves(
                         except Exception:
                             pass
 
-        return success_result(
+        return maya_success(
             "Imported animation curves from '{}'".format(file_path),
             file_path=file_path,
             target_object=target_object,
             merge=merge,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("import_animation_curves failed")
-        return error_result("Failed to import animation curves from '{}'".format(file_path), str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to import animation curves from '{}'".format(file_path))
 
 def query_scene_time_info() -> dict:
     """Query the current scene time and playback settings as a single call.
@@ -746,7 +709,6 @@ def query_scene_time_info() -> dict:
         ``fps``, ``animation_start``, ``animation_end``,
         ``playback_start``, ``playback_end``, ``current_time``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
@@ -758,7 +720,7 @@ def query_scene_time_info() -> dict:
         pb_end = cmds.playbackOptions(query=True, maxTime=True)
         current = cmds.currentTime(query=True)
 
-        return success_result(
+        return maya_success(
             "Scene time info retrieved",
             fps=fps,
             animation_start=anim_start,
@@ -766,9 +728,8 @@ def query_scene_time_info() -> dict:
             playback_start=pb_start,
             playback_end=pb_end,
             current_time=current,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("query_scene_time_info failed")
-        return error_result("Failed to query scene time info", str(exc)).to_dict()
+                return maya_from_exception(exc, "Failed to query scene time info")

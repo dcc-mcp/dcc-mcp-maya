@@ -4,10 +4,10 @@
 from __future__ import annotations
 
 # Import built-in modules
-import logging
 import os
 
-logger = logging.getLogger(__name__)
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 
 def delete_geometry_cache(
@@ -28,16 +28,14 @@ def delete_geometry_cache(
         ActionResultModel dict with ``context.deleted_node`` and
         ``context.files_deleted``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(cache_node):
-            return error_result(
+            return maya_error(
                 "Cache node not found: {}".format(cache_node),
                 "'{}' does not exist in the scene".format(cache_node),
-            ).to_dict()
+            )
 
         files_deleted = []
         if delete_files:
@@ -57,17 +55,16 @@ def delete_geometry_cache(
         if files_deleted:
             msg += " and {} file(s)".format(len(files_deleted))
 
-        return success_result(
+        return maya_success(
             msg,
             prompt="Use list_geometry_caches to confirm deletion.",
             deleted_node=cache_node,
             files_deleted=files_deleted,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("delete_geometry_cache failed")
-        return error_result("Failed to delete geometry cache", str(exc)).to_dict()
+        return maya_from_exception(exc, "Failed to delete geometry cache")
 
 
 def main(**kwargs):

@@ -4,10 +4,10 @@
 from __future__ import annotations
 
 # Import built-in modules
-import logging
 from typing import List, Optional
 
-logger = logging.getLogger(__name__)
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 
 def bake_constraint(
@@ -35,17 +35,15 @@ def bake_constraint(
         ActionResultModel dict with ``context.baked_objects`` and
         ``context.frame_range``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         for obj in objects:
             if not cmds.objExists(obj):
-                return error_result(
+                return maya_error(
                     "Object not found: {}".format(obj),
                     "'{}' does not exist in the scene".format(obj),
-                ).to_dict()
+                )
 
         sf = start_frame if start_frame is not None else cmds.playbackOptions(query=True, minTime=True)
         ef = end_frame if end_frame is not None else cmds.playbackOptions(query=True, maxTime=True)
@@ -69,18 +67,17 @@ def bake_constraint(
                     if cmds.objExists(con):
                         cmds.delete(con)
 
-        return success_result(
+        return maya_success(
             "Baked {} object(s) from frame {} to {}".format(len(objects), int(sf), int(ef)),
             prompt="Objects are now free with explicit keyframes. Use the Graph Editor to review.",
             baked_objects=objects,
             frame_range=[int(sf), int(ef)],
             constraints_removed=remove_constraints,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("bake_constraint failed")
-        return error_result("Failed to bake constraint", str(exc)).to_dict()
+        return maya_from_exception(exc, "Failed to bake constraint")
 
 
 def main(**kwargs):

@@ -60,39 +60,39 @@ class TestXgenCreateDescription:
     def test_create_success(self):
         mod = _load_script("maya-xgen", "create_description")
         result = mod.run({"mesh": "pSphere1"})
-        assert result.success is True
-        assert "description1" in result.message
+        assert result["success"] is True
+        assert "description1" in result["message"]
 
     def test_missing_mesh_param(self):
         mod = _load_script("maya-xgen", "create_description")
         result = mod.run({})
-        assert result.success is False
-        assert "mesh" in result.error.lower()
+        assert result["success"] is False
+        assert "mesh" in result["error"].lower()
 
     def test_mesh_not_exists(self):
         self.mock_cmds.objExists.return_value = False
         mod = _load_script("maya-xgen", "create_description")
         result = mod.run({"mesh": "nonexistent"})
-        assert result.success is False
-        assert "not exist" in result.error
+        assert result["success"] is False
+        assert "not exist" in result["error"]
 
     def test_custom_primitive(self):
         mod = _load_script("maya-xgen", "create_description")
         result = mod.run({"mesh": "pSphere1", "primitive": "CardPrimitive"})
-        assert result.success is True
-        assert result.context["primitive"] == "CardPrimitive"
+        assert result["success"] is True
+        assert result["context"]["primitive"] == "CardPrimitive"
 
     def test_exception(self):
         self.mock_xg.createPalette.side_effect = RuntimeError("plugin not loaded")
         mod = _load_script("maya-xgen", "create_description")
         result = mod.run({"mesh": "pSphere1"})
-        assert result.success is False
-        assert "plugin not loaded" in result.error
+        assert result["success"] is False
+        assert "plugin not loaded" in result["error"]
 
     def test_prompt_present(self):
         mod = _load_script("maya-xgen", "create_description")
         result = mod.run({"mesh": "pSphere1"})
-        assert result.prompt is not None and len(result.prompt) > 0
+        assert result["prompt"] is not None and len(result["prompt"]) > 0
 
 
 class TestXgenListDescriptions:
@@ -111,25 +111,25 @@ class TestXgenListDescriptions:
     def test_list_all(self):
         mod = _load_script("maya-xgen", "list_descriptions")
         result = mod.run({})
-        assert result.success is True
-        assert result.context["count"] == 2
+        assert result["success"] is True
+        assert result["context"]["count"] == 2
 
     def test_collection_filter(self):
         mod = _load_script("maya-xgen", "list_descriptions")
         result = mod.run({"collection": "xgenCollection1"})
-        assert result.success is True
+        assert result["success"] is True
 
     def test_collection_filter_excludes(self):
         mod = _load_script("maya-xgen", "list_descriptions")
         result = mod.run({"collection": "otherCollection"})
-        assert result.success is True
-        assert result.context["count"] == 0
+        assert result["success"] is True
+        assert result["context"]["count"] == 0
 
     def test_exception(self):
         self.mock_xg.palettes.side_effect = RuntimeError("xgen error")
         mod = _load_script("maya-xgen", "list_descriptions")
         result = mod.run({})
-        assert result.success is False
+        assert result["success"] is False
 
 
 class TestXgenDeleteDescription:
@@ -146,26 +146,26 @@ class TestXgenDeleteDescription:
     def test_delete_success(self):
         mod = _load_script("maya-xgen", "delete_description")
         result = mod.run({"collection": "col1", "description": "description1"})
-        assert result.success is True
+        assert result["success"] is True
         self.mock_xg.deleteDescription.assert_called_once_with("col1", "description1")
 
     def test_missing_params(self):
         mod = _load_script("maya-xgen", "delete_description")
         result = mod.run({"collection": "col1"})
-        assert result.success is False
+        assert result["success"] is False
 
     def test_description_not_found(self):
         self.mock_xg.descriptions.return_value = []
         mod = _load_script("maya-xgen", "delete_description")
         result = mod.run({"collection": "col1", "description": "missing"})
-        assert result.success is False
-        assert "not found" in result.error.lower()
+        assert result["success"] is False
+        assert "not found" in result["error"].lower()
 
     def test_exception(self):
         self.mock_xg.deleteDescription.side_effect = RuntimeError("delete error")
         mod = _load_script("maya-xgen", "delete_description")
         result = mod.run({"collection": "col1", "description": "description1"})
-        assert result.success is False
+        assert result["success"] is False
 
 
 class TestXgenSetAttribute:
@@ -181,25 +181,25 @@ class TestXgenSetAttribute:
     def test_set_success(self):
         mod = _load_script("maya-xgen", "set_xgen_attribute")
         result = mod.run({"collection": "c", "description": "d", "attribute": "density", "value": "5.0"})
-        assert result.success is True
+        assert result["success"] is True
         self.mock_xg.setAttr.assert_called_once_with("density", "5.0", "c", "d", "")
 
     def test_missing_params(self):
         mod = _load_script("maya-xgen", "set_xgen_attribute")
         result = mod.run({"collection": "c"})
-        assert result.success is False
+        assert result["success"] is False
 
     def test_exception(self):
         self.mock_xg.setAttr.side_effect = RuntimeError("attr error")
         mod = _load_script("maya-xgen", "set_xgen_attribute")
         result = mod.run({"collection": "c", "description": "d", "attribute": "density", "value": "3"})
-        assert result.success is False
+        assert result["success"] is False
 
     def test_value_coerced_to_string(self):
         mod = _load_script("maya-xgen", "set_xgen_attribute")
         result = mod.run({"collection": "c", "description": "d", "attribute": "density", "value": 42})
-        assert result.success is True
-        assert result.context["value"] == "42"
+        assert result["success"] is True
+        assert result["context"]["value"] == "42"
 
 
 class TestXgenGetAttribute:
@@ -216,24 +216,24 @@ class TestXgenGetAttribute:
     def test_get_success(self):
         mod = _load_script("maya-xgen", "get_xgen_attribute")
         result = mod.run({"collection": "c", "description": "d", "attribute": "density"})
-        assert result.success is True
-        assert result.context["value"] == "5.0"
+        assert result["success"] is True
+        assert result["context"]["value"] == "5.0"
 
     def test_missing_params(self):
         mod = _load_script("maya-xgen", "get_xgen_attribute")
         result = mod.run({"collection": "c"})
-        assert result.success is False
+        assert result["success"] is False
 
     def test_exception(self):
         self.mock_xg.getAttr.side_effect = RuntimeError("get error")
         mod = _load_script("maya-xgen", "get_xgen_attribute")
         result = mod.run({"collection": "c", "description": "d", "attribute": "density"})
-        assert result.success is False
+        assert result["success"] is False
 
     def test_prompt_present(self):
         mod = _load_script("maya-xgen", "get_xgen_attribute")
         result = mod.run({"collection": "c", "description": "d", "attribute": "density"})
-        assert result.prompt is not None
+        assert result["prompt"] is not None
 
 
 # ---------------------------------------------------------------------------
@@ -273,31 +273,31 @@ class TestMashCreateNetwork:
     def test_create_success(self):
         mod = _load_script("maya-mash", "create_network")
         result = mod.run({"object_name": "pSphere1"})
-        assert result.success is True
-        assert "MASH1_Instancer" in result.message or result.context.get("network_name")
+        assert result["success"] is True
+        assert "MASH1_Instancer" in result["message"] or result["context"].get("network_name")
 
     def test_missing_object_name(self):
         mod = _load_script("maya-mash", "create_network")
         result = mod.run({})
-        assert result.success is False
-        assert "object_name" in result.error
+        assert result["success"] is False
+        assert "object_name" in result["error"]
 
     def test_object_not_exists(self):
         self.mock_cmds.objExists.return_value = False
         mod = _load_script("maya-mash", "create_network")
         result = mod.run({"object_name": "nonexistent"})
-        assert result.success is False
+        assert result["success"] is False
 
     def test_custom_network_name(self):
         mod = _load_script("maya-mash", "create_network")
         result = mod.run({"object_name": "pSphere1", "network_name": "myMASH"})
-        assert result.success is True
+        assert result["success"] is True
 
     def test_exception(self):
         self.mock_net.createNetwork.side_effect = RuntimeError("MASH not loaded")
         mod = _load_script("maya-mash", "create_network")
         result = mod.run({"object_name": "pSphere1"})
-        assert result.success is False
+        assert result["success"] is False
 
 
 class TestMashListNetworks:
@@ -314,21 +314,21 @@ class TestMashListNetworks:
     def test_list_networks(self):
         mod = _load_script("maya-mash", "list_networks")
         result = mod.run({})
-        assert result.success is True
-        assert result.context["count"] == 2
+        assert result["success"] is True
+        assert result["context"]["count"] == 2
 
     def test_empty_scene(self):
         self.mock_cmds.ls.return_value = []
         mod = _load_script("maya-mash", "list_networks")
         result = mod.run({})
-        assert result.success is True
-        assert result.context["count"] == 0
+        assert result["success"] is True
+        assert result["context"]["count"] == 0
 
     def test_exception(self):
         self.mock_cmds.ls.side_effect = RuntimeError("cmds error")
         mod = _load_script("maya-mash", "list_networks")
         result = mod.run({})
-        assert result.success is False
+        assert result["success"] is False
 
 
 class TestMashDeleteNetwork:
@@ -346,24 +346,24 @@ class TestMashDeleteNetwork:
     def test_delete_success(self):
         mod = _load_script("maya-mash", "delete_network")
         result = mod.run({"waiter": "MASH1_Waiter"})
-        assert result.success is True
+        assert result["success"] is True
 
     def test_missing_waiter(self):
         mod = _load_script("maya-mash", "delete_network")
         result = mod.run({})
-        assert result.success is False
+        assert result["success"] is False
 
     def test_waiter_not_found(self):
         self.mock_cmds.objExists.return_value = False
         mod = _load_script("maya-mash", "delete_network")
         result = mod.run({"waiter": "missing"})
-        assert result.success is False
+        assert result["success"] is False
 
     def test_exception(self):
         self.mock_net.deleteNetwork.side_effect = RuntimeError("delete error")
         mod = _load_script("maya-mash", "delete_network")
         result = mod.run({"waiter": "MASH1_Waiter"})
-        assert result.success is False
+        assert result["success"] is False
 
 
 class TestMashAddNode:
@@ -383,25 +383,25 @@ class TestMashAddNode:
     def test_add_success(self):
         mod = _load_script("maya-mash", "add_node")
         result = mod.run({"waiter": "MASH1_Waiter", "node_type": "MASH_Random"})
-        assert result.success is True
-        assert result.context["node_name"] == "MASH1_Random1"
+        assert result["success"] is True
+        assert result["context"]["node_name"] == "MASH1_Random1"
 
     def test_missing_params(self):
         mod = _load_script("maya-mash", "add_node")
         result = mod.run({"waiter": "MASH1_Waiter"})
-        assert result.success is False
+        assert result["success"] is False
 
     def test_waiter_not_found(self):
         self.mock_cmds.objExists.return_value = False
         mod = _load_script("maya-mash", "add_node")
         result = mod.run({"waiter": "missing", "node_type": "MASH_Random"})
-        assert result.success is False
+        assert result["success"] is False
 
     def test_exception(self):
         self.mock_net.addNode.side_effect = RuntimeError("add error")
         mod = _load_script("maya-mash", "add_node")
         result = mod.run({"waiter": "MASH1_Waiter", "node_type": "MASH_Random"})
-        assert result.success is False
+        assert result["success"] is False
 
 
 class TestMashSetAttribute:
@@ -415,30 +415,30 @@ class TestMashSetAttribute:
     def test_set_success(self):
         mod = _load_script("maya-mash", "set_mash_attribute")
         result = mod.run({"node": "MASH1_Random", "attribute": "amplitudeX", "value": 2.0})
-        assert result.success is True
+        assert result["success"] is True
         self.mock_cmds.setAttr.assert_called_once_with("MASH1_Random.amplitudeX", 2.0)
 
     def test_missing_params(self):
         mod = _load_script("maya-mash", "set_mash_attribute")
         result = mod.run({"node": "MASH1_Random"})
-        assert result.success is False
+        assert result["success"] is False
 
     def test_node_not_found(self):
         self.mock_cmds.objExists.return_value = False
         mod = _load_script("maya-mash", "set_mash_attribute")
         result = mod.run({"node": "missing", "attribute": "amplitudeX", "value": 1.0})
-        assert result.success is False
+        assert result["success"] is False
 
     def test_exception(self):
         self.mock_cmds.setAttr.side_effect = RuntimeError("setAttr error")
         mod = _load_script("maya-mash", "set_mash_attribute")
         result = mod.run({"node": "MASH1_Random", "attribute": "amplitudeX", "value": 1.0})
-        assert result.success is False
+        assert result["success"] is False
 
     def test_prompt_present(self):
         mod = _load_script("maya-mash", "set_mash_attribute")
         result = mod.run({"node": "MASH1_Random", "attribute": "amplitudeX", "value": 1.0})
-        assert result.prompt is not None
+        assert result["prompt"] is not None
 
 
 # ---------------------------------------------------------------------------
@@ -458,8 +458,8 @@ class TestSelectionGrow:
     def test_grow_success(self):
         mod = _load_script("maya-selection", "grow_selection")
         result = mod.run({})
-        assert result.success is True
-        assert result.context["added"] == 2
+        assert result["success"] is True
+        assert result["context"]["added"] == 2
 
     def test_grow_calls_command(self):
         mod = _load_script("maya-selection", "grow_selection")
@@ -470,12 +470,12 @@ class TestSelectionGrow:
         self.mock_cmds.GrowPolygonSelectionRegion.side_effect = RuntimeError("grow error")
         mod = _load_script("maya-selection", "grow_selection")
         result = mod.run({})
-        assert result.success is False
+        assert result["success"] is False
 
     def test_prompt_present(self):
         mod = _load_script("maya-selection", "grow_selection")
         result = mod.run({})
-        assert result.prompt is not None
+        assert result["prompt"] is not None
 
 
 class TestSelectionShrink:
@@ -492,8 +492,8 @@ class TestSelectionShrink:
     def test_shrink_success(self):
         mod = _load_script("maya-selection", "shrink_selection")
         result = mod.run({})
-        assert result.success is True
-        assert result.context["removed"] == 2
+        assert result["success"] is True
+        assert result["context"]["removed"] == 2
 
     def test_shrink_calls_command(self):
         mod = _load_script("maya-selection", "shrink_selection")
@@ -504,12 +504,12 @@ class TestSelectionShrink:
         self.mock_cmds.ShrinkPolygonSelectionRegion.side_effect = RuntimeError("shrink error")
         mod = _load_script("maya-selection", "shrink_selection")
         result = mod.run({})
-        assert result.success is False
+        assert result["success"] is False
 
     def test_prompt_present(self):
         mod = _load_script("maya-selection", "shrink_selection")
         result = mod.run({})
-        assert result.prompt is not None
+        assert result["prompt"] is not None
 
 
 class TestSelectionInvert:
@@ -526,9 +526,9 @@ class TestSelectionInvert:
     def test_invert_success(self):
         mod = _load_script("maya-selection", "invert_selection")
         result = mod.run({})
-        assert result.success is True
-        assert result.context["before_count"] == 2
-        assert result.context["after_count"] == 2
+        assert result["success"] is True
+        assert result["context"]["before_count"] == 2
+        assert result["context"]["after_count"] == 2
 
     def test_invert_calls_command(self):
         mod = _load_script("maya-selection", "invert_selection")
@@ -539,7 +539,7 @@ class TestSelectionInvert:
         self.mock_cmds.InvertSelection.side_effect = RuntimeError("invert error")
         mod = _load_script("maya-selection", "invert_selection")
         result = mod.run({})
-        assert result.success is False
+        assert result["success"] is False
 
 
 class TestSelectionConvert:
@@ -557,30 +557,30 @@ class TestSelectionConvert:
     def test_convert_to_vertex(self):
         mod = _load_script("maya-selection", "convert_selection")
         result = mod.run({"target": "vertex"})
-        assert result.success is True
-        assert result.context["target"] == "vertex"
+        assert result["success"] is True
+        assert result["context"]["target"] == "vertex"
 
     def test_convert_to_edge(self):
         mod = _load_script("maya-selection", "convert_selection")
         result = mod.run({"target": "edge"})
-        assert result.success is True
+        assert result["success"] is True
 
     def test_invalid_target(self):
         mod = _load_script("maya-selection", "convert_selection")
         result = mod.run({"target": "blob"})
-        assert result.success is False
+        assert result["success"] is False
 
     def test_empty_selection(self):
         self.mock_cmds.ls.return_value = []
         mod = _load_script("maya-selection", "convert_selection")
         result = mod.run({"target": "face"})
-        assert result.success is False
+        assert result["success"] is False
 
     def test_exception(self):
         self.mock_cmds.polyListComponentConversion.side_effect = RuntimeError("conv error")
         mod = _load_script("maya-selection", "convert_selection")
         result = mod.run({"target": "edge"})
-        assert result.success is False
+        assert result["success"] is False
 
 
 class TestSelectionSelectSimilar:
@@ -603,18 +603,18 @@ class TestSelectionSelectSimilar:
         self.mock_cmds.objectType.return_value = "transform"
         mod = _load_script("maya-selection", "select_similar")
         result = mod.run({"criteria": "type"})
-        assert result.success is True
+        assert result["success"] is True
 
     def test_nothing_selected(self):
         self.mock_cmds.ls.return_value = []
         mod = _load_script("maya-selection", "select_similar")
         result = mod.run({"criteria": "topology"})
-        assert result.success is False
+        assert result["success"] is False
 
     def test_invalid_criteria(self):
         mod = _load_script("maya-selection", "select_similar")
         result = mod.run({"criteria": "invalid"})
-        assert result.success is False
+        assert result["success"] is False
 
     def test_name_prefix(self):
         self.mock_cmds.ls.side_effect = [
@@ -623,11 +623,11 @@ class TestSelectionSelectSimilar:
         ]
         mod = _load_script("maya-selection", "select_similar")
         result = mod.run({"criteria": "name_prefix", "prefix": "pSphere"})
-        assert result.success is True
-        assert result.context["count"] == 2
+        assert result["success"] is True
+        assert result["context"]["count"] == 2
 
     def test_exception(self):
         self.mock_cmds.ls.side_effect = [["pSphere1"], RuntimeError("ls error")]
         mod = _load_script("maya-selection", "select_similar")
         result = mod.run({"criteria": "type"})
-        assert result.success is False
+        assert result["success"] is False

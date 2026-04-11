@@ -4,9 +4,9 @@
 from __future__ import annotations
 
 # Import built-in modules
-import logging
 
-logger = logging.getLogger(__name__)
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 _VALID_FIELD_TYPES = (
     "gravity",
@@ -20,7 +20,6 @@ _VALID_FIELD_TYPES = (
 )
 
 _VALID_MIRROR_AXES = ("x", "y", "z")
-
 
 def set_ncloth_attribute(
     ncloth_node: str,
@@ -43,30 +42,28 @@ def set_ncloth_attribute(
         ActionResultModel dict with ``context.ncloth_node``,
         ``context.attribute``, ``context.value``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(ncloth_node):
-            return error_result(
+            return maya_error(
                 "nCloth node not found: {}".format(ncloth_node),
                 "'{}' does not exist in the scene".format(ncloth_node),
-            ).to_dict()
+            )
 
         node_type = cmds.objectType(ncloth_node)
         if node_type != "nCloth":
-            return error_result(
+            return maya_error(
                 "Not an nCloth node: {}".format(ncloth_node),
                 "Expected node type 'nCloth', got '{}'".format(node_type),
-            ).to_dict()
+            )
 
         plug = "{}.{}".format(ncloth_node, attribute)
         if not cmds.objExists(plug):
-            return error_result(
+            return maya_error(
                 "Attribute not found: {}".format(plug),
                 "'{}' does not have attribute '{}'".format(ncloth_node, attribute),
-            ).to_dict()
+            )
 
         if isinstance(value, (list, tuple)) and len(value) == 3:
             cmds.setAttr(plug, value[0], value[1], value[2], type="double3")
@@ -75,23 +72,20 @@ def set_ncloth_attribute(
         else:
             cmds.setAttr(plug, value)
 
-        return success_result(
+        return maya_success(
             "Set '{}.{}' = {}".format(ncloth_node, attribute, value),
             ncloth_node=ncloth_node,
             attribute=attribute,
             value=value,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("set_ncloth_attribute failed")
-        return error_result("Failed to set attribute on nCloth '{}'".format(ncloth_node), str(exc)).to_dict()
-
+        return maya_from_exception(exc, "Failed to set attribute on nCloth '{}'".format(ncloth_node))
 
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`set_ncloth_attribute`."""
     return set_ncloth_attribute(**kwargs)
-
 
 if __name__ == "__main__":
     import json

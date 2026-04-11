@@ -14,6 +14,10 @@ logger = logging.getLogger(__name__)
 _NEGATE_ATTRS = {"tx", "ry", "rz"}
 
 
+
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 def mirror_pose(
     file_path: str,
     output_path: Optional[str] = None,
@@ -39,14 +43,13 @@ def mirror_pose(
         ActionResultModel dict with ``context.mirrored_pairs`` and
         ``context.output_path``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         if not os.path.isfile(file_path):
-            return error_result(
+            return maya_error(
                 "Pose file not found: {}".format(file_path),
                 "'{}'  does not exist on disk".format(file_path),
-            ).to_dict()
+            )
 
         with open(file_path, "r") as fh:
             pose_data = json.load(fh)
@@ -106,18 +109,17 @@ def mirror_pose(
                         logger.warning("Could not set %s: %s", full, exc)
             msg = "Mirrored pose applied to scene"
 
-        return success_result(
+        return maya_success(
             "{} ({} pair(s) swapped)".format(msg, len(processed_pairs)),
             prompt="Use save_pose to persist the mirrored pose for reuse.",
             mirrored_pairs=processed_pairs,
             output_path=output_path,
             control_count=len(mirrored_data),
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("mirror_pose failed")
-        return error_result("Failed to mirror pose from '{}'".format(file_path), str(exc)).to_dict()
+        return maya_from_exception(exc, "Failed to mirror pose from '{}'".format(file_path))
 
 
 def main(**kwargs):

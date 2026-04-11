@@ -4,10 +4,10 @@
 from __future__ import annotations
 
 # Import built-in modules
-import logging
 from typing import List, Optional
 
-logger = logging.getLogger(__name__)
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 
 def update_annotation(
@@ -28,25 +28,23 @@ def update_annotation(
         ActionResultModel dict with ``context.annotation_node`` and
         updated ``context.text`` / ``context.position``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(annotation_node):
-            return error_result(
+            return maya_error(
                 "Annotation not found: {}".format(annotation_node),
                 "'{}' does not exist".format(annotation_node),
-            ).to_dict()
+            )
 
         node_type = cmds.objectType(annotation_node)
         if node_type != "annotationShape":
             shapes = cmds.listRelatives(annotation_node, shapes=True, type="annotationShape") or []
             if not shapes:
-                return error_result(
+                return maya_error(
                     "No annotationShape found under '{}'".format(annotation_node),
                     "Provide the annotationShape node name directly.",
-                ).to_dict()
+                )
             annotation_node = shapes[0]
 
         parents = cmds.listRelatives(annotation_node, parent=True)
@@ -59,18 +57,17 @@ def update_annotation(
             cmds.move(position[0], position[1], position[2], transform_node, absolute=True)
 
         current_text = cmds.getAttr("{}.text".format(annotation_node)) or ""
-        return success_result(
+        return maya_success(
             "Updated annotation '{}'".format(current_text[:40]),
             prompt="Use list_annotations to verify the update.",
             annotation_node=annotation_node,
             transform_node=transform_node,
             text=current_text,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("update_annotation failed")
-        return error_result("Failed to update annotation", str(exc)).to_dict()
+        return maya_from_exception(exc, "Failed to update annotation")
 
 
 def main(**kwargs):

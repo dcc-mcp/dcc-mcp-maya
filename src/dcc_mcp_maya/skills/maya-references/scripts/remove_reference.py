@@ -3,11 +3,10 @@
 # Import future modules
 from __future__ import annotations
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 # Import built-in modules
-import logging
-
-logger = logging.getLogger(__name__)
-
 
 def remove_reference(
     reference_node: str,
@@ -26,22 +25,21 @@ def remove_reference(
         ActionResultModel dict with ``context.reference_node`` and
         ``context.namespace_removed``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(reference_node):
-            return error_result(
+            return maya_error(
                 "Reference node not found: {}".format(reference_node),
                 "'{}' does not exist in the scene".format(reference_node),
-            ).to_dict()
+            )
 
         if cmds.objectType(reference_node) != "reference":
-            return error_result(
+            return maya_error(
                 "Not a reference node: {}".format(reference_node),
                 "'{}' is of type '{}', expected 'reference'".format(reference_node, cmds.objectType(reference_node)),
-            ).to_dict()
+            )
 
         # Resolve namespace before removal
         namespace_removed = ""
@@ -61,22 +59,19 @@ def remove_reference(
             except Exception:
                 pass
 
-        return success_result(
+        return maya_success(
             "Removed reference '{}'".format(reference_node),
             reference_node=reference_node,
             namespace_removed=namespace_removed if remove_namespace else "",
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("remove_reference failed")
-        return error_result("Failed to remove reference '{}'".format(reference_node), str(exc)).to_dict()
-
+        return maya_from_exception(exc, "Failed to remove reference '{}'".format(reference_node))
 
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`remove_reference`."""
     return remove_reference(**kwargs)
-
 
 if __name__ == "__main__":
     import json

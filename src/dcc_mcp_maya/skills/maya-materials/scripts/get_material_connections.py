@@ -3,10 +3,8 @@
 # Import future modules
 from __future__ import annotations
 
-# Import built-in modules
-import logging
-
-logger = logging.getLogger(__name__)
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 _SUPPORTED_SHADERS = ("lambert", "blinn", "phong", "phongE", "aiStandardSurface")
 
@@ -25,16 +23,14 @@ def get_material_connections(material_name: str) -> dict:
         with ``source_node``, ``source_attr``, ``dest_attr``, ``node_type``
         keys, and ``context.count``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(material_name):
-            return error_result(
+            return maya_error(
                 "Material not found: {}".format(material_name),
                 "'{}' does not exist in the scene".format(material_name),
-            ).to_dict()
+            )
 
         # List all source plugs connected into this material
         raw_connections = (
@@ -70,17 +66,16 @@ def get_material_connections(material_name: str) -> dict:
             )
             i += 2
 
-        return success_result(
+        return maya_success(
             "Found {} connection(s) into material '{}'".format(len(connections), material_name),
             material_name=material_name,
             connections=connections,
             count=len(connections),
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("get_material_connections failed")
-        return error_result("Failed to get connections for material '{}'".format(material_name), str(exc)).to_dict()
+        return maya_from_exception(exc, "Failed to get connections for material '{}'".format(material_name))
 
 
 def main(**kwargs) -> dict:

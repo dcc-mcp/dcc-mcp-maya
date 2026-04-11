@@ -3,10 +3,8 @@
 # Import future modules
 from __future__ import annotations
 
-# Import built-in modules
-import logging
-
-logger = logging.getLogger(__name__)
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 
 def list_gpu_caches() -> dict:
@@ -16,8 +14,6 @@ def list_gpu_caches() -> dict:
         ActionResultModel dict with ``context.caches`` (list of dicts with
         ``transform``, ``cache_node``, and ``file_path`` keys) and ``context.count``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
@@ -35,17 +31,16 @@ def list_gpu_caches() -> dict:
                 }
             )
 
-        return success_result(
+        return maya_success(
             "Found {} gpuCache node(s)".format(len(caches)),
             prompt="Use refresh_gpu_cache to reload a cache from disk, or import_gpu_cache to add a new one.",
             caches=caches,
             count=len(caches),
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("list_gpu_caches failed")
-        return error_result("Failed to list GPU caches", str(exc)).to_dict()
+        return maya_from_exception(exc, "Failed to list GPU caches")
 
 
 def main(**kwargs):

@@ -4,9 +4,10 @@
 from __future__ import annotations
 
 # Import built-in modules
-import logging
 
-logger = logging.getLogger(__name__)
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 
 
 def delete_shot(shot_node: str) -> dict:
@@ -18,30 +19,27 @@ def delete_shot(shot_node: str) -> dict:
     Returns:
         ActionResultModel dict with ``shot_node`` (the deleted node name).
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(shot_node):
-            return error_result(
+            return maya_error(
                 "Shot not found: {}".format(shot_node),
                 "Verify the shot node name with list_shots",
-            ).to_dict()
+            )
 
         cmds.shot(shot_node, edit=True, lock=False)
         cmds.delete(shot_node)
 
-        return success_result(
+        return maya_success(
             "Deleted shot '{}'".format(shot_node),
             prompt="Use list_shots to confirm deletion or create_shot to add a new one.",
             shot_node=shot_node,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("delete_shot failed")
-        return error_result("Failed to delete shot", str(exc)).to_dict()
+        return maya_from_exception(exc, "Failed to delete shot")
 
 
 def main(**kwargs):

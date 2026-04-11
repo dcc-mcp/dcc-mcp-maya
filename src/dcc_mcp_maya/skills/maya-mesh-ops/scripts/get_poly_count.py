@@ -4,10 +4,10 @@
 from __future__ import annotations
 
 # Import built-in modules
-import logging
 from typing import Optional
 
-logger = logging.getLogger(__name__)
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 
 def get_poly_count(object_name: Optional[str] = None) -> dict:
@@ -21,14 +21,12 @@ def get_poly_count(object_name: Optional[str] = None) -> dict:
         ActionResultModel dict with ``context.faces``, ``context.vertices``,
         ``context.edges``, and ``context.triangles``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if object_name:
             if not cmds.objExists(object_name):
-                return error_result("Object not found: {}".format(object_name)).to_dict()
+                return maya_error("Object not found: {}".format(object_name), "")
             targets = [object_name]
         else:
             targets = cmds.ls(type="mesh") or []
@@ -74,12 +72,11 @@ def get_poly_count(object_name: Optional[str] = None) -> dict:
         if object_name:
             result_kwargs["objects"] = per_object
 
-        return success_result(label, **result_kwargs).to_dict()
+        return maya_success(label, **result_kwargs)
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("get_poly_count failed")
-        return error_result("Failed to get poly count", str(exc)).to_dict()
+        return maya_from_exception(exc, "Failed to get poly count")
 
 
 def main(**kwargs) -> dict:

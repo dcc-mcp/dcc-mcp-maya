@@ -4,11 +4,11 @@
 from __future__ import annotations
 
 # Import built-in modules
-import logging
 from typing import List, Optional
 
-logger = logging.getLogger(__name__)
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 def clean_mocap_keys(
     joints: Optional[List[str]] = None,
@@ -30,7 +30,6 @@ def clean_mocap_keys(
         ActionResultModel dict with ``context.keys_before``, ``context.keys_after``,
         and ``context.keys_removed``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
@@ -41,10 +40,10 @@ def clean_mocap_keys(
             targets = cmds.ls(type="joint") or []
 
         if not targets:
-            return error_result(
+            return maya_error(
                 "No joints found to clean",
                 "Specify joint names or ensure joints exist in the scene.",
-            ).to_dict()
+            )
 
         anim_curves_before = cmds.keyframe(targets, query=True, keyframeCount=True) or 0
 
@@ -62,7 +61,7 @@ def clean_mocap_keys(
         anim_curves_after = cmds.keyframe(targets, query=True, keyframeCount=True) or 0
         removed = anim_curves_before - anim_curves_after
 
-        return success_result(
+        return maya_success(
             "Cleaned {} joint(s): {} -> {} keys (removed {})".format(
                 len(targets), anim_curves_before, anim_curves_after, removed
             ),
@@ -71,17 +70,14 @@ def clean_mocap_keys(
             keys_before=anim_curves_before,
             keys_after=anim_curves_after,
             keys_removed=removed,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("clean_mocap_keys failed")
-        return error_result("Failed to clean mocap keys", str(exc)).to_dict()
-
+        return maya_from_exception(exc, "Failed to clean mocap keys")
 
 def main(**kwargs):
     return clean_mocap_keys(**kwargs)
-
 
 if __name__ == "__main__":
     import json

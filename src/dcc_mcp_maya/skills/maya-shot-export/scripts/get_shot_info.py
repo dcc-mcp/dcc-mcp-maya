@@ -3,12 +3,11 @@
 # Import future modules
 from __future__ import annotations
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 # Import built-in modules
-import logging
 import os
-
-logger = logging.getLogger(__name__)
-
 
 def get_shot_info() -> dict:
     """Query current shot metadata from the open Maya scene.
@@ -16,7 +15,6 @@ def get_shot_info() -> dict:
     Returns:
         ActionResultModel dict with shot metadata (frame range, camera, scene path).
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
@@ -44,7 +42,7 @@ def get_shot_info() -> dict:
             parents = cmds.listRelatives(shape, parent=True, fullPath=False) or []
             cameras.append(parents[0] if parents else shape)
 
-        return success_result(
+        return maya_success(
             "Shot info for '{}'".format(scene_name),
             prompt="Use export_shot_fbx or export_shot_alembic to export this shot.",
             scene_name=scene_name,
@@ -54,17 +52,14 @@ def get_shot_info() -> dict:
             current_frame=current_frame,
             active_camera=active_cam,
             cameras=cameras,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("get_shot_info failed")
-        return error_result("Failed to get shot info", str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to get shot info")
 
 def main(**kwargs):
     return get_shot_info(**kwargs)
-
 
 if __name__ == "__main__":
     import json

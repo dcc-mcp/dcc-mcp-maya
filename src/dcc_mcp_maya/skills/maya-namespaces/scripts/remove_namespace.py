@@ -4,10 +4,10 @@
 from __future__ import annotations
 
 # Import built-in modules
-import logging
 
-logger = logging.getLogger(__name__)
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 def remove_namespace(
     name: str,
@@ -26,47 +26,43 @@ def remove_namespace(
     Returns:
         ActionResultModel dict with ``namespace`` and ``merged_objects``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         rel = name.lstrip(":")
         if not cmds.namespace(exists=rel):
-            return error_result(
+            return maya_error(
                 "Namespace not found: {}".format(name),
                 "Verify the namespace with list_namespaces",
-            ).to_dict()
+            )
 
         objects_in_ns = cmds.ls("{}:*".format(rel)) or []
 
         if objects_in_ns and not force:
-            return error_result(
+            return maya_error(
                 "Namespace '{}' is not empty ({} objects)".format(rel, len(objects_in_ns)),
                 "Set force=True to merge objects into the parent namespace",
-            ).to_dict()
+            )
 
         if objects_in_ns and force:
             cmds.namespace(moveNamespace=[rel, ":"], force=True)
 
         cmds.namespace(removeNamespace=rel)
 
-        return success_result(
+        return maya_success(
             "Removed namespace '{}' ({} objects merged)".format(rel, len(objects_in_ns)),
             prompt="Use list_namespaces to confirm removal.",
             namespace=rel,
             merged_objects=len(objects_in_ns),
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("remove_namespace failed")
-        return error_result("Failed to remove namespace", str(exc)).to_dict()
-
+        return maya_from_exception(exc, "Failed to remove namespace")
 
 def main(**kwargs):
     return remove_namespace(**kwargs)
-
 
 if __name__ == "__main__":
     import json

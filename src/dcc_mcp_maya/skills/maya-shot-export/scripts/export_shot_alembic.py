@@ -3,13 +3,12 @@
 # Import future modules
 from __future__ import annotations
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 # Import built-in modules
-import logging
 import os
 from typing import List, Optional
-
-logger = logging.getLogger(__name__)
-
 
 def export_shot_alembic(
     file_path: str,
@@ -32,7 +31,6 @@ def export_shot_alembic(
     Returns:
         ActionResultModel dict with ``context.file_path`` and frame range.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
@@ -42,10 +40,10 @@ def export_shot_alembic(
         else:
             targets = cmds.ls(selection=True) or []
         if not targets:
-            return error_result(
+            return maya_error(
                 "Nothing selected",
                 "Provide 'objects' or select nodes in Maya",
-            ).to_dict()
+            )
 
         sf = start_frame if start_frame is not None else cmds.playbackOptions(q=True, minTime=True)
         ef = end_frame if end_frame is not None else cmds.playbackOptions(q=True, maxTime=True)
@@ -71,24 +69,21 @@ def export_shot_alembic(
         )
         cmds.AbcExport(j=job_str)
 
-        return success_result(
+        return maya_success(
             "Exported Alembic to '{}'".format(file_path),
             prompt="Use import_file to bring the Alembic back into a scene.",
             file_path=file_path,
             start_frame=sf,
             end_frame=ef,
             objects=targets,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("export_shot_alembic failed")
-        return error_result("Failed to export Alembic", str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to export Alembic")
 
 def main(**kwargs):
     return export_shot_alembic(**kwargs)
-
 
 if __name__ == "__main__":
     import json

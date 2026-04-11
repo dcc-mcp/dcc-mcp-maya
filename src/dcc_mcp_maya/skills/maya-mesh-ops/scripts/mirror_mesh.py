@@ -3,10 +3,8 @@
 # Import future modules
 from __future__ import annotations
 
-# Import built-in modules
-import logging
-
-logger = logging.getLogger(__name__)
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 
 def mirror_mesh(
@@ -37,20 +35,18 @@ def mirror_mesh(
         ActionResultModel dict with ``context.object_name``, ``context.axis``,
         ``context.cut_position``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     axis_lower = (axis or "x").lower()
     if axis_lower not in ("x", "y", "z"):
-        return error_result(
+        return maya_error(
             "Invalid axis: {}".format(axis),
             "axis must be one of 'x', 'y', 'z'",
-        ).to_dict()
+        )
 
     if not object_name:
-        return error_result(
+        return maya_error(
             "object_name is required",
             "Provide a non-empty polygon mesh name",
-        ).to_dict()
+        )
 
     # polyMirrorFace axis indices: 0=X, 1=Y, 2=Z
     axis_index = {"x": 0, "y": 1, "z": 2}[axis_lower]
@@ -59,10 +55,10 @@ def mirror_mesh(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return error_result(
+            return maya_error(
                 "Object not found: {}".format(object_name),
                 "'{}' does not exist in the scene".format(object_name),
-            ).to_dict()
+            )
 
         cmds.polyMirrorFace(
             object_name,
@@ -77,17 +73,16 @@ def mirror_mesh(
             mergeThreshold=merge_threshold,
         )
 
-        return success_result(
+        return maya_success(
             "Mirrored '{}' along {} axis at {}".format(object_name, axis_lower, cut_position),
             object_name=object_name,
             axis=axis_lower,
             cut_position=cut_position,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("mirror_mesh failed")
-        return error_result("Failed to mirror mesh '{}'".format(object_name), str(exc)).to_dict()
+        return maya_from_exception(exc, "Failed to mirror mesh '{}'".format(object_name))
 
 
 def main(**kwargs) -> dict:

@@ -5,12 +5,11 @@ from __future__ import annotations
 
 # Import built-in modules
 import json
-import logging
 import os
 from typing import Dict, List, Optional
 
-logger = logging.getLogger(__name__)
-
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 def save_export_preset(
     preset_name: str,
@@ -34,8 +33,6 @@ def save_export_preset(
         ActionResultModel dict with ``context.preset_path`` and
         ``context.preset_data``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
@@ -69,7 +66,7 @@ def save_export_preset(
         with open(preset_path, "w") as fh:
             json.dump(preset_data, fh, indent=2)
 
-        return success_result(
+        return maya_success(
             "Export preset saved",
             prompt=(
                 "Preset '{}' saved to '{}'. Use load_export_preset to restore these settings.".format(
@@ -78,17 +75,14 @@ def save_export_preset(
             ),
             preset_path=preset_path,
             preset_data=preset_data,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("save_export_preset failed")
-        return error_result("Failed to save export preset", str(exc)).to_dict()
-
+        return maya_from_exception(exc, "Failed to save export preset")
 
 def main(**kwargs):
     return save_export_preset(**kwargs)
-
 
 if __name__ == "__main__":
     import json as _json

@@ -4,11 +4,11 @@
 from __future__ import annotations
 
 # Import built-in modules
-import logging
 from typing import Optional
 
-logger = logging.getLogger(__name__)
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 def create_nparticle_emitter(
     name: str = "nParticle1",
@@ -33,7 +33,6 @@ def create_nparticle_emitter(
     Returns:
         ActionResultModel dict with particle shape, emitter, and nucleus names.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
@@ -47,10 +46,10 @@ def create_nparticle_emitter(
         # Get the last created nParticle shape
         particle_shapes = cmds.ls(type="nParticle") or []
         if not particle_shapes:
-            return error_result(
+            return maya_error(
                 "Failed to create nParticle",
                 "No nParticle node found after creation",
-            ).to_dict()
+            )
         particle_shape = particle_shapes[-1]
 
         # Get emitter connected to the particle shape
@@ -82,7 +81,7 @@ def create_nparticle_emitter(
             nucleus if nucleus and cmds.objExists(nucleus) else (nucleus_nodes[-1] if nucleus_nodes else None)
         )
 
-        return success_result(
+        return maya_success(
             "Created nParticle '{}' with emitter '{}'".format(particle_shape, emitter_node),
             prompt="Use add_field_to_nparticles to attach gravity or turbulence fields.",
             particle_shape=particle_shape,
@@ -90,17 +89,14 @@ def create_nparticle_emitter(
             nucleus=actual_nucleus,
             rate=rate,
             speed=speed,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("create_nparticle_emitter failed")
-        return error_result("Failed to create nParticle emitter", str(exc)).to_dict()
-
+        return maya_from_exception(exc, "Failed to create nParticle emitter")
 
 def main(**kwargs):
     return create_nparticle_emitter(**kwargs)
-
 
 if __name__ == "__main__":
     import json

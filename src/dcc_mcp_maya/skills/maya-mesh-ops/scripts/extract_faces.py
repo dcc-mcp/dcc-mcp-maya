@@ -3,10 +3,8 @@
 # Import future modules
 from __future__ import annotations
 
-# Import built-in modules
-import logging
-
-logger = logging.getLogger(__name__)
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 
 def extract_faces(
@@ -33,27 +31,25 @@ def extract_faces(
         ActionResultModel dict with ``context.extracted_mesh`` and
         ``context.face_count``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     if not object_name:
-        return error_result(
+        return maya_error(
             "object_name is required",
             "Provide a non-empty polygon mesh name",
-        ).to_dict()
+        )
     if not face_indices:
-        return error_result(
+        return maya_error(
             "face_indices is required",
             "Provide a non-empty list of integer face indices",
-        ).to_dict()
+        )
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return error_result(
+            return maya_error(
                 "Object not found: {}".format(object_name),
                 "'{}' does not exist in the scene".format(object_name),
-            ).to_dict()
+            )
 
         face_components = ["{}.f[{}]".format(object_name, idx) for idx in face_indices]
 
@@ -70,16 +66,15 @@ def extract_faces(
                     parents = cmds.listRelatives(last, parent=True, fullPath=False) or []
                     extracted = parents[0] if parents else object_name
 
-        return success_result(
+        return maya_success(
             "Extracted {} face(s) from '{}'".format(len(face_indices), object_name),
             extracted_mesh=extracted,
             face_count=len(face_indices),
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("extract_faces failed")
-        return error_result("Failed to extract faces from '{}'".format(object_name), str(exc)).to_dict()
+        return maya_from_exception(exc, "Failed to extract faces from '{}'".format(object_name))
 
 
 def main(**kwargs) -> dict:

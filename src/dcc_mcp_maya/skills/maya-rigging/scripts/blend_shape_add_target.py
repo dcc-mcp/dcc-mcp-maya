@@ -3,12 +3,11 @@
 # Import future modules
 from __future__ import annotations
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 # Import built-in modules
-import logging
 from typing import Optional
-
-logger = logging.getLogger(__name__)
-
 
 def blend_shape_add_target(
     blend_shape: str,
@@ -30,26 +29,25 @@ def blend_shape_add_target(
         ActionResultModel dict with ``context.blend_shape``,
         ``context.target_mesh``, ``context.target_index``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     if not (0.0 <= weight <= 1.0):
-        return error_result(
+        return maya_error(
             "Invalid weight: {}".format(weight),
             "weight must be between 0.0 and 1.0",
-        ).to_dict()
+        )
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(blend_shape):
-            return error_result("Blend shape not found: {}".format(blend_shape)).to_dict()
+            return maya_error("Blend shape not found: {}".format(blend_shape))
 
         node_type = cmds.objectType(blend_shape)
         if node_type != "blendShape":
-            return error_result("'{}' is not a blendShape node (type: {})".format(blend_shape, node_type)).to_dict()
+            return maya_error("'{}' is not a blendShape node (type: {})".format(blend_shape, node_type))
 
         if not cmds.objExists(target_mesh):
-            return error_result("Target mesh not found: {}".format(target_mesh)).to_dict()
+            return maya_error("Target mesh not found: {}".format(target_mesh))
 
         # Determine target index
         if index is None:
@@ -69,24 +67,21 @@ def blend_shape_add_target(
             ),
         )
 
-        return success_result(
+        return maya_success(
             "Added target '{}' to blend shape '{}' at index {}".format(target_mesh, blend_shape, target_index),
             blend_shape=blend_shape,
             target_mesh=target_mesh,
             target_index=target_index,
             weight=weight,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("blend_shape_add_target failed")
-        return error_result("Failed to add blend shape target", str(exc)).to_dict()
-
+        return maya_from_exception(exc, "Failed to add blend shape target")
 
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`blend_shape_add_target`."""
     return blend_shape_add_target(**kwargs)
-
 
 if __name__ == "__main__":
     import json

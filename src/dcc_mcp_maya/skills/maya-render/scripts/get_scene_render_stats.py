@@ -3,11 +3,8 @@
 # Import future modules
 from __future__ import annotations
 
-# Import built-in modules
-import logging
-
-logger = logging.getLogger(__name__)
-
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 def get_scene_render_stats() -> dict:
     """Query a summary of the current scene render configuration.
@@ -23,7 +20,6 @@ def get_scene_render_stats() -> dict:
         - ``context.output_file_prefix``
         - ``context.quality`` — dict of quality attribute values
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
@@ -51,7 +47,7 @@ def get_scene_render_stats() -> dict:
             if cmds.objExists(plug):
                 quality[attr_name] = cmds.getAttr(plug)
 
-        return success_result(
+        return maya_success(
             "Scene render stats: {} @ {}x{}".format(renderer, width, height),
             renderer=renderer,
             width=width,
@@ -60,18 +56,15 @@ def get_scene_render_stats() -> dict:
             end_frame=end_frame,
             output_file_prefix=output_prefix,
             quality=quality,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("get_scene_render_stats failed")
-        return error_result("Failed to query scene render stats", str(exc)).to_dict()
-
+        return maya_from_exception(exc, "Failed to query scene render stats")
 
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`get_scene_render_stats`."""
     return get_scene_render_stats(**kwargs)
-
 
 if __name__ == "__main__":
     import json

@@ -3,10 +3,8 @@
 # Import future modules
 from __future__ import annotations
 
-# Import built-in modules
-import logging
-
-logger = logging.getLogger(__name__)
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 # Supported Maya light types and their corresponding command/node names
 _LIGHT_TYPE_MAP = {
@@ -27,16 +25,14 @@ def delete_light(light_name: str) -> dict:
     Returns:
         ActionResultModel dict.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(light_name):
-            return error_result(
+            return maya_error(
                 "Light not found: {}".format(light_name),
                 "'{}' does not exist in the scene".format(light_name),
-            ).to_dict()
+            )
 
         node_type = cmds.objectType(light_name)
         # If it's a shape, delete its transform
@@ -46,12 +42,11 @@ def delete_light(light_name: str) -> dict:
                 light_name = parents[0]
 
         cmds.delete(light_name)
-        return success_result("Deleted light '{}'".format(light_name), light_name=light_name).to_dict()
+        return maya_success("Deleted light '{}'".format(light_name), light_name=light_name)
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("delete_light failed")
-        return error_result("Failed to delete light", str(exc)).to_dict()
+        return maya_from_exception(exc, "Failed to delete light")
 
 
 def main(**kwargs) -> dict:

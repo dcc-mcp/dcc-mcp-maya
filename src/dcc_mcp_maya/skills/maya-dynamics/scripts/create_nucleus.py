@@ -4,10 +4,10 @@
 from __future__ import annotations
 
 # Import built-in modules
-import logging
 from typing import List, Optional
 
-logger = logging.getLogger(__name__)
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 _VALID_FIELD_TYPES = (
     "gravity",
@@ -44,8 +44,6 @@ def create_nucleus(
         ActionResultModel dict with ``context.nucleus_node``,
         ``context.gravity``, ``context.wind_speed``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     wind_dir = wind_direction if (wind_direction and len(wind_direction) == 3) else [0.0, 0.0, 1.0]
 
     try:
@@ -75,18 +73,17 @@ def create_nucleus(
         if not cmds.isConnected("{}.outTime".format(time_node), "{}.currentTime".format(nucleus_node)):
             cmds.connectAttr("{}.outTime".format(time_node), "{}.currentTime".format(nucleus_node))
 
-        return success_result(
+        return maya_success(
             "Created nucleus solver '{}'".format(nucleus_node),
             nucleus_node=nucleus_node,
             gravity=gravity,
             wind_speed=wind_speed,
             wind_direction=wind_dir,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("create_nucleus failed")
-        return error_result("Failed to create nucleus solver", str(exc)).to_dict()
+        return maya_from_exception(exc, "Failed to create nucleus solver")
 
 
 def main(**kwargs) -> dict:

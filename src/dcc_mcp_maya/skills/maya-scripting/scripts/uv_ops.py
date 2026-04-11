@@ -3,12 +3,11 @@
 # Import future modules
 from __future__ import annotations
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 # Import built-in modules
-import logging
 from typing import Optional
-
-logger = logging.getLogger(__name__)
-
 
 def get_uv_info(object_name: str, uv_set: Optional[str] = None) -> dict:
     """Query UV sets and coordinates on a polygon mesh.
@@ -22,13 +21,12 @@ def get_uv_info(object_name: str, uv_set: Optional[str] = None) -> dict:
         ActionResultModel dict with ``context.uv_sets``, ``context.current_uv_set``,
         and optionally ``context.uv_count`` / ``context.uvs``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return error_result("Object not found: {}".format(object_name)).to_dict()
+            return maya_error("Object not found: {}".format(object_name))
 
         uv_sets = cmds.polyUVSet(object_name, query=True, allUVSets=True) or []
         current_set = cmds.polyUVSet(object_name, query=True, currentUVSet=True)
@@ -43,18 +41,16 @@ def get_uv_info(object_name: str, uv_set: Optional[str] = None) -> dict:
 
         if uv_set:
             if uv_set not in uv_sets:
-                return error_result("UV set '{}' not found on '{}'".format(uv_set, object_name)).to_dict()
+                return maya_error("UV set '{}' not found on '{}'".format(uv_set, object_name))
             u_coords = cmds.polyEditUV("{}.map[*]".format(object_name), query=True, uValue=True) or []
             result_kwargs["uv_count"] = len(u_coords)
             result_kwargs["queried_uv_set"] = uv_set
 
-        return success_result("UV info for '{}'".format(object_name), **result_kwargs).to_dict()
+        return maya_success("UV info for '{}'".format(object_name), **result_kwargs)
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("get_uv_info failed")
-        return error_result("Failed to get UV info", str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to get UV info")
 
 def create_uv_set(object_name: str, uv_set_name: str, copy_from: Optional[str] = None) -> dict:
     """Create a new UV set on a polygon mesh.
@@ -67,37 +63,34 @@ def create_uv_set(object_name: str, uv_set_name: str, copy_from: Optional[str] =
     Returns:
         ActionResultModel dict with ``context.uv_set_name``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return error_result("Object not found: {}".format(object_name)).to_dict()
+            return maya_error("Object not found: {}".format(object_name))
 
         existing = cmds.polyUVSet(object_name, query=True, allUVSets=True) or []
         if uv_set_name in existing:
-            return error_result("UV set '{}' already exists on '{}'".format(uv_set_name, object_name)).to_dict()
+            return maya_error("UV set '{}' already exists on '{}'".format(uv_set_name, object_name))
 
         if copy_from:
             if copy_from not in existing:
-                return error_result("Source UV set '{}' not found on '{}'".format(copy_from, object_name)).to_dict()
+                return maya_error("Source UV set '{}' not found on '{}'".format(copy_from, object_name))
             cmds.polyUVSet(object_name, copy=True, uvSet=copy_from, newUVSet=uv_set_name)
         else:
             cmds.polyUVSet(object_name, create=True, uvSet=uv_set_name)
 
-        return success_result(
+        return maya_success(
             "Created UV set '{}' on '{}'".format(uv_set_name, object_name),
             object_name=object_name,
             uv_set_name=uv_set_name,
             copied_from=copy_from,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("create_uv_set failed")
-        return error_result("Failed to create UV set", str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to create UV set")
 
 def delete_uv_set(object_name: str, uv_set_name: str) -> dict:
     """Delete a UV set from a polygon mesh.
@@ -109,35 +102,32 @@ def delete_uv_set(object_name: str, uv_set_name: str) -> dict:
     Returns:
         ActionResultModel dict.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return error_result("Object not found: {}".format(object_name)).to_dict()
+            return maya_error("Object not found: {}".format(object_name))
 
         existing = cmds.polyUVSet(object_name, query=True, allUVSets=True) or []
         if uv_set_name not in existing:
-            return error_result("UV set '{}' not found on '{}'".format(uv_set_name, object_name)).to_dict()
+            return maya_error("UV set '{}' not found on '{}'".format(uv_set_name, object_name))
 
         # Protect the only remaining UV set
         if len(existing) <= 1:
-            return error_result("Cannot delete the only UV set on '{}'".format(object_name)).to_dict()
+            return maya_error("Cannot delete the only UV set on '{}'".format(object_name))
 
         cmds.polyUVSet(object_name, delete=True, uvSet=uv_set_name)
 
-        return success_result(
+        return maya_success(
             "Deleted UV set '{}' from '{}'".format(uv_set_name, object_name),
             object_name=object_name,
             uv_set_name=uv_set_name,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("delete_uv_set failed")
-        return error_result("Failed to delete UV set", str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to delete UV set")
 
 def project_uvs(
     object_name: str,
@@ -156,27 +146,26 @@ def project_uvs(
     Returns:
         ActionResultModel dict.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     valid_types = ("planar", "cylindrical", "spherical")
     if projection_type not in valid_types:
-        return error_result(
+        return maya_error(
             "Invalid projection_type: {}".format(projection_type),
             "Use one of: {}".format(", ".join(valid_types)),
-        ).to_dict()
+        )
 
     valid_axes = ("x", "y", "z")
     if axis not in valid_axes:
-        return error_result(
+        return maya_error(
             "Invalid axis: {}".format(axis),
             "Use one of: x, y, z",
-        ).to_dict()
+        )
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return error_result("Object not found: {}".format(object_name)).to_dict()
+            return maya_error("Object not found: {}".format(object_name))
 
         axis_index = {"x": 0, "y": 1, "z": 2}[axis]
 
@@ -200,19 +189,17 @@ def project_uvs(
                 ch=False,
             )
 
-        return success_result(
+        return maya_success(
             "Applied {} UV projection to '{}' (axis={})".format(projection_type, object_name, axis),
             object_name=object_name,
             projection_type=projection_type,
             axis=axis,
             axis_index=axis_index,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("project_uvs failed")
-        return error_result("Failed to project UVs", str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to project UVs")
 
 def copy_uvs(
     source: str,
@@ -233,14 +220,13 @@ def copy_uvs(
     Returns:
         ActionResultModel dict.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         for name in (source, target):
             if not cmds.objExists(name):
-                return error_result("Object not found: {}".format(name)).to_dict()
+                return maya_error("Object not found: {}".format(name))
 
         kwargs = {
             "transferUVs": 1,
@@ -254,19 +240,17 @@ def copy_uvs(
 
         cmds.transferAttributes(source, target, **kwargs)
 
-        return success_result(
+        return maya_success(
             "Copied UVs from '{}' to '{}'".format(source, target),
             source=source,
             target=target,
             source_uv_set=source_uv_set,
             target_uv_set=target_uv_set,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("copy_uvs failed")
-        return error_result("Failed to copy UVs", str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to copy UVs")
 
 def get_uv_shell_info(object_name: str, uv_set: Optional[str] = None) -> dict:
     """Get UV shell information for a polygon mesh.
@@ -283,19 +267,18 @@ def get_uv_shell_info(object_name: str, uv_set: Optional[str] = None) -> dict:
         ``context.shells`` (list of dicts with ``u_min``, ``v_min``,
         ``u_max``, ``v_max``, ``uv_indices``).
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return error_result("Object not found: {}".format(object_name)).to_dict()
+            return maya_error("Object not found: {}".format(object_name))
 
         # Resolve UV set
         if uv_set:
             existing = cmds.polyUVSet(object_name, query=True, allUVSets=True) or []
             if uv_set not in existing:
-                return error_result("UV set '{}' not found on '{}'".format(uv_set, object_name)).to_dict()
+                return maya_error("UV set '{}' not found on '{}'".format(uv_set, object_name))
             cmds.polyUVSet(object_name, currentUVSet=True, uvSet=uv_set)
 
         active_set = cmds.polyUVSet(object_name, query=True, currentUVSet=True)
@@ -333,19 +316,17 @@ def get_uv_shell_info(object_name: str, uv_set: Optional[str] = None) -> dict:
             else:
                 shells.append({"shell_id": sid, "uv_count": len(indices)})
 
-        return success_result(
+        return maya_success(
             "UV shell info for '{}' (UV set: {})".format(object_name, active_set),
             object_name=object_name,
             uv_set=active_set,
             shell_count=len(shells),
             shells=shells,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("get_uv_shell_info failed")
-        return error_result("Failed to get UV shell info", str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to get UV shell info")
 
 def unfold_uvs(
     object_name: str,
@@ -366,19 +347,18 @@ def unfold_uvs(
         ActionResultModel dict with ``context.object_name``,
         ``context.iterations``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     if iterations < 1 or iterations > 100:
-        return error_result(
+        return maya_error(
             "Invalid iterations: {}".format(iterations),
             "iterations must be between 1 and 100",
-        ).to_dict()
+        )
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return error_result("Object not found: {}".format(object_name)).to_dict()
+            return maya_error("Object not found: {}".format(object_name))
 
         cmds.u3dUnfold(
             object_name,
@@ -393,18 +373,16 @@ def unfold_uvs(
         if optimize_scale:
             cmds.u3dOptimize(object_name, iterations=1, power=1, resultScale=1)
 
-        return success_result(
+        return maya_success(
             "Unfolded UVs on '{}' ({} iteration(s))".format(object_name, iterations),
             object_name=object_name,
             iterations=iterations,
             optimize_scale=optimize_scale,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("unfold_uvs failed")
-        return error_result("Failed to unfold UVs on '{}'".format(object_name), str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to unfold UVs on '{}'".format(object_name))
 
 def normalize_uvs(
     object_name: str,
@@ -424,24 +402,23 @@ def normalize_uvs(
     Returns:
         ActionResultModel dict with ``context.object_name``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     if not (0 < layout_u <= 1):
-        return error_result(
+        return maya_error(
             "Invalid layout_u: {}".format(layout_u),
             "layout_u must be in range (0, 1]",
-        ).to_dict()
+        )
     if not (0 < layout_v <= 1):
-        return error_result(
+        return maya_error(
             "Invalid layout_v: {}".format(layout_v),
             "layout_v must be in range (0, 1]",
-        ).to_dict()
+        )
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return error_result("Object not found: {}".format(object_name)).to_dict()
+            return maya_error("Object not found: {}".format(object_name))
 
         cmds.polyNormalizeUV(
             object_name,
@@ -451,15 +428,14 @@ def normalize_uvs(
             ch=False,
         )
 
-        return success_result(
+        return maya_success(
             "Normalized UVs on '{}' (layout_u={}, layout_v={})".format(object_name, layout_u, layout_v),
             object_name=object_name,
             layout_u=layout_u,
             layout_v=layout_v,
             preserve_aspect=preserve_aspect,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("normalize_uvs failed")
-        return error_result("Failed to normalize UVs on '{}'".format(object_name), str(exc)).to_dict()
+                return maya_from_exception(exc, "Failed to normalize UVs on '{}'".format(object_name))

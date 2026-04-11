@@ -3,11 +3,10 @@
 # Import future modules
 from __future__ import annotations
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 # Import built-in modules
-import logging
-
-logger = logging.getLogger(__name__)
-
 
 def list_bake_sets() -> dict:
     """List all bake set nodes in the current Maya scene.
@@ -19,7 +18,6 @@ def list_bake_sets() -> dict:
         ActionResultModel dict with ``bake_sets`` list.  Each entry contains
         ``name``, ``resolution``, ``file_format``, and ``members``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
@@ -54,22 +52,19 @@ def list_bake_sets() -> dict:
                 pass
             bake_sets.append(info)
 
-        return success_result(
+        return maya_success(
             "Found {} bake set(s)".format(len(bake_sets)),
             prompt="Use bake_lighting or transfer_maps to bake, or bake_ambient_occlusion for AO.",
             bake_sets=bake_sets,
             count=len(bake_sets),
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("list_bake_sets failed")
-        return error_result("Failed to list bake sets", str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to list bake sets")
 
 def main(**kwargs):
     return list_bake_sets(**kwargs)
-
 
 if __name__ == "__main__":
     import json

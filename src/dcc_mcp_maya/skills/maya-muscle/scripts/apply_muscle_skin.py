@@ -4,11 +4,10 @@
 from __future__ import annotations
 
 # Import built-in modules
-import logging
 from typing import List, Optional
 
-logger = logging.getLogger(__name__)
-
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 def apply_muscle_skin(
     mesh: str,
@@ -23,17 +22,16 @@ def apply_muscle_skin(
     Returns:
         ActionResultModel dict with ``context.system_node`` and ``context.muscles_connected``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
         import maya.mel as mel  # noqa: PLC0415
 
         if not cmds.objExists(mesh):
-            return error_result(
+            return maya_error(
                 "Mesh '{}' not found".format(mesh),
                 "Verify the mesh name in the Outliner.",
-            ).to_dict()
+            )
 
         cmds.loadPlugin("MayaMuscle", quiet=True)
 
@@ -41,10 +39,10 @@ def apply_muscle_skin(
             muscles = cmds.ls(type="cMuscleObject") or []
 
         if not muscles:
-            return error_result(
+            return maya_error(
                 "No muscle objects found or specified",
                 "Create muscles first with create_muscle_capsule.",
-            ).to_dict()
+            )
 
         muscle_parents = []
         for m in muscles:
@@ -57,23 +55,20 @@ def apply_muscle_skin(
         sys_nodes = cmds.ls(type="cMuscleSystem") or []
         sys_node = sys_nodes[-1] if sys_nodes else ""
 
-        return success_result(
+        return maya_success(
             "cMuscleSystem '{}' applied to '{}'".format(sys_node, mesh),
             prompt="Muscle skin applied. Simulate or scrub the timeline to see secondary motion.",
             system_node=sys_node,
             mesh=mesh,
             muscles_connected=len(muscles),
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("apply_muscle_skin failed")
-        return error_result("Failed to apply muscle skin to '{}'".format(mesh), str(exc)).to_dict()
-
+        return maya_from_exception(exc, "Failed to apply muscle skin to '{}'".format(mesh))
 
 def main(**kwargs):
     return apply_muscle_skin(**kwargs)
-
 
 if __name__ == "__main__":
     import json

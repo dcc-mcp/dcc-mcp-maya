@@ -3,12 +3,11 @@
 # Import future modules
 from __future__ import annotations
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 # Import built-in modules
-import logging
 from typing import List
-
-logger = logging.getLogger(__name__)
-
 
 def freeze_transforms(
     objects: List[str],
@@ -33,20 +32,19 @@ def freeze_transforms(
     Returns:
         ActionResultModel dict with ``context.frozen_objects``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not objects:
-            return error_result("No objects provided", "Pass at least one object name.").to_dict()
+            return maya_error("No objects provided", "Pass at least one object name.")
 
         missing = [o for o in objects if not cmds.objExists(o)]
         if missing:
-            return error_result(
+            return maya_error(
                 "Objects not found",
                 "Missing: {}".format(", ".join(missing)),
-            ).to_dict()
+            )
 
         if apply:
             cmds.makeIdentity(
@@ -70,21 +68,18 @@ def freeze_transforms(
                 entry["scale"] = list(cmds.getAttr("{}.scale".format(obj))[0])
             frozen.append(entry)
 
-        return success_result(
+        return maya_success(
             "Frozen transforms on {} object(s)".format(len(objects)),
             prompt="Use reset_pivot to also centre the pivot, or match_transforms to align to another object.",
             frozen_objects=frozen,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("freeze_transforms failed")
-        return error_result("Failed to freeze transforms", str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to freeze transforms")
 
 def main(**kwargs):
     return freeze_transforms(**kwargs)
-
 
 if __name__ == "__main__":
     import json

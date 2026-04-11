@@ -5,10 +5,10 @@ from __future__ import annotations
 
 # Import built-in modules
 import json
-import logging
 from typing import List, Optional
 
-logger = logging.getLogger(__name__)
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 
 def load_material(
@@ -28,8 +28,6 @@ def load_material(
     Returns:
         ActionResultModel dict with the created node name and assignment info.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
@@ -37,7 +35,7 @@ def load_material(
             with open(file_path) as fh:
                 preset_data = json.load(fh)
         except (IOError, ValueError) as exc:
-            return error_result("Cannot read preset '{}'".format(file_path), str(exc)).to_dict()
+            return maya_error("Cannot read preset '{}'".format(file_path), str(exc))
 
         node_type = preset_data.get("node_type", "lambert")
         default_name = preset_data.get("material", "mat_preset")
@@ -70,19 +68,18 @@ def load_material(
                     cmds.sets(obj, edit=True, forceElement=sg)
                     assigned_to.append(obj)
 
-        return success_result(
+        return maya_success(
             "Loaded material '{}' from '{}'".format(mat_node, file_path),
             prompt="Use assign_material to assign this material to additional objects.",
             material=mat_node,
             node_type=node_type,
             applied_attributes=len(applied),
             assigned_to=assigned_to,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("load_material failed")
-        return error_result("Failed to load material preset", str(exc)).to_dict()
+        return maya_from_exception(exc, "Failed to load material preset")
 
 
 def main(**kwargs):

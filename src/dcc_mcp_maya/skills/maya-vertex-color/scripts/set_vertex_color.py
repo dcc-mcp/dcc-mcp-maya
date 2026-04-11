@@ -3,12 +3,11 @@
 # Import future modules
 from __future__ import annotations
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 # Import built-in modules
-import logging
 from typing import List, Optional, Tuple
-
-logger = logging.getLogger(__name__)
-
 
 def set_vertex_color(
     object_name: str,
@@ -30,13 +29,12 @@ def set_vertex_color(
     Returns:
         ActionResultModel dict with ``context.colored_count``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return error_result("Object not found: {}".format(object_name)).to_dict()
+            return maya_error("Object not found: {}".format(object_name))
 
         r, g, b = float(color[0]), float(color[1]), float(color[2])
         a = float(alpha)
@@ -59,24 +57,21 @@ def set_vertex_color(
             total = cmds.polyEvaluate(object_name, vertex=True)
             colored_count = total if isinstance(total, int) else 0
 
-        return success_result(
+        return maya_success(
             "Set vertex color on '{}' ({} vertices)".format(object_name, colored_count),
             object_name=object_name,
             color=[r, g, b],
             alpha=a,
             colored_count=colored_count,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("set_vertex_color failed")
-        return error_result("Failed to set vertex color", str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to set vertex color")
 
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`set_vertex_color`."""
     return set_vertex_color(**kwargs)
-
 
 if __name__ == "__main__":
     import json

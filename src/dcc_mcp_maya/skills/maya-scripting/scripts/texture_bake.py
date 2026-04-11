@@ -3,12 +3,14 @@
 # Import future modules
 from __future__ import annotations
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 # Import built-in modules
 import logging
 from typing import List, Optional
 
 logger = logging.getLogger(__name__)
-
 
 def bake_textures(
     objects: List[str],
@@ -34,37 +36,36 @@ def bake_textures(
         ActionResultModel dict with ``context.baked_objects`` and
         ``context.file_path``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     valid_types = ("diffuse", "full_render", "normals", "ao")
     if bake_type not in valid_types:
-        return error_result(
+        return maya_error(
             "Invalid bake_type: {}".format(bake_type),
             "Use one of: {}".format(", ".join(valid_types)),
-        ).to_dict()
+        )
 
     valid_renderers = ("mentalRay", "arnold")
     if renderer not in valid_renderers:
-        return error_result(
+        return maya_error(
             "Invalid renderer: {}".format(renderer),
             "Use one of: {}".format(", ".join(valid_renderers)),
-        ).to_dict()
+        )
 
     if not objects:
-        return error_result("No objects specified for baking").to_dict()
+        return maya_error("No objects specified for baking")
 
     if resolution < 1:
-        return error_result(
+        return maya_error(
             "Invalid resolution: {}".format(resolution),
             "Resolution must be >= 1",
-        ).to_dict()
+        )
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         missing = [obj for obj in objects if not cmds.objExists(obj)]
         if missing:
-            return error_result("Objects not found: {}".format(", ".join(missing))).to_dict()
+            return maya_error("Objects not found: {}".format(", ".join(missing)))
 
         bake_type_map = {
             "diffuse": "diffuse",
@@ -96,7 +97,7 @@ def bake_textures(
             except Exception as bake_exc:
                 logger.warning("Bake skipped for '%s': %s", obj, bake_exc)
 
-        return success_result(
+        return maya_success(
             "Baked {} object(s) to '{}'".format(len(baked_files), file_path),
             objects=objects,
             baked_count=len(baked_files),
@@ -104,13 +105,11 @@ def bake_textures(
             resolution=resolution,
             bake_type=bake_type,
             renderer=renderer,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("bake_textures failed")
-        return error_result("Failed to bake textures", str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to bake textures")
 
 def set_color_management(
     enabled: bool = True,
@@ -132,7 +131,6 @@ def set_color_management(
     Returns:
         ActionResultModel dict with current color management configuration.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
@@ -174,19 +172,17 @@ def set_color_management(
         except Exception:
             current_output = output_transform
 
-        return success_result(
+        return maya_success(
             "Color management {}".format("enabled" if enabled else "disabled"),
             enabled=cm_enabled,
             rendering_space=current_rendering,
             output_transform=current_output,
             input_color_space=input_color_space,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("set_color_management failed")
-        return error_result("Failed to set color management", str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to set color management")
 
 def list_color_spaces() -> dict:
     """List all available color spaces registered in Maya's color management.
@@ -194,7 +190,6 @@ def list_color_spaces() -> dict:
     Returns:
         ActionResultModel dict with ``context.color_spaces`` list.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
@@ -219,15 +214,14 @@ def list_color_spaces() -> dict:
         except Exception:
             cm_enabled = False
 
-        return success_result(
+        return maya_success(
             "Color space list retrieved",
             color_management_enabled=cm_enabled,
             input_color_spaces=list(spaces),
             rendering_spaces=list(rendering_spaces),
             output_transforms=list(output_transforms),
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("list_color_spaces failed")
-        return error_result("Failed to list color spaces", str(exc)).to_dict()
+                return maya_from_exception(exc, "Failed to list color spaces")

@@ -8,12 +8,11 @@ values procedurally without keyframes.
 # Import future modules
 from __future__ import annotations
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 # Import built-in modules
-import logging
 from typing import Optional
-
-logger = logging.getLogger(__name__)
-
 
 def create_expression(
     expression: str,
@@ -45,7 +44,6 @@ def create_expression(
     Returns:
         ActionResultModel dict with ``context.expression_name``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     _VALID_UNIT_CONVERSIONS = (0, 1, 2)
 
@@ -53,16 +51,16 @@ def create_expression(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not expression or not expression.strip():
-            return error_result(
+            return maya_error(
                 "Empty expression",
                 "expression string must not be empty",
-            ).to_dict()
+            )
 
         if unit_conversion not in _VALID_UNIT_CONVERSIONS:
-            return error_result(
+            return maya_error(
                 "Invalid unitConversion value: {}".format(unit_conversion),
                 "unitConversion must be one of {}".format(_VALID_UNIT_CONVERSIONS),
-            ).to_dict()
+            )
 
         kwargs = {
             "string": expression,
@@ -74,28 +72,26 @@ def create_expression(
             kwargs["name"] = name
         if object_name:
             if not cmds.objExists(object_name):
-                return error_result(
+                return maya_error(
                     "Object not found: {}".format(object_name),
                     "'{}' does not exist in the scene".format(object_name),
-                ).to_dict()
+                )
             kwargs["object"] = object_name
             if attribute:
                 kwargs["attribute"] = attribute
 
         expr_name = cmds.expression(**kwargs)
 
-        return success_result(
+        return maya_success(
             "Created expression '{}'".format(expr_name),
             expression_name=expr_name,
             object_name=object_name,
             attribute=attribute,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("create_expression failed")
-        return error_result("Failed to create expression", str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to create expression")
 
 def list_expressions(
     object_name: Optional[str] = None,
@@ -111,16 +107,15 @@ def list_expressions(
         dicts with ``name`` and ``string`` (the MEL expression body), and
         ``context.count``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if object_name and not cmds.objExists(object_name):
-            return error_result(
+            return maya_error(
                 "Object not found: {}".format(object_name),
                 "'{}' does not exist in the scene".format(object_name),
-            ).to_dict()
+            )
 
         all_exprs = cmds.ls(type="expression") or []
 
@@ -140,7 +135,7 @@ def list_expressions(
                 expr_str = ""
             expressions.append({"name": expr, "string": expr_str})
 
-        return success_result(
+        return maya_success(
             "Found {} expression(s){}".format(
                 len(expressions),
                 " on '{}'".format(object_name) if object_name else "",
@@ -148,13 +143,11 @@ def list_expressions(
             expressions=expressions,
             count=len(expressions),
             object_name=object_name,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("list_expressions failed")
-        return error_result("Failed to list expressions", str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to list expressions")
 
 def delete_expression(
     expression_name: str,
@@ -167,32 +160,30 @@ def delete_expression(
     Returns:
         ActionResultModel dict with ``context.expression_name``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(expression_name):
-            return error_result(
+            return maya_error(
                 "Expression not found: {}".format(expression_name),
                 "'{}' does not exist in the scene".format(expression_name),
-            ).to_dict()
+            )
 
         node_type = cmds.objectType(expression_name)
         if node_type != "expression":
-            return error_result(
+            return maya_error(
                 "Not an expression node: {}".format(expression_name),
                 "'{}' is of type '{}', expected 'expression'".format(expression_name, node_type),
-            ).to_dict()
+            )
 
         cmds.delete(expression_name)
 
-        return success_result(
+        return maya_success(
             "Deleted expression '{}'".format(expression_name),
             expression_name=expression_name,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("delete_expression failed")
-        return error_result("Failed to delete expression {}".format(expression_name), str(exc)).to_dict()
+                return maya_from_exception(exc, "Failed to delete expression {}".format(expression_name))

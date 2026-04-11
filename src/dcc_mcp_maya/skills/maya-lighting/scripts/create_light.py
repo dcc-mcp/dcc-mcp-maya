@@ -4,10 +4,10 @@
 from __future__ import annotations
 
 # Import built-in modules
-import logging
 from typing import List, Optional
 
-logger = logging.getLogger(__name__)
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 _LIGHT_TYPES = {
     "directional": "directionalLight",
@@ -40,16 +40,14 @@ def create_light(
     Returns:
         ActionResultModel dict with ``context.transform`` and ``context.shape``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if light_type not in _LIGHT_TYPES:
-            return error_result(
+            return maya_error(
                 "Unknown light type: {}".format(light_type),
                 "Supported types: {}".format(", ".join(sorted(_LIGHT_TYPES))),
-            ).to_dict()
+            )
 
         cmd_fn = getattr(cmds, _LIGHT_TYPES[light_type])
         shape = cmd_fn(intensity=intensity)
@@ -71,19 +69,18 @@ def create_light(
         if rotation and len(rotation) == 3:
             cmds.rotate(rotation[0], rotation[1], rotation[2], transform)
 
-        return success_result(
+        return maya_success(
             "Created {} light '{}'".format(light_type, transform),
             prompt="Use set_light_attribute to adjust intensity, color, or shadows.",
             transform=transform,
             shape=shape,
             light_type=light_type,
             intensity=intensity,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("create_light failed")
-        return error_result("Failed to create light", str(exc)).to_dict()
+        return maya_from_exception(exc, "Failed to create light")
 
 
 def main(**kwargs) -> dict:

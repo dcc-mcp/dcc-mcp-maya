@@ -4,10 +4,10 @@
 from __future__ import annotations
 
 # Import built-in modules
-import logging
 from typing import Optional
 
-logger = logging.getLogger(__name__)
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 _VALID_FIELD_TYPES = (
     "gravity",
@@ -44,29 +44,27 @@ def create_nrigid(
         ActionResultModel dict with ``context.nrigid_node``,
         ``context.mesh``, ``context.nucleus``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(mesh):
-            return error_result(
+            return maya_error(
                 "Mesh not found: {}".format(mesh),
                 "'{}' does not exist in the scene".format(mesh),
-            ).to_dict()
+            )
 
         mesh_type = cmds.objectType(mesh)
         if mesh_type not in ("transform", "mesh"):
-            return error_result(
+            return maya_error(
                 "Invalid mesh type: {}".format(mesh_type),
                 "'{}' is not a polygon mesh or transform".format(mesh),
-            ).to_dict()
+            )
 
         if nucleus and not cmds.objExists(nucleus):
-            return error_result(
+            return maya_error(
                 "Nucleus node not found: {}".format(nucleus),
                 "'{}' does not exist in the scene".format(nucleus),
-            ).to_dict()
+            )
 
         cmds.select(mesh, replace=True)
         nrigid_kwargs = {}
@@ -83,17 +81,16 @@ def create_nrigid(
             )
 
         used_nucleus = nucleus or "default"
-        return success_result(
+        return maya_success(
             "Created nRigid '{}' on mesh '{}'".format(nrigid_node, mesh),
             nrigid_node=nrigid_node,
             mesh=mesh,
             nucleus=used_nucleus,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("create_nrigid failed")
-        return error_result("Failed to create nRigid on '{}'".format(mesh), str(exc)).to_dict()
+        return maya_from_exception(exc, "Failed to create nRigid on '{}'".format(mesh))
 
 
 def main(**kwargs) -> dict:

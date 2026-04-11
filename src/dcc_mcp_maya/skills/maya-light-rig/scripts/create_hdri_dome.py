@@ -4,10 +4,10 @@
 from __future__ import annotations
 
 # Import built-in modules
-import logging
 from typing import Optional
 
-logger = logging.getLogger(__name__)
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 
 def create_hdri_dome(
@@ -35,8 +35,6 @@ def create_hdri_dome(
         ActionResultModel dict with ``context.dome_node``,
         ``context.file_node``, ``context.hdri_path``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
@@ -71,7 +69,7 @@ def create_hdri_dome(
             file_node = cmds.createNode("file", name="{}_texture".format(node_name))
             cmds.setAttr("{}.fileTextureName".format(file_node), hdri_path, type="string")
 
-        return success_result(
+        return maya_success(
             "Created HDRI dome '{}' from '{}'".format(dome_transform, hdri_path),
             prompt="Adjust intensity with set_light_rig_intensity or rotate the dome to change HDRI orientation.",
             dome_node=dome_transform,
@@ -80,12 +78,11 @@ def create_hdri_dome(
             hdri_path=hdri_path,
             intensity=intensity,
             rotation=rotation,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("create_hdri_dome failed")
-        return error_result("Failed to create HDRI dome from '{}'".format(hdri_path), str(exc)).to_dict()
+        return maya_from_exception(exc, "Failed to create HDRI dome from '{}'".format(hdri_path))
 
 
 def main(**kwargs):

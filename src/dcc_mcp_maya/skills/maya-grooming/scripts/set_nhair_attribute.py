@@ -3,10 +3,8 @@
 # Import future modules
 from __future__ import annotations
 
-# Import built-in modules
-import logging
-
-logger = logging.getLogger(__name__)
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 
 def set_nhair_attribute(hair_system: str, attribute: str, value: float) -> dict:
@@ -20,31 +18,28 @@ def set_nhair_attribute(hair_system: str, attribute: str, value: float) -> dict:
     Returns:
         ActionResultModel dict confirming the attribute change.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(hair_system):
-            return error_result(
+            return maya_error(
                 "Node not found",
                 "hairSystem '{}' does not exist".format(hair_system),
-            ).to_dict()
+            )
 
         cmds.setAttr("{}.{}".format(hair_system, attribute), value)
 
-        return success_result(
+        return maya_success(
             "nHair attribute set",
             prompt="hairSystem {}.{} = {}. Simulate to see the effect.".format(hair_system, attribute, value),
             hair_system=hair_system,
             attribute=attribute,
             value=value,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("set_nhair_attribute failed")
-        return error_result("Failed to set nHair attribute", str(exc)).to_dict()
+        return maya_from_exception(exc, "Failed to set nHair attribute")
 
 
 def main(**kwargs):

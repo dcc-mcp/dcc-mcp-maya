@@ -3,11 +3,10 @@
 # Import future modules
 from __future__ import annotations
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 # Import built-in modules
-import logging
-
-logger = logging.getLogger(__name__)
-
 
 def execute_python(code: str, capture_output: bool = False) -> dict:
     """Execute an arbitrary Python snippet with Maya cmds pre-imported.
@@ -25,10 +24,9 @@ def execute_python(code: str, capture_output: bool = False) -> dict:
         ActionResultModel dict with ``context.output`` (str) and ``context.stdout``
         (str, only when ``capture_output=True``).
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     if not code or not code.strip():
-        return error_result("No Python code provided", "Provide 'code' with valid Python.").to_dict()
+        return maya_error("No Python code provided", "Provide 'code' with valid Python.")
 
     # Import built-in modules
     import io
@@ -58,21 +56,18 @@ def execute_python(code: str, capture_output: bool = False) -> dict:
             output = str(raw) if raw is not None else ""
             captured = ""
 
-        return success_result(
+        return maya_success(
             "Python executed successfully",
             prompt="Python script finished. Check 'output' for any return value.",
             output=output,
             stdout=captured,
-        ).to_dict()
+        )
     except Exception as exc:
-        logger.exception("execute_python failed")
-        return error_result("Python execution failed", str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Python execution failed")
 
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`execute_python`."""
     return execute_python(**kwargs)
-
 
 if __name__ == "__main__":
     import json

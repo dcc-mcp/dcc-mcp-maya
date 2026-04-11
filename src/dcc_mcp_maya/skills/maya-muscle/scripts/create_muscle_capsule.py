@@ -4,11 +4,11 @@
 from __future__ import annotations
 
 # Import built-in modules
-import logging
 from typing import Optional
 
-logger = logging.getLogger(__name__)
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 def create_muscle_capsule(
     start_joint: str,
@@ -27,7 +27,6 @@ def create_muscle_capsule(
     Returns:
         ActionResultModel dict with ``context.muscle_node`` and ``context.radius``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
@@ -35,10 +34,10 @@ def create_muscle_capsule(
 
         for jnt in (start_joint, end_joint):
             if not cmds.objExists(jnt):
-                return error_result(
+                return maya_error(
                     "Joint '{}' not found".format(jnt),
                     "Verify joint names using the Outliner.",
-                ).to_dict()
+                )
 
         cmds.loadPlugin("MayaMuscle", quiet=True)
         cmds.select([start_joint, end_joint], replace=True)
@@ -57,24 +56,21 @@ def create_muscle_capsule(
             cmds.setAttr("{}.radius0".format(muscle_node), radius)
             cmds.setAttr("{}.radius1".format(muscle_node), radius)
 
-        return success_result(
+        return maya_success(
             "Muscle capsule created: '{}'".format(muscle_node),
             prompt="Muscle created. Use apply_muscle_skin to connect it to a mesh.",
             muscle_node=muscle_node,
             start_joint=start_joint,
             end_joint=end_joint,
             radius=radius,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("create_muscle_capsule failed")
-        return error_result("Failed to create muscle capsule", str(exc)).to_dict()
-
+        return maya_from_exception(exc, "Failed to create muscle capsule")
 
 def main(**kwargs):
     return create_muscle_capsule(**kwargs)
-
 
 if __name__ == "__main__":
     import json

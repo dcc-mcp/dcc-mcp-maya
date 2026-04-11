@@ -3,13 +3,15 @@
 # Import future modules
 from __future__ import annotations
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 # Import built-in modules
 import logging
 import os
 from typing import List, Optional
 
 logger = logging.getLogger(__name__)
-
 
 def bake_lighting(
     objects: Optional[List[str]] = None,
@@ -36,26 +38,25 @@ def bake_lighting(
     Returns:
         ActionResultModel dict with ``baked_files``, ``objects``, ``resolution``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         targets = objects or (cmds.ls(selection=True) or [])
         if not targets:
-            return error_result(
+            return maya_error(
                 "No objects specified",
                 "Provide 'objects' or select meshes in Maya",
-            ).to_dict()
+            )
 
         if not os.path.isdir(output_dir):
             try:
                 os.makedirs(output_dir)
             except Exception as exc:
-                return error_result(
+                return maya_error(
                     "Cannot create output directory: {}".format(output_dir),
                     str(exc),
-                ).to_dict()
+                )
 
         baked_files = []
         for obj in targets:
@@ -75,23 +76,20 @@ def bake_lighting(
             )
             baked_files.append(out_file)
 
-        return success_result(
+        return maya_success(
             "Baked lighting for {} object(s)".format(len(baked_files)),
             prompt="Use bake_ambient_occlusion for AO or transfer_maps for normal maps.",
             baked_files=baked_files,
             objects=targets,
             resolution=resolution,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("bake_lighting failed")
-        return error_result("Failed to bake lighting", str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to bake lighting")
 
 def main(**kwargs):
     return bake_lighting(**kwargs)
-
 
 if __name__ == "__main__":
     import json

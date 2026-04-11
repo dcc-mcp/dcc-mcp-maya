@@ -4,10 +4,10 @@
 from __future__ import annotations
 
 # Import built-in modules
-import logging
 from typing import List, Optional
 
-logger = logging.getLogger(__name__)
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 
 def create_blend_shape(
@@ -33,23 +33,21 @@ def create_blend_shape(
         ActionResultModel dict with ``context.blend_shape_node`` and
         ``context.targets``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(base_mesh):
-            return error_result(
+            return maya_error(
                 "Base mesh not found: {}".format(base_mesh),
                 "'{}' does not exist in the scene".format(base_mesh),
-            ).to_dict()
+            )
 
         missing = [t for t in targets if not cmds.objExists(t)]
         if missing:
-            return error_result(
+            return maya_error(
                 "Target meshes not found",
                 "Missing: {}".format(", ".join(missing)),
-            ).to_dict()
+            )
 
         kwargs = {"origin": origin}
         if name:
@@ -59,7 +57,7 @@ def create_blend_shape(
         node = cmds.blendShape(targets + [base_mesh], **kwargs)
         node_name = node[0] if isinstance(node, list) else node
 
-        return success_result(
+        return maya_success(
             "Created blend shape '{}' on '{}' with {} target(s)".format(node_name, base_mesh, len(targets)),
             prompt=(
                 "Use set_blend_shape_weight to drive target weights, "
@@ -68,12 +66,11 @@ def create_blend_shape(
             blend_shape_node=node_name,
             base_mesh=base_mesh,
             targets=targets,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("create_blend_shape failed")
-        return error_result("Failed to create blend shape", str(exc)).to_dict()
+        return maya_from_exception(exc, "Failed to create blend shape")
 
 
 def main(**kwargs):

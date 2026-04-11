@@ -3,10 +3,8 @@
 # Import future modules
 from __future__ import annotations
 
-# Import built-in modules
-import logging
-
-logger = logging.getLogger(__name__)
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 _LIGHT_SHAPE_TYPES = [
     "directionalLight",
@@ -32,8 +30,6 @@ def list_lights() -> dict:
         ActionResultModel dict with ``context.lights`` — list of dicts
         with ``transform``, ``shape``, ``type``, and ``intensity``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
@@ -56,17 +52,16 @@ def list_lights() -> dict:
                 }
             )
 
-        return success_result(
+        return maya_success(
             "Found {} light(s) in the scene".format(len(lights)),
             prompt="Use create_light to add a light or set_light_attribute to modify one.",
             lights=lights,
             count=len(lights),
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("list_lights failed")
-        return error_result("Failed to list lights", str(exc)).to_dict()
+        return maya_from_exception(exc, "Failed to list lights")
 
 
 def main(**kwargs) -> dict:

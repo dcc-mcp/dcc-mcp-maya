@@ -4,10 +4,10 @@
 from __future__ import annotations
 
 # Import built-in modules
-import logging
 from typing import List, Optional
 
-logger = logging.getLogger(__name__)
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 
 def create_annotation(
@@ -34,16 +34,14 @@ def create_annotation(
         ActionResultModel dict with ``context.annotation_node`` and
         ``context.transform_node``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if target_object and not cmds.objExists(target_object):
-            return error_result(
+            return maya_error(
                 "Object not found: {}".format(target_object),
                 "'{}' does not exist in the scene".format(target_object),
-            ).to_dict()
+            )
 
         pos = position if position and len(position) == 3 else [0.0, 1.0, 0.0]
 
@@ -58,19 +56,18 @@ def create_annotation(
         if name:
             transform_node = cmds.rename(transform_node, name)
 
-        return success_result(
+        return maya_success(
             "Created annotation '{}'".format(text[:40]),
             prompt="Use update_annotation to change the text, or list_annotations to see all annotations.",
             annotation_node=annotation_node,
             transform_node=transform_node,
             text=text,
             position=pos,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("create_annotation failed")
-        return error_result("Failed to create annotation", str(exc)).to_dict()
+        return maya_from_exception(exc, "Failed to create annotation")
 
 
 def main(**kwargs):

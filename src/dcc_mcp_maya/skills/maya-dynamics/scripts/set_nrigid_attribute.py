@@ -4,9 +4,9 @@
 from __future__ import annotations
 
 # Import built-in modules
-import logging
 
-logger = logging.getLogger(__name__)
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_success
 
 _VALID_FIELD_TYPES = (
     "gravity",
@@ -20,7 +20,6 @@ _VALID_FIELD_TYPES = (
 )
 
 _VALID_MIRROR_AXES = ("x", "y", "z")
-
 
 def set_nrigid_attribute(
     nrigid_node,  # type: str
@@ -40,36 +39,34 @@ def set_nrigid_attribute(
         ActionResultModel dict with ``context.nrigid_node``,
         ``context.attribute``, ``context.value``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     if not nrigid_node or not attribute:
-        return error_result(
+        return maya_error(
             "nrigid_node and attribute are required",
             "Provide non-empty nrigid_node and attribute strings",
-        ).to_dict()
+        )
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(nrigid_node):
-            return error_result(
+            return maya_error(
                 "nRigid node not found: {}".format(nrigid_node),
                 "'{}' does not exist in the scene".format(nrigid_node),
-            ).to_dict()
+            )
 
         node_type = cmds.objectType(nrigid_node)
         if node_type != "nRigid":
-            return error_result(
+            return maya_error(
                 "Not an nRigid node: {}".format(nrigid_node),
                 "Expected node type 'nRigid', got '{}'".format(node_type),
-            ).to_dict()
+            )
 
         attr_path = "{}.{}".format(nrigid_node, attribute)
         if not cmds.objExists(attr_path):
-            return error_result(
+            return maya_error(
                 "Attribute not found: {}".format(attr_path),
                 "'{}' does not have attribute '{}'".format(nrigid_node, attribute),
-            ).to_dict()
+            )
 
         if isinstance(value, (list, tuple)) and len(value) == 3:
             cmds.setAttr(attr_path, value[0], value[1], value[2], type="double3")
@@ -78,26 +75,23 @@ def set_nrigid_attribute(
         else:
             cmds.setAttr(attr_path, value)
 
-        return success_result(
+        return maya_success(
             "Set {}.{} = {}".format(nrigid_node, attribute, value),
             nrigid_node=nrigid_node,
             attribute=attribute,
             value=value,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("set_nrigid_attribute failed")
-        return error_result(
+        return maya_error(
             "Failed to set attribute '{}' on '{}'".format(attribute, nrigid_node),
             str(exc),
-        ).to_dict()
-
+        )
 
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`set_nrigid_attribute`."""
     return set_nrigid_attribute(**kwargs)
-
 
 if __name__ == "__main__":
     import json

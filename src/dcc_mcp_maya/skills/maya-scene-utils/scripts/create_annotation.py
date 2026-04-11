@@ -3,12 +3,11 @@
 # Import future modules
 from __future__ import annotations
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 # Import built-in modules
-import logging
 from typing import List, Optional
-
-logger = logging.getLogger(__name__)
-
 
 def create_annotation(
     object_name: str,
@@ -30,30 +29,29 @@ def create_annotation(
         ActionResultModel dict with ``context.annotation_transform``,
         ``context.object_name``, ``context.text``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
-            return error_result(
+            return maya_error(
                 "Object not found: {}".format(object_name),
                 "'{}' does not exist in the scene".format(object_name),
-            ).to_dict()
+            )
 
         if not text:
-            return error_result(
+            return maya_error(
                 "Empty annotation text",
                 "text must be a non-empty string",
-            ).to_dict()
+            )
 
         # Determine annotation position
         if position is not None:
             if len(position) != 3:
-                return error_result(
+                return maya_error(
                     "Invalid position: {}".format(position),
                     "position must be a list of exactly 3 floats [x, y, z]",
-                ).to_dict()
+                )
             ann_pos = [float(v) for v in position]
         else:
             # Default: slightly above the object pivot
@@ -65,25 +63,22 @@ def create_annotation(
         ann_parent = cmds.listRelatives(ann_transform, parent=True, fullPath=False)
         ann_transform_name = ann_parent[0] if ann_parent else ann_transform
 
-        return success_result(
+        return maya_success(
             "Created annotation '{}' on '{}'".format(text, object_name),
             annotation_transform=ann_transform_name,
             annotation_shape=ann_transform,
             object_name=object_name,
             text=text,
             position=ann_pos,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("create_annotation failed")
-        return error_result("Failed to create annotation on '{}'".format(object_name), str(exc)).to_dict()
-
+                return maya_from_exception(exc, "Failed to create annotation on '{}'".format(object_name))
 
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`create_annotation`."""
     return create_annotation(**kwargs)
-
 
 if __name__ == "__main__":
     import json

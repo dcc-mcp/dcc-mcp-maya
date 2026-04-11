@@ -3,10 +3,10 @@
 # Import future modules
 from __future__ import annotations
 
-# Import built-in modules
-import logging
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
-logger = logging.getLogger(__name__)
+# Import built-in modules
 
 _RENDER_QUALITY_PRESETS = {
     "low": {
@@ -47,7 +47,6 @@ _RENDER_QUALITY_PRESETS = {
     },
 }
 
-
 def set_render_quality(preset: str = "medium") -> dict:
     """Apply a render quality preset to the Maya Software render globals.
 
@@ -62,14 +61,13 @@ def set_render_quality(preset: str = "medium") -> dict:
         ActionResultModel dict with ``context.preset`` and
         ``context.applied`` (dict of attribute names and values set).
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     preset_key = preset.lower()
     if preset_key not in _RENDER_QUALITY_PRESETS:
-        return error_result(
+        return maya_error(
             "Invalid preset: {}".format(preset),
             "Supported presets: {}".format(", ".join(sorted(_RENDER_QUALITY_PRESETS))),
-        ).to_dict()
+        )
 
     attrs = _RENDER_QUALITY_PRESETS[preset_key]
 
@@ -84,22 +82,19 @@ def set_render_quality(preset: str = "medium") -> dict:
                 cmds.setAttr(plug, value)
                 applied[attr_name] = value
 
-        return success_result(
+        return maya_success(
             "Applied '{}' render quality preset".format(preset_key),
             preset=preset_key,
             applied=applied,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("set_render_quality failed")
-        return error_result("Failed to set render quality preset '{}'".format(preset), str(exc)).to_dict()
-
+        return maya_from_exception(exc, "Failed to set render quality preset '{}'".format(preset))
 
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`set_render_quality`."""
     return set_render_quality(**kwargs)
-
 
 if __name__ == "__main__":
     import json

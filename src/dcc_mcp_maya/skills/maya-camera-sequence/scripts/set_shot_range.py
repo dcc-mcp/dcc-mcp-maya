@@ -4,10 +4,10 @@
 from __future__ import annotations
 
 # Import built-in modules
-import logging
 from typing import Optional
 
-logger = logging.getLogger(__name__)
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 
 def set_shot_range(
@@ -28,16 +28,14 @@ def set_shot_range(
         ActionResultModel dict with the updated ``shot_node``, ``start_frame``,
         ``end_frame``, and ``sequence_start_frame``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
-
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(shot_node):
-            return error_result(
+            return maya_error(
                 "Shot not found: {}".format(shot_node),
                 "Verify the shot node name with list_shots",
-            ).to_dict()
+            )
 
         current_start = float(cmds.shot(shot_node, query=True, startTime=True))
         current_end = float(cmds.shot(shot_node, query=True, endTime=True))
@@ -57,7 +55,7 @@ def set_shot_range(
             sequenceEndTime=new_seq_end,
         )
 
-        return success_result(
+        return maya_success(
             "Shot '{}' range updated to [{}-{}]".format(shot_node, new_start, new_end),
             prompt="Use list_shots to review the full sequence order.",
             shot_node=shot_node,
@@ -65,12 +63,11 @@ def set_shot_range(
             end_frame=new_end,
             sequence_start_frame=new_seq,
             sequence_end_frame=new_seq_end,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("set_shot_range failed")
-        return error_result("Failed to set shot range", str(exc)).to_dict()
+        return maya_from_exception(exc, "Failed to set shot range")
 
 
 def main(**kwargs):

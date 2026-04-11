@@ -4,10 +4,9 @@
 from __future__ import annotations
 
 # Import built-in modules
-import logging
 
-logger = logging.getLogger(__name__)
-
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 def transfer_attributes(
     source: str,
@@ -40,7 +39,6 @@ def transfer_attributes(
         ActionResultModel dict with ``context.source``, ``context.target``,
         ``context.transfer_node`` (the created ``transferAttributes`` node).
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     _VALID_SPACES = (0, 1, 4, 5)
 
@@ -48,22 +46,22 @@ def transfer_attributes(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(source):
-            return error_result(
+            return maya_error(
                 "Source not found: {}".format(source),
                 "'{}' does not exist in the scene".format(source),
-            ).to_dict()
+            )
 
         if not cmds.objExists(target):
-            return error_result(
+            return maya_error(
                 "Target not found: {}".format(target),
                 "'{}' does not exist in the scene".format(target),
-            ).to_dict()
+            )
 
         if sample_space not in _VALID_SPACES:
-            return error_result(
+            return maya_error(
                 "Invalid sample_space: {}".format(sample_space),
                 "sample_space must be one of {} (0=World, 1=Local, 4=UV, 5=Component)".format(_VALID_SPACES),
-            ).to_dict()
+            )
 
         result = cmds.transferAttributes(
             source,
@@ -76,7 +74,7 @@ def transfer_attributes(
         )
         node_name = result[0] if result else "transferAttributes1"
 
-        return success_result(
+        return maya_success(
             "Transferred attributes from '{}' to '{}'".format(source, target),
             source=source,
             target=target,
@@ -86,20 +84,17 @@ def transfer_attributes(
             transfer_normals=transfer_normals,
             transfer_uvs=transfer_uvs,
             transfer_colors=transfer_colors,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("transfer_attributes failed")
-        return error_result(
+        return maya_error(
             "Failed to transfer attributes from '{}' to '{}'".format(source, target), str(exc)
-        ).to_dict()
-
+        )
 
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`transfer_attributes`."""
     return transfer_attributes(**kwargs)
-
 
 if __name__ == "__main__":
     import json

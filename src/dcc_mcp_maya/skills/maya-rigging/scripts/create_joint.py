@@ -3,12 +3,11 @@
 # Import future modules
 from __future__ import annotations
 
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+
 # Import built-in modules
-import logging
 from typing import List, Optional
-
-logger = logging.getLogger(__name__)
-
 
 def create_joint(
     name: Optional[str] = None,
@@ -33,23 +32,22 @@ def create_joint(
         ActionResultModel dict with ``context.object_name``,
         ``context.position``, and ``context.parent``.
     """
-    from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if parent and not cmds.objExists(parent):
-            return error_result(
+            return maya_error(
                 "Parent not found: {}".format(parent),
                 "'{}' does not exist in the scene".format(parent),
-            ).to_dict()
+            )
 
         pos = position or [0.0, 0.0, 0.0]
         if len(pos) != 3:
-            return error_result(
+            return maya_error(
                 "Invalid position",
                 "position must be a list of 3 floats, got: {}".format(pos),
-            ).to_dict()
+            )
 
         # Select parent first so joint is created as its child
         if parent:
@@ -63,23 +61,20 @@ def create_joint(
 
         joint_name = cmds.joint(**kwargs)
 
-        return success_result(
+        return maya_success(
             "Created joint '{}'".format(joint_name),
             object_name=joint_name,
             position=pos,
             parent=parent,
-        ).to_dict()
+        )
     except ImportError:
-        return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        logger.exception("create_joint failed")
-        return error_result("Failed to create joint", str(exc)).to_dict()
-
+        return maya_from_exception(exc, "Failed to create joint")
 
 def main(**kwargs) -> dict:
     """Entry point; delegates to :func:`create_joint`."""
     return create_joint(**kwargs)
-
 
 if __name__ == "__main__":
     import json
