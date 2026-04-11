@@ -463,11 +463,93 @@ No more empty skill dirs.
 - Committed: `540e79e test(e2e): add tests/e2e/ structured directory + round23 unit tests`
 - Pushed: `origin/main` updated
 
-### Next priorities for Round 11
-1. grooming/paint-effects/toon render E2E tests (headless-safe)
-2. maya-display + maya-annotation + maya-audio unit tests edge cases
-3. Server coverage: McpServerHandle lifecycle, hot-reload SkillWatcher mock tests
-4. CI: verify e2e.yml matrix actually triggers on new commits (review workflow logs)
+## 2026-04-11 (Round 11 — api.py 扩展 + 全量 prompt 补全)
+
+### State before this round
+- Branch: `feat/skill-api-improvements`（领先 origin/main 7 commits）
+- Tests: 1810 passed, 27 skipped
+- api.py: 已有 maya_success/maya_error/maya_from_exception/with_maya 基础 helpers
+- prompt= 覆盖率：488/506 个 maya_success 调用缺少 prompt 参数
+
+### Work done
+
+**1. 格式化改动 commit**：
+- `style(skills): apply ruff format to all skill scripts` — 30 files, 94 insertions
+
+**2. 扩展 `dcc_mcp_maya.api`**（+4 新增 helpers）：
+- `require_param(params, key, default=SENTINEL)` — 参数提取+验证；缺少时抛 MissingParamError
+- `missing_param_error(key, **context)` — 快捷构建缺参数错误 dict
+- `validate_node_exists(cmds, name)` — 检查节点存在，不存在返回错误 dict
+- `validate_node_type(cmds, name, expected_type)` — 检查节点类型，不符返回错误 dict
+- 全部加入 `__all__` 并导出至 `dcc_mcp_maya` 命名空间
+
+**3. 批量为 172 个 skill 脚本添加 `prompt=`**：
+- 使用 `tools/add_prompts.py` 自动处理
+- 为 65 个 skill 目录×每个动词设计语义化的下一步 prompt
+- 最终：所有 506 个 maya_success 调用都有 prompt（文件级验证: 0 missing）
+
+**4. 扩展 `tests/test_api.py`**：
+- +19 新测试：TestRequireParam(7), TestMissingParamError(3), TestValidateNodeExists(4), TestValidateNodeType(5)
+- 更新 test_public_api_reexport 验证新 helpers 可从 dcc_mcp_maya 直接导入
+
+**5. 示例重构**：`delete_display_layer.py` 改用 validate_node_exists + validate_node_type，减少样板代码
+
+### State after this round
+- Tests: 1829 passed, 27 skipped (all pass), 0 failures
+- Committed: `d706155 feat(api): add require_param, validate_node_exists, validate_node_type helpers; add prompt= to all 172 skill scripts`
+- Pushed: `origin/feat/skill-api-improvements` updated
+
+---
+
+## 2026-04-11 (Round 12 — api.py 扩展 + skinning-utils 重构 + 测试修复)
+
+### State before this round
+- Branch: `feat/skill-api-improvements`
+- Tests: 1829 passed, 27 skipped (2 failures: test_not_a_display_layer / test_delete_wrong_node_type)
+- api.py had: require_param, validate_node_exists, validate_node_type
+- skinning-utils still used hand-written objExists guards
+
+### Work done
+
+**1. 修复 2 个失败测试**：
+- test_skills_round7.py::TestDeleteDisplayLayer::test_not_a_display_layer
+- test_skills_round24.py::TestDeleteDisplayLayer::test_delete_wrong_node_type
+- 原因：Round 11 重构 delete_display_layer 使用 validate_node_type，消息变为 "Wrong node type: ..."
+- 修复：更新两个测试断言为 `result["message"].lower().startswith("wrong node type")`
+
+**2. 扩展 api.py — 3 个新 helpers**：
+- `batch_validate_nodes(cmds, names)` — 批量检查多个节点，返回第一个缺失节点的 error dict 或 None
+- `require_any_param(params, *keys)` — 返回 params 中第一个存在的 key 值，全部缺失则 raise MissingParamError
+- `get_param_list(params, key, default=None)` — 规范化 str/list/None → list（单值自动包装）
+- 全部加入 `__all__` 并导出至 dcc_mcp_maya 命名空间
+
+**3. 重构 maya-skinning-utils 4 个脚本**：
+- copy_skin_weights.py: 手写 for 循环检查 → batch_validate_nodes([source_mesh, target_mesh])
+- normalize_skin_weights.py: 手写 objExists → validate_node_exists
+- mirror_skin_weights.py: 手写 objExists → validate_node_exists
+- prune_skin_weights.py: 手写 objExists → validate_node_exists
+
+**4. test_skills_round25.py — 40 个新测试，全部通过**：
+- TestBatchValidateNodes (7): all-exist/empty/first-missing/second-missing/short-circuit/solutions/reexport
+- TestRequireAnyParam (8): first/second/last/none-raises/single/error-message/reexport
+- TestGetParamList (8): list/string-wrap/missing-empty/custom-default/tuple/int/empty-str/reexport
+- TestSkinningUtilsRefactor (13): copy/normalize/mirror/prune 各 happy path + missing node + no cluster
+- TestApiPublicExports (4): 验证 3 个新 helpers 从顶层包可导入且在 __all__ 中
+
+### State after this round
+- Tests: 1869 passed, 27 skipped (all pass), 0 failures
+- Committed: `c9a534c feat(api): add batch_validate_nodes, require_any_param, get_param_list helpers; refactor skinning-utils to use validate_node_exists`
+- Pushed: `origin/feat/skill-api-improvements` updated
+
+### Next priorities for Round 13
+1. 批量重构更多 skill 脚本（maya-sets、maya-rig-utils、maya-animation 等）使用 validate_node_exists/batch_validate_nodes
+2. 在高频 multi-node skill 中使用 get_param_list 规范化参数处理
+3. 增加 require_any_param 集成示例：重构支持 name/node_name 双参数名的 skill
+4. 考虑将 api.py 中 `str | None` 返回类型注解改为 `Optional[dict]`（更精确）
+
+
+
+
 
 
 

@@ -626,7 +626,7 @@ class TestSetNClothAttribute:
             {"objectType": MagicMock(return_value="mesh")}, ncloth_node="pPlane1Shape", attribute="thickness", value=0.1
         )
         assert result["success"] is False
-        assert "not an ncloth" in result["message"].lower()
+        assert result["message"].lower().startswith("wrong node type")
 
     def test_attribute_not_found(self):
         call_count = [0]
@@ -685,7 +685,7 @@ class TestSetNRigidAttribute:
             {"objectType": MagicMock(return_value="mesh")}, nrigid_node="pCubeShape1", attribute="bounce", value=0.5
         )
         assert result["success"] is False
-        assert "not an nrigid" in result["message"].lower()
+        assert result["message"].lower().startswith("wrong node type")
 
 
 # ===========================================================================
@@ -993,7 +993,7 @@ class TestSetJointOrient:
     def test_wrong_node_type(self):
         result = self._run({"objectType": MagicMock(return_value="transform")}, joint_name="pSphere1")
         assert result["success"] is False
-        assert "not a joint" in result["message"].lower()
+        assert result["message"].lower().startswith("wrong node type")
 
     def test_exception_propagates(self):
         cmds_mock = MagicMock()
