@@ -13,11 +13,11 @@ versions (2020 – 2025).
 # Import future modules
 from __future__ import annotations
 
-# Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
-
 # Import built-in modules
 from typing import List, Optional
+
+# Import local modules
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 
 
 def create_render_layer(
@@ -282,5 +282,5 @@ def set_render_layer_attribute(
         )
     except ImportError:
         return maya_error("Maya not available", "maya.cmds could not be imported")
-    except Exception as exc:
+    except Exception:
         return maya_error("Failed to set attribute '{}.{}'".format(layer_name, attribute))

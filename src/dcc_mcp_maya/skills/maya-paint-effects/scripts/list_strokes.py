@@ -4,8 +4,6 @@
 from __future__ import annotations
 
 # Import built-in modules
-
-
 # Import local modules
 from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
 

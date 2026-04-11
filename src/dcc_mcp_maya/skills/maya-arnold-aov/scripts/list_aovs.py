@@ -4,10 +4,8 @@
 from __future__ import annotations
 
 # Import built-in modules
-
 # Import local modules
 from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
-
 
 _INT_TO_TYPE = {1: "FLOAT", 2: "INT", 3: "RGB", 4: "RGBA", 5: "VECTOR"}
 

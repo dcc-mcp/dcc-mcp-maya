@@ -4,9 +4,8 @@
 from __future__ import annotations
 
 # Import built-in modules
-
 # Import local modules
-from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
+from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success, validate_node_exists
 
 
 def delete_attribute(node_name: str, attribute: str) -> dict:
@@ -24,11 +23,9 @@ def delete_attribute(node_name: str, attribute: str) -> dict:
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(node_name):
-            return maya_error(
-                "Node not found: {}".format(node_name),
-                "'{}' does not exist".format(node_name),
-            )
+        err = validate_node_exists(cmds, node_name)
+        if err:
+            return err
 
         full_attr = "{}.{}".format(node_name, attribute)
         if not cmds.objExists(full_attr):
