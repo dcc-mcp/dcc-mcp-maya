@@ -654,9 +654,60 @@ No more empty skill dirs.
 - Committed: `ee06ec6 refactor(skills): bulk migrate 136 scripts from cmds.objExists to validate_node_exists; add test_skills_round29 (25 tests)`
 - Pushed: `origin/feat/skill-api-improvements` updated
 
+
+---
+
+## 2026-04-11 (Round 16 — 44 cmds.objExists 迁移 + test_skills_round30)
+
+### State before this round
+- Branch: `feat/skill-api-improvements`
+- Tests: 2046 passed, 27 skipped
+- cmds.objExists: 142 处分布在 89 个文件
+
+### Work done
+
+**批量迁移 44 处 `cmds.objExists` → `validate_node_exists` / `batch_validate_nodes`**：
+
+目标文件（8个，集中在 maya-scripting 目录）：
+- `uv_ops.py`: 8 处 → validate_node_exists（含 for-loop / copy_uvs 情形）
+- `vertex_color.py`: 5 处 → validate_node_exists（含 component vtx 检查）
+- `deformer_advanced.py`: 5 处 list 模式 → batch_validate_nodes（cluster/lattice/wire/sculpt）
+- `mesh_ops.py`: 7 处 → validate_node_exists（全部清零）
+- `rigging.py`: 5 处 → validate_node_exists（含 conditional `if parent and` 模式）
+- `dynamics.py`: 2 处 conditional nucleus → validate_node_exists（保留 mag_attr 属性探测）
+- `animation.py`: 2 处 list 模式 → batch_validate_nodes
+- `sets.py`: 2 处 list 模式 → batch_validate_nodes
+
+**工具脚本**（4 个，已提交入库）：
+- `tools/migrate_uv_ops.py` — 简单 objExists 替换
+- `tools/migrate_batch_validate.py` — list 模式替换（MISSING_LINE regex）
+- `tools/migrate_standard_objexists.py` — 标准单节点替换
+- `tools/fix_broken_batch_migration.py` — 修复 regex 残留片段（dangling error call）
+
+**修复的问题**：migrate_batch_validate.py 的 regex 仅替换了第一行，遗留了多行 skill_error 参数 → fix_broken_batch_migration.py 逐行修复 `return err…` 残留。
+
+**test_skills_round30.py** — 36 个新测试，全部通过：
+- TestRound30Structural (6): 无语法错误/无 raw objExists/import 完整/全局计数<100
+- TestUvOpsValidation (3): missing object / success / no raw guard
+- TestVertexColorValidation (3): same pattern
+- TestDeformerAdvancedBatchValidation (4): batch_validate_nodes 行为/import
+- TestMeshOpsValidation (5): 全部清零/import/3 函数 missing-node
+- TestRiggingValidation (4): import/no raw guard/missing parent/set_driven_key
+- TestDynamicsConditionalValidation (3): no nucleus guard/import/mag_attr probe preserved
+- TestAnimationBatchValidation (2): import/no broken return err
+- TestSetsBatchValidation (3): import/no broken return err/no raw guard
+- TestGlobalObjExistsReduction (2): total<100/validate usage ≥170 files
+
+### State after this round
+- Tests: 2082 passed (+36), 27 skipped, 0 failures
+- cmds.objExists: 142 → 98（减少 44 处）
+- ruff: 通过（0 errors）
+- Committed: `69ee591 refactor(skills): migrate 44 cmds.objExists guards to validate_node_exists/batch_validate_nodes; add test_skills_round30 (36 tests)`
+- Pushed: `origin/feat/skill-api-improvements` updated
+
 ### Next priorities
-1. Migrate remaining ~95 complex `objExists` patterns (multi-node checks → batch_validate_nodes)
-2. Integration of dcc-mcp-core new APIs: `create_skill_manager()`, `TransportManager.bind_and_register`, `resolve_dependencies`
-3. server.py update: use `create_skill_manager()` for one-step setup
-4. E2E tests: add more coverage for skill dirs added in Rounds 2-9
+1. 继续迁移剩余 ~98 处 cmds.objExists（优先 lighting.py / cameras.py 的属性检查模式、node_attrs.py）
+2. 覆盖更多 skill 目录的 E2E 测试（目前 tests/e2e/ 只有 scene/animation/material/scripting）
+3. 考虑对 remaining `cmds.objExists` 做最终分类：attribute-probe（保留） vs node-existence（迁移）
+
 

@@ -9,6 +9,8 @@ from typing import Optional
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 
 def get_script_node(
     name: str,
@@ -35,8 +37,9 @@ def get_script_node(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if action == "get":
-            if not cmds.objExists(name):
-                return skill_error("scriptNode not found", "No node named '{}'.".format(name))
+            err = validate_node_exists(cmds, name)
+            if err:
+                return err
             body = cmds.getAttr("{}.before".format(name))
             stype = cmds.getAttr("{}.scriptType".format(name))
             return skill_success(

@@ -6,6 +6,8 @@ from __future__ import annotations
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 # Import built-in modules
 
 
@@ -32,8 +34,9 @@ def list_node_connections(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(node):
-            return skill_error("Node not found", "No node named '{}'.".format(node))
+        err = validate_node_exists(cmds, node)
+        if err:
+            return err
 
         connections = []
 

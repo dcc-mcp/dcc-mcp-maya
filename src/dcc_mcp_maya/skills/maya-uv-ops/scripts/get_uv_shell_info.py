@@ -9,6 +9,8 @@ from typing import Optional
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 
 def get_uv_shell_info(object_name: str, uv_set: Optional[str] = None) -> dict:
     """Get UV shell information for a polygon mesh.
@@ -29,8 +31,9 @@ def get_uv_shell_info(object_name: str, uv_set: Optional[str] = None) -> dict:
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(object_name):
-            return skill_error("Object not found: {}".format(object_name), "'{}' does not exist".format(object_name))
+        err = validate_node_exists(cmds, object_name)
+        if err:
+            return err
 
         # Resolve UV set
         if uv_set:

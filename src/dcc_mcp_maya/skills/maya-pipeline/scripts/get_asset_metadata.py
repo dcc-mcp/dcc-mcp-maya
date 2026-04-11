@@ -11,6 +11,8 @@ _META_ATTRS = ["asset_name", "asset_variant", "asset_version", "pipeline_step"]
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success  # noqa: E402
 
+from dcc_mcp_maya.api import validate_node_exists  # noqa: E402
+
 
 def get_asset_metadata(node: str) -> dict:
     """Read pipeline metadata string attributes from a node.
@@ -29,8 +31,9 @@ def get_asset_metadata(node: str) -> dict:
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(node):
-            return skill_error("Node not found", "No node named '{}'.".format(node))
+        err = validate_node_exists(cmds, node)
+        if err:
+            return err
 
         metadata = {}
         for attr in _META_ATTRS:
