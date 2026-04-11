@@ -95,7 +95,8 @@ def set_animation_curve_tangent(
         return error_result("Failed to set tangent on '{}.{}'".format(object_name, attribute), str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`set_animation_curve_tangent`."""
     return set_animation_curve_tangent(**kwargs)
 
 

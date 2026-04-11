@@ -39,7 +39,8 @@ def save_scene(file_path: Optional[str] = None, file_type: str = "mayaBinary") -
         return error_result("Failed to save scene", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`save_scene`."""
     return save_scene(**kwargs)
 
 

@@ -98,7 +98,8 @@ def export_animation_curves(
         return error_result("Failed to export animation curves for '{}'".format(object_name), str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`export_animation_curves`."""
     return export_animation_curves(**kwargs)
 
 

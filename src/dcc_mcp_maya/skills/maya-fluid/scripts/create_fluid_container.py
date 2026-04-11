@@ -77,5 +77,6 @@ def main(**kwargs):
 
 if __name__ == "__main__":
     import json
+
     result = create_fluid_container()
     print(json.dumps(result))

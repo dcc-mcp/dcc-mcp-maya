@@ -69,7 +69,8 @@ def remove_from_set(
         return error_result("Failed to remove objects from set '{}'".format(set_name), str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`remove_from_set`."""
     return remove_from_set(**kwargs)
 
 

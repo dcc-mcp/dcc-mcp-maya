@@ -72,7 +72,8 @@ def delete_display_layer(
         return error_result("Failed to delete display layer '{}'".format(layer_name), str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`delete_display_layer`."""
     return delete_display_layer(**kwargs)
 
 

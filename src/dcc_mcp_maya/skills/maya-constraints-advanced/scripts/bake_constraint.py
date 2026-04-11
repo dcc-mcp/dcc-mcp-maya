@@ -63,10 +63,8 @@ def bake_constraint(
 
         if remove_constraints:
             for obj in objects:
-                constraints = (
-                    cmds.listRelatives(obj, type="constraint") or []
-                )
-                constraints += (cmds.listConnections(obj, type="constraint") or [])
+                constraints = cmds.listRelatives(obj, type="constraint") or []
+                constraints += cmds.listConnections(obj, type="constraint") or []
                 for con in set(constraints):
                     if cmds.objExists(con):
                         cmds.delete(con)

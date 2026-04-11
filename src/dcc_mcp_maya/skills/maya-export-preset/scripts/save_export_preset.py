@@ -72,8 +72,7 @@ def save_export_preset(
         return success_result(
             "Export preset saved",
             prompt=(
-                "Preset '{}' saved to '{}'. "
-                "Use load_export_preset to restore these settings.".format(
+                "Preset '{}' saved to '{}'. Use load_export_preset to restore these settings.".format(
                     preset_name, preset_path
                 )
             ),
@@ -93,5 +92,6 @@ def main(**kwargs):
 
 if __name__ == "__main__":
     import json as _json
+
     result = save_export_preset("my_fbx_preset")
     print(_json.dumps(result))

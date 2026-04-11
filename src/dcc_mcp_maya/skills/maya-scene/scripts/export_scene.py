@@ -43,7 +43,8 @@ def export_scene(file_path: str, file_type: str = "mayaBinary") -> dict:
         return error_result("Failed to export scene to '{}'".format(file_path), str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`export_scene`."""
     return export_scene(**kwargs)
 
 

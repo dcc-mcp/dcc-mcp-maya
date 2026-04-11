@@ -41,7 +41,8 @@ def list_objects(object_type: Optional[str] = None, dag: bool = True) -> dict:
         return error_result("Failed to list objects", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`list_objects`."""
     return list_objects(**kwargs)
 
 

@@ -69,7 +69,8 @@ def set_object_color(
         return error_result("Failed to set object color on '{}'".format(object_name), str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`set_object_color`."""
     return set_object_color(**kwargs)
 
 

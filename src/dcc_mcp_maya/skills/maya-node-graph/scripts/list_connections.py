@@ -80,7 +80,8 @@ def list_connections(
         return error_result("Failed to list connections on {}".format(object_name), str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`list_connections`."""
     return list_connections(**kwargs)
 
 

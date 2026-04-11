@@ -47,7 +47,8 @@ def list_display_layers() -> dict:
         return error_result("Failed to list display layers", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`list_display_layers`."""
     return list_display_layers(**kwargs)
 
 

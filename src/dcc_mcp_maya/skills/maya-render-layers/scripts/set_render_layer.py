@@ -63,7 +63,8 @@ def set_render_layer(
         ).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`set_render_layer`."""
     return set_render_layer(**kwargs)
 
 

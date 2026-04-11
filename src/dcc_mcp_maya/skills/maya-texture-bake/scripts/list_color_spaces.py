@@ -54,7 +54,8 @@ def list_color_spaces() -> dict:
         return error_result("Failed to list color spaces", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`list_color_spaces`."""
     return list_color_spaces(**kwargs)
 
 

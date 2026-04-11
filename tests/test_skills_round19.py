@@ -6,16 +6,11 @@ maya-namespaces, and maya-texture-bake skills.
 from __future__ import annotations
 
 # Import built-in modules
-import os
 import sys
-import tempfile
 from unittest.mock import MagicMock, patch
 
 # Import third-party modules
-import pytest
-
 from tests.conftest import load_skill_script, make_mock_maya
-
 
 # ---------------------------------------------------------------------------
 # maya-paint-effects
@@ -470,11 +465,15 @@ class TestListShots:
         mock_maya, mock_cmds = make_mock_maya()
         mock_cmds.ls.return_value = ["shot1", "shot2"]
         mock_cmds.shot.side_effect = lambda sn, **kw: (
-            "camera1" if kw.get("currentCamera") else
-            1.0 if kw.get("startTime") else
-            24.0 if kw.get("endTime") else
-            1.0 if kw.get("sequenceStartTime") else
-            24.0
+            "camera1"
+            if kw.get("currentCamera")
+            else 1.0
+            if kw.get("startTime")
+            else 24.0
+            if kw.get("endTime")
+            else 1.0
+            if kw.get("sequenceStartTime")
+            else 24.0
         )
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             result = mod.list_shots()
@@ -509,10 +508,7 @@ class TestSetShotRange:
         mock_maya, mock_cmds = make_mock_maya()
         mock_cmds.objExists.return_value = True
         mock_cmds.shot.side_effect = lambda sn, **kw: (
-            1.0 if kw.get("startTime") else
-            24.0 if kw.get("endTime") else
-            1.0 if kw.get("sequenceStartTime") else
-            None
+            1.0 if kw.get("startTime") else 24.0 if kw.get("endTime") else 1.0 if kw.get("sequenceStartTime") else None
         )
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             result = mod.set_shot_range("shot1", start_frame=10, end_frame=60)
@@ -524,11 +520,7 @@ class TestSetShotRange:
         mod = self._load()
         mock_maya, mock_cmds = make_mock_maya()
         mock_cmds.objExists.return_value = True
-        mock_cmds.shot.side_effect = lambda sn, **kw: (
-            5.0 if kw.get("startTime") else
-            30.0 if kw.get("endTime") else
-            5.0
-        )
+        mock_cmds.shot.side_effect = lambda sn, **kw: 5.0 if kw.get("startTime") else 30.0 if kw.get("endTime") else 5.0
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             result = mod.set_shot_range("shot1", end_frame=100)
         assert result["success"] is True
@@ -916,7 +908,8 @@ class TestTransferMaps:
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             with patch("os.path.isdir", return_value=True):
                 result = mod.transfer_maps(
-                    "highMesh", "lowMesh",
+                    "highMesh",
+                    "lowMesh",
                     map_types=["normals", "diffuse", "ambientOcclusion"],
                 )
         assert result["success"] is True
@@ -953,9 +946,7 @@ class TestListBakeSets:
         mock_cmds.ls.return_value = ["bakeSet1"]
         mock_cmds.attributeQuery.return_value = True
         mock_cmds.getAttr.side_effect = lambda attr: (
-            1024 if "resolution" in attr.lower() else
-            "png" if "format" in attr.lower() else
-            None
+            1024 if "resolution" in attr.lower() else "png" if "format" in attr.lower() else None
         )
         mock_cmds.sets.return_value = ["pSphere1"]
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):

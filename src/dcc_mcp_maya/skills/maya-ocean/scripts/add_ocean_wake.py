@@ -45,9 +45,7 @@ def add_ocean_wake(
         return success_result(
             "Ocean wake added",
             prompt=(
-                "Wake locator '{}' created. Animate the locator to simulate a moving vessel.".format(
-                    locator_transform
-                )
+                "Wake locator '{}' created. Animate the locator to simulate a moving vessel.".format(locator_transform)
             ),
             wake_locator=locator_transform,
             shader=shader,
@@ -66,5 +64,6 @@ def main(**kwargs):
 
 if __name__ == "__main__":
     import json
+
     result = add_ocean_wake("oceanShader1")
     print(json.dumps(result))

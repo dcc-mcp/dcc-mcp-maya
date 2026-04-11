@@ -54,7 +54,8 @@ def list_references() -> dict:
         return error_result("Failed to list references", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`list_references`."""
     return list_references(**kwargs)
 
 

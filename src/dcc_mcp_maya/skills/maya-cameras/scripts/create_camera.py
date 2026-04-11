@@ -59,7 +59,8 @@ def create_camera(
         return error_result("Failed to create camera", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`create_camera`."""
     return create_camera(**kwargs)
 
 

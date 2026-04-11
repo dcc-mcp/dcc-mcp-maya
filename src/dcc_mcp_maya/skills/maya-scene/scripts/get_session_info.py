@@ -39,7 +39,8 @@ def get_session_info() -> dict:
         return error_result("Failed to get session info", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`get_session_info`."""
     return get_session_info(**kwargs)
 
 

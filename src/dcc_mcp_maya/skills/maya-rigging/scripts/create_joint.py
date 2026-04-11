@@ -76,7 +76,8 @@ def create_joint(
         return error_result("Failed to create joint", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`create_joint`."""
     return create_joint(**kwargs)
 
 

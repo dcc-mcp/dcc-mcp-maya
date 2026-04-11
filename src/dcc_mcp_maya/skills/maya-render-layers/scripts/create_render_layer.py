@@ -62,7 +62,8 @@ def create_render_layer(
         return error_result("Failed to create render layer '{}'".format(name), str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`create_render_layer`."""
     return create_render_layer(**kwargs)
 
 

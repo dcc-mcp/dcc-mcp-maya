@@ -27,11 +27,13 @@ def list_gpu_caches() -> dict:
             file_path = cmds.getAttr("{}.cacheFileName".format(node)) or ""
             parents = cmds.listRelatives(node, parent=True) or []
             transform = parents[0] if parents else ""
-            caches.append({
-                "transform": transform,
-                "cache_node": node,
-                "file_path": file_path,
-            })
+            caches.append(
+                {
+                    "transform": transform,
+                    "cache_node": node,
+                    "file_path": file_path,
+                }
+            )
 
         return success_result(
             "Found {} gpuCache node(s)".format(len(caches)),

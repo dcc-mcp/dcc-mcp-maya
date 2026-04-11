@@ -70,7 +70,8 @@ def set_joint_orient(
         return error_result("Failed to set joint orient on {}".format(joint_name), str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`set_joint_orient`."""
     return set_joint_orient(**kwargs)
 
 

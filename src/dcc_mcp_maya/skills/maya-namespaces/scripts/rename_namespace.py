@@ -70,7 +70,8 @@ def rename_namespace(
         return error_result("Failed to rename namespace", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`rename_namespace`."""
     return rename_namespace(**kwargs)
 
 

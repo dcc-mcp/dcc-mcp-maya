@@ -45,13 +45,15 @@ def list_proxies() -> dict:
             except Exception:
                 pass
 
-            proxies.append({
-                "proxy": node,
-                "source": source,
-                "proxy_visible": proxy_vis,
-                "source_visible": source_vis,
-                "face_count": face_count,
-            })
+            proxies.append(
+                {
+                    "proxy": node,
+                    "source": source,
+                    "proxy_visible": proxy_vis,
+                    "source_visible": source_vis,
+                    "face_count": face_count,
+                }
+            )
 
         return success_result(
             "Found {} proxy mesh pair(s)".format(len(proxies)),
@@ -72,5 +74,6 @@ def main(**kwargs):
 
 if __name__ == "__main__":
     import json
+
     result = list_proxies()
     print(json.dumps(result))

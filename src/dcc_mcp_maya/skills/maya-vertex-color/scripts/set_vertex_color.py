@@ -73,7 +73,8 @@ def set_vertex_color(
         return error_result("Failed to set vertex color", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`set_vertex_color`."""
     return set_vertex_color(**kwargs)
 
 

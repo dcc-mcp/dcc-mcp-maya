@@ -68,7 +68,7 @@ def bake_transforms(
         return success_result(
             "Baked transforms for {} object(s) [{} → {}]".format(len(objects), s, e),
             prompt="You can now delete constraints and export the objects. "
-                   "Use maya-animation skills to further edit keyframes.",
+            "Use maya-animation skills to further edit keyframes.",
             baked_objects=objects,
             frame_range=[s, e],
             step=step,

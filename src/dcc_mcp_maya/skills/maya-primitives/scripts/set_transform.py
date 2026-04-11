@@ -61,7 +61,8 @@ def set_transform(
         return error_result(f"Failed to set transform on {object_name}", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`set_transform`."""
     return set_transform(**kwargs)
 
 

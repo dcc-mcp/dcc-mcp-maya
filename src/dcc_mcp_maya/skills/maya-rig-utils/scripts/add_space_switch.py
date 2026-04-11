@@ -49,9 +49,7 @@ def add_space_switch(
         if len(spaces) != len(space_names):
             return error_result(
                 "Mismatched spaces/space_names lengths",
-                "spaces ({}) and space_names ({}) must have the same length".format(
-                    len(spaces), len(space_names)
-                ),
+                "spaces ({}) and space_names ({}) must have the same length".format(len(spaces), len(space_names)),
             ).to_dict()
 
         missing = [s for s in spaces if not cmds.objExists(s)]

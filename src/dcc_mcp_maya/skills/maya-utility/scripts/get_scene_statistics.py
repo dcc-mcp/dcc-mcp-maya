@@ -78,7 +78,7 @@ def get_scene_statistics(
                 "Statistics gathered. Large scenes (>500k verts) may be slow to manipulate; "
                 "consider using proxy meshes."
             ),
-            **ctx
+            **ctx,
         ).to_dict()
     except ImportError:
         return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
@@ -87,11 +87,13 @@ def get_scene_statistics(
         return error_result("Failed to get scene statistics", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`get_scene_statistics`."""
     return get_scene_statistics(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = get_scene_statistics()
     print(json.dumps(result))

@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 # Import built-in modules
-import json
 import logging
 import os
 import subprocess
@@ -56,20 +55,15 @@ def submit_to_deadline(
         scene_stem = os.path.splitext(os.path.basename(scene_path))[0]
         name = job_name or scene_stem
 
-        sf = start_frame if start_frame is not None else int(
-            cmds.getAttr("defaultRenderGlobals.startFrame")
-        )
-        ef = end_frame if end_frame is not None else int(
-            cmds.getAttr("defaultRenderGlobals.endFrame")
-        )
+        sf = start_frame if start_frame is not None else int(cmds.getAttr("defaultRenderGlobals.startFrame"))
+        ef = end_frame if end_frame is not None else int(cmds.getAttr("defaultRenderGlobals.endFrame"))
 
         # Locate deadlinecommand
         cmd = deadline_command
         if not cmd:
             for candidate in ["deadlinecommand", "deadlinecommand.exe"]:
                 result = subprocess.run(
-                    ["where", candidate] if os.name == "nt" else ["which", candidate],
-                    capture_output=True, text=True
+                    ["where", candidate] if os.name == "nt" else ["which", candidate], capture_output=True, text=True
                 )
                 if result.returncode == 0:
                     cmd = candidate
@@ -108,7 +102,9 @@ def submit_to_deadline(
 
             proc = subprocess.run(
                 [cmd, job_file, plugin_file],
-                capture_output=True, text=True, timeout=60,
+                capture_output=True,
+                text=True,
+                timeout=60,
             )
 
         if proc.returncode != 0:

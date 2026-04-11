@@ -58,7 +58,8 @@ def create_set(
         return error_result("Failed to create set '{}'".format(name), str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`create_set`."""
     return create_set(**kwargs)
 
 

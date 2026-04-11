@@ -30,11 +30,13 @@ def list_fluid_containers() -> dict:
             if cmds.attributeQuery("resolution", node=shape, exists=True):
                 raw = cmds.getAttr("{}.resolution".format(shape))
                 resolution = list(raw[0]) if raw else None
-            containers.append({
-                "transform": transform,
-                "shape": shape,
-                "resolution": resolution,
-            })
+            containers.append(
+                {
+                    "transform": transform,
+                    "shape": shape,
+                    "resolution": resolution,
+                }
+            )
 
         return success_result(
             "Found {} fluid container(s)".format(len(containers)),
@@ -55,5 +57,6 @@ def main(**kwargs):
 
 if __name__ == "__main__":
     import json
+
     result = list_fluid_containers()
     print(json.dumps(result))

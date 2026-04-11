@@ -57,9 +57,9 @@ def mirror_pose(
 
         for node, attrs in pose_data.items():
             if node.startswith(left_prefix):
-                counterpart = right_prefix + node[len(left_prefix):]
+                counterpart = right_prefix + node[len(left_prefix) :]
             elif node.startswith(right_prefix):
-                counterpart = left_prefix + node[len(right_prefix):]
+                counterpart = left_prefix + node[len(right_prefix) :]
             else:
                 mirrored_data[node] = attrs
                 continue
@@ -73,9 +73,13 @@ def mirror_pose(
 
             counterpart_orig = pose_data.get(counterpart, {})
             mirrored_data[node] = {
-                k: (counterpart_orig.get(k, v) if k not in _NEGATE_ATTRS
-                    else -counterpart_orig.get(k, v) if isinstance(counterpart_orig.get(k, v), (int, float))
-                    else v)
+                k: (
+                    counterpart_orig.get(k, v)
+                    if k not in _NEGATE_ATTRS
+                    else -counterpart_orig.get(k, v)
+                    if isinstance(counterpart_orig.get(k, v), (int, float))
+                    else v
+                )
                 for k, v in attrs.items()
             }
             mirrored_data[counterpart] = mirror_attrs
@@ -88,6 +92,7 @@ def mirror_pose(
             msg = "Mirrored pose saved to '{}'".format(output_path)
         else:
             import maya.cmds as cmds  # noqa: PLC0415
+
             for node, attrs in mirrored_data.items():
                 if not cmds.objExists(node):
                     continue

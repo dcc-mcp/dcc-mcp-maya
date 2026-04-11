@@ -58,5 +58,6 @@ def main(**kwargs):
 
 if __name__ == "__main__":
     import json
+
     result = set_muscle_attribute("cMuscleObject1", "stiffness", 0.5)
     print(json.dumps(result))

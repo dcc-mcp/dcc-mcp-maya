@@ -96,7 +96,8 @@ def transfer_attributes(
         ).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`transfer_attributes`."""
     return transfer_attributes(**kwargs)
 
 

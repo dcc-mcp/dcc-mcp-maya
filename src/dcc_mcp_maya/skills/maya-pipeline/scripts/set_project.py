@@ -63,5 +63,6 @@ def main(**kwargs):
 
 if __name__ == "__main__":
     import json
+
     result = set_project("/path/to/project")
     print(json.dumps(result))

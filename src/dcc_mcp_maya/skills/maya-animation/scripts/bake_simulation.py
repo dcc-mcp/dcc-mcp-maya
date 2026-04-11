@@ -77,7 +77,8 @@ def bake_simulation(
         return error_result("Failed to bake simulation", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`bake_simulation`."""
     return bake_simulation(**kwargs)
 
 

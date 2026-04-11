@@ -88,7 +88,8 @@ def set_ncloth_attribute(
         return error_result("Failed to set attribute on nCloth '{}'".format(ncloth_node), str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`set_ncloth_attribute`."""
     return set_ncloth_attribute(**kwargs)
 
 

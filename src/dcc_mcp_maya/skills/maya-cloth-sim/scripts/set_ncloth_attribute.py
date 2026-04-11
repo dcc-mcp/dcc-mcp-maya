@@ -35,9 +35,7 @@ def set_ncloth_attribute(ncloth_shape: str, attribute: str, value: float) -> dic
 
         return success_result(
             "nCloth attribute set",
-            prompt="nCloth {}.{} = {}. Run simulation to see effect.".format(
-                ncloth_shape, attribute, value
-            ),
+            prompt="nCloth {}.{} = {}. Run simulation to see effect.".format(ncloth_shape, attribute, value),
             ncloth_shape=ncloth_shape,
             attribute=attribute,
             value=value,
@@ -55,5 +53,6 @@ def main(**kwargs):
 
 if __name__ == "__main__":
     import json
+
     result = set_ncloth_attribute("nCloth1", "thickness", 0.1)
     print(json.dumps(result))

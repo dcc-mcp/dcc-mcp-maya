@@ -63,9 +63,9 @@ def mirror_skin_weights(
         else:
             mirror_kwargs["mirrorInverse"] = True
 
-        cmds.copySkinWeights(mesh, mirrorMode=mirror_mode, **{
-            k: v for k, v in mirror_kwargs.items() if k != "mirrorMode"
-        })
+        cmds.copySkinWeights(
+            mesh, mirrorMode=mirror_mode, **{k: v for k, v in mirror_kwargs.items() if k != "mirrorMode"}
+        )
 
         return success_result(
             "Mirrored skin weights on '{}' across {} plane".format(mesh, mirror_mode),

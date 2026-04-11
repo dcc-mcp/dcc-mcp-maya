@@ -85,5 +85,6 @@ def main(**kwargs):
 
 if __name__ == "__main__":
     import json
+
     result = clean_mocap_keys()
     print(json.dumps(result))

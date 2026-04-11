@@ -67,8 +67,9 @@ def create_nparticle_emitter(
 
         # Configure emitter
         if emitter_node:
-            cmds.setAttr("{}.emitterType".format(emitter_node),
-                         {"omni": 0, "directional": 1, "volume": 3}.get(emitter_type, 0))
+            cmds.setAttr(
+                "{}.emitterType".format(emitter_node), {"omni": 0, "directional": 1, "volume": 3}.get(emitter_type, 0)
+            )
             cmds.setAttr("{}.rate".format(emitter_node), rate)
             cmds.setAttr("{}.speed".format(emitter_node), speed)
 
@@ -77,8 +78,8 @@ def create_nparticle_emitter(
 
         # Find nucleus node
         nucleus_nodes = cmds.ls(type="nucleus") or []
-        actual_nucleus = nucleus if nucleus and cmds.objExists(nucleus) else (
-            nucleus_nodes[-1] if nucleus_nodes else None
+        actual_nucleus = (
+            nucleus if nucleus and cmds.objExists(nucleus) else (nucleus_nodes[-1] if nucleus_nodes else None)
         )
 
         return success_result(

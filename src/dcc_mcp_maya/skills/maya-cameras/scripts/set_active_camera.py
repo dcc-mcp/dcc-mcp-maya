@@ -56,7 +56,8 @@ def set_active_camera(camera_name: str, panel: Optional[str] = None) -> dict:
         return error_result("Failed to set active camera", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`set_active_camera`."""
     return set_active_camera(**kwargs)
 
 

@@ -97,7 +97,8 @@ def assign_deformer(
         return error_result("Failed to assign deformer to {}".format(object_name), str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`assign_deformer`."""
     return assign_deformer(**kwargs)
 
 

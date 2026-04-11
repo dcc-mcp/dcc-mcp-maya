@@ -68,7 +68,8 @@ def get_camera_info(camera_name: str) -> dict:
         return error_result("Failed to get camera info for '{}'".format(camera_name), str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`get_camera_info`."""
     return get_camera_info(**kwargs)
 
 

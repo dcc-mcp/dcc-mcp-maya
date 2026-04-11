@@ -32,7 +32,8 @@ def new_scene(force: bool = False) -> dict:
         return error_result("Failed to create new scene", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`new_scene`."""
     return new_scene(**kwargs)
 
 

@@ -35,13 +35,15 @@ def list_hair_systems() -> dict:
             if cmds.attributeQuery("stiffness", node=hs, exists=True):
                 stiffness = cmds.getAttr("{}.stiffness".format(hs))
 
-            result.append({
-                "hair_system": hs,
-                "transform": transform,
-                "follicle_count": len(follicles),
-                "nucleus": nucleus,
-                "stiffness": stiffness,
-            })
+            result.append(
+                {
+                    "hair_system": hs,
+                    "transform": transform,
+                    "follicle_count": len(follicles),
+                    "nucleus": nucleus,
+                    "stiffness": stiffness,
+                }
+            )
 
         return success_result(
             "Found {} hair system(s)".format(len(result)),
@@ -62,5 +64,6 @@ def main(**kwargs):
 
 if __name__ == "__main__":
     import json
+
     result = list_hair_systems()
     print(json.dumps(result))

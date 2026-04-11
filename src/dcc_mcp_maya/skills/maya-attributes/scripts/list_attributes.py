@@ -57,7 +57,8 @@ def list_attributes(
         return error_result("Failed to list attributes", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`list_attributes`."""
     return list_attributes(**kwargs)
 
 

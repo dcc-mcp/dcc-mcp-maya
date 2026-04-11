@@ -60,6 +60,7 @@ def enable_aov(name: str, enabled: bool = True) -> dict:
 
 
 def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`enable_aov`."""
     return enable_aov(**kwargs)
 
 

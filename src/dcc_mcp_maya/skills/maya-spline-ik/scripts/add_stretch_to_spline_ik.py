@@ -38,7 +38,7 @@ def add_stretch_to_spline_ik(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        for name in ([ik_handle, curve] + joints):
+        for name in [ik_handle, curve] + joints:
             if not cmds.objExists(name):
                 return error_result(
                     "Node not found: {}".format(name),
@@ -84,7 +84,7 @@ def add_stretch_to_spline_ik(
         return success_result(
             "Added stretch to {} joint(s) via '{}'".format(len(joints), ci),
             prompt="Animate the curve's CVs to see the joints stretch. "
-                   "Use bake_transforms to collapse the result before export.",
+            "Use bake_transforms to collapse the result before export.",
             curve_info=ci,
             multiply_divide=md,
             joints_driven=joints,

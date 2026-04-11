@@ -94,7 +94,8 @@ def set_nrigid_attribute(
         ).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`set_nrigid_attribute`."""
     return set_nrigid_attribute(**kwargs)
 
 

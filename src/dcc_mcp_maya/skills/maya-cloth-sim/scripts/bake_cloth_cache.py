@@ -53,8 +53,7 @@ def bake_cloth_cache(
         return success_result(
             "nCloth cache baked ({}-{})".format(start_frame, end_frame),
             prompt=(
-                "Cloth cache baked for frames {}-{}. "
-                "Playback is now deterministic without re-simulating.".format(
+                "Cloth cache baked for frames {}-{}. Playback is now deterministic without re-simulating.".format(
                     start_frame, end_frame
                 )
             ),
@@ -75,5 +74,6 @@ def main(**kwargs):
 
 if __name__ == "__main__":
     import json
+
     result = bake_cloth_cache("nCloth1")
     print(json.dumps(result))

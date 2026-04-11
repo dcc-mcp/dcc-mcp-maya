@@ -49,18 +49,22 @@ def list_export_presets(preset_dir: Optional[str] = None) -> dict:
             try:
                 with open(fpath, "r") as fh:
                     data = json.load(fh)
-                presets.append({
-                    "preset_name": data.get("preset_name", fname[:-5]),
-                    "format": data.get("format", ""),
-                    "frame_range": data.get("frame_range"),
-                    "path": fpath,
-                })
+                presets.append(
+                    {
+                        "preset_name": data.get("preset_name", fname[:-5]),
+                        "format": data.get("format", ""),
+                        "frame_range": data.get("frame_range"),
+                        "path": fpath,
+                    }
+                )
             except Exception:
-                presets.append({
-                    "path": fpath,
-                    "preset_name": fname[:-5],
-                    "error": "invalid JSON",
-                })
+                presets.append(
+                    {
+                        "path": fpath,
+                        "preset_name": fname[:-5],
+                        "error": "invalid JSON",
+                    }
+                )
 
         return success_result(
             "Found {} export preset(s)".format(len(presets)),
@@ -82,5 +86,6 @@ def main(**kwargs):
 
 if __name__ == "__main__":
     import json as _json
+
     result = list_export_presets()
     print(_json.dumps(result))

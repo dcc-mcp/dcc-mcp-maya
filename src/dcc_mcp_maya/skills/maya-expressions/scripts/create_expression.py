@@ -38,9 +38,7 @@ def create_expression(
     from dcc_mcp_core import error_result, success_result  # noqa: PLC0415
 
     if not expression or not expression.strip():
-        return error_result(
-            "Missing parameter", "'expression' string is required and must not be empty"
-        ).to_dict()
+        return error_result("Missing parameter", "'expression' string is required and must not be empty").to_dict()
 
     # Validate unit_conversion
     if unit_conversion is not None and not isinstance(unit_conversion, str):
@@ -90,7 +88,7 @@ def create_expression(
         return success_result(
             "Expression node '{}' created".format(node),
             prompt="Expression is live. Use list_expressions to verify or delete_expression to remove.",
-            **ctx
+            **ctx,
         ).to_dict()
     except ImportError:
         return error_result("Maya not available", "maya.cmds could not be imported").to_dict()
@@ -99,11 +97,13 @@ def create_expression(
         return error_result("Failed to create expression", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`create_expression`."""
     return create_expression(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = create_expression("pSphere1.translateY = sin(time) * 2;")
     print(json.dumps(result))

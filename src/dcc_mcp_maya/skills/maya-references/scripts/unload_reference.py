@@ -53,7 +53,8 @@ def unload_reference(reference_node: str) -> dict:
         return error_result("Failed to unload reference '{}'".format(reference_node), str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`unload_reference`."""
     return unload_reference(**kwargs)
 
 

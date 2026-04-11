@@ -54,7 +54,8 @@ def get_keyframes(
         return error_result("Failed to get keyframes for {}".format(object_name), str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`get_keyframes`."""
     return get_keyframes(**kwargs)
 
 

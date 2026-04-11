@@ -37,9 +37,9 @@ def create_toon_shader(
         shader = cmds.shadingNode("rampShader", asShader=True, name=name)
 
         default_ramp = [
-            [0.05, 0.05, 0.05],   # shadow
-            [0.45, 0.45, 0.45],   # mid
-            [1.0, 1.0, 1.0],      # highlight
+            [0.05, 0.05, 0.05],  # shadow
+            [0.45, 0.45, 0.45],  # mid
+            [1.0, 1.0, 1.0],  # highlight
         ]
         ramp_colors = color_ramp if color_ramp and len(color_ramp) == 3 else default_ramp
 
@@ -47,25 +47,14 @@ def create_toon_shader(
         positions = [0.0, 0.5, 1.0]
         for i, (pos, col) in enumerate(zip(positions, ramp_colors)):
             try:
-                cmds.setAttr(
-                    "{}.color[{}].color_ColorR".format(shader, i), col[0]
-                )
-                cmds.setAttr(
-                    "{}.color[{}].color_ColorG".format(shader, i), col[1]
-                )
-                cmds.setAttr(
-                    "{}.color[{}].color_ColorB".format(shader, i), col[2]
-                )
-                cmds.setAttr(
-                    "{}.color[{}].color_Position".format(shader, i), pos
-                )
+                cmds.setAttr("{}.color[{}].color_ColorR".format(shader, i), col[0])
+                cmds.setAttr("{}.color[{}].color_ColorG".format(shader, i), col[1])
+                cmds.setAttr("{}.color[{}].color_ColorB".format(shader, i), col[2])
+                cmds.setAttr("{}.color[{}].color_Position".format(shader, i), pos)
             except Exception:
                 pass
 
-        sg = cmds.sets(
-            renderable=True, noSurfaceShader=True, empty=True,
-            name="{}_SG".format(shader)
-        )
+        sg = cmds.sets(renderable=True, noSurfaceShader=True, empty=True, name="{}_SG".format(shader))
         cmds.connectAttr(
             "{}.outColor".format(shader),
             "{}.surfaceShader".format(sg),

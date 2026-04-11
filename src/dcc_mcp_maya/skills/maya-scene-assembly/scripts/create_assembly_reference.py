@@ -70,5 +70,6 @@ def main(**kwargs):
 
 if __name__ == "__main__":
     import json
+
     result = create_assembly_reference("myAssembly")
     print(json.dumps(result))

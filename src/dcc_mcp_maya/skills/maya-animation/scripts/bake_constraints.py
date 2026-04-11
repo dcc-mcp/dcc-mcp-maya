@@ -102,7 +102,8 @@ def bake_constraints(
         return error_result("Failed to bake constraints", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`bake_constraints`."""
     return bake_constraints(**kwargs)
 
 

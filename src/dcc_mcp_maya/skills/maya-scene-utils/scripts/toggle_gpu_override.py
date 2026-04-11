@@ -67,7 +67,8 @@ def toggle_gpu_override(
         return error_result("Failed to toggle GPU override on '{}'".format(object_name), str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`toggle_gpu_override`."""
     return toggle_gpu_override(**kwargs)
 
 

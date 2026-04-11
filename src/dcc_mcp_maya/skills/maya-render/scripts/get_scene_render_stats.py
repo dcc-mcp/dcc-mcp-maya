@@ -68,7 +68,8 @@ def get_scene_render_stats() -> dict:
         return error_result("Failed to query scene render stats", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`get_scene_render_stats`."""
     return get_scene_render_stats(**kwargs)
 
 

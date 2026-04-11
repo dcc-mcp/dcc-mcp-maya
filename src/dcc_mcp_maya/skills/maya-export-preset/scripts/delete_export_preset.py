@@ -33,9 +33,7 @@ def delete_export_preset(preset_path: str) -> dict:
 
         return success_result(
             "Export preset deleted",
-            prompt="Preset '{}' removed. Use save_export_preset to create a new one.".format(
-                preset_name
-            ),
+            prompt="Preset '{}' removed. Use save_export_preset to create a new one.".format(preset_name),
             deleted_path=preset_path,
             preset_name=preset_name,
         ).to_dict()
@@ -50,5 +48,6 @@ def main(**kwargs):
 
 if __name__ == "__main__":
     import json
+
     result = delete_export_preset("/path/to/preset.json")
     print(json.dumps(result))

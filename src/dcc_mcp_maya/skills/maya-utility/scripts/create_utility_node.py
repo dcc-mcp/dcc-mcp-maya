@@ -53,8 +53,7 @@ def create_utility_node(
         return success_result(
             "Created utility node: {}".format(node),
             prompt=(
-                "Node '{}' created. Use set_material_attribute or connectAttr to wire it "
-                "into your shading network."
+                "Node '{}' created. Use set_material_attribute or connectAttr to wire it into your shading network."
             ).format(node),
             node_name=node,
             node_type=node_type,
@@ -66,11 +65,13 @@ def create_utility_node(
         return error_result("Failed to create utility node", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`create_utility_node`."""
     return create_utility_node(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = create_utility_node("multiplyDivide", name="myMult")
     print(json.dumps(result))

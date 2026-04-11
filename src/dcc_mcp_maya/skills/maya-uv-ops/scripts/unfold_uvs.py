@@ -68,7 +68,8 @@ def unfold_uvs(
         return error_result("Failed to unfold UVs on '{}'".format(object_name), str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`unfold_uvs`."""
     return unfold_uvs(**kwargs)
 
 

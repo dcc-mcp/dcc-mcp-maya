@@ -56,7 +56,8 @@ def group_objects(objects: List[str], group_name: Optional[str] = None, world: b
         return error_result("Failed to group objects", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`group_objects`."""
     return group_objects(**kwargs)
 
 

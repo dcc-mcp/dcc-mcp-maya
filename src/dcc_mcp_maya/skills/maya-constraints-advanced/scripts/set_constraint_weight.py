@@ -45,9 +45,7 @@ def set_constraint_weight(
         matching = [a for a in all_ud if a.endswith(weight_suffix)]
         if not matching:
             return error_result(
-                "No weight attribute found for driver index {} on '{}'".format(
-                    driver_index, constraint_node
-                ),
+                "No weight attribute found for driver index {} on '{}'".format(driver_index, constraint_node),
                 "Use get_constraint_weights to list available driver indices.",
             ).to_dict()
 

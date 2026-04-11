@@ -68,7 +68,8 @@ def combine_meshes(
         return error_result("Failed to combine meshes", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`combine_meshes`."""
     return combine_meshes(**kwargs)
 
 

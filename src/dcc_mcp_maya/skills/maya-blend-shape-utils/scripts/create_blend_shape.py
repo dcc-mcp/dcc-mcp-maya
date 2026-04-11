@@ -60,9 +60,7 @@ def create_blend_shape(
         node_name = node[0] if isinstance(node, list) else node
 
         return success_result(
-            "Created blend shape '{}' on '{}' with {} target(s)".format(
-                node_name, base_mesh, len(targets)
-            ),
+            "Created blend shape '{}' on '{}' with {} target(s)".format(node_name, base_mesh, len(targets)),
             prompt=(
                 "Use set_blend_shape_weight to drive target weights, "
                 "or get_blend_shape_weights to inspect current values."

@@ -60,7 +60,8 @@ def parent_object(child: str, parent: Optional[str] = None, world: bool = False)
         return error_result("Failed to parent '{}'".format(child), str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`parent_object`."""
     return parent_object(**kwargs)
 
 

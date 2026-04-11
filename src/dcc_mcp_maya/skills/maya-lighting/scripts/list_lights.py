@@ -69,7 +69,8 @@ def list_lights() -> dict:
         return error_result("Failed to list lights", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`list_lights`."""
     return list_lights(**kwargs)
 
 

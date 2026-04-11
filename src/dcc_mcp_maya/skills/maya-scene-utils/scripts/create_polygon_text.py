@@ -79,7 +79,8 @@ def create_polygon_text(
         return error_result("Failed to create polygon text '{}'".format(text), str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`create_polygon_text`."""
     return create_polygon_text(**kwargs)
 
 

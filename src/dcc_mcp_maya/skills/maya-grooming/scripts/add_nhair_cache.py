@@ -51,8 +51,7 @@ def add_nhair_cache(
         return success_result(
             "nHair cache baked ({}-{})".format(start_frame, end_frame),
             prompt=(
-                "Hair cache baked for frames {}-{}. "
-                "Playback is now deterministic without re-simulating.".format(
+                "Hair cache baked for frames {}-{}. Playback is now deterministic without re-simulating.".format(
                     start_frame, end_frame
                 )
             ),
@@ -73,5 +72,6 @@ def main(**kwargs):
 
 if __name__ == "__main__":
     import json
+
     result = add_nhair_cache("hairSystem1")
     print(json.dumps(result))

@@ -73,7 +73,8 @@ def separate_mesh(
         return error_result("Failed to separate mesh '{}'".format(object_name), str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`separate_mesh`."""
     return separate_mesh(**kwargs)
 
 

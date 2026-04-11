@@ -115,6 +115,7 @@ def _get_next_aov_index(cmds) -> int:  # type: ignore[no-untyped-def]
 
 
 def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`add_aov`."""
     return add_aov(**kwargs)
 
 

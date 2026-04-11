@@ -58,7 +58,8 @@ def remove_vertex_colors(object_name: str, color_set: Optional[str] = None) -> d
         return error_result("Failed to remove vertex colors", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`remove_vertex_colors`."""
     return remove_vertex_colors(**kwargs)
 
 

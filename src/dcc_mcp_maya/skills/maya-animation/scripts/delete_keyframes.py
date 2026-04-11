@@ -67,7 +67,8 @@ def delete_keyframes(
         return error_result("Failed to delete keyframes from {}".format(object_name), str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`delete_keyframes`."""
     return delete_keyframes(**kwargs)
 
 

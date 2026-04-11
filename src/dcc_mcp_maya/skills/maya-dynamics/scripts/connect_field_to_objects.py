@@ -80,7 +80,8 @@ def connect_field_to_objects(
         return error_result("Failed to connect field '{}' to objects".format(field_node), str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`connect_field_to_objects`."""
     return connect_field_to_objects(**kwargs)
 
 

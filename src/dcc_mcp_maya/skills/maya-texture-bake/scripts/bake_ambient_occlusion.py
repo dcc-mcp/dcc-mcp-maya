@@ -69,15 +69,16 @@ def bake_ambient_occlusion(
             if not cmds.objExists(obj):
                 continue
             # Record current shader assignment
-            sgs = cmds.listConnections(
-                cmds.listHistory(obj, pruneDagObjects=True) or [],
-                type="shadingEngine",
-            ) or []
+            sgs = (
+                cmds.listConnections(
+                    cmds.listHistory(obj, pruneDagObjects=True) or [],
+                    type="shadingEngine",
+                )
+                or []
+            )
             original_assignments[obj] = sgs[0] if sgs else "initialShadingGroup"
 
-            out_file = os.path.join(
-                output_dir, "{}_ao.{}".format(obj.replace(":", "_"), file_format)
-            )
+            out_file = os.path.join(output_dir, "{}_ao.{}".format(obj.replace(":", "_"), file_format))
             cmds.sets(obj, edit=True, forceElement=ao_sg)
             cmds.convertSolidTx(
                 ao_shader,

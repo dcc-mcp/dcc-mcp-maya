@@ -51,12 +51,14 @@ def list_expressions(
                 default_obj = cmds.expression(node, query=True, object=True) or ""
             except Exception:
                 pass
-            results.append({
-                "name": node,
-                "node": node,
-                "expression_str": expr_str,
-                "default_object": default_obj,
-            })
+            results.append(
+                {
+                    "name": node,
+                    "node": node,
+                    "expression_str": expr_str,
+                    "default_object": default_obj,
+                }
+            )
 
         return success_result(
             "Found {} expression node(s)".format(len(results)),
@@ -71,11 +73,13 @@ def list_expressions(
         return error_result("Failed to list expressions", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`list_expressions`."""
     return list_expressions(**kwargs)
 
 
 if __name__ == "__main__":
     import json
+
     result = list_expressions()
     print(json.dumps(result))

@@ -42,7 +42,8 @@ def create_sphere(radius: float = 1.0, name: Optional[str] = None) -> dict:
         return error_result("Failed to create sphere", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`create_sphere`."""
     return create_sphere(**kwargs)
 
 

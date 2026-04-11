@@ -55,7 +55,8 @@ def create_material(
         return error_result("Failed to create material", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`create_material`."""
     return create_material(**kwargs)
 
 

@@ -53,7 +53,8 @@ def create_uv_set(object_name: str, uv_set_name: str, copy_from: Optional[str] =
         return error_result("Failed to create UV set", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`create_uv_set`."""
     return create_uv_set(**kwargs)
 
 

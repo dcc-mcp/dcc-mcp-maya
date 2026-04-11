@@ -96,7 +96,8 @@ def set_render_quality(preset: str = "medium") -> dict:
         return error_result("Failed to set render quality preset '{}'".format(preset), str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`set_render_quality`."""
     return set_render_quality(**kwargs)
 
 

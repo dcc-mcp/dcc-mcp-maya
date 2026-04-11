@@ -32,12 +32,14 @@ def list_muscles() -> dict:
             except Exception:
                 radius0 = radius1 = None
 
-            results.append({
-                "node": node,
-                "transform": parent[0] if parent else "",
-                "radius0": radius0,
-                "radius1": radius1,
-            })
+            results.append(
+                {
+                    "node": node,
+                    "transform": parent[0] if parent else "",
+                    "radius0": radius0,
+                    "radius1": radius1,
+                }
+            )
 
         return success_result(
             "Found {} muscle node(s)".format(len(results)),
@@ -58,5 +60,6 @@ def main(**kwargs):
 
 if __name__ == "__main__":
     import json
+
     result = list_muscles()
     print(json.dumps(result))

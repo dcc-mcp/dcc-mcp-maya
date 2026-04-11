@@ -6,7 +6,6 @@ from __future__ import annotations
 # Import built-in modules
 import logging
 import os
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -76,9 +75,7 @@ def import_mocap(
         roots = [j for j in new_joints if not cmds.listRelatives(j, parent=True, type="joint")]
 
         return success_result(
-            "Imported mocap from '{}' ({} joints)".format(
-                os.path.basename(file_path), len(new_joints)
-            ),
+            "Imported mocap from '{}' ({} joints)".format(os.path.basename(file_path), len(new_joints)),
             prompt="Mocap skeleton imported. Use create_hik_definition to set up retargeting.",
             file=file_path,
             namespace=namespace,
@@ -99,5 +96,6 @@ def main(**kwargs):
 if __name__ == "__main__":
     import json
     import sys
+
     result = import_mocap(sys.argv[1] if len(sys.argv) > 1 else "")
     print(json.dumps(result))

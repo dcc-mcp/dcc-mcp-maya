@@ -61,7 +61,8 @@ def list_history(
         return error_result("Failed to list history for {}".format(object_name), str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`list_history`."""
     return list_history(**kwargs)
 
 

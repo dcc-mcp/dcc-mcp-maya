@@ -31,9 +31,7 @@ def list_toon_outlines() -> dict:
 
             # Find connected meshes via displaySurface compound array
             try:
-                connections = cmds.listConnections(
-                    node, source=True, destination=False, type="mesh"
-                ) or []
+                connections = cmds.listConnections(node, source=True, destination=False, type="mesh") or []
                 info["meshes"] = list(set(connections))
             except Exception:
                 pass

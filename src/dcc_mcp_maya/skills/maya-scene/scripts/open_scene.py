@@ -36,7 +36,8 @@ def open_scene(file_path: str, force: bool = False) -> dict:
         return error_result(f"Failed to open {file_path}", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`open_scene`."""
     return open_scene(**kwargs)
 
 

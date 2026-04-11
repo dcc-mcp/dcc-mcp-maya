@@ -76,7 +76,8 @@ def remove_constraint(
         return error_result("Failed to remove constraint", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`remove_constraint`."""
     return remove_constraint(**kwargs)
 
 

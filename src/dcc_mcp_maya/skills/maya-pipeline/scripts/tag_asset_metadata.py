@@ -79,5 +79,6 @@ def main(**kwargs):
 
 if __name__ == "__main__":
     import json
+
     result = tag_asset_metadata("pSphere1", asset_name="hero", pipeline_step="modeling")
     print(json.dumps(result))

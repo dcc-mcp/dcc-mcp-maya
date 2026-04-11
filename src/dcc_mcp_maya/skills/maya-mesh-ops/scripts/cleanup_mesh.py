@@ -57,7 +57,8 @@ def cleanup_mesh(
         return error_result("Failed to clean mesh", str(exc)).to_dict()
 
 
-def main(**kwargs):
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`cleanup_mesh`."""
     return cleanup_mesh(**kwargs)
 
 
