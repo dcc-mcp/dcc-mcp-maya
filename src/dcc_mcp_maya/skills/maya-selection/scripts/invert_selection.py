@@ -1,24 +1,24 @@
 """Invert the current selection within its context."""
 
+# Import future modules
+from __future__ import annotations
+
 # Import local modules
-from dcc_mcp_core.skill import skill_error, skill_success
+from dcc_mcp_core.skill import skill_entry, skill_exception, skill_success
 
 
-def run(params):  # noqa: ARG001
+def invert_selection() -> dict:
     """Invert the current selection.
 
     For object mode: deselects currently selected objects and selects all others.
     For component mode: inverts within the current component context.
 
-    Args:
-        params: dict (unused — no parameters required)
-
     Returns:
-        ActionResultModel
+        ActionResultModel dict with ``context.before_count``, ``context.after_count``.
     """
-    import maya.cmds as cmds
-
     try:
+        import maya.cmds as cmds  # noqa: PLC0415
+
         before = cmds.ls(selection=True, flatten=True) or []
         cmds.InvertSelection()
         after = cmds.ls(selection=True, flatten=True) or []
@@ -30,4 +30,16 @@ def run(params):  # noqa: ARG001
             selection=after,
         )
     except Exception as exc:
-        return skill_error("Failed to invert selection", str(exc))
+        return skill_exception(exc, message="Failed to invert selection")
+
+
+@skill_entry
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`invert_selection`."""
+    return invert_selection(**kwargs)
+
+
+if __name__ == "__main__":
+    from dcc_mcp_core.skill import run_main
+
+    run_main(main)

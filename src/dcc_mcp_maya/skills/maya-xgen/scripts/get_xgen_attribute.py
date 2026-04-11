@@ -1,36 +1,31 @@
 """Get an attribute value from an XGen description."""
 
+# Import future modules
+from __future__ import annotations
+
 # Import local modules
-from dcc_mcp_core.skill import skill_error, skill_success
+from dcc_mcp_core.skill import skill_entry, skill_exception, skill_success
 
 
-def run(params):
+def get_xgen_attribute(
+    collection: str,
+    description: str,
+    attribute: str,
+    object_name: str = "",
+) -> dict:
     """Get an XGen attribute value.
 
     Args:
-        params: dict with keys:
-            - collection (str, required): XGen collection name.
-            - description (str, required): Description name.
-            - attribute (str, required): Attribute name.
-            - object_name (str, optional): Object context.
+        collection: XGen collection name.
+        description: Description name.
+        attribute: Attribute name.
+        object_name: Object context (optional).
 
     Returns:
-        ActionResultModel
+        ActionResultModel dict with ``context.value``.
     """
-    collection = params.get("collection")
-    description = params.get("description")
-    attribute = params.get("attribute")
-
-    if not all([collection, description, attribute]):
-        return skill_error(
-            "Missing required parameters",
-            "'collection', 'description', and 'attribute' are all required",
-        )
-
-    object_name = params.get("object_name", "")
-
     try:
-        import xgenm as xg
+        import xgenm as xg  # noqa: PLC0415
 
         value = xg.getAttr(attribute, collection, description, object_name)
         return skill_success(
@@ -42,4 +37,16 @@ def run(params):
             value=value,
         )
     except Exception as exc:
-        return skill_error("Failed to get XGen attribute", str(exc))
+        return skill_exception(exc, message="Failed to get XGen attribute")
+
+
+@skill_entry
+def main(**kwargs) -> dict:
+    """Entry point; delegates to :func:`get_xgen_attribute`."""
+    return get_xgen_attribute(**kwargs)
+
+
+if __name__ == "__main__":
+    from dcc_mcp_core.skill import run_main
+
+    run_main(main)
