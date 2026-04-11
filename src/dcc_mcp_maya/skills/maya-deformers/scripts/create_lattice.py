@@ -9,6 +9,8 @@ from typing import List, Optional
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import batch_validate_nodes
+
 
 def create_lattice(
     objects: List[str],
@@ -42,12 +44,10 @@ def create_lattice(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        missing = [o for o in objects if not cmds.objExists(o)]
-        if missing:
-            return skill_error(
-                "Object(s) not found: {}".format(", ".join(missing)),
-                "Ensure all objects exist before creating a lattice",
-            )
+
+        err = batch_validate_nodes(cmds, list(objects))
+        if err:
+            return err
 
         ffd_kwargs = {
             "divisions": divs,

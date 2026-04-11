@@ -9,7 +9,7 @@ from typing import List
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
-from dcc_mcp_maya.api import validate_node_exists
+from dcc_mcp_maya.api import batch_validate_nodes, validate_node_exists
 
 
 def add_space_switch(
@@ -41,6 +41,7 @@ def add_space_switch(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
+
         err = validate_node_exists(cmds, control)
         if err:
             return err
@@ -51,12 +52,9 @@ def add_space_switch(
                 "spaces ({}) and space_names ({}) must have the same length".format(len(spaces), len(space_names)),
             )
 
-        missing = [s for s in spaces if not cmds.objExists(s)]
-        if missing:
-            return skill_error(
-                "Driver nodes not found: {}".format(", ".join(missing)),
-                "The following space drivers do not exist: {}".format(", ".join(missing)),
-            )
+        err = batch_validate_nodes(cmds, list(spaces))
+        if err:
+            return err
 
         target = offset_node if (offset_node and cmds.objExists(offset_node)) else control
 

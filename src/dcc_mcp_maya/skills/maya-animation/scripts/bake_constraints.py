@@ -9,6 +9,8 @@ from typing import List, Optional
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import batch_validate_nodes
+
 
 def bake_constraints(
     objects: Optional[List[str]] = None,
@@ -39,14 +41,12 @@ def bake_constraints(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
+
         targets = list(objects) if objects else []
         if targets:
-            missing = [o for o in targets if not cmds.objExists(o)]
-            if missing:
-                return skill_error(
-                    "Objects not found: {}".format(", ".join(missing)),
-                    "The following objects do not exist: {}".format(", ".join(missing)),
-                )
+            err = batch_validate_nodes(cmds, list(targets))
+            if err:
+                return err
             cmds.select(targets, replace=True)
         else:
             targets = cmds.ls(selection=True) or []
