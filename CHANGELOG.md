@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.2](https://github.com/loonghao/dcc-mcp-maya/compare/v0.2.1...v0.2.2) (2026-04-12)
+
+
+### Features
+
+* **ci:** add Maya .mod module distribution with offline packaging ([ce501d3](https://github.com/loonghao/dcc-mcp-maya/commit/ce501d3ee3c0b96602bbe99a0e6383353bb7299b))
+
 ## [0.2.1](https://github.com/loonghao/dcc-mcp-maya/compare/v0.2.0...v0.2.1) (2026-04-11)
 
 
