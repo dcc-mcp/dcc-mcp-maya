@@ -63,9 +63,7 @@ def get_frame_range() -> dict:
         return skill_success(
             "Frame range: {:.0f} - {:.0f} @ {:.0f} fps".format(start, end, fps),
             frame_range=frame_range,
-            prompt=(
-                "Use set_timeline to change the range, or set_keyframe to add a key at the current time."
-            ),
+            prompt=("Use set_timeline to change the range, or set_keyframe to add a key at the current time."),
         )
     except ImportError:
         return skill_error("Maya not available", "maya.cmds could not be imported")

@@ -36,6 +36,7 @@ def _make_server():
         for mod in [k for k in sys.modules if "dcc_mcp_maya" in k]:
             del sys.modules[mod]
         import importlib
+
         server_mod = importlib.import_module("dcc_mcp_maya.server")
         server = server_mod.MayaMcpServer(port=19900)
 
@@ -264,6 +265,7 @@ class TestRankServices:
         mock_tm = MagicMock()
         mock_tm.rank_services.return_value = []
         import importlib
+
         with patch.dict(sys.modules, {"dcc_mcp_core": MagicMock()}):
             server_mod = importlib.import_module("dcc_mcp_maya.server")
         server_mod.MayaMcpServer.rank_services(mock_tm, dcc_type="houdini")
@@ -399,6 +401,7 @@ class TestGetSkillInfo:
 class TestServerStructural:
     def test_is_skill_loaded_in_server_class(self):
         import importlib
+
         with patch.dict(sys.modules, {"dcc_mcp_core": MagicMock()}):
             for mod in [k for k in sys.modules if "dcc_mcp_maya" in k]:
                 del sys.modules[mod]
@@ -407,6 +410,7 @@ class TestServerStructural:
 
     def test_get_skill_info_in_server_class(self):
         import importlib
+
         with patch.dict(sys.modules, {"dcc_mcp_core": MagicMock()}):
             for mod in [k for k in sys.modules if "dcc_mcp_maya" in k]:
                 del sys.modules[mod]
@@ -415,6 +419,7 @@ class TestServerStructural:
 
     def test_search_skills_in_server_class(self):
         import importlib
+
         with patch.dict(sys.modules, {"dcc_mcp_core": MagicMock()}):
             for mod in [k for k in sys.modules if "dcc_mcp_maya" in k]:
                 del sys.modules[mod]
@@ -423,6 +428,7 @@ class TestServerStructural:
 
     def test_find_skills_in_server_class(self):
         import importlib
+
         with patch.dict(sys.modules, {"dcc_mcp_core": MagicMock()}):
             for mod in [k for k in sys.modules if "dcc_mcp_maya" in k]:
                 del sys.modules[mod]
@@ -431,6 +437,7 @@ class TestServerStructural:
 
     def test_rank_services_is_static(self):
         import importlib
+
         with patch.dict(sys.modules, {"dcc_mcp_core": MagicMock()}):
             for mod in [k for k in sys.modules if "dcc_mcp_maya" in k]:
                 del sys.modules[mod]
@@ -442,6 +449,7 @@ class TestServerStructural:
 
     def test_find_best_service_is_static(self):
         import importlib
+
         with patch.dict(sys.modules, {"dcc_mcp_core": MagicMock()}):
             for mod in [k for k in sys.modules if "dcc_mcp_maya" in k]:
                 del sys.modules[mod]
