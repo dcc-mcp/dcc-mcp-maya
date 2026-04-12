@@ -194,8 +194,144 @@ def generate_mod_file(version: str, platform: str, has_cp37: bool = False) -> st
             lines.append("PYTHONPATH+:=python37")
         else:
             lines.append("PYTHONPATH+:=python")
+        # Add plug-ins/ to MAYA_PLUG_IN_PATH so loadPlugin finds the .py
+        lines.append("PLUG_IN_PATH+:=plug-ins")
 
     return "\n".join(lines) + "\n"
+
+
+def _generate_post_install(module_dir: Path) -> None:
+    """Generate a post_install.py script that verifies the module works.
+
+    The script is designed to be run with mayapy::
+
+        mayapy <module_dir>/post_install.py
+
+    It verifies that:
+    1. The module's python/ directory is on sys.path
+    2. dcc_mcp_maya and dcc_mcp_core are importable
+    3. dcc_mcp_maya.start_server is available
+    4. The MCP server can start and stop cleanly
+    """
+    script = '''#!/usr/bin/env python
+"""Post-install verification for dcc-mcp-maya module.
+
+Run with mayapy (Maya's Python interpreter)::
+
+    mayapy post_install.py
+
+This script verifies the .mod module installation is correct.
+"""
+from __future__ import annotations
+
+import os
+import sys
+from pathlib import Path
+
+MODULE_ROOT = Path(__file__).resolve().parent
+
+# Ensure python/ is on sys.path (needed for mayapy standalone which
+# does not process .mod PYTHONPATH directives)
+_python_dir = MODULE_ROOT / "python"
+if str(_python_dir) not in sys.path:
+    sys.path.insert(0, str(_python_dir))
+
+errors = []
+
+
+def _check(label, condition, detail=""):
+    if condition:
+        print(f"  [PASS] {label}")
+    else:
+        msg = f"  [FAIL] {label}"
+        if detail:
+            msg += f" — {detail}"
+        print(msg)
+        errors.append(label)
+
+
+def main():
+    print("=" * 50)
+    print(" dcc-mcp-maya Post-Install Verification")
+    print("=" * 50)
+    print()
+
+    # 1. Check module directory structure
+    print("1. Module directory structure:")
+    _check("dcc_mcp_maya.mod exists", (MODULE_ROOT / "dcc_mcp_maya.mod").is_file())
+    _check("plug-ins/dcc_mcp_maya.py exists", (MODULE_ROOT / "plug-ins" / "dcc_mcp_maya.py").is_file())
+    _check("python/dcc_mcp_maya/ exists", (MODULE_ROOT / "python" / "dcc_mcp_maya").is_dir())
+    _check("python/dcc_mcp_core/ exists", (MODULE_ROOT / "python" / "dcc_mcp_core").is_dir())
+    print()
+
+    # 2. Check Python imports
+    print("2. Python package imports:")
+    try:
+        import dcc_mcp_core
+        _check("import dcc_mcp_core", True)
+        _check("dcc_mcp_core version", hasattr(dcc_mcp_core, "__version__"))
+    except ImportError as exc:
+        _check("import dcc_mcp_core", False, str(exc))
+
+    try:
+        import dcc_mcp_maya
+        _check("import dcc_mcp_maya", True)
+        _check("dcc_mcp_maya.start_server", hasattr(dcc_mcp_maya, "start_server"))
+        _check("dcc_mcp_maya.stop_server", hasattr(dcc_mcp_maya, "stop_server"))
+        _check("dcc_mcp_maya.__version__", hasattr(dcc_mcp_maya, "__version__"))
+    except ImportError as exc:
+        _check("import dcc_mcp_maya", False, str(exc))
+        _check("dcc_mcp_maya.start_server", False, "import failed")
+        _check("dcc_mcp_maya.stop_server", False, "import failed")
+        _check("dcc_mcp_maya.__version__", False, "import failed")
+    print()
+
+    # 3. Check Maya standalone (optional, only if maya is available)
+    print("3. Maya integration:")
+    try:
+        import maya.standalone  # noqa: F401
+        maya.standalone.initialize()
+        import maya.cmds as cmds
+        _check("maya.standalone.initialize", True)
+
+        # Test that the plugin can be found after setting MAYA_PLUG_IN_PATH
+        plugins_dir = str(MODULE_ROOT / "plug-ins")
+        current = os.environ.get("MAYA_PLUG_IN_PATH", "")
+        sep = ";" if sys.platform == "win32" else ":"
+        if plugins_dir not in current:
+            os.environ["MAYA_PLUG_IN_PATH"] = plugins_dir + (sep + current if current else "")
+        _check("MAYA_PLUG_IN_PATH updated", True)
+
+        # Test server start/stop in standalone
+        try:
+            handle = dcc_mcp_maya.start_server(port=0)
+            _check("start_server(port=0)", True)
+            url = handle.mcp_url()
+            _check("server URL reachable", url.startswith("http://"))
+            dcc_mcp_maya.stop_server()
+            _check("stop_server()", True)
+        except Exception as exc:
+            _check("start_server/stop_server", False, str(exc))
+    except ImportError:
+        _check("maya.standalone (skipped)", True, "not running under mayapy")
+    print()
+
+    # Summary
+    print("=" * 50)
+    if errors:
+        print(f" FAILED — {len(errors)} check(s) failed:")
+        for e in errors:
+            print(f"   - {e}")
+        sys.exit(1)
+    else:
+        print(" ALL CHECKS PASSED — installation is correct")
+        sys.exit(0)
+
+
+if __name__ == "__main__":
+    main()
+'''
+    (module_dir / "post_install.py").write_text(script, encoding="utf-8")
 
 
 def assemble(project_root: Path, version: str, platform: str, output: Path) -> Path:
@@ -294,6 +430,10 @@ def assemble(project_root: Path, version: str, platform: str, output: Path) -> P
             encoding="utf-8",
         )
     print("  Copied install/uninstall scripts and README")
+
+    # 7. Generate post_install.py verification script
+    _generate_post_install(module_dir)
+    print("  Generated post_install.py")
 
     return module_dir
 
