@@ -169,15 +169,11 @@ class TestSkillMdToolsField:
         content = self._read_skill_md(skill_name)
         fm = self._parse_frontmatter(content)
         for tool in fm["tools"]:
-            assert "read_only" in tool, "tool '{}' missing read_only in {}".format(
-                tool.get("name", "?"), skill_name
-            )
+            assert "read_only" in tool, "tool '{}' missing read_only in {}".format(tool.get("name", "?"), skill_name)
             assert "destructive" in tool, "tool '{}' missing destructive in {}".format(
                 tool.get("name", "?"), skill_name
             )
-            assert "idempotent" in tool, "tool '{}' missing idempotent in {}".format(
-                tool.get("name", "?"), skill_name
-            )
+            assert "idempotent" in tool, "tool '{}' missing idempotent in {}".format(tool.get("name", "?"), skill_name)
 
     @pytest.mark.parametrize("skill_name", SKILL_NAMES_WITH_TOOLS)
     def test_source_file_under_scripts(self, skill_name):
@@ -185,9 +181,7 @@ class TestSkillMdToolsField:
         fm = self._parse_frontmatter(content)
         for tool in fm["tools"]:
             sf = tool.get("source_file", "")
-            assert sf.startswith("scripts/"), (
-                "source_file '{}' must start with 'scripts/' in {}".format(sf, skill_name)
-            )
+            assert sf.startswith("scripts/"), "source_file '{}' must start with 'scripts/' in {}".format(sf, skill_name)
 
     def test_maya_scene_tool_count(self):
         content = self._read_skill_md("maya-scene")
@@ -217,9 +211,7 @@ class TestSkillMdToolsField:
             for tool in fm["tools"]:
                 if tool.get("read_only") is True:
                     assert tool.get("destructive") is False, (
-                        "read_only tool '{}' in {} should not be destructive".format(
-                            tool.get("name"), skill_name
-                        )
+                        "read_only tool '{}' in {} should not be destructive".format(tool.get("name"), skill_name)
                     )
 
     def test_tool_names_match_source_file_stems(self):
@@ -229,10 +221,8 @@ class TestSkillMdToolsField:
             fm = self._parse_frontmatter(content)
             for tool in fm["tools"]:
                 stem = os.path.splitext(os.path.basename(tool.get("source_file", "")))[0]
-                assert tool["name"] == stem, (
-                    "Tool name '{}' doesn't match source_file stem '{}' in {}".format(
-                        tool["name"], stem, skill_name
-                    )
+                assert tool["name"] == stem, "Tool name '{}' doesn't match source_file stem '{}' in {}".format(
+                    tool["name"], stem, skill_name
                 )
 
 
@@ -250,9 +240,7 @@ class TestApiAllConsistency:
         for name in api.__all__:
             assert hasattr(api, name), "'{}' in __all__ but not found in api module".format(name)
             obj = getattr(api, name)
-            assert callable(obj) or isinstance(obj, type), (
-                "'{}' should be callable or a class".format(name)
-            )
+            assert callable(obj) or isinstance(obj, type), "'{}' should be callable or a class".format(name)
 
     def test_maya_warning_in_api_all_and_callable(self):
         from dcc_mcp_maya import api
@@ -268,6 +256,6 @@ class TestApiAllConsistency:
         excluded = {"MayaCmds"}
         for name in api.__all__:
             if name not in excluded:
-                assert name in dcc_mcp_maya.__all__, (
-                    "'{}' in api.__all__ but missing from dcc_mcp_maya.__all__".format(name)
+                assert name in dcc_mcp_maya.__all__, "'{}' in api.__all__ but missing from dcc_mcp_maya.__all__".format(
+                    name
                 )
