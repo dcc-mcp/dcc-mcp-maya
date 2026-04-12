@@ -22,6 +22,17 @@ Flow::
     print(handle.mcp_url())             # http://127.0.0.1:8765/mcp
     handle.shutdown()
 
+Or with ``ActionPipeline`` middleware enabled::
+
+    server = MayaMcpServer(port=8765, enable_pipeline=True)
+    server.register_builtin_actions()
+    handle = server.start()
+    # Query audit trail:
+    for rec in server.audit_records():
+        print(rec)
+    # Query timing:
+    elapsed = server.last_elapsed_ms("maya_scene__new_scene")
+
 Or via the module-level singleton helper::
 
     import dcc_mcp_maya
@@ -157,8 +168,9 @@ class MayaMcpServer:
         port: int = 8765,
         server_name: str = "maya-mcp",
         server_version: str = "0.3.0",
+        enable_pipeline: bool = False,
     ) -> None:
-        from dcc_mcp_core import McpHttpConfig, create_skill_manager  # noqa: PLC0415
+        from dcc_mcp_core import ActionDispatcher, ActionPipeline, ActionRegistry, McpHttpConfig, create_skill_manager  # noqa: PLC0415
 
         self._config = McpHttpConfig(
             port=port,
@@ -169,6 +181,173 @@ class MayaMcpServer:
         # and auto-discovers skills from env vars (DCC_MCP_MAYA_SKILL_PATHS, DCC_MCP_SKILL_PATHS)
         self._server = create_skill_manager("maya", self._config)
         self._handle = None
+
+        # Optional ActionPipeline for middleware (logging, timing, audit, rate-limit)
+        self._pipeline = None
+        self._audit_middleware = None
+        self._timing_middleware = None
+        if enable_pipeline:
+            self._init_pipeline()
+
+    # ── ActionPipeline middleware ──────────────────────────────────────────────
+
+    def _init_pipeline(self) -> None:
+        """Initialise the ActionPipeline with default middleware.
+
+        Called automatically when ``enable_pipeline=True`` is passed to
+        :meth:`__init__`, or explicitly via :meth:`setup_pipeline`.
+        """
+        from dcc_mcp_core import ActionDispatcher, ActionPipeline  # noqa: PLC0415
+
+        registry = self.registry
+        if registry is None:
+            logger.warning("Registry not available; cannot create ActionPipeline")
+            return
+        dispatcher = ActionDispatcher(registry)
+        self._pipeline = ActionPipeline(dispatcher)
+        # Default middleware stack — production-safe defaults
+        self._pipeline.add_logging(log_params=True)
+        self._timing_middleware = self._pipeline.add_timing()
+        self._audit_middleware = self._pipeline.add_audit(record_params=True)
+        logger.info(
+            "ActionPipeline created with %d middleware: %s",
+            self._pipeline.middleware_count(),
+            self._pipeline.middleware_names(),
+        )
+
+    def setup_pipeline(
+        self,
+        log_params: bool = True,
+        timing: bool = True,
+        audit: bool = True,
+        audit_record_params: bool = True,
+        rate_limit: bool = False,
+        rate_limit_max_calls: int = 100,
+        rate_limit_window_ms: int = 1000,
+    ) -> "MayaMcpServer":
+        """Configure the ActionPipeline middleware stack.
+
+        Creates an :class:`~dcc_mcp_core.ActionPipeline` wrapping the
+        ``ActionDispatcher`` so that every action dispatch passes through
+        logging, timing, audit and optional rate-limiting middleware.
+
+        Must be called **before** :meth:`start`.  If called more than once,
+        the previous pipeline is discarded.
+
+        Args:
+            log_params: Log action name and parameters on every dispatch.
+            timing: Record elapsed wall-clock time per action.
+            audit: Record an audit trail (queryable via :meth:`audit_records`).
+            audit_record_params: Include parameter values in audit records.
+            rate_limit: Enable per-action rate limiting.
+            rate_limit_max_calls: Max calls per window when rate limiting.
+            rate_limit_window_ms: Sliding window length in milliseconds.
+
+        Returns:
+            ``self`` for fluent chaining::
+
+                server = MayaMcpServer(port=8765, enable_pipeline=True)
+                server.setup_pipeline(rate_limit=True)
+
+        Example::
+
+            server = MayaMcpServer().setup_pipeline(
+                log_params=True, timing=True, audit=True, rate_limit=True,
+            )
+            server.register_builtin_actions()
+            handle = server.start()
+        """
+        if self._handle is not None:
+            logger.warning("Cannot setup pipeline after server has started")
+            return self
+
+        from dcc_mcp_core import ActionDispatcher, ActionPipeline  # noqa: PLC0415
+
+        registry = self.registry
+        if registry is None:
+            logger.warning("Registry not available; cannot create ActionPipeline")
+            return self
+
+        dispatcher = ActionDispatcher(registry)
+        self._pipeline = ActionPipeline(dispatcher)
+
+        if log_params:
+            self._pipeline.add_logging(log_params=True)
+        if timing:
+            self._timing_middleware = self._pipeline.add_timing()
+        if audit:
+            self._audit_middleware = self._pipeline.add_audit(record_params=audit_record_params)
+        if rate_limit:
+            self._pipeline.add_rate_limit(
+                max_calls=rate_limit_max_calls,
+                window_ms=rate_limit_window_ms,
+            )
+
+        logger.info(
+            "ActionPipeline configured with %d middleware: %s",
+            self._pipeline.middleware_count(),
+            self._pipeline.middleware_names(),
+        )
+        return self
+
+    @property
+    def pipeline(self):
+        """The ``ActionPipeline`` instance, or ``None`` if not enabled.
+
+        Access the pipeline to query middleware state or register additional
+        handlers.
+        """
+        return self._pipeline
+
+    @property
+    def audit_middleware(self):
+        """The ``AuditMiddleware`` instance, or ``None`` if audit is not enabled."""
+        return self._audit_middleware
+
+    @property
+    def timing_middleware(self):
+        """The ``TimingMiddleware`` instance, or ``None`` if timing is not enabled."""
+        return self._timing_middleware
+
+    def audit_records(self, action_name: Optional[str] = None) -> List[Any]:
+        """Query audit records, optionally filtered by action name.
+
+        Args:
+            action_name: If given, return only records for this action.
+
+        Returns:
+            List of audit record dicts.  Returns ``[]`` if audit middleware
+            is not enabled.
+        """
+        if self._audit_middleware is None:
+            return []
+        try:
+            if action_name:
+                return list(self._audit_middleware.records_for_action(action_name))
+            return list(self._audit_middleware.records())
+        except Exception as exc:
+            logger.debug("audit_records failed: %s", exc)
+            return []
+
+    def last_elapsed_ms(self, action_name: str) -> Optional[float]:
+        """Return the elapsed wall-clock time in ms for the last dispatch of *action_name*.
+
+        Requires the timing middleware to be enabled.
+
+        Args:
+            action_name: The canonical action name to query.
+
+        Returns:
+            Elapsed time in ms, or ``None`` if timing is not enabled or the
+            action has never been dispatched.
+        """
+        if self._timing_middleware is None:
+            return None
+        try:
+            return self._timing_middleware.last_elapsed_ms(action_name)
+        except Exception as exc:
+            logger.debug("last_elapsed_ms(%r) failed: %s", action_name, exc)
+            return None
 
     # ── action registration ────────────────────────────────────────────────────
 
@@ -618,6 +797,7 @@ def start_server(
     register_builtins: bool = True,
     extra_skill_paths: Optional[List[str]] = None,
     include_bundled: bool = True,
+    enable_pipeline: bool = False,
 ) -> Any:
     """Start (or return the already-running) Maya MCP server.
 
@@ -642,6 +822,8 @@ def start_server(
             general-purpose skills bundled with ``dcc-mcp-core``
             (``dcc-diagnostics``, ``workflow``, ``git-automation``, etc.).
             Pass ``False`` to opt-out.
+        enable_pipeline: If ``True``, enables ``ActionPipeline`` middleware
+            (logging, timing, audit) on every action dispatch.
 
     Returns:
         ``McpServerHandle`` with ``.mcp_url()``, ``.port``, ``.shutdown()``.
@@ -655,6 +837,9 @@ def start_server(
         # Disable bundled core skills:
         handle = dcc_mcp_maya.start_server(include_bundled=False)
 
+        # With pipeline middleware:
+        handle = dcc_mcp_maya.start_server(port=8765, enable_pipeline=True)
+
         # With custom skill paths:
         handle = dcc_mcp_maya.start_server(extra_skill_paths=["/studio/maya-skills"])
     """
@@ -664,6 +849,7 @@ def start_server(
             _server_instance = MayaMcpServer(
                 port=port,
                 server_name=server_name,
+                enable_pipeline=enable_pipeline,
             )
             if register_builtins:
                 _server_instance.register_builtin_actions(
