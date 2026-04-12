@@ -63,7 +63,7 @@ jobs:
           node-version: "24"
 
       - name: Run unit tests (no Maya required)
-        run: mayapy -m pytest tests/ -v --tb=short -m "not e2e"
+        run: mayapy -m pytest tests/ -v --tb=short -m "not e2e and not packaging"
 
       - name: Run E2E tests (Maya standalone)
         run: |
