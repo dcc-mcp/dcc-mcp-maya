@@ -1217,12 +1217,17 @@ class TestPluginEntryPoint:
         )
 
     def test_plugin_uses_api2_import(self, plugin_module):
-        """Plugin module must use maya.api.OpenMaya, not maya.OpenMaya alone."""
+        """Plugin module must use maya.api.OpenMaya and declare maya_useNewAPI."""
         import inspect
 
         src = inspect.getsource(plugin_module)
         assert "maya.api.OpenMaya" in src, (
             "Plugin should import from maya.api.OpenMaya (API 2.0) to avoid MFnPlugin AttributeError"
+        )
+        # maya_useNewAPI() is the official Autodesk mechanism that tells Maya to
+        # pass API 2.0 MObject wrappers to initializePlugin/uninitializePlugin.
+        assert "maya_useNewAPI" in src, (
+            "Plugin must declare maya_useNewAPI() so Maya passes API 2.0 objects to plugin callbacks"
         )
 
     def test_initialize_plugin(self, plugin_module, mock_mfn_plugin):

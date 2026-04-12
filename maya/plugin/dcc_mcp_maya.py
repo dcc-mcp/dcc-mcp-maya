@@ -30,15 +30,8 @@ from __future__ import annotations
 import logging
 import os
 
+import maya.api.OpenMaya as om  # Python API 2.0 — required for MFnPlugin on Maya 2022-2025
 import maya.cmds as cmds
-
-# Maya API 2.0 (maya.api.OpenMaya) is preferred because MFnPlugin is always
-# available there across Maya 2022-2025.  API 1.0 (maya.OpenMaya) omits
-# MFnPlugin in some standalone / batch environments, causing AttributeError.
-try:
-    import maya.api.OpenMaya as om  # API 2.0 — Maya 2012+, preferred
-except ImportError:  # pragma: no cover — should never happen on Maya 2022+
-    import maya.OpenMaya as om  # type: ignore[no-redef]  # API 1.0 fallback
 
 logger = logging.getLogger(__name__)
 
@@ -60,6 +53,22 @@ VERSION = _get_version()
 # ── module-level server handle ────────────────────────────────────────────────
 _handle = None
 _menu_name = "DccMcpMenu"
+
+
+# ── plugin API version declaration ──────────────────────────────────────────
+
+
+def maya_useNewAPI() -> None:
+    """Declare Python API 2.0 to Maya.
+
+    When this function is present Maya passes ``MObject`` wrappers from
+    API 2.0 (``maya.api.OpenMaya``) to ``initializePlugin`` and
+    ``uninitializePlugin`` instead of API 1.0 objects.  Without this
+    declaration the two APIs cannot be mixed and ``MFnPlugin`` construction
+    may raise ``AttributeError`` in standalone / batch mode.
+
+    References: Autodesk Maya Python API 2.0 documentation.
+    """
 
 
 # ── plugin init ───────────────────────────────────────────────────────────────
