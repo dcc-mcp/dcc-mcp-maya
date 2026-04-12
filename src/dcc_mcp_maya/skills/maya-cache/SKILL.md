@@ -4,6 +4,7 @@ description: "Maya geometry cache — create, attach, list and delete geometry c
 dcc: maya
 version: "1.0.0"
 tags: [maya, cache, geometry, simulation]
+search-hint: "cache, geometry cache, bake, deformation"
 license: "MIT"
 allowed-tools: ["Bash", "Read"]
 depends: []

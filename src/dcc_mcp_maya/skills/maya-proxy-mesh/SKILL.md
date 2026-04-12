@@ -3,6 +3,7 @@ name: maya-proxy-mesh
 description: Maya proxy mesh management — create, swap, and manage low-res proxy stand-ins
 dcc: maya
 tags: [proxy, LOD, performance, stand-in, mesh]
+search-hint: "proxy, level of detail, LOD, lightweight"
 version: "1.0.0"
 license: "MIT"
 allowed-tools: ["Bash", "Read"]

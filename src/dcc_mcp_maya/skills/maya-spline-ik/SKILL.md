@@ -4,6 +4,7 @@ description: "Maya spline IK utilities — create and configure spline IK chains
 dcc: maya
 version: "1.0.0"
 tags: [maya, ik, spline, rigging, spine]
+search-hint: "spline IK, curve, ribbon, spine"
 license: "MIT"
 allowed-tools: ["Bash", "Read"]
 depends: []

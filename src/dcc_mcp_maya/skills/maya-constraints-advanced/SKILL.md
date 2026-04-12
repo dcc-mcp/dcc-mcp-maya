@@ -4,6 +4,7 @@ description: "Advanced Maya constraints — pole vector, IK handle constraints, 
 dcc: maya
 version: "1.0.0"
 tags: [maya, constraint, rigging, ik, space-switch]
+search-hint: "constraint, parent, aim, orient, advanced"
 license: "MIT"
 allowed-tools: ["Bash", "Read"]
 depends: []

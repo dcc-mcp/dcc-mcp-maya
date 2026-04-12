@@ -4,6 +4,7 @@ description: "Pipeline integration utilities for Maya scenes: metadata, asset pu
 dcc: maya
 version: "1.0.0"
 tags: [maya, pipeline, asset, publish, project]
+search-hint: "pipeline, publish, export, import, workflow"
 license: "MIT"
 allowed-tools: ["Bash", "Read"]
 depends: []

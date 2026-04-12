@@ -4,6 +4,7 @@ description: "Maya utility nodes and scene statistics"
 dcc: maya
 version: "1.0.0"
 tags: [maya, utility, node, scene]
+search-hint: "utility, transform, freeze, center pivot, convert"
 license: "MIT"
 allowed-tools: ["Bash", "Read"]
 depends: []

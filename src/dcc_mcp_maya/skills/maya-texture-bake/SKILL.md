@@ -4,6 +4,7 @@ description: "Maya texture baking — bake lighting, AO, normals, and custom map
 dcc: maya
 version: "1.0.0"
 tags: [maya, baking, textures, ao, lighting, normals]
+search-hint: "bake, texture, light map, normal map"
 license: "MIT"
 allowed-tools: ["Bash", "Read"]
 depends: []

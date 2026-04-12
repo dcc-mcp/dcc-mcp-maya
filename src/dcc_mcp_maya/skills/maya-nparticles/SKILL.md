@@ -4,6 +4,7 @@ description: "Maya nParticles — create and configure nParticle systems, set fi
 dcc: maya
 version: "1.0.0"
 tags: [maya, nparticles, dynamics, simulation, vfx]
+search-hint: "nparticle, particle, dynamics, simulation"
 license: "MIT"
 allowed-tools: ["Bash", "Read"]
 depends: []

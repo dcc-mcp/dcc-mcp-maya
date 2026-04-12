@@ -4,6 +4,7 @@ description: "Maya XGen hair and fur operations — create, list, preview and ma
 dcc: maya
 version: "1.0.0"
 tags: [maya, xgen, hair, fur, grooming]
+search-hint: "xgen, hair, fur, feather, groom"
 license: "MIT"
 allowed-tools: ["Bash", "Read"]
 depends: []

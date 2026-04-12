@@ -4,6 +4,7 @@ description: "Maya pose library — save, load, apply, and manage character pose
 dcc: maya
 version: "1.0.0"
 tags: [maya, animation, pose, library, rigging]
+search-hint: "pose, library, save pose, apply pose"
 license: "MIT"
 allowed-tools: ["Bash", "Read"]
 depends: []
