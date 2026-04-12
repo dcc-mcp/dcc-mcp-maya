@@ -10,7 +10,7 @@ REM -- Resolve script directory (handles spaces) --
 set "SCRIPT_DIR=%~dp0"
 set "MODULE_DIR=%SCRIPT_DIR%dcc-mcp-maya"
 
-if not exist "%MODULE_DIR%\dcc_mcp_maya.mod" (
+if not exist "%MODULE_DIR%\module-info.json" (
     echo ERROR: Module directory not found at:
     echo   %MODULE_DIR%
     echo.
@@ -18,12 +18,23 @@ if not exist "%MODULE_DIR%\dcc_mcp_maya.mod" (
     pause & exit /b 1
 )
 
-REM -- Read version from .mod file --
+REM -- Read version from module-info.json --
 set "VERSION=unknown"
-for /f "tokens=4" %%v in ('findstr /r "^+ MAYAVERSION" "%MODULE_DIR%\dcc_mcp_maya.mod" 2^>nul') do (
-    set "VERSION=%%v"
+for /f "tokens=2 delims=:," %%v in ('findstr /c:"\"version\"" "%MODULE_DIR%\module-info.json"') do (
+    set "VERSION=%%~v"
 )
+set "VERSION=%VERSION: =%"
+set "VERSION=%VERSION:"=%"
 echo  Version: %VERSION%
+
+REM -- Check if python37/ exists (cp37 for Maya 2022) --
+set "HAS_CP37=0"
+if exist "%MODULE_DIR%\python37" set "HAS_CP37=1"
+if "%HAS_CP37%"=="1" (
+    echo  Python 3.7 support: Yes ^(Maya 2022^)
+) else (
+    echo  Python 3.7 support: No
+)
 echo.
 
 REM -- Detect Maya installations --
@@ -57,6 +68,27 @@ if errorlevel 1 (
     echo ERROR: Failed to copy module files.
     pause & exit /b 1
 )
+
+REM -- Generate .mod file dynamically --
+echo Generating dcc_mcp_maya.mod...
+
+set "PLATFORM=win64"
+set "MOD_FILE=%MOD_DEST%\dcc-mcp-maya\dcc_mcp_maya.mod"
+
+(
+if "%HAS_CP37%"=="1" (
+    echo + MAYAVERSION:2022 PLATFORM:%PLATFORM% dcc_mcp_maya %VERSION% .
+    echo PYTHONPATH+:=python37
+    echo PLUG_IN_PATH+:=plug-ins
+)
+for %%Y in (2023 2024 2025 2026) do (
+    echo + MAYAVERSION:%%Y PLATFORM:%PLATFORM% dcc_mcp_maya %VERSION% .
+    echo PYTHONPATH+:=python
+    echo PLUG_IN_PATH+:=plug-ins
+)
+) > "%MOD_FILE%"
+
+echo  Generated %MOD_FILE%
 
 REM -- Deploy userSetup.py --
 set "SCRIPTS_DEST=%USERPROFILE%\Documents\maya\scripts"
