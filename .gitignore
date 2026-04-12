@@ -47,6 +47,7 @@ desktop.ini
 # ── Logs & temp files ─────────────────────────────────────────────────────────
 *.log
 *.txt
+!packaging/README.txt
 tmp/
 temp/
 
