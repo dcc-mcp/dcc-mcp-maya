@@ -4,6 +4,7 @@ description: "Maya animation keyframes, timeline, curves and simulation baking"
 dcc: maya
 version: "1.0.0"
 tags: [maya, animation, keyframe, timeline]
+search-hint: "keyframe, timeline, animate, curves, bake, simulation, constraint, tangent"
 license: "MIT"
 allowed-tools: ["Bash", "Read"]
 depends: []

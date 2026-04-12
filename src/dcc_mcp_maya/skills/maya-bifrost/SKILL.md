@@ -3,6 +3,7 @@ name: maya-bifrost
 description: Bifrost visual programming graph management for simulations and effects
 dcc: maya
 tags: [bifrost, simulation, vfx, graph]
+search-hint: "bifrost, simulation, graph, node, vellum"
 version: "1.0.0"
 license: "MIT"
 allowed-tools: ["Bash", "Read"]

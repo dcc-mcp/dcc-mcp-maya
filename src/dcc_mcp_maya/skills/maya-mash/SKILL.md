@@ -4,6 +4,7 @@ description: "Maya MASH motion graphics network — create, modify and query MAS
 dcc: maya
 version: "1.0.0"
 tags: [maya, mash, motion-graphics, instancer, dynamics]
+search-hint: "mash, motion graphics, distribute, scatter"
 license: "MIT"
 allowed-tools: ["Bash", "Read"]
 depends: []

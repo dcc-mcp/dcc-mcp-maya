@@ -4,6 +4,7 @@ description: "Maya display layers and viewport shading mode management"
 dcc: maya
 version: "1.0.0"
 tags: [maya, display, layer, visibility]
+search-hint: "display, visibility, show, hide, wireframe, layer"
 license: "MIT"
 allowed-tools: ["Bash", "Read"]
 depends: []

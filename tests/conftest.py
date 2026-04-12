@@ -1,14 +1,11 @@
 """Shared test fixtures and helpers for dcc-mcp-maya tests.
 
 Provides:
-- ``SKILLS_ROOT`` — Path to ``src/dcc_mcp_maya/skills/``
 - ``load_skill_script(skill_dir, script_name)`` — load a skill script by path
 - ``make_mock_maya(cmds_attrs, mel_attrs)`` — build a (mock_maya, mock_cmds, mock_mel) triple
-- ``load_and_call(rel_path, mock_cmds, func_name, **kwargs)`` — load a skill script with
-  maya mocked, call ``func_name`` (default ``"main"``) with ``**kwargs``, return result dict
-- ``load_and_call_with_mel(rel_path, mock_cmds, mock_mel, func_name, **kwargs)`` — same as
-  ``load_and_call`` but also patches ``maya.mel``
 - ``mock_maya_modules`` — autouse fixture for server tests
+- ``load_and_call(rel_path, mock_cmds, func_name, **kwargs)`` — load + call with mock active
+- ``load_and_call_with_mel(rel_path, mock_cmds, mock_mel, **kwargs)`` — like load_and_call but also patches maya.mel
 """
 
 # Import future modules
@@ -50,107 +47,6 @@ def load_skill_script(skill_dir: str, script_name: str):
     return mod
 
 
-def load_and_call(
-    rel_path: str,
-    mock_cmds: Any,
-    func_name: str = "main",
-    **kwargs: Any,
-) -> dict:
-    """Load a skill script with Maya mocked and call *func_name* with *kwargs*.
-
-    Keeps the ``maya`` / ``maya.cmds`` mock active during **both** module load
-    and function invocation, which prevents ``ImportError`` inside scripts that
-    import ``maya.cmds`` at module level or inside the function body.
-
-    Args:
-        rel_path: Path relative to ``SKILLS_ROOT``, e.g.
-            ``"maya-scene/scripts/get_scene_info.py"``.
-        mock_cmds: A ``MagicMock`` configured to behave like ``maya.cmds``.
-        func_name: Name of the callable to invoke (default ``"main"``).
-        **kwargs: Keyword arguments forwarded to the called function.
-
-    Returns:
-        The result dict returned by the skill function.
-
-    Example::
-
-        result = load_and_call("maya-scene/scripts/create_object.py", mock_cmds, type="sphere")
-        assert result["success"] is True
-    """
-    _MOD_COUNTER[0] += 1
-    script_path = SKILLS_ROOT / rel_path
-    module_name = "skill_lac_{}_{}".format(rel_path.replace("/", "_").replace(".", "_"), _MOD_COUNTER[0])
-
-    mock_maya = MagicMock()
-    mock_maya.cmds = mock_cmds
-
-    fake_modules = {
-        "maya": mock_maya,
-        "maya.cmds": mock_cmds,
-        "maya.api": MagicMock(),
-        "maya.api.OpenMaya": MagicMock(),
-        "maya.utils": MagicMock(),
-    }
-
-    with patch.dict(sys.modules, fake_modules):
-        spec = importlib.util.spec_from_file_location(module_name, str(script_path))
-        mod = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(mod)
-        func = getattr(mod, func_name)
-        return func(**kwargs)
-
-
-def load_and_call_with_mel(
-    rel_path: str,
-    mock_cmds: Any,
-    mock_mel: Optional[Any] = None,
-    func_name: str = "main",
-    **kwargs: Any,
-) -> dict:
-    """Like :func:`load_and_call` but also patches ``maya.mel``.
-
-    Required for scripts that call ``maya.mel.eval(...)`` or
-    ``import maya.mel as mel`` inside the function body.
-
-    Args:
-        rel_path: Path relative to ``SKILLS_ROOT``.
-        mock_cmds: A ``MagicMock`` configured to behave like ``maya.cmds``.
-        mock_mel: Optional ``MagicMock`` for ``maya.mel``.  A new one is
-            created if *None* is passed.
-        func_name: Name of the callable to invoke (default ``"main"``).
-        **kwargs: Keyword arguments forwarded to the called function.
-
-    Returns:
-        The result dict returned by the skill function.
-    """
-    if mock_mel is None:
-        mock_mel = MagicMock()
-
-    _MOD_COUNTER[0] += 1
-    script_path = SKILLS_ROOT / rel_path
-    module_name = "skill_lacm_{}_{}".format(rel_path.replace("/", "_").replace(".", "_"), _MOD_COUNTER[0])
-
-    mock_maya = MagicMock()
-    mock_maya.cmds = mock_cmds
-    mock_maya.mel = mock_mel
-
-    fake_modules = {
-        "maya": mock_maya,
-        "maya.cmds": mock_cmds,
-        "maya.mel": mock_mel,
-        "maya.api": MagicMock(),
-        "maya.api.OpenMaya": MagicMock(),
-        "maya.utils": MagicMock(),
-    }
-
-    with patch.dict(sys.modules, fake_modules):
-        spec = importlib.util.spec_from_file_location(module_name, str(script_path))
-        mod = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(mod)
-        func = getattr(mod, func_name)
-        return func(**kwargs)
-
-
 def make_mock_maya(
     cmds_attrs: Optional[Dict] = None,
     mel_attrs: Optional[Dict] = None,
@@ -178,3 +74,84 @@ def make_mock_maya(
         for k, v in mel_attrs.items():
             setattr(mock_mel, k, v)
     return mock_maya, mock_cmds, mock_mel
+
+
+_LOAD_COUNTER = [0]
+
+
+def load_and_call(rel_path: str, mock_cmds: MagicMock, func_name: str = "main", **kwargs) -> Any:
+    """Load a skill script and call a function with the Maya mock active throughout.
+
+    This helper ensures the ``maya`` / ``maya.cmds`` mock is patched both during
+    module *loading* and function *execution*, which is required for scripts that
+    do ``import maya.cmds as cmds`` at the top level of the function body.
+
+    Args:
+        rel_path: Path relative to the ``skills/`` root, e.g.
+            ``"maya-scene/scripts/create_object.py"``.
+        mock_cmds: The :class:`~unittest.mock.MagicMock` to use as ``maya.cmds``.
+        func_name: Name of the callable to invoke (default: ``"main"``).
+        **kwargs: Keyword arguments forwarded to the callable.
+
+    Returns:
+        Whatever the skill function returns (typically an ActionResultModel dict).
+    """
+    _LOAD_COUNTER[0] += 1
+    mock_maya = MagicMock()
+    mock_maya.cmds = mock_cmds
+
+    fpath = SKILLS_ROOT / rel_path
+    mod_name = "skill_lac_{}_{}".format(fpath.stem, _LOAD_COUNTER[0])
+    spec = importlib.util.spec_from_file_location(mod_name, str(fpath))
+    mod = importlib.util.module_from_spec(spec)
+    with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
+        spec.loader.exec_module(mod)
+        fn = getattr(mod, func_name)
+        return fn(**kwargs)
+
+
+def load_and_call_with_mel(
+    rel_path: str,
+    mock_cmds: MagicMock,
+    mock_mel: Optional[MagicMock] = None,
+    func_name: str = "main",
+    **kwargs,
+) -> Any:
+    """Load a skill script and call a function with maya.cmds AND maya.mel mocked.
+
+    Extends :func:`load_and_call` for scripts that also ``import maya.mel as mel``
+    inside the function body.
+
+    Args:
+        rel_path: Path relative to the ``skills/`` root.
+        mock_cmds: The :class:`~unittest.mock.MagicMock` to use as ``maya.cmds``.
+        mock_mel: Optional mock for ``maya.mel``; a new :class:`MagicMock` is
+            created if not provided.
+        func_name: Name of the callable to invoke (default: ``"main"``).
+        **kwargs: Keyword arguments forwarded to the callable.
+
+    Returns:
+        Whatever the skill function returns (typically an ActionResultModel dict).
+    """
+    _LOAD_COUNTER[0] += 1
+    if mock_mel is None:
+        mock_mel = MagicMock()
+    mock_maya = MagicMock()
+    mock_maya.cmds = mock_cmds
+    mock_maya.mel = mock_mel
+
+    fpath = SKILLS_ROOT / rel_path
+    mod_name = "skill_lacm_{}_{}".format(fpath.stem, _LOAD_COUNTER[0])
+    spec = importlib.util.spec_from_file_location(mod_name, str(fpath))
+    mod = importlib.util.module_from_spec(spec)
+    with patch.dict(
+        sys.modules,
+        {
+            "maya": mock_maya,
+            "maya.cmds": mock_cmds,
+            "maya.mel": mock_mel,
+        },
+    ):
+        spec.loader.exec_module(mod)
+        fn = getattr(mod, func_name)
+        return fn(**kwargs)

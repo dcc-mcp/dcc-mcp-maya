@@ -4,6 +4,7 @@ description: "Maya Paint Effects — create, attach, and manage stroke brushes a
 dcc: maya
 version: "1.0.0"
 tags: [maya, paint-effects, strokes, brushes, stylized]
+search-hint: "paint effects, stroke, brush, 3d paint"
 license: "MIT"
 allowed-tools: ["Bash", "Read"]
 depends: []

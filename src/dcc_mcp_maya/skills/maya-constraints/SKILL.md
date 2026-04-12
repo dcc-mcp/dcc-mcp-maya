@@ -4,6 +4,7 @@ description: "Maya constraints — parent, point, orient, scale, aim and weighte
 dcc: maya
 version: "1.0.0"
 tags: [maya, constraint, rigging]
+search-hint: "constraint, parent, orient, aim, point, scale"
 license: "MIT"
 allowed-tools: ["Bash", "Read"]
 depends: []
