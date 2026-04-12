@@ -4,6 +4,11 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      tag_name:
+        description: "Tag name for manual build-mod (e.g. v0.2.4). Leave empty to only run release-please."
+        required: false
+        default: ""
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -21,7 +26,7 @@ jobs:
     if: github.ref == 'refs/heads/main'
     outputs:
       release_created: ${{ steps.release.outputs.release_created }}
-      tag_name: ${{ steps.release.outputs.tag_name }}
+      tag_name: ${{ steps.release.outputs.tag_name || inputs.tag_name }}
       version: ${{ steps.release.outputs.version }}
     steps:
       - uses: googleapis/release-please-action@v4
@@ -34,7 +39,7 @@ jobs:
   # ── Build wheel — only when release-please creates a release ───────────────
   build:
     needs: [release-please]
-    if: needs.release-please.outputs.release_created == 'true'
+    if: needs.release-please.outputs.release_created == 'true' || (github.event_name == 'workflow_dispatch' && inputs.tag_name != '')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -42,7 +47,7 @@ jobs:
       - name: Set up Python 3.12
         uses: actions/setup-python@v6
         with:
-          python-version: "3.14"
+          python-version: "3.12"
 
       - name: Install build tools
         run: pip install hatchling build
@@ -91,7 +96,7 @@ jobs:
   # ── Build Maya .mod module ZIPs ──────────────────────────────────────────────
   build-mod:
     needs: [release-please]
-    if: needs.release-please.outputs.release_created == 'true'
+    if: needs.release-please.outputs.release_created == 'true' || (github.event_name == 'workflow_dispatch' && inputs.tag_name != '')
     strategy:
       matrix:
         include:
