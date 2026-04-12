@@ -519,6 +519,172 @@ def get_param_list(params: Any, key: str, default: Any = None) -> List[Any]:
 
 
 # ---------------------------------------------------------------------------
+# Name and context helpers
+# ---------------------------------------------------------------------------
+
+
+def ensure_valid_name(name: Any, param: str = "name") -> Optional[Dict[str, Any]]:
+    """Return an error dict if *name* is falsy or whitespace-only, else None.
+
+    Designed to guard skill functions that require a non-empty node name::
+
+        err = ensure_valid_name(layer_name, "layer_name")
+        if err:
+            return err
+
+    Args:
+        name: The value to validate (typically a ``str``).
+        param: The parameter name used in the error message.
+
+    Returns:
+        ``None`` when *name* is a non-empty string, otherwise a serialised
+        error dict.
+    """
+    if not name or (isinstance(name, str) and not name.strip()):
+        return maya_error(
+            "Invalid '{}': name must not be empty".format(param),
+            "'{}' received an empty or whitespace-only value".format(param),
+            possible_solutions=[
+                "Pass a non-empty string for '{}'".format(param),
+            ],
+        )
+    return None
+
+
+def build_context_dict(**kwargs: Any) -> Dict[str, Any]:
+    """Return a dict of *kwargs* with ``None``-valued keys removed.
+
+    Reduces ``if value is not None`` boilerplate in skill return statements::
+
+        return maya_success("Done", prompt="...", **build_context_dict(
+            object_name=name,
+            translate=translate,  # may be None
+        ))
+
+    Args:
+        **kwargs: Arbitrary key/value pairs.
+
+    Returns:
+        A new dict containing only entries whose value is not ``None``.
+    """
+    return {k: v for k, v in kwargs.items() if v is not None}
+
+
+# ---------------------------------------------------------------------------
+# Cross-DCC data model helpers
+# ---------------------------------------------------------------------------
+
+
+def scene_object_from_node(cmds: Any, long_name: str) -> Dict[str, Any]:
+    """Build a SceneObject-compatible dict from a Maya DAG transform node.
+
+    Returns a dictionary matching the ``SceneObject`` schema used by
+    ``dcc-mcp-core`` for cross-DCC scene exchange::
+
+        {
+            "name": "pSphere1",
+            "long_name": "|pSphere1",
+            "object_type": "transform",
+            "parent": None,
+            "visible": True,
+            "metadata": {},
+        }
+
+    Args:
+        cmds: The ``maya.cmds`` module.
+        long_name: Long DAG path of the node (e.g. ``"|group1|pSphere1"``).
+
+    Returns:
+        SceneObject-compatible dict.
+    """
+    short_name = long_name.rsplit("|", 1)[-1] if "|" in long_name else long_name
+    object_type = cmds.objectType(long_name)
+
+    # Determine parent (None for top-level transforms)
+    parents = cmds.listRelatives(long_name, parent=True, fullPath=True) or []
+    parent = parents[0] if parents else None
+
+    # Visibility — graceful fallback
+    try:
+        visible = bool(cmds.getAttr("{}.visibility".format(long_name)))
+    except Exception:
+        visible = True
+
+    return {
+        "name": short_name,
+        "long_name": long_name,
+        "object_type": object_type,
+        "parent": parent,
+        "visible": visible,
+        "metadata": {},
+    }
+
+
+def object_transform_from_node(cmds: Any, node_name: str) -> Dict[str, Any]:
+    """Build an ObjectTransform-compatible dict from a Maya transform node.
+
+    Returns::
+
+        {
+            "translate": [tx, ty, tz],
+            "rotate":    [rx, ry, rz],
+            "scale":     [sx, sy, sz],
+        }
+
+    All values are Python ``float``.
+
+    Args:
+        cmds: The ``maya.cmds`` module.
+        node_name: Name of the transform node.
+
+    Returns:
+        ObjectTransform-compatible dict.
+    """
+    tx, ty, tz = cmds.getAttr("{}.translate".format(node_name))[0]
+    rx, ry, rz = cmds.getAttr("{}.rotate".format(node_name))[0]
+    sx, sy, sz = cmds.getAttr("{}.scale".format(node_name))[0]
+    return {
+        "translate": [float(tx), float(ty), float(tz)],
+        "rotate": [float(rx), float(ry), float(rz)],
+        "scale": [float(sx), float(sy), float(sz)],
+    }
+
+
+def bounding_box_from_node(cmds: Any, node_name: str) -> Dict[str, Any]:
+    """Build a BoundingBox-compatible dict from a Maya node.
+
+    Uses ``exactWorldBoundingBox`` to compute the world-space AABB.
+
+    Returns::
+
+        {
+            "min":    [xmin, ymin, zmin],
+            "max":    [xmax, ymax, zmax],
+            "center": [cx,   cy,   cz  ],
+            "size":   [dx,   dy,   dz  ],
+        }
+
+    Args:
+        cmds: The ``maya.cmds`` module.
+        node_name: Name of the node.
+
+    Returns:
+        BoundingBox-compatible dict.
+    """
+    bb = cmds.exactWorldBoundingBox(node_name)
+    xmin, ymin, zmin, xmax, ymax, zmax = (float(v) for v in bb)
+    cx = (xmin + xmax) / 2.0
+    cy = (ymin + ymax) / 2.0
+    cz = (zmin + zmax) / 2.0
+    return {
+        "min": [xmin, ymin, zmin],
+        "max": [xmax, ymax, zmax],
+        "center": [cx, cy, cz],
+        "size": [xmax - xmin, ymax - ymin, zmax - zmin],
+    }
+
+
+# ---------------------------------------------------------------------------
 # Convenience re-exports so callers only need one import
 # ---------------------------------------------------------------------------
 
@@ -540,4 +706,11 @@ __all__ = [
     "validate_node_exists",
     "validate_node_type",
     "batch_validate_nodes",
+    # Name and context helpers
+    "ensure_valid_name",
+    "build_context_dict",
+    # Cross-DCC data model helpers
+    "scene_object_from_node",
+    "object_transform_from_node",
+    "bounding_box_from_node",
 ]
