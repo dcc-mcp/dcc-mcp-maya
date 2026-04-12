@@ -4,6 +4,7 @@ description: "Maya GPU cache utilities — export, import, and manage gpuCache n
 dcc: maya
 version: "1.0.0"
 tags: [maya, gpu-cache, alembic, viewport, performance]
+search-hint: "gpu cache, alembic, cache, performance"
 license: "MIT"
 allowed-tools: ["Bash", "Read"]
 depends: []

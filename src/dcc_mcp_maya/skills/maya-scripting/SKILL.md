@@ -4,6 +4,7 @@ description: "Execute MEL/Python scripts inside Maya; broad scripting utilities 
 dcc: maya
 version: "1.0.0"
 tags: [maya, scripting, mel, python, utility]
+search-hint: "script, mel, python, expression, execute"
 license: "MIT"
 allowed-tools: ["Bash", "Read"]
 depends: []

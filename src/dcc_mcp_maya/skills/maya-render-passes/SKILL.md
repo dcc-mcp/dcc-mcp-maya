@@ -4,6 +4,7 @@ description: "Maya render passes — create, list, and configure render pass/AOV
 dcc: maya
 version: "1.0.0"
 tags: [maya, render, passes, aov, compositing]
+search-hint: "render pass, aov, beauty, diffuse, specular"
 license: "MIT"
 allowed-tools: ["Bash", "Read"]
 depends: []

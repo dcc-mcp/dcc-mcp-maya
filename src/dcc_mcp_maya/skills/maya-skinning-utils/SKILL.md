@@ -4,6 +4,7 @@ description: "Maya skinning utilities — copy weights, normalize, mirror, prune
 dcc: maya
 version: "1.0.0"
 tags: [maya, skinning, skin-cluster, weights, rigging]
+search-hint: "skin, weight, bind, copy weights, smooth"
 license: "MIT"
 allowed-tools: ["Bash", "Read"]
 depends: []

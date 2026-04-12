@@ -4,6 +4,7 @@ description: "Maya light rig — create standard three-point lighting rigs, HDRI
 dcc: maya
 version: "1.0.0"
 tags: [maya, lighting, light-rig, three-point, hdri]
+search-hint: "light, rig, three-point, studio setup"
 license: "MIT"
 allowed-tools: ["Bash", "Read"]
 depends: []

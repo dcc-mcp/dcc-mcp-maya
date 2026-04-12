@@ -4,6 +4,7 @@ description: "Maya viewport annotations — create, update, list and remove text
 dcc: maya
 version: "1.0.0"
 tags: [maya, annotation, viewport, text]
+search-hint: "annotation, label, text, viewport, note, create annotation"
 license: "MIT"
 allowed-tools: ["Bash", "Read"]
 depends: []

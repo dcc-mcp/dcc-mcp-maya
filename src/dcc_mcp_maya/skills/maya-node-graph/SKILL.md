@@ -4,6 +4,7 @@ description: "Maya node graph — connect/disconnect attributes, query history a
 dcc: maya
 version: "1.0.0"
 tags: [maya, node, attribute, graph, utility]
+search-hint: "node, graph, connection, attribute, editor"
 license: "MIT"
 allowed-tools: ["Bash", "Read"]
 depends: []

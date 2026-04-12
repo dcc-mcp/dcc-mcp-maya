@@ -821,17 +821,85 @@ Files migrated (25 individual scripts + scene_utils.py which already had top-lev
 - Committed: `1c4f500 refactor(skills): migrate 26 list-comp cmds.objExists to batch_validate_nodes; add test_skills_round32 (76 tests)`
 - Pushed: `origin/feat/skill-api-improvements` updated
 
-### Remaining cmds.objExists (54 total)
-- **Positive-filter list-comp** (3): clean_mocap_keys (keep existing joints), sets/remove_from_set, scripting/sets (skip non-existent gracefully)
-- **Positive guards** (17): arnold-aov, constraints, display, dynamics, render, toon — keep (logic guards)
-- **Attr probes** (2): list_connections, node_graph — keep
-- **Other conditional** (32): inline conditions, nucleus checks, expression guards — keep or future work
+
+---
+
+## 2026-04-12 (Round 19 — 100% coverage milestone)
+
+### State before this round
+- Branch: `feat/skill-lint-checker` (up to date with origin/main)
+- Tests: 2303 passed, 5 skipped (baseline)
+- Coverage: 98% total (api.py 97% missing lines 212-214, 228-230; server.py 99% missing line 164)
+
+### Work done
+
+**test_skills_round33.py — 44 new tests, all pass**:
+- TestRequireCmds (3): context manager yield / ImportError path / callable check
+- TestGetCmds (3): return value / ImportError path / callable check
+- TestEnsureValidName (8): valid / empty / whitespace / None / False / param name / default param
+- TestBuildContextDict (5): excludes None / keeps falsy / all-None / no-None / empty
+- TestSceneObjectFromNode (6): top-level / nested short name / parent / visibility=False / exception defaults True / no-pipe name
+- TestObjectTransformFromNode (4): basic / zero / float types / negative
+- TestBoundingBoxFromNode (6): basic / center / size / float types / assert call / asymmetric
+- TestServerRegistryProperty (2): no _registry → None / has _registry → returns it
+- TestApiPublicReexportRound33 (7): all new helpers callable
+
+### State after this round
+- Tests: 2347 passed (+44), 5 skipped, 0 failures
+- Coverage: **100%** total (api.py 100%, server.py 100%) — milestone achieved
+- ruff: All checks passed
+- Committed: `1227381 test(api): achieve 100% coverage — add test_skills_round33`
+- Pushed: `origin/feat/skill-lint-checker` updated
+
+
+---
+
+## 2026-04-12 (Round 20 — maya_warning helper + ToolDeclaration SKILL.md 更新)
+
+### State before this round
+- Branch: `feat/skill-lint-checker`
+- Tests: 2347 passed, 5 skipped (100% coverage)
+- dcc-mcp-core 新特性：skill_warning、ToolDeclaration/tools: 数组、serialize_result/deserialize_result
+
+### Work done
+
+**1. `maya_warning` helper 新增（api.py + __init__.py）**:
+- `maya_warning(message, warning="", prompt=None, **context)` — 对应 `dcc_mcp_core.skill.skill_warning`
+- 返回 `success=True` 且 `context["warning"]` 包含非致命警告信息
+- 加入 `api.__all__` 和 `dcc_mcp_maya.__all__`，从顶层包可直接导入
+
+**2. 4 个核心 SKILL.md 添加 `tools:` 数组（ToolDeclaration 格式）**:
+- `maya-scene/SKILL.md`: 8 个工具（new_scene, save_scene, open_scene, list_objects, get_selection, set_selection, get_scene_info, get_session_info）
+- `maya-primitives/SKILL.md`: 8 个工具（8 个 scripts 全部映射）
+- `maya-animation/SKILL.md`: 7 个工具（set_keyframe, get_keyframes, set_timeline 等核心工具）
+- `maya-render/SKILL.md`: 3 个工具（set_render_settings, get_render_settings, playblast）
+- 每个 ToolDeclaration 包含：name, description, source_file, read_only, destructive, idempotent
+
+**3. Bug 修复**：
+- maya-scene SKILL.md 添加 `tools:` 后 SkillCatalog 只注册声明工具（7个），导致 `get_session_info` 找不到
+- 修复：补充 `get_session_info` 进入 tools: 数组
+- test_server.py `test_tools_list_contains_maya_actions` 重新通过
+
+**4. test_skills_round34.py — 40 个新测试，全部通过**:
+- TestMayaWarning (11): success=True / warning in context / empty warning / prompt / extra context / no error / top-level import / __all__ 等
+- TestSkillMdToolsField (28): parametrized × 4 skills × 工具验证（存在/是list/必需字段/注解/source_file路径格式/计数）+ 额外 5 个具体断言
+- TestApiAllConsistency (3): __all__ 与实际导出一致性
+
+### State after this round
+- Tests: 2387 passed (+40), 5 skipped, 0 failures
+- ruff: All checks passed
+- Committed: `84c8a27 feat(api): add maya_warning helper; add tools: ToolDeclaration arrays to 4 core SKILL.md files; test_skills_round34 (40 tests)`
+- Pushed: `origin/feat/skill-lint-checker` updated
 
 ### Next priorities
-1. Investigate if the remaining 32 "other" conditionals have any migratable patterns
-2. Add `_load_and_call` helper pattern to shared conftest.py for reuse across future test files
-3. Check dcc-mcp-core for new API updates
-4. Consider E2E test expansion for deformers/xform-utils
+1. 为其余 SKILL.md 文件批量添加 `tools:` 数组（剩余 ~60 个 SKILL.md）
+2. 使用 `maya_warning` 重构部分 skill 脚本（如 Arnold 不可用时返回 warning）
+3. 添加 `serialize_result`/`deserialize_result` 集成测试
+4. GitHub Dependabot 安全漏洞（2 moderate on default branch）
+
+
+
+
 
 
 

@@ -4,6 +4,7 @@ description: "Maya instancer utilities — create and configure particle instanc
 dcc: maya
 version: "1.0.0"
 tags: [maya, instancer, particles, scatter, motion-graphics]
+search-hint: "instancer, particle instancer, instance, scatter"
 license: "MIT"
 allowed-tools: ["Bash", "Read"]
 depends: []

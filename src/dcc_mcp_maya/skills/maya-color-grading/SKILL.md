@@ -4,6 +4,7 @@ description: "Maya color management — query and set color space, apply color c
 dcc: maya
 version: "1.0.0"
 tags: [maya, color, color-management, aces, rendering]
+search-hint: "color, grading, lut, grade"
 license: "MIT"
 allowed-tools: ["Bash", "Read"]
 depends: []

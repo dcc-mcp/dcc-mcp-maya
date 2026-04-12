@@ -4,6 +4,7 @@ description: "Maya camera sequencer — create, list, trim, and bake camera cuts
 dcc: maya
 version: "1.0.0"
 tags: [maya, camera, sequencer, shots, animation]
+search-hint: "camera, sequence, film, multi-camera"
 license: "MIT"
 allowed-tools: ["Bash", "Read"]
 depends: []
