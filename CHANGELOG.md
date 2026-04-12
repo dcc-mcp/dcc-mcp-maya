@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.2.6](https://github.com/loonghao/dcc-mcp-maya/compare/v0.2.5...v0.2.6) (2026-04-12)
+
+
+### Bug Fixes
+
+* **plugin:** use maya.api.OpenMaya (API 2.0) to resolve MFnPlugin AttributeError ([44f8170](https://github.com/loonghao/dcc-mcp-maya/commit/44f817038164be27f49d74c2af421fc1c72620e0))
+
+
+### Code Refactoring
+
+* **plugin:** add maya_useNewAPI(); simplify to direct API 2.0 import ([9020a89](https://github.com/loonghao/dcc-mcp-maya/commit/9020a890179e37bf71acd8614811d19468a40ec0))
+
 ## [0.2.5](https://github.com/loonghao/dcc-mcp-maya/compare/v0.2.4...v0.2.5) (2026-04-12)
 
 
