@@ -283,7 +283,16 @@ def assemble(project_root: Path, version: str, platform: str, output: Path) -> P
     else:
         shutil.copy2(packaging_dir / "install.sh", module_dir / "install.sh")
         shutil.copy2(packaging_dir / "uninstall.sh", module_dir / "uninstall.sh")
-    shutil.copy2(packaging_dir / "README.txt", module_dir / "README.txt")
+    readme_src = packaging_dir / "README.txt"
+    if readme_src.exists():
+        shutil.copy2(readme_src, module_dir / "README.txt")
+    else:
+        # Fallback: generate a minimal README if the file is not tracked in git
+        (module_dir / "README.txt").write_text(
+            "DCC-MCP-Maya — Maya Module Distribution\n"
+            "See https://github.com/loonghao/dcc-mcp-maya for full documentation.\n",
+            encoding="utf-8",
+        )
     print("  Copied install/uninstall scripts and README")
 
     return module_dir
