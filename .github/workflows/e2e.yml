@@ -54,6 +54,18 @@ jobs:
           print('Python version:', sys.version)
           "
 
+      # ── Phase 0: Install test dependencies into mayapy ────────────────
+      # pytest and other dev deps must be installed so E2E tests can run.
+      # We install only test/dev extras, NOT the source package — the E2E
+      # tests use the packaged .mod module, not a pip-editable install.
+
+      - name: Install test dependencies into mayapy
+        run: |
+          mayapy -m pip install --upgrade pip
+          # Install dev/test extras only; dcc_mcp_maya itself is tested via
+          # the packaged .mod module (not pip-installed source).
+          mayapy -m pip install "pytest>=7" pytest-cov pytest-mock pyyaml "tomli; python_version<'3.11'"
+
       # ── Phase 1: Assemble the .mod module ──────────────────────────────
       # We build the packaged module *exactly* as release.yml does, then
       # deploy it to the Maya modules directory so mayapy can find it.
@@ -121,12 +133,21 @@ jobs:
         env:
           # Tell the E2E tests to use the packaged module's paths
           DCC_MCP_MAYA_MOD_DIR: $HOME/maya/modules/dcc-mcp-maya
+          # Expose the packaged python/ dir so pytest subprocess can import
+          # dcc_mcp_maya and dcc_mcp_core (bundled in the .mod module).
+          PYTHONPATH: $HOME/maya/modules/dcc-mcp-maya/python
         run: |
           mayapy -c "
           import maya.standalone
           maya.standalone.initialize()
 
           import sys, subprocess, os
+          from pathlib import Path
+
+          # Ensure packaged python/ is on sys.path for this process too
+          mod_python = str(Path(os.path.expanduser('~/maya/modules/dcc-mcp-maya/python')))
+          if mod_python not in sys.path:
+              sys.path.insert(0, mod_python)
 
           # Run e2e tests via pytest inside mayapy
           result = subprocess.run(
