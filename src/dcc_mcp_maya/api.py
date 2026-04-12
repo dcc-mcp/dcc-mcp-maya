@@ -622,6 +622,65 @@ def bounding_box_from_node(cmds: Any, node_name: str) -> Dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
+# Name validation helpers
+# ---------------------------------------------------------------------------
+
+
+def ensure_valid_name(name: Any, param: str = "name") -> Optional[Dict[str, Any]]:
+    """Return an error dict if *name* is falsy or whitespace-only, else None.
+
+    Convenience guard for skill functions that require a non-empty string name.
+
+    Args:
+        name: The value to validate.
+        param: The parameter name used in the error message (default ``"name"``).
+
+    Returns:
+        ``None`` when *name* is a non-empty string, otherwise a serialised
+        error dict.
+
+    Example::
+
+        err = ensure_valid_name(name, "layer_name")
+        if err:
+            return err
+    """
+    if not name or not str(name).strip():
+        return maya_error(
+            "Invalid {}: '{}'".format(param, name),
+            "'{}' must be a non-empty string".format(param),
+            possible_solutions=["Provide a non-empty string for '{}'".format(param)],
+        )
+    return None
+
+
+# ---------------------------------------------------------------------------
+# Context dict builder
+# ---------------------------------------------------------------------------
+
+
+def build_context_dict(**kwargs: Any) -> Dict[str, Any]:
+    """Build a context dict, omitting keys whose values are ``None``.
+
+    Many skill success results include optional fields that are only meaningful
+    when present.  This helper removes the ``if value is not None`` boilerplate:
+
+    Args:
+        **kwargs: Arbitrary key/value pairs.
+
+    Returns:
+        A new dict containing only the key/value pairs where the value is not
+        ``None``.
+
+    Example::
+
+        ctx = build_context_dict(name=layer_name, objects=added or None, vis=visibility)
+        return maya_success("Done", **ctx)
+    """
+    return {k: v for k, v in kwargs.items() if v is not None}
+
+
+# ---------------------------------------------------------------------------
 # Convenience re-exports so callers only need one import
 # ---------------------------------------------------------------------------
 
@@ -647,4 +706,7 @@ __all__ = [
     "scene_object_from_node",
     "object_transform_from_node",
     "bounding_box_from_node",
+    # Name validation and context helpers
+    "ensure_valid_name",
+    "build_context_dict",
 ]
