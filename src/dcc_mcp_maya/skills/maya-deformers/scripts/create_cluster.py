@@ -13,14 +13,18 @@ from dcc_mcp_maya.api import batch_validate_nodes
 
 
 def create_cluster(
-    objects: List[str],
+    mesh: Optional[str] = None,
+    objects: Optional[List[str]] = None,
     name: Optional[str] = None,
     relative: bool = False,
 ) -> dict:
     """Create a cluster deformer on one or more objects.
 
     Args:
-        objects: List of mesh names to deform.
+        mesh: Single mesh name to deform.  Convenience alias for ``objects``
+            when working with one mesh.
+        objects: List of mesh names to deform.  If both ``mesh`` and
+            ``objects`` are given, ``mesh`` is prepended to ``objects``.
         name: Optional name for the cluster handle.  Maya auto-names if
             ``None``.
         relative: When ``True``, the cluster operates in relative mode
@@ -30,16 +34,23 @@ def create_cluster(
         ActionResultModel dict with ``context.cluster_node``,
         ``context.cluster_handle``.
     """
-    if not objects:
+    # Normalise: merge mesh + objects into a single list
+    target_objects: List[str] = []
+    if mesh:
+        target_objects.append(mesh)
+    if objects:
+        target_objects.extend(o for o in objects if o not in target_objects)
+
+    if not target_objects:
         return skill_error(
             "No objects specified",
-            "Provide at least one object name in the 'objects' list",
+            "Provide 'mesh' or at least one object name in the 'objects' list",
         )
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        err = batch_validate_nodes(cmds, list(objects))
+        err = batch_validate_nodes(cmds, list(target_objects))
         if err:
             return err
 
@@ -47,16 +58,16 @@ def create_cluster(
         if name:
             kwargs["name"] = name
 
-        result = cmds.cluster(objects, **kwargs)
+        result = cmds.cluster(target_objects, **kwargs)
         # cmds.cluster returns [clusterNode, clusterHandle]
         cluster_node = result[0] if result else None
         cluster_handle = result[1] if result and len(result) > 1 else None
 
         return skill_success(
-            "Created cluster deformer '{}' on {} object(s)".format(cluster_node, len(objects)),
+            "Created cluster deformer '{}' on {} object(s)".format(cluster_node, len(target_objects)),
             cluster_node=cluster_node,
             cluster_handle=cluster_handle,
-            objects=objects,
+            objects=target_objects,
             relative=relative,
             prompt="Check the result with list_deformers or use related actions to continue.",
         )

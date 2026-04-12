@@ -15,6 +15,9 @@ from dcc_mcp_maya.api import batch_validate_nodes
 def create_lattice(
     objects: List[str],
     divisions: Optional[List[int]] = None,
+    s_divisions: Optional[int] = None,
+    t_divisions: Optional[int] = None,
+    u_divisions: Optional[int] = None,
     name: Optional[str] = None,
     local_scale: Optional[List[float]] = None,
 ) -> dict:
@@ -24,6 +27,9 @@ def create_lattice(
         objects: List of mesh/surface names to enclose in the lattice.
         divisions: ``[s_divisions, t_divisions, u_divisions]`` for the
             lattice control-point grid.  Defaults to ``[2, 5, 2]``.
+        s_divisions: S (X) axis divisions.  Overrides ``divisions[0]`` if set.
+        t_divisions: T (Y) axis divisions.  Overrides ``divisions[1]`` if set.
+        u_divisions: U (Z) axis divisions.  Overrides ``divisions[2]`` if set.
         name: Optional base name for the lattice node.
         local_scale: Optional ``[sx, sy, sz]`` local scale applied to the
             FFD base.  If ``None``, the bounding-box size is used.
@@ -39,7 +45,15 @@ def create_lattice(
             "Provide at least one object name in the 'objects' list",
         )
 
-    divs = divisions if (divisions and len(divisions) == 3) else [2, 5, 2]
+    # Build divisions list: individual params take precedence over divisions list
+    base_divs = list(divisions) if (divisions and len(divisions) == 3) else [2, 5, 2]
+    if s_divisions is not None:
+        base_divs[0] = s_divisions
+    if t_divisions is not None:
+        base_divs[1] = t_divisions
+    if u_divisions is not None:
+        base_divs[2] = u_divisions
+    divs = base_divs
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415

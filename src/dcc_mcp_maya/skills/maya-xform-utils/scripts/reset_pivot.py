@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 # Import built-in modules
-from typing import List
+from typing import List, Optional
 
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
@@ -13,13 +13,16 @@ from dcc_mcp_maya.api import batch_validate_nodes
 
 
 def reset_pivot(
-    objects: List[str],
+    objects: Optional[List[str]] = None,
+    object_name: Optional[str] = None,
     mode: str = "bbox_center",
 ) -> dict:
     """Reposition the pivot of each object.
 
     Args:
         objects: List of transform node names.
+        object_name: Single transform node name.  Convenience alias for
+            ``objects`` when working with one object.
         mode: Where to place the pivot:
             - ``"bbox_center"`` — centre of the object's bounding box (default).
             - ``"world_origin"`` — place pivot at (0, 0, 0).
@@ -32,10 +35,17 @@ def reset_pivot(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not objects:
+        # Normalise: merge object_name + objects into a single list
+        target_objects: List[str] = []
+        if object_name:
+            target_objects.append(object_name)
+        if objects:
+            target_objects.extend(o for o in objects if o not in target_objects)
+
+        if not target_objects:
             return skill_error("No objects provided", "Pass at least one object name.")
 
-        err = batch_validate_nodes(cmds, list(objects))
+        err = batch_validate_nodes(cmds, list(target_objects))
         if err:
             return err
 
@@ -47,7 +57,7 @@ def reset_pivot(
             )
 
         updated = []
-        for obj in objects:
+        for obj in target_objects:
             if mode == "world_origin":
                 pivot = [0.0, 0.0, 0.0]
             else:
@@ -65,7 +75,7 @@ def reset_pivot(
             updated.append({"name": obj, "pivot": pivot})
 
         return skill_success(
-            "Reset pivot for {} object(s) (mode={})".format(len(objects), mode),
+            "Reset pivot for {} object(s) (mode={})".format(len(target_objects), mode),
             prompt="After adjusting the pivot, use freeze_transforms if you want to bake the new position.",
             updated_objects=updated,
         )
