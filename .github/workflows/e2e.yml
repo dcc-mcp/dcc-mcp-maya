@@ -78,6 +78,30 @@ jobs:
           # Deploy the assembled module
           cp -R dist/mod/dcc-mcp-maya "$MAYA_MODULES/dcc-mcp-maya"
 
+          # Generate .mod file dynamically (same as install.sh does)
+          # The .mod is no longer pre-baked by assemble — it is generated
+          # at deploy time based on the actual platform and module metadata.
+          mayapy -c "
+          import json, sys
+          from pathlib import Path
+          module_root = Path('$MAYA_MODULES/dcc-mcp-maya')
+          with open(module_root / 'module-info.json') as f:
+              info = json.load(f)
+          version = info['version']
+          has_cp37 = info.get('has_cp37', False)
+          maya_versions = info.get('supported_maya_versions', ['2023', '2024', '2025'])
+          lines = []
+          for mv in maya_versions:
+              lines.append(f'+ MAYAVERSION:{mv} PLATFORM:linux dcc_mcp_maya {version} .')
+              if mv == '2022' and has_cp37:
+                  lines.append('PYTHONPATH+:=python37')
+              else:
+                  lines.append('PYTHONPATH+:=python')
+              lines.append('PLUG_IN_PATH+:=plug-ins')
+          (module_root / 'dcc_mcp_maya.mod').write_text(chr(10).join(lines) + chr(10))
+          print(f'Generated .mod for Maya {maya_versions}, version={version}')
+          "
+
           echo "Deployed module to $MAYA_MODULES/dcc-mcp-maya"
           ls -la "$MAYA_MODULES/dcc-mcp-maya/"
 
