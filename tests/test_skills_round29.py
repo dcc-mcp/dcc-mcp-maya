@@ -230,7 +230,7 @@ class TestGetTransformMigrated:
 
     def test_has_validate_import(self):
         source = (_SKILLS_ROOT / "maya-primitives" / "scripts" / "get_transform.py").read_text()
-        assert "from dcc_mcp_maya.api import validate_node_exists" in source
+        assert "validate_node_exists" in source
 
 
 # ---------------------------------------------------------------------------

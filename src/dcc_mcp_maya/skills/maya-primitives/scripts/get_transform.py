@@ -3,15 +3,19 @@
 # Import future modules
 from __future__ import annotations
 
-# Import built-in modules
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
-from dcc_mcp_maya.api import validate_node_exists
+from dcc_mcp_maya.api import object_transform_from_node, validate_node_exists
 
 
 def get_transform(object_name: str) -> dict:
     """Get the translate/rotate/scale of an object.
+
+    Uses :func:`dcc_mcp_maya.api.object_transform_from_node` to produce an
+    ``ObjectTransform``-compatible dict for cross-DCC interoperability.
+    The returned ``translate``, ``rotate`` and ``scale`` values match the
+    right-hand Y-up world-space convention defined by ``ObjectTransform``.
 
     Args:
         object_name: Name of the object to query.
@@ -27,15 +31,13 @@ def get_transform(object_name: str) -> dict:
         if err:
             return err
 
-        translate = list(cmds.getAttr("{}.translate".format(object_name))[0])
-        rotate = list(cmds.getAttr("{}.rotate".format(object_name))[0])
-        scale = list(cmds.getAttr("{}.scale".format(object_name))[0])
+        xform = object_transform_from_node(cmds, object_name)
         return skill_success(
             "Transform of {}".format(object_name),
             object_name=object_name,
-            translate=translate,
-            rotate=rotate,
-            scale=scale,
+            translate=xform["translate"],
+            rotate=xform["rotate"],
+            scale=xform["scale"],
             prompt="Check the result with list_primitives or use related actions to continue.",
         )
     except ImportError:

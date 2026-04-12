@@ -519,6 +519,109 @@ def get_param_list(params: Any, key: str, default: Any = None) -> List[Any]:
 
 
 # ---------------------------------------------------------------------------
+# Cross-DCC protocol data model helpers (dcc-mcp-core v0.12+)
+# ---------------------------------------------------------------------------
+
+
+def scene_object_from_node(cmds: Any, long_name: str) -> Dict[str, Any]:
+    """Build a ``SceneObject``-compatible dict from a Maya DAG transform node.
+
+    Maps Maya node attributes to the cross-DCC ``SceneObject`` schema so that
+    callers do not need to know the exact ``dcc_mcp_core.SceneObject`` constructor.
+
+    The returned dict has the following keys that mirror ``SceneObject`` fields:
+    ``name``, ``long_name``, ``object_type``, ``parent``, ``visible``, ``metadata``.
+
+    Args:
+        cmds: The ``maya.cmds`` module (already imported by the caller).
+        long_name: Full DAG path of the transform node (e.g. ``"|group1|pSphere1"``).
+
+    Returns:
+        Dict compatible with ``SceneObject`` field layout.
+
+    Example::
+
+        obj = scene_object_from_node(cmds, "|group1|pSphere1")
+        # {"name": "pSphere1", "long_name": "|group1|pSphere1",
+        #  "object_type": "transform", "parent": "|group1",
+        #  "visible": True, "metadata": {}}
+    """
+    parent_list = cmds.listRelatives(long_name, parent=True, fullPath=True) or []
+    try:
+        visible = bool(cmds.getAttr("{}.visibility".format(long_name)))
+    except Exception:
+        visible = True
+    return {
+        "name": long_name.split("|")[-1],
+        "long_name": long_name,
+        "object_type": cmds.objectType(long_name),
+        "parent": parent_list[0] if parent_list else None,
+        "visible": visible,
+        "metadata": {},
+    }
+
+
+def object_transform_from_node(cmds: Any, node_name: str) -> Dict[str, Any]:
+    """Build an ``ObjectTransform``-compatible dict from a Maya node's TRS.
+
+    Maya uses a right-hand Y-up coordinate system which matches the
+    ``ObjectTransform`` convention directly (no axis remapping needed).
+
+    The returned dict has keys ``translate``, ``rotate``, ``scale`` — each
+    a list of three floats — matching the ``ObjectTransform`` field layout.
+
+    Args:
+        cmds: The ``maya.cmds`` module (already imported by the caller).
+        node_name: Name or full DAG path of the transform node.
+
+    Returns:
+        Dict compatible with ``ObjectTransform`` field layout.
+
+    Example::
+
+        xform = object_transform_from_node(cmds, "pSphere1")
+        # {"translate": [0.0, 1.0, 0.0], "rotate": [0.0, 0.0, 0.0],
+        #  "scale": [1.0, 1.0, 1.0]}
+    """
+    translate = list(cmds.getAttr("{}.translate".format(node_name))[0])
+    rotate = list(cmds.getAttr("{}.rotate".format(node_name))[0])
+    scale = list(cmds.getAttr("{}.scale".format(node_name))[0])
+    return {"translate": translate, "rotate": rotate, "scale": scale}
+
+
+def bounding_box_from_node(cmds: Any, node_name: str) -> Dict[str, Any]:
+    """Build a ``BoundingBox``-compatible dict from a Maya node's world bbox.
+
+    Uses ``cmds.exactWorldBoundingBox`` which returns the tight axis-aligned
+    bounding box in world space.
+
+    The returned dict has keys ``min``, ``max``, ``center``, ``size`` — each
+    a list of three floats — matching the ``BoundingBox`` field layout plus
+    the convenience helpers ``BoundingBox.center()`` and ``BoundingBox.size()``.
+
+    Args:
+        cmds: The ``maya.cmds`` module (already imported by the caller).
+        node_name: Name or full DAG path of the node.
+
+    Returns:
+        Dict compatible with ``BoundingBox`` field layout.
+
+    Example::
+
+        bb = bounding_box_from_node(cmds, "pSphere1")
+        # {"min": [-1.0, -1.0, -1.0], "max": [1.0, 1.0, 1.0],
+        #  "center": [0.0, 0.0, 0.0], "size": [2.0, 2.0, 2.0]}
+    """
+    bb = cmds.exactWorldBoundingBox(node_name)
+    # bb = [xmin, ymin, zmin, xmax, ymax, zmax]
+    bb_min = [bb[0], bb[1], bb[2]]
+    bb_max = [bb[3], bb[4], bb[5]]
+    center = [(bb[0] + bb[3]) / 2.0, (bb[1] + bb[4]) / 2.0, (bb[2] + bb[5]) / 2.0]
+    size = [bb[3] - bb[0], bb[4] - bb[1], bb[5] - bb[2]]
+    return {"min": bb_min, "max": bb_max, "center": center, "size": size}
+
+
+# ---------------------------------------------------------------------------
 # Convenience re-exports so callers only need one import
 # ---------------------------------------------------------------------------
 
@@ -540,4 +643,8 @@ __all__ = [
     "validate_node_exists",
     "validate_node_type",
     "batch_validate_nodes",
+    # Cross-DCC data model helpers
+    "scene_object_from_node",
+    "object_transform_from_node",
+    "bounding_box_from_node",
 ]

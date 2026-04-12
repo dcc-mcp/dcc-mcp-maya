@@ -327,6 +327,148 @@ class MayaMcpServer:
         except Exception as exc:
             logger.debug("unregister(%r) failed: %s", name, exc)
 
+    def find_skills(
+        self,
+        query: Optional[str] = None,
+        tags: Optional[List[str]] = None,
+        dcc: Optional[str] = None,
+    ) -> List[Any]:
+        """Search the SkillCatalog using ``SkillCatalog.find_skills`` (v0.12.12+).
+
+        Matches on skill name, description, ``search_hint``, and tool names.
+        All filters are applied as AND conditions; ``None`` ignores that filter.
+
+        Args:
+            query: Free-text search term matched against name/description/hint.
+            tags: List of tags that the skill must have **all** of.
+            dcc: If given, restrict results to skills targeting this DCC (e.g.
+                ``"maya"``).
+
+        Returns:
+            List of :class:`SkillSummary` objects (or dicts) matching the
+            query.  Returns ``[]`` when the catalog is unavailable or on error.
+
+        Example::
+
+            server.register_builtin_actions()
+            hits = server.find_skills(query="bounding box")
+            hits = server.find_skills(tags=["rigging"], dcc="maya")
+        """
+        try:
+            return list(self._server.find_skills(query=query, tags=tags, dcc=dcc))
+        except Exception as exc:
+            logger.debug("find_skills failed: %s", exc)
+            return []
+
+    # ── TransportManager helpers ──────────────────────────────────────────────
+
+    def bind_and_register(
+        self,
+        transport_manager: Any,
+        version: Optional[str] = None,
+        metadata: Optional[Any] = None,
+    ) -> Any:
+        """Register this Maya instance via ``TransportManager.bind_and_register``.
+
+        One-shot helper that auto-selects the best transport (Named Pipe on
+        Windows, Unix Socket on Linux/macOS, TCP fallback) and registers the
+        service so other processes can discover it via ``find_best_service`` /
+        ``rank_services``.
+
+        Wraps ``TransportManager.bind_and_register`` (v0.12+).
+
+        Args:
+            transport_manager: A :class:`dcc_mcp_core.TransportManager`
+                instance managing service discovery.
+            version: Maya version string reported to the registry (e.g.
+                ``"2025"``).  If ``None``, attempts to read ``cmds.about(v=True)``.
+            metadata: Arbitrary dict stored with the service entry (e.g.
+                ``{"artist": "user1"}``).
+
+        Returns:
+            Tuple ``(instance_id, listener)`` returned by
+            ``TransportManager.bind_and_register``, or ``None`` on error.
+
+        Example::
+
+            from dcc_mcp_core import TransportManager
+            mgr = TransportManager()
+            instance_id, listener = server.bind_and_register(mgr, version="2025")
+        """
+        if version is None:
+            try:
+                import maya.cmds as cmds  # noqa: PLC0415
+
+                version = str(cmds.about(version=True))
+            except Exception:
+                version = "unknown"
+
+        try:
+            return transport_manager.bind_and_register(
+                "maya",
+                version=version,
+                metadata=metadata or {},
+            )
+        except Exception as exc:
+            logger.warning("bind_and_register failed: %s", exc)
+            return None
+
+    @staticmethod
+    def find_best_service(transport_manager: Any, dcc_type: str = "maya") -> Any:
+        """Find the best available Maya service via ``TransportManager.find_best_service``.
+
+        Wraps ``TransportManager.find_best_service`` (v0.12+).
+
+        Args:
+            transport_manager: A :class:`dcc_mcp_core.TransportManager`
+                instance managing service discovery.
+            dcc_type: DCC type string to search for.  Defaults to ``"maya"``.
+
+        Returns:
+            The best service instance, or ``None`` if none are available.
+
+        Example::
+
+            from dcc_mcp_core import TransportManager
+            mgr = TransportManager()
+            service = MayaMcpServer.find_best_service(mgr)
+        """
+        try:
+            return transport_manager.find_best_service(dcc_type)
+        except Exception as exc:
+            logger.debug("find_best_service failed: %s", exc)
+            return None
+
+    @staticmethod
+    def rank_services(transport_manager: Any, dcc_type: str = "maya") -> List[Any]:
+        """List and rank all active Maya instances via ``TransportManager.rank_services``.
+
+        Services are ordered by: local IPC available → local IPC busy →
+        local TCP available → remote TCP.
+
+        Wraps ``TransportManager.rank_services`` (v0.12+).
+
+        Args:
+            transport_manager: A :class:`dcc_mcp_core.TransportManager`
+                instance managing service discovery.
+            dcc_type: DCC type string to filter.  Defaults to ``"maya"``.
+
+        Returns:
+            Ranked list of service info objects.  Returns ``[]`` on error.
+
+        Example::
+
+            from dcc_mcp_core import TransportManager
+            mgr = TransportManager()
+            services = MayaMcpServer.rank_services(mgr)
+            # [service_local_ipc, service_busy_ipc, service_tcp, ...]
+        """
+        try:
+            return list(transport_manager.rank_services(dcc_type))
+        except Exception as exc:
+            logger.debug("rank_services failed: %s", exc)
+            return []
+
     # ── lifecycle ─────────────────────────────────────────────────────────────
 
     def start(self):

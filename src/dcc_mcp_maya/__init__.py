@@ -16,6 +16,7 @@ Skill authoring helpers (for Maya skills developers)::
     from dcc_mcp_maya.api import (
         maya_success, maya_error, maya_from_exception, with_maya,
         require_param, validate_node_exists, validate_node_type,
+        scene_object_from_node, object_transform_from_node, bounding_box_from_node,
     )
 
     @with_maya
@@ -36,6 +37,7 @@ from dcc_mcp_maya.__version__ import __version__
 from dcc_mcp_maya.api import (
     MissingParamError,
     batch_validate_nodes,
+    bounding_box_from_node,
     get_cmds,
     get_param_list,
     is_maya_available,
@@ -43,9 +45,11 @@ from dcc_mcp_maya.api import (
     maya_from_exception,
     maya_success,
     missing_param_error,
+    object_transform_from_node,
     require_any_param,
     require_cmds,
     require_param,
+    scene_object_from_node,
     validate_node_exists,
     validate_node_type,
     with_maya,
@@ -76,4 +80,8 @@ __all__ = [
     "validate_node_exists",
     "validate_node_type",
     "batch_validate_nodes",
+    # Cross-DCC data model helpers
+    "scene_object_from_node",
+    "object_transform_from_node",
+    "bounding_box_from_node",
 ]
