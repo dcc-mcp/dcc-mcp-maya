@@ -8,9 +8,8 @@ Instead of repeating the same boilerplate in every script, import from here:
 Key helpers
 -----------
 ``maya_success(message, **context)``
-    Build a success ActionResultModel dict, identical to
-    ``success_result(message, **context).to_dict()`` but without any extra
-    import in the script body.
+    Build a success result dict backed by ``dcc_mcp_core.skill.skill_success``
+    (pure-Python, zero compiled-extension dependency).
 
 ``maya_error(message, error, **context)``
     Build an error ActionResultModel dict.
@@ -107,9 +106,9 @@ def maya_success(message: str, prompt: Optional[str] = None, **context: Any) -> 
 
         return maya_success("Created sphere", object_name="pSphere1", radius=1.0)
     """
-    from dcc_mcp_core import success_result  # noqa: PLC0415
+    from dcc_mcp_core.skill import skill_success  # noqa: PLC0415
 
-    return success_result(message, prompt=prompt, **context).to_dict()
+    return skill_success(message, prompt=prompt, **context)
 
 
 def maya_error(
@@ -139,15 +138,15 @@ def maya_error(
             possible_solutions=["Check the object name", "Use list_objects to see available nodes"],
         )
     """
-    from dcc_mcp_core import error_result  # noqa: PLC0415
+    from dcc_mcp_core.skill import skill_error  # noqa: PLC0415
 
-    return error_result(
+    return skill_error(
         message,
         error,
         prompt=prompt,
         possible_solutions=possible_solutions,
         **context,
-    ).to_dict()
+    )
 
 
 def maya_warning(message: str, warning: str = "", prompt: Optional[str] = None, **context: Any) -> Dict[str, Any]:
@@ -177,9 +176,9 @@ def maya_warning(message: str, warning: str = "", prompt: Optional[str] = None, 
             object_name="pSphere1",
         )
     """
-    from dcc_mcp_core import success_result  # noqa: PLC0415
+    from dcc_mcp_core.skill import skill_warning  # noqa: PLC0415
 
-    return success_result(message, prompt=prompt, warning=warning, **context).to_dict()
+    return skill_warning(message, warning=warning, prompt=prompt, **context)
 
 
 def maya_from_exception(
@@ -213,16 +212,16 @@ def maya_from_exception(
             logger.exception("create_sphere failed")
             return maya_from_exception(exc, "Failed to create sphere")
     """
-    from dcc_mcp_core import from_exception  # noqa: PLC0415
+    from dcc_mcp_core.skill import skill_exception  # noqa: PLC0415
 
-    return from_exception(
-        error_message=str(exc),
+    return skill_exception(
+        exc,
         message=message,
         prompt=prompt,
         include_traceback=include_traceback,
         possible_solutions=possible_solutions,
         **context,
-    ).to_dict()
+    )
 
 
 # ---------------------------------------------------------------------------
