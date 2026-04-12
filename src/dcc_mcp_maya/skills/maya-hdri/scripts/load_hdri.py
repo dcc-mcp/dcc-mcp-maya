@@ -9,6 +9,9 @@ import os
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+# Import third-party modules
+from dcc_mcp_maya.api import maya_warning
+
 
 def load_hdri(
     file_path: str,
@@ -79,6 +82,20 @@ def load_hdri(
             file_node = cmds.shadingNode("file", asTexture=True, name="{}_tex".format(name))
             cmds.setAttr("{}.fileTextureName".format(file_node), file_path, type="string")
             backend = "native"
+
+        if backend == "native" and use_arnold:
+            # Arnold was requested but fell back to native; warn the user
+            return maya_warning(
+                "HDRI loaded from '{}' using native backend (Arnold fallback)".format(
+                    os.path.basename(file_path)
+                ),
+                warning="Arnold (mtoa) was not available; used directionalLight as fallback.",
+                prompt="Install Arnold (MtoA) for physically-based sky dome. Use set_hdri_exposure to adjust.",
+                light_node=light_transform,
+                file_node=file_node,
+                backend=backend,
+                file_path=file_path,
+            )
 
         return skill_success(
             "HDRI loaded from '{}' using {} backend".format(os.path.basename(file_path), backend),
