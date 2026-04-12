@@ -46,7 +46,66 @@ pytestmark = pytest.mark.e2e
 # Helpers
 # ---------------------------------------------------------------------------
 
-_SKILLS_ROOT = Path(__file__).parent.parent / "src" / "dcc_mcp_maya" / "skills"
+
+# Resolve skills root: prefer the installed package location (packaged .mod
+# module), fall back to the source tree (development / pip install -e).
+def _resolve_skills_root() -> Path:
+    """Find the skills/ directory from either installed package or source tree."""
+    # 1. Installed package (works with packaged .mod module)
+    try:
+        import dcc_mcp_maya  # noqa: PLC0415
+
+        package_dir = Path(dcc_mcp_maya.__file__).resolve().parent
+        skills_dir = package_dir / "skills"
+        if skills_dir.is_dir():
+            return skills_dir
+    except ImportError:
+        pass
+
+    # 2. Source tree (development / pip install -e)
+    src_skills = Path(__file__).resolve().parent.parent / "src" / "dcc_mcp_maya" / "skills"
+    if src_skills.is_dir():
+        return src_skills
+
+    # 3. Environment variable override
+    import os  # noqa: PLC0415
+
+    env_dir = os.environ.get("DCC_MCP_MAYA_SKILL_PATHS", "")
+    if env_dir:
+        first = Path(env_dir.split(os.pathsep)[0])
+        if first.is_dir():
+            return first
+
+    raise RuntimeError("Cannot find dcc_mcp_maya skills/ directory — check installation")
+
+
+_SKILLS_ROOT = _resolve_skills_root()
+
+
+# Ensure dcc_mcp_maya is importable in packaged module mode
+# (Maya standalone does not process .mod PYTHONPATH directives)
+def _ensure_package_importable() -> None:
+    """Add the packaged module's python/ to sys.path if needed."""
+    import sys  # noqa: PLC0415
+
+    try:
+        import dcc_mcp_maya  # noqa: F401
+
+        return  # already importable
+    except ImportError:
+        pass
+
+    # Try the .mod module directory from environment variable
+    import os  # noqa: PLC0415
+
+    mod_dir = os.environ.get("DCC_MCP_MAYA_MOD_DIR", "")
+    if mod_dir:
+        python_dir = Path(mod_dir) / "python"
+        if python_dir.is_dir() and str(python_dir) not in sys.path:
+            sys.path.insert(0, str(python_dir))
+
+
+_ensure_package_importable()
 
 
 def _new_scene():

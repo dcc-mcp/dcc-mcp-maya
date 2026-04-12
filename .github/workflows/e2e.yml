@@ -4,6 +4,10 @@ name: E2E (mayapy)
 # Uses the tahv/mayapy Docker image which ships /usr/autodesk/maya/bin/mayapy
 # and exposes it as both `mayapy` and `python` on PATH.
 #
+# This workflow tests the **packaged .mod module** (as users would install it)
+# rather than pip-installing the source tree.  This catches packaging issues
+# like missing imports or broken sys.path that the old pip-based E2E missed.
+#
 # References:
 #   https://hub.docker.com/r/tahv/mayapy
 #   https://github.com/tahv/docker-mayapy
@@ -22,7 +26,6 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Map Maya version -> Python version (for reference in logs only)
         include:
           - maya-version: "2025"
             python-version: "3.11"
@@ -51,27 +54,56 @@ jobs:
           print('Python version:', sys.version)
           "
 
-      - name: Install package into mayapy
+      # ── Phase 1: Assemble the .mod module ──────────────────────────────
+      # We build the packaged module *exactly* as release.yml does, then
+      # deploy it to the Maya modules directory so mayapy can find it.
+
+      - name: Assemble .mod module
         run: |
-          # Install into mayapy's site-packages so E2E tests can import dcc_mcp_maya
-          mayapy -m pip install --upgrade pip
-          mayapy -m pip install -e ".[dev]"
+          python packaging/assemble_mod.py \
+            --version "0.0.0-ci" \
+            --platform linux \
+            --output dist/mod \
+            --project-root .
 
-      - name: Setup Node.js for mcporter
-        uses: actions/setup-node@v6
-        with:
-          node-version: "24"
+      - name: Deploy .mod module to Maya modules directory
+        run: |
+          # Maya looks for modules in ~/maya/modules/ on Linux
+          MAYA_MODULES="$HOME/maya/modules"
+          mkdir -p "$MAYA_MODULES"
 
-      - name: Run unit tests (no Maya required)
-        run: mayapy -m pytest tests/ -v --tb=short -m "not e2e and not packaging"
+          # Remove any previous deployment
+          rm -rf "$MAYA_MODULES/dcc-mcp-maya"
 
-      - name: Run E2E tests (Maya standalone)
+          # Deploy the assembled module
+          cp -R dist/mod/dcc-mcp-maya "$MAYA_MODULES/dcc-mcp-maya"
+
+          echo "Deployed module to $MAYA_MODULES/dcc-mcp-maya"
+          ls -la "$MAYA_MODULES/dcc-mcp-maya/"
+
+      # ── Phase 2: Post-install verification ─────────────────────────────
+      # Run the post_install.py script that verifies the packaged module
+      # works correctly in mayapy standalone mode.
+
+      - name: Post-install verification
+        run: |
+          mayapy "$HOME/maya/modules/dcc-mcp-maya/post_install.py"
+
+      # ── Phase 3: E2E tests using the packaged module ───────────────────
+      # The E2E tests exercise the server, skills, and plugin lifecycle
+      # using the packaged .mod module, not a pip install.
+
+      - name: Run E2E tests (Maya standalone, packaged module)
+        env:
+          # Tell the E2E tests to use the packaged module's paths
+          DCC_MCP_MAYA_MOD_DIR: $HOME/maya/modules/dcc-mcp-maya
         run: |
           mayapy -c "
           import maya.standalone
           maya.standalone.initialize()
 
           import sys, subprocess, os
+
           # Run e2e tests via pytest inside mayapy
           result = subprocess.run(
               [sys.executable, '-m', 'pytest', 'tests/', '-v', '--tb=short', '-m', 'e2e'],
@@ -80,12 +112,25 @@ jobs:
           sys.exit(result.returncode)
           "
 
+      # ── Phase 4: MCP connectivity test with mcporter ───────────────────
+
+      - name: Setup Node.js for mcporter
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+
       - name: Test MCP connectivity with mcporter
         run: |
           # Start Maya MCP server in background (standalone mode, port 7891)
+          # Use the packaged module's python/ directory on sys.path
           mayapy -c "
           import maya.standalone
           maya.standalone.initialize()
+          import sys, os
+          # Add the packaged module's python/ to sys.path
+          mod_python = os.path.expanduser('~/maya/modules/dcc-mcp-maya/python')
+          if mod_python not in sys.path:
+              sys.path.insert(0, mod_python)
           import dcc_mcp_maya, time
           handle = dcc_mcp_maya.start_server(port=7891)
           print('MCP server running at:', handle.mcp_url())
@@ -95,7 +140,7 @@ jobs:
           " &
           SERVER_PID=$!
 
-          # Wait for server to be ready, then verify via Python urllib (no curl needed)
+          # Wait for server to be ready, then verify via Python urllib
           sleep 10
           python -c "
           import urllib.request, json, time, sys
@@ -127,7 +172,7 @@ jobs:
             --name maya-ci \
             --allow-http
 
-          # Call get_session_info tool (colon-delimited key=value style)
+          # Call get_session_info tool
           npx mcporter call \
             --http-url http://127.0.0.1:7891/mcp \
             --allow-http \
@@ -148,4 +193,3 @@ jobs:
 
           kill $SERVER_PID 2>/dev/null || true
           echo "mcporter connectivity tests: PASSED"
-
