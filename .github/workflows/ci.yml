@@ -49,7 +49,7 @@ jobs:
       - name: Set up Python 3.12
         uses: actions/setup-python@v6
         with:
-          python-version: "3.14"
+          python-version: "3.12"
 
       - name: Install ruff
         run: pip install ruff
@@ -59,3 +59,20 @@ jobs:
 
       - name: Run ruff format check
         run: ruff format --check src/ tests/
+
+  lint-skills:
+    name: Lint Skills
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install PyYAML
+        run: pip install pyyaml
+
+      - name: Lint SKILL.md files
+        run: python tools/lint_skills.py --error-only
