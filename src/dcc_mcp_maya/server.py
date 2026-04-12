@@ -360,6 +360,53 @@ class MayaMcpServer:
             logger.debug("find_skills failed: %s", exc)
             return []
 
+    def is_skill_loaded(self, name: str) -> bool:
+        """Check whether a skill has been loaded into the SkillCatalog.
+
+        Wraps ``SkillCatalog.is_loaded`` (v0.12.12+).
+
+        Args:
+            name: Skill name as discovered (e.g. ``"maya-scene"``).
+
+        Returns:
+            ``True`` if the skill is currently loaded, ``False`` otherwise.
+
+        Example::
+
+            server.register_builtin_actions()
+            if server.is_skill_loaded("maya-scene"):
+                print("maya-scene is ready")
+        """
+        try:
+            return bool(self._server.is_loaded(name))
+        except Exception as exc:
+            logger.debug("is_loaded(%r) failed: %s", name, exc)
+            return False
+
+    def get_skill_info(self, name: str) -> Any:
+        """Return full metadata for a skill from the SkillCatalog.
+
+        Wraps ``SkillCatalog.get_skill_info`` (v0.12.12+).
+
+        Args:
+            name: Skill name as discovered (e.g. ``"maya-scene"``).
+
+        Returns:
+            :class:`SkillMetadata` instance (or dict), or ``None`` if the skill
+            is not found or the catalog is unavailable.
+
+        Example::
+
+            info = server.get_skill_info("maya-scene")
+            if info:
+                print(info.description)
+        """
+        try:
+            return self._server.get_skill_info(name)
+        except Exception as exc:
+            logger.debug("get_skill_info(%r) failed: %s", name, exc)
+            return None
+
     # ── TransportManager helpers ──────────────────────────────────────────────
 
     def bind_and_register(
