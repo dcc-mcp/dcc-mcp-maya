@@ -39,6 +39,7 @@ dev = [
     "hatchling",
     "build",
     "tomli; python_version < '3.11'",  # tomllib backport for Python < 3.11
+    "pyyaml>=5.0",  # YAML parsing for SKILL.md test validation
 ]
 
 [project.urls]
