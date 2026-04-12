@@ -343,12 +343,33 @@ class TestExtractWheel:
         assert not (dest / "dcc_mcp_core-0.12.17.dist-info").exists()
 
 
-# ── generate_mod_file ───────────────────────────────────────────────────────
+# ── generate_module_info / generate_mod_content ───────────────────────────
 
 
-class TestGenerateModFile:
+class TestGenerateModuleInfo:
+    def test_with_cp37(self):
+        content = assemble_mod.generate_module_info("0.2.2", has_cp37=True)
+        import json
+
+        info = json.loads(content)
+        assert info["name"] == "dcc_mcp_maya"
+        assert info["version"] == "0.2.2"
+        assert info["has_cp37"] is True
+        assert info["supported_maya_versions"] == ["2022", "2023", "2024", "2025"]
+
+    def test_without_cp37(self):
+        content = assemble_mod.generate_module_info("0.2.2", has_cp37=False)
+        import json
+
+        info = json.loads(content)
+        assert info["has_cp37"] is False
+        assert "2022" not in info["supported_maya_versions"]
+        assert info["supported_maya_versions"] == ["2023", "2024", "2025"]
+
+
+class TestGenerateModContent:
     def test_win64_all_maya_versions(self):
-        content = assemble_mod.generate_mod_file("0.2.2", "win64", has_cp37=True)
+        content = assemble_mod.generate_mod_content("0.2.2", "win64", ["2022", "2023", "2024", "2025"], has_cp37=True)
         lines = content.strip().split("\n")
         assert len(lines) == 12  # 4 maya versions * 3 lines each (PYTHONPATH + PLUG_IN_PATH)
         assert "MAYAVERSION:2022" in lines[0]
@@ -359,19 +380,18 @@ class TestGenerateModFile:
         assert "PLUG_IN_PATH+:=plug-ins" in lines[5]
 
     def test_win64_no_cp37(self):
-        content = assemble_mod.generate_mod_file("0.2.2", "win64", has_cp37=False)
-        # All should use python/ (no python37)
+        content = assemble_mod.generate_mod_content("0.2.2", "win64", ["2023", "2024", "2025"], has_cp37=False)
         assert "python37" not in content
         assert "PLUG_IN_PATH+:=plug-ins" in content
 
-    def test_macos_skips_2022(self):
-        content = assemble_mod.generate_mod_file("0.2.2", "macos", has_cp37=False)
+    def test_macos_no_2022(self):
+        content = assemble_mod.generate_mod_content("0.2.2", "macos", ["2023", "2024", "2025"], has_cp37=False)
         assert "MAYAVERSION:2022" not in content
         assert "MAYAVERSION:2023" in content
         assert "PLUG_IN_PATH+:=plug-ins" in content
 
     def test_linux_all_versions(self):
-        content = assemble_mod.generate_mod_file("0.2.2", "linux", has_cp37=True)
+        content = assemble_mod.generate_mod_content("0.2.2", "linux", ["2022", "2023", "2024", "2025"], has_cp37=True)
         assert "MAYAVERSION:2022" in content
         assert "python37" in content
         assert "PLUG_IN_PATH+:=plug-ins" in content
@@ -455,11 +475,15 @@ class TestAssemble:
         assert (result / "python37" / "dcc_mcp_core" / "__init__.py").exists()
         assert (result / "python37" / "dcc_mcp_maya" / "__init__.py").exists()
 
-        # Check .mod file uses python37 for Maya 2022
-        mod_content = (result / "dcc_mcp_maya.mod").read_text(encoding="utf-8")
-        assert "python37" in mod_content
-        lines = mod_content.strip().split("\n")
-        assert "PYTHONPATH+:=python37" in lines[1]  # Line after MAYAVERSION:2022
+        # Check module-info.json exists (replaces .mod — generated at install time)
+        assert (result / "module-info.json").exists()
+        import json
+
+        info = json.loads((result / "module-info.json").read_text(encoding="utf-8"))
+        assert info["version"] == "0.2.2"
+        assert info["has_cp37"] is True
+        # .mod file should NOT exist (generated at install time)
+        assert not (result / "dcc_mcp_maya.mod").exists()
 
     def test_macos_no_python37(self, tmp_path):
         project = self._setup_project(tmp_path)
@@ -483,7 +507,7 @@ class TestAssemble:
         assert (result / "python" / "dcc_mcp_core").exists()
         assert not (result / "python37").exists()
 
-    def test_mod_file_structure(self, tmp_path):
+    def test_module_info_structure(self, tmp_path):
         project = self._setup_project(tmp_path)
         output = tmp_path / "output"
         output.mkdir()
@@ -494,14 +518,16 @@ class TestAssemble:
         ):
             result = assemble_mod.assemble(project, "0.2.2", "win64", output)
 
-        # Verify .mod file
-        mod = (result / "dcc_mcp_maya.mod").read_text(encoding="utf-8")
-        assert "MAYAVERSION:2022" in mod
-        assert "MAYAVERSION:2023" in mod
-        assert "MAYAVERSION:2024" in mod
-        assert "MAYAVERSION:2025" in mod
-        assert "PLATFORM:win64" in mod
-        assert "dcc_mcp_maya 0.2.2" in mod
+        # Verify module-info.json
+        import json
+
+        info = json.loads((result / "module-info.json").read_text(encoding="utf-8"))
+        assert info["name"] == "dcc_mcp_maya"
+        assert info["version"] == "0.2.2"
+        assert "2022" in info["supported_maya_versions"]
+        assert "2023" in info["supported_maya_versions"]
+        assert "2024" in info["supported_maya_versions"]
+        assert "2025" in info["supported_maya_versions"]
 
     def test_plugin_and_usersetup_copied(self, tmp_path):
         project = self._setup_project(tmp_path)
@@ -623,7 +649,7 @@ class TestAssembleLive:
         result = assemble_mod.assemble(PROJECT_ROOT, "0.2.2", "win64", output)
 
         # Verify core structure
-        assert (result / "dcc_mcp_maya.mod").exists()
+        assert (result / "module-info.json").exists()
         assert (result / "python" / "dcc_mcp_core" / "__init__.py").exists()
         assert (result / "python" / "dcc_mcp_core" / "_core.pyd").exists()
         assert (result / "python" / "dcc_mcp_maya" / "__init__.py").exists()
