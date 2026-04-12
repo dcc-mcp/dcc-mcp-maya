@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.4](https://github.com/loonghao/dcc-mcp-maya/compare/v0.2.3...v0.2.4) (2026-04-12)
+
+
+### Bug Fixes
+
+* **e2e:** fix deformer E2E tests and mark HTTP tool-call tests as xfail ([a4b29d0](https://github.com/loonghao/dcc-mcp-maya/commit/a4b29d04ab3ea733444c7279ea62822123923234))
+
 ## [0.2.3](https://github.com/loonghao/dcc-mcp-maya/compare/v0.2.2...v0.2.3) (2026-04-12)
 
 
