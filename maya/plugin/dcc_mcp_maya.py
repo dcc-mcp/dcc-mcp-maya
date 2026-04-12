@@ -29,6 +29,8 @@ from __future__ import annotations
 # Import built-in modules
 import logging
 import os
+import sys
+from pathlib import Path
 
 import maya.api.OpenMaya as om  # Python API 2.0 — required for MFnPlugin on Maya 2022-2025
 import maya.cmds as cmds
@@ -36,6 +38,54 @@ import maya.cmds as cmds
 logger = logging.getLogger(__name__)
 
 VENDOR = "dcc-mcp"
+
+
+# ── ensure dcc_mcp_maya package is importable ────────────────────────────────
+
+
+def _ensure_package_importable() -> None:
+    """Add the module's python/ directory to sys.path if needed.
+
+    Maya GUI mode processes ``PYTHONPATH+:=...`` directives from ``.mod`` files
+    automatically, but **Maya standalone / batch mode does not**.  This helper
+    ensures the Python package bundled inside the ``.mod`` module directory is
+    always importable regardless of how Maya was started.
+
+    It resolves the ``python/`` (or ``python37/`` for Maya 2022) directory
+    relative to the ``.mod`` file location and inserts it at the front of
+    ``sys.path`` if the ``dcc_mcp_maya`` package cannot already be imported.
+    """
+    try:
+        import dcc_mcp_maya  # noqa: F401 — already importable, nothing to do
+
+        return
+    except ImportError:
+        pass
+
+    # Resolve the .mod module root: this script lives in <module_root>/plug-ins/
+    plugin_dir = Path(__file__).resolve().parent
+    module_root = plugin_dir.parent  # <module_root>/
+
+    # Determine which python/ subdir to use based on Maya version
+    maya_version = cmds.about(version=True)
+    # e.g. "2025", "2024.1" — extract the major version
+    try:
+        major = int(str(maya_version).split(".")[0])
+    except (ValueError, IndexError):
+        major = 2025  # safe default
+
+    # Maya 2022 uses Python 3.7 (python37/), later versions use python/
+    python_dir = module_root / "python37" if major == 2022 else module_root / "python"
+    if not python_dir.is_dir():
+        python_dir = module_root / "python"  # fallback
+
+    python_str = str(python_dir)
+    if python_str not in sys.path:
+        sys.path.insert(0, python_str)
+        logger.debug("Added %s to sys.path for dcc_mcp_maya package discovery", python_str)
+
+
+_ensure_package_importable()
 
 
 def _get_version() -> str:

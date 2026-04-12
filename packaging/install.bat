@@ -98,6 +98,36 @@ echo.
 echo  Module:   %MOD_DEST%\dcc-mcp-maya
 echo  Plugin:   %MOD_DEST%\dcc-mcp-maya\plug-ins\dcc_mcp_maya.py
 echo.
+
+REM -- Post-install verification --
+echo Running post-install verification...
+set "VERIFY_MAYA="
+for %%Y in (2026 2025 2024 2023 2022) do (
+    if not defined VERIFY_MAYA (
+        if exist "C:\Program Files\Autodesk\Maya%%Y\bin\mayapy.exe" (
+            set "VERIFY_MAYA=C:\Program Files\Autodesk\Maya%%Y\bin\mayapy.exe"
+        )
+    )
+)
+if defined VERIFY_MAYA (
+    echo Using mayapy: %VERIFY_MAYA%
+    "%VERIFY_MAYA%" "%MOD_DEST%\dcc-mcp-maya\post_install.py"
+    if errorlevel 1 (
+        echo.
+        echo WARNING: Post-install verification failed.
+        echo The module files are deployed but may not work correctly.
+        echo Please check the errors above.
+    ) else (
+        echo.
+        echo Post-install verification: PASSED
+    )
+) else (
+    echo  WARNING: No mayapy found — skipping post-install verification.
+    echo  To verify manually, run:
+    echo    mayapy "%MOD_DEST%\dcc-mcp-maya\post_install.py"
+)
+
+echo.
 echo  The plugin will auto-load when Maya starts.
 echo  Alternatively, load it via:
 echo    Window ^> Settings/Preferences ^> Plug-in Manager

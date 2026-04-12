@@ -350,26 +350,31 @@ class TestGenerateModFile:
     def test_win64_all_maya_versions(self):
         content = assemble_mod.generate_mod_file("0.2.2", "win64", has_cp37=True)
         lines = content.strip().split("\n")
-        assert len(lines) == 8  # 4 maya versions * 2 lines each
+        assert len(lines) == 12  # 4 maya versions * 3 lines each (PYTHONPATH + PLUG_IN_PATH)
         assert "MAYAVERSION:2022" in lines[0]
         assert "python37" in lines[1]
-        assert "MAYAVERSION:2023" in lines[2]
-        assert "PYTHONPATH+:=python" in lines[3]
+        assert "PLUG_IN_PATH+:=plug-ins" in lines[2]
+        assert "MAYAVERSION:2023" in lines[3]
+        assert "PYTHONPATH+:=python" in lines[4]
+        assert "PLUG_IN_PATH+:=plug-ins" in lines[5]
 
     def test_win64_no_cp37(self):
         content = assemble_mod.generate_mod_file("0.2.2", "win64", has_cp37=False)
         # All should use python/ (no python37)
         assert "python37" not in content
+        assert "PLUG_IN_PATH+:=plug-ins" in content
 
     def test_macos_skips_2022(self):
         content = assemble_mod.generate_mod_file("0.2.2", "macos", has_cp37=False)
         assert "MAYAVERSION:2022" not in content
         assert "MAYAVERSION:2023" in content
+        assert "PLUG_IN_PATH+:=plug-ins" in content
 
     def test_linux_all_versions(self):
         content = assemble_mod.generate_mod_file("0.2.2", "linux", has_cp37=True)
         assert "MAYAVERSION:2022" in content
         assert "python37" in content
+        assert "PLUG_IN_PATH+:=plug-ins" in content
 
 
 # ── assemble (integration) ──────────────────────────────────────────────────
