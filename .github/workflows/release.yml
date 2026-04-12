@@ -88,6 +88,46 @@ jobs:
           verbose: true
           print-hash: true
 
+  # ── Build Maya .mod module ZIPs ──────────────────────────────────────────────
+  build-mod:
+    needs: [release-please]
+    if: needs.release-please.outputs.release_created == 'true'
+    strategy:
+      matrix:
+        include:
+          - platform: win64
+            runs-on: windows-latest
+          - platform: linux
+            runs-on: ubuntu-latest
+          - platform: macos
+            runs-on: macos-latest
+    runs-on: ${{ matrix.runs-on }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.10"
+
+      - name: Install assemble dependencies
+        run: pip install dcc-mcp-core
+
+      - name: Assemble .mod module
+        run: |
+          python packaging/assemble_mod.py \
+            --version ${{ needs.release-please.outputs.version }} \
+            --platform ${{ matrix.platform }} \
+            --output dist/mod \
+            --project-root .
+        shell: bash
+
+      - name: Upload mod artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: mod-${{ matrix.platform }}
+          path: dist/mod/*.zip
+
   # ── Attach wheels to GitHub Release ─────────────────────────────────────────
   attach-release-assets:
     needs: [release-please, publish]
@@ -108,3 +148,27 @@ jobs:
         with:
           tag_name: ${{ needs.release-please.outputs.tag_name }}
           files: dist/*
+
+  # ── Attach .mod module ZIPs to GitHub Release ───────────────────────────────
+  attach-mod-release:
+    needs: [release-please, build-mod]
+    if: needs.release-please.outputs.release_created == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download all mod artifacts
+        uses: actions/download-artifact@v8
+        with:
+          path: mod-artifacts/
+          pattern: mod-*
+
+      - name: List mod artifacts
+        run: find mod-artifacts/ -name "*.zip" -ls
+
+      - name: Attach mod ZIPs to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.release-please.outputs.tag_name }}
+          files: mod-artifacts/**/*.zip
