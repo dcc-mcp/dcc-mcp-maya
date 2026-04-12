@@ -64,6 +64,7 @@ python_functions = ["test_*"]
 addopts = "-v --tb=short"
 markers = [
     "e2e: end-to-end tests that require a real Maya standalone interpreter (tahv/mayapy)",
+    "packaging: tests for packaging/assemble_mod.py that require network access to PyPI",
 ]
 
 [tool.coverage.run]
