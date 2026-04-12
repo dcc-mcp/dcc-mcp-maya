@@ -4,6 +4,7 @@ description: "Maya object sets — create, add to, remove from and list Maya set
 dcc: maya
 version: "1.0.0"
 tags: [maya, set, collection, utility]
+search-hint: "set, group, partition, render, deformer set"
 license: "MIT"
 allowed-tools: ["Bash", "Read"]
 depends: []

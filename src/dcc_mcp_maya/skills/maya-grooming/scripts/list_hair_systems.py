@@ -29,7 +29,10 @@ def list_hair_systems() -> dict:
 
             stiffness = None
             if cmds.attributeQuery("stiffness", node=hs, exists=True):
-                stiffness = cmds.getAttr("{}.stiffness".format(hs))
+                try:
+                    stiffness = cmds.getAttr("{}.stiffness".format(hs))
+                except Exception:
+                    stiffness = None
 
             result.append(
                 {

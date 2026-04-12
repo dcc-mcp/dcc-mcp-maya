@@ -4,6 +4,7 @@ description: "Maya render settings and viewport capture"
 dcc: maya
 version: "1.0.0"
 tags: [maya, render, playblast, settings]
+search-hint: "render, settings, playblast, capture, viewport"
 license: "MIT"
 allowed-tools: ["Bash", "Read"]
 depends: []

@@ -4,6 +4,7 @@ description: "Maya render layers — create, assign, list and manage render laye
 dcc: maya
 version: "1.0.0"
 tags: [maya, render, layer, renderlayer]
+search-hint: "render layer, override, pass, layer"
 license: "MIT"
 allowed-tools: ["Bash", "Read"]
 depends: []

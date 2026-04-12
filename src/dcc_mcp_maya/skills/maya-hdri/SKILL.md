@@ -4,6 +4,7 @@ description: "Maya HDRI environment lighting — load HDR images, configure IBL 
 dcc: maya
 version: "1.0.0"
 tags: [maya, hdri, ibl, lighting, environment]
+search-hint: "hdri, ibl, environment, dome light, image based lighting"
 license: "MIT"
 allowed-tools: ["Bash", "Read"]
 depends: []

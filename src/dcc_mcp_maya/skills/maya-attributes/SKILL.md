@@ -4,6 +4,7 @@ description: "Maya node attribute get/set and custom attribute management"
 dcc: maya
 version: "1.0.0"
 tags: [maya, attribute, node, utility]
+search-hint: "attribute, property, value, lock, unlock, set attr"
 license: "MIT"
 allowed-tools: ["Bash", "Read"]
 depends: []

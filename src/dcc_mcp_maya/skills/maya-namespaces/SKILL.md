@@ -4,6 +4,7 @@ description: "Maya namespace management — create, rename, merge, and remove na
 dcc: maya
 version: "1.0.0"
 tags: [maya, namespaces, pipeline, rigging, scene-management]
+search-hint: "namespace, reference, scene, organize"
 license: "MIT"
 allowed-tools: ["Bash", "Read"]
 depends: []

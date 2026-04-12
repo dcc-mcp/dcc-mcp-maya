@@ -235,6 +235,48 @@ Pushed to `origin/auto-improve`
 
 ---
 
+### Run 10 — 2026-04-12 12:53
+
+**Branch**: auto-improve worktree at `G:\PycharmProjects\github\dcc-mcp-maya-auto-improve`
+
+**Baseline before**: 2152 passed (Run 9); **After this run**: 2786 passed (+634)
+
+**Merge**: `git merge origin/main` — 6 new commits from main. 3-way conflicts in:
+- `src/dcc_mcp_maya/api.py` — HEAD: `scene_object_from_node` docstring variant; origin/main: `ensure_valid_name` + `build_context_dict` + improved `bounding_box_from_node`/`object_transform_from_node` with explicit float casts
+- `src/dcc_mcp_maya/__init__.py` — new symbols `ensure_valid_name`/`build_context_dict`
+- `tests/conftest.py` — HEAD had sys.path priority fix; origin/main had duplicate `load_and_call` definition
+- `packaging/assemble_mod.py` — AA conflict; origin/main used PyPI JSON API (better); theirs taken
+
+**Conflict resolution**:
+- `api.py`: merged — kept HEAD docstrings for `scene_object_from_node`, adopted origin/main `short_name` pre-extraction + float casts + added `ensure_valid_name`/`build_context_dict` functions
+- `__init__.py`: added `build_context_dict`/`ensure_valid_name` imports + `__all__` entries
+- `conftest.py`: kept HEAD sys.path priority fix block; used HEAD `load_and_call`/`load_and_call_with_mel` (with `maya.api.OpenMaya`/`maya.utils` mocks, more complete); removed duplicate definition from origin/main
+- `assemble_mod.py`: `git checkout --theirs` (PyPI JSON API approach is better)
+
+**New from origin/main**:
+- `tests/test_skills_round10.py` — 90 tests covering conftest helpers, new API helpers, deep skill edge cases
+- `tests/test_assemble_mod.py` — 27 tests for assemble_mod.py (packaging)
+- `packaging/assemble_mod.py` refactored: PyPI JSON API download, `python37/` directory for Maya 2022
+
+**Actions taken**:
+1. Resolved 3-way merge conflict in api.py/__init__.py/conftest.py
+2. `packaging/assemble_mod.py` conflict: took origin/main version (PyPI JSON API)
+3. `ruff format`: 2 files reformatted; `ruff check --fix`: All checks passed ✅
+4. Added 14 new tests to `tests/test_api.py`: `TestEnsureValidName` (8 tests) + `TestBuildContextDict` (6 tests) — new API helpers now have 100% functional test coverage
+
+**Quality gate**:
+- `ruff check src/ tests/` → **All checks passed!** ✅
+- `pytest tests/ --ignore=tests/e2e` → **2786 passed, 1 skipped** ✅ (+634 from 2152)
+
+**Commits pushed**: `34c477b`, `49957b2` to `origin/auto-improve`
+
+**Next priorities for future runs**:
+1. Dependabot: 2 moderate vulnerabilities on default branch — check `pyproject.toml` deps
+2. Check if any new skill scripts in future main merges use `ensure_valid_name`/`build_context_dict` patterns
+3. `server.py:164` dead branch — still outstanding from Run 7
+
+---
+
 ### Run 9 — 2026-04-12 00:19
 
 **Branch**: auto-improve worktree at `G:\PycharmProjects\github\dcc-mcp-maya-auto-improve`

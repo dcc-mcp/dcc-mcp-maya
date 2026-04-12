@@ -4,6 +4,7 @@ description: "Maya toon shading — create toon outlines, fill shaders, and cel-
 dcc: maya
 version: "1.0.0"
 tags: [maya, toon, shading, npr, stylized]
+search-hint: "toon, outline, cartoon, cel shading"
 license: "MIT"
 allowed-tools: ["Bash", "Read"]
 depends: []
