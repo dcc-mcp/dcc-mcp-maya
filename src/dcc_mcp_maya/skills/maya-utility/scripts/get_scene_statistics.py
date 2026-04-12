@@ -16,6 +16,10 @@ def get_scene_statistics(
 ) -> dict:
     """Return a summary of current scene statistics.
 
+    Returns structured output compatible with ``dcc_mcp_core.SceneStatistics``.
+    The ``scene_statistics`` context key contains a ``SceneStatistics``-compatible
+    dict with standard cross-DCC fields.
+
     Args:
         include_memory: Whether to include memory usage. Default True.
         node_types: Specific node types to count additionally. Default ``None``.
@@ -24,7 +28,7 @@ def get_scene_statistics(
         ActionResultModel dict with keys:
         ``total_nodes``, ``transform_count``, ``mesh_count``,
         ``poly_vertex_count``, ``poly_face_count``, ``scene_file``,
-        ``memory_mb`` (optional).
+        ``memory_mb`` (optional), and ``scene_statistics`` (structured dict).
     """
 
     extra_types = node_types or []
@@ -35,6 +39,10 @@ def get_scene_statistics(
         total_nodes = len(cmds.ls())
         transforms = cmds.ls(type="transform") or []
         meshes = cmds.ls(type="mesh") or []
+        materials = cmds.ls(type="shadingEngine") or []
+        lights = cmds.ls(lights=True) or []
+        cameras = cmds.ls(type="camera") or []
+        textures = cmds.ls(type="file") or []
 
         vert_count = 0
         face_count = 0
@@ -51,6 +59,17 @@ def get_scene_statistics(
         except Exception:
             scene_file = ""
 
+        # Build SceneStatistics-compatible dict
+        scene_statistics = {
+            "object_count": total_nodes,
+            "polygon_count": face_count,
+            "vertex_count": vert_count,
+            "material_count": len(materials),
+            "texture_count": len(textures),
+            "light_count": len(lights),
+            "camera_count": len(cameras),
+        }
+
         ctx = {
             "total_nodes": total_nodes,
             "transform_count": len(transforms),
@@ -58,6 +77,7 @@ def get_scene_statistics(
             "poly_vertex_count": vert_count,
             "poly_face_count": face_count,
             "scene_file": scene_file,
+            "scene_statistics": scene_statistics,
         }
 
         if include_memory:

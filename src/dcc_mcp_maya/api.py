@@ -602,6 +602,87 @@ def build_context_dict(**kwargs: Any) -> Dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
+# InputValidator helpers
+# ---------------------------------------------------------------------------
+
+
+def make_input_validator(
+    string_fields=None,
+    number_fields=None,
+    injected_fields=None,
+):
+    """Build a configured ``InputValidator`` from ``dcc-mcp-core``.
+
+    Convenience factory so skill scripts can create a validator in one call
+    without importing ``dcc_mcp_core`` directly.
+
+    Args:
+        string_fields: Dict mapping field name → ``(min_length, max_length)``
+            tuples.  All listed fields are required strings.  Pass
+            ``{"code": (1, 100000)}`` to require a non-empty ``code`` field.
+        number_fields: Dict mapping field name → ``(min_value, max_value)``
+            tuples.  All listed fields are required numbers.
+        injected_fields: Dict mapping field name → list of forbidden substrings
+            (injection-guard).  Note: ``InputValidator.forbid_substrings`` does
+            NOT raise on matching content in the current dcc-mcp-core version;
+            use it in combination with manual keyword checks when needed.
+
+    Returns:
+        Configured :class:`dcc_mcp_core.InputValidator` instance.
+
+    Example::
+
+        validator = make_input_validator(
+            string_fields={"script": (1, 100000)},
+        )
+        ok, err = validate_input(validator, {"script": "print(1)"})
+        if not ok:
+            return maya_error("Invalid input", err)
+    """
+    from dcc_mcp_core import InputValidator  # noqa: PLC0415
+
+    iv = InputValidator()
+    for field, (min_len, max_len) in (string_fields or {}).items():
+        iv.require_string(field, max_len, min_len)
+    for field, (min_val, max_val) in (number_fields or {}).items():
+        iv.require_number(field, min_val, max_val)
+    for field, substrings in (injected_fields or {}).items():
+        iv.forbid_substrings(field, substrings)
+    return iv
+
+
+def validate_input(validator, params):
+    """Validate *params* dict against a pre-built ``InputValidator``.
+
+    Serialises *params* to JSON and passes it to
+    ``InputValidator.validate()``.
+
+    Args:
+        validator: A :class:`dcc_mcp_core.InputValidator` instance.
+        params: Dict of parameters (will be JSON-serialised internally).
+
+    Returns:
+        Tuple ``(ok: bool, error_message: str | None)``.  ``error_message``
+        is ``None`` when validation passes.
+
+    Example::
+
+        ok, err = validate_input(validator, kwargs)
+        if not ok:
+            return maya_error("Input validation failed", err or "")
+    """
+    # Import built-in modules
+    import json  # noqa: PLC0415
+
+    try:
+        json_str = json.dumps(params)
+        return validator.validate(json_str)
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("InputValidator.validate failed: %s", exc)
+        return True, None
+
+
+# ---------------------------------------------------------------------------
 # Cross-DCC data model helpers
 # ---------------------------------------------------------------------------
 
@@ -738,6 +819,9 @@ __all__ = [
     "validate_node_exists",
     "validate_node_type",
     "batch_validate_nodes",
+    # Input validation helpers
+    "make_input_validator",
+    "validate_input",
     # Name and context helpers
     "ensure_valid_name",
     "build_context_dict",

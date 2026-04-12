@@ -42,6 +42,7 @@ from dcc_mcp_maya.api import (
     get_cmds,
     get_param_list,
     is_maya_available,
+    make_input_validator,
     maya_capabilities,
     maya_error,
     maya_from_exception,
@@ -53,6 +54,7 @@ from dcc_mcp_maya.api import (
     require_cmds,
     require_param,
     scene_object_from_node,
+    validate_input,
     validate_node_exists,
     validate_node_type,
     with_maya,
@@ -84,6 +86,9 @@ __all__ = [
     "validate_node_exists",
     "validate_node_type",
     "batch_validate_nodes",
+    # Input validation helpers
+    "make_input_validator",
+    "validate_input",
     # Name and context helpers
     "ensure_valid_name",
     "build_context_dict",
