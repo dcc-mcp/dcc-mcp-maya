@@ -19,6 +19,7 @@ from unittest.mock import MagicMock, patch
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_maya_mock(mtoa_loaded: bool = False):
     """Return (mock_maya, mock_cmds) with pluginInfo configured."""
     mock_cmds = MagicMock()
@@ -91,6 +92,7 @@ def _load_create_render_pass(mtoa_loaded: bool):
 # ---------------------------------------------------------------------------
 # Tests: create_hdri_dome
 # ---------------------------------------------------------------------------
+
 
 class TestCreateHdriDomeArnoldFallback:
     """create_hdri_dome — Arnold (mtoa) not loaded → ambientLight fallback + warning."""
@@ -191,6 +193,7 @@ class TestCreateHdriDomeStructural:
 
     def _source(self):
         import os
+
         path = os.path.join(
             os.path.dirname(__file__),
             "..",
@@ -216,6 +219,7 @@ class TestCreateHdriDomeStructural:
 # ---------------------------------------------------------------------------
 # Tests: create_render_pass
 # ---------------------------------------------------------------------------
+
 
 class TestCreateRenderPassArnoldFallback:
     """create_render_pass — renderer=arnold but mtoa not loaded → renderPass + warning."""
@@ -355,6 +359,7 @@ class TestCreateRenderPassStructural:
 
     def _source(self):
         import os
+
         path = os.path.join(
             os.path.dirname(__file__),
             "..",

@@ -22,11 +22,12 @@ _MOD_COUNTER = [0]
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _load_script(skill_dir, script_name):
     """Load a skill script directly from its file path."""
     _MOD_COUNTER[0] += 1
     script_path = _SKILLS_ROOT / skill_dir / "scripts" / "{}.py".format(script_name)
-    mod_name = "skill_r44_{}_{}_{}" .format(skill_dir.replace("-", "_"), script_name, _MOD_COUNTER[0])
+    mod_name = "skill_r44_{}_{}_{}".format(skill_dir.replace("-", "_"), script_name, _MOD_COUNTER[0])
     spec = importlib.util.spec_from_file_location(mod_name, str(script_path))
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
@@ -68,9 +69,17 @@ def _run_get_frame_range(cmds_mock=None, **kwargs):
 def _caps_to_dict(caps):
     """Convert DccCapabilities to a plain dict using attribute access."""
     keys = [
-        "scene_manager", "transform", "hierarchy", "selection",
-        "render_capture", "snapshot", "undo_redo", "file_operations",
-        "has_embedded_python", "progress_reporting", "scene_info",
+        "scene_manager",
+        "transform",
+        "hierarchy",
+        "selection",
+        "render_capture",
+        "snapshot",
+        "undo_redo",
+        "file_operations",
+        "has_embedded_python",
+        "progress_reporting",
+        "scene_info",
     ]
     return {k: getattr(caps, k) for k in keys if hasattr(caps, k)}
 
@@ -78,6 +87,7 @@ def _caps_to_dict(caps):
 # ===========================================================================
 # 1. capabilities.py
 # ===========================================================================
+
 
 class TestMayaCapabilitiesFactory:
     """Tests for dcc_mcp_maya.capabilities.maya_capabilities()."""
@@ -169,6 +179,7 @@ class TestMayaCapabilitiesDict:
 # 2. server.py MayaMcpServer.get_capabilities()
 # ===========================================================================
 
+
 def _import_server_module():
     cmds_mock = _mock_maya_cmds()
     mods = _make_modules(cmds_mock)
@@ -177,6 +188,7 @@ def _import_server_module():
         del sys.modules[mod_name]
     with patch.dict(sys.modules, mods):
         import importlib
+
         mod = importlib.import_module(mod_name)
     return mod
 
@@ -226,6 +238,7 @@ class TestServerGetCapabilities:
 # 3. Public re-exports
 # ===========================================================================
 
+
 class TestPublicReexports:
     """Verify maya_capabilities is accessible from top-level and api module."""
 
@@ -263,39 +276,32 @@ class TestPublicReexports:
 # 4. get_frame_range skill
 # ===========================================================================
 
+
 class TestGetFrameRangeHappyPath:
     """Happy path tests for get_frame_range skill."""
 
     def test_success_result(self):
         cmds = _mock_maya_cmds()
-        cmds.playbackOptions.side_effect = lambda **kw: (
-            1.0 if kw.get("minTime") else 120.0
-        )
+        cmds.playbackOptions.side_effect = lambda **kw: 1.0 if kw.get("minTime") else 120.0
         result = _run_get_frame_range(cmds)
         assert result["success"] is True
 
     def test_frame_range_in_context(self):
         cmds = _mock_maya_cmds()
-        cmds.playbackOptions.side_effect = lambda **kw: (
-            1.0 if kw.get("minTime") else 120.0
-        )
+        cmds.playbackOptions.side_effect = lambda **kw: 1.0 if kw.get("minTime") else 120.0
         result = _run_get_frame_range(cmds)
         assert "frame_range" in result.get("context", {})
 
     def test_film_fps_24(self):
         cmds = _mock_maya_cmds()
-        cmds.playbackOptions.side_effect = lambda **kw: (
-            1.0 if kw.get("minTime") else 120.0
-        )
+        cmds.playbackOptions.side_effect = lambda **kw: 1.0 if kw.get("minTime") else 120.0
         cmds.currentUnit.return_value = "film"
         result = _run_get_frame_range(cmds)
         assert result["context"]["frame_range"]["fps"] == 24.0
 
     def test_pal_fps_25(self):
         cmds = _mock_maya_cmds()
-        cmds.playbackOptions.side_effect = lambda **kw: (
-            1.0 if kw.get("minTime") else 100.0
-        )
+        cmds.playbackOptions.side_effect = lambda **kw: 1.0 if kw.get("minTime") else 100.0
         cmds.currentUnit.return_value = "pal"
         result = _run_get_frame_range(cmds)
         assert result["context"]["frame_range"]["fps"] == 25.0
@@ -452,4 +458,4 @@ class TestGetFrameRangeStructural:
     def test_has_prompt_in_skill_success(self):
         path = _SKILLS_ROOT / "maya-animation" / "scripts" / "get_frame_range.py"
         source = path.read_text(encoding="utf-8")
-        assert 'prompt=' in source
+        assert "prompt=" in source

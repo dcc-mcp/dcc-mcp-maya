@@ -86,9 +86,7 @@ def load_hdri(
         if backend == "native" and use_arnold:
             # Arnold was requested but fell back to native; warn the user
             return maya_warning(
-                "HDRI loaded from '{}' using native backend (Arnold fallback)".format(
-                    os.path.basename(file_path)
-                ),
+                "HDRI loaded from '{}' using native backend (Arnold fallback)".format(os.path.basename(file_path)),
                 warning="Arnold (mtoa) was not available; used directionalLight as fallback.",
                 prompt="Install Arnold (MtoA) for physically-based sky dome. Use set_hdri_exposure to adjust.",
                 light_node=light_transform,
