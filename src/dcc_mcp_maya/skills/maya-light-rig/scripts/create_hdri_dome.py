@@ -9,6 +9,8 @@ from typing import Optional
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import maya_warning
+
 
 def create_hdri_dome(
     hdri_path: str,
@@ -68,6 +70,18 @@ def create_hdri_dome(
 
             file_node = cmds.createNode("file", name="{}_texture".format(node_name))
             cmds.setAttr("{}.fileTextureName".format(file_node), hdri_path, type="string")
+
+            return maya_warning(
+                "Created HDRI dome '{}' from '{}' (Arnold fallback)".format(dome_transform, hdri_path),
+                warning="Arnold (mtoa) was not available; used ambientLight as fallback.",
+                prompt="Install Arnold (mtoa) for full HDRI sky-dome support. Adjust intensity with set_light_rig_intensity.",
+                dome_node=dome_transform,
+                dome_shape=dome_shape,
+                file_node=file_node,
+                hdri_path=hdri_path,
+                intensity=intensity,
+                rotation=rotation,
+            )
 
         return skill_success(
             "Created HDRI dome '{}' from '{}'".format(dome_transform, hdri_path),

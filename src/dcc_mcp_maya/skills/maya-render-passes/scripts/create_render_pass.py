@@ -9,6 +9,8 @@ from typing import Optional
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import maya_warning
+
 _PASS_TYPES = {
     "beauty": "renderPassBeauty",
     "diffuse": "renderPassDiffuse",
@@ -48,6 +50,22 @@ def create_render_pass(
         import maya.cmds as cmds  # noqa: PLC0415
 
         if renderer.lower() == "arnold":
+            if not cmds.pluginInfo("mtoa", loaded=True, query=True):
+                # Arnold not loaded — fall back to standard renderPass + warn
+                node_type = "renderPass"
+                node_name = name or "{}_pass".format(pass_type)
+                pass_node = cmds.createNode(node_type, name=node_name)
+                if cmds.attributeQuery("passContribution", node=pass_node, exists=True):
+                    pass_contribution = _PASS_TYPES.get(pass_type, "renderPassBeauty")
+                    cmds.setAttr("{}.passContribution".format(pass_node), pass_contribution, type="string")
+                return maya_warning(
+                    "Created render pass '{}' (type={}, renderer=mayaSoftware)".format(pass_node, pass_type),
+                    warning="Arnold (mtoa) was not available; created a standard renderPass node as fallback.",
+                    prompt="Load the Arnold plugin (mtoa) and retry to create an aiAOV node. Use enable_render_pass to activate.",
+                    pass_node=pass_node,
+                    pass_type=pass_type,
+                    renderer="mayaSoftware",
+                )
             node_type = "aiAOV"
             node_name = name or "{}_aov".format(pass_type)
             pass_node = cmds.createNode(node_type, name=node_name)
