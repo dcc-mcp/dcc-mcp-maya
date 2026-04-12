@@ -7,6 +7,55 @@ tags: [maya, scene, hierarchy]
 license: "MIT"
 allowed-tools: ["Bash", "Read"]
 depends: []
+tools:
+  - name: new_scene
+    description: "Create a new empty Maya scene"
+    source_file: scripts/new_scene.py
+    read_only: false
+    destructive: true
+    idempotent: false
+  - name: save_scene
+    description: "Save the current Maya scene"
+    source_file: scripts/save_scene.py
+    read_only: false
+    destructive: false
+    idempotent: true
+  - name: open_scene
+    description: "Open a Maya scene file from disk"
+    source_file: scripts/open_scene.py
+    read_only: false
+    destructive: true
+    idempotent: false
+  - name: list_objects
+    description: "List objects in the current Maya scene"
+    source_file: scripts/list_objects.py
+    read_only: true
+    destructive: false
+    idempotent: true
+  - name: get_selection
+    description: "Return the current Maya selection"
+    source_file: scripts/get_selection.py
+    read_only: true
+    destructive: false
+    idempotent: true
+  - name: set_selection
+    description: "Set the active Maya selection"
+    source_file: scripts/set_selection.py
+    read_only: false
+    destructive: false
+    idempotent: false
+  - name: get_scene_info
+    description: "Return a hierarchical DAG description of the current scene"
+    source_file: scripts/get_scene_info.py
+    read_only: true
+    destructive: false
+    idempotent: true
+  - name: get_session_info
+    description: "Return Maya version, scene path, and basic session statistics"
+    source_file: scripts/get_session_info.py
+    read_only: true
+    destructive: false
+    idempotent: true
 ---
 
 # maya-scene
