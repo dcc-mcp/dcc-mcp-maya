@@ -1213,8 +1213,7 @@ class TestPluginEntryPoint:
         import maya.api.OpenMaya as om2
 
         assert hasattr(om2, "MFnPlugin"), (
-            "maya.api.OpenMaya.MFnPlugin not found — "
-            "plugin will raise AttributeError on load"
+            "maya.api.OpenMaya.MFnPlugin not found — plugin will raise AttributeError on load"
         )
 
     def test_plugin_uses_api2_import(self, plugin_module):
@@ -1223,8 +1222,7 @@ class TestPluginEntryPoint:
 
         src = inspect.getsource(plugin_module)
         assert "maya.api.OpenMaya" in src, (
-            "Plugin should import from maya.api.OpenMaya (API 2.0) "
-            "to avoid MFnPlugin AttributeError"
+            "Plugin should import from maya.api.OpenMaya (API 2.0) to avoid MFnPlugin AttributeError"
         )
 
     def test_initialize_plugin(self, plugin_module, mock_mfn_plugin):
