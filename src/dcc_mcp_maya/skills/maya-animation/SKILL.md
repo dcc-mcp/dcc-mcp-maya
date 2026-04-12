@@ -7,6 +7,49 @@ tags: [maya, animation, keyframe, timeline]
 license: "MIT"
 allowed-tools: ["Bash", "Read"]
 depends: []
+tools:
+  - name: set_keyframe
+    description: "Set a keyframe on an object at the given time"
+    source_file: scripts/set_keyframe.py
+    read_only: false
+    destructive: false
+    idempotent: false
+  - name: get_keyframes
+    description: "Get all keyframe times for an object / attribute"
+    source_file: scripts/get_keyframes.py
+    read_only: true
+    destructive: false
+    idempotent: true
+  - name: set_timeline
+    description: "Set the playback and animation timeline range"
+    source_file: scripts/set_timeline.py
+    read_only: false
+    destructive: false
+    idempotent: true
+  - name: get_current_time
+    description: "Get the current frame number"
+    source_file: scripts/get_current_time.py
+    read_only: true
+    destructive: false
+    idempotent: true
+  - name: set_current_time
+    description: "Set the current frame number"
+    source_file: scripts/set_current_time.py
+    read_only: false
+    destructive: false
+    idempotent: true
+  - name: delete_keyframes
+    description: "Delete keyframes from an object within an optional frame range"
+    source_file: scripts/delete_keyframes.py
+    read_only: false
+    destructive: true
+    idempotent: false
+  - name: bake_simulation
+    description: "Bake simulation / constraints to keyframes on objects"
+    source_file: scripts/bake_simulation.py
+    read_only: false
+    destructive: false
+    idempotent: false
 ---
 
 # maya-animation
