@@ -148,3 +148,4 @@ jobs:
 
           kill $SERVER_PID 2>/dev/null || true
           echo "mcporter connectivity tests: PASSED"
+
