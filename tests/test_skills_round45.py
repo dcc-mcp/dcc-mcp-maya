@@ -20,10 +20,6 @@ from __future__ import annotations
 import sys
 from unittest.mock import MagicMock, patch
 
-# Import third-party modules
-import pytest
-
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -76,21 +72,21 @@ class TestSearchSkills:
         reg.search_actions.return_value = []
         server.search_skills(category="mesh")
         call_kwargs = reg.search_actions.call_args
-        assert call_kwargs.kwargs.get("dcc_name") == "maya"
+        assert call_kwargs[1].get("dcc_name") == "maya"
 
     def test_explicit_dcc_name_is_forwarded(self):
         server, reg = _make_server_with_registry()
         reg.search_actions.return_value = []
         server.search_skills(dcc_name="houdini")
         call_kwargs = reg.search_actions.call_args
-        assert call_kwargs.kwargs.get("dcc_name") == "houdini"
+        assert call_kwargs[1].get("dcc_name") == "houdini"
 
     def test_tags_forwarded(self):
         server, reg = _make_server_with_registry()
         reg.search_actions.return_value = []
         server.search_skills(tags=["rigging", "ik"])
         call_kwargs = reg.search_actions.call_args
-        assert call_kwargs.kwargs.get("tags") == ["rigging", "ik"]
+        assert call_kwargs[1].get("tags") == ["rigging", "ik"]
 
     def test_returns_empty_when_registry_none(self):
         server = _make_server()
@@ -222,14 +218,14 @@ class TestGetSkillTags:
         reg.get_tags.return_value = []
         server.get_skill_tags()
         call_kwargs = reg.get_tags.call_args
-        assert call_kwargs.kwargs.get("dcc_name") == "maya"
+        assert call_kwargs[1].get("dcc_name") == "maya"
 
     def test_explicit_dcc_forwarded(self):
         server, reg = _make_server_with_registry()
         reg.get_tags.return_value = []
         server.get_skill_tags(dcc_name="blender")
         call_kwargs = reg.get_tags.call_args
-        assert call_kwargs.kwargs.get("dcc_name") == "blender"
+        assert call_kwargs[1].get("dcc_name") == "blender"
 
     def test_returns_empty_on_exception(self):
         server, reg = _make_server_with_registry()
