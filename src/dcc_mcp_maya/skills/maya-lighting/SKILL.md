@@ -4,6 +4,7 @@ description: "Maya scene lighting — create, modify and query light nodes"
 dcc: maya
 version: "1.0.0"
 tags: [maya, lighting, light, render]
+search-hint: "light, directional, point, spot, area, ambient"
 license: "MIT"
 allowed-tools: ["Bash", "Read"]
 depends: []

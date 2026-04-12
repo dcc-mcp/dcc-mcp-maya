@@ -4,6 +4,7 @@ description: "Maya polygon mesh operations — subdivision, cleanup, boolean, UV
 dcc: maya
 version: "1.0.0"
 tags: [maya, mesh, polygon, geometry, topology]
+search-hint: "mesh, bevel, bridge, extrude, combine, separate"
 license: "MIT"
 allowed-tools: ["Bash", "Read"]
 depends: []

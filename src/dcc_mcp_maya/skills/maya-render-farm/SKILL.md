@@ -4,6 +4,7 @@ description: "Maya render farm — prepare scenes, write render job configs, and
 dcc: maya
 version: "1.0.0"
 tags: [maya, render, farm, deadline, pipeline]
+search-hint: "render farm, deadline, batch, submit"
 license: "MIT"
 allowed-tools: ["Bash", "Read"]
 depends: []

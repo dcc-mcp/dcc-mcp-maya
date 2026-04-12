@@ -3,6 +3,7 @@ name: maya-arnold-aov
 description: Arnold AOV (Arbitrary Output Variable) management for multi-pass rendering
 dcc: maya
 tags: [arnold, aov, render, passes]
+search-hint: "arnold, aov, render pass, beauty, lighting"
 version: "1.0.0"
 license: "MIT"
 allowed-tools: ["Bash", "Read"]

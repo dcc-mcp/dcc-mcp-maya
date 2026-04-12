@@ -3,6 +3,7 @@ name: maya-scene-assembly
 description: Maya Scene Assembly — manage Assembly Definition, Assembly Reference, and representation LODs
 dcc: maya
 tags: [scene-assembly, LOD, reference, pipeline, assembly]
+search-hint: "scene assembly, asset, level, publish"
 version: "1.0.0"
 license: "MIT"
 allowed-tools: ["Bash", "Read"]

@@ -4,6 +4,7 @@ description: "Maya shot export — export shots, frame ranges, cameras, and FBX/
 dcc: maya
 version: "1.0.0"
 tags: [maya, export, shot, pipeline, production]
+search-hint: "shot, export, sequence, frame range, publish"
 license: "MIT"
 allowed-tools: ["Bash", "Read"]
 depends: []

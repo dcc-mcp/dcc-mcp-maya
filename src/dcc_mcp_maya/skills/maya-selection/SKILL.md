@@ -4,6 +4,7 @@ description: "Maya selection utilities — filter, grow, shrink, invert, and con
 dcc: maya
 version: "1.0.0"
 tags: [maya, selection, filter, component]
+search-hint: "select, filter, type, hierarchy, component"
 license: "MIT"
 allowed-tools: ["Bash", "Read"]
 depends: []

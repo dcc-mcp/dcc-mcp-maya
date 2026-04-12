@@ -4,6 +4,7 @@ description: "Maya nDynamics — nucleus, nCloth, nRigid and dynamic fields"
 dcc: maya
 version: "1.0.0"
 tags: [maya, dynamics, ncloth, simulation, effects]
+search-hint: "dynamics, particle, ncloth, fluid, simulation"
 license: "MIT"
 allowed-tools: ["Bash", "Read"]
 depends: []

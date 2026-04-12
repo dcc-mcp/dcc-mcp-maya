@@ -4,6 +4,7 @@ description: "Maya expression nodes — create, list and delete procedural expre
 dcc: maya
 version: "1.0.0"
 tags: [maya, expression, scripting, procedural]
+search-hint: "expression, script, attribute, driven key"
 license: "MIT"
 allowed-tools: ["Bash", "Read"]
 depends: []

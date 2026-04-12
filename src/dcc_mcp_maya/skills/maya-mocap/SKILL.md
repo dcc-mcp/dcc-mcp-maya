@@ -3,6 +3,7 @@ name: maya-mocap
 description: Motion capture data import, retargeting and cleanup for Maya
 dcc: maya
 tags: [mocap, animation, retarget, hik, bvh]
+search-hint: "mocap, motion capture, retarget, fbx"
 version: "1.0.0"
 license: "MIT"
 allowed-tools: ["Bash", "Read"]

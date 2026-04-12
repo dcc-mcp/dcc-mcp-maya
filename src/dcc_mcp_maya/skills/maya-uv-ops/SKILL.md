@@ -4,6 +4,7 @@ description: "Maya UV operations — create, delete, project, unfold and normali
 dcc: maya
 version: "1.0.0"
 tags: [maya, uv, texture, geometry]
+search-hint: "UV, unfold, layout, planar map, texture coordinates"
 license: "MIT"
 allowed-tools: ["Bash", "Read"]
 depends: []

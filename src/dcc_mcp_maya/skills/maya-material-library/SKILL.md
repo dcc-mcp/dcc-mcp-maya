@@ -4,6 +4,7 @@ description: "Maya material library — save, load, and manage reusable material
 dcc: maya
 version: "1.0.0"
 tags: [maya, materials, library, shading, presets]
+search-hint: "material, library, shader, preset"
 license: "MIT"
 allowed-tools: ["Bash", "Read"]
 depends: []
