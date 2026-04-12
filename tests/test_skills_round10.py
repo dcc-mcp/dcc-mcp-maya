@@ -13,7 +13,7 @@ from __future__ import annotations
 # Import built-in modules
 import sys
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 # Import third-party modules
 import pytest
@@ -21,7 +21,7 @@ import pytest
 # Add tests/ to sys.path so we can import conftest helpers directly
 sys.path.insert(0, str(Path(__file__).parent))
 
-from conftest import SKILLS_ROOT, load_and_call, load_and_call_with_mel, make_mock_maya  # noqa: E402
+from conftest import load_and_call, load_and_call_with_mel  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -583,9 +583,7 @@ class TestCreateDisplayLayerDeep:
     def test_visibility_false_calls_setattr(self):
         cmds = _make_cmds()
         cmds.createDisplayLayer.return_value = "layer1"
-        result = load_and_call(
-            "maya-display/scripts/create_display_layer.py", cmds, name="l", visibility=False
-        )
+        result = load_and_call("maya-display/scripts/create_display_layer.py", cmds, name="l", visibility=False)
         assert result["success"] is True
         cmds.setAttr.assert_called()
 
@@ -638,9 +636,7 @@ class TestDeleteDisplayLayerDeep:
         cmds = _make_cmds()
         cmds.objExists.return_value = True
         cmds.objectType.return_value = "transform"  # not displayLayer
-        result = load_and_call(
-            "maya-display/scripts/delete_display_layer.py", cmds, layer_name="pSphere1"
-        )
+        result = load_and_call("maya-display/scripts/delete_display_layer.py", cmds, layer_name="pSphere1")
         assert result["success"] is False
         assert "wrong node type" in result["message"].lower()
 
@@ -648,18 +644,14 @@ class TestDeleteDisplayLayerDeep:
         cmds = _make_cmds()
         cmds.objExists.return_value = True
         cmds.objectType.return_value = "displayLayer"
-        result = load_and_call(
-            "maya-display/scripts/delete_display_layer.py", cmds, layer_name="myLayer"
-        )
+        result = load_and_call("maya-display/scripts/delete_display_layer.py", cmds, layer_name="myLayer")
         assert result["success"] is True
         cmds.delete.assert_called()
 
     def test_default_layer_blocked(self):
         """defaultLayer should not be deletable."""
         cmds = _make_cmds()
-        result = load_and_call(
-            "maya-display/scripts/delete_display_layer.py", cmds, layer_name="defaultLayer"
-        )
+        result = load_and_call("maya-display/scripts/delete_display_layer.py", cmds, layer_name="defaultLayer")
         assert result["success"] is False
 
 
