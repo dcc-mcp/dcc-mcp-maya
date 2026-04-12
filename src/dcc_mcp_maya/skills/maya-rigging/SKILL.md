@@ -4,6 +4,7 @@ description: "Maya rigging — joints, IK, skin clusters, deformers, blend shape
 dcc: maya
 version: "1.0.0"
 tags: [maya, rigging, skeleton, deformer, animation]
+search-hint: "rig, joint, bind, skin, IK, FK, control"
 license: "MIT"
 allowed-tools: ["Bash", "Read"]
 depends: []

@@ -4,6 +4,7 @@ description: "Maya blend shape utilities — create, inspect, and drive blend sh
 dcc: maya
 version: "1.0.0"
 tags: [maya, blend-shape, deformer, morph, facial]
+search-hint: "blend shape, morph, target, deform"
 license: "MIT"
 allowed-tools: ["Bash", "Read"]
 depends: []

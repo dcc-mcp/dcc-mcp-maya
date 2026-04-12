@@ -4,6 +4,7 @@ description: "Maya rig utilities — space switching, control curve shapes, rig 
 dcc: maya
 version: "1.0.0"
 tags: [maya, rigging, controls, space-switch, attributes]
+search-hint: "rig, utility, mirror, constraint, helper"
 license: "MIT"
 allowed-tools: ["Bash", "Read"]
 depends: []

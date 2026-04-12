@@ -4,6 +4,7 @@ description: "Maya camera creation and attribute management"
 dcc: maya
 version: "1.0.0"
 tags: [maya, camera, scene]
+search-hint: "camera, film, focal, persp, orthographic"
 license: "MIT"
 allowed-tools: ["Bash", "Read"]
 depends: []

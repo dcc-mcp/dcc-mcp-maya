@@ -4,6 +4,7 @@ description: "Maya transform utilities — freeze, reset, match, bake, and mirro
 dcc: maya
 version: "1.0.0"
 tags: [maya, transform, xform, freeze, pivot]
+search-hint: "transform, pivot, align, freeze, reset"
 license: "MIT"
 allowed-tools: ["Bash", "Read"]
 depends: []
