@@ -16,12 +16,7 @@
           "path": "pyproject.toml",
           "jsonpath": "$.project.version"
         },
-        "src/dcc_mcp_maya/__version__.py",
-        {
-          "type": "generic",
-          "path": "maya/plugin/dcc_mcp_maya.py",
-          "search-by-regex": "VERSION = \"[0-9]+\\.[0-9]+\\.[0-9]+\""
-        }
+        "src/dcc_mcp_maya/__version__.py"
       ]
     }
   },

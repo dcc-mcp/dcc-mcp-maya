@@ -30,15 +30,27 @@ from __future__ import annotations
 import logging
 import os
 
+import maya.cmds as cmds
+
 # Import third-party modules
 import maya.OpenMaya as om
-import maya.cmds as cmds
-import maya.utils
 
 logger = logging.getLogger(__name__)
 
 VENDOR = "dcc-mcp"
-VERSION = "0.3.0"
+
+
+def _get_version() -> str:
+    """Read version from the installed package, with static fallback."""
+    try:
+        from dcc_mcp_maya.__version__ import __version__  # noqa: PLC0415
+
+        return __version__
+    except Exception:
+        return "0.0.0"
+
+
+VERSION = _get_version()
 
 # ── module-level server handle ────────────────────────────────────────────────
 _handle = None
@@ -47,9 +59,10 @@ _menu_name = "DccMcpMenu"
 
 # ── plugin init ───────────────────────────────────────────────────────────────
 
+
 def initializePlugin(plugin):
     """Called by Maya when the plugin is loaded."""
-    fn = om.MFnPlugin(plugin, VENDOR, VERSION)
+    om.MFnPlugin(plugin, VENDOR, VERSION)
     try:
         _add_menu()
         _start()
@@ -71,6 +84,7 @@ def uninitializePlugin(plugin):
 
 
 # ── server helpers ────────────────────────────────────────────────────────────
+
 
 def _start() -> None:
     global _handle
@@ -107,6 +121,7 @@ def _server_url() -> str:
 
 
 # ── menu ─────────────────────────────────────────────────────────────────────
+
 
 def _add_menu() -> None:
     try:
@@ -145,6 +160,7 @@ def _open_browser() -> None:
     url = _server_url()
     if url and url != "<not running>":
         import webbrowser  # noqa: PLC0415
+
         webbrowser.open(url)
     else:
         cmds.warning("MCP server is not running.")
