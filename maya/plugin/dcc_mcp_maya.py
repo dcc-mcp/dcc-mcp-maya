@@ -32,8 +32,13 @@ import os
 
 import maya.cmds as cmds
 
-# Import third-party modules
-import maya.OpenMaya as om
+# Maya API 2.0 (maya.api.OpenMaya) is preferred because MFnPlugin is always
+# available there across Maya 2022-2025.  API 1.0 (maya.OpenMaya) omits
+# MFnPlugin in some standalone / batch environments, causing AttributeError.
+try:
+    import maya.api.OpenMaya as om  # API 2.0 — Maya 2012+, preferred
+except ImportError:  # pragma: no cover — should never happen on Maya 2022+
+    import maya.OpenMaya as om  # type: ignore[no-redef]  # API 1.0 fallback
 
 logger = logging.getLogger(__name__)
 
