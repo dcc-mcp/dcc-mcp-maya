@@ -130,13 +130,11 @@ jobs:
       # using the packaged .mod module, not a pip install.
 
       - name: Run E2E tests (Maya standalone, packaged module)
-        env:
-          # Tell the E2E tests to use the packaged module's paths
-          DCC_MCP_MAYA_MOD_DIR: $HOME/maya/modules/dcc-mcp-maya
-          # Expose the packaged python/ dir so pytest subprocess can import
-          # dcc_mcp_maya and dcc_mcp_core (bundled in the .mod module).
-          PYTHONPATH: $HOME/maya/modules/dcc-mcp-maya/python
         run: |
+          # $HOME is expanded by bash — cannot use it in the env: block above.
+          export DCC_MCP_MAYA_MOD_DIR="$HOME/maya/modules/dcc-mcp-maya"
+          export PYTHONPATH="$HOME/maya/modules/dcc-mcp-maya/python"
+
           mayapy -c "
           import maya.standalone
           maya.standalone.initialize()
@@ -150,8 +148,12 @@ jobs:
               sys.path.insert(0, mod_python)
 
           # Run e2e tests via pytest inside mayapy
+          # Only collect test_e2e_maya_standalone.py to avoid importing
+          # other test modules that need dcc_mcp_maya in site-packages.
           result = subprocess.run(
-              [sys.executable, '-m', 'pytest', 'tests/', '-v', '--tb=short', '-m', 'e2e'],
+              [sys.executable, '-m', 'pytest',
+               'tests/test_e2e_maya_standalone.py',
+               '-v', '--tb=short', '-m', 'e2e'],
               env=dict(os.environ),
           )
           sys.exit(result.returncode)
