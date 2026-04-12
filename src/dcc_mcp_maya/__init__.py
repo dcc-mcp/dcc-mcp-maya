@@ -45,6 +45,7 @@ from dcc_mcp_maya.api import (
     maya_error,
     maya_from_exception,
     maya_success,
+    maya_warning,
     missing_param_error,
     object_transform_from_node,
     require_any_param,
@@ -66,6 +67,7 @@ __all__ = [
     # Skill authoring helpers
     "maya_success",
     "maya_error",
+    "maya_warning",
     "maya_from_exception",
     "require_cmds",
     "get_cmds",

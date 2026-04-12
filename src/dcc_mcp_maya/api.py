@@ -150,6 +150,38 @@ def maya_error(
     ).to_dict()
 
 
+def maya_warning(message: str, warning: str = "", prompt: Optional[str] = None, **context: Any) -> Dict[str, Any]:
+    """Return a success ActionResultModel dict with a warning note.
+
+    The result is a *success* (``success=True``) but includes a ``warning``
+    key in the context to inform the AI agent of a non-fatal issue.
+
+    Corresponds to ``dcc_mcp_core.skill.skill_warning``.
+
+    Args:
+        message: Human-readable success message.
+        warning: Short description of the non-fatal warning.
+        prompt: Optional follow-up hint shown to the AI agent.
+        **context: Arbitrary key/value pairs stored in ``result["context"]``.
+
+    Returns:
+        Serialised ``ActionResultModel`` dict (``success=True``, with
+        ``context["warning"]`` set).
+
+    Example::
+
+        return maya_warning(
+            "Material assigned with fallback",
+            warning="Arnold not available; used Lambert instead",
+            prompt="Install Arnold for physically-based shading.",
+            object_name="pSphere1",
+        )
+    """
+    from dcc_mcp_core import success_result  # noqa: PLC0415
+
+    return success_result(message, prompt=prompt, warning=warning, **context).to_dict()
+
+
 def maya_from_exception(
     exc: BaseException,
     message: str = "Maya operation failed",
@@ -691,6 +723,7 @@ def bounding_box_from_node(cmds: Any, node_name: str) -> Dict[str, Any]:
 __all__ = [
     "maya_success",
     "maya_error",
+    "maya_warning",
     "maya_from_exception",
     "require_cmds",
     "get_cmds",
