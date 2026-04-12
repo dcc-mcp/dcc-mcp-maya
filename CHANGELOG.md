@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.2.3](https://github.com/loonghao/dcc-mcp-maya/compare/v0.2.2...v0.2.3) (2026-04-12)
+
+
+### Features
+
+* add skill discovery API, search-hint fields, and test rounds 35-40 ([8b6b96e](https://github.com/loonghao/dcc-mcp-maya/commit/8b6b96e113e47ce8d7a5b33d452560fda3bc3a19))
+* add SKILL.md lint checker, fix merge conflicts, add pyyaml dev dep ([53cc48b](https://github.com/loonghao/dcc-mcp-maya/commit/53cc48b95f1423900ff26380b3fee024f1824ab8))
+* **api:** add ensure_valid_name, build_context_dict, cross-DCC model helpers; feat(test): add conftest load_and_call helpers + test_skills_round10 (90 tests) ([188618c](https://github.com/loonghao/dcc-mcp-maya/commit/188618c13f72d12bc6ef5c63ff166a74aaf63b03))
+
+
+### Bug Fixes
+
+* **ci:** exclude packaging marker from default test run and fix lint issues ([5e36e76](https://github.com/loonghao/dcc-mcp-maya/commit/5e36e761154a36e3fb0a5628814c64339e6efcf3))
+* **packaging:** replace pip download with PyPI JSON API for cross-platform wheel retrieval ([349da9a](https://github.com/loonghao/dcc-mcp-maya/commit/349da9a3acbbd677d7abcbecf8da73c669302b68))
+* **packaging:** replace pip download with PyPI JSON API for cross-platform wheel retrieval ([0038aec](https://github.com/loonghao/dcc-mcp-maya/commit/0038aec9c8d4a6bb36d63b086d55fd9bb131b0ec))
+
 ## [0.2.2](https://github.com/loonghao/dcc-mcp-maya/compare/v0.2.1...v0.2.2) (2026-04-12)
 
 
