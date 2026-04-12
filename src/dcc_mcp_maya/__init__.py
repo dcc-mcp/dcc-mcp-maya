@@ -42,6 +42,7 @@ from dcc_mcp_maya.api import (
     get_cmds,
     get_param_list,
     is_maya_available,
+    maya_capabilities,
     maya_error,
     maya_from_exception,
     maya_success,
@@ -90,4 +91,6 @@ __all__ = [
     "scene_object_from_node",
     "object_transform_from_node",
     "bounding_box_from_node",
+    # DCC capabilities
+    "maya_capabilities",
 ]

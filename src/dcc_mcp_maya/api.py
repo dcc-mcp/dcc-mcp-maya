@@ -746,4 +746,9 @@ __all__ = [
     "scene_object_from_node",
     "object_transform_from_node",
     "bounding_box_from_node",
+    # DCC capabilities
+    "maya_capabilities",
 ]
+
+# Import maya_capabilities here so it is accessible as dcc_mcp_maya.api.maya_capabilities
+from dcc_mcp_maya.capabilities import maya_capabilities  # noqa: E402, F401

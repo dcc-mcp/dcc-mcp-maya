@@ -502,6 +502,25 @@ class MayaMcpServer:
         """The MCP endpoint URL, or ``None`` if not running."""
         return self._handle.mcp_url() if self._handle else None
 
+    def get_capabilities(self) -> Any:
+        """Return the Maya DCC capabilities as a ``DccCapabilities`` instance.
+
+        Declares the feature set supported by this Maya integration for
+        cross-DCC protocol negotiation (v0.12.7+).
+
+        Returns:
+            ``dcc_mcp_core.DccCapabilities`` instance with Maya-specific flags.
+
+        Example::
+
+            caps = server.get_capabilities()
+            print(caps.transform)    # True
+            print(caps.to_dict())    # serialisable dict
+        """
+        from dcc_mcp_maya.capabilities import maya_capabilities  # noqa: PLC0415
+
+        return maya_capabilities()
+
 
 # ── module-level singleton helpers ────────────────────────────────────────────
 

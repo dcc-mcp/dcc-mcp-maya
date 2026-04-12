@@ -106,7 +106,7 @@ class TestBindAndRegisterVersionAutoDetect:
     def test_bind_and_register_auto_version_calls_about(self):
         """When version=None, bind_and_register calls cmds.about(version=True)."""
         srv_mod = self._get_server()
-        server = srv_mod.MayaMcpServer()
+        server = srv_mod.MayaMcpServer(port=18822)
         server.start()
 
         mock_tm = MagicMock()
@@ -122,7 +122,7 @@ class TestBindAndRegisterVersionAutoDetect:
     def test_bind_and_register_auto_version_uses_about_return(self):
         """The version string passed to transport_manager equals cmds.about return value."""
         srv_mod = self._get_server()
-        server = srv_mod.MayaMcpServer()
+        server = srv_mod.MayaMcpServer(port=18823)
         server.start()
 
         self._cmds.about.return_value = "2024"
