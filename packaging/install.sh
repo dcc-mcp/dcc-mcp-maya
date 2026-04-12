@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 set -e
 
-VERSION="0.3.0"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 MODULE_DIR="$SCRIPT_DIR/dcc-mcp-maya"
 
@@ -10,7 +9,7 @@ echo " DCC-MCP-Maya Installer"
 echo "========================================="
 echo
 
-if [ ! -f "$MODULE_DIR/dcc_mcp_maya.mod" ]; then
+if [ ! -f "$MODULE_DIR/module-info.json" ]; then
     echo "ERROR: Module directory not found at:"
     echo "  $MODULE_DIR"
     echo
@@ -18,9 +17,22 @@ if [ ! -f "$MODULE_DIR/dcc_mcp_maya.mod" ]; then
     exit 1
 fi
 
-# Read version from .mod file
-VERSION=$(grep -oP '(?<=dcc_mcp_maya )\d+\.\d+\.\d+' "$MODULE_DIR/dcc_mcp_maya.mod" | head -1 || echo "unknown")
+# Read version from module-info.json
+VERSION=$(python3 -c "
+import json, sys
+with open('$MODULE_DIR/module-info.json') as f:
+    print(json.load(f)['version'])
+" 2>/dev/null || echo "unknown")
 echo " Version: ${VERSION}"
+
+# Check if python37/ exists (cp37 for Maya 2022)
+HAS_CP37=0
+if [ -d "$MODULE_DIR/python37" ]; then
+    HAS_CP37=1
+    echo " Python 3.7 support: Yes (Maya 2022)"
+else
+    echo " Python 3.7 support: No"
+fi
 echo
 
 # Detect Maya installations
@@ -44,13 +56,15 @@ if [ "$FOUND_MAYA" -eq 0 ]; then
     echo
 fi
 
-# Determine platform-specific paths
+# Determine platform-specific paths and .mod platform string
 if [[ "$OSTYPE" == "darwin"* ]]; then
     MOD_DEST="$HOME/Library/Preferences/Autodesk/maya/modules"
     SCRIPTS_DEST="$HOME/Library/Preferences/Autodesk/maya/scripts"
+    PLATFORM="macos"
 else
     MOD_DEST="$HOME/maya/modules"
     SCRIPTS_DEST="$HOME/maya/scripts"
+    PLATFORM="linux"
 fi
 
 # Deploy module directory
@@ -64,6 +78,25 @@ fi
 echo
 echo "Deploying module to: $MOD_DEST/dcc-mcp-maya"
 cp -R "$MODULE_DIR" "$MOD_DEST/dcc-mcp-maya"
+
+# Generate .mod file dynamically
+echo "Generating dcc_mcp_maya.mod..."
+MOD_FILE="$MOD_DEST/dcc-mcp-maya/dcc_mcp_maya.mod"
+
+{
+    if [ "$HAS_CP37" -eq 1 ]; then
+        echo "+ MAYAVERSION:2022 PLATFORM:$PLATFORM dcc_mcp_maya $VERSION ."
+        echo "PYTHONPATH+:=python37"
+        echo "PLUG_IN_PATH+:=plug-ins"
+    fi
+    for year in 2023 2024 2025 2026; do
+        echo "+ MAYAVERSION:$year PLATFORM:$PLATFORM dcc_mcp_maya $VERSION ."
+        echo "PYTHONPATH+:=python"
+        echo "PLUG_IN_PATH+:=plug-ins"
+    done
+} > "$MOD_FILE"
+
+echo " Generated $MOD_FILE"
 
 # Deploy userSetup.py
 mkdir -p "$SCRIPTS_DEST"

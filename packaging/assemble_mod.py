@@ -8,7 +8,7 @@ This script:
 1. Creates the .mod module directory structure
 2. Copies the Python package and plugin files
 3. Extracts dcc_mcp_core from a downloaded wheel into python/dcc_mcp_core/
-4. Generates the .mod file with correct platform/version
+4. Generates module-info.json metadata (the .mod file is generated at install time)
 5. Copies install/uninstall scripts and README
 """
 
@@ -173,22 +173,43 @@ def extract_wheel(wheel_path: Path, dest: Path, *, extensions_only: bool = False
                 dst.write(src.read())
 
 
-def generate_mod_file(version: str, platform: str, has_cp37: bool = False) -> str:
-    """Generate the .mod file content."""
-    platform_str = {
-        "win64": "win64",
-        "linux": "linux",
-        "macos": "macos",
-    }[platform]
+def generate_module_info(version: str, has_cp37: bool = False) -> str:
+    """Generate module-info.json content with build metadata.
 
-    maya_versions = ["2022", "2023", "2024", "2025"]
-    # macOS has no cp37 wheel, skip Maya 2022
-    if platform == "macos":
-        maya_versions = ["2023", "2024", "2025"]
+    The .mod file is no longer generated at assemble time — it is generated
+    at install time by the install scripts, which can detect the actual
+    platform and installed Maya versions on the user's machine.
 
+    module-info.json provides the metadata the install scripts need:
+    version, whether cp37 extensions are available, and which Maya
+    versions the package supports.
+    """
+    import json
+
+    supported = ["2022", "2023", "2024", "2025"]
+    if not has_cp37:
+        # Without cp37 extensions, Maya 2022 (Python 3.7) is not supported
+        supported = ["2023", "2024", "2025"]
+
+    info = {
+        "name": "dcc_mcp_maya",
+        "version": version,
+        "has_cp37": has_cp37,
+        "supported_maya_versions": supported,
+    }
+    return json.dumps(info, indent=2) + "\n"
+
+
+def generate_mod_content(version: str, platform: str, maya_versions: list[str], has_cp37: bool = False) -> str:
+    """Generate .mod file content for given platform and Maya versions.
+
+    This is used by the install scripts (via post_install.py) and by tests.
+    The platform string and Maya version list come from runtime detection,
+    not from build-time assumptions.
+    """
     lines = []
     for mv in maya_versions:
-        lines.append(f"+ MAYAVERSION:{mv} PLATFORM:{platform_str} dcc_mcp_maya {version} .")
+        lines.append(f"+ MAYAVERSION:{mv} PLATFORM:{platform} dcc_mcp_maya {version} .")
         # Maya 2022 uses python37/ if cp37 extensions are available
         if mv == "2022" and has_cp37:
             lines.append("PYTHONPATH+:=python37")
@@ -208,10 +229,14 @@ def _generate_post_install(module_dir: Path) -> None:
         mayapy <module_dir>/post_install.py
 
     It verifies that:
-    1. The module's python/ directory is on sys.path
+    1. The module-info.json metadata file exists
     2. dcc_mcp_maya and dcc_mcp_core are importable
     3. dcc_mcp_maya.start_server is available
     4. The MCP server can start and stop cleanly
+
+    If the .mod file does not exist yet (e.g. running before install script),
+    it is generated dynamically from module-info.json so the verification
+    can proceed.
     """
     script = '''#!/usr/bin/env python
 """Post-install verification for dcc-mcp-maya module.
@@ -221,9 +246,11 @@ Run with mayapy (Maya's Python interpreter)::
     mayapy post_install.py
 
 This script verifies the .mod module installation is correct.
+If the .mod file does not exist yet, it is generated from module-info.json.
 """
 from __future__ import annotations
 
+import json
 import os
 import sys
 from pathlib import Path
@@ -250,15 +277,61 @@ def _check(label, condition, detail=""):
         errors.append(label)
 
 
+def _ensure_mod_file():
+    """Generate .mod file from module-info.json if it does not exist yet.
+
+    The install scripts normally generate the .mod file at install time,
+    but when running post_install.py directly (e.g. in CI or for testing)
+    the .mod may not have been created yet.
+    """
+    mod_path = MODULE_ROOT / "dcc_mcp_maya.mod"
+    if mod_path.exists():
+        return
+
+    info_path = MODULE_ROOT / "module-info.json"
+    if not info_path.is_file():
+        return  # nothing to generate from
+
+    with open(info_path, encoding="utf-8") as f:
+        info = json.load(f)
+
+    version = info.get("version", "0.0.0")
+    has_cp37 = info.get("has_cp37", False)
+    maya_versions = info.get("supported_maya_versions", ["2023", "2024", "2025"])
+
+    # Detect platform
+    if sys.platform == "win32":
+        platform_str = "win64"
+    elif sys.platform == "darwin":
+        platform_str = "macos"
+    else:
+        platform_str = "linux"
+
+    lines = []
+    for mv in maya_versions:
+        lines.append(f"+ MAYAVERSION:{mv} PLATFORM:{platform_str} dcc_mcp_maya {version} .")
+        if mv == "2022" and has_cp37:
+            lines.append("PYTHONPATH+:=python37")
+        else:
+            lines.append("PYTHONPATH+:=python")
+        lines.append("PLUG_IN_PATH+:=plug-ins")
+
+    mod_path.write_text("\\n".join(lines) + "\\n", encoding="utf-8")
+    print(f"  Generated {mod_path.name} from module-info.json")
+
+
 def main():
     print("=" * 50)
     print(" dcc-mcp-maya Post-Install Verification")
     print("=" * 50)
     print()
 
+    # 0. Generate .mod file if missing
+    _ensure_mod_file()
+
     # 1. Check module directory structure
     print("1. Module directory structure:")
-    _check("dcc_mcp_maya.mod exists", (MODULE_ROOT / "dcc_mcp_maya.mod").is_file())
+    _check("module-info.json exists", (MODULE_ROOT / "module-info.json").is_file())
     _check("plug-ins/dcc_mcp_maya.py exists", (MODULE_ROOT / "plug-ins" / "dcc_mcp_maya.py").is_file())
     _check("python/dcc_mcp_maya/ exists", (MODULE_ROOT / "python" / "dcc_mcp_maya").is_dir())
     _check("python/dcc_mcp_core/ exists", (MODULE_ROOT / "python" / "dcc_mcp_core").is_dir())
@@ -382,10 +455,10 @@ def assemble(project_root: Path, version: str, platform: str, output: Path) -> P
                 has_cp37 = True
     print("  Extracted dcc_mcp_core to python/" + (" and python37/" if has_cp37 else ""))
 
-    # 1. Generate .mod file
-    mod_content = generate_mod_file(version, platform, has_cp37=has_cp37)
-    (module_dir / "dcc_mcp_maya.mod").write_text(mod_content, encoding="utf-8")
-    print(f"  Generated dcc_mcp_maya.mod (platform={platform}, version={version})")
+    # 1. Generate module-info.json (the .mod file is generated at install time)
+    info_content = generate_module_info(version, has_cp37=has_cp37)
+    (module_dir / "module-info.json").write_text(info_content, encoding="utf-8")
+    print(f"  Generated module-info.json (version={version}, has_cp37={has_cp37})")
 
     # 2. Copy Maya plugin
     plugin_src = project_root / "maya" / "plugin" / "dcc_mcp_maya.py"
