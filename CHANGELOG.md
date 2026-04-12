@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.2.5](https://github.com/loonghao/dcc-mcp-maya/compare/v0.2.4...v0.2.5) (2026-04-12)
+
+
+### Features
+
+* **api:** emit maya_warning on Arnold fallback in create_hdri_dome and create_render_pass; add test_skills_round42 (27 tests) ([8f11f4b](https://github.com/loonghao/dcc-mcp-maya/commit/8f11f4b84c2192e08fed7d072465b69fbf4d2e67))
+* **api:** emit maya_warning on Arnold fallback in load_hdri; achieve 100% coverage (test_skills_round41) ([4ce6850](https://github.com/loonghao/dcc-mcp-maya/commit/4ce6850f5e9dde4091f8d71fceb0668aa9969bbb))
+* **capabilities:** add DccCapabilities module, server.get_capabilities(), get_frame_range skill; fix test_round41 port conflict; add test_skills_round44 (47 tests) ([e6f9c2a](https://github.com/loonghao/dcc-mcp-maya/commit/e6f9c2a3cfe92ef361a76a51a69db471e01e348f))
+* **server:** add is_skill_loaded, get_skill_info to MayaMcpServer; add test_skills_round45 (48 tests) ([401f0c4](https://github.com/loonghao/dcc-mcp-maya/commit/401f0c4fc6a541e76775424959d843b3e3e17f6a))
+* **skills:** add mtoa plugin availability guards to all 5 maya-arnold-aov scripts; add test_skills_round43 (28 tests) ([b540188](https://github.com/loonghao/dcc-mcp-maya/commit/b540188a7f1865ba0c1e2624eee90003c4897045))
+
+
+### Bug Fixes
+
+* **release:** add workflow_dispatch input for manual build-mod; fix Python 3.14-&gt;3.12 ([22f54cc](https://github.com/loonghao/dcc-mcp-maya/commit/22f54cc20247b8621ef4df2b86e30a2892c8dda9))
+* **release:** use inputs.tag_name as fallback for version/tag in manual workflow dispatch ([06a7c42](https://github.com/loonghao/dcc-mcp-maya/commit/06a7c42b247e550f0ea8ee64667b9ff7d1e423f2))
+* **tests:** fix Python 3.7 compat and lint in test_skills_round45 ([c179cdc](https://github.com/loonghao/dcc-mcp-maya/commit/c179cdc3debf91638e70bba669b8e2828c214559))
+
 ## [0.2.4](https://github.com/loonghao/dcc-mcp-maya/compare/v0.2.3...v0.2.4) (2026-04-12)
 
 
