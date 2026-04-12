@@ -33,6 +33,13 @@ def set_aov_attribute(name: str, attribute: str, value: object) -> dict:
         if not attribute:
             return skill_error("Attribute name is required", "Provide a non-empty attribute name")
 
+        # Arnold (mtoa) must be loaded to query/modify aiAOV nodes
+        if not cmds.pluginInfo("mtoa", query=True, loaded=True):
+            return skill_error(
+                "Arnold (mtoa) plugin is not loaded",
+                "Load the mtoa plugin first: cmds.loadPlugin('mtoa')",
+            )
+
         # Find the aiAOV node
         nodes = cmds.ls(type="aiAOV") or []
         target_node = None

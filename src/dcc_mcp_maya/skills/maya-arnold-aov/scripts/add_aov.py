@@ -58,6 +58,13 @@ def add_aov(
         if not name:
             return skill_error("AOV name is required", "Provide a non-empty AOV name")
 
+        # Arnold (mtoa) must be loaded to use aiAOV nodes
+        if not cmds.pluginInfo("mtoa", query=True, loaded=True):
+            return skill_error(
+                "Arnold (mtoa) plugin is not loaded",
+                "Load the mtoa plugin first: cmds.loadPlugin('mtoa')",
+            )
+
         # Resolve type — check both original case and lowercase for case-insensitive lookup
         resolved_type = aov_type or _STANDARD_AOV_TYPES.get(name) or _STANDARD_AOV_TYPES.get(name.lower(), "RGB")
 

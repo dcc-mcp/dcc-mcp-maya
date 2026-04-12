@@ -20,6 +20,15 @@ def list_aovs() -> dict:
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
+        # When mtoa is absent aiAOV nodes cannot exist; return empty list gracefully
+        if not cmds.pluginInfo("mtoa", query=True, loaded=True):
+            return skill_success(
+                "Arnold (mtoa) plugin is not loaded — no AOVs available",
+                prompt="Load the mtoa plugin then use add_aov to create Arnold AOVs.",
+                aovs=[],
+                count=0,
+            )
+
         nodes = cmds.ls(type="aiAOV") or []
         aovs = []
         for node in nodes:

@@ -24,6 +24,13 @@ def enable_aov(name: str, enabled: bool = True) -> dict:
         if not name:
             return skill_error("AOV name is required", "Provide a non-empty AOV name")
 
+        # Arnold (mtoa) must be loaded to query/modify aiAOV nodes
+        if not cmds.pluginInfo("mtoa", query=True, loaded=True):
+            return skill_error(
+                "Arnold (mtoa) plugin is not loaded",
+                "Load the mtoa plugin first: cmds.loadPlugin('mtoa')",
+            )
+
         nodes = cmds.ls(type="aiAOV") or []
         target_node = None
         for node in nodes:
