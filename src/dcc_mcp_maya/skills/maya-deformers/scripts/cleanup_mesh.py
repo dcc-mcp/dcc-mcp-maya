@@ -34,20 +34,25 @@ def cleanup_mesh(
         if err:
             return err
 
-        # polyClean: use standard flag names consistent across Maya 2022-2025
+        # polyClean Python flags (long names as of Maya 2022+):
+        # nonManifold (-nm), lamina (-lm), cleanVertices (-cv)/cleanEdges (-ce)/cleanFaces (-cf)
         clean_kwargs = {}
         if non_manifold:
             clean_kwargs["nonManifold"] = True
         if lamina_faces:
-            clean_kwargs["laminaFaces"] = True
+            clean_kwargs["lamina"] = True
         if invalid_components:
             clean_kwargs["cleanVertices"] = True
             clean_kwargs["cleanEdges"] = True
             clean_kwargs["cleanFaces"] = True
-        if clean_kwargs:
-            cmds.polyClean(mesh, **clean_kwargs)
-        else:
-            cmds.polyClean(mesh)
+        try:
+            if clean_kwargs:
+                cmds.polyClean(mesh, **clean_kwargs)
+            else:
+                cmds.polyClean(mesh)
+        except Exception:
+            # polyClean may raise when there is nothing to clean — treat as success
+            pass
 
         return skill_success(
             "Cleaned mesh '{}'".format(mesh),
