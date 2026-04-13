@@ -36,10 +36,7 @@ from __future__ import annotations
 import json
 import logging
 import os
-from typing import TYPE_CHECKING, Any
-
-if TYPE_CHECKING:
-    pass
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -188,10 +185,7 @@ def _handle_dispatch_action(params_json: str) -> str:
         # result keys: "action", "output", "validation_skipped"
         output = result.get("output", "{}")
         if isinstance(output, str):
-            try:
-                return output  # already JSON
-            except Exception:
-                return json.dumps({"success": True, "message": output})
+            return output  # already JSON
         return json.dumps(output)
     except Exception as exc:
         logger.warning("dispatch_action handler error for '%s': %s", action, exc)
