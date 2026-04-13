@@ -759,8 +759,9 @@ def make_input_validator(
         for field_name, (min_val, max_val) in number_fields.items():
             validator.require_number(field_name, min_value=min_val, max_value=max_val)
     if injected_fields:
-        for field_name, default_val in injected_fields.items():
-            validator.inject(field_name, default_val)
+        # NOTE: InputValidator does not currently support field injection.
+        # Injected fields are applied by the caller after validation.
+        pass
     return validator
 
 

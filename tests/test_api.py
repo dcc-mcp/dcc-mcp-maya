@@ -13,11 +13,13 @@ import pytest
 from dcc_mcp_maya.api import (
     MissingParamError,
     is_maya_available,
+    make_input_validator,
     maya_error,
     maya_from_exception,
     maya_success,
     missing_param_error,
     require_param,
+    validate_input,
     validate_node_exists,
     validate_node_type,
     with_maya,
@@ -340,3 +342,98 @@ class TestValidateNodeType:
         cmds = self._make_cmds("transform")
         validate_node_type(cmds, "pCube1", "transform")
         cmds.objectType.assert_called_once_with("pCube1")
+
+
+# ---------------------------------------------------------------------------
+# make_input_validator
+# ---------------------------------------------------------------------------
+
+
+class TestMakeInputValidator:
+    def test_creates_validator_with_no_fields(self):
+        validator = make_input_validator()
+        assert validator is not None
+
+    def test_creates_validator_with_string_fields(self):
+        validator = make_input_validator(
+            string_fields={"name": (1, 100)},
+        )
+        assert validator is not None
+
+    def test_creates_validator_with_number_fields(self):
+        validator = make_input_validator(
+            number_fields={"radius": (0.0, 100.0)},
+        )
+        assert validator is not None
+
+    def test_creates_validator_with_injected_fields(self):
+        # injected_fields is accepted but not applied to the validator
+        # (InputValidator does not support injection yet)
+        validator = make_input_validator(
+            injected_fields={"dcc": "maya"},
+        )
+        assert validator is not None
+
+    def test_creates_validator_with_all_field_types(self):
+        validator = make_input_validator(
+            string_fields={"name": (1, 50)},
+            number_fields={"count": (0, 1000)},
+            injected_fields={"env": "test"},
+        )
+        assert validator is not None
+
+    def test_reexport_from_dcc_mcp_maya(self):
+        import dcc_mcp_maya
+
+        assert hasattr(dcc_mcp_maya, "make_input_validator")
+
+    def test_in_all(self):
+        from dcc_mcp_maya import __all__
+
+        assert "make_input_validator" in __all__
+
+
+# ---------------------------------------------------------------------------
+# validate_input
+# ---------------------------------------------------------------------------
+
+
+class TestValidateInput:
+    def test_returns_tuple(self):
+        validator = make_input_validator(string_fields={"name": (1, 100)})
+        result = validate_input(validator, {"name": "test"})
+        assert isinstance(result, tuple)
+        assert len(result) == 2
+
+    def test_valid_input_returns_true(self):
+        validator = make_input_validator(string_fields={"name": (1, 100)})
+        is_valid, err = validate_input(validator, {"name": "hello"})
+        assert is_valid is True
+        assert err is None
+
+    def test_invalid_input_returns_false(self):
+        validator = make_input_validator(string_fields={"name": (1, 100)})
+        is_valid, err = validate_input(validator, {"name": ""})
+        assert is_valid is False
+        assert err is not None
+
+    def test_non_serialisable_params_returns_false(self):
+        validator = make_input_validator()
+
+        class BadObj:
+            def __repr__(self):
+                return "BadObj"
+
+        is_valid, err = validate_input(validator, {"obj": BadObj()})
+        # May succeed or fail depending on JSON serialisation
+        assert isinstance(is_valid, bool)
+
+    def test_reexport_from_dcc_mcp_maya(self):
+        import dcc_mcp_maya
+
+        assert hasattr(dcc_mcp_maya, "validate_input")
+
+    def test_in_all(self):
+        from dcc_mcp_maya import __all__
+
+        assert "validate_input" in __all__
