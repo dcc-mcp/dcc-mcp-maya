@@ -78,7 +78,10 @@ def _maya_available() -> bool:
 # ── Skills search path helpers ────────────────────────────────────────────────
 
 
-def _collect_skill_search_paths(extra_paths: Optional[List[str]] = None) -> List[str]:
+def _collect_skill_search_paths(
+    extra_paths: Optional[List[str]] = None,
+    include_bundled: bool = True,
+) -> List[str]:
     """Build the ordered skill search path list.
 
     Priority (highest first):
@@ -86,7 +89,15 @@ def _collect_skill_search_paths(extra_paths: Optional[List[str]] = None) -> List
     2. Built-in skills directory (``src/dcc_mcp_maya/skills/``)
     3. ``DCC_MCP_MAYA_SKILL_PATHS`` — Maya-specific env var (v0.12.12+)
     4. ``DCC_MCP_SKILL_PATHS`` — global fallback env var
-    5. Platform default skills dir (``get_skills_dir()``)
+    5. Bundled skills shipped with ``dcc-mcp-core`` (dcc-diagnostics, workflow, …)
+    6. Platform default skills dir (``get_skills_dir()``)
+
+    Args:
+        extra_paths: Additional directories to prepend (highest priority).
+        include_bundled: When ``True`` (default), automatically include the
+            general-purpose skills bundled inside ``dcc-mcp-core``
+            (``dcc-diagnostics``, ``workflow``, ``git-automation``, etc.).
+            Pass ``False`` to opt-out.
     """
     from dcc_mcp_core import get_app_skill_paths_from_env, get_skill_paths_from_env, get_skills_dir  # noqa: PLC0415
 
@@ -100,6 +111,15 @@ def _collect_skill_search_paths(extra_paths: Optional[List[str]] = None) -> List
 
     # Global fallback env var: DCC_MCP_SKILL_PATHS
     paths.extend(get_skill_paths_from_env())
+
+    # Bundled skills shipped with dcc-mcp-core (default ON, disable with include_bundled=False)
+    if include_bundled:
+        try:
+            from dcc_mcp_core.skill import get_bundled_skill_paths  # noqa: PLC0415
+
+            paths.extend(get_bundled_skill_paths(include_bundled=True))
+        except Exception:
+            pass
 
     default_dir = get_skills_dir()
     if default_dir and default_dir not in paths:
@@ -163,7 +183,11 @@ class MayaMcpServer:
         """
         return getattr(self._server, "_registry", None)
 
-    def register_builtin_actions(self, extra_skill_paths: Optional[List[str]] = None) -> "MayaMcpServer":
+    def register_builtin_actions(
+        self,
+        extra_skill_paths: Optional[List[str]] = None,
+        include_bundled: bool = True,
+    ) -> "MayaMcpServer":
         """Discover and load all built-in Maya skills into the server.
 
         Uses the dcc-mcp-core SkillCatalog API (v0.12.12+):
@@ -181,18 +205,24 @@ class MayaMcpServer:
         - Built-in ``skills/`` directory shipped with this package
         - ``DCC_MCP_MAYA_SKILL_PATHS`` environment variable (Maya-specific)
         - ``DCC_MCP_SKILL_PATHS`` environment variable (global fallback)
+        - Bundled skills inside ``dcc-mcp-core`` wheel (when ``include_bundled=True``)
         - Platform default skills directory
 
         Args:
             extra_skill_paths: Additional directories to scan for SKILL.md files.
+            include_bundled: When ``True`` (default), automatically include the
+                general-purpose skills bundled with ``dcc-mcp-core``
+                (``dcc-diagnostics``, ``workflow``, ``git-automation``, etc.).
+                Pass ``False`` to opt-out of bundled skills.
 
         Returns:
             ``self`` for fluent chaining::
 
                 server = MayaMcpServer().register_builtin_actions()
-                server = MayaMcpServer().register_builtin_actions(["/my/custom/skills"])
+                # Disable bundled core skills:
+                server = MayaMcpServer().register_builtin_actions(include_bundled=False)
         """
-        search_paths = _collect_skill_search_paths(extra_skill_paths)
+        search_paths = _collect_skill_search_paths(extra_skill_paths, include_bundled=include_bundled)
 
         count = self._server.discover(extra_paths=search_paths, dcc_name="maya")
         logger.debug("SkillCatalog discovered %d skill(s)", count)
@@ -587,6 +617,7 @@ def start_server(
     server_name: str = "maya-mcp",
     register_builtins: bool = True,
     extra_skill_paths: Optional[List[str]] = None,
+    include_bundled: bool = True,
 ) -> Any:
     """Start (or return the already-running) Maya MCP server.
 
@@ -599,6 +630,7 @@ def start_server(
     - Built-in ``skills/`` directory in this package
     - ``DCC_MCP_MAYA_SKILL_PATHS`` environment variable (Maya-specific, v0.12.12+)
     - ``DCC_MCP_SKILL_PATHS`` environment variable (global fallback)
+    - Bundled skills inside ``dcc-mcp-core`` wheel (when ``include_bundled=True``)
     - ``extra_skill_paths`` argument
 
     Args:
@@ -606,6 +638,10 @@ def start_server(
         server_name: Name shown in MCP ``initialize`` response.
         register_builtins: If ``True``, discovers and loads all built-in skills.
         extra_skill_paths: Additional directories to scan for ``SKILL.md`` files.
+        include_bundled: When ``True`` (default), automatically include the
+            general-purpose skills bundled with ``dcc-mcp-core``
+            (``dcc-diagnostics``, ``workflow``, ``git-automation``, etc.).
+            Pass ``False`` to opt-out.
 
     Returns:
         ``McpServerHandle`` with ``.mcp_url()``, ``.port``, ``.shutdown()``.
@@ -615,6 +651,9 @@ def start_server(
         import dcc_mcp_maya
         handle = dcc_mcp_maya.start_server(port=8765)
         print(handle.mcp_url())  # http://127.0.0.1:8765/mcp
+
+        # Disable bundled core skills:
+        handle = dcc_mcp_maya.start_server(include_bundled=False)
 
         # With custom skill paths:
         handle = dcc_mcp_maya.start_server(extra_skill_paths=["/studio/maya-skills"])
@@ -627,7 +666,10 @@ def start_server(
                 server_name=server_name,
             )
             if register_builtins:
-                _server_instance.register_builtin_actions(extra_skill_paths=extra_skill_paths)
+                _server_instance.register_builtin_actions(
+                    extra_skill_paths=extra_skill_paths,
+                    include_bundled=include_bundled,
+                )
         return _server_instance.start()
 
 
