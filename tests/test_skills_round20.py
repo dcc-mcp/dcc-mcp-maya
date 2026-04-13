@@ -68,20 +68,24 @@ class TestListObjects:
         mod = self._load()
         mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.ls.return_value = ["pSphere1", "pCube1"]
+        mock_cmds.objectType.return_value = "transform"
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             result = mod.list_objects()
         assert result["success"] is True
         assert result["context"]["count"] == 2
-        assert "pSphere1" in result["context"]["objects"]
+        # list_objects now returns SceneObject dicts (dag=True)
+        obj_names = [o["name"] for o in result["context"]["objects"]]
+        assert "pSphere1" in obj_names
 
     def test_list_by_type(self):
         mod = self._load()
         mock_maya, mock_cmds, _ = make_mock_maya()
         mock_cmds.ls.return_value = ["pSphereShape1"]
+        mock_cmds.objectType.return_value = "mesh"
         with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": mock_cmds}):
             result = mod.list_objects(object_type="mesh")
         assert result["success"] is True
-        mock_cmds.ls.assert_called_once_with(dag=True, type="mesh")
+        mock_cmds.ls.assert_called_once_with(dag=True, long=True, type="mesh")
 
     def test_list_empty_scene(self):
         mod = self._load()

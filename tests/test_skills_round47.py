@@ -11,11 +11,11 @@ Tests the new pipeline middleware feature:
 from __future__ import annotations
 
 # Import built-in modules
+import inspect
 import sys
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
-
 
 # ---------------------------------------------------------------------------
 # Helper: create a MayaMcpServer with mock dcc_mcp_core
@@ -197,25 +197,25 @@ class TestPipelineEnabledOnInit:
     def test_pipeline_has_logging(self, _mock_dcc_mcp_core):
         from dcc_mcp_maya.server import MayaMcpServer
 
-        srv = MayaMcpServer(port=0, enable_pipeline=True)
+        MayaMcpServer(port=0, enable_pipeline=True)
         _mock_dcc_mcp_core["pipeline"].add_logging.assert_called_once_with(log_params=True)
 
     def test_pipeline_has_timing(self, _mock_dcc_mcp_core):
         from dcc_mcp_maya.server import MayaMcpServer
 
-        srv = MayaMcpServer(port=0, enable_pipeline=True)
+        MayaMcpServer(port=0, enable_pipeline=True)
         _mock_dcc_mcp_core["pipeline"].add_timing.assert_called_once()
 
     def test_pipeline_has_audit(self, _mock_dcc_mcp_core):
         from dcc_mcp_maya.server import MayaMcpServer
 
-        srv = MayaMcpServer(port=0, enable_pipeline=True)
+        MayaMcpServer(port=0, enable_pipeline=True)
         _mock_dcc_mcp_core["pipeline"].add_audit.assert_called_once_with(record_params=True)
 
     def test_pipeline_no_rate_limit_by_default(self, _mock_dcc_mcp_core):
         from dcc_mcp_maya.server import MayaMcpServer
 
-        srv = MayaMcpServer(port=0, enable_pipeline=True)
+        MayaMcpServer(port=0, enable_pipeline=True)
         _mock_dcc_mcp_core["pipeline"].add_rate_limit.assert_not_called()
 
 
@@ -284,7 +284,7 @@ class TestPipelineQueries:
         from dcc_mcp_maya.server import MayaMcpServer
 
         srv = MayaMcpServer(port=0, enable_pipeline=True)
-        records = srv.audit_records(action_name="maya_scene__new_scene")
+        srv.audit_records(action_name="maya_scene__new_scene")
         _mock_dcc_mcp_core["audit"].records_for_action.assert_called_once_with(
             "maya_scene__new_scene",
         )
@@ -416,8 +416,6 @@ class TestPipelineStructural:
     def test_enable_pipeline_param_in_init(self, _mock_dcc_mcp_core):
         """Verify __init__ accepts enable_pipeline parameter."""
         from dcc_mcp_maya.server import MayaMcpServer
-
-        import inspect
 
         sig = inspect.signature(MayaMcpServer.__init__)
         assert "enable_pipeline" in sig.parameters

@@ -12,6 +12,17 @@ from typing import Optional
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import make_input_validator, validate_input
+
+# Pre-build validator for viewport capture parameters
+_CAPTURE_VALIDATOR = make_input_validator(
+    number_fields={
+        "width": (1, 8192),
+        "height": (1, 8192),
+        "frame": (-100000, 100000),
+    },
+)
+
 
 def capture_viewport(
     width: int = 1920,
@@ -24,13 +35,21 @@ def capture_viewport(
     PNG file and returns the image bytes as a Base64 string.
 
     Args:
-        width: Image width in pixels.  Default: 1920.
-        height: Image height in pixels.  Default: 1080.
+        width: Image width in pixels (1–8192).  Default: 1920.
+        height: Image height in pixels (1–8192).  Default: 1080.
         frame: Frame to capture.  Defaults to the current frame.
 
     Returns:
         ActionResultModel dict with ``context.image`` (base64 PNG string).
     """
+
+    # Validate dimensions
+    capture_params = {"width": width, "height": height}
+    if frame is not None:
+        capture_params["frame"] = frame
+    valid, err_msg = validate_input(_CAPTURE_VALIDATOR, capture_params)
+    if not valid:
+        return skill_error("Invalid capture parameters", err_msg)
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415

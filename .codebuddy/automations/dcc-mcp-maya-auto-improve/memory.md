@@ -898,6 +898,58 @@ Files migrated (25 individual scripts + scene_utils.py which already had top-lev
 4. GitHub Dependabot 安全漏洞（2 moderate on default branch）
 
 
+---
+
+## 2026-04-12 (Round 27 — ActionPipeline middleware integration)
+
+### State before this round
+- Branch: `auto-improve` (worktree at `G:/PycharmProjects/github/dcc-mcp-maya-auto-improve`)
+- Version: 0.2.6 (hard reset to origin/main)
+- Tests: 3001 passed, 6 skipped, 0 failures
+- dcc-mcp-core: v0.12.18 (ActionPipeline, SkillCatalog, create_skill_manager available)
+
+### Work done
+
+**1. ActionPipeline middleware integration in `server.py`**:
+- Added `enable_pipeline: bool = False` param to `MayaMcpServer.__init__`
+- Added `_init_pipeline()` — creates default middleware stack (logging, timing, audit)
+- Added `setup_pipeline()` fluent API — fine-grained middleware config (logging/timing/audit/rate-limit toggles)
+- Added `pipeline` / `audit_middleware` / `timing_middleware` properties
+- Added `audit_records(action_name=None)` and `last_elapsed_ms(action_name)` query methods
+- Added `enable_pipeline` param to `start_server()` module-level helper
+- Updated module docstring with pipeline usage examples
+
+**2. Test fixture fix — module cache issue**:
+- Root cause: `pip install -e` pointed to main repo (`dcc-mcp-maya`), not worktree (`dcc-mcp-maya-auto-improve`)
+- Fix: `pip install -e G:/PycharmProjects/github/dcc-mcp-maya-auto-improve` to repoint editable install
+- Fixture also improved: mock `dcc_mcp_core` FIRST, then evict all `dcc_mcp_maya*` cached modules
+
+**3. test_skills_round47.py — 32 tests across 7 test classes, all pass**:
+- TestPipelineDisabledByDefault (5): no pipeline/audit/timing by default, empty records/elapsed
+- TestPipelineEnabledOnInit (7): pipeline created, audit/timing middleware, logging/timing/audit calls, no rate-limit
+- TestSetupPipelineFluent (5): returns self, rate-limit, disable timing/audit/logging
+- TestPipelineQueries (5): audit_records all/filtered, last_elapsed_ms, exception handling
+- TestStartServerWithPipeline (2): enable_pipeline=True/False in start_server()
+- TestSetupPipelineAfterStart (1): setup_pipeline after start() is no-op
+- TestPipelineStructural (7): hasattr checks + enable_pipeline in __init__ signature
+
+### State after this round
+- Tests: 3033 passed (+32), 6 skipped, 0 failures
+- Committed: `9c9d231 feat(server): add ActionPipeline middleware integration`
+- Pushed: `origin/auto-improve` updated (force-with-lease)
+- pip editable install now points to worktree
+
+### Key lesson
+When using git worktrees, `pip install -e` must be run from the worktree directory, not the main repo. Otherwise Python imports will load code from the wrong location regardless of `sys.modules` manipulation.
+
+### Next priorities
+1. SandboxContext integration (if dcc-mcp-core supports it)
+2. InputValidator extension for common Maya param patterns
+3. Remaining cmds.objExists migration (80 → 0)
+4. Batch add `tools:` arrays to remaining ~60 SKILL.md files
+5. E2E test improvements
+
+
 
 
 
