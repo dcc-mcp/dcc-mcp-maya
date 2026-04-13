@@ -214,6 +214,13 @@ class MayaMcpServer:
             failed,
             count,
         )
+
+        # Register diagnostic IPC handlers and set DCC_MCP_IPC_ADDRESS so that
+        # skill subprocesses (dcc-diagnostics, workflow) can call back into this
+        # server to retrieve live audit log, metrics, and dispatch relays.
+        from dcc_mcp_maya.diagnostics import register_diagnostic_handlers  # noqa: PLC0415
+
+        register_diagnostic_handlers(self._server)
         return self
 
     # ── skill discovery helpers ───────────────────────────────────────────────
