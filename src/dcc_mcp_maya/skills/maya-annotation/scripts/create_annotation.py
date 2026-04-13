@@ -9,6 +9,8 @@ from typing import List, Optional
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 
 def create_annotation(
     text: str,
@@ -39,11 +41,10 @@ def create_annotation(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if target_object and not cmds.objExists(target_object):
-            return skill_error(
-                "Object not found: {}".format(target_object),
-                "'{}' does not exist in the scene".format(target_object),
-            )
+        if target_object:
+            err = validate_node_exists(cmds, target_object)
+            if err:
+                return err
 
         pos = position if position and len(position) == 3 else [0.0, 1.0, 0.0]
         annotation_node = None

@@ -5,7 +5,12 @@ import sys
 from unittest.mock import MagicMock, patch
 
 # Import local modules
+from dcc_mcp_maya import api as _maya_api
 from tests.conftest import load_skill_script, make_mock_maya
+
+# Ensure dcc_mcp_maya.api is importable by skill scripts that use validate_node_exists
+if "dcc_mcp_maya.api" not in sys.modules:
+    sys.modules["dcc_mcp_maya.api"] = _maya_api
 
 # ===========================================================================
 # maya-expressions

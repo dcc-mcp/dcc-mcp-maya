@@ -60,11 +60,10 @@ def create_ncloth(
                 "'{}' is not a polygon mesh or transform".format(mesh),
             )
 
-        if nucleus and not cmds.objExists(nucleus):
-            return skill_error(
-                "Nucleus node not found: {}".format(nucleus),
-                "'{}' does not exist in the scene".format(nucleus),
-            )
+        if nucleus:
+            err = validate_node_exists(cmds, nucleus)
+            if err:
+                return err
 
         # Select the mesh and create nCloth
         cmds.select(mesh, replace=True)

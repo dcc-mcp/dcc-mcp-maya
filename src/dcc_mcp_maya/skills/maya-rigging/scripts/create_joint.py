@@ -9,6 +9,8 @@ from typing import List, Optional
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 
 def create_joint(
     name: Optional[str] = None,
@@ -37,11 +39,10 @@ def create_joint(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if parent and not cmds.objExists(parent):
-            return skill_error(
-                "Parent not found: {}".format(parent),
-                "'{}' does not exist in the scene".format(parent),
-            )
+        if parent:
+            err = validate_node_exists(cmds, parent)
+            if err:
+                return err
 
         pos = position or [0.0, 0.0, 0.0]
         if len(pos) != 3:

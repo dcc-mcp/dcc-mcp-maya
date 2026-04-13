@@ -9,6 +9,8 @@ from typing import Optional, Union
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 _VALID_UNIT_CONVERSIONS = {"none", "angularOnly", "all"}
 
 
@@ -57,11 +59,10 @@ def create_expression(
         import maya.cmds as cmds  # noqa: PLC0415
 
         # Validate object existence if specified
-        if obj and not cmds.objExists(obj):
-            return skill_error(
-                "Object '{}' not found".format(obj),
-                "Ensure the object exists in the scene before creating the expression.",
-            )
+        if obj:
+            err = validate_node_exists(cmds, obj)
+            if err:
+                return err
 
         kwargs = {"string": expression}
         if unit_conversion:

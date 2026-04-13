@@ -17,7 +17,7 @@ from __future__ import annotations
 import importlib.util
 import sys
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 from unittest.mock import MagicMock, patch
 
 # Import third-party modules
@@ -57,7 +57,7 @@ def _make_maya_env(**cmds_overrides: Any):
     return maya_mock, cmds_mock, modules
 
 
-def _run_func(skill_dir: str, func_name: str, cmds_overrides: "dict | None" = None, **kwargs: Any) -> dict:
+def _run_func(skill_dir: str, func_name: str, cmds_overrides: Optional[dict] = None, **kwargs: Any) -> dict:
     """Load a skill script, inject Maya mocks, and call its main function."""
     cmds_overrides = cmds_overrides or {}
     _, cmds_mock, modules = _make_maya_env(**cmds_overrides)

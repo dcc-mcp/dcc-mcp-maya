@@ -14,6 +14,12 @@ import sys
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+# Ensure dcc_mcp_maya.api is importable by skill scripts that use validate_node_exists
+from dcc_mcp_maya import api as _maya_api
+
+if "dcc_mcp_maya.api" not in sys.modules:
+    sys.modules["dcc_mcp_maya.api"] = _maya_api
+
 _SKILLS_ROOT = Path(__file__).parent.parent / "src" / "dcc_mcp_maya" / "skills"
 
 _MOD_COUNTER = [0]
