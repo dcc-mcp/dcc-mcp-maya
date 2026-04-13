@@ -110,21 +110,25 @@ def _handle_get_audit_log(params_json: str) -> str:
         serialized = []
         for entry in entries[:limit]:
             try:
-                serialized.append({
-                    "action": entry.action,
-                    "outcome": entry.outcome,
-                    "timestamp_ms": getattr(entry, "timestamp_ms", None),
-                    "details": getattr(entry, "details", None),
-                })
+                serialized.append(
+                    {
+                        "action": entry.action,
+                        "outcome": entry.outcome,
+                        "timestamp_ms": getattr(entry, "timestamp_ms", None),
+                        "details": getattr(entry, "details", None),
+                    }
+                )
             except Exception:
                 serialized.append(str(entry))
 
-        return json.dumps({
-            "success": True,
-            "total_entries": total,
-            "entries": serialized,
-            "source": "maya-ipc",
-        })
+        return json.dumps(
+            {
+                "success": True,
+                "total_entries": total,
+                "entries": serialized,
+                "source": "maya-ipc",
+            }
+        )
     except Exception as exc:
         logger.warning("get_audit_log handler error: %s", exc)
         return json.dumps({"success": False, "message": str(exc)})
@@ -150,11 +154,13 @@ def _handle_get_action_metrics(params_json: str) -> str:
         else:
             metrics_list = [_metric_to_dict(m) for m in recorder.all_metrics()]
 
-        return json.dumps({
-            "success": True,
-            "metrics": metrics_list,
-            "source": "maya-ipc",
-        })
+        return json.dumps(
+            {
+                "success": True,
+                "metrics": metrics_list,
+                "source": "maya-ipc",
+            }
+        )
     except Exception as exc:
         logger.warning("get_action_metrics handler error: %s", exc)
         return json.dumps({"success": False, "message": str(exc)})

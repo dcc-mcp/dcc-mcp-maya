@@ -157,7 +157,7 @@ class TestStartServerExtraSkillPaths:
                 )
             srv_mod.stop_server()
 
-        mock_reg.assert_called_once_with(extra_skill_paths=[tmp])
+        mock_reg.assert_called_once_with(extra_skill_paths=[tmp], include_bundled=True)
 
     def test_start_server_register_builtins_false_skips_register(self):
         """start_server with register_builtins=False must not call register_builtin_actions."""
