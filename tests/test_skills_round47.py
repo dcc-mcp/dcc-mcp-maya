@@ -7,6 +7,7 @@ Tests the new pipeline middleware feature:
 - start_server(enable_pipeline=True)
 - Structural checks (pipeline property, middleware names)
 """
+
 # Import future modules
 from __future__ import annotations
 
@@ -240,7 +241,8 @@ class TestSetupPipelineFluent:
         srv = MayaMcpServer(port=0)
         srv.setup_pipeline(rate_limit=True, rate_limit_max_calls=50, rate_limit_window_ms=500)
         _mock_dcc_mcp_core["pipeline"].add_rate_limit.assert_called_once_with(
-            max_calls=50, window_ms=500,
+            max_calls=50,
+            window_ms=500,
         )
 
     def test_disable_timing(self, _mock_dcc_mcp_core):

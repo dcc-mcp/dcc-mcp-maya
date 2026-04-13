@@ -951,6 +951,61 @@ When using git worktrees, `pip install -e` must be run from the worktree directo
 
 
 
+---
+
+## 2026-04-13 (Round 28 — cmds.objExists migration + Python 3.7 compat + test fixes)
+
+### State before this round
+- Branch: `auto-improve` (worktree at `G:/PycharmProjects/github/dcc-mcp-maya-auto-improve`)
+- Tests: 3068 passed, 6 skipped, 0 failures
+- cmds.objExists remaining: 47 across 47 files (10 error-return guard patterns)
+- packaging/assemble_mod.py: uses lowercase generics (list[Path], dict[str, str], Path | None)
+- tests/test_skills_round26.py: `"dict | None"` string annotation (Python 3.7 incompatible)
+
+### Work done
+
+**1. Migrated 8 `cmds.objExists` error-return guards → `validate_node_exists`**:
+- maya-cache/list_geometry_caches: mesh guard
+- maya-annotation/create_annotation: target_object guard
+- maya-expressions/list_expressions: obj_filter guard
+- maya-expressions/create_expression: obj guard
+- maya-rigging/create_joint: parent guard
+- maya-dynamics/create_nrigid: nucleus guard (file already had import for mesh)
+- maya-dynamics/create_ncloth: nucleus guard (file already had import for mesh)
+- maya-scripting/expressions: object_name guard (file already had import)
+
+**2. Fixed `packaging/assemble_mod.py` Python 3.7 compat**:
+- Removed unused `from typing import Dict, List, Optional, Tuple` (already has `from __future__ import annotations`)
+- All type annotations use lowercase generics consistently (list[str], dict[str, str], Path | None)
+
+**3. Fixed `tests/test_skills_round26.py` type annotation**:
+- `"dict | None"` → `Optional[dict]` (added `Optional` to typing imports)
+
+**4. Fixed 7 test failures caused by validate_node_exists migration**:
+- Root cause: skill scripts now import `validate_node_exists` from `dcc_mcp_maya.api`, but test `patch.dict(sys.modules)` didn't include `dcc_mcp_maya` / `dcc_mcp_maya.api`
+- Fix: Added `from dcc_mcp_maya import api as _maya_api` guard to conftest.py + 6 test files
+- Ensures `dcc_mcp_maya.api` is always in `sys.modules` before skill scripts are loaded
+- Fixed I001 import sorting via `ruff --fix`
+- Added `# noqa: E402` for after-constant imports in test_skills_round29.py
+
+**5. cmds.objExists remaining count**: 47 → 39 (8 migrated)
+   - Remaining 39 are mostly legitimate: positive guards, attribute probes, list comprehensions, inline checks
+
+### State after this round
+- Tests: 3068 passed, 6 skipped, 0 failures
+- ruff: All checks passed
+- Committed: `055005a refactor(skills): migrate 8 cmds.objExists guards to validate_node_exists; fix Python 3.7 compat in assemble_mod.py; fix test_skills_round26 type annotation`
+- Pushed: `origin/auto-improve` updated (force-with-lease)
+
+### Next priorities
+1. Remaining cmds.objExists migration (~39, mostly complex patterns)
+2. Batch add `tools:` arrays to remaining ~60 SKILL.md files
+3. E2E test improvements
+4. SandboxContext integration
+5. Continue iteration loop
+
+
+
 
 
 

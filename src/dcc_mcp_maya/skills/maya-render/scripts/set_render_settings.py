@@ -47,7 +47,12 @@ def set_render_settings(
     """
 
     # Validate numeric parameter ranges
-    for param_name, value in [("width", width), ("height", height), ("start_frame", start_frame), ("end_frame", end_frame)]:
+    for param_name, value in [
+        ("width", width),
+        ("height", height),
+        ("start_frame", start_frame),
+        ("end_frame", end_frame),
+    ]:
         if value is not None:
             min_val, max_val = _NUMERIC_RANGES[param_name]
             if not isinstance(value, (int, float)) or value < min_val or value > max_val:

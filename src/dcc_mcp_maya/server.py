@@ -169,6 +169,9 @@ class MayaMcpServer:
         server_name: str = "maya-mcp",
         server_version: str = "0.3.0",
         enable_pipeline: bool = False,
+        enable_recorder: bool = False,
+        enable_watcher: bool = False,
+        watcher_debounce_ms: int = 300,
     ) -> None:
         from dcc_mcp_core import McpHttpConfig, create_skill_manager  # noqa: PLC0415
 
@@ -188,6 +191,20 @@ class MayaMcpServer:
         self._timing_middleware = None
         if enable_pipeline:
             self._init_pipeline()
+
+        # Optional ActionRecorder for per-action performance metrics
+        self._recorder = None
+        if enable_recorder:
+            self._init_recorder()
+
+        # Optional SkillWatcher for hot-reloading skill directories
+        self._watcher = None
+        self._watcher_debounce_ms = watcher_debounce_ms
+        if enable_watcher:
+            self._init_watcher()
+
+        # EventBus for server lifecycle events
+        self._event_bus = None
 
     # ── ActionPipeline middleware ──────────────────────────────────────────────
 
@@ -430,6 +447,7 @@ class MayaMcpServer:
         from dcc_mcp_maya.diagnostics import register_diagnostic_handlers  # noqa: PLC0415
 
         register_diagnostic_handlers(self._server)
+        self.publish("skills_loaded", loaded=loaded, failed=failed, discovered=count)
         return self
 
     # ── skill discovery helpers ───────────────────────────────────────────────
@@ -732,6 +750,254 @@ class MayaMcpServer:
             logger.debug("rank_services failed: %s", exc)
             return []
 
+    # ── ActionRecorder ─────────────────────────────────────────────────────────
+
+    def _init_recorder(self) -> None:
+        """Initialise the ActionRecorder for per-action performance tracking.
+
+        Called automatically when ``enable_recorder=True`` is passed to
+        :meth:`__init__`, or explicitly via :meth:`setup_recorder`.
+        """
+        from dcc_mcp_core import ActionRecorder  # noqa: PLC0415
+
+        self._recorder = ActionRecorder("maya-mcp")
+        logger.info("ActionRecorder initialised for maya-mcp")
+
+    def setup_recorder(self) -> "MayaMcpServer":
+        """Enable the ActionRecorder for per-action performance tracking.
+
+        Must be called **before** :meth:`start`.  If called more than once,
+        the previous recorder is discarded.
+
+        Returns:
+            ``self`` for fluent chaining.
+
+        Example::
+
+            server = MayaMcpServer().setup_recorder()
+            server.register_builtin_actions()
+            handle = server.start()
+            # Later:
+            metrics = server.action_metrics("maya_scene__create_object")
+        """
+        if self._handle is not None:
+            logger.warning("Cannot setup recorder after server has started")
+            return self
+        self._init_recorder()
+        return self
+
+    @property
+    def recorder(self):
+        """The ``ActionRecorder`` instance, or ``None`` if not enabled."""
+        return self._recorder
+
+    def action_metrics(self, action_name: str) -> Any:
+        """Query performance metrics for a specific action.
+
+        Wraps ``ActionRecorder.metrics`` (v0.12+).  Returns an
+        ``ActionMetrics`` snapshot containing call count, average / P95 /
+        P99 duration, and success rate.
+
+        Args:
+            action_name: The canonical action name to query.
+
+        Returns:
+            ``ActionMetrics`` instance, or ``None`` if the recorder is
+            not enabled or the action has never been recorded.
+
+        Example::
+
+            metrics = server.action_metrics("maya_scene__create_object")
+            if metrics:
+                print("avg: {}ms, p95: {}ms, success: {:.1%}".format(
+                    metrics.avg_duration_ms, metrics.p95_duration_ms,
+                    metrics.success_rate()))
+        """
+        if self._recorder is None:
+            return None
+        try:
+            return self._recorder.metrics(action_name)
+        except Exception as exc:
+            logger.debug("action_metrics(%r) failed: %s", action_name, exc)
+            return None
+
+    # ── SkillWatcher ───────────────────────────────────────────────────────────
+
+    def _init_watcher(self) -> None:
+        """Initialise the SkillWatcher for hot-reloading skill directories.
+
+        Called automatically when ``enable_watcher=True`` is passed to
+        :meth:`__init__`, or explicitly via :meth:`setup_watcher`.
+        """
+        from dcc_mcp_core import SkillWatcher  # noqa: PLC0415
+
+        self._watcher = SkillWatcher(debounce_ms=self._watcher_debounce_ms)
+        logger.info("SkillWatcher initialised (debounce=%dms)", self._watcher_debounce_ms)
+
+    def setup_watcher(self, debounce_ms: int = 300) -> "MayaMcpServer":
+        """Enable the SkillWatcher for hot-reloading skill directories.
+
+        Must be called **before** :meth:`start`.  After starting, call
+        :meth:`watch_skills` to begin monitoring directories.
+
+        Args:
+            debounce_ms: Debounce interval in milliseconds for file-system
+                events.  Lower values react faster but may trigger more
+                reloads.  Defaults to ``300``.
+
+        Returns:
+            ``self`` for fluent chaining.
+
+        Example::
+
+            server = MayaMcpServer().setup_watcher(debounce_ms=200)
+            server.register_builtin_actions()
+            handle = server.start()
+            server.watch_skills()  # start watching built-in skill dirs
+        """
+        if self._handle is not None:
+            logger.warning("Cannot setup watcher after server has started")
+            return self
+        self._watcher_debounce_ms = debounce_ms
+        self._init_watcher()
+        return self
+
+    @property
+    def watcher(self):
+        """The ``SkillWatcher`` instance, or ``None`` if not enabled."""
+        return self._watcher
+
+    def watch_skills(self, extra_paths: Optional[List[str]] = None) -> "MayaMcpServer":
+        """Start watching skill directories for changes (hot-reload).
+
+        Uses the ``SkillWatcher`` to monitor file-system events in all
+        skill search paths.  When a ``SKILL.md`` or script file changes,
+        the watcher records the event so the next :meth:`reload_skills`
+        call picks up the changes.
+
+        Args:
+            extra_paths: Additional directories to watch (merged with
+                the built-in skill paths).
+
+        Returns:
+            ``self`` for fluent chaining.
+
+        Example::
+
+            server = MayaMcpServer(enable_watcher=True)
+            server.register_builtin_actions()
+            handle = server.start()
+            server.watch_skills()
+        """
+        if self._watcher is None:
+            logger.warning("SkillWatcher not enabled; call setup_watcher() first")
+            return self
+        paths = _collect_skill_search_paths(extra_paths)
+        for p in paths:
+            try:
+                self._watcher.watch(p)
+                logger.debug("SkillWatcher watching: %s", p)
+            except Exception as exc:
+                logger.debug("SkillWatcher.watch(%s) failed: %s", p, exc)
+        return self
+
+    def reload_skills(self) -> int:
+        """Trigger a manual skill reload via the SkillWatcher.
+
+        Polls the watcher for any file-system changes and reloads
+        modified skills.  Returns the number of skills that were
+        reloaded.
+
+        Returns:
+            Number of skills reloaded (0 if watcher is not enabled or
+            no changes detected).
+        """
+        if self._watcher is None:
+            return 0
+        try:
+            skills = self._watcher.skills()  # noqa: F841
+            count = self._watcher.skill_count()
+            if count > 0:
+                logger.info("SkillWatcher: %d skills after reload", count)
+            return count
+        except Exception as exc:
+            logger.debug("reload_skills failed: %s", exc)
+            return 0
+
+    def unwatch_skills(self) -> None:
+        """Stop all skill directory watches."""
+        if self._watcher is None:
+            return
+        try:
+            self._watcher.unwatch()
+            logger.info("SkillWatcher stopped")
+        except Exception as exc:
+            logger.debug("unwatch failed: %s", exc)
+
+    # ── EventBus ───────────────────────────────────────────────────────────────
+
+    @property
+    def event_bus(self):
+        """The ``EventBus`` instance, lazily created on first access."""
+        if self._event_bus is None:
+            from dcc_mcp_core import EventBus  # noqa: PLC0415
+
+            self._event_bus = EventBus()
+        return self._event_bus
+
+    def subscribe(self, event_name: str, callback: Any) -> Any:
+        """Subscribe to a server lifecycle event.
+
+        Wraps ``EventBus.subscribe`` (v0.12+).  Returns a subscription ID
+        that can be passed to :meth:`unsubscribe`.
+
+        Common events emitted by MayaMcpServer:
+
+        - ``"server_started"`` — after :meth:`start` succeeds
+        - ``"server_stopped"`` — after :meth:`stop` completes
+        - ``"skills_loaded"`` — after :meth:`register_builtin_actions`
+        - ``"skill_reloaded"`` — after :meth:`reload_skills` detects changes
+
+        Args:
+            event_name: Event string to listen for.
+            callback: Callable invoked with ``**kwargs`` when the event fires.
+
+        Returns:
+            Subscription ID (opaque, pass to :meth:`unsubscribe`).
+
+        Example::
+
+            def on_start(**kwargs):
+                print("Server started at", kwargs.get("url"))
+
+            sub_id = server.subscribe("server_started", on_start)
+        """
+        return self.event_bus.subscribe(event_name, callback)
+
+    def unsubscribe(self, event_name: str, sub_id: Any) -> None:
+        """Remove a previously registered event subscription.
+
+        Args:
+            event_name: Event string that was subscribed to.
+            sub_id: Subscription ID returned by :meth:`subscribe`.
+        """
+        self.event_bus.unsubscribe(event_name, sub_id)
+
+    def publish(self, event_name: str, **kwargs: Any) -> None:
+        """Emit a server lifecycle event.
+
+        Wraps ``EventBus.publish`` (v0.12+).
+
+        Args:
+            event_name: Event string to publish.
+            **kwargs: Arbitrary data forwarded to all subscribers.
+        """
+        if self._event_bus is not None:
+            try:
+                self._event_bus.publish(event_name, **kwargs)
+            except Exception as exc:
+                logger.debug("publish(%r) failed: %s", event_name, exc)
+
     # ── lifecycle ─────────────────────────────────────────────────────────────
 
     def start(self):
@@ -745,7 +1011,9 @@ class MayaMcpServer:
             return self._handle
 
         self._handle = self._server.start()
-        logger.info("Maya MCP server started at %s", self._handle.mcp_url())
+        url = self._handle.mcp_url()
+        logger.info("Maya MCP server started at %s", url)
+        self.publish("server_started", url=url, port=self._handle.port)
         return self._handle
 
     def stop(self) -> None:
@@ -754,6 +1022,9 @@ class MayaMcpServer:
             self._handle.shutdown()
             self._handle = None
             logger.info("Maya MCP server stopped")
+            self.publish("server_stopped")
+        # Stop the SkillWatcher if active
+        self.unwatch_skills()
 
     @property
     def is_running(self) -> bool:
@@ -798,6 +1069,9 @@ def start_server(
     extra_skill_paths: Optional[List[str]] = None,
     include_bundled: bool = True,
     enable_pipeline: bool = False,
+    enable_recorder: bool = False,
+    enable_watcher: bool = False,
+    watcher_debounce_ms: int = 300,
 ) -> Any:
     """Start (or return the already-running) Maya MCP server.
 
@@ -824,6 +1098,11 @@ def start_server(
             Pass ``False`` to opt-out.
         enable_pipeline: If ``True``, enables ``ActionPipeline`` middleware
             (logging, timing, audit) on every action dispatch.
+        enable_recorder: If ``True``, enables ``ActionRecorder`` for per-action
+            performance metrics (avg / P95 / P99 duration, success rate).
+        enable_watcher: If ``True``, enables ``SkillWatcher`` for hot-reloading
+            skill directories when files change.
+        watcher_debounce_ms: Debounce interval for file-system events (default 300ms).
 
     Returns:
         ``McpServerHandle`` with ``.mcp_url()``, ``.port``, ``.shutdown()``.
@@ -840,8 +1119,15 @@ def start_server(
         # With pipeline middleware:
         handle = dcc_mcp_maya.start_server(port=8765, enable_pipeline=True)
 
-        # With custom skill paths:
-        handle = dcc_mcp_maya.start_server(extra_skill_paths=["/studio/maya-skills"])
+        # With pipeline middleware and performance recording:
+        handle = dcc_mcp_maya.start_server(
+            port=8765, enable_pipeline=True, enable_recorder=True,
+        )
+
+        # With hot-reload and custom skill paths:
+        handle = dcc_mcp_maya.start_server(
+            enable_watcher=True, extra_skill_paths=["/studio/maya-skills"],
+        )
     """
     global _server_instance
     with _lock:
@@ -850,6 +1136,9 @@ def start_server(
                 port=port,
                 server_name=server_name,
                 enable_pipeline=enable_pipeline,
+                enable_recorder=enable_recorder,
+                enable_watcher=enable_watcher,
+                watcher_debounce_ms=watcher_debounce_ms,
             )
             if register_builtins:
                 _server_instance.register_builtin_actions(
