@@ -428,6 +428,16 @@ class TestValidateInput:
         # May succeed or fail depending on JSON serialisation
         assert isinstance(is_valid, bool)
 
+    def test_validation_exception_returns_false(self):
+        """When validate() raises an unexpected exception, returns (False, msg)."""
+        validator = make_input_validator(string_fields={"name": (1, 100)})
+        # Use a mock validator that raises on validate
+        mock_validator = MagicMock()
+        mock_validator.validate.side_effect = RuntimeError("internal crash")
+        is_valid, err = validate_input(mock_validator, {"name": "ok"})
+        assert is_valid is False
+        assert "Validation error" in err
+
     def test_reexport_from_dcc_mcp_maya(self):
         import dcc_mcp_maya
 
