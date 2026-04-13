@@ -71,6 +71,56 @@ The server starts automatically when the plugin loads.
 |---|---|---|
 | `DCC_MCP_MAYA_PORT` | `8765` | TCP port for the MCP server |
 | `DCC_MCP_MAYA_SERVER_NAME` | `maya-mcp` | Name shown in MCP initialize |
+| `DCC_MCP_MAYA_SKILL_PATHS` | _(none)_ | Extra skill directories (semicolon-separated on Windows, colon on Unix) |
+| `DCC_MCP_SKILL_PATHS` | _(none)_ | Global fallback skill directories for all DCC adapters |
+
+### Bundled Skills (Zero Configuration)
+
+`dcc-mcp-maya` automatically loads the **bundled general-purpose skills** shipped
+inside the `dcc-mcp-core` wheel — no path configuration required.
+
+| Skill | Tools | Notes |
+|-------|-------|-------|
+| `dcc-diagnostics` | `screenshot`, `audit_log`, `action_metrics`, `process_status` | Observability & debugging |
+| `workflow` | `run_chain` | Multi-step action chaining |
+| `git-automation` | `repo_stats`, `changelog_gen` | Git analysis |
+| `ffmpeg-media` | `convert`, `probe`, `thumbnail` | Requires `ffmpeg` on PATH |
+| `imagemagick-tools` | `resize`, `composite` | Requires `ImageMagick` on PATH |
+
+To **opt-out** of bundled skills:
+
+```python
+# Disable all bundled core skills
+handle = dcc_mcp_maya.start_server(include_bundled=False)
+
+# Or fine-grained control
+server = MayaMcpServer()
+server.register_builtin_actions(include_bundled=False)
+```
+
+**Skill search-path priority** (highest → lowest):
+
+1. `extra_skill_paths` argument
+2. Built-in Maya skills (shipped in this package)
+3. `DCC_MCP_MAYA_SKILL_PATHS` environment variable
+4. `DCC_MCP_SKILL_PATHS` environment variable
+5. Bundled `dcc-mcp-core` skills ← loaded by default
+6. Platform default skills directory
+
+### Diagnostic IPC Actions
+
+When `register_builtin_actions()` is called, three IPC callback actions are
+automatically registered so the `dcc-diagnostics` skill can retrieve **live
+runtime data** from the running Maya process:
+
+| Action | Returns |
+|--------|---------|
+| `get_audit_log` | `SandboxContext` audit entries |
+| `get_action_metrics` | `ActionRecorder` performance counters |
+| `dispatch_action` | Relay for `workflow__run_chain` |
+
+The `DCC_MCP_IPC_ADDRESS` environment variable is set automatically so skill
+subprocesses can connect back without any manual configuration.
 
 ## Available MCP Tools
 
