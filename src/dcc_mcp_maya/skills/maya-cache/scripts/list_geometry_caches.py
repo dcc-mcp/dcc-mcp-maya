@@ -9,6 +9,8 @@ from typing import Optional
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 
 def list_geometry_caches(mesh: Optional[str] = None) -> dict:
     """List geometry cache nodes in the scene.
@@ -25,11 +27,10 @@ def list_geometry_caches(mesh: Optional[str] = None) -> dict:
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if mesh and not cmds.objExists(mesh):
-            return skill_error(
-                "Mesh not found: {}".format(mesh),
-                "'{}' does not exist in the scene".format(mesh),
-            )
+        if mesh:
+            err = validate_node_exists(cmds, mesh)
+            if err:
+                return err
 
         all_cache_nodes = cmds.ls(type="cacheFile") or []
 

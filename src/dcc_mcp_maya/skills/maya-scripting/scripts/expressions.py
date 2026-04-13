@@ -114,11 +114,10 @@ def list_expressions(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if object_name and not cmds.objExists(object_name):
-            return skill_error(
-                "Object not found: {}".format(object_name),
-                "'{}' does not exist in the scene".format(object_name),
-            )
+        if object_name:
+            err = validate_node_exists(cmds, object_name)
+            if err:
+                return err
 
         all_exprs = cmds.ls(type="expression") or []
 

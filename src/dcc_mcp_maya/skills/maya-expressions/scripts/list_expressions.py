@@ -9,6 +9,8 @@ from typing import Optional
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import validate_node_exists
+
 
 def list_expressions(
     object: Optional[str] = None,
@@ -32,11 +34,10 @@ def list_expressions(
         import maya.cmds as cmds  # noqa: PLC0415
 
         # Validate object existence if filter specified
-        if obj_filter and not cmds.objExists(obj_filter):
-            return skill_error(
-                "Object '{}' not found".format(obj_filter),
-                "Ensure the object exists in the scene.",
-            )
+        if obj_filter:
+            err = validate_node_exists(cmds, obj_filter)
+            if err:
+                return err
 
         all_expr = cmds.ls(type="expression") or []
         results = []
