@@ -518,3 +518,72 @@ class TestGetBundledSkillPathsIntegration:
                         skill_mod.get_bundled_skill_paths = original
                     else:
                         delattr(skill_mod, "get_bundled_skill_paths")
+
+
+# ---------------------------------------------------------------------------
+# api.py: serialize_action_result / deserialize_action_result
+# ---------------------------------------------------------------------------
+
+
+class TestSerializeActionResult:
+    """Test serialize_action_result and deserialize_action_result helpers."""
+
+    def test_serialize_json_roundtrip(self):
+        from dcc_mcp_maya.api import deserialize_action_result, serialize_action_result
+
+        result = {"success": True, "message": "test", "context": {}}
+        payload = serialize_action_result(result, fmt="json")
+        restored = deserialize_action_result(payload, fmt="json")
+        assert restored["success"] is True
+        assert restored["message"] == "test"
+
+    def test_serialize_msgpack_roundtrip(self):
+        from dcc_mcp_maya.api import deserialize_action_result, serialize_action_result
+
+        result = {"success": False, "message": "error", "error": "detail"}
+        payload = serialize_action_result(result, fmt="msgpack")
+        restored = deserialize_action_result(payload, fmt="msgpack")
+        assert restored["success"] is False
+        assert restored["error"] == "detail"
+
+    def test_serialize_fallback_on_exception(self):
+        from dcc_mcp_maya.api import serialize_action_result
+
+        result = {"success": True, "message": "ok"}
+        with patch(
+            "dcc_mcp_core.serialize_result",
+            side_effect=RuntimeError("boom"),
+        ):
+            payload = serialize_action_result(result, fmt="json")
+        # Should fallback to plain JSON
+        import json
+
+        restored = json.loads(payload)
+        assert restored["success"] is True
+
+    def test_deserialize_fallback_on_exception(self):
+        import json
+
+        from dcc_mcp_maya.api import deserialize_action_result
+
+        payload = json.dumps({"success": True, "message": "ok"})
+        with patch(
+            "dcc_mcp_core.deserialize_result",
+            side_effect=RuntimeError("boom"),
+        ):
+            restored = deserialize_action_result(payload, fmt="json")
+        assert restored["success"] is True
+
+    def test_serialize_in_api_all(self):
+        from dcc_mcp_maya.api import __all__
+
+        assert "serialize_action_result" in __all__
+        assert "deserialize_action_result" in __all__
+
+    def test_serialize_importable_from_top_level(self):
+        import dcc_mcp_maya
+
+        assert hasattr(dcc_mcp_maya, "serialize_action_result")
+        assert hasattr(dcc_mcp_maya, "deserialize_action_result")
+        assert "serialize_action_result" in dcc_mcp_maya.__all__
+        assert "deserialize_action_result" in dcc_mcp_maya.__all__

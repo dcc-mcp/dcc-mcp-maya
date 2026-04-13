@@ -40,6 +40,7 @@ from dcc_mcp_maya.api import (
     build_context_dict,
     create_sandbox_context,
     create_sandbox_policy,
+    deserialize_action_result,
     ensure_valid_name,
     get_cmds,
     get_param_list,
@@ -57,6 +58,7 @@ from dcc_mcp_maya.api import (
     require_cmds,
     require_param,
     scene_object_from_node,
+    serialize_action_result,
     validate_input,
     validate_node_exists,
     validate_node_type,
@@ -103,6 +105,9 @@ __all__ = [
     # Sandbox helpers
     "create_sandbox_policy",
     "create_sandbox_context",
+    # Serialization helpers
+    "serialize_action_result",
+    "deserialize_action_result",
     # DCC capabilities
     "maya_capabilities",
 ]

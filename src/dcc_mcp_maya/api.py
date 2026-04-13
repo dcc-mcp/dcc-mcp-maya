@@ -951,6 +951,77 @@ def make_scene_object(
 
 
 # ---------------------------------------------------------------------------
+# Serialization helpers
+# ---------------------------------------------------------------------------
+
+
+def serialize_action_result(result: Dict[str, Any], fmt: str = "json") -> str:
+    """Serialize an action result dict to a transport-safe string.
+
+    Wraps ``dcc_mcp_core.serialize_result`` so skill scripts can produce
+    compact binary representations (e.g. MsgPack) for high-throughput
+    IPC without importing dcc_mcp_core directly.
+
+    Args:
+        result: An ActionResultModel dict (typically from :func:`maya_success`
+            or :func:`maya_error`).
+        fmt: Serialization format.  ``"json"`` (default) returns a UTF-8
+            JSON string.  ``"msgpack"`` returns a hex-encoded MessagePack
+            binary representation.
+
+    Returns:
+        Serialized string (JSON or hex-encoded MsgPack).
+
+    Example::
+
+        result = maya_success("Created sphere", object_name="pSphere1")
+        payload = serialize_action_result(result)  # JSON string
+    """
+    import json  # noqa: PLC0415
+
+    from dcc_mcp_core import SerializeFormat, serialize_result  # noqa: PLC0415
+
+    fmt_enum = SerializeFormat.MsgPack if fmt == "msgpack" else SerializeFormat.Json
+    try:
+        result_json = json.dumps(result)
+        return serialize_result(result_json, fmt_enum)
+    except Exception as exc:
+        logger.debug("serialize_action_result failed: %s", exc)
+        return json.dumps(result)  # fallback to plain JSON
+
+
+def deserialize_action_result(payload: str, fmt: str = "json") -> Dict[str, Any]:
+    """Deserialize a transport string back to an action result dict.
+
+    Wraps ``dcc_mcp_core.deserialize_result`` for symmetry with
+    :func:`serialize_action_result`.
+
+    Args:
+        payload: Serialized string (JSON or hex-encoded MsgPack).
+        fmt: Serialization format matching the one used for serialization.
+
+    Returns:
+        Deserialized ActionResultModel dict.
+
+    Example::
+
+        result = deserialize_action_result(payload)
+        assert result["success"] is True
+    """
+    import json  # noqa: PLC0415
+
+    from dcc_mcp_core import SerializeFormat, deserialize_result  # noqa: PLC0415
+
+    fmt_enum = SerializeFormat.MsgPack if fmt == "msgpack" else SerializeFormat.Json
+    try:
+        result_json = deserialize_result(payload, fmt_enum)
+        return json.loads(result_json)
+    except Exception as exc:
+        logger.debug("deserialize_action_result failed: %s", exc)
+        return json.loads(payload)  # fallback to plain JSON
+
+
+# ---------------------------------------------------------------------------
 # Convenience re-exports so callers only need one import
 # ---------------------------------------------------------------------------
 
@@ -987,6 +1058,9 @@ __all__ = [
     # Sandbox helpers
     "create_sandbox_policy",
     "create_sandbox_context",
+    # Serialization helpers
+    "serialize_action_result",
+    "deserialize_action_result",
     # DCC capabilities
     "maya_capabilities",
 ]
