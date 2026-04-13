@@ -38,10 +38,14 @@ from dcc_mcp_maya.api import (
     batch_validate_nodes,
     bounding_box_from_node,
     build_context_dict,
+    create_sandbox_context,
+    create_sandbox_policy,
     ensure_valid_name,
     get_cmds,
     get_param_list,
     is_maya_available,
+    make_input_validator,
+    make_scene_object,
     maya_capabilities,
     maya_error,
     maya_from_exception,
@@ -53,6 +57,7 @@ from dcc_mcp_maya.api import (
     require_cmds,
     require_param,
     scene_object_from_node,
+    validate_input,
     validate_node_exists,
     validate_node_type,
     with_maya,
@@ -91,6 +96,13 @@ __all__ = [
     "scene_object_from_node",
     "object_transform_from_node",
     "bounding_box_from_node",
+    "make_scene_object",
+    # Input validation helpers
+    "make_input_validator",
+    "validate_input",
+    # Sandbox helpers
+    "create_sandbox_policy",
+    "create_sandbox_context",
     # DCC capabilities
     "maya_capabilities",
 ]

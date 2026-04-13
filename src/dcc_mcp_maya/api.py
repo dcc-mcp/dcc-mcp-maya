@@ -716,6 +716,240 @@ def bounding_box_from_node(cmds: Any, node_name: str) -> Dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
+# Input validation helpers
+# ---------------------------------------------------------------------------
+
+
+def make_input_validator(
+    string_fields: Optional[Dict[str, Any]] = None,
+    number_fields: Optional[Dict[str, Any]] = None,
+    injected_fields: Optional[Dict[str, Any]] = None,
+) -> Any:
+    """Create an ``InputValidator`` from a simple dict specification.
+
+    Wraps ``dcc_mcp_core.InputValidator`` with a Python-friendly interface.
+
+    Args:
+        string_fields: Mapping of field name → ``(min_len, max_len)`` tuple.
+            Fields listed here must be non-empty strings whose length falls
+            within the specified range.
+        number_fields: Mapping of field name → ``(min_value, max_value)``
+            tuple.  Fields listed here must be numeric and fall within the
+            inclusive range.
+        injected_fields: Mapping of field name → default value.  These fields
+            are auto-populated when absent from the input.
+
+    Returns:
+        A configured ``InputValidator`` instance.
+
+    Example::
+
+        validator = make_input_validator(
+            string_fields={"name": (1, 256)},
+            number_fields={"radius": (0.01, 10000)},
+        )
+    """
+    from dcc_mcp_core import InputValidator  # noqa: PLC0415
+
+    validator = InputValidator()
+    if string_fields:
+        for field_name, (min_len, max_len) in string_fields.items():
+            validator.require_string(field_name, min_length=min_len, max_length=max_len)
+    if number_fields:
+        for field_name, (min_val, max_val) in number_fields.items():
+            validator.require_number(field_name, min_value=min_val, max_value=max_val)
+    if injected_fields:
+        for field_name, default_val in injected_fields.items():
+            validator.inject(field_name, default_val)
+    return validator
+
+
+def validate_input(validator: Any, params: Dict[str, Any]) -> Any:
+    """Validate *params* using the given *validator*.
+
+    Serialises *params* to JSON and delegates to
+    ``InputValidator.validate(params_json)``.
+
+    Args:
+        validator: An ``InputValidator`` instance (e.g. from
+            :func:`make_input_validator`).
+        params: The parameter dict to validate.
+
+    Returns:
+        ``(bool, err_msg_or_None)`` — a 2-tuple where the first element is
+        ``True`` when validation passes and ``False`` otherwise.  On failure
+        the second element contains the error message string.
+    """
+    import json  # noqa: PLC0415
+
+    try:
+        params_json = json.dumps(params)
+        is_valid, err_msg = validator.validate(params_json)
+        return (is_valid, err_msg)
+    except (TypeError, ValueError) as exc:
+        return (False, "Failed to serialise parameters: {}".format(str(exc)))
+    except Exception as exc:
+        return (False, "Validation error: {}".format(str(exc)))
+
+
+# ---------------------------------------------------------------------------
+# Sandbox helpers
+# ---------------------------------------------------------------------------
+
+
+def create_sandbox_policy(
+    allowed_actions: Optional[List[str]] = None,
+    denied_actions: Optional[List[str]] = None,
+    read_only: bool = False,
+    timeout_ms: Optional[int] = None,
+    max_actions: Optional[int] = None,
+    allowed_paths: Optional[List[str]] = None,
+) -> Any:
+    """Create a ``SandboxPolicy`` for secure skill execution.
+
+    Wraps ``dcc_mcp_core.SandboxPolicy`` with a simpler Python-friendly
+    interface so skill scripts can define execution constraints without
+    needing to know the Rust-backed API details.
+
+    Args:
+        allowed_actions: If given, restrict execution to **only** these
+            action names (whitelist).  When ``None``, all actions are
+            permitted unless explicitly denied.
+        denied_actions: Action names that are always blocked (blacklist).
+        read_only: If ``True``, the sandbox prevents any scene-modifying
+            operations.
+        timeout_ms: Maximum execution time in milliseconds.  ``None`` means
+            no timeout.
+        max_actions: Cap on the number of actions that can be executed in a
+            single session.  ``None`` means unlimited.
+        allowed_paths: Directory paths that the sandbox is allowed to access
+            on the file system.
+
+    Returns:
+        A configured ``SandboxPolicy`` instance.
+
+    Example::
+
+        policy = create_sandbox_policy(
+            allowed_actions=["get_scene_info", "list_objects"],
+            timeout_ms=5000,
+        )
+    """
+    from dcc_mcp_core import SandboxPolicy  # noqa: PLC0415
+
+    policy = SandboxPolicy()
+    if allowed_actions is not None:
+        policy.allow_actions(allowed_actions)
+    if denied_actions is not None:
+        policy.deny_actions(denied_actions)
+    if read_only:
+        policy.set_read_only(True)
+    if timeout_ms is not None:
+        policy.set_timeout_ms(timeout_ms)
+    if max_actions is not None:
+        policy.set_max_actions(max_actions)
+    if allowed_paths is not None:
+        policy.allow_paths(allowed_paths)
+    return policy
+
+
+def create_sandbox_context(
+    allowed_actions: Optional[List[str]] = None,
+    denied_actions: Optional[List[str]] = None,
+    read_only: bool = False,
+    timeout_ms: Optional[int] = None,
+    max_actions: Optional[int] = None,
+    allowed_paths: Optional[List[str]] = None,
+    actor: Optional[str] = None,
+) -> Any:
+    """Create a ``SandboxContext`` for secure action execution.
+
+    Combines :func:`create_sandbox_policy` and
+    ``dcc_mcp_core.SandboxContext`` into a one-shot factory.
+
+    Args:
+        allowed_actions: Whitelist of action names.
+        denied_actions: Blacklist of action names.
+        read_only: Prevent scene modifications.
+        timeout_ms: Maximum execution time in milliseconds.
+        max_actions: Cap on actions per session.
+        allowed_paths: Directory paths the sandbox can access.
+        actor: Identity string attached to audit entries.
+
+    Returns:
+        A configured ``SandboxContext`` instance.
+
+    Example::
+
+        ctx = create_sandbox_context(
+            allowed_actions=["get_scene_info", "list_objects"],
+            actor="maya-agent-v1",
+        )
+        result_json = ctx.execute_json("get_scene_info", "{}")
+    """
+    from dcc_mcp_core import SandboxContext  # noqa: PLC0415
+
+    policy = create_sandbox_policy(
+        allowed_actions=allowed_actions,
+        denied_actions=denied_actions,
+        read_only=read_only,
+        timeout_ms=timeout_ms,
+        max_actions=max_actions,
+        allowed_paths=allowed_paths,
+    )
+    ctx = SandboxContext(policy)
+    if actor is not None:
+        ctx.set_actor(actor)
+    return ctx
+
+
+# ---------------------------------------------------------------------------
+# SceneObject factory (typed instance, not just dict)
+# ---------------------------------------------------------------------------
+
+
+def make_scene_object(
+    cmds: Any,
+    node_name: str,
+    include_transform: bool = False,
+) -> Dict[str, Any]:
+    """Build a ``SceneObject``-compatible dict with optional transform.
+
+    Combines :func:`scene_object_from_node` and
+    :func:`object_transform_from_node` into a single call that
+    produces a richer scene object description suitable for cross-DCC
+    exchange.
+
+    Args:
+        cmds: The ``maya.cmds`` module.
+        node_name: DAG path of the node (long name preferred).
+        include_transform: If ``True``, also include ``translate``,
+            ``rotate``, and ``scale`` in the returned dict.
+
+    Returns:
+        SceneObject-compatible dict, optionally extended with TRS data.
+
+    Example::
+
+        obj = make_scene_object(cmds, "|group1|pSphere1", include_transform=True)
+        # {"name": "pSphere1", "long_name": "|group1|pSphere1",
+        #  "object_type": "transform", "parent": "|group1",
+        #  "visible": True, "metadata": {},
+        #  "translate": [0.0, 1.0, 0.0], ...}
+    """
+    obj = scene_object_from_node(cmds, node_name)
+    if include_transform:
+        try:
+            xform = object_transform_from_node(cmds, node_name)
+            obj["translate"] = xform["translate"]
+            obj["rotate"] = xform["rotate"]
+            obj["scale"] = xform["scale"]
+        except Exception:
+            pass
+    return obj
+
+
+# ---------------------------------------------------------------------------
 # Convenience re-exports so callers only need one import
 # ---------------------------------------------------------------------------
 
@@ -745,6 +979,13 @@ __all__ = [
     "scene_object_from_node",
     "object_transform_from_node",
     "bounding_box_from_node",
+    "make_scene_object",
+    # Input validation helpers
+    "make_input_validator",
+    "validate_input",
+    # Sandbox helpers
+    "create_sandbox_policy",
+    "create_sandbox_context",
     # DCC capabilities
     "maya_capabilities",
 ]

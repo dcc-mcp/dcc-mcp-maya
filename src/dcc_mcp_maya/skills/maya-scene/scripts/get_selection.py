@@ -6,23 +6,38 @@ from __future__ import annotations
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import make_scene_object
 
-def get_selection() -> dict:
+
+def get_selection(include_transform: bool = False) -> dict:
     """Return the current Maya selection.
 
+    Returns :class:`~dcc_mcp_core.SceneObject`-compatible dicts for
+    cross-DCC interoperability.
+
+    Args:
+        include_transform: If True, include translate/rotate/scale in
+            each object entry.
+
     Returns:
-        ActionResultModel dict with ``context.selection`` list.
+        ActionResultModel dict with ``context.selection`` list and
+        ``context.count``.
     """
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        selection = cmds.ls(selection=True) or []
+        selected = cmds.ls(selection=True, long=True) or []
+        result = []
+        for long_name in selected:
+            obj = make_scene_object(cmds, long_name, include_transform=include_transform)
+            result.append(obj)
+
         return skill_success(
-            f"{len(selection)} objects selected",
-            selection=selection,
-            count=len(selection),
-            prompt="Check the result with list_scene or use related actions to continue.",
+            "{} objects selected".format(len(result)),
+            selection=result,
+            count=len(result),
+            prompt="Use set_transform to modify or assign_material to shade selected objects.",
         )
     except ImportError:
         return skill_error("Maya not available", "maya.cmds could not be imported")

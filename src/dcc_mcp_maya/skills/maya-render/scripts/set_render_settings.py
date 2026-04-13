@@ -9,6 +9,17 @@ from typing import Optional
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+_VALID_RENDERERS = ("mayaSoftware", "mayaHardware2", "arnold", "vray", "redshift", "renderman")
+_VALID_IMAGE_FORMATS = ("png", "exr", "jpg", "jpeg", "tiff", "tga", "bmp", "iff", "sgi", "rla")
+
+# Range constraints for numeric parameters
+_NUMERIC_RANGES = {
+    "width": (1, 32768),
+    "height": (1, 32768),
+    "start_frame": (-100000, 100000),
+    "end_frame": (-100000, 100000),
+}
+
 
 def set_render_settings(
     width: Optional[int] = None,
@@ -22,8 +33,8 @@ def set_render_settings(
     """Set Maya render settings.
 
     Args:
-        width: Render width in pixels.
-        height: Render height in pixels.
+        width: Render width in pixels (1–32768).
+        height: Render height in pixels (1–32768).
         start_frame: Animation start frame.
         end_frame: Animation end frame.
         renderer: Render engine name (e.g. ``"mayaSoftware"``, ``"mayaHardware2"``,
@@ -34,6 +45,38 @@ def set_render_settings(
     Returns:
         ActionResultModel dict with applied settings.
     """
+
+    # Validate numeric parameter ranges
+    for param_name, value in [("width", width), ("height", height), ("start_frame", start_frame), ("end_frame", end_frame)]:
+        if value is not None:
+            min_val, max_val = _NUMERIC_RANGES[param_name]
+            if not isinstance(value, (int, float)) or value < min_val or value > max_val:
+                return skill_error(
+                    "Invalid render parameters",
+                    "'{}' must be between {} and {}".format(param_name, min_val, max_val),
+                )
+
+    # Validate frame range order
+    if start_frame is not None and end_frame is not None:
+        if start_frame > end_frame:
+            return skill_error(
+                "Invalid frame range",
+                "start_frame ({}) must not exceed end_frame ({})".format(start_frame, end_frame),
+            )
+
+    # Validate renderer name
+    if renderer is not None and renderer not in _VALID_RENDERERS:
+        return skill_error(
+            "Unknown renderer: {}".format(renderer),
+            "Supported renderers: {}".format(", ".join(sorted(_VALID_RENDERERS))),
+        )
+
+    # Validate image format
+    if image_format is not None and image_format.lower() not in _VALID_IMAGE_FORMATS:
+        return skill_error(
+            "Unknown image format: {}".format(image_format),
+            "Supported formats: {}".format(", ".join(sorted(_VALID_IMAGE_FORMATS))),
+        )
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415

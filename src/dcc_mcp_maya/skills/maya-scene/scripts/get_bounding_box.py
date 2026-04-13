@@ -6,13 +6,14 @@ from __future__ import annotations
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
-from dcc_mcp_maya.api import validate_node_exists
-
-# Import built-in modules
+from dcc_mcp_maya.api import bounding_box_from_node, validate_node_exists
 
 
 def get_bounding_box(object_name: str) -> dict:
     """Query the world-space bounding box of an object.
+
+    Uses :func:`dcc_mcp_maya.api.bounding_box_from_node` to produce
+    a ``BoundingBox``-compatible dict for cross-DCC exchange.
 
     Args:
         object_name: Name of the object to query.
@@ -29,20 +30,13 @@ def get_bounding_box(object_name: str) -> dict:
         if err:
             return err
 
-        bb = cmds.exactWorldBoundingBox(object_name)
-        # bb = [xmin, ymin, zmin, xmax, ymax, zmax]
-        bb_min = [bb[0], bb[1], bb[2]]
-        bb_max = [bb[3], bb[4], bb[5]]
-        center = [(bb[0] + bb[3]) / 2.0, (bb[1] + bb[4]) / 2.0, (bb[2] + bb[5]) / 2.0]
-        size = [bb[3] - bb[0], bb[4] - bb[1], bb[5] - bb[2]]
+        bb = bounding_box_from_node(cmds, object_name)
         return skill_success(
             "Bounding box of '{}'".format(object_name),
             object_name=object_name,
-            min=bb_min,
-            max=bb_max,
-            center=center,
-            size=size,
-            prompt="Check the result with list_scene or use related actions to continue.",
+            bounding_box=bb,
+            **bb,
+            prompt="Use get_transform for position or set_transform to move the object.",
         )
     except ImportError:
         return skill_error("Maya not available", "maya.cmds could not be imported")

@@ -9,6 +9,18 @@ from typing import Optional
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya.api import make_input_validator, validate_input
+
+# Pre-build validator for fluid container parameters
+_FLUID_VALIDATOR = make_input_validator(
+    number_fields={
+        "size_x": (0.01, 10000),
+        "size_y": (0.01, 10000),
+        "size_z": (0.01, 10000),
+        "resolution": (1, 200),
+    },
+)
+
 
 def create_fluid_container(
     name: Optional[str] = None,
@@ -24,12 +36,21 @@ def create_fluid_container(
         size_x: X dimension of the fluid grid. Default ``10.0``.
         size_y: Y dimension of the fluid grid. Default ``10.0``.
         size_z: Z dimension of the fluid grid. Default ``10.0``.
-        resolution: Voxel resolution along each axis. Default ``10``.
+        resolution: Voxel resolution along each axis (1–200). Default ``10``.
 
     Returns:
         ActionResultModel dict with ``context.fluid_transform`` and
         ``context.fluid_shape``.
     """
+
+    # Validate numeric parameters
+    valid, err_msg = validate_input(
+        _FLUID_VALIDATOR,
+        {"size_x": size_x, "size_y": size_y, "size_z": size_z, "resolution": resolution},
+    )
+    if not valid:
+        return skill_error("Invalid fluid container parameters", err_msg)
+
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 

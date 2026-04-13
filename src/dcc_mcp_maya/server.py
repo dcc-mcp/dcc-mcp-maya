@@ -170,7 +170,7 @@ class MayaMcpServer:
         server_version: str = "0.3.0",
         enable_pipeline: bool = False,
     ) -> None:
-        from dcc_mcp_core import ActionDispatcher, ActionPipeline, ActionRegistry, McpHttpConfig, create_skill_manager  # noqa: PLC0415
+        from dcc_mcp_core import McpHttpConfig, create_skill_manager  # noqa: PLC0415
 
         self._config = McpHttpConfig(
             port=port,
