@@ -111,8 +111,8 @@ if not exist "%USERSETUP_DEST%" (
         echo     def _load_dcc_mcp_maya^^^(^^^): >> "%USERSETUP_DEST%"
         echo         try: >> "%USERSETUP_DEST%"
         echo             import maya.cmds as cmds >> "%USERSETUP_DEST%"
-        echo             if not cmds.pluginInfo^^^("dcc_mcp_maya", query=True, loaded=True^^^): >> "%USERSETUP_DEST%"
-        echo                 cmds.loadPlugin^^^("dcc_mcp_maya", quiet=True^^^) >> "%USERSETUP_DEST%"
+        echo             if not cmds.pluginInfo^^^("dcc_mcp_maya_plugin", query=True, loaded=True^^^): >> "%USERSETUP_DEST%"
+        echo                 cmds.loadPlugin^^^("dcc_mcp_maya_plugin", quiet=True^^^) >> "%USERSETUP_DEST%"
         echo         except Exception: >> "%USERSETUP_DEST%"
         echo             pass >> "%USERSETUP_DEST%"
         echo     maya.utils.executeDeferred^^^(_load_dcc_mcp_maya^^^) >> "%USERSETUP_DEST%"
@@ -128,7 +128,7 @@ echo =========================================
 echo  Installation complete!
 echo.
 echo  Module:   %MOD_DEST%\dcc-mcp-maya
-echo  Plugin:   %MOD_DEST%\dcc-mcp-maya\plug-ins\dcc_mcp_maya.py
+echo  Plugin:   %MOD_DEST%\dcc-mcp-maya\plug-ins\dcc_mcp_maya_plugin.py
 echo.
 
 REM -- Post-install verification --
