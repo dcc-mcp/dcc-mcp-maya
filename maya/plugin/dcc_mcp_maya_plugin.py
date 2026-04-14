@@ -1,6 +1,12 @@
-"""dcc_mcp_maya — Maya plugin entry point.
+"""dcc_mcp_maya_plugin — Maya plugin entry point.
 
 Loads the MCP Streamable HTTP server inside Maya.
+
+**Plugin file naming**: This file is intentionally named ``dcc_mcp_maya_plugin.py``
+(not ``dcc_mcp_maya.py``) to avoid a Python namespace collision.  Maya adds the
+``plug-ins/`` directory to ``sys.path``, so a file named ``dcc_mcp_maya.py``
+would shadow the ``dcc_mcp_maya`` Python package, breaking all imports inside
+the plugin itself.
 
 Installation
 ------------
@@ -10,7 +16,13 @@ Load it via **Window > Settings/Preferences > Plug-in Manager**.
 Alternatively, add to ``userSetup.py``::
 
     import maya.cmds as cmds
-    cmds.loadPlugin("dcc_mcp_maya")
+    cmds.loadPlugin("dcc_mcp_maya_plugin")
+
+Standalone / batch mode
+-----------------------
+The plugin is fully usable in ``mayapy`` / Maya standalone.  Menu creation is
+skipped automatically when ``MayaWindow`` is not available (i.e. non-interactive
+sessions).
 
 Configuration
 -------------
@@ -21,6 +33,13 @@ Environment variables (optional, read at plugin load time):
 
 ``DCC_MCP_MAYA_SERVER_NAME``
     Name advertised in the MCP ``initialize`` response.  Default: ``"maya-mcp"``.
+
+``DCC_MCP_GATEWAY_PORT``
+    Gateway competition port.  ``0`` (default) disables gateway participation.
+    Set to ``9765`` to join the multi-DCC auto-gateway.
+
+``DCC_MCP_REGISTRY_DIR``
+    Directory for the shared ``FileRegistry`` JSON.  Defaults to OS temp dir.
 """
 
 # Import future modules
@@ -104,6 +123,16 @@ VERSION = _get_version()
 _handle = None
 _menu_name = "DccMcpMenu"
 
+# ── standalone detection ──────────────────────────────────────────────────────
+
+
+def _is_interactive() -> bool:
+    """Return True when Maya is running in interactive (GUI) mode."""
+    try:
+        return bool(cmds.about(batch=True) is False or not cmds.about(batch=True))
+    except Exception:
+        return False
+
 
 # ── plugin API version declaration ──────────────────────────────────────────
 
@@ -128,7 +157,8 @@ def initializePlugin(plugin):
     """Called by Maya when the plugin is loaded."""
     om.MFnPlugin(plugin, VENDOR, VERSION)
     try:
-        _add_menu()
+        if _is_interactive():
+            _add_menu()
         _start()
         logger.info("dcc-mcp-maya plugin v%s loaded — %s", VERSION, _server_url())
     except Exception as exc:
@@ -141,7 +171,8 @@ def uninitializePlugin(plugin):
     om.MFnPlugin(plugin)
     try:
         _stop()
-        _remove_menu()
+        if _is_interactive():
+            _remove_menu()
         logger.info("dcc-mcp-maya plugin unloaded")
     except Exception as exc:
         logger.warning("dcc-mcp-maya cleanup error: %s", exc)
@@ -157,8 +188,33 @@ def _start() -> None:
 
         port = int(os.environ.get("DCC_MCP_MAYA_PORT", "8765"))
         server_name = os.environ.get("DCC_MCP_MAYA_SERVER_NAME", "maya-mcp")
-        _handle = dcc_mcp_maya.start_server(port=port, server_name=server_name)
-        logger.info("MCP server started at %s", _handle.mcp_url())
+        # Gateway support: read env vars; explicit 0 disables gateway
+        gateway_port_str = os.environ.get("DCC_MCP_GATEWAY_PORT", "0")
+        gateway_port = int(gateway_port_str) if gateway_port_str.isdigit() else 0
+        registry_dir = os.environ.get("DCC_MCP_REGISTRY_DIR") or None
+        # Detect Maya version for registry metadata
+        try:
+            dcc_version = str(cmds.about(version=True))
+        except Exception:
+            dcc_version = None
+
+        _handle = dcc_mcp_maya.start_server(
+            port=port,
+            server_name=server_name,
+            gateway_port=gateway_port if gateway_port > 0 else None,
+            registry_dir=registry_dir,
+            dcc_version=dcc_version,
+        )
+        if gateway_port > 0:
+            import dcc_mcp_maya as _pkg  # noqa: PLC0415
+
+            gw = _pkg._server_instance  # noqa: SLF001
+            if gw and getattr(gw, "is_gateway", False):
+                logger.info("MCP server started at %s [GATEWAY]", _handle.mcp_url())
+            else:
+                logger.info("MCP server started at %s [instance, gateway=%d]", _handle.mcp_url(), gateway_port)
+        else:
+            logger.info("MCP server started at %s", _handle.mcp_url())
     except Exception as exc:
         logger.error("Failed to start MCP server: %s", exc)
         raise

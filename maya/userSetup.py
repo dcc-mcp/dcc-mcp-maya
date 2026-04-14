@@ -96,8 +96,8 @@ def _load_dcc_mcp_maya():
 
         _setup_module_paths()
 
-        if not cmds.pluginInfo("dcc_mcp_maya", query=True, loaded=True):
-            cmds.loadPlugin("dcc_mcp_maya", quiet=True)
+        if not cmds.pluginInfo("dcc_mcp_maya_plugin", query=True, loaded=True):
+            cmds.loadPlugin("dcc_mcp_maya_plugin", quiet=True)
             logger.info("dcc-mcp-maya plugin loaded via userSetup.py")
     except Exception as exc:
         logger.warning("dcc-mcp-maya auto-load failed: %s", exc)

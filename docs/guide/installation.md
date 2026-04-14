@@ -31,7 +31,7 @@ mayapy -c "import dcc_mcp_maya; print(dcc_mcp_maya.__version__)"
 
 Copy the plugin file to a directory on `MAYA_PLUG_IN_PATH`, then load it through the Plug-in Manager.
 
-1. Copy `maya/plugin/dcc_mcp_maya.py` to your Maya plugins folder, e.g.:
+1. Copy `maya/plugin/dcc_mcp_maya_plugin.py` to your Maya plugins folder, e.g.:
    - Windows: `%USERPROFILE%\Documents\maya\2024\plug-ins\`
    - macOS: `~/Library/Preferences/Autodesk/maya/2024/plug-ins/`
 
