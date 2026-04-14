@@ -90,10 +90,22 @@ def _setup_module_paths() -> None:
         break
 
 
+def _apply_default_env() -> None:
+    """Set dcc-mcp-maya defaults only if the user has not overridden them.
+
+    - ``DCC_MCP_MAYA_PORT=0``        OS-assigned port avoids conflicts when
+                                     multiple Maya versions run simultaneously.
+    - ``DCC_MCP_GATEWAY_PORT=9765``  Enable auto-gateway by default.
+    """
+    os.environ.setdefault("DCC_MCP_MAYA_PORT", "0")
+    os.environ.setdefault("DCC_MCP_GATEWAY_PORT", "9765")
+
+
 def _load_dcc_mcp_maya():
     try:
         import maya.cmds as cmds
 
+        _apply_default_env()
         _setup_module_paths()
 
         if not cmds.pluginInfo("dcc_mcp_maya_plugin", query=True, loaded=True):
