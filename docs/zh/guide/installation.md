@@ -31,7 +31,7 @@ mayapy -c "import dcc_mcp_maya; print(dcc_mcp_maya.__version__)"
 
 将插件文件复制到 `MAYA_PLUG_IN_PATH` 中的某个目录，然后通过插件管理器加载。
 
-1. 将 `maya/plugin/dcc_mcp_maya.py` 复制到 Maya 插件目录，例如：
+1. 将 `maya/plugin/dcc_mcp_maya_plugin.py` 复制到 Maya 插件目录，例如：
    - Windows：`%USERPROFILE%\Documents\maya\2024\plug-ins\`
    - macOS：`~/Library/Preferences/Autodesk/maya/2024/plug-ins/`
 

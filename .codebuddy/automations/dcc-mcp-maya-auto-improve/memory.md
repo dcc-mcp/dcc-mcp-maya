@@ -424,6 +424,61 @@ No more empty skill dirs.
 
 ---
 
+## 2026-04-12 (Round 24 — DccCapabilities module + get_frame_range skill)
+
+### State before this round
+- Branch: `main`
+- Tests: 2906 passed, 6 skipped (2 failures: test_round41 port conflict with 8765)
+- dcc-mcp-core: v0.12.7+, new APIs include DccCapabilities, ObjectTransform, SceneObject, FrameRange
+- All skill dirs populated; api.py had scene_object_from_node, object_transform_from_node
+
+### Work done
+
+**1. Bug fix: test_skills_round41.py port conflict**
+- `TestBindAndRegisterVersionAutoDetect::test_bind_and_register_auto_version_calls_about` + `*_uses_about_return` were using default port 8765 which was already in use on the dev machine
+- Fixed: assigned unique ports 18822 and 18823
+
+**2. New module: `src/dcc_mcp_maya/capabilities.py`**
+- `maya_capabilities()` — factory returning `DccCapabilities(scene_manager=True, transform=True, hierarchy=True, selection=True, render_capture=True, snapshot=True, undo_redo=True, file_operations=True, has_embedded_python=True, progress_reporting=True, scene_info=True)`
+- `MAYA_CAPABILITIES_DICT` — pre-computed plain dict (no dcc_mcp_core import needed)
+
+**3. `server.py` — `MayaMcpServer.get_capabilities()` method**
+- Returns `DccCapabilities` instance via `maya_capabilities()` factory
+- Works before `start()` is called; no side effects
+
+**4. `api.py` — added `maya_capabilities` to `__all__` + imported from capabilities.py**
+
+**5. `__init__.py` — added `maya_capabilities` to imports and `__all__`**
+
+**6. New skill: `maya-animation/scripts/get_frame_range.py`**
+- `get_frame_range()` → returns `frame_range` dict with `start/end/fps/current`
+- Maps Maya time unit strings (film=24, pal=25, ntsc=30, show=48, palf=50, ntscf=60) + custom `Xfps` parsing
+- Uses `skill_entry` decorator, has `prompt=`
+
+**7. `test_skills_round44.py` — 47 tests, all pass**:
+- TestMayaCapabilitiesFactory (10): DccCapabilities type, all flag assertions
+- TestMayaCapabilitiesDict (3): constant existence, key consistency
+- TestServerGetCapabilities (5): get_capabilities() on server before/after start
+- TestPublicReexports (5): importable from init/api, in __all__
+- TestGetFrameRangeHappyPath (10): all fps units, schema keys, prompt
+- TestGetFrameRangeEdgeCases (8): exception handling, all fps mappings
+- TestGetFrameRangeStructural (6): file exists, main callable, no legacy run(params)
+
+### State after this round
+- Tests: 2953 passed (+47), 6 skipped, 0 failures
+- ruff: All checks passed
+- Committed: `e6f9c2a feat(capabilities): add DccCapabilities module, server.get_capabilities(), get_frame_range skill; fix test_round41 port conflict; add test_skills_round44 (47 tests)`
+- Pushed: `origin/main` updated
+
+### Next priorities
+1. Investigate and fix Dependabot 2 moderate dev-dep vulnerabilities (needs user authorization)
+2. Add `FrameRange` structured output to more skills (query_scene_time_info, get_session_info)
+3. Add `SceneObject` structured output to list_objects / get_selection
+4. Consider adding `get_scene_objects` skill returning List[SceneObject] for cross-DCC scene exchange
+
+
+---
+
 ## 2026-04-11 (Round 10 — E2E infrastructure + Round 23 edge-case tests)
 
 ### State before this round
@@ -822,86 +877,188 @@ Files migrated (25 individual scripts + scene_utils.py which already had top-lev
 - Pushed: `origin/feat/skill-api-improvements` updated
 
 
----
-
-## 2026-04-12 (Round 19 — 100% coverage milestone)
-
-### State before this round
-- Branch: `feat/skill-lint-checker` (up to date with origin/main)
-- Tests: 2303 passed, 5 skipped (baseline)
-- Coverage: 98% total (api.py 97% missing lines 212-214, 228-230; server.py 99% missing line 164)
-
-### Work done
-
-**test_skills_round33.py — 44 new tests, all pass**:
-- TestRequireCmds (3): context manager yield / ImportError path / callable check
-- TestGetCmds (3): return value / ImportError path / callable check
-- TestEnsureValidName (8): valid / empty / whitespace / None / False / param name / default param
-- TestBuildContextDict (5): excludes None / keeps falsy / all-None / no-None / empty
-- TestSceneObjectFromNode (6): top-level / nested short name / parent / visibility=False / exception defaults True / no-pipe name
-- TestObjectTransformFromNode (4): basic / zero / float types / negative
-- TestBoundingBoxFromNode (6): basic / center / size / float types / assert call / asymmetric
-- TestServerRegistryProperty (2): no _registry → None / has _registry → returns it
-- TestApiPublicReexportRound33 (7): all new helpers callable
-
-### State after this round
-- Tests: 2347 passed (+44), 5 skipped, 0 failures
-- Coverage: **100%** total (api.py 100%, server.py 100%) — milestone achieved
-- ruff: All checks passed
-- Committed: `1227381 test(api): achieve 100% coverage — add test_skills_round33`
-- Pushed: `origin/feat/skill-lint-checker` updated
-
 
 ---
 
-## 2026-04-12 (Round 20 — maya_warning helper + ToolDeclaration SKILL.md 更新)
+## 2026-04-12 (Round 22 — Arnold fallback maya_warning 扩展)
 
 ### State before this round
-- Branch: `feat/skill-lint-checker`
-- Tests: 2347 passed, 5 skipped (100% coverage)
-- dcc-mcp-core 新特性：skill_warning、ToolDeclaration/tools: 数组、serialize_result/deserialize_result
+- Branch: `main`
+- Tests: 2851 passed, 6 skipped (100% coverage)
+- Last commit: `4ce6850` (load_hdri Arnold fallback warning)
+- All 64 SKILL.md have tools: arrays
 
 ### Work done
 
-**1. `maya_warning` helper 新增（api.py + __init__.py）**:
-- `maya_warning(message, warning="", prompt=None, **context)` — 对应 `dcc_mcp_core.skill.skill_warning`
-- 返回 `success=True` 且 `context["warning"]` 包含非致命警告信息
-- 加入 `api.__all__` 和 `dcc_mcp_maya.__all__`，从顶层包可直接导入
+**Analysis**: Scanned remaining 55 cmds.objExists instances — all are legitimate:
+- `continue` patterns in loops (skip missing objects, not error returns)
+- Attribute probe fallback logic (`node.attr` format)
+- Positive guards (check if attribute plug exists before set)
+These are intentionally correct usage, no migration needed.
 
-**2. 4 个核心 SKILL.md 添加 `tools:` 数组（ToolDeclaration 格式）**:
-- `maya-scene/SKILL.md`: 8 个工具（new_scene, save_scene, open_scene, list_objects, get_selection, set_selection, get_scene_info, get_session_info）
-- `maya-primitives/SKILL.md`: 8 个工具（8 个 scripts 全部映射）
-- `maya-animation/SKILL.md`: 7 个工具（set_keyframe, get_keyframes, set_timeline 等核心工具）
-- `maya-render/SKILL.md`: 3 个工具（set_render_settings, get_render_settings, playblast）
-- 每个 ToolDeclaration 包含：name, description, source_file, read_only, destructive, idempotent
+**1. create_hdri_dome.py — Arnold fallback emits maya_warning**:
+- Added `from dcc_mcp_maya.api import maya_warning` import
+- When `mtoa` plugin not loaded → `ambientLight` fallback now returns `maya_warning(...)` with `context["warning"]` = "Arnold (mtoa) was not available; used ambientLight as fallback."
+- Arnold success path → `skill_success` (no warning)
 
-**3. Bug 修复**：
-- maya-scene SKILL.md 添加 `tools:` 后 SkillCatalog 只注册声明工具（7个），导致 `get_session_info` 找不到
-- 修复：补充 `get_session_info` 进入 tools: 数组
-- test_server.py `test_tools_list_contains_maya_actions` 重新通过
+**2. create_render_pass.py — Arnold renderer + mtoa not loaded → maya_warning**:
+- Added `from dcc_mcp_maya.api import maya_warning` import
+- Added `cmds.pluginInfo("mtoa", loaded=True, query=True)` check in Arnold renderer path
+- mtoa not loaded → falls back to standard `renderPass` node + returns `maya_warning(...)`
+- mtoa loaded → creates `aiAOV` node + `skill_success` (no warning)
+- mayaSoftware renderer → standard `renderPass` node + `skill_success` (unchanged)
 
-**4. test_skills_round34.py — 40 个新测试，全部通过**:
-- TestMayaWarning (11): success=True / warning in context / empty warning / prompt / extra context / no error / top-level import / __all__ 等
-- TestSkillMdToolsField (28): parametrized × 4 skills × 工具验证（存在/是list/必需字段/注解/source_file路径格式/计数）+ 额外 5 个具体断言
-- TestApiAllConsistency (3): __all__ 与实际导出一致性
+**3. test_skills_round42.py — 27 new tests, all pass**:
+- TestCreateHdriDomeArnoldFallback (6): fallback success/warning/arnold-mention/dome_node/prompt/ambientLight
+- TestCreateHdriDomeArnoldSuccess (3): success/no-warning/aiSkyDomeLight
+- TestCreateHdriDomeStructural (3): import/call/fallback-node-type
+- TestCreateRenderPassArnoldFallback (6): success/warning/arnold-mention/renderPass-not-aiAOV/renderer/prompt
+- TestCreateRenderPassArnoldSuccess (3): success/no-warning/aiAOV
+- TestCreateRenderPassMayaSoftware (3): success/no-warning/renderPass
+- TestCreateRenderPassStructural (3): import/call/pluginInfo-check
 
 ### State after this round
-- Tests: 2387 passed (+40), 5 skipped, 0 failures
+- Tests: 2878 passed (+27), 6 skipped, 0 failures
+- Coverage: 100% (unchanged)
 - ruff: All checks passed
-- Committed: `84c8a27 feat(api): add maya_warning helper; add tools: ToolDeclaration arrays to 4 core SKILL.md files; test_skills_round34 (40 tests)`
-- Pushed: `origin/feat/skill-lint-checker` updated
+- Committed: `8f11f4b feat(api): emit maya_warning on Arnold fallback in create_hdri_dome and create_render_pass; add test_skills_round42 (27 tests)`
+- Pushed: `origin/main` updated
+
+---
+
+## 2026-04-12 (Round 23 — mtoa plugin availability guards for maya-arnold-aov)
+
+### State before this round
+- Branch: `main`
+- Tests: 2878 passed, 6 skipped
+- dcc-mcp-core: v0.12.7 (stable, no breaking changes)
+- 15 Arnold scripts missing pluginInfo checks; all 64 SKILL.md already have tools: arrays
+
+### Work done
+
+**Analysis**: Reviewed all 15 "Arnold scripts missing plugin check":
+- `maya-arnold-aov` (5): All 5 scripts directly create/query `aiAOV` nodes — mtoa not loaded → RuntimeError. **Fixed.**
+- `maya-hdri` (3 queries): Already gracefully handle node type detection; aiSkyDomeLight absent = empty result. No change needed.
+- `maya-light-rig` (2): Arnold types in enum lists only; already handled gracefully. No change needed.
+- `maya-lighting/list_lights.py`: Same — Arnold types in _LIGHT_SHAPE_TYPES list, cmds.ls returns [] gracefully. No change needed.
+- `maya-render-passes` (3 queries): aiAOV already handled via cmds.ls(type="aiAOV") returning []. No change needed.
+- `maya-scripting/utility.py`: Arnold types in get_scene_statistics light_types list only. No change needed.
+
+**5 scripts modified** in `maya-arnold-aov`:
+- `add_aov.py` — `skill_error` when mtoa not loaded (hard block: cannot create aiAOV)
+- `list_aovs.py` — `skill_success` empty (graceful: return aovs=[], count=0 with helpful prompt)
+- `enable_aov.py` — `skill_error` when mtoa not loaded
+- `delete_aov.py` — `skill_error` when mtoa not loaded
+- `set_aov_attribute.py` — `skill_error` when mtoa not loaded
+
+**test_skills_round43.py — 28 new tests, all pass**:
+- TestAddAovMtoaCheck (5): not-loaded error/solution/loaded-proceeds/empty-name-first/context
+- TestListAovsMtoaCheck (5): not-loaded empty/message/prompt/loaded-queries-ls/loaded-with-aovs
+- TestEnableAovMtoaCheck (4): not-loaded error/empty-name-first/loaded-not-found/loaded-success
+- TestDeleteAovMtoaCheck (4): not-loaded error/empty-name-first/loaded-not-found/loaded-success
+- TestSetAovAttributeMtoaCheck (6): not-loaded/empty-name/empty-attr/not-found/success/string-type
+- TestAovScriptsStructural (3+1): pluginInfo in all scripts/mtoa in all scripts/add_aov uses skill_error/list_aovs uses skill_success
+
+### State after this round
+- Tests: 2906 passed (+28), 6 skipped, 0 failures
+- ruff: All checks passed
+- Committed: `b540188 feat(skills): add mtoa plugin availability guards to all 5 maya-arnold-aov scripts; add test_skills_round43 (28 tests)`
+- Pushed: `origin/main` updated
 
 ### Next priorities
-1. 为其余 SKILL.md 文件批量添加 `tools:` 数组（剩余 ~60 个 SKILL.md）
-2. 使用 `maya_warning` 重构部分 skill 脚本（如 Arnold 不可用时返回 warning）
-3. 添加 `serialize_result`/`deserialize_result` 集成测试
-4. GitHub Dependabot 安全漏洞（2 moderate on default branch）
+1. GitHub Dependabot 2 moderate vulnerabilities — need user authorization to bump dev deps
+2. Investigate remaining Arnold-adjacent scripts for any other potential RuntimeError paths
+3. Verify dcc-mcp-core FramedChannel.call v0.12.7 integration opportunities
+4. Consider adding `aiPhotometricLight` / `aiMeshLight` pattern in list_lights to test coverage
 
+---
 
+## 2026-04-12 (Round 25 — server.py SkillCatalog API coverage)
 
+### State before this round
+- Branch: `main`
+- Tests: 2953 passed, 6 skipped
+- server.py already uses create_skill_manager, SkillCatalog, search_actions, get_categories, get_tags, bind_and_register, find_best_service, rank_services
+- Missing: is_skill_loaded, get_skill_info methods; no tests for search_skills, unregister_skill, find_skills, get_skill_categories, get_skill_tags, rank_services, find_best_service
 
+### Work done
 
+**1. server.py — added 2 new SkillCatalog methods**:
+- `is_skill_loaded(name)` — wraps `SkillCatalog.is_loaded`, returns bool, False on exception
+- `get_skill_info(name)` — wraps `SkillCatalog.get_skill_info`, returns SkillMetadata or None on exception
 
+**2. test_skills_round45.py — 48 new tests, all pass**:
+- TestSearchSkills (7): category/dcc_name default/explicit/tags/registry-none/exception/no-attr
+- TestUnregisterSkill (5): calls unregister/dcc_name forwarded/ignores exception/registry-none/no-attr
+- TestFindSkills (4): list/forwards query-tags-dcc/exception/none-args
+- TestGetSkillCategories (3): sorted-list/exception/registry-none
+- TestGetSkillTags (5): list/default-dcc/explicit-dcc/exception/registry-none
+- TestRankServices (4): list/default-maya/explicit-dcc/exception
+- TestFindBestService (4): service/default-maya/explicit-dcc/none-on-exception
+- TestIsSkillLoaded (5): true/false/forwarded/exception/truthy-coercion
+- TestGetSkillInfo (5): metadata/none/forwarded/exception/description-accessible
+- TestServerStructural (6): all new methods present, rank_services/find_best_service are @staticmethod
 
+### State after this round
+- Tests: 3001 passed (+48), 6 skipped, 0 failures
+- ruff: All checks passed
+- Committed: `401f0c4 feat(server): add is_skill_loaded, get_skill_info to MayaMcpServer; add test_skills_round45 (48 tests)`
+- Pushed: `origin/main` updated
 
+### Next priorities
+1. GitHub Dependabot 2 moderate dev-dep vulnerabilities — need user authorization
+2. `SandboxContext` integration: wrap skill execution in sandbox for safety
+3. `InputValidator` integration: validate action parameters against schema before dispatch
+4. Add `SkillSummary` structured return type hints to find_skills / list_skills results
 
+---
+
+## 2026-04-12 (Round 26 — InputValidator + ScriptResult + SceneStatistics integration)
+
+### State before this round
+- Branch: `feat/upgrade-dcc-mcp-core-0.12.17`
+- Tests: 3001 passed, 6 skipped
+- New APIs available: InputValidator, ScriptResult, ScriptLanguage, SceneInfo, SceneStatistics, SerializeFormat
+
+### Work done
+
+**1. api.py — 2 new helpers:**
+- `make_input_validator(string_fields, number_fields, injected_fields)` — factory wrapping `dcc_mcp_core.InputValidator`; validates field presence and numeric ranges from a simple dict spec
+- `validate_input(validator, params)` — serialises params to JSON and calls `InputValidator.validate(params_json)`; returns `(bool, err_msg|None)`; graceful on non-serialisable inputs
+- Both added to `__all__` and re-exported from top-level `dcc_mcp_maya` package
+
+**2. execute_mel.py — refactored:**
+- Uses `make_input_validator(string_fields={"script": (1, 1_000_000)})` to guard missing/empty script field
+- Added `execution_time_ms` timing via `time.time()`
+- Added `script_result` context key: ScriptResult-compatible dict `{success, output, error, execution_time_ms, context}`
+
+**3. execute_python.py — refactored:**
+- Uses `make_input_validator(string_fields={"code": (1, 1_000_000)})` for field validation
+- Added `_DANGEROUS_PATTERNS` list + `_check_injection(code)` guard blocking: `os.system`, `subprocess`, `__import__`, `eval(`, `exec(`, `open(`, `shutil.rmtree`, `os.remove`, `os.unlink`, `os.rmdir`, `importlib`
+- Added `execution_time_ms` timing
+- Added `script_result` context key (ScriptResult-compatible dict)
+
+**4. get_scene_statistics.py — refactored:**
+- Now queries `materials`, `lights`, `cameras`, `textures` via `cmds.ls()`
+- Adds `scene_statistics` context key: SceneStatistics-compatible dict `{object_count, polygon_count, vertex_count, material_count, texture_count, light_count, camera_count}`
+- All legacy keys preserved for backward compatibility
+
+**5. test_skills_round46.py — 55 new tests, all pass:**
+- TestMakeInputValidator (9): instance creation, required string, valid string, required number, out-of-range, valid number, no fields, reexport, __all__
+- TestValidateInput (3): returns tuple, graceful on non-serialisable, empty string min length
+- TestExecuteMelInputValidator (10): missing param, valid, script_result key, success flag, output, execution_time_ms, exception, None return, script key, whitespace
+- TestExecutePythonInjectionGuard (14): os.system, subprocess, __import__, safe code, empty, whitespace, script_result, success flag, output match, timing, capture_output, exception, open, eval
+- TestGetSceneStatisticsStructured (12): scene_statistics key, all 7 standard fields, legacy keys, include_memory=False, scene_file, prompt
+- TestStructuralChecks (7): structural content/import checks
+
+### State after this round
+- Tests: 3056 passed (+55), 6 skipped, 0 failures
+- ruff: All checks passed
+- Committed: `8a10ef2 feat(api): add make_input_validator/validate_input helpers; add injection guard and ScriptResult to execute_mel/execute_python; add SceneStatistics to get_scene_statistics; add test_skills_round46 (55 tests)`
+- Pushed: `origin/feat/upgrade-dcc-mcp-core-0.12.17` (new branch)
+
+### Next priorities
+1. `SandboxContext` + `SandboxPolicy` integration — wrap execute_python/execute_mel in sandbox
+2. Extend InputValidator to more skills (e.g. create_object size params, render resolution)
+3. `serialize_result` / `SerializeFormat` helper in api.py for MsgPack transport
+4. GitHub Dependabot 2 moderate dev-dep vulnerabilities — need user authorization

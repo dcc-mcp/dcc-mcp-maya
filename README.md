@@ -44,7 +44,7 @@ mayapy -m pip install dcc-mcp-maya
 2. Or add to your `userSetup.py`:
    ```python
    import maya.cmds as cmds
-   cmds.loadPlugin("dcc_mcp_maya")
+   cmds.loadPlugin("dcc_mcp_maya_plugin")
    ```
 
 ## Quick Start
@@ -62,7 +62,7 @@ Point your MCP host at the URL above.
 
 ### Option B — Load Plugin
 
-Copy `maya/plugin/dcc_mcp_maya.py` to a directory on `MAYA_PLUG_IN_PATH`.  
+Copy `maya/plugin/dcc_mcp_maya_plugin.py` to a directory on `MAYA_PLUG_IN_PATH`.  
 The server starts automatically when the plugin loads.
 
 ### Configuration

@@ -332,7 +332,7 @@ def main():
     # 1. Check module directory structure
     print("1. Module directory structure:")
     _check("module-info.json exists", (MODULE_ROOT / "module-info.json").is_file())
-    _check("plug-ins/dcc_mcp_maya.py exists", (MODULE_ROOT / "plug-ins" / "dcc_mcp_maya.py").is_file())
+    _check("plug-ins/dcc_mcp_maya_plugin.py exists", (MODULE_ROOT / "plug-ins" / "dcc_mcp_maya_plugin.py").is_file())
     _check("python/dcc_mcp_maya/ exists", (MODULE_ROOT / "python" / "dcc_mcp_maya").is_dir())
     _check("python/dcc_mcp_core/ exists", (MODULE_ROOT / "python" / "dcc_mcp_core").is_dir())
     print()
@@ -461,8 +461,8 @@ def assemble(project_root: Path, version: str, platform: str, output: Path) -> P
     print(f"  Generated module-info.json (version={version}, has_cp37={has_cp37})")
 
     # 2. Copy Maya plugin
-    plugin_src = project_root / "maya" / "plugin" / "dcc_mcp_maya.py"
-    shutil.copy2(plugin_src, module_dir / "plug-ins" / "dcc_mcp_maya.py")
+    plugin_src = project_root / "maya" / "plugin" / "dcc_mcp_maya_plugin.py"
+    shutil.copy2(plugin_src, module_dir / "plug-ins" / "dcc_mcp_maya_plugin.py")
     print("  Copied plugin to plug-ins/")
 
     # 3. Copy userSetup.py
