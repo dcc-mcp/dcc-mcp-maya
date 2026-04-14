@@ -1231,7 +1231,7 @@ class TestPluginEntryPoint:
     @pytest.fixture
     def plugin_module(self):
         """Import the plugin script as a plain Python module."""
-        plugin_path = Path(__file__).parent.parent / "maya" / "plugin" / "dcc_mcp_maya.py"
+        plugin_path = Path(__file__).parent.parent / "maya" / "plugin" / "dcc_mcp_maya_plugin.py"
         spec = importlib.util.spec_from_file_location("_dcc_mcp_maya_plugin", plugin_path)
         mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(mod)

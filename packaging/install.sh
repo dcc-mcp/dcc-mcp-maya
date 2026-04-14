@@ -117,8 +117,8 @@ try:
     def _load_dcc_mcp_maya():
         try:
             import maya.cmds as cmds
-            if not cmds.pluginInfo("dcc_mcp_maya", query=True, loaded=True):
-                cmds.loadPlugin("dcc_mcp_maya", quiet=True)
+            if not cmds.pluginInfo("dcc_mcp_maya_plugin", query=True, loaded=True):
+                cmds.loadPlugin("dcc_mcp_maya_plugin", quiet=True)
         except Exception:
             pass
     maya.utils.executeDeferred(_load_dcc_mcp_maya)
@@ -135,7 +135,7 @@ echo "========================================="
 echo " Installation complete!"
 echo
 echo " Module:   $MOD_DEST/dcc-mcp-maya"
-echo " Plugin:   $MOD_DEST/dcc-mcp-maya/plug-ins/dcc_mcp_maya.py"
+echo " Plugin:   $MOD_DEST/dcc-mcp-maya/plug-ins/dcc_mcp_maya_plugin.py"
 echo
 
 # Post-install verification

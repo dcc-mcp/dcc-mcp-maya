@@ -412,7 +412,7 @@ class TestAssemble:
         # Maya plugin
         plugin_dir = project / "maya" / "plugin"
         plugin_dir.mkdir(parents=True)
-        (plugin_dir / "dcc_mcp_maya.py").write_text("# plugin", encoding="utf-8")
+        (plugin_dir / "dcc_mcp_maya_plugin.py").write_text("# plugin", encoding="utf-8")
 
         # userSetup.py
         maya_dir = project / "maya"
@@ -540,7 +540,7 @@ class TestAssemble:
         ):
             result = assemble_mod.assemble(project, "0.2.2", "win64", output)
 
-        assert (result / "plug-ins" / "dcc_mcp_maya.py").exists()
+        assert (result / "plug-ins" / "dcc_mcp_maya_plugin.py").exists()
         assert (result / "scripts" / "userSetup.py").exists()
 
     def test_install_scripts_win64(self, tmp_path):
@@ -653,7 +653,7 @@ class TestAssembleLive:
         assert (result / "python" / "dcc_mcp_core" / "__init__.py").exists()
         assert (result / "python" / "dcc_mcp_core" / "_core.pyd").exists()
         assert (result / "python" / "dcc_mcp_maya" / "__init__.py").exists()
-        assert (result / "plug-ins" / "dcc_mcp_maya.py").exists()
+        assert (result / "plug-ins" / "dcc_mcp_maya_plugin.py").exists()
         assert (result / "scripts" / "userSetup.py").exists()
 
         # If cp37 wheels were available, python37/ should exist

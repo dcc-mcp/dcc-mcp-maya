@@ -54,6 +54,7 @@ from __future__ import annotations
 
 # Import built-in modules
 import logging
+import os
 import threading
 from pathlib import Path
 from typing import Any, List, Optional
@@ -157,6 +158,10 @@ class MayaMcpServer:
         port: int = 8765,
         server_name: str = "maya-mcp",
         server_version: str = "0.3.0",
+        gateway_port: Optional[int] = None,
+        registry_dir: Optional[str] = None,
+        dcc_version: Optional[str] = None,
+        scene: Optional[str] = None,
     ) -> None:
         from dcc_mcp_core import McpHttpConfig, create_skill_manager  # noqa: PLC0415
 
@@ -165,12 +170,63 @@ class MayaMcpServer:
             server_name=server_name,
             server_version=server_version,
         )
+
+        # Resolve gateway_port: explicit arg > DCC_MCP_GATEWAY_PORT env var > 0 (disabled)
+        resolved_gateway = gateway_port
+        if resolved_gateway is None:
+            resolved_gateway = int(os.environ.get("DCC_MCP_GATEWAY_PORT", "0"))
+
+        if resolved_gateway > 0:
+            self._config.gateway_port = resolved_gateway
+            self._config.dcc_type = "maya"
+            resolved_registry = registry_dir or os.environ.get("DCC_MCP_REGISTRY_DIR")
+            if resolved_registry:
+                self._config.registry_dir = resolved_registry
+            if dcc_version:
+                self._config.dcc_version = dcc_version
+            if scene:
+                self._config.scene = scene
+
         # create_skill_manager pre-wires ActionRegistry + ActionDispatcher + SkillCatalog
         # and auto-discovers skills from env vars (DCC_MCP_MAYA_SKILL_PATHS, DCC_MCP_SKILL_PATHS)
         self._server = create_skill_manager("maya", self._config)
         self._handle = None
 
     # ── action registration ────────────────────────────────────────────────────
+
+    @property
+    def is_gateway(self) -> bool:
+        """True if this process won the gateway port competition.
+
+        Only meaningful after :meth:`start` has been called.  Returns ``False``
+        when ``gateway_port`` was not configured or this instance lost the
+        first-wins port competition.
+
+        Example::
+
+            server = MayaMcpServer(port=0, gateway_port=9765)
+            server.register_builtin_actions()
+            handle = server.start()
+            if server.is_gateway:
+                print("This Maya instance is the gateway")
+        """
+        return bool(self._handle and getattr(self._handle, "is_gateway", False))
+
+    @property
+    def gateway_url(self) -> Optional[str]:
+        """Gateway base URL if this process is the gateway, otherwise ``None``.
+
+        Example::
+
+            server.start()
+            if server.gateway_url:
+                print(f"Gateway at {server.gateway_url}/instances")
+        """
+        if self.is_gateway:
+            port = getattr(self._config, "gateway_port", 0)
+            if port:
+                return f"http://127.0.0.1:{port}"
+        return None
 
     @property
     def registry(self):
@@ -618,6 +674,10 @@ def start_server(
     register_builtins: bool = True,
     extra_skill_paths: Optional[List[str]] = None,
     include_bundled: bool = True,
+    gateway_port: Optional[int] = None,
+    registry_dir: Optional[str] = None,
+    dcc_version: Optional[str] = None,
+    scene: Optional[str] = None,
 ) -> Any:
     """Start (or return the already-running) Maya MCP server.
 
@@ -633,15 +693,26 @@ def start_server(
     - Bundled skills inside ``dcc-mcp-core`` wheel (when ``include_bundled=True``)
     - ``extra_skill_paths`` argument
 
+    **Multi-DCC Gateway** (v0.12.22+):
+    When ``gateway_port`` is set (or ``DCC_MCP_GATEWAY_PORT`` env var), this
+    instance joins the first-wins gateway port competition.  The first process
+    to bind the port becomes the gateway and exposes discovery meta-tools;
+    all others register themselves as plain instances.  See
+    :attr:`MayaMcpServer.is_gateway` and :attr:`MayaMcpServer.gateway_url`.
+
     Args:
         port: TCP port.  Use ``0`` for a random available port.
         server_name: Name shown in MCP ``initialize`` response.
         register_builtins: If ``True``, discovers and loads all built-in skills.
         extra_skill_paths: Additional directories to scan for ``SKILL.md`` files.
         include_bundled: When ``True`` (default), automatically include the
-            general-purpose skills bundled with ``dcc-mcp-core``
-            (``dcc-diagnostics``, ``workflow``, ``git-automation``, etc.).
+            general-purpose skills bundled with ``dcc-mcp-core``.
             Pass ``False`` to opt-out.
+        gateway_port: Port to compete for as the multi-DCC gateway.  ``None``
+            reads ``DCC_MCP_GATEWAY_PORT`` env var; default ``0`` disables gateway.
+        registry_dir: Directory for the shared ``FileRegistry`` JSON file.
+        dcc_version: Maya version string reported to the registry (e.g. ``"2025"``).
+        scene: Currently open scene file path reported to the registry.
 
     Returns:
         ``McpServerHandle`` with ``.mcp_url()``, ``.port``, ``.shutdown()``.
@@ -652,11 +723,8 @@ def start_server(
         handle = dcc_mcp_maya.start_server(port=8765)
         print(handle.mcp_url())  # http://127.0.0.1:8765/mcp
 
-        # Disable bundled core skills:
-        handle = dcc_mcp_maya.start_server(include_bundled=False)
-
-        # With custom skill paths:
-        handle = dcc_mcp_maya.start_server(extra_skill_paths=["/studio/maya-skills"])
+        # Join the multi-DCC gateway (first Maya wins :9765):
+        handle = dcc_mcp_maya.start_server(port=0, gateway_port=9765, dcc_version="2025")
     """
     global _server_instance
     with _lock:
@@ -664,6 +732,10 @@ def start_server(
             _server_instance = MayaMcpServer(
                 port=port,
                 server_name=server_name,
+                gateway_port=gateway_port,
+                registry_dir=registry_dir,
+                dcc_version=dcc_version,
+                scene=scene,
             )
             if register_builtins:
                 _server_instance.register_builtin_actions(
