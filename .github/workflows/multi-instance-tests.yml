@@ -25,7 +25,7 @@ jobs:
 
     strategy:
       matrix:
-        maya-version: ['2023', '2024', '2025']
+        maya-version: ['2022', '2023', '2024', '2025']
         python-version: ['3.9', '3.10', '3.11']
       fail-fast: false
 
@@ -55,8 +55,8 @@ jobs:
       - name: Verify Docker and pull Maya image
         run: |
           docker --version
-          echo "Pulling Docker image: autodesk/maya:${{ matrix.maya-version }}"
-          docker pull autodesk/maya:${{ matrix.maya-version }} 2>&1 || echo "⚠️  Image pull failed; tests may skip if local pull unavailable"
+          echo "Pulling Docker image: tahv/mayapy:${{ matrix.maya-version }}"
+          docker pull tahv/mayapy:${{ matrix.maya-version }} 2>&1 || echo "⚠️  Image pull failed; tests may skip if local pull unavailable"
 
       - name: Verify installation
         run: |
@@ -65,25 +65,31 @@ jobs:
           python -c "from tests.fixtures.docker_maya import DockerMayaInstanceManager; print('✓ DockerMayaInstanceManager imported successfully')"
           python -c "from tests.fixtures.instance_factory import get_instance_manager; print('✓ instance_factory imported successfully')"
 
+      - name: Set Docker image env
+        run: echo "DCC_MCP_MAYA_DOCKER_IMAGE=tahv/mayapy:${{ matrix.maya-version }}" >> $GITHUB_ENV
+
       - name: Run gateway failover tests (Docker Maya ${{ matrix.maya-version }})
         run: |
           cd tests
-          export DCC_MCP_FORCE_DOCKER=1
-          python -m pytest test_gateway_failover.py -v --tb=short -x
+          DCC_MCP_FORCE_DOCKER=1 python -m pytest test_gateway_failover.py -v --tb=short -m e2e
         continue-on-error: true
 
       - name: Run discovery tests (Docker Maya ${{ matrix.maya-version }})
         run: |
           cd tests
-          export DCC_MCP_FORCE_DOCKER=1
-          python -m pytest test_multi_instance_discovery.py -v --tb=short -x
+          DCC_MCP_FORCE_DOCKER=1 python -m pytest test_multi_instance_discovery.py -v --tb=short -m e2e
         continue-on-error: true
 
       - name: Run scene update tests (Docker Maya ${{ matrix.maya-version }})
         run: |
           cd tests
-          export DCC_MCP_FORCE_DOCKER=1
-          python -m pytest test_scene_update.py -v --tb=short -x
+          DCC_MCP_FORCE_DOCKER=1 python -m pytest test_scene_update.py -v --tb=short -m e2e
+        continue-on-error: true
+
+      - name: Run Docker integration tests
+        run: |
+          cd tests
+          DCC_MCP_FORCE_DOCKER=1 python -m pytest test_docker_integration.py -v --tb=short -m e2e
         continue-on-error: true
 
       - name: Upload test results
