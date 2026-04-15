@@ -823,8 +823,7 @@ class MayaMcpServer:
                         result = mgr.py_heartbeat("maya", instance_id)
                         if result:
                             logger.info(
-                                "Gateway metadata updated and heartbeat sent: "
-                                "scene=%s, version=%s", scene, version
+                                "Gateway metadata updated and heartbeat sent: scene=%s, version=%s", scene, version
                             )
                             return True
                         else:
@@ -866,7 +865,6 @@ class MayaMcpServer:
                 else 0
             ),
         }
-
 
         """Return the Maya DCC capabilities as a ``DccCapabilities`` instance.
 
@@ -1016,11 +1014,11 @@ def start_server(
             gateway_failover_enabled = (
                 enable_gateway_failover
                 and os.environ.get("DCC_MCP_MAYA_ENABLE_GATEWAY_FAILOVER", "1") != "0"
-                and gateway_port and gateway_port > 0
+                and gateway_port
+                and gateway_port > 0
             )
             if gateway_failover_enabled and hasattr(_server_instance, "_enable_gateway_failover"):
                 logger.info("Gateway failover election ready (will start in server.start())")
-
 
         return _server_instance.start()
 

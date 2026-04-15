@@ -48,15 +48,19 @@ def _find_mayapy_version(version: str) -> Optional[Path]:
     ]
 
     # Try macOS
-    paths_to_try.extend([
-        Path(f"/Applications/Autodesk/maya{version}/Maya.app/Contents/bin/mayapy"),
-    ])
+    paths_to_try.extend(
+        [
+            Path(f"/Applications/Autodesk/maya{version}/Maya.app/Contents/bin/mayapy"),
+        ]
+    )
 
     # Try Linux
-    paths_to_try.extend([
-        Path(f"/opt/autodesk/maya{version}/bin/mayapy"),
-        Path(f"/usr/autodesk/maya{version}/bin/mayapy"),
-    ])
+    paths_to_try.extend(
+        [
+            Path(f"/opt/autodesk/maya{version}/bin/mayapy"),
+            Path(f"/usr/autodesk/maya{version}/bin/mayapy"),
+        ]
+    )
 
     for path in paths_to_try:
         if path.exists() and os.access(path, os.X_OK):
@@ -159,9 +163,7 @@ class MayaInstanceManager:
             env["DCC_MCP_GATEWAY_PORT"] = str(config.gateway_port)
             env["DCC_MCP_REGISTRY_DIR"] = config.registry_dir
             env["DCC_MCP_MAYA_HOT_RELOAD"] = "1" if config.enable_hot_reload else "0"
-            env["DCC_MCP_MAYA_ENABLE_GATEWAY_FAILOVER"] = (
-                "1" if config.enable_gateway_failover else "0"
-            )
+            env["DCC_MCP_MAYA_ENABLE_GATEWAY_FAILOVER"] = "1" if config.enable_gateway_failover else "0"
 
             if config.env_vars:
                 env.update(config.env_vars)

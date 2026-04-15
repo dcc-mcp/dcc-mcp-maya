@@ -41,33 +41,24 @@ def test_discovery_many_instances(maya_instance_manager, gateway_client):
     Verifies that gateway can handle and serve multiple instances concurrently.
     """
     # Create 10 instances
-    configs = [
-        maya_instance_manager.create_config(
-            f"maya-2025-{i:02d}", maya_version="2025"
-        )
-        for i in range(1, 11)
-    ]
+    configs = [maya_instance_manager.create_config(f"maya-2025-{i:02d}", maya_version="2025") for i in range(1, 11)]
 
     # Launch them
     for config in configs:
-        assert maya_instance_manager.launch_instance(
-            config
-        ), f"Failed to launch {config.instance_id}"
+        assert maya_instance_manager.launch_instance(config), f"Failed to launch {config.instance_id}"
 
     # Wait for all to register
     assert gateway_client.wait_for_gateway()
-    assert gateway_client.wait_for_instance_count(
-        10, max_retries=60, retry_delay=1.0
-    ), "Not all 10 instances registered"
+    assert gateway_client.wait_for_instance_count(10, max_retries=60, retry_delay=1.0), (
+        "Not all 10 instances registered"
+    )
 
     # Verify via FileRegistry
     registry = maya_instance_manager.get_registry_content()
     logger.info("Registry content keys: %s", list(registry.keys()))
 
     instances = gateway_client.list_instances("maya")
-    assert (
-        len(instances) >= 10
-    ), f"Expected >= 10 instances from gateway, got {len(instances)}"
+    assert len(instances) >= 10, f"Expected >= 10 instances from gateway, got {len(instances)}"
 
     logger.info("Many instances test PASSED: %d instances registered", len(instances))
 
@@ -150,9 +141,7 @@ def test_discovery_instance_metadata_accuracy(maya_instance_manager, gateway_cli
     if "maya-2025-scene1" in instance_map:
         inst1 = instance_map["maya-2025-scene1"]
         assert inst1.get("dcc_version") == "2025", "Version mismatch for instance 1"
-        assert (
-            inst1.get("scene") == "/path/to/project1/scene.ma"
-        ), "Scene mismatch for instance 1"
+        assert inst1.get("scene") == "/path/to/project1/scene.ma", "Scene mismatch for instance 1"
 
     logger.info("Instance metadata accuracy test PASSED")
 
@@ -164,12 +153,8 @@ def test_discovery_mixed_maya_versions(maya_instance_manager, gateway_client):
     Verifies that gateway correctly groups and tracks instances by version.
     """
     # Create instances of different versions
-    configs = [
-        maya_instance_manager.create_config(f"maya-2024-{i}", maya_version="2024")
-        for i in range(1, 4)
-    ] + [
-        maya_instance_manager.create_config(f"maya-2025-{i}", maya_version="2025")
-        for i in range(1, 4)
+    configs = [maya_instance_manager.create_config(f"maya-2024-{i}", maya_version="2024") for i in range(1, 4)] + [
+        maya_instance_manager.create_config(f"maya-2025-{i}", maya_version="2025") for i in range(1, 4)
     ]
 
     for config in configs:
@@ -181,12 +166,8 @@ def test_discovery_mixed_maya_versions(maya_instance_manager, gateway_client):
     instances = gateway_client.list_instances("maya")
 
     # Count by version
-    version_2024 = [
-        i for i in instances if i.get("dcc_version") == "2024"
-    ]
-    version_2025 = [
-        i for i in instances if i.get("dcc_version") == "2025"
-    ]
+    version_2024 = [i for i in instances if i.get("dcc_version") == "2024"]
+    version_2025 = [i for i in instances if i.get("dcc_version") == "2025"]
 
     logger.info("Discovered: %d x Maya2024, %d x Maya2025", len(version_2024), len(version_2025))
 
@@ -203,9 +184,7 @@ def test_discovery_registry_persistence(maya_instance_manager, gateway_client):
     Verifies FileRegistry maintains instance list even if gateway crashes/restarts.
     """
     # Create and launch instances
-    configs = [
-        maya_instance_manager.create_config(f"maya-persist-{i}") for i in range(1, 4)
-    ]
+    configs = [maya_instance_manager.create_config(f"maya-persist-{i}") for i in range(1, 4)]
 
     for config in configs:
         assert maya_instance_manager.launch_instance(config)
