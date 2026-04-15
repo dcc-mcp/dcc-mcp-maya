@@ -11,6 +11,8 @@ import pytest
 
 logger = logging.getLogger(__name__)
 
+pytestmark = pytest.mark.integration
+
 
 @pytest.mark.timeout(120)
 def test_gateway_election_enabled_by_default(maya_instance_manager, gateway_client):

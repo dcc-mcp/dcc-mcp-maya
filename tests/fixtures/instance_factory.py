@@ -78,17 +78,23 @@ def get_instance_manager(
         except RuntimeError as exc:
             logger.warning("Docker forced but not available: %s. Falling back to local mayapy.", exc)
 
-    # Try Docker first in CI environments
+    # Try Docker first in CI environments, but only if Maya images are available
     if is_docker_available():
-        logger.info("Docker is available; using Docker mode")
-        try:
-            return DockerMayaInstanceManager(
-                gateway_port=gateway_port,
-                registry_dir=registry_dir,
-                docker_registry=docker_registry if docker_registry else None,
-            )
-        except RuntimeError as exc:
-            logger.warning("Docker available but initialization failed: %s. Trying local mayapy.", exc)
+        from .docker_maya import DOCKER_IMAGES, has_docker_image
+
+        has_maya_images = any(has_docker_image(img) for img in DOCKER_IMAGES.values())
+        if has_maya_images:
+            logger.info("Docker is available with Maya images; using Docker mode")
+            try:
+                return DockerMayaInstanceManager(
+                    gateway_port=gateway_port,
+                    registry_dir=registry_dir,
+                    docker_registry=docker_registry if docker_registry else None,
+                )
+            except RuntimeError as exc:
+                logger.warning("Docker available but initialization failed: %s. Trying local mayapy.", exc)
+        else:
+            logger.info("Docker available but no Maya images found; skipping Docker mode")
 
     # Fall back to local mayapy
     if check_mayapy_available():
