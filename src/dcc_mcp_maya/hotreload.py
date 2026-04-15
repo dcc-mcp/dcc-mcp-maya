@@ -15,8 +15,7 @@ from __future__ import annotations
 # Import built-in modules
 import logging
 import threading
-from pathlib import Path
-from typing import Any, Callable, List, Optional
+from typing import Any, List, Optional
 
 logger = logging.getLogger(__name__)
 
