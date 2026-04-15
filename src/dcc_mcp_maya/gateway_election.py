@@ -18,7 +18,6 @@ import logging
 import os
 import socket
 import threading
-import time
 from typing import Optional
 
 logger = logging.getLogger(__name__)
