@@ -12,6 +12,8 @@ import pytest
 
 logger = logging.getLogger(__name__)
 
+pytestmark = pytest.mark.integration
+
 
 @pytest.mark.timeout(60)
 def test_discovery_basic_two_instances(maya_instance_manager, gateway_client):
