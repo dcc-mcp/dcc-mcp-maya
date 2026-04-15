@@ -16,11 +16,53 @@ import platform
 import subprocess
 import tempfile
 import time
-from dataclasses import dataclass, asdict
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
+
+
+def check_mayapy_available() -> bool:
+    """Check if mayapy is available in the environment.
+
+    Attempts to find mayapy executable for at least one Maya version.
+    Used to skip tests that require mayapy when it's not available.
+
+    Returns:
+        True if mayapy can be found, False otherwise.
+    """
+    # Try common Maya versions
+    for version in ["2025", "2024", "2023", "2022"]:
+        if _find_mayapy_version(version):
+            return True
+    return False
+
+
+def _find_mayapy_version(version: str) -> Optional[Path]:
+    """Find mayapy executable for a specific version (internal helper)."""
+    # Try Windows
+    paths_to_try = [
+        Path(f"C:/Program Files/Autodesk/Maya{version}/bin/mayapy.exe"),
+        Path(f"C:/Program Files/Autodesk/Maya{version}/bin/mayapy"),
+    ]
+
+    # Try macOS
+    paths_to_try.extend([
+        Path(f"/Applications/Autodesk/maya{version}/Maya.app/Contents/bin/mayapy"),
+    ])
+
+    # Try Linux
+    paths_to_try.extend([
+        Path(f"/opt/autodesk/maya{version}/bin/mayapy"),
+        Path(f"/usr/autodesk/maya{version}/bin/mayapy"),
+    ])
+
+    for path in paths_to_try:
+        if path.exists() and os.access(path, os.X_OK):
+            return path
+
+    return None
 
 
 @dataclass
@@ -277,7 +319,7 @@ class MayaInstanceManager:
         # Escape registry_dir for Python string literal (convert backslashes to forward slashes)
         registry_dir = config.registry_dir.replace("\\", "/")
         scene_file_repr = repr(config.scene_file) if config.scene_file else "None"
-        
+
         return f"""
 import sys
 import logging
@@ -291,10 +333,10 @@ try:
     import maya.standalone
     maya.standalone.initialize(name="{config.instance_id}")
     logger.info("Maya initialized for {config.instance_id}")
-    
+
     # Import and start MCP server
     from dcc_mcp_maya import start_server
-    
+
     handle = start_server(
         port={config.port},
         gateway_port={config.gateway_port},
@@ -304,13 +346,13 @@ try:
         enable_hot_reload={config.enable_hot_reload},
         enable_gateway_failover={config.enable_gateway_failover},
     )
-    
+
     logger.info("MCP server started: {config.instance_id} -> {{}}".format(handle.mcp_url()))
-    
+
     # Keep server running
     while True:
         time.sleep(1)
-        
+
 except Exception as e:
     logger.exception("Startup failed for {config.instance_id}: %s", e)
     sys.exit(1)

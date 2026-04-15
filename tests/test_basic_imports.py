@@ -17,8 +17,9 @@ def test_hotreload_imports():
 
 def test_server_has_gateway_failover():
     """Verify MayaMcpServer accepts enable_gateway_failover parameter."""
-    from dcc_mcp_maya.server import MayaMcpServer
     import inspect
+
+    from dcc_mcp_maya.server import MayaMcpServer
 
     # Check __init__ signature
     sig = inspect.signature(MayaMcpServer.__init__)
@@ -41,8 +42,8 @@ def test_server_has_get_gateway_election_status():
 
 def test_maya_instance_manager_imports():
     """Verify MayaInstanceManager can be imported."""
-    from tests.fixtures.maya_instances import MayaInstanceManager, MayaInstanceConfig
-    
+    from tests.fixtures.maya_instances import MayaInstanceConfig, MayaInstanceManager
+
     assert MayaInstanceManager is not None
     assert MayaInstanceConfig is not None
 
@@ -50,18 +51,18 @@ def test_maya_instance_manager_imports():
 def test_gateway_test_client_imports():
     """Verify GatewayTestClient can be imported from conftest."""
     from tests.conftest import GatewayTestClient
-    
+
     assert GatewayTestClient is not None
 
 
 def test_gateway_election_attributes():
     """Verify GatewayElection has expected attributes and methods."""
+
     from dcc_mcp_maya.gateway_election import GatewayElection
-    import inspect
 
     # Get all methods
     methods = [m for m in dir(GatewayElection) if not m.startswith("_")]
-    
+
     assert "start" in methods
     assert "stop" in methods
     assert "is_running" in methods or "_is_running" in dir(GatewayElection)
@@ -69,11 +70,11 @@ def test_gateway_election_attributes():
 
 def test_hotreload_attributes():
     """Verify MayaSkillHotReloader has expected methods."""
+
     from dcc_mcp_maya.hotreload import MayaSkillHotReloader
-    import inspect
 
     methods = [m for m in dir(MayaSkillHotReloader) if not m.startswith("_")]
-    
+
     assert "enable" in methods
     assert "disable" in methods
     assert "reload_now" in methods
@@ -81,8 +82,9 @@ def test_hotreload_attributes():
 
 def test_start_server_has_enable_gateway_failover():
     """Verify start_server() function accepts enable_gateway_failover parameter."""
-    from dcc_mcp_maya import start_server
     import inspect
+
+    from dcc_mcp_maya import start_server
 
     sig = inspect.signature(start_server)
     assert "enable_gateway_failover" in sig.parameters
@@ -94,7 +96,7 @@ def test_config_has_gateway_fields():
     from dcc_mcp_core import McpHttpConfig
 
     config = McpHttpConfig(port=8765)
-    
+
     # Should have gateway-related fields
     assert hasattr(config, "gateway_port")
     assert hasattr(config, "registry_dir")

@@ -260,9 +260,13 @@ def temp_registry_dir(tmp_path):
 def maya_instance_manager(temp_registry_dir):
     """Fixture providing a MayaInstanceManager."""
     try:
-        from fixtures.maya_instances import MayaInstanceManager
+        from fixtures.maya_instances import MayaInstanceManager, check_mayapy_available
     except ImportError:
         pytest.skip("MayaInstanceManager not available")
+
+    # Skip tests if mayapy is not available
+    if not check_mayapy_available():
+        pytest.skip("mayapy not available in test environment")
 
     manager = MayaInstanceManager(gateway_port=9765, registry_dir=temp_registry_dir)
     yield manager
