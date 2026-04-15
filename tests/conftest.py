@@ -258,16 +258,23 @@ def temp_registry_dir(tmp_path):
 
 @pytest.fixture
 def maya_instance_manager(temp_registry_dir):
-    """Fixture providing a MayaInstanceManager."""
+    """Fixture providing a Maya instance manager (local or Docker).
+
+    Automatically selects appropriate manager based on environment:
+    - If DCC_MCP_FORCE_DOCKER=1, uses Docker
+    - If Docker available with images, prefers Docker
+    - Otherwise falls back to local mayapy
+    - Skips tests if neither is available
+    """
     try:
-        from fixtures.maya_instances import MayaInstanceManager, check_mayapy_available
+        from fixtures.instance_factory import get_instance_manager
     except ImportError:
-        pytest.skip("MayaInstanceManager not available")
+        pytest.skip("instance_factory not available")
 
-    # Skip tests if mayapy is not available
-    if not check_mayapy_available():
-        pytest.skip("mayapy not available in test environment")
-
-    manager = MayaInstanceManager(gateway_port=9765, registry_dir=temp_registry_dir)
-    yield manager
-    manager.cleanup()
+    try:
+        # Try to get an appropriate instance manager
+        manager = get_instance_manager(gateway_port=9765, registry_dir=temp_registry_dir)
+        yield manager
+        manager.cleanup()
+    except RuntimeError as exc:
+        pytest.skip(f"No suitable instance manager available: {exc}")
