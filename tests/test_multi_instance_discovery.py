@@ -6,8 +6,9 @@ maintain current state in FileRegistry, and serve list dynamically.
 
 import json
 import logging
-import pytest
 import time
+
+import pytest
 
 logger = logging.getLogger(__name__)
 
