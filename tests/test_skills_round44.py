@@ -14,6 +14,14 @@ import sys
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import pytest
+
+# Check if DccCapabilities is available before running tests
+try:
+    from dcc_mcp_core import DccCapabilities  # noqa: F401
+except ImportError:
+    pytest.skip("dcc_mcp_core.DccCapabilities not available", allow_module_level=True)
+
 _SKILLS_ROOT = Path(__file__).parent.parent / "src" / "dcc_mcp_maya" / "skills"
 _MOD_COUNTER = [0]
 
