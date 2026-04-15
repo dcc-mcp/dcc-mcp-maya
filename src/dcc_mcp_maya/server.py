@@ -1,18 +1,10 @@
 """MayaMcpServer — embedded MCP Streamable HTTP server for Maya.
 
-Starts a standards-compliant MCP server (2025-03-26 spec) inside Maya using
-``dcc-mcp-core``'s ``McpHttpServer``.  All registered actions become MCP
-tools that any compatible MCP host (Claude Desktop, OpenClaw, Cursor …) can
-call directly.
+Extends :class:`dcc_mcp_core.server_base.DccServerBase` with Maya-specific
+skill path discovery and version detection.
 
-Skills-First API (v0.12.12+)
------------------------------
-The preferred entry point is :func:`create_skill_manager` from ``dcc-mcp-core``,
-which wires up ``ActionRegistry``, ``ActionDispatcher``, ``SkillCatalog`` and
-auto-discovers skills from env vars in one call.
-
-:class:`MayaMcpServer` wraps this factory and adds Maya-specific path discovery
-so built-in skills shipped with this package are always included.
+All generic logic (skill registration, hot-reload, gateway failover,
+action registry, lifecycle) is provided by the base class.
 
 Flow::
 
@@ -28,25 +20,13 @@ Or via the module-level singleton helper::
     handle = dcc_mcp_maya.start_server(port=8765)
     print(handle.mcp_url())
 
-Action naming convention (unchanged)::
-
-    {skill_name.replace("-", "_")}__{script_stem}
-    # e.g. maya_scene__new_scene, maya_primitives__create_sphere
-
 Search path resolution (highest → lowest priority):
 
 1. ``extra_skill_paths`` supplied by the caller
 2. Built-in skills shipped with this package  (``src/dcc_mcp_maya/skills/``)
-3. ``DCC_MCP_MAYA_SKILL_PATHS`` environment variable (Maya-specific, v0.12.12+)
+3. ``DCC_MCP_MAYA_SKILL_PATHS`` environment variable (Maya-specific)
 4. ``DCC_MCP_SKILL_PATHS`` environment variable (global fallback)
 5. Platform default  (``dcc_mcp_core.get_skills_dir()``)
-
-Architecture::
-
-    Maya main thread                     Tokio worker thread
-    ─────────────────                    ──────────────────────────
-    MayaMcpServer.start()   ─────────►  McpHttpServer (axum HTTP)
-                                         handlers called via registry
 """
 
 # Import future modules
@@ -59,15 +39,17 @@ import threading
 from pathlib import Path
 from typing import Any, List, Optional
 
+# Import third-party modules
+from dcc_mcp_core.server_base import DccServerBase
+
 logger = logging.getLogger(__name__)
 
 # Built-in skills directory shipped with this package
 _BUILTIN_SKILLS_DIR = Path(__file__).parent / "skills"
 
-# ── lazy imports (Maya not available at test time) ────────────────────────────
-
 
 def _maya_available() -> bool:
+    """Return True if Maya is importable in this Python environment."""
     try:
         import maya.cmds  # noqa: F401
 
@@ -76,68 +58,19 @@ def _maya_available() -> bool:
         return False
 
 
-# ── Skills search path helpers ────────────────────────────────────────────────
-
-
-def _collect_skill_search_paths(
-    extra_paths: Optional[List[str]] = None,
-    include_bundled: bool = True,
-) -> List[str]:
-    """Build the ordered skill search path list.
-
-    Priority (highest first):
-    1. ``extra_paths`` supplied by the caller
-    2. Built-in skills directory (``src/dcc_mcp_maya/skills/``)
-    3. ``DCC_MCP_MAYA_SKILL_PATHS`` — Maya-specific env var (v0.12.12+)
-    4. ``DCC_MCP_SKILL_PATHS`` — global fallback env var
-    5. Bundled skills shipped with ``dcc-mcp-core`` (dcc-diagnostics, workflow, …)
-    6. Platform default skills dir (``get_skills_dir()``)
-
-    Args:
-        extra_paths: Additional directories to prepend (highest priority).
-        include_bundled: When ``True`` (default), automatically include the
-            general-purpose skills bundled inside ``dcc-mcp-core``
-            (``dcc-diagnostics``, ``workflow``, ``git-automation``, etc.).
-            Pass ``False`` to opt-out.
-    """
-    from dcc_mcp_core import get_app_skill_paths_from_env, get_skill_paths_from_env, get_skills_dir  # noqa: PLC0415
-
-    paths: List[str] = list(extra_paths or [])
-
-    if _BUILTIN_SKILLS_DIR.is_dir():
-        paths.append(str(_BUILTIN_SKILLS_DIR))
-
-    # Per-app env var: DCC_MCP_MAYA_SKILL_PATHS (highest priority among env vars)
-    paths.extend(get_app_skill_paths_from_env("maya"))
-
-    # Global fallback env var: DCC_MCP_SKILL_PATHS
-    paths.extend(get_skill_paths_from_env())
-
-    # Bundled skills shipped with dcc-mcp-core (default ON, disable with include_bundled=False)
-    if include_bundled:
-        try:
-            from dcc_mcp_core.skill import get_bundled_skill_paths  # noqa: PLC0415
-
-            paths.extend(get_bundled_skill_paths(include_bundled=True))
-        except Exception:
-            pass
-
-    default_dir = get_skills_dir()
-    if default_dir and default_dir not in paths:
-        paths.append(default_dir)
-
-    return paths
-
-
-# ── MayaMcpServer ─────────────────────────────────────────────────────────────
-
-
-class MayaMcpServer:
+class MayaMcpServer(DccServerBase):
     """MCP Streamable HTTP server embedded inside Maya.
 
-    Uses the Skills-First API introduced in dcc-mcp-core v0.12.12:
-    :func:`dcc_mcp_core.create_skill_manager` wires up the full stack
-    (registry, dispatcher, catalog) in one call.
+    Thin subclass of :class:`~dcc_mcp_core.server_base.DccServerBase`.
+    All skill management, hot-reload, gateway election, and lifecycle
+    logic is inherited.  This class adds only:
+
+    - Maya builtin skills directory (``skills/``)
+    - Maya version detection via ``cmds.about(version=True)``
+    - Optional ``register_builtin_actions()`` override for IPC diagnostic
+      handlers (``dcc_mcp_core.dcc_server.register_diagnostic_handlers``)
+    - Maya-specific TransportManager wrappers
+      (``bind_and_register``, ``find_best_service``, ``rank_services``)
 
     Example::
 
@@ -151,6 +84,12 @@ class MayaMcpServer:
         port: TCP port to listen on.  Use ``0`` for a random available port.
         server_name: Name reported in MCP ``initialize`` response.
         server_version: Version reported in MCP ``initialize`` response.
+        gateway_port: Port for first-wins gateway competition.  ``None``
+            reads ``DCC_MCP_GATEWAY_PORT`` env var; ``0`` disables.
+        registry_dir: Directory for the shared ``FileRegistry`` JSON file.
+        dcc_version: Maya version string reported to the registry.
+        scene: Currently open scene file path reported to the registry.
+        enable_gateway_failover: Enable automatic gateway failover election.
     """
 
     def __init__(
@@ -164,430 +103,67 @@ class MayaMcpServer:
         scene: Optional[str] = None,
         enable_gateway_failover: bool = True,
     ) -> None:
-        from dcc_mcp_core import McpHttpConfig, create_skill_manager  # noqa: PLC0415
-
-        from dcc_mcp_maya.gateway_election import GatewayElection  # noqa: PLC0415
-        from dcc_mcp_maya.hotreload import MayaSkillHotReloader  # noqa: PLC0415
-
-        self._config = McpHttpConfig(
+        super().__init__(
+            dcc_name="maya",
+            builtin_skills_dir=_BUILTIN_SKILLS_DIR,
             port=port,
             server_name=server_name,
             server_version=server_version,
+            gateway_port=gateway_port,
+            registry_dir=registry_dir,
+            dcc_version=dcc_version,
+            scene=scene,
+            enable_gateway_failover=enable_gateway_failover,
         )
 
-        # Resolve gateway_port: explicit arg > DCC_MCP_GATEWAY_PORT env var > 0 (disabled)
-        resolved_gateway = gateway_port
-        if resolved_gateway is None:
-            resolved_gateway = int(os.environ.get("DCC_MCP_GATEWAY_PORT", "0"))
-
-        if resolved_gateway > 0:
-            self._config.gateway_port = resolved_gateway
-            self._config.dcc_type = "maya"
-            resolved_registry = registry_dir or os.environ.get("DCC_MCP_REGISTRY_DIR")
-            if resolved_registry:
-                self._config.registry_dir = resolved_registry
-            if dcc_version:
-                self._config.dcc_version = dcc_version
-            if scene:
-                self._config.scene = scene
-
-        # create_skill_manager pre-wires ActionRegistry + ActionDispatcher + SkillCatalog
-        # and auto-discovers skills from env vars (DCC_MCP_MAYA_SKILL_PATHS, DCC_MCP_SKILL_PATHS)
-        self._server = create_skill_manager("maya", self._config)
-        self._handle = None
-        self._hot_reloader = MayaSkillHotReloader(self)
-
-        # Gateway election for automatic failover
-        self._gateway_election: Optional[GatewayElection] = None
-        self._enable_gateway_failover = enable_gateway_failover and resolved_gateway > 0
-
-    # ── action registration ────────────────────────────────────────────────────
-
-    @property
-    def is_gateway(self) -> bool:
-        """True if this process won the gateway port competition.
-
-        Only meaningful after :meth:`start` has been called.  Returns ``False``
-        when ``gateway_port`` was not configured or this instance lost the
-        first-wins port competition.
-
-        Example::
-
-            server = MayaMcpServer(port=0, gateway_port=9765)
-            server.register_builtin_actions()
-            handle = server.start()
-            if server.is_gateway:
-                print("This Maya instance is the gateway")
-        """
-        return bool(self._handle and getattr(self._handle, "is_gateway", False))
-
-    @property
-    def gateway_url(self) -> Optional[str]:
-        """Gateway base URL if this process is the gateway, otherwise ``None``.
-
-        Example::
-
-            server.start()
-            if server.gateway_url:
-                print(f"Gateway at {server.gateway_url}/instances")
-        """
-        if self.is_gateway:
-            port = getattr(self._config, "gateway_port", 0)
-            if port:
-                return f"http://127.0.0.1:{port}"
-        return None
-
-    @property
-    def registry(self):
-        """The underlying ``ActionRegistry``.
-
-        .. deprecated::
-            With ``create_skill_manager`` (v0.12.12+), the registry is managed
-            internally by the ``McpHttpServer``.  Use ``self._server.list_skills()``
-            or the HTTP ``tools/list`` endpoint to inspect registered tools.
-        """
-        return getattr(self._server, "_registry", None)
+    # ── Maya-specific overrides ───────────────────────────────────────────────
 
     def register_builtin_actions(
         self,
         extra_skill_paths: Optional[List[str]] = None,
         include_bundled: bool = True,
     ) -> "MayaMcpServer":
-        """Discover and load all built-in Maya skills into the server.
+        """Discover and load all skills, then register diagnostic IPC handlers.
 
-        Uses the dcc-mcp-core SkillCatalog API (v0.12.12+):
-
-        1. ``server.discover(extra_paths, dcc_name="maya")`` — scans all paths
-           for ``SKILL.md`` files and caches skill metadata.
-        2. ``server.load_skill(name)`` — registers each script as an MCP action
-           with the canonical naming convention::
-
-               {skill_name.replace("-", "_")}__{script_stem}
-
-        Skills are discovered from (highest → lowest priority):
-
-        - ``extra_skill_paths`` supplied by the caller
-        - Built-in ``skills/`` directory shipped with this package
-        - ``DCC_MCP_MAYA_SKILL_PATHS`` environment variable (Maya-specific)
-        - ``DCC_MCP_SKILL_PATHS`` environment variable (global fallback)
-        - Bundled skills inside ``dcc-mcp-core`` wheel (when ``include_bundled=True``)
-        - Platform default skills directory
+        Calls the base-class implementation to scan all skill directories,
+        then additionally registers the standard diagnostic IPC handlers
+        (``get_audit_log``, ``get_action_metrics``, ``dispatch_action``) so
+        that skill sub-processes can call back into this server.
 
         Args:
-            extra_skill_paths: Additional directories to scan for SKILL.md files.
-            include_bundled: When ``True`` (default), automatically include the
-                general-purpose skills bundled with ``dcc-mcp-core``
-                (``dcc-diagnostics``, ``workflow``, ``git-automation``, etc.).
-                Pass ``False`` to opt-out of bundled skills.
+            extra_skill_paths: Additional directories to scan.
+            include_bundled: Include dcc-mcp-core bundled skills.
 
         Returns:
-            ``self`` for fluent chaining::
-
-                server = MayaMcpServer().register_builtin_actions()
-                # Disable bundled core skills:
-                server = MayaMcpServer().register_builtin_actions(include_bundled=False)
+            ``self`` for chaining.
         """
-        search_paths = _collect_skill_search_paths(extra_skill_paths, include_bundled=include_bundled)
-
-        count = self._server.discover(extra_paths=search_paths, dcc_name="maya")
-        logger.debug("SkillCatalog discovered %d skill(s)", count)
-
-        loaded = 0
-        failed = 0
-        for summary in self._server.list_skills():
-            skill_name = summary.name if hasattr(summary, "name") else summary["name"]
-            try:
-                self._server.load_skill(skill_name)
-                loaded += 1
-            except Exception as exc:
-                logger.warning("Failed to load skill %r: %s", skill_name, exc)
-                failed += 1
-
-        logger.info(
-            "Skills loaded: %d loaded, %d failed (from %d discovered)",
-            loaded,
-            failed,
-            count,
+        super().register_builtin_actions(
+            extra_skill_paths=extra_skill_paths,
+            include_bundled=include_bundled,
         )
+        try:
+            from dcc_mcp_core.dcc_server import register_diagnostic_handlers  # noqa: PLC0415
 
-        # Register diagnostic IPC handlers and set DCC_MCP_IPC_ADDRESS so that
-        # skill subprocesses (dcc-diagnostics, workflow) can call back into this
-        # server to retrieve live audit log, metrics, and dispatch relays.
-        from dcc_mcp_maya.diagnostics import register_diagnostic_handlers  # noqa: PLC0415
-
-        register_diagnostic_handlers(self._server)
-
-        # Store search paths for hot-reload use
-        self._skill_search_paths = search_paths
-
+            register_diagnostic_handlers(self._server, dcc_name="maya")
+        except Exception as exc:
+            logger.debug("Failed to register diagnostic handlers: %s", exc)
         return self
 
-    # ── skill discovery helpers ───────────────────────────────────────────────
+    def _version_string(self) -> str:
+        """Return the Maya version via ``cmds.about(version=True)``.
 
-    def enable_hot_reload(self, debounce_ms: int = 300) -> bool:
-        """Enable automatic hot-reload of skills when files change.
-
-        Monitors skill directories for changes to SKILL.md files and scripts.
-        When a change is detected, the affected skill is automatically
-        unloaded and reloaded without restarting the server.
-
-        This feature uses platform-native filesystem monitoring:
-        - **Linux**: inotify
-        - **macOS**: FSEvents
-        - **Windows**: ReadDirectoryChangesW
-
-        The reloader runs on a background thread and never blocks Maya.
-
-        Args:
-            debounce_ms: Milliseconds to wait after a filesystem change before
-                reloading (default 300ms). Use this to avoid excessive reloads
-                when a single "save" triggers multiple low-level events.
-
-        Returns:
-            ``True`` if hot-reload was successfully enabled, ``False`` on error.
-
-        Example::
-
-            server.register_builtin_actions()
-            if server.enable_hot_reload(debounce_ms=250):
-                print("Hot-reload enabled")
-
-        .. versionadded:: 0.3.0
-           Requires dcc-mcp-core >= 0.12.24 with SkillWatcher support.
+        Falls back to ``"unknown"`` when Maya is not running or importable.
         """
-        if not hasattr(self, "_skill_search_paths"):
-            logger.warning("Cannot enable hot-reload: skills not yet registered")
-            return False
-        return self._hot_reloader.enable(self._skill_search_paths, debounce_ms=debounce_ms)
-
-    def disable_hot_reload(self) -> None:
-        """Disable automatic skill hot-reload.
-
-        Stops monitoring skill directories and cleans up watcher resources.
-
-        Example::
-
-            server.disable_hot_reload()
-        """
-        self._hot_reloader.disable()
-
-    @property
-    def is_hot_reload_enabled(self) -> bool:
-        """Whether hot-reload is currently active.
-
-        Returns:
-            ``True`` if hot-reload is enabled, ``False`` otherwise.
-        """
-        return self._hot_reloader.is_enabled
-
-    @property
-    def hot_reload_stats(self) -> dict:
-        """Return hot-reload statistics.
-
-        Returns:
-            Dict with ``enabled``, ``watched_paths``, ``reload_count`` keys.
-
-        Example::
-
-            stats = server.hot_reload_stats
-            print(f"Reloads so far: {stats['reload_count']}")
-        """
-        return {
-            "enabled": self._hot_reloader.is_enabled,
-            "watched_paths": self._hot_reloader.watched_paths,
-            "reload_count": self._hot_reloader.reload_count,
-        }
-
-    def search_skills(
-        self,
-        category: Optional[str] = None,
-        tags: Optional[List[str]] = None,
-        dcc_name: Optional[str] = None,
-    ) -> List[Any]:
-        """Search registered skills / actions using dcc-mcp-core's ``search_actions``.
-
-        Wraps ``ActionRegistry.search_actions`` (v0.12.5+).  All filters are
-        applied as AND conditions; passing ``None`` ignores that filter.
-
-        Args:
-            category: Filter by action category (e.g. ``"geometry"``).
-            tags: Filter by tag list (e.g. ``["mesh", "create"]``).
-            dcc_name: Filter by DCC name (e.g. ``"maya"``).  Defaults to
-                ``"maya"`` when not specified.
-
-        Returns:
-            List of :class:`ActionInfo` objects (or dicts) matching the filters.
-
-        Example::
-
-            server.register_builtin_actions()
-            results = server.search_skills(category="geometry", tags=["create"])
-        """
-        registry = self.registry
-        if registry is None:
-            logger.warning("Registry not available; returning empty search result")
-            return []
-
-        effective_dcc = dcc_name if dcc_name is not None else "maya"
+        if not _maya_available():
+            return "unknown"
         try:
-            return list(
-                registry.search_actions(
-                    category=category,
-                    tags=tags,
-                    dcc_name=effective_dcc,
-                )
-            )
-        except Exception as exc:
-            logger.debug("search_actions failed: %s", exc)
-            return []
+            import maya.cmds as cmds  # noqa: PLC0415
 
-    def get_skill_categories(self) -> List[str]:
-        """Return all unique action categories registered in the server.
+            return str(cmds.about(version=True))
+        except Exception:
+            return "unknown"
 
-        Wraps ``ActionRegistry.get_categories`` (v0.12.5+).
-
-        Returns:
-            Sorted list of category strings.
-        """
-        registry = self.registry
-        if registry is None:
-            return []
-        try:
-            return list(registry.get_categories())
-        except Exception as exc:
-            logger.debug("get_categories failed: %s", exc)
-            return []
-
-    def get_skill_tags(self, dcc_name: Optional[str] = None) -> List[str]:
-        """Return all unique tags for the given DCC (or all DCCs).
-
-        Wraps ``ActionRegistry.get_tags`` (v0.12.5+).
-
-        Args:
-            dcc_name: If given, only return tags for that DCC.  Defaults to
-                ``"maya"`` when not specified.
-
-        Returns:
-            Sorted list of tag strings.
-        """
-        registry = self.registry
-        if registry is None:
-            return []
-        effective_dcc = dcc_name if dcc_name is not None else "maya"
-        try:
-            return list(registry.get_tags(dcc_name=effective_dcc))
-        except Exception as exc:
-            logger.debug("get_tags failed: %s", exc)
-            return []
-
-    def unregister_skill(self, name: str, dcc_name: Optional[str] = None) -> None:
-        """Unregister a skill / action from the server's registry.
-
-        Wraps ``ActionRegistry.unregister`` (v0.12.6+).  Silently ignores
-        errors so callers do not need to guard against missing entries.
-
-        Args:
-            name: The canonical action name (e.g.
-                ``"maya_scene__create_object"``).
-            dcc_name: If given, only unregister for that DCC.  If ``None``,
-                unregisters globally (all DCCs).
-
-        Example::
-
-            server.unregister_skill("maya_scene__create_object")
-            server.unregister_skill("maya_scene__create_object", dcc_name="maya")
-        """
-        registry = self.registry
-        if registry is None:
-            logger.warning("Registry not available; cannot unregister skill %r", name)
-            return
-        try:
-            registry.unregister(name, dcc_name=dcc_name)
-            logger.debug("Unregistered skill %r (dcc=%r)", name, dcc_name)
-        except Exception as exc:
-            logger.debug("unregister(%r) failed: %s", name, exc)
-
-    def find_skills(
-        self,
-        query: Optional[str] = None,
-        tags: Optional[List[str]] = None,
-        dcc: Optional[str] = None,
-    ) -> List[Any]:
-        """Search the SkillCatalog using ``SkillCatalog.find_skills`` (v0.12.12+).
-
-        Matches on skill name, description, ``search_hint``, and tool names.
-        All filters are applied as AND conditions; ``None`` ignores that filter.
-
-        Args:
-            query: Free-text search term matched against name/description/hint.
-            tags: List of tags that the skill must have **all** of.
-            dcc: If given, restrict results to skills targeting this DCC (e.g.
-                ``"maya"``).
-
-        Returns:
-            List of :class:`SkillSummary` objects (or dicts) matching the
-            query.  Returns ``[]`` when the catalog is unavailable or on error.
-
-        Example::
-
-            server.register_builtin_actions()
-            hits = server.find_skills(query="bounding box")
-            hits = server.find_skills(tags=["rigging"], dcc="maya")
-        """
-        try:
-            return list(self._server.find_skills(query=query, tags=tags, dcc=dcc))
-        except Exception as exc:
-            logger.debug("find_skills failed: %s", exc)
-            return []
-
-    def is_skill_loaded(self, name: str) -> bool:
-        """Check whether a skill has been loaded into the SkillCatalog.
-
-        Wraps ``SkillCatalog.is_loaded`` (v0.12.12+).
-
-        Args:
-            name: Skill name as discovered (e.g. ``"maya-scene"``).
-
-        Returns:
-            ``True`` if the skill is currently loaded, ``False`` otherwise.
-
-        Example::
-
-            server.register_builtin_actions()
-            if server.is_skill_loaded("maya-scene"):
-                print("maya-scene is ready")
-        """
-        try:
-            return bool(self._server.is_loaded(name))
-        except Exception as exc:
-            logger.debug("is_loaded(%r) failed: %s", name, exc)
-            return False
-
-    def get_skill_info(self, name: str) -> Any:
-        """Return full metadata for a skill from the SkillCatalog.
-
-        Wraps ``SkillCatalog.get_skill_info`` (v0.12.12+).
-
-        Args:
-            name: Skill name as discovered (e.g. ``"maya-scene"``).
-
-        Returns:
-            :class:`SkillMetadata` instance (or dict), or ``None`` if the skill
-            is not found or the catalog is unavailable.
-
-        Example::
-
-            info = server.get_skill_info("maya-scene")
-            if info:
-                print(info.description)
-        """
-        try:
-            return self._server.get_skill_info(name)
-        except Exception as exc:
-            logger.debug("get_skill_info(%r) failed: %s", name, exc)
-            return None
-
-    # ── TransportManager helpers ──────────────────────────────────────────────
+    # ── TransportManager helpers (Maya-specific wrappers) ─────────────────────
 
     def bind_and_register(
         self,
@@ -597,39 +173,18 @@ class MayaMcpServer:
     ) -> Any:
         """Register this Maya instance via ``TransportManager.bind_and_register``.
 
-        One-shot helper that auto-selects the best transport (Named Pipe on
-        Windows, Unix Socket on Linux/macOS, TCP fallback) and registers the
-        service so other processes can discover it via ``find_best_service`` /
-        ``rank_services``.
-
-        Wraps ``TransportManager.bind_and_register`` (v0.12+).
+        Auto-detects the Maya version when ``version`` is not supplied.
 
         Args:
-            transport_manager: A :class:`dcc_mcp_core.TransportManager`
-                instance managing service discovery.
-            version: Maya version string reported to the registry (e.g.
-                ``"2025"``).  If ``None``, attempts to read ``cmds.about(v=True)``.
-            metadata: Arbitrary dict stored with the service entry (e.g.
-                ``{"artist": "user1"}``).
+            transport_manager: A :class:`dcc_mcp_core.TransportManager` instance.
+            version: Maya version string.  Auto-detected if ``None``.
+            metadata: Arbitrary dict stored with the service entry.
 
         Returns:
-            Tuple ``(instance_id, listener)`` returned by
-            ``TransportManager.bind_and_register``, or ``None`` on error.
-
-        Example::
-
-            from dcc_mcp_core import TransportManager
-            mgr = TransportManager()
-            instance_id, listener = server.bind_and_register(mgr, version="2025")
+            Tuple ``(instance_id, listener)`` or ``None`` on error.
         """
         if version is None:
-            try:
-                import maya.cmds as cmds  # noqa: PLC0415
-
-                version = str(cmds.about(version=True))
-            except Exception:
-                version = "unknown"
-
+            version = self._version_string()
         try:
             return transport_manager.bind_and_register(
                 "maya",
@@ -642,23 +197,16 @@ class MayaMcpServer:
 
     @staticmethod
     def find_best_service(transport_manager: Any, dcc_type: str = "maya") -> Any:
-        """Find the best available Maya service via ``TransportManager.find_best_service``.
+        """Find the best available Maya MCP service.
 
-        Wraps ``TransportManager.find_best_service`` (v0.12+).
+        Wraps ``TransportManager.find_best_service``.
 
         Args:
-            transport_manager: A :class:`dcc_mcp_core.TransportManager`
-                instance managing service discovery.
-            dcc_type: DCC type string to search for.  Defaults to ``"maya"``.
+            transport_manager: A :class:`dcc_mcp_core.TransportManager` instance.
+            dcc_type: DCC type string to search for.
 
         Returns:
-            The best service instance, or ``None`` if none are available.
-
-        Example::
-
-            from dcc_mcp_core import TransportManager
-            mgr = TransportManager()
-            service = MayaMcpServer.find_best_service(mgr)
+            Best service instance, or ``None``.
         """
         try:
             return transport_manager.find_best_service(dcc_type)
@@ -668,221 +216,22 @@ class MayaMcpServer:
 
     @staticmethod
     def rank_services(transport_manager: Any, dcc_type: str = "maya") -> List[Any]:
-        """List and rank all active Maya instances via ``TransportManager.rank_services``.
+        """List and rank all active Maya MCP instances.
 
-        Services are ordered by: local IPC available → local IPC busy →
-        local TCP available → remote TCP.
-
-        Wraps ``TransportManager.rank_services`` (v0.12+).
+        Wraps ``TransportManager.rank_services``.
 
         Args:
-            transport_manager: A :class:`dcc_mcp_core.TransportManager`
-                instance managing service discovery.
-            dcc_type: DCC type string to filter.  Defaults to ``"maya"``.
+            transport_manager: A :class:`dcc_mcp_core.TransportManager` instance.
+            dcc_type: DCC type string to filter.
 
         Returns:
-            Ranked list of service info objects.  Returns ``[]`` on error.
-
-        Example::
-
-            from dcc_mcp_core import TransportManager
-            mgr = TransportManager()
-            services = MayaMcpServer.rank_services(mgr)
-            # [service_local_ipc, service_busy_ipc, service_tcp, ...]
+            Ranked list of service info objects.
         """
         try:
             return list(transport_manager.rank_services(dcc_type))
         except Exception as exc:
             logger.debug("rank_services failed: %s", exc)
             return []
-
-    # ── lifecycle ─────────────────────────────────────────────────────────────
-
-    def start(self):
-        """Start the MCP HTTP server and optionally the gateway election thread.
-
-        Returns:
-            ``McpServerHandle`` with ``.mcp_url()``, ``.port``, ``.shutdown()``.
-        """
-        if self._handle is not None:
-            logger.warning("MayaMcpServer already running on port %d", self._handle.port)
-            return self._handle
-
-        self._handle = self._server.start()
-        logger.info("Maya MCP server started at %s", self._handle.mcp_url())
-
-        # Start gateway election thread if enabled
-        if self._enable_gateway_failover and self._gateway_election is None:
-            try:
-                from dcc_mcp_maya.gateway_election import GatewayElection  # noqa: PLC0415
-
-                self._gateway_election = GatewayElection(self)
-                self._gateway_election.start()
-                logger.info("Gateway failover election enabled")
-            except Exception as exc:
-                logger.warning("Failed to start gateway election: %s", exc)
-
-        return self._handle
-
-    def stop(self) -> None:
-        """Gracefully stop the server and gateway election thread."""
-        # Stop gateway election thread first
-        if self._gateway_election is not None:
-            try:
-                self._gateway_election.stop()
-            except Exception as exc:
-                logger.warning("Error stopping gateway election: %s", exc)
-            finally:
-                self._gateway_election = None
-
-        if self._handle is not None:
-            self._handle.shutdown()
-            self._handle = None
-            logger.info("Maya MCP server stopped")
-
-    @property
-    def is_running(self) -> bool:
-        """Whether the server is currently running."""
-        return self._handle is not None
-
-    @property
-    def mcp_url(self) -> Optional[str]:
-        """The MCP endpoint URL, or ``None`` if not running."""
-        return self._handle.mcp_url() if self._handle else None
-
-    def update_gateway_metadata(
-        self,
-        scene: Optional[str] = None,
-        version: Optional[str] = None,
-    ) -> bool:
-        """Update this instance's metadata in the gateway registry (without restarting).
-
-        Dynamically updates the scene and/or version information registered with
-        the gateway. The changes are immediately reflected in the FileRegistry
-        and visible to all gateway clients without requiring a server restart.
-
-        This is useful when:
-        - The user opens/saves a new scene in Maya
-        - The application version changes
-        - Any other metadata needs updating
-
-        Args:
-            scene: New scene file path (optional). If provided, updates the
-                registered scene information.
-            version: New application version (optional). If provided, updates
-                the registered version.
-
-        Returns:
-            ``True`` if metadata was successfully updated, ``False`` on error.
-
-        Example::
-
-            server.update_gateway_metadata(scene="/path/to/new_scene.ma")
-            # Gateway now shows this instance as having a new scene
-
-        .. versionadded:: 0.4.0
-           Requires dcc-mcp-core >= 0.12.24 with FileRegistry hot-reload support.
-        """
-        if not self.is_running:
-            logger.warning("Cannot update metadata: server is not running")
-            return False
-
-        if not self._config.gateway_port or self._config.gateway_port <= 0:
-            logger.debug("Gateway not configured; metadata update skipped")
-            return False
-
-        try:
-            # Update the config (this propagates to the Rust layer)
-            if scene is not None:
-                self._config.scene = scene
-                logger.debug("Updated scene metadata: %s", scene)
-
-            if version is not None:
-                self._config.dcc_version = version
-                logger.debug("Updated version metadata: %s", version)
-
-            # Send heartbeat to notify gateway of updates
-            # This triggers gateway to refresh FileRegistry entries
-            try:
-                from dcc_mcp_core import TransportManager  # noqa: PLC0415
-
-                registry_dir = self._config.registry_dir
-                if not registry_dir:
-                    registry_dir = os.environ.get("DCC_MCP_REGISTRY_DIR", "")
-
-                if registry_dir:
-                    mgr = TransportManager(registry_dir=registry_dir)
-
-                    # Get instance_id from handle if available (added in v0.12.24)
-                    instance_id = None
-                    if hasattr(self._handle, "instance_id"):
-                        instance_id = self._handle.instance_id
-
-                    if instance_id:
-                        # Send heartbeat to trigger gateway refresh
-                        result = mgr.py_heartbeat("maya", instance_id)
-                        if result:
-                            logger.info(
-                                "Gateway metadata updated and heartbeat sent: scene=%s, version=%s", scene, version
-                            )
-                            return True
-                        else:
-                            logger.warning("Heartbeat send failed; metadata may not be visible to gateway")
-                            return False
-                    else:
-                        logger.debug("instance_id not available; metadata updated locally only")
-                        return True
-
-            except ImportError:
-                logger.debug("TransportManager not available; skipping heartbeat")
-                return True  # Still consider it success if config was updated
-
-        except Exception as exc:
-            logger.error("Failed to update gateway metadata: %s", exc)
-            return False
-
-    def get_gateway_election_status(self) -> dict:
-        """Return the status of the gateway election thread (if running).
-
-        Returns:
-            Dict with keys:
-            - ``enabled``: Whether gateway failover is enabled
-            - ``running``: Whether election thread is active
-            - ``consecutive_failures``: Current failure counter (if running)
-
-        Example::
-
-            status = server.get_gateway_election_status()
-            if status['running']:
-                print(f"Gateway election active, {status['consecutive_failures']} failures")
-        """
-        return {
-            "enabled": self._enable_gateway_failover,
-            "running": self._gateway_election.is_running if self._gateway_election else False,
-            "consecutive_failures": (
-                self._gateway_election._consecutive_failures  # noqa: SLF001
-                if self._gateway_election
-                else 0
-            ),
-        }
-
-        """Return the Maya DCC capabilities as a ``DccCapabilities`` instance.
-
-        Declares the feature set supported by this Maya integration for
-        cross-DCC protocol negotiation (v0.12.7+).
-
-        Returns:
-            ``dcc_mcp_core.DccCapabilities`` instance with Maya-specific flags.
-
-        Example::
-
-            caps = server.get_capabilities()
-            print(caps.transform)    # True
-            print(caps.to_dict())    # serialisable dict
-        """
-        from dcc_mcp_maya.capabilities import maya_capabilities  # noqa: PLC0415
-
-        return maya_capabilities()
 
 
 # ── module-level singleton helpers ────────────────────────────────────────────
@@ -906,56 +255,34 @@ def start_server(
 ) -> Any:
     """Start (or return the already-running) Maya MCP server.
 
-    Creates a module-level singleton :class:`MayaMcpServer`, optionally discovers
-    and loads all built-in Maya skills, and starts the HTTP server.
-
-    Uses the dcc-mcp-core Skills-First API (``create_skill_manager``, v0.12.12+).
-    Skills are discovered from:
-
-    - Built-in ``skills/`` directory in this package
-    - ``DCC_MCP_MAYA_SKILL_PATHS`` environment variable (Maya-specific, v0.12.12+)
-    - ``DCC_MCP_SKILL_PATHS`` environment variable (global fallback)
-    - Bundled skills inside ``dcc-mcp-core`` wheel (when ``include_bundled=True``)
-    - ``extra_skill_paths`` argument
+    Creates a module-level :class:`MayaMcpServer` singleton, optionally
+    discovers all skills, and starts the HTTP server.
 
     **Multi-DCC Gateway** (v0.12.22+):
-    When ``gateway_port`` is set (or ``DCC_MCP_GATEWAY_PORT`` env var), this
-    instance joins the first-wins gateway port competition.  The first process
-    to bind the port becomes the gateway and exposes discovery meta-tools;
-    all others register themselves as plain instances.  See
-    :attr:`MayaMcpServer.is_gateway` and :attr:`MayaMcpServer.gateway_url`.
+    When ``gateway_port`` is set, this instance joins the first-wins
+    gateway port competition.  See :attr:`~dcc_mcp_core.server_base.DccServerBase.is_gateway`.
 
-    **Hot-Reload Support** (v0.3.0+):
-    When ``enable_hot_reload`` is ``True`` (or ``DCC_MCP_MAYA_HOT_RELOAD=1``
-    env var), the server automatically monitors skill directories and reloads
-    skills when SKILL.md or script files are modified. Requires dcc-mcp-core
-    >= 0.12.24 with SkillWatcher support.
+    **Hot-Reload** (v0.3.0+):
+    When ``enable_hot_reload`` is ``True`` (or ``DCC_MCP_MAYA_HOT_RELOAD=1``),
+    the server monitors skill directories and reloads on file changes.
 
     **Gateway Failover** (v0.4.0+):
-    When ``enable_gateway_failover`` is ``True`` (or ``DCC_MCP_MAYA_ENABLE_GATEWAY_FAILOVER=1``
-    env var), non-gateway instances monitor the current gateway and automatically
-    attempt to become the new gateway if it fails. This ensures continued service
-    availability in multi-instance deployments.
+    When ``enable_gateway_failover`` is ``True`` (or
+    ``DCC_MCP_MAYA_ENABLE_GATEWAY_FAILOVER=1``), non-gateway instances
+    promote themselves if the current gateway becomes unreachable.
 
     Args:
         port: TCP port.  Use ``0`` for a random available port.
         server_name: Name shown in MCP ``initialize`` response.
-        register_builtins: If ``True``, discovers and loads all built-in skills.
-        extra_skill_paths: Additional directories to scan for ``SKILL.md`` files.
-        include_bundled: When ``True`` (default), automatically include the
-            general-purpose skills bundled with ``dcc-mcp-core``.
-            Pass ``False`` to opt-out.
-        gateway_port: Port to compete for as the multi-DCC gateway.  ``None``
-            reads ``DCC_MCP_GATEWAY_PORT`` env var; default ``0`` disables gateway.
-        registry_dir: Directory for the shared ``FileRegistry`` JSON file.
-        dcc_version: Maya version string reported to the registry (e.g. ``"2025"``).
-        scene: Currently open scene file path reported to the registry.
-        enable_hot_reload: If ``True``, enable automatic skill hot-reload.
-            Can also be set via ``DCC_MCP_MAYA_HOT_RELOAD=1`` env var.
-        enable_gateway_failover: If ``True``, enable automatic gateway failover
-            (non-gateway instances monitor and can upgrade if current gateway fails).
-            Only effective when ``gateway_port`` is configured.
-            Can also be set via ``DCC_MCP_MAYA_ENABLE_GATEWAY_FAILOVER=1`` env var.
+        register_builtins: If ``True``, discovers and loads all skills.
+        extra_skill_paths: Additional directories to scan.
+        include_bundled: Include dcc-mcp-core bundled skills.
+        gateway_port: Port for multi-DCC gateway competition.
+        registry_dir: Shared ``FileRegistry`` directory.
+        dcc_version: Maya version string for the gateway registry.
+        scene: Currently open scene file path for the gateway registry.
+        enable_hot_reload: Enable skill hot-reload on file changes.
+        enable_gateway_failover: Enable automatic gateway failover election.
 
     Returns:
         ``McpServerHandle`` with ``.mcp_url()``, ``.port``, ``.shutdown()``.
@@ -965,22 +292,6 @@ def start_server(
         import dcc_mcp_maya
         handle = dcc_mcp_maya.start_server(port=8765)
         print(handle.mcp_url())  # http://127.0.0.1:8765/mcp
-
-        # Join the multi-DCC gateway (first Maya wins :9765):
-        handle = dcc_mcp_maya.start_server(port=0, gateway_port=9765, dcc_version="2025")
-
-        # With hot-reload enabled:
-        handle = dcc_mcp_maya.start_server(enable_hot_reload=True)
-
-        # With gateway failover (auto-elevate to gateway on failure):
-        handle = dcc_mcp_maya.start_server(
-            port=0, gateway_port=9765, enable_gateway_failover=True
-        )
-
-        # Or via environment variable:
-        import os
-        os.environ["DCC_MCP_MAYA_ENABLE_GATEWAY_FAILOVER"] = "1"
-        handle = dcc_mcp_maya.start_server(port=0, gateway_port=9765)
     """
     global _server_instance
     with _lock:
@@ -994,14 +305,16 @@ def start_server(
                 scene=scene,
                 enable_gateway_failover=enable_gateway_failover,
             )
+
             if register_builtins:
                 _server_instance.register_builtin_actions(
                     extra_skill_paths=extra_skill_paths,
                     include_bundled=include_bundled,
                 )
-            # Check environment variable for hot-reload if not explicitly set
-            hot_reload_enabled = enable_hot_reload or os.environ.get("DCC_MCP_MAYA_HOT_RELOAD", "0") == "1"
-            if hot_reload_enabled:
+
+            # Hot-reload: explicit arg OR environment variable override
+            hot_reload_active = enable_hot_reload or os.environ.get("DCC_MCP_MAYA_HOT_RELOAD", "0") == "1"
+            if hot_reload_active:
                 try:
                     if _server_instance.enable_hot_reload():
                         logger.info("Skill hot-reload enabled")
@@ -1009,16 +322,6 @@ def start_server(
                         logger.warning("Failed to enable skill hot-reload")
                 except Exception as exc:
                     logger.warning("Error enabling hot-reload: %s", exc)
-
-            # Gateway failover is enabled by default unless explicitly disabled or gateway_port=0
-            gateway_failover_enabled = (
-                enable_gateway_failover
-                and os.environ.get("DCC_MCP_MAYA_ENABLE_GATEWAY_FAILOVER", "1") != "0"
-                and gateway_port
-                and gateway_port > 0
-            )
-            if gateway_failover_enabled and hasattr(_server_instance, "_enable_gateway_failover"):
-                logger.info("Gateway failover election ready (will start in server.start())")
 
         return _server_instance.start()
 

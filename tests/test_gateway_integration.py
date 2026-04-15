@@ -227,7 +227,7 @@ class TestGatewayProperties:
 
     def test_gateway_url_returns_url_when_is_gateway(self):
         server = self._make_server_with_handle(True, gateway_port=9765)
-        assert server.gateway_url == "http://127.0.0.1:9765"
+        assert server.gateway_url == "http://127.0.0.1:9765/mcp"
 
     def test_gateway_url_none_when_not_gateway(self):
         server = self._make_server_with_handle(False, gateway_port=9765)

@@ -83,18 +83,16 @@ class TestMayaMcpServerApi:
         server.stop()
 
     def test_registry_has_builtins(self):
-        """register_builtin_actions loads skills into the SkillCatalog."""
+        """register_builtin_actions discovers skills into the SkillCatalog."""
         srv_mod = _import_server()
         server = srv_mod.MayaMcpServer(port=0)
         # Pass explicit skills path to ensure discovery regardless of install mode
         server.register_builtin_actions(extra_skill_paths=[_builtin_skills_dir()])
-        # Verify skills are loaded via the SkillCatalog API
-        loaded_skills = [
-            s.name if hasattr(s, "name") else s["name"] for s in server._server.list_skills(status="loaded")
-        ]
-        assert "maya-primitives" in loaded_skills
-        assert "maya-scripting" in loaded_skills
-        assert "maya-scene" in loaded_skills
+        # Verify skills are discovered via the SkillCatalog API (skills are lazy-loaded)
+        discovered_skills = [s.name if hasattr(s, "name") else s["name"] for s in server._server.list_skills()]
+        assert "maya-primitives" in discovered_skills
+        assert "maya-scripting" in discovered_skills
+        assert "maya-scene" in discovered_skills
 
     def test_mcp_url_none_when_not_running(self):
         srv_mod = _import_server()
@@ -111,6 +109,12 @@ class TestMayaMcpServerHttp:
         server = srv_mod.MayaMcpServer(port=0)
         # Pass explicit skills path to ensure discovery regardless of install mode
         server.register_builtin_actions(extra_skill_paths=[_builtin_skills_dir()])
+        # Explicitly load key skills so their tools appear in tools/list
+        for skill in ("maya-primitives", "maya-scripting", "maya-scene"):
+            try:
+                server._server.load_skill(skill)
+            except Exception:
+                pass
         handle = server.start()
         yield server, handle
         server.stop()
@@ -181,43 +185,96 @@ class TestMayaMcpServerHttp:
 
 
 class TestSkillSearchPaths:
-    """_collect_skill_search_paths respects all path sources."""
+    """collect_skill_search_paths respects all path sources."""
 
     def test_builtin_skills_always_included(self):
-        srv_mod = _import_server()
-        paths = srv_mod._collect_skill_search_paths()
-        builtin = str(srv_mod._BUILTIN_SKILLS_DIR)
-        assert builtin in paths
+        from dcc_mcp_maya.server import _BUILTIN_SKILLS_DIR, MayaMcpServer
+
+        srv = object.__new__(MayaMcpServer)
+        srv._dcc_name = "maya"
+        srv._builtin_skills_dir = _BUILTIN_SKILLS_DIR
+        srv._handle = None
+        srv._enable_gateway_failover = False
+        srv._hot_reloader = None
+        srv._gateway_election = None
+        from dcc_mcp_core import McpHttpConfig
+
+        srv._config = McpHttpConfig()
+        srv._server = MagicMock()
+        paths = srv.collect_skill_search_paths(include_bundled=False)
+        assert str(_BUILTIN_SKILLS_DIR) in paths
 
     def test_extra_paths_take_highest_priority(self):
         import tempfile
 
-        srv_mod = _import_server()
+        from dcc_mcp_maya.server import MayaMcpServer
+
+        srv = object.__new__(MayaMcpServer)
+        srv._dcc_name = "maya"
+        from dcc_mcp_maya.server import _BUILTIN_SKILLS_DIR
+
+        srv._builtin_skills_dir = _BUILTIN_SKILLS_DIR
+        srv._handle = None
+        srv._enable_gateway_failover = False
+        srv._hot_reloader = None
+        srv._gateway_election = None
+        from dcc_mcp_core import McpHttpConfig
+
+        srv._config = McpHttpConfig()
+        srv._server = MagicMock()
         with tempfile.TemporaryDirectory() as tmp:
-            paths = srv_mod._collect_skill_search_paths(extra_paths=[tmp])
+            paths = srv.collect_skill_search_paths(extra_paths=[tmp], include_bundled=False)
             assert paths[0] == tmp
 
     def test_dcc_mcp_maya_skill_paths_env_var(self):
         """DCC_MCP_MAYA_SKILL_PATHS (per-app) is honoured (v0.12.12+)."""
         import tempfile
 
-        srv_mod = _import_server()
+        from dcc_mcp_maya.server import MayaMcpServer
+
+        srv = object.__new__(MayaMcpServer)
+        srv._dcc_name = "maya"
+        from dcc_mcp_maya.server import _BUILTIN_SKILLS_DIR
+
+        srv._builtin_skills_dir = _BUILTIN_SKILLS_DIR
+        srv._handle = None
+        srv._enable_gateway_failover = False
+        srv._hot_reloader = None
+        srv._gateway_election = None
+        from dcc_mcp_core import McpHttpConfig
+
+        srv._config = McpHttpConfig()
+        srv._server = MagicMock()
         with tempfile.TemporaryDirectory() as tmp:
             with patch.dict("os.environ", {"DCC_MCP_MAYA_SKILL_PATHS": tmp}):
-                paths = srv_mod._collect_skill_search_paths()
+                paths = srv.collect_skill_search_paths(include_bundled=False)
         assert tmp in paths
 
     def test_app_env_var_before_global_env_var(self):
-        """Per-app env var (DCC_MCP_MAYA_SKILL_PATHS) appears before DCC_MCP_SKILL_PATHS."""
+        """Per-app env var appears before DCC_MCP_SKILL_PATHS."""
         import tempfile
 
-        srv_mod = _import_server()
+        from dcc_mcp_maya.server import MayaMcpServer
+
+        srv = object.__new__(MayaMcpServer)
+        srv._dcc_name = "maya"
+        from dcc_mcp_maya.server import _BUILTIN_SKILLS_DIR
+
+        srv._builtin_skills_dir = _BUILTIN_SKILLS_DIR
+        srv._handle = None
+        srv._enable_gateway_failover = False
+        srv._hot_reloader = None
+        srv._gateway_election = None
+        from dcc_mcp_core import McpHttpConfig
+
+        srv._config = McpHttpConfig()
+        srv._server = MagicMock()
         with tempfile.TemporaryDirectory() as app_tmp, tempfile.TemporaryDirectory() as global_tmp:
             with patch.dict(
                 "os.environ",
                 {"DCC_MCP_MAYA_SKILL_PATHS": app_tmp, "DCC_MCP_SKILL_PATHS": global_tmp},
             ):
-                paths = srv_mod._collect_skill_search_paths()
+                paths = srv.collect_skill_search_paths(include_bundled=False)
         assert app_tmp in paths
         assert global_tmp in paths
         assert paths.index(app_tmp) < paths.index(global_tmp)
