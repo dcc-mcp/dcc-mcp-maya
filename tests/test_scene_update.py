@@ -5,8 +5,8 @@ within < 100ms and without server restart.
 """
 
 import logging
+
 import pytest
-import time
 
 logger = logging.getLogger(__name__)
 
