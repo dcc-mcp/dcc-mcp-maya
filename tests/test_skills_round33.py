@@ -436,10 +436,8 @@ class TestServerRegistryProperty:
             # Replace Rust object with a simple namespace that has _registry
             fake_registry = MagicMock()
 
-            class FakeServer:
-                _registry = fake_registry
-
-            server._server = FakeServer()
+            server._server = MagicMock()
+            server._server.registry = fake_registry
             result = server.registry
             assert result is fake_registry
 
