@@ -210,7 +210,4 @@ class MayaSkillHotReloader:
         """Return a string representation."""
         status = "enabled" if self._enabled else "disabled"
         paths_count = len(self._watched_paths) if self._enabled else 0
-        return (
-            f"MayaSkillHotReloader(status={status}, "
-            f"watched_paths={paths_count}, reloads={self._reload_count})"
-        )
+        return f"MayaSkillHotReloader(status={status}, watched_paths={paths_count}, reloads={self._reload_count})"

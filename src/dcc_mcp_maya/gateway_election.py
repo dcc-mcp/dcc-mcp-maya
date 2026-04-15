@@ -140,8 +140,7 @@ class GatewayElection:
         Runs on background thread until stop event is set.
         """
         logger.debug(
-            "Starting election loop: probe_interval=%ds, "
-            "probe_timeout=%ds, probe_failures=%d",
+            "Starting election loop: probe_interval=%ds, probe_timeout=%ds, probe_failures=%d",
             self._probe_interval,
             self._probe_timeout,
             self._probe_failures,
@@ -170,17 +169,14 @@ class GatewayElection:
 
                         if self._consecutive_failures >= self._probe_failures:
                             logger.warning(
-                                "Gateway unreachable for %d probes, "
-                                "attempting election...",
+                                "Gateway unreachable for %d probes, attempting election...",
                                 self._consecutive_failures,
                             )
                             if self._attempt_gateway_election():
                                 logger.info("🎉 Successfully promoted to gateway!")
                                 self._consecutive_failures = 0
                             else:
-                                logger.debug(
-                                    "Election failed, another instance may have won"
-                                )
+                                logger.debug("Election failed, another instance may have won")
 
             except Exception as exc:
                 logger.error("Unexpected error in election loop: %s", exc)
@@ -319,7 +315,4 @@ class GatewayElection:
     def __repr__(self) -> str:
         """Return a string representation."""
         status = "running" if self.is_running else "stopped"
-        return (
-            f"GatewayElection(status={status}, "
-            f"consecutive_failures={self._consecutive_failures})"
-        )
+        return f"GatewayElection(status={status}, consecutive_failures={self._consecutive_failures})"

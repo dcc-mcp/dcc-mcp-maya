@@ -24,9 +24,7 @@ class GatewayTestClient:
         self.timeout = timeout
         self.session = requests.Session()
 
-    def _request(
-        self, method: str, endpoint: str, **kwargs
-    ) -> requests.Response:
+    def _request(self, method: str, endpoint: str, **kwargs) -> requests.Response:
         """Make HTTP request to gateway.
 
         Args:
@@ -48,9 +46,7 @@ class GatewayTestClient:
             resp.raise_for_status()
             return resp
         except requests.RequestException as exc:
-            logger.error(
-                "Gateway request failed: %s %s - %s", method, url, exc
-            )
+            logger.error("Gateway request failed: %s %s - %s", method, url, exc)
             raise
 
     def health_check(self) -> bool:
@@ -75,9 +71,7 @@ class GatewayTestClient:
         data = resp.json()
         return data.get("tools", [])
 
-    def call_tool(
-        self, tool_name: str, arguments: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def call_tool(self, tool_name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
         """Call a tool via gateway.
 
         Args:
@@ -223,9 +217,7 @@ def maya_instance_manager(temp_registry_dir):
     """
     from maya_instances import MayaInstanceManager
 
-    manager = MayaInstanceManager(
-        gateway_port=9765, registry_dir=temp_registry_dir
-    )
+    manager = MayaInstanceManager(gateway_port=9765, registry_dir=temp_registry_dir)
 
     yield manager
 

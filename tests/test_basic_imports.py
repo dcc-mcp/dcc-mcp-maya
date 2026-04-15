@@ -6,12 +6,14 @@ import pytest
 def test_gateway_election_imports():
     """Verify GatewayElection can be imported."""
     from dcc_mcp_maya.gateway_election import GatewayElection
+
     assert GatewayElection is not None
 
 
 def test_hotreload_imports():
     """Verify MayaSkillHotReloader can be imported."""
     from dcc_mcp_maya.hotreload import MayaSkillHotReloader
+
     assert MayaSkillHotReloader is not None
 
 

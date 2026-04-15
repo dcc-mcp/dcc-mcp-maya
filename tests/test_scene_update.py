@@ -48,9 +48,7 @@ def test_scene_update_basic(maya_instance_manager, gateway_client):
 def test_version_update(maya_instance_manager, gateway_client):
     """Test version metadata update."""
     # Create instance with version 2025
-    config = maya_instance_manager.create_config(
-        "maya-version-test-01", maya_version="2025"
-    )
+    config = maya_instance_manager.create_config("maya-version-test-01", maya_version="2025")
 
     assert maya_instance_manager.launch_instance(config)
     assert gateway_client.wait_for_gateway()
@@ -177,9 +175,7 @@ def test_scene_update_visibility_latency(maya_instance_manager, gateway_client):
     Tests that after update_gateway_metadata() returns, the gateway
     shows the new scene within a short time window (< 5s).
     """
-    config = maya_instance_manager.create_config(
-        "maya-visibility-01", scene_file="/path/to/initial.ma"
-    )
+    config = maya_instance_manager.create_config("maya-visibility-01", scene_file="/path/to/initial.ma")
 
     assert maya_instance_manager.launch_instance(config)
     assert gateway_client.wait_for_gateway()
