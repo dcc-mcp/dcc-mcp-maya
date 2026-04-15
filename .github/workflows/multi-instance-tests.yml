@@ -42,12 +42,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements-test.txt
-          pip install pytest pytest-timeout requests
-
-      - name: Install dcc-mcp-maya in development mode
-        run: |
-          pip install -e .
+          pip install -e ".[dev]"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -69,27 +64,19 @@ jobs:
         run: echo "DCC_MCP_MAYA_DOCKER_IMAGE=tahv/mayapy:${{ matrix.maya-version }}" >> $GITHUB_ENV
 
       - name: Run gateway failover tests (Docker Maya ${{ matrix.maya-version }})
-        run: |
-          cd tests
-          DCC_MCP_FORCE_DOCKER=1 python -m pytest test_gateway_failover.py -v --tb=short -m integration
+        run: DCC_MCP_FORCE_DOCKER=1 python -m pytest tests/test_gateway_failover.py -v --tb=short -m integration
         continue-on-error: true
 
       - name: Run discovery tests (Docker Maya ${{ matrix.maya-version }})
-        run: |
-          cd tests
-          DCC_MCP_FORCE_DOCKER=1 python -m pytest test_multi_instance_discovery.py -v --tb=short -m integration
+        run: DCC_MCP_FORCE_DOCKER=1 python -m pytest tests/test_multi_instance_discovery.py -v --tb=short -m integration
         continue-on-error: true
 
       - name: Run scene update tests (Docker Maya ${{ matrix.maya-version }})
-        run: |
-          cd tests
-          DCC_MCP_FORCE_DOCKER=1 python -m pytest test_scene_update.py -v --tb=short -m integration
+        run: DCC_MCP_FORCE_DOCKER=1 python -m pytest tests/test_scene_update.py -v --tb=short -m integration
         continue-on-error: true
 
       - name: Run Docker integration tests
-        run: |
-          cd tests
-          DCC_MCP_FORCE_DOCKER=1 python -m pytest test_docker_integration.py -v --tb=short -m integration
+        run: DCC_MCP_FORCE_DOCKER=1 python -m pytest tests/test_docker_integration.py -v --tb=short -m integration
         continue-on-error: true
 
       - name: Upload test results
@@ -131,12 +118,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements-test.txt
-          pip install pytest pytest-timeout requests
-
-      - name: Install dcc-mcp-maya in development mode
-        run: |
-          pip install -e .
+          pip install -e ".[dev]"
 
       - name: Verify installation
         run: |
@@ -144,15 +126,11 @@ jobs:
           python -c "from tests.fixtures.maya_instances import MayaInstanceManager; print('✓ MayaInstanceManager imported successfully')"
 
       - name: Run gateway failover tests (local mode)
-        run: |
-          cd tests
-          python -m pytest test_gateway_failover.py -v --tb=short -x -m integration
+        run: python -m pytest tests/test_gateway_failover.py -v --tb=short -x -m integration
         continue-on-error: true
 
       - name: Run discovery tests (local mode)
-        run: |
-          cd tests
-          python -m pytest test_multi_instance_discovery.py -v --tb=short -x -m integration
+        run: python -m pytest tests/test_multi_instance_discovery.py -v --tb=short -x -m integration
         continue-on-error: true
 
       - name: Upload test results
