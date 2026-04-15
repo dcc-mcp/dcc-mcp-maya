@@ -1,5 +1,45 @@
 # Changelog
 
+## [0.2.7](https://github.com/loonghao/dcc-mcp-maya/compare/v0.2.6...v0.2.7) (2026-04-15)
+
+
+### Features
+
+* **docker:** Add Docker-based multi-version Maya testing support ([683eeb4](https://github.com/loonghao/dcc-mcp-maya/commit/683eeb4f4a02aa4dcc6024e27aa1d0511dfefbc4))
+* **hotreload:** automatic skill hot-reload without server restart ([85c81ca](https://github.com/loonghao/dcc-mcp-maya/commit/85c81ca3d202e3caf72cea4f5923e79c9bfbf671))
+* **plugin:** default gateway mode + non-blocking restart + startup banner ([1b4b98f](https://github.com/loonghao/dcc-mcp-maya/commit/1b4b98f0adc5a70fa17d3d1ae436ff1a131905b7))
+* **server:** add gateway support + rename plugin to fix namespace collision ([17e23e1](https://github.com/loonghao/dcc-mcp-maya/commit/17e23e1056fa16e7dd370a4cfadd0efb2cec76ad))
+* **server:** auto-include dcc-mcp-core bundled skills by default ([2224c25](https://github.com/loonghao/dcc-mcp-maya/commit/2224c25f94e5a40309fa827aa92e05a6b5bda493))
+* **server:** register diagnostic IPC handlers for dcc-diagnostics skill ([bd3e1dc](https://github.com/loonghao/dcc-mcp-maya/commit/bd3e1dcdc1ae98c077674f99a2358d3bb0b5e1b4))
+
+
+### Bug Fixes
+
+* Add mayapy availability check and lint fixes for CI ([e03e619](https://github.com/loonghao/dcc-mcp-maya/commit/e03e619fe6e3e3810d8464b3305d3c604c104623))
+* Apply ruff format to resolve formatting issues ([72175e1](https://github.com/loonghao/dcc-mcp-maya/commit/72175e1861e4bececba1f30a312c9a0af74d2462))
+* **ci:** exclude integration tests from standard CI run ([3e7a267](https://github.com/loonghao/dcc-mcp-maya/commit/3e7a2673e73b51665af1dc00eb84cb82f93e7d54))
+* **ci:** fix e2e PYTHONPATH expansion and narrow test collection ([90edb81](https://github.com/loonghao/dcc-mcp-maya/commit/90edb81d4e1d26cd64da648a442340db5877693f))
+* **ci:** fix SSL certificate failure in assemble step on Maya 2022/2023 ([5d7c6d4](https://github.com/loonghao/dcc-mcp-maya/commit/5d7c6d4c4befb8eb486ec91674d3c0220dd2de15))
+* **ci:** format diagnostics.py and fix test_start_server assertion ([b1bd133](https://github.com/loonghao/dcc-mcp-maya/commit/b1bd13350acc147c9795696883c481d13d5e3e96))
+* **ci:** install pytest deps into mayapy before running e2e tests ([762b164](https://github.com/loonghao/dcc-mcp-maya/commit/762b16456596ebbf476c9627f6f18e38c37c4bca))
+* **e2e:** lazy-import requests in GatewayTestClient to fix E2E conftest loading ([5eac8e8](https://github.com/loonghao/dcc-mcp-maya/commit/5eac8e81ff6f3d1f98adb9d63953072c509a3faa))
+* **packaging:** ensure packaged .mod module works in Maya standalone/batch mode ([d1cebd8](https://github.com/loonghao/dcc-mcp-maya/commit/d1cebd874241a0c5ce851f21ce728f4ec0c63302))
+* Remove unused imports and blank line whitespace ([0c5edee](https://github.com/loonghao/dcc-mcp-maya/commit/0c5edee4fe85478575a02c013fbf718775b08569))
+* resolve CI failures and clean up repo ([82fa545](https://github.com/loonghao/dcc-mcp-maya/commit/82fa545f9c4f9896917b64227a5710340e954d38))
+* Skip get_capabilities tests until method is implemented ([a07a8a2](https://github.com/loonghao/dcc-mcp-maya/commit/a07a8a2d7589abbb2fdd2b60b730e90f0eac4b3b))
+* Skip test_skills_round44 when DccCapabilities unavailable ([dd0a3c8](https://github.com/loonghao/dcc-mcp-maya/commit/dd0a3c80a2fbdf956fa135defa9cd842faec31e5))
+* Upgrade upload-artifact to v4 ([54623ff](https://github.com/loonghao/dcc-mcp-maya/commit/54623ffa0029bd6e31f47b57a60f6cef72d58700))
+
+
+### Code Refactoring
+
+* **packaging:** generate .mod file at install time from module-info.json ([58e8022](https://github.com/loonghao/dcc-mcp-maya/commit/58e8022bf36fe4040dcef1e20fb1c50affa11283))
+
+
+### Documentation
+
+* document bundled skills, IPC diagnostics, and include_bundled param ([3eb5ff4](https://github.com/loonghao/dcc-mcp-maya/commit/3eb5ff46234a802af900258ccb07ef1527ad088c))
+
 ## [0.2.6](https://github.com/loonghao/dcc-mcp-maya/compare/v0.2.5...v0.2.6) (2026-04-12)
 
 
