@@ -5,8 +5,9 @@ a failed gateway within RTO < 15s, with backup elevation < 5s.
 """
 
 import logging
-import pytest
 import time
+
+import pytest
 
 logger = logging.getLogger(__name__)
 
