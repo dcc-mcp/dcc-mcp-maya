@@ -1,62 +1,65 @@
-"""Round 45 tests: server.py SkillCatalog + search API coverage.
+"""Round 45 tests: MayaMcpServer inherited + Maya-specific API coverage.
 
-Tests cover:
-1. MayaMcpServer.search_skills() — wraps ActionRegistry.search_actions
-2. MayaMcpServer.unregister_skill() — wraps ActionRegistry.unregister
-3. MayaMcpServer.find_skills() — wraps SkillCatalog.find_skills
-4. MayaMcpServer.get_skill_categories() — wraps ActionRegistry.get_categories
-5. MayaMcpServer.get_skill_tags() — wraps ActionRegistry.get_tags
-6. MayaMcpServer.rank_services() — wraps TransportManager.rank_services
-7. MayaMcpServer.find_best_service() — wraps TransportManager.find_best_service
-8. MayaMcpServer.is_skill_loaded() — wraps SkillCatalog.is_loaded
-9. MayaMcpServer.get_skill_info() — wraps SkillCatalog.get_skill_info
-10. Structural: all helpers present in server module
+After the DccServerBase refactor, these methods are inherited from core.
+Tests verify the Maya adapter exposes them correctly.
+
+Covers:
+1. MayaMcpServer.search_actions() — inherited from DccServerBase
+2. MayaMcpServer.unregister_skill() — inherited
+3. MayaMcpServer.find_skills() — inherited
+4. MayaMcpServer.get_skill_categories() — inherited
+5. MayaMcpServer.get_skill_tags() — inherited
+6. MayaMcpServer.rank_services() — Maya-specific static method
+7. MayaMcpServer.find_best_service() — Maya-specific static method
+8. MayaMcpServer.is_skill_loaded() — inherited
+9. MayaMcpServer.get_skill_info() — inherited
+10. Structural: all helpers present on MayaMcpServer class
 """
 
 # Import future modules
 from __future__ import annotations
 
 # Import built-in modules
-import sys
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 # ---------------------------------------------------------------------------
-# Helpers
+# Helpers — bypass __init__ to avoid needing Rust extension at construction
 # ---------------------------------------------------------------------------
 
 
 def _make_server():
-    """Create MayaMcpServer with a fully mocked dcc_mcp_core."""
-    mock_core = MagicMock()
-    mock_server_inst = MagicMock()
-    mock_core.create_skill_manager.return_value = mock_server_inst
-    mock_core.McpHttpConfig.return_value = MagicMock()
+    """Create MayaMcpServer via object.__new__ to avoid Rust deps."""
+    from dcc_mcp_maya.server import MayaMcpServer
 
-    with patch.dict(sys.modules, {"dcc_mcp_core": mock_core}):
-        for mod in [k for k in sys.modules if "dcc_mcp_maya" in k]:
-            del sys.modules[mod]
-        import importlib
+    server = object.__new__(MayaMcpServer)
+    server._dcc_name = "maya"
+    from dcc_mcp_maya.server import _BUILTIN_SKILLS_DIR
 
-        server_mod = importlib.import_module("dcc_mcp_maya.server")
-        server = server_mod.MayaMcpServer(port=19900)
+    server._builtin_skills_dir = _BUILTIN_SKILLS_DIR
+    server._handle = None
+    server._enable_gateway_failover = False
+    server._hot_reloader = None
+    server._gateway_election = None
+    from dcc_mcp_core import McpHttpConfig
 
-    server._mock_core = mock_core
-    server._mock_inst = mock_server_inst
+    server._config = McpHttpConfig()
+    # Mock the inner server
+    mock_inner = MagicMock()
+    server._server = mock_inner
     return server
 
 
 def _make_server_with_registry():
-    """Create server + inject a mock ActionRegistry via _registry attr."""
+    """Create server + inject a mock ActionRegistry."""
     server = _make_server()
     mock_registry = MagicMock()
-    # Expose registry via the internal _registry attr used by server.registry property
-    server._mock_inst._registry = mock_registry
-    server._server = server._mock_inst
+    # The `registry` property reads `self._server.registry`
+    server._server.registry = mock_registry
     return server, mock_registry
 
 
 # ---------------------------------------------------------------------------
-# 1. search_skills
+# 1. search_actions (was search_skills in old server)
 # ---------------------------------------------------------------------------
 
 
@@ -64,48 +67,41 @@ class TestSearchSkills:
     def test_returns_list_from_search_actions(self):
         server, reg = _make_server_with_registry()
         reg.search_actions.return_value = [{"name": "maya_scene__create_object"}]
-        result = server.search_skills(category="geometry")
+        result = server.search_actions(query="geometry")
         assert isinstance(result, list)
         assert len(result) == 1
 
     def test_default_dcc_name_is_maya(self):
         server, reg = _make_server_with_registry()
         reg.search_actions.return_value = []
-        server.search_skills(category="mesh")
+        server.search_actions(query="mesh")
         call_kwargs = reg.search_actions.call_args
-        assert call_kwargs[1].get("dcc_name") == "maya"
+        # search_actions passes dcc_name to registry
+        assert call_kwargs[1].get("dcc_name") == "maya" or call_kwargs[0][1] == "maya"
 
     def test_explicit_dcc_name_is_forwarded(self):
         server, reg = _make_server_with_registry()
         reg.search_actions.return_value = []
-        server.search_skills(dcc_name="houdini")
+        server.search_actions(query="node", dcc_name="houdini")
         call_kwargs = reg.search_actions.call_args
         assert call_kwargs[1].get("dcc_name") == "houdini"
 
-    def test_tags_forwarded(self):
-        server, reg = _make_server_with_registry()
-        reg.search_actions.return_value = []
-        server.search_skills(tags=["rigging", "ik"])
-        call_kwargs = reg.search_actions.call_args
-        assert call_kwargs[1].get("tags") == ["rigging", "ik"]
-
     def test_returns_empty_when_registry_none(self):
         server = _make_server()
-        server._server._registry = None
-        result = server.search_skills()
+        server._server.registry = None
+        result = server.search_actions(query="x")
         assert result == []
 
     def test_returns_empty_on_exception(self):
         server, reg = _make_server_with_registry()
         reg.search_actions.side_effect = RuntimeError("boom")
-        result = server.search_skills(category="x")
+        result = server.search_actions(query="x")
         assert result == []
 
     def test_returns_empty_when_no_registry_attr(self):
         server = _make_server()
-        # _registry attribute does not exist at all
-        del server._server._registry
-        result = server.search_skills()
+        server._server.registry = None
+        result = server.search_actions(query="foo")
         assert result == []
 
 
@@ -128,23 +124,21 @@ class TestUnregisterSkill:
     def test_silently_ignores_exception(self):
         server, reg = _make_server_with_registry()
         reg.unregister.side_effect = KeyError("not found")
-        # Should not raise
-        server.unregister_skill("nonexistent_skill")
+        server.unregister_skill("nonexistent_skill")  # must not raise
 
     def test_does_nothing_when_registry_none(self):
         server = _make_server()
-        server._server._registry = None
-        # Should not raise
-        server.unregister_skill("some_skill")
+        server._server.registry = None
+        server.unregister_skill("some_skill")  # must not raise
 
     def test_does_nothing_when_no_registry_attr(self):
         server = _make_server()
-        del server._server._registry
-        server.unregister_skill("some_skill")
+        server._server.registry = None
+        server.unregister_skill("some_skill")  # must not raise
 
 
 # ---------------------------------------------------------------------------
-# 3. find_skills (SkillCatalog.find_skills)
+# 3. find_skills
 # ---------------------------------------------------------------------------
 
 
@@ -198,7 +192,7 @@ class TestGetSkillCategories:
 
     def test_returns_empty_when_registry_none(self):
         server = _make_server()
-        server._server._registry = None
+        server._server.registry = None
         assert server.get_skill_categories() == []
 
 
@@ -236,82 +230,87 @@ class TestGetSkillTags:
 
     def test_returns_empty_when_registry_none(self):
         server = _make_server()
-        server._server._registry = None
+        server._server.registry = None
         assert server.get_skill_tags() == []
 
 
 # ---------------------------------------------------------------------------
-# 6. rank_services (static method)
+# 6. rank_services (Maya-specific static method)
 # ---------------------------------------------------------------------------
 
 
 class TestRankServices:
     def test_returns_list_from_transport_manager(self):
-        server = _make_server()
+        from dcc_mcp_maya.server import MayaMcpServer
+
         mock_tm = MagicMock()
         mock_tm.rank_services.return_value = [MagicMock(), MagicMock()]
-        result = server.rank_services(mock_tm)
+        result = MayaMcpServer.rank_services(mock_tm)
         assert isinstance(result, list)
         assert len(result) == 2
 
     def test_default_dcc_type_is_maya(self):
-        server = _make_server()
+        from dcc_mcp_maya.server import MayaMcpServer
+
         mock_tm = MagicMock()
         mock_tm.rank_services.return_value = []
-        server.rank_services(mock_tm)
+        MayaMcpServer.rank_services(mock_tm)
         mock_tm.rank_services.assert_called_once_with("maya")
 
     def test_explicit_dcc_type_forwarded(self):
+        from dcc_mcp_maya.server import MayaMcpServer
+
         mock_tm = MagicMock()
         mock_tm.rank_services.return_value = []
-        import importlib
-
-        with patch.dict(sys.modules, {"dcc_mcp_core": MagicMock()}):
-            server_mod = importlib.import_module("dcc_mcp_maya.server")
-        server_mod.MayaMcpServer.rank_services(mock_tm, dcc_type="houdini")
+        MayaMcpServer.rank_services(mock_tm, dcc_type="houdini")
         mock_tm.rank_services.assert_called_with("houdini")
 
     def test_returns_empty_on_exception(self):
-        server = _make_server()
+        from dcc_mcp_maya.server import MayaMcpServer
+
         mock_tm = MagicMock()
         mock_tm.rank_services.side_effect = RuntimeError("unreachable")
-        result = server.rank_services(mock_tm)
+        result = MayaMcpServer.rank_services(mock_tm)
         assert result == []
 
 
 # ---------------------------------------------------------------------------
-# 7. find_best_service (static method)
+# 7. find_best_service (Maya-specific static method)
 # ---------------------------------------------------------------------------
 
 
 class TestFindBestService:
     def test_returns_service_from_transport_manager(self):
-        server = _make_server()
+        from dcc_mcp_maya.server import MayaMcpServer
+
         mock_tm = MagicMock()
         fake_service = MagicMock()
         mock_tm.find_best_service.return_value = fake_service
-        result = server.find_best_service(mock_tm)
+        result = MayaMcpServer.find_best_service(mock_tm)
         assert result is fake_service
 
     def test_default_dcc_type_is_maya(self):
-        server = _make_server()
+        from dcc_mcp_maya.server import MayaMcpServer
+
         mock_tm = MagicMock()
         mock_tm.find_best_service.return_value = None
-        server.find_best_service(mock_tm)
+        MayaMcpServer.find_best_service(mock_tm)
         mock_tm.find_best_service.assert_called_once_with("maya")
 
     def test_explicit_dcc_type_forwarded(self):
-        server = _make_server()
+        from dcc_mcp_maya.server import MayaMcpServer
+
         mock_tm = MagicMock()
         mock_tm.find_best_service.return_value = None
-        server.find_best_service(mock_tm, dcc_type="blender")
+        MayaMcpServer.find_best_service(mock_tm, dcc_type="blender")
         mock_tm.find_best_service.assert_called_once_with("blender")
 
     def test_returns_none_on_exception(self):
-        server = _make_server()
+        from dcc_mcp_maya.server import MayaMcpServer
+
         mock_tm = MagicMock()
         mock_tm.find_best_service.side_effect = ConnectionError("no service")
-        result = server.find_best_service(mock_tm)
+        result = MayaMcpServer.find_best_service(mock_tm)
         assert result is None
 
 
@@ -344,7 +343,6 @@ class TestIsSkillLoaded:
 
     def test_truthy_return_coerced_to_bool(self):
         server = _make_server()
-        # is_loaded returns a truthy non-bool
         server._server.is_loaded.return_value = 1
         result = server.is_skill_loaded("maya-animation")
         assert isinstance(result, bool)
@@ -394,67 +392,38 @@ class TestGetSkillInfo:
 
 
 # ---------------------------------------------------------------------------
-# 10. Structural: all new helpers present in server module
+# 10. Structural: all methods present on MayaMcpServer
 # ---------------------------------------------------------------------------
 
 
 class TestServerStructural:
     def test_is_skill_loaded_in_server_class(self):
-        import importlib
+        from dcc_mcp_maya.server import MayaMcpServer
 
-        with patch.dict(sys.modules, {"dcc_mcp_core": MagicMock()}):
-            for mod in [k for k in sys.modules if "dcc_mcp_maya" in k]:
-                del sys.modules[mod]
-            server_mod = importlib.import_module("dcc_mcp_maya.server")
-        assert hasattr(server_mod.MayaMcpServer, "is_skill_loaded")
+        assert hasattr(MayaMcpServer, "is_skill_loaded")
 
     def test_get_skill_info_in_server_class(self):
-        import importlib
+        from dcc_mcp_maya.server import MayaMcpServer
 
-        with patch.dict(sys.modules, {"dcc_mcp_core": MagicMock()}):
-            for mod in [k for k in sys.modules if "dcc_mcp_maya" in k]:
-                del sys.modules[mod]
-            server_mod = importlib.import_module("dcc_mcp_maya.server")
-        assert hasattr(server_mod.MayaMcpServer, "get_skill_info")
+        assert hasattr(MayaMcpServer, "get_skill_info")
 
     def test_search_skills_in_server_class(self):
-        import importlib
+        from dcc_mcp_maya.server import MayaMcpServer
 
-        with patch.dict(sys.modules, {"dcc_mcp_core": MagicMock()}):
-            for mod in [k for k in sys.modules if "dcc_mcp_maya" in k]:
-                del sys.modules[mod]
-            server_mod = importlib.import_module("dcc_mcp_maya.server")
-        assert hasattr(server_mod.MayaMcpServer, "search_skills")
+        # search_actions is the inherited name (search_skills was the old name)
+        assert hasattr(MayaMcpServer, "search_actions")
 
     def test_find_skills_in_server_class(self):
-        import importlib
+        from dcc_mcp_maya.server import MayaMcpServer
 
-        with patch.dict(sys.modules, {"dcc_mcp_core": MagicMock()}):
-            for mod in [k for k in sys.modules if "dcc_mcp_maya" in k]:
-                del sys.modules[mod]
-            server_mod = importlib.import_module("dcc_mcp_maya.server")
-        assert hasattr(server_mod.MayaMcpServer, "find_skills")
+        assert hasattr(MayaMcpServer, "find_skills")
 
     def test_rank_services_is_static(self):
-        import importlib
+        from dcc_mcp_maya.server import MayaMcpServer
 
-        with patch.dict(sys.modules, {"dcc_mcp_core": MagicMock()}):
-            for mod in [k for k in sys.modules if "dcc_mcp_maya" in k]:
-                del sys.modules[mod]
-            server_mod = importlib.import_module("dcc_mcp_maya.server")
-        assert isinstance(
-            server_mod.MayaMcpServer.__dict__["rank_services"],
-            staticmethod,
-        )
+        assert isinstance(MayaMcpServer.__dict__["rank_services"], staticmethod)
 
     def test_find_best_service_is_static(self):
-        import importlib
+        from dcc_mcp_maya.server import MayaMcpServer
 
-        with patch.dict(sys.modules, {"dcc_mcp_core": MagicMock()}):
-            for mod in [k for k in sys.modules if "dcc_mcp_maya" in k]:
-                del sys.modules[mod]
-            server_mod = importlib.import_module("dcc_mcp_maya.server")
-        assert isinstance(
-            server_mod.MayaMcpServer.__dict__["find_best_service"],
-            staticmethod,
-        )
+        assert isinstance(MayaMcpServer.__dict__["find_best_service"], staticmethod)

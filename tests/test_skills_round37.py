@@ -18,7 +18,6 @@ Coverage targets
 from __future__ import annotations
 
 # Import built-in modules
-import sys
 from unittest.mock import MagicMock, patch
 
 # Import third-party modules
@@ -625,31 +624,22 @@ class TestServerSearchAPI:
     """Unit tests for MayaMcpServer search / discovery helpers."""
 
     def _make_server(self, registry=None):
-        """Return a MayaMcpServer with mocked dcc_mcp_core internals."""
-        mock_core = MagicMock()
-        mock_core.McpHttpConfig.return_value = MagicMock()
-        mock_core.create_skill_manager.return_value = MagicMock()
+        """Return a MayaMcpServer with mocked internals (bypasses __init__)."""
+        from dcc_mcp_maya.server import MayaMcpServer  # noqa: PLC0415
 
-        with patch.dict(
-            sys.modules,
-            {
-                "dcc_mcp_core": mock_core,
-                "maya": MagicMock(),
-                "maya.cmds": MagicMock(),
-            },
-        ):
-            from dcc_mcp_maya.server import MayaMcpServer  # noqa: PLC0415
-
-            srv = MayaMcpServer.__new__(MayaMcpServer)
-            srv._config = MagicMock()
-            srv._server = MagicMock()
-            srv._handle = None
-            # Attach registry mock
-            if registry is not None:
-                srv._server._registry = registry
-            else:
-                srv._server._registry = None
-            return srv
+        srv = MayaMcpServer.__new__(MayaMcpServer)
+        srv._dcc_name = "maya"
+        srv._config = MagicMock()
+        srv._server = MagicMock()
+        srv._handle = None
+        srv._hot_reloader = None
+        srv._gateway_election = None
+        srv._enable_gateway_failover = False
+        if registry is not None:
+            srv._server.registry = registry
+        else:
+            srv._server.registry = None
+        return srv
 
     def test_search_skills_no_registry_returns_empty(self):
         from dcc_mcp_maya.server import MayaMcpServer
@@ -663,7 +653,7 @@ class TestServerSearchAPI:
         srv._server.__dict__["_registry"] = None
         # Override the property to return None
         with patch.object(type(srv), "registry", new_callable=lambda: property(lambda self: None)):
-            result = srv.search_skills(category="geometry")
+            result = srv.search_actions(query="geometry")
         assert result == []
 
     def test_search_skills_delegates_to_registry(self):
@@ -673,11 +663,12 @@ class TestServerSearchAPI:
         from dcc_mcp_maya.server import MayaMcpServer
 
         srv = MayaMcpServer.__new__(MayaMcpServer)
+        srv._dcc_name = "maya"
         srv._handle = None
         with patch.object(type(srv), "registry", new_callable=lambda: property(lambda s: mock_registry)):
-            result = srv.search_skills(category="geometry", tags=["create"])
+            result = srv.search_actions(query="geometry")
 
-        mock_registry.search_actions.assert_called_once_with(category="geometry", tags=["create"], dcc_name="maya")
+        mock_registry.search_actions.assert_called_once_with("geometry", dcc_name="maya")
         assert result == ["action1", "action2"]
 
     def test_search_skills_uses_custom_dcc_name(self):
@@ -687,9 +678,10 @@ class TestServerSearchAPI:
         from dcc_mcp_maya.server import MayaMcpServer
 
         srv = MayaMcpServer.__new__(MayaMcpServer)
+        srv._dcc_name = "maya"
         srv._handle = None
         with patch.object(type(srv), "registry", new_callable=lambda: property(lambda s: mock_registry)):
-            srv.search_skills(dcc_name="houdini")
+            srv.search_actions(query=None, dcc_name="houdini")
 
         call_kwargs = mock_registry.search_actions.call_args[1]
         assert call_kwargs["dcc_name"] == "houdini"
@@ -701,9 +693,10 @@ class TestServerSearchAPI:
         from dcc_mcp_maya.server import MayaMcpServer
 
         srv = MayaMcpServer.__new__(MayaMcpServer)
+        srv._dcc_name = "maya"
         srv._handle = None
         with patch.object(type(srv), "registry", new_callable=lambda: property(lambda s: mock_registry)):
-            result = srv.search_skills()
+            result = srv.search_actions(query=None)
         assert result == []
 
     def test_get_skill_categories_returns_sorted_list(self):
@@ -713,6 +706,7 @@ class TestServerSearchAPI:
         from dcc_mcp_maya.server import MayaMcpServer
 
         srv = MayaMcpServer.__new__(MayaMcpServer)
+        srv._dcc_name = "maya"
         srv._handle = None
         with patch.object(type(srv), "registry", new_callable=lambda: property(lambda s: mock_registry)):
             cats = srv.get_skill_categories()
@@ -722,6 +716,7 @@ class TestServerSearchAPI:
         from dcc_mcp_maya.server import MayaMcpServer
 
         srv = MayaMcpServer.__new__(MayaMcpServer)
+        srv._dcc_name = "maya"
         srv._handle = None
         with patch.object(type(srv), "registry", new_callable=lambda: property(lambda s: None)):
             assert srv.get_skill_categories() == []
@@ -733,6 +728,7 @@ class TestServerSearchAPI:
         from dcc_mcp_maya.server import MayaMcpServer
 
         srv = MayaMcpServer.__new__(MayaMcpServer)
+        srv._dcc_name = "maya"
         srv._handle = None
         with patch.object(type(srv), "registry", new_callable=lambda: property(lambda s: mock_registry)):
             assert srv.get_skill_categories() == []
@@ -744,6 +740,7 @@ class TestServerSearchAPI:
         from dcc_mcp_maya.server import MayaMcpServer
 
         srv = MayaMcpServer.__new__(MayaMcpServer)
+        srv._dcc_name = "maya"
         srv._handle = None
         with patch.object(type(srv), "registry", new_callable=lambda: property(lambda s: mock_registry)):
             tags = srv.get_skill_tags()
@@ -757,6 +754,7 @@ class TestServerSearchAPI:
         from dcc_mcp_maya.server import MayaMcpServer
 
         srv = MayaMcpServer.__new__(MayaMcpServer)
+        srv._dcc_name = "maya"
         srv._handle = None
         with patch.object(type(srv), "registry", new_callable=lambda: property(lambda s: mock_registry)):
             srv.get_skill_tags(dcc_name="blender")
@@ -766,6 +764,7 @@ class TestServerSearchAPI:
         from dcc_mcp_maya.server import MayaMcpServer
 
         srv = MayaMcpServer.__new__(MayaMcpServer)
+        srv._dcc_name = "maya"
         srv._handle = None
         with patch.object(type(srv), "registry", new_callable=lambda: property(lambda s: None)):
             assert srv.get_skill_tags() == []
@@ -777,6 +776,7 @@ class TestServerSearchAPI:
         from dcc_mcp_maya.server import MayaMcpServer
 
         srv = MayaMcpServer.__new__(MayaMcpServer)
+        srv._dcc_name = "maya"
         srv._handle = None
         with patch.object(type(srv), "registry", new_callable=lambda: property(lambda s: mock_registry)):
             assert srv.get_skill_tags() == []

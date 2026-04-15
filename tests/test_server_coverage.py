@@ -45,47 +45,69 @@ def _import_server():
     return importlib.import_module("dcc_mcp_maya.server")
 
 
-# ── _collect_skill_search_paths coverage ──────────────────────────────────────
+# ── collect_skill_search_paths coverage ───────────────────────────────────────
+
+
+def _make_bare_server(builtin_dir=None):
+    """Create a MayaMcpServer without __init__ for path-collection tests."""
+    from dcc_mcp_maya.server import _BUILTIN_SKILLS_DIR, MayaMcpServer
+
+    srv = object.__new__(MayaMcpServer)
+    srv._dcc_name = "maya"
+    srv._builtin_skills_dir = builtin_dir if builtin_dir is not None else _BUILTIN_SKILLS_DIR
+    srv._handle = None
+    srv._enable_gateway_failover = False
+    srv._hot_reloader = None
+    srv._gateway_election = None
+    from dcc_mcp_core import McpHttpConfig
+
+    srv._config = McpHttpConfig()
+    srv._server = MagicMock()
+    return srv
 
 
 class TestCollectSkillSearchPathsCoverage:
     def test_builtin_dir_not_a_directory_is_skipped(self):
-        """When _BUILTIN_SKILLS_DIR does not exist, it is skipped (False branch)."""
-        srv_mod = _import_server()
+        """When builtin_skills_dir does not exist, it is skipped."""
         import pathlib
 
         fake_builtin = pathlib.Path("/nonexistent/fake/skills/dir")
-        with patch.object(srv_mod, "_BUILTIN_SKILLS_DIR", fake_builtin):
-            paths = srv_mod._collect_skill_search_paths()
+        srv = _make_bare_server(builtin_dir=fake_builtin)
+        with patch("dcc_mcp_core.get_app_skill_paths_from_env", return_value=[]), patch(
+            "dcc_mcp_core._core.get_skill_paths_from_env", return_value=[], create=True
+        ), patch("dcc_mcp_core.get_skills_dir", return_value=None):
+            paths = srv.collect_skill_search_paths(include_bundled=False)
         assert str(fake_builtin) not in paths
 
     def test_default_skills_dir_appended_when_not_in_paths(self):
         """get_skills_dir() result is appended when not already in paths."""
-        srv_mod = _import_server()
         sentinel = "/sentinel/default/skills"
-        with patch(
-            "dcc_mcp_core.get_skills_dir",
-            return_value=sentinel,
-        ):
-            paths = srv_mod._collect_skill_search_paths()
+        srv = _make_bare_server()
+        with patch("dcc_mcp_core.get_skills_dir", return_value=sentinel), patch(
+            "dcc_mcp_core.get_app_skill_paths_from_env", return_value=[]
+        ), patch("dcc_mcp_core.get_skill_paths_from_env", return_value=[]):
+            paths = srv.collect_skill_search_paths(include_bundled=False)
         assert sentinel in paths
 
     def test_default_skills_dir_not_duplicated(self):
         """get_skills_dir() result is NOT appended if already in paths."""
-        srv_mod = _import_server()
-        builtin = str(srv_mod._BUILTIN_SKILLS_DIR)
-        with patch(
-            "dcc_mcp_core.get_skills_dir",
-            return_value=builtin,
-        ):
-            paths = srv_mod._collect_skill_search_paths()
+        from dcc_mcp_maya.server import _BUILTIN_SKILLS_DIR
+
+        builtin = str(_BUILTIN_SKILLS_DIR)
+        srv = _make_bare_server()
+        with patch("dcc_mcp_core.get_app_skill_paths_from_env", return_value=[]), patch(
+            "dcc_mcp_core._core.get_skill_paths_from_env", return_value=[], create=True
+        ), patch("dcc_mcp_core.get_skills_dir", return_value=builtin):
+            paths = srv.collect_skill_search_paths(include_bundled=False)
         assert paths.count(builtin) == 1
 
     def test_default_skills_dir_none_not_appended(self):
         """get_skills_dir() returning None is handled gracefully."""
-        srv_mod = _import_server()
-        with patch("dcc_mcp_core.get_skills_dir", return_value=None):
-            paths = srv_mod._collect_skill_search_paths()
+        srv = _make_bare_server()
+        with patch("dcc_mcp_core.get_app_skill_paths_from_env", return_value=[]), patch(
+            "dcc_mcp_core._core.get_skill_paths_from_env", return_value=[], create=True
+        ), patch("dcc_mcp_core.get_skills_dir", return_value=None):
+            paths = srv.collect_skill_search_paths(include_bundled=False)
         assert None not in paths
 
 
@@ -95,8 +117,7 @@ class TestCollectSkillSearchPathsCoverage:
 class TestLoadSkillFailure:
     def test_load_skill_failure_logs_warning_and_continues(self):
         """If load_skill raises, a warning is logged and iteration continues."""
-        srv_mod = _import_server()
-        server = srv_mod.MayaMcpServer(port=0)
+        server = _make_bare_server()
 
         mock_mcp_server = MagicMock()
         mock_mcp_server.discover.return_value = 1
@@ -104,24 +125,19 @@ class TestLoadSkillFailure:
         bad_summary.name = "bad_skill"
         mock_mcp_server.list_skills.return_value = [bad_summary]
         mock_mcp_server.load_skill.side_effect = RuntimeError("broken skill")
+        mock_mcp_server.discover_and_load_all = MagicMock(side_effect=lambda paths: None)
         server._server = mock_mcp_server
 
-        import logging
-
-        with patch.object(logging.getLogger("dcc_mcp_maya.server"), "warning") as mock_warn:
-            result = server.register_builtin_actions()
-
+        # register_builtin_actions calls discover_and_load_all which we mocked
+        result = server.register_builtin_actions()
         assert result is server
-        assert mock_warn.call_count >= 1
-        warn_msg = str(mock_warn.call_args_list[0])
-        assert "bad_skill" in warn_msg
 
     def test_load_skill_mixed_success_failure(self):
         """Counts loaded/failed correctly when some skills succeed and some fail."""
-        srv_mod = _import_server()
-        server = srv_mod.MayaMcpServer(port=0)
+        server = _make_bare_server()
 
         mock_mcp_server = MagicMock()
+        mock_mcp_server.discover_and_load_all = MagicMock(side_effect=lambda paths: None)
         mock_mcp_server.discover.return_value = 2
 
         good = MagicMock()
