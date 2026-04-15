@@ -20,8 +20,7 @@ Tests:
 from __future__ import annotations
 
 # Import built-in modules
-import sys
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 # Import third-party modules
 import pytest

@@ -18,7 +18,6 @@ Coverage targets
 from __future__ import annotations
 
 # Import built-in modules
-import sys
 from unittest.mock import MagicMock, patch
 
 # Import third-party modules
