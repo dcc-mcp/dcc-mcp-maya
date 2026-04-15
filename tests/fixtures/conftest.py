@@ -1,6 +1,5 @@
 """Pytest fixtures for multi-instance gateway and failover testing."""
 
-import json
 import logging
 import time
 from typing import Any, Dict, List, Optional

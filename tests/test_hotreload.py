@@ -6,10 +6,7 @@ from __future__ import annotations
 # Import built-in modules
 import os
 import tempfile
-import time
-from pathlib import Path
-from typing import Optional
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import MagicMock, patch
 
 # Import third-party modules
 import pytest
