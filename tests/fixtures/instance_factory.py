@@ -59,8 +59,7 @@ def get_instance_manager(
         logger.info("Using local mayapy mode (explicit)")
         if not check_mayapy_available():
             raise RuntimeError(
-                "Local mayapy mode requested but no mayapy found. "
-                "Install Maya or use Docker mode instead."
+                "Local mayapy mode requested but no mayapy found. Install Maya or use Docker mode instead."
             )
         return MayaInstanceManager(gateway_port=gateway_port, registry_dir=registry_dir)
 

@@ -2,18 +2,24 @@
 
 Tests that can run in Docker environments with mayapy images,
 verifying multi-version and multi-instance capabilities.
+
+These tests use the tahv/mayapy public Docker image and are marked
+as ``e2e`` — excluded from the main CI test suite by default.
+Run manually or via the multi-instance-tests workflow:
+
+    pytest tests/test_docker_integration.py -m e2e
 """
 
-import os
 import pytest
-
 from fixtures.docker_maya import is_docker_available
 from fixtures.instance_factory import get_instance_manager
 
-# Skip all tests in this file if Docker is not available
-pytestmark = pytest.mark.skipif(
-    not is_docker_available(), reason="Docker not available in test environment"
-)
+# Mark all tests as e2e — excluded from main CI (addopts: -m 'not e2e')
+# Also skip if Docker daemon is not reachable at all
+pytestmark = [
+    pytest.mark.e2e,
+    pytest.mark.skipif(not is_docker_available(), reason="Docker not available"),
+]
 
 
 class TestDockerInstanceManager:
@@ -132,6 +138,7 @@ class TestInstanceFactoryAutoSelection:
                 registry_dir=temp_registry_dir,
             )
             from fixtures.docker_maya import DockerMayaInstanceManager
+
             assert isinstance(manager, DockerMayaInstanceManager)
             manager.cleanup()
         except RuntimeError:
@@ -148,20 +155,22 @@ class TestInstanceFactoryAutoSelection:
                 registry_dir=temp_registry_dir,
             )
             from fixtures.maya_instances import MayaInstanceManager
+
             assert isinstance(manager, MayaInstanceManager)
             manager.cleanup()
         except RuntimeError as exc:
             pytest.skip(f"Local mayapy not available: {exc}")
 
     def test_factory_raises_no_suitable_manager(self, temp_registry_dir, monkeypatch):
-        """Test error when no suitable manager is available."""
-        # Force Docker mode with unavailable image
-        monkeypatch.setenv("DCC_MCP_FORCE_DOCKER", "1")
-        monkeypatch.setenv("DCC_MCP_DOCKER_REGISTRY", "nonexistent.registry/")
+        """Test error when neither Docker nor local mayapy is available."""
+        from unittest.mock import patch
 
-        # This should raise because the registry is invalid
-        with pytest.raises(RuntimeError):
-            get_instance_manager(
-                mode="docker",
-                registry_dir=temp_registry_dir,
-            )
+        # Patch both Docker and local mayapy checks to return unavailable
+        with patch("fixtures.docker_maya.is_docker_available", return_value=False), patch(
+            "fixtures.maya_instances.check_mayapy_available", return_value=False
+        ):
+            with pytest.raises(RuntimeError, match="No suitable Maya instance manager"):
+                get_instance_manager(
+                    mode=None,  # Auto-detect → both unavailable → raise
+                    registry_dir=temp_registry_dir,
+                )

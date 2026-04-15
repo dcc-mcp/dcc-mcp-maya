@@ -11,4 +11,3 @@ __all__ = [
     "DockerMayaConfig",
     "get_instance_manager",
 ]
-
