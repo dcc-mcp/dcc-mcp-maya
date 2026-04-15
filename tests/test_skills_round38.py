@@ -858,145 +858,51 @@ class TestCleanMocapKeys:
 class TestServerUnregisterSkill:
     """Verify MayaMcpServer.unregister_skill delegates to registry.unregister (v0.12.6+)."""
 
-    def _make_server(self):
-        """Return a MayaMcpServer with all dcc_mcp_core imports mocked."""
-        import importlib
+    def _make_server_with_registry(self):
+        """Return (server, mock_registry) using object.__new__ bypass."""
+        from dcc_mcp_maya.server import MayaMcpServer
 
-        mock_core = MagicMock()
-        mock_skill_manager = MagicMock()
         mock_registry = MagicMock()
-        mock_skill_manager._registry = mock_registry
-        mock_core.create_skill_manager.return_value = mock_skill_manager
-        mock_core.McpHttpConfig.return_value = MagicMock()
-
-        with patch.dict(
-            sys.modules,
-            {
-                "dcc_mcp_core": mock_core,
-                "maya": MagicMock(),
-                "maya.cmds": MagicMock(),
-            },
-        ):
-            srv_mod2 = importlib.import_module("dcc_mcp_maya.server")
-            return srv_mod2.MayaMcpServer.__new__(srv_mod2.MayaMcpServer), mock_registry, mock_skill_manager
+        srv = object.__new__(MayaMcpServer)
+        srv._dcc_name = "maya"
+        srv._handle = None
+        srv._hot_reloader = None
+        srv._gateway_election = None
+        srv._enable_gateway_failover = False
+        srv._config = MagicMock()
+        srv._server = MagicMock()
+        srv._server.registry = mock_registry
+        return srv, mock_registry
 
     def test_server_has_unregister_skill_method(self):
         """MayaMcpServer must expose an unregister_skill method."""
-        mock_core = MagicMock()
-        mock_skill_manager = MagicMock()
-        mock_registry = MagicMock()
-        mock_skill_manager._registry = mock_registry
-        mock_core.create_skill_manager.return_value = mock_skill_manager
-        mock_core.McpHttpConfig.return_value = MagicMock()
+        from dcc_mcp_maya.server import MayaMcpServer
 
-        with patch.dict(
-            sys.modules,
-            {
-                "dcc_mcp_core": mock_core,
-                "maya": MagicMock(),
-                "maya.cmds": MagicMock(),
-            },
-        ):
-            import importlib
-
-            srv_mod = importlib.import_module("dcc_mcp_maya.server")
-            importlib.reload(srv_mod)
-            assert hasattr(srv_mod.MayaMcpServer, "unregister_skill")
+        assert hasattr(MayaMcpServer, "unregister_skill")
 
     def test_unregister_delegates_to_registry(self):
-        mock_core = MagicMock()
-        mock_skill_manager = MagicMock()
-        mock_registry = MagicMock()
-        mock_skill_manager._registry = mock_registry
-        mock_core.create_skill_manager.return_value = mock_skill_manager
-        mock_core.McpHttpConfig.return_value = MagicMock()
-
-        with patch.dict(
-            sys.modules,
-            {
-                "dcc_mcp_core": mock_core,
-                "maya": MagicMock(),
-                "maya.cmds": MagicMock(),
-            },
-        ):
-            import importlib
-
-            srv_mod = importlib.import_module("dcc_mcp_maya.server")
-            importlib.reload(srv_mod)
-            srv = srv_mod.MayaMcpServer(port=0)
-            srv.unregister_skill("maya_scene__create_object")
-            mock_registry.unregister.assert_called_once_with("maya_scene__create_object", dcc_name=None)
+        srv, mock_registry = self._make_server_with_registry()
+        srv.unregister_skill("maya_scene__create_object")
+        mock_registry.unregister.assert_called_once_with("maya_scene__create_object", dcc_name=None)
 
     def test_unregister_no_registry_graceful(self):
         """When registry is None, unregister_skill should not raise."""
-        mock_core = MagicMock()
-        mock_skill_manager = MagicMock()
-        mock_skill_manager._registry = None  # No registry
-        mock_core.create_skill_manager.return_value = mock_skill_manager
-        mock_core.McpHttpConfig.return_value = MagicMock()
+        from dcc_mcp_maya.server import MayaMcpServer
 
-        with patch.dict(
-            sys.modules,
-            {
-                "dcc_mcp_core": mock_core,
-                "maya": MagicMock(),
-                "maya.cmds": MagicMock(),
-            },
-        ):
-            import importlib
-
-            srv_mod = importlib.import_module("dcc_mcp_maya.server")
-            importlib.reload(srv_mod)
-            srv = srv_mod.MayaMcpServer(port=0)
-            # Should not raise
-            srv.unregister_skill("maya_scene__create_object")
+        srv = object.__new__(MayaMcpServer)
+        srv._dcc_name = "maya"
+        srv._handle = None
+        srv._server = MagicMock()
+        srv._server.registry = None
+        srv.unregister_skill("maya_scene__create_object")  # must not raise
 
     def test_unregister_with_dcc_name(self):
-        mock_core = MagicMock()
-        mock_skill_manager = MagicMock()
-        mock_registry = MagicMock()
-        mock_skill_manager._registry = mock_registry
-        mock_core.create_skill_manager.return_value = mock_skill_manager
-        mock_core.McpHttpConfig.return_value = MagicMock()
-
-        with patch.dict(
-            sys.modules,
-            {
-                "dcc_mcp_core": mock_core,
-                "maya": MagicMock(),
-                "maya.cmds": MagicMock(),
-            },
-        ):
-            import importlib
-
-            srv_mod = importlib.import_module("dcc_mcp_maya.server")
-            importlib.reload(srv_mod)
-            srv = srv_mod.MayaMcpServer(port=0)
-            srv.unregister_skill("maya_scene__create_object", dcc_name="maya")
-            mock_registry.unregister.assert_called_once_with("maya_scene__create_object", dcc_name="maya")
+        srv, mock_registry = self._make_server_with_registry()
+        srv.unregister_skill("maya_scene__create_object", dcc_name="maya")
+        mock_registry.unregister.assert_called_once_with("maya_scene__create_object", dcc_name="maya")
 
     def test_unregister_exception_graceful(self):
         """Registry.unregister raising should be caught and return gracefully."""
-        mock_core = MagicMock()
-        mock_skill_manager = MagicMock()
-        mock_registry = MagicMock()
+        srv, mock_registry = self._make_server_with_registry()
         mock_registry.unregister.side_effect = KeyError("not found")
-        mock_skill_manager._registry = mock_registry
-        mock_core.create_skill_manager.return_value = mock_skill_manager
-        mock_core.McpHttpConfig.return_value = MagicMock()
-
-        with patch.dict(
-            sys.modules,
-            {
-                "dcc_mcp_core": mock_core,
-                "maya": MagicMock(),
-                "maya.cmds": MagicMock(),
-            },
-        ):
-            import importlib
-
-            srv_mod = importlib.import_module("dcc_mcp_maya.server")
-            importlib.reload(srv_mod)
-            srv = srv_mod.MayaMcpServer(port=0)
-            # Should not raise
-            srv.unregister_skill("nonexistent_skill")
+        srv.unregister_skill("nonexistent_skill")  # must not raise

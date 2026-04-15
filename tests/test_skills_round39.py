@@ -393,6 +393,7 @@ class TestServerFindSkills:
         from dcc_mcp_maya.server import MayaMcpServer
 
         server = object.__new__(MayaMcpServer)
+        server._dcc_name = "maya"
         server._config = MagicMock()
         server._handle = None
         server._server = catalog_server or MagicMock()
@@ -445,6 +446,7 @@ class TestServerBindAndRegister:
         from dcc_mcp_maya.server import MayaMcpServer
 
         server = object.__new__(MayaMcpServer)
+        server._dcc_name = "maya"
         server._config = MagicMock()
         server._handle = None
         server._server = MagicMock()
