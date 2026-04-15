@@ -10,6 +10,8 @@ import pytest
 
 logger = logging.getLogger(__name__)
 
+pytestmark = pytest.mark.integration
+
 
 @pytest.mark.timeout(90)
 def test_scene_update_basic(maya_instance_manager, gateway_client):

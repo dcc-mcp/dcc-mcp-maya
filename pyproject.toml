@@ -66,10 +66,11 @@ pythonpath = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
-addopts = "-v --tb=short -m 'not e2e and not packaging'"
+addopts = "-v --tb=short -m 'not e2e and not packaging and not integration'"
 markers = [
     "e2e: end-to-end tests that require a real Maya standalone interpreter (tahv/mayapy)",
     "packaging: tests for packaging/assemble_mod.py that require network access to PyPI",
+    "integration: integration tests that require a running Maya instance (local mayapy or Docker)",
 ]
 
 [tool.coverage.run]
