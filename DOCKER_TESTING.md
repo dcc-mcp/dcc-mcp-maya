@@ -40,9 +40,9 @@ pytest tests/test_gateway_failover.py -v
 #### For Docker Mode
 - Docker or Docker Desktop installed and running
 - Docker images available:
-  - `autodesk/maya:2023`
-  - `autodesk/maya:2024`
-  - `autodesk/maya:2025`
+  - `tahv/mayapy:2023`
+  - `tahv/mayapy:2024`
+  - `tahv/mayapy:2025`
 
 #### For Local Mode
 - Maya installed (2023, 2024, or 2025)
@@ -231,13 +231,13 @@ def test_gateway_failover_all_versions(maya_version):
 
 ### Docker Image Not Found
 
-**Error**: `Failed to pull Docker image autodesk/maya:2025`
+**Error**: `Failed to pull Docker image tahv/mayapy:2025`
 
 **Solutions**:
 - Ensure Docker is authenticated: `docker login`
 - Check image availability:
   ```bash
-  docker pull autodesk/maya:2025
+  docker pull tahv/mayapy:2025
   ```
 - Use custom registry if needed:
   ```bash

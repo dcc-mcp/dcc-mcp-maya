@@ -8,7 +8,6 @@ This module provides Docker-based alternatives to local mayapy, enabling:
 
 import json
 import logging
-import os
 import subprocess
 import tempfile
 import time
@@ -19,10 +18,12 @@ from typing import Dict, List, Optional
 logger = logging.getLogger(__name__)
 
 # Docker image mapping for different Maya versions
+# Uses tahv/mayapy public images: https://hub.docker.com/r/tahv/mayapy
 DOCKER_IMAGES = {
-    "2023": "autodesk/maya:2023",
-    "2024": "autodesk/maya:2024",
-    "2025": "autodesk/maya:2025",
+    "2022": "tahv/mayapy:2022",
+    "2023": "tahv/mayapy:2023",
+    "2024": "tahv/mayapy:2024",
+    "2025": "tahv/mayapy:2025",
 }
 
 # Environment variable to force Docker mode
@@ -97,9 +98,7 @@ class DockerMayaInstanceManager:
         self._next_port = 10000
 
         if not is_docker_available():
-            raise RuntimeError(
-                "Docker is not available. Install Docker or use local mayapy instead."
-            )
+            raise RuntimeError("Docker is not available. Install Docker or use local mayapy instead.")
 
     def create_config(
         self,
@@ -124,8 +123,7 @@ class DockerMayaInstanceManager:
         """
         if maya_version not in DOCKER_IMAGES:
             raise ValueError(
-                f"Unsupported Maya version: {maya_version}. "
-                f"Supported versions: {list(DOCKER_IMAGES.keys())}"
+                f"Unsupported Maya version: {maya_version}. Supported versions: {list(DOCKER_IMAGES.keys())}"
             )
 
         docker_image = self.docker_registry + DOCKER_IMAGES[maya_version]
@@ -162,9 +160,7 @@ class DockerMayaInstanceManager:
         try:
             # Check if image is available
             if not has_docker_image(config.docker_image):
-                logger.warning(
-                    "Docker image %s not found. Pulling...", config.docker_image
-                )
+                logger.warning("Docker image %s not found. Pulling...", config.docker_image)
                 result = subprocess.run(
                     ["docker", "pull", config.docker_image],
                     capture_output=True,
@@ -186,9 +182,7 @@ class DockerMayaInstanceManager:
                 "DCC_MCP_GATEWAY_PORT": str(config.gateway_port),
                 "DCC_MCP_REGISTRY_DIR": "/mnt/registry",
                 "DCC_MCP_MAYA_HOT_RELOAD": "1" if config.enable_hot_reload else "0",
-                "DCC_MCP_MAYA_ENABLE_GATEWAY_FAILOVER": (
-                    "1" if config.enable_gateway_failover else "0"
-                ),
+                "DCC_MCP_MAYA_ENABLE_GATEWAY_FAILOVER": ("1" if config.enable_gateway_failover else "0"),
             }
 
             if config.env_vars:
@@ -214,12 +208,14 @@ class DockerMayaInstanceManager:
                 docker_cmd.extend(["-e", f"{key}={value}"])
 
             # Add the startup script as entrypoint
-            docker_cmd.extend([
-                config.docker_image,
-                "mayapy",
-                "-c",
-                startup_script,
-            ])
+            docker_cmd.extend(
+                [
+                    config.docker_image,
+                    "mayapy",
+                    "-c",
+                    startup_script,
+                ]
+            )
 
             logger.info(
                 "Launching Docker instance %s from image %s on port %d (gateway %d)",
