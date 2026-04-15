@@ -166,20 +166,22 @@ class TestServerLifecycle:
         stop_server()
 
     def test_skills_discovered(self):
-        """Skills are discovered via SKILL.md and registered as MCP tools."""
+        """Skills are discovered via SKILL.md (progressive loading — discovered, not loaded)."""
         from dcc_mcp_maya.server import MayaMcpServer
 
         server = MayaMcpServer(port=0)
         server.register_builtin_actions()
-        # Use SkillCatalog API to verify skills are loaded
-        loaded_skills = {
-            s.name if hasattr(s, "name") else s["name"] for s in server._server.list_skills(status="loaded")
+        # Progressive loading: discover() finds skills but does NOT load them.
+        # list_skills() returns all discovered skills regardless of status.
+        all_skills = {
+            s.name if hasattr(s, "name") else s["name"] for s in server._server.list_skills()
         }
-        assert "maya-primitives" in loaded_skills
-        assert "maya-scripting" in loaded_skills
-        assert "maya-scene" in loaded_skills
-        assert "maya-animation" in loaded_skills
-        assert len(loaded_skills) >= 20
+        # Key skills must be discoverable
+        assert "maya-primitives" in all_skills
+        assert "maya-scripting" in all_skills
+        assert "maya-scene" in all_skills
+        assert "maya-animation" in all_skills
+        assert len(all_skills) >= 20
 
 
 # ---------------------------------------------------------------------------
@@ -224,7 +226,14 @@ class TestMcpHttpConnectivity:
         assert result["protocolVersion"] == "2025-03-26"
         assert result["serverInfo"]["name"] == "maya-mcp"
 
-    def test_tools_list_returns_maya_tools(self):
+    def test_tools_list_shows_core_and_stubs(self):
+        """tools/list returns core discovery tools + skill stubs (progressive loading).
+
+        In the progressive (lazy) loading model, tools/list returns three layers:
+        1. Core discovery tools (find_skills, list_skills, get_skill_info, load_skill, ...)
+        2. Already-loaded skill tools with full input_schema
+        3. Unloaded skill stubs as ``__skill__<name>`` with minimal description
+        """
         code, body = _mcp_post(
             self._mcp_url,
             {"jsonrpc": "2.0", "id": 2, "method": "tools/list"},
@@ -232,12 +241,69 @@ class TestMcpHttpConnectivity:
         assert code == 200
         tools = body["result"]["tools"]
         names = {t["name"] for t in tools}
-        assert len(tools) >= 100
-        assert "maya_primitives__create_sphere" in names
-        assert "maya_scene__get_session_info" in names
-        assert "maya_scripting__execute_python" in names
-        assert "maya_animation__set_keyframe" in names
-        assert "maya_rigging__skin_cluster_bind" in names
+
+        # Layer 1: core discovery tools must always be present
+        for core_tool in ("find_skills", "list_skills", "get_skill_info", "load_skill", "unload_skill"):
+            assert core_tool in names, f"Core tool {core_tool!r} missing from tools/list"
+
+        # Layer 3: unloaded skills appear as stubs (__skill__<name>)
+        stub_names = {n for n in names if n.startswith("__skill__")}
+        assert len(stub_names) >= 1, "Expected at least one skill stub in progressive mode"
+
+        # Stubs should have minimal schema (no or empty input_schema)
+        for t in tools:
+            if t["name"].startswith("__skill__"):
+                schema = t.get("inputSchema", {})
+                # Stubs have empty or minimal input_schema
+                assert schema.get("properties", {}) == {} or "properties" not in schema, (
+                    f"Stub {t['name']} should not have full input_schema"
+                )
+
+    def test_load_skill_exposes_full_tools(self):
+        """Calling load_skill replaces a stub with fully-schemad tools."""
+        # First, list tools to find a skill stub
+        code, body = _mcp_post(
+            self._mcp_url,
+            {"jsonrpc": "2.0", "id": 10, "method": "tools/list"},
+        )
+        assert code == 200
+        before_names = {t["name"] for t in body["result"]["tools"]}
+        stubs_before = {n for n in before_names if n.startswith("__skill__")}
+        assert len(stubs_before) >= 1, "Need at least one stub to test progressive loading"
+
+        # Pick the maya-scene stub (guaranteed in E2E with real skills)
+        scene_stub = "__skill__maya-scene"
+        if scene_stub not in stubs_before:
+            # Pick first available stub
+            scene_stub = next(iter(stubs_before))
+
+        # Load the skill via tools/call
+        code, body = _mcp_post(
+            self._mcp_url,
+            {
+                "jsonrpc": "2.0",
+                "id": 11,
+                "method": "tools/call",
+                "params": {"name": "load_skill", "arguments": {"skill_name": scene_stub.replace("__skill__", "")}},
+            },
+        )
+        assert code == 200
+
+        # Now tools/list should show the skill's real tools instead of the stub
+        code, body = _mcp_post(
+            self._mcp_url,
+            {"jsonrpc": "2.0", "id": 12, "method": "tools/list"},
+        )
+        assert code == 200
+        after_names = {t["name"] for t in body["result"]["tools"]}
+
+        # The stub should be gone, replaced by real tools
+        assert scene_stub not in after_names, f"Stub {scene_stub} should be removed after load_skill"
+
+        # The loaded skill's real tools should now be present
+        skill_prefix = scene_stub.replace("__skill__", "").replace("-", "_") + "__"
+        real_tools = {n for n in after_names if n.startswith(skill_prefix)}
+        assert len(real_tools) >= 1, f"Expected tools prefixed with {skill_prefix!r} after loading"
 
     @pytest.mark.xfail(
         reason="dcc-mcp-core subprocess executor uses relative script path; known issue",
@@ -911,7 +977,11 @@ class TestMultiInstanceIsolation:
                     {"jsonrpc": "2.0", "id": 2, "method": "tools/list"},
                 )
                 assert code == 200
-                assert len(body["result"]["tools"]) >= 100
+                tools = body["result"]["tools"]
+                names = {t["name"] for t in tools}
+                # Core discovery tools must be present
+                assert "find_skills" in names
+                assert "load_skill" in names
         finally:
             for srv, handle in servers:
                 srv.stop()
@@ -1175,7 +1245,9 @@ class TestMultiInstanceConcurrentWorkflows:
                 {"jsonrpc": "2.0", "id": 99, "method": "tools/list"},
             )
             assert code == 200
-            assert len(body["result"]["tools"]) >= 100
+            tools = body["result"]["tools"]
+            names = {t["name"] for t in tools}
+            assert "find_skills" in names
 
     def test_cross_server_scene_visibility(self):
         """Nodes created via server A are visible when queried via server B."""
