@@ -24,9 +24,7 @@ def test_gateway_election_enabled_by_default(maya_instance_manager, gateway_clie
 
     # Wait for gateway to start and instances to register
     assert gateway_client.wait_for_gateway(), "Gateway did not start"
-    assert gateway_client.wait_for_instance_count(
-        2, max_retries=30
-    ), "Instances did not register"
+    assert gateway_client.wait_for_instance_count(2, max_retries=30), "Instances did not register"
 
     # Verify at least one is the gateway
     gateway_id = gateway_client.find_gateway_instance()
@@ -36,9 +34,7 @@ def test_gateway_election_enabled_by_default(maya_instance_manager, gateway_clie
 
 
 @pytest.mark.timeout(120)
-def test_gateway_failure_detection_and_elevation(
-    maya_instance_manager, gateway_client
-):
+def test_gateway_failure_detection_and_elevation(maya_instance_manager, gateway_client):
     """Test that non-gateway instances detect gateway failure and one elevates.
 
     Scenario:
@@ -55,15 +51,11 @@ def test_gateway_failure_detection_and_elevation(
     ]
 
     for config in configs:
-        assert maya_instance_manager.launch_instance(
-            config
-        ), f"Failed to launch {config.instance_id}"
+        assert maya_instance_manager.launch_instance(config), f"Failed to launch {config.instance_id}"
 
     # Wait for registration
     assert gateway_client.wait_for_gateway(), "Gateway did not start"
-    assert gateway_client.wait_for_instance_count(
-        3, max_retries=30
-    ), "Instances did not register"
+    assert gateway_client.wait_for_instance_count(3, max_retries=30), "Instances did not register"
 
     # Identify current gateway
     original_gateway = gateway_client.find_gateway_instance()
@@ -98,9 +90,7 @@ def test_gateway_failure_detection_and_elevation(
 
                     if new_gateway != original_gateway and elevation_rto is None:
                         elevation_rto = elapsed
-                        logger.info(
-                            "New gateway elected in %.2fs: %s", elapsed, new_gateway
-                        )
+                        logger.info("New gateway elected in %.2fs: %s", elapsed, new_gateway)
                         break
         except Exception as exc:
             logger.debug("Health check failed: %s", exc)
@@ -126,18 +116,14 @@ def test_gateway_failure_detection_and_elevation(
 
 
 @pytest.mark.timeout(90)
-def test_gateway_failover_disabled_when_gateway_port_zero(
-    maya_instance_manager, gateway_client
-):
+def test_gateway_failover_disabled_when_gateway_port_zero(maya_instance_manager, gateway_client):
     """Verify gateway failover is disabled when gateway_port=0."""
     # Create instance without gateway
     config = maya_instance_manager.create_config("maya-no-gateway")
     config.gateway_port = 0  # Disable gateway
     config.enable_gateway_failover = False
 
-    assert maya_instance_manager.launch_instance(
-        config
-    ), "Failed to launch instance"
+    assert maya_instance_manager.launch_instance(config), "Failed to launch instance"
 
     # Wait a bit
     time.sleep(2)
@@ -156,19 +142,13 @@ def test_multiple_instance_failover_chain(maya_instance_manager, gateway_client)
     This verifies the election process is robust and can handle cascading failures.
     """
     # Create 5 instances to test failover chain
-    configs = [
-        maya_instance_manager.create_config(f"maya-2025-{i:02d}") for i in range(1, 6)
-    ]
+    configs = [maya_instance_manager.create_config(f"maya-2025-{i:02d}") for i in range(1, 6)]
 
     for config in configs:
-        assert maya_instance_manager.launch_instance(
-            config
-        ), f"Failed to launch {config.instance_id}"
+        assert maya_instance_manager.launch_instance(config), f"Failed to launch {config.instance_id}"
 
     assert gateway_client.wait_for_gateway(), "Gateway did not start"
-    assert gateway_client.wait_for_instance_count(
-        5, max_retries=30
-    ), "Instances did not register"
+    assert gateway_client.wait_for_instance_count(5, max_retries=30), "Instances did not register"
 
     # Track gateway transitions
     gateways_seen = []
@@ -237,18 +217,14 @@ def test_fast_failover_recovery(maya_instance_manager, gateway_client):
 
 
 @pytest.mark.timeout(120)
-def test_gateway_failover_environment_variable(
-    maya_instance_manager, gateway_client
-):
+def test_gateway_failover_environment_variable(maya_instance_manager, gateway_client):
     """Verify DCC_MCP_MAYA_ENABLE_GATEWAY_FAILOVER env var controls failover."""
     # Create instance with failover explicitly disabled via config
     config = maya_instance_manager.create_config("maya-no-failover")
     config.enable_gateway_failover = False
     config.env_vars = {"DCC_MCP_MAYA_ENABLE_GATEWAY_FAILOVER": "0"}
 
-    assert maya_instance_manager.launch_instance(
-        config
-    ), "Failed to launch instance"
+    assert maya_instance_manager.launch_instance(config), "Failed to launch instance"
 
     time.sleep(2)
 
