@@ -57,6 +57,7 @@ from dcc_mcp_maya.api import (
     validate_node_type,
     with_maya,
 )
+from dcc_mcp_maya.hotreload import MayaSkillHotReloader
 from dcc_mcp_maya.server import MayaMcpServer, start_server, stop_server
 
 __all__ = [
@@ -65,6 +66,8 @@ __all__ = [
     "MayaMcpServer",
     "start_server",
     "stop_server",
+    # Hot-reload support
+    "MayaSkillHotReloader",
     # Skill authoring helpers
     "maya_success",
     "maya_error",

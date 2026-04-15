@@ -162,8 +162,11 @@ class MayaMcpServer:
         registry_dir: Optional[str] = None,
         dcc_version: Optional[str] = None,
         scene: Optional[str] = None,
+        enable_gateway_failover: bool = True,
     ) -> None:
         from dcc_mcp_core import McpHttpConfig, create_skill_manager  # noqa: PLC0415
+        from dcc_mcp_maya.gateway_election import GatewayElection  # noqa: PLC0415
+        from dcc_mcp_maya.hotreload import MayaSkillHotReloader  # noqa: PLC0415
 
         self._config = McpHttpConfig(
             port=port,
@@ -191,6 +194,11 @@ class MayaMcpServer:
         # and auto-discovers skills from env vars (DCC_MCP_MAYA_SKILL_PATHS, DCC_MCP_SKILL_PATHS)
         self._server = create_skill_manager("maya", self._config)
         self._handle = None
+        self._hot_reloader = MayaSkillHotReloader(self)
+        
+        # Gateway election for automatic failover
+        self._gateway_election: Optional[GatewayElection] = None
+        self._enable_gateway_failover = enable_gateway_failover and resolved_gateway > 0
 
     # ── action registration ────────────────────────────────────────────────────
 
@@ -307,9 +315,87 @@ class MayaMcpServer:
         from dcc_mcp_maya.diagnostics import register_diagnostic_handlers  # noqa: PLC0415
 
         register_diagnostic_handlers(self._server)
+
+        # Store search paths for hot-reload use
+        self._skill_search_paths = search_paths
+
         return self
 
     # ── skill discovery helpers ───────────────────────────────────────────────
+
+    def enable_hot_reload(self, debounce_ms: int = 300) -> bool:
+        """Enable automatic hot-reload of skills when files change.
+
+        Monitors skill directories for changes to SKILL.md files and scripts.
+        When a change is detected, the affected skill is automatically
+        unloaded and reloaded without restarting the server.
+
+        This feature uses platform-native filesystem monitoring:
+        - **Linux**: inotify
+        - **macOS**: FSEvents
+        - **Windows**: ReadDirectoryChangesW
+
+        The reloader runs on a background thread and never blocks Maya.
+
+        Args:
+            debounce_ms: Milliseconds to wait after a filesystem change before
+                reloading (default 300ms). Use this to avoid excessive reloads
+                when a single "save" triggers multiple low-level events.
+
+        Returns:
+            ``True`` if hot-reload was successfully enabled, ``False`` on error.
+
+        Example::
+
+            server.register_builtin_actions()
+            if server.enable_hot_reload(debounce_ms=250):
+                print("Hot-reload enabled")
+
+        .. versionadded:: 0.3.0
+           Requires dcc-mcp-core >= 0.12.24 with SkillWatcher support.
+        """
+        if not hasattr(self, "_skill_search_paths"):
+            logger.warning("Cannot enable hot-reload: skills not yet registered")
+            return False
+        return self._hot_reloader.enable(self._skill_search_paths, debounce_ms=debounce_ms)
+
+    def disable_hot_reload(self) -> None:
+        """Disable automatic skill hot-reload.
+
+        Stops monitoring skill directories and cleans up watcher resources.
+
+        Example::
+
+            server.disable_hot_reload()
+        """
+        self._hot_reloader.disable()
+
+    @property
+    def is_hot_reload_enabled(self) -> bool:
+        """Whether hot-reload is currently active.
+
+        Returns:
+            ``True`` if hot-reload is enabled, ``False`` otherwise.
+        """
+        return self._hot_reloader.is_enabled
+
+    @property
+    def hot_reload_stats(self) -> dict:
+        """Return hot-reload statistics.
+
+        Returns:
+            Dict with ``enabled``, ``watched_paths``, ``reload_count`` keys.
+
+        Example::
+
+            stats = server.hot_reload_stats
+            print(f"Reloads so far: {stats['reload_count']}")
+        """
+        return {
+            "enabled": self._hot_reloader.is_enabled,
+            "watched_paths": self._hot_reloader.watched_paths,
+            "reload_count": self._hot_reloader.reload_count,
+        }
 
     def search_skills(
         self,
@@ -612,7 +698,7 @@ class MayaMcpServer:
     # ── lifecycle ─────────────────────────────────────────────────────────────
 
     def start(self):
-        """Start the MCP HTTP server.
+        """Start the MCP HTTP server and optionally the gateway election thread.
 
         Returns:
             ``McpServerHandle`` with ``.mcp_url()``, ``.port``, ``.shutdown()``.
@@ -623,10 +709,31 @@ class MayaMcpServer:
 
         self._handle = self._server.start()
         logger.info("Maya MCP server started at %s", self._handle.mcp_url())
+        
+        # Start gateway election thread if enabled
+        if self._enable_gateway_failover and self._gateway_election is None:
+            try:
+                from dcc_mcp_maya.gateway_election import GatewayElection  # noqa: PLC0415
+                
+                self._gateway_election = GatewayElection(self)
+                self._gateway_election.start()
+                logger.info("Gateway failover election enabled")
+            except Exception as exc:
+                logger.warning("Failed to start gateway election: %s", exc)
+        
         return self._handle
 
     def stop(self) -> None:
-        """Gracefully stop the server."""
+        """Gracefully stop the server and gateway election thread."""
+        # Stop gateway election thread first
+        if self._gateway_election is not None:
+            try:
+                self._gateway_election.stop()
+            except Exception as exc:
+                logger.warning("Error stopping gateway election: %s", exc)
+            finally:
+                self._gateway_election = None
+        
         if self._handle is not None:
             self._handle.shutdown()
             self._handle = None
@@ -642,7 +749,124 @@ class MayaMcpServer:
         """The MCP endpoint URL, or ``None`` if not running."""
         return self._handle.mcp_url() if self._handle else None
 
-    def get_capabilities(self) -> Any:
+    def update_gateway_metadata(
+        self,
+        scene: Optional[str] = None,
+        version: Optional[str] = None,
+    ) -> bool:
+        """Update this instance's metadata in the gateway registry (without restarting).
+
+        Dynamically updates the scene and/or version information registered with
+        the gateway. The changes are immediately reflected in the FileRegistry
+        and visible to all gateway clients without requiring a server restart.
+
+        This is useful when:
+        - The user opens/saves a new scene in Maya
+        - The application version changes
+        - Any other metadata needs updating
+
+        Args:
+            scene: New scene file path (optional). If provided, updates the
+                registered scene information.
+            version: New application version (optional). If provided, updates
+                the registered version.
+
+        Returns:
+            ``True`` if metadata was successfully updated, ``False`` on error.
+
+        Example::
+
+            server.update_gateway_metadata(scene="/path/to/new_scene.ma")
+            # Gateway now shows this instance as having a new scene
+
+        .. versionadded:: 0.4.0
+           Requires dcc-mcp-core >= 0.12.24 with FileRegistry hot-reload support.
+        """
+        if not self.is_running:
+            logger.warning("Cannot update metadata: server is not running")
+            return False
+
+        if not self._config.gateway_port or self._config.gateway_port <= 0:
+            logger.debug("Gateway not configured; metadata update skipped")
+            return False
+
+        try:
+            # Update the config (this propagates to the Rust layer)
+            if scene is not None:
+                self._config.scene = scene
+                logger.debug("Updated scene metadata: %s", scene)
+            
+            if version is not None:
+                self._config.dcc_version = version
+                logger.debug("Updated version metadata: %s", version)
+            
+            # Send heartbeat to notify gateway of updates
+            # This triggers gateway to refresh FileRegistry entries
+            try:
+                from dcc_mcp_core import TransportManager  # noqa: PLC0415
+                
+                registry_dir = self._config.registry_dir
+                if not registry_dir:
+                    registry_dir = os.environ.get("DCC_MCP_REGISTRY_DIR", "")
+                
+                if registry_dir:
+                    mgr = TransportManager(registry_dir=registry_dir)
+                    
+                    # Get instance_id from handle if available (added in v0.12.24)
+                    instance_id = None
+                    if hasattr(self._handle, "instance_id"):
+                        instance_id = self._handle.instance_id
+                    
+                    if instance_id:
+                        # Send heartbeat to trigger gateway refresh
+                        result = mgr.py_heartbeat("maya", instance_id)
+                        if result:
+                            logger.info(
+                                "Gateway metadata updated and heartbeat sent: "
+                                "scene=%s, version=%s", scene, version
+                            )
+                            return True
+                        else:
+                            logger.warning("Heartbeat send failed; metadata may not be visible to gateway")
+                            return False
+                    else:
+                        logger.debug("instance_id not available; metadata updated locally only")
+                        return True
+            
+            except ImportError:
+                logger.debug("TransportManager not available; skipping heartbeat")
+                return True  # Still consider it success if config was updated
+            
+        except Exception as exc:
+            logger.error("Failed to update gateway metadata: %s", exc)
+            return False
+
+    def get_gateway_election_status(self) -> dict:
+        """Return the status of the gateway election thread (if running).
+
+        Returns:
+            Dict with keys:
+            - ``enabled``: Whether gateway failover is enabled
+            - ``running``: Whether election thread is active
+            - ``consecutive_failures``: Current failure counter (if running)
+
+        Example::
+
+            status = server.get_gateway_election_status()
+            if status['running']:
+                print(f"Gateway election active, {status['consecutive_failures']} failures")
+        """
+        return {
+            "enabled": self._enable_gateway_failover,
+            "running": self._gateway_election.is_running if self._gateway_election else False,
+            "consecutive_failures": (
+                self._gateway_election._consecutive_failures  # noqa: SLF001
+                if self._gateway_election
+                else 0
+            ),
+        }
+
+
         """Return the Maya DCC capabilities as a ``DccCapabilities`` instance.
 
         Declares the feature set supported by this Maya integration for
@@ -678,6 +902,8 @@ def start_server(
     registry_dir: Optional[str] = None,
     dcc_version: Optional[str] = None,
     scene: Optional[str] = None,
+    enable_hot_reload: bool = False,
+    enable_gateway_failover: bool = True,
 ) -> Any:
     """Start (or return the already-running) Maya MCP server.
 
@@ -700,6 +926,18 @@ def start_server(
     all others register themselves as plain instances.  See
     :attr:`MayaMcpServer.is_gateway` and :attr:`MayaMcpServer.gateway_url`.
 
+    **Hot-Reload Support** (v0.3.0+):
+    When ``enable_hot_reload`` is ``True`` (or ``DCC_MCP_MAYA_HOT_RELOAD=1``
+    env var), the server automatically monitors skill directories and reloads
+    skills when SKILL.md or script files are modified. Requires dcc-mcp-core
+    >= 0.12.24 with SkillWatcher support.
+
+    **Gateway Failover** (v0.4.0+):
+    When ``enable_gateway_failover`` is ``True`` (or ``DCC_MCP_MAYA_ENABLE_GATEWAY_FAILOVER=1``
+    env var), non-gateway instances monitor the current gateway and automatically
+    attempt to become the new gateway if it fails. This ensures continued service
+    availability in multi-instance deployments.
+
     Args:
         port: TCP port.  Use ``0`` for a random available port.
         server_name: Name shown in MCP ``initialize`` response.
@@ -713,6 +951,12 @@ def start_server(
         registry_dir: Directory for the shared ``FileRegistry`` JSON file.
         dcc_version: Maya version string reported to the registry (e.g. ``"2025"``).
         scene: Currently open scene file path reported to the registry.
+        enable_hot_reload: If ``True``, enable automatic skill hot-reload.
+            Can also be set via ``DCC_MCP_MAYA_HOT_RELOAD=1`` env var.
+        enable_gateway_failover: If ``True``, enable automatic gateway failover
+            (non-gateway instances monitor and can upgrade if current gateway fails).
+            Only effective when ``gateway_port`` is configured.
+            Can also be set via ``DCC_MCP_MAYA_ENABLE_GATEWAY_FAILOVER=1`` env var.
 
     Returns:
         ``McpServerHandle`` with ``.mcp_url()``, ``.port``, ``.shutdown()``.
@@ -725,6 +969,19 @@ def start_server(
 
         # Join the multi-DCC gateway (first Maya wins :9765):
         handle = dcc_mcp_maya.start_server(port=0, gateway_port=9765, dcc_version="2025")
+
+        # With hot-reload enabled:
+        handle = dcc_mcp_maya.start_server(enable_hot_reload=True)
+        
+        # With gateway failover (auto-elevate to gateway on failure):
+        handle = dcc_mcp_maya.start_server(
+            port=0, gateway_port=9765, enable_gateway_failover=True
+        )
+        
+        # Or via environment variable:
+        import os
+        os.environ["DCC_MCP_MAYA_ENABLE_GATEWAY_FAILOVER"] = "1"
+        handle = dcc_mcp_maya.start_server(port=0, gateway_port=9765)
     """
     global _server_instance
     with _lock:
@@ -736,12 +993,34 @@ def start_server(
                 registry_dir=registry_dir,
                 dcc_version=dcc_version,
                 scene=scene,
+                enable_gateway_failover=enable_gateway_failover,
             )
             if register_builtins:
                 _server_instance.register_builtin_actions(
                     extra_skill_paths=extra_skill_paths,
                     include_bundled=include_bundled,
                 )
+            # Check environment variable for hot-reload if not explicitly set
+            hot_reload_enabled = enable_hot_reload or os.environ.get("DCC_MCP_MAYA_HOT_RELOAD", "0") == "1"
+            if hot_reload_enabled:
+                try:
+                    if _server_instance.enable_hot_reload():
+                        logger.info("Skill hot-reload enabled")
+                    else:
+                        logger.warning("Failed to enable skill hot-reload")
+                except Exception as exc:
+                    logger.warning("Error enabling hot-reload: %s", exc)
+            
+            # Gateway failover is enabled by default unless explicitly disabled or gateway_port=0
+            gateway_failover_enabled = (
+                enable_gateway_failover 
+                and os.environ.get("DCC_MCP_MAYA_ENABLE_GATEWAY_FAILOVER", "1") != "0"
+                and gateway_port and gateway_port > 0
+            )
+            if gateway_failover_enabled and hasattr(_server_instance, "_enable_gateway_failover"):
+                logger.info("Gateway failover election ready (will start in server.start())")
+
+
         return _server_instance.start()
 
 
