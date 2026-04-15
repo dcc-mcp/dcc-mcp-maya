@@ -62,3 +62,7 @@ target/
 /.zip/
 /coverage.xml
 /run_pycharm.bat
+
+# Local documentation (development reference only)
+DOCKER_CHANGES.md
+DOCKER_QUICK_START.md
