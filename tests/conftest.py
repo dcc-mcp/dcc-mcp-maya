@@ -24,7 +24,6 @@ from unittest.mock import MagicMock, patch
 
 # Import third-party modules
 import pytest
-import requests
 
 SKILLS_ROOT = Path(__file__).parent.parent / "src" / "dcc_mcp_maya" / "skills"
 
@@ -173,6 +172,8 @@ class GatewayTestClient:
 
     def __init__(self, gateway_url: str, timeout: int = 10):
         """Initialize gateway test client."""
+        import requests  # noqa: PLC0415 — lazy import to avoid top-level dep in E2E
+
         self.gateway_url = gateway_url.rstrip("/")
         self.timeout = timeout
         self.session = requests.Session()
