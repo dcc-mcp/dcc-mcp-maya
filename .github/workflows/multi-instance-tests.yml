@@ -18,8 +18,92 @@ on:
       - '.github/workflows/multi-instance-tests.yml'
 
 jobs:
-  multi-instance-tests:
-    name: Gateway Failover & Discovery Tests
+  docker-multi-instance-tests:
+    name: Docker Multi-Version (${{ matrix.maya-version }}, py${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    strategy:
+      matrix:
+        maya-version: ['2023', '2024', '2025']
+        python-version: ['3.9', '3.10', '3.11']
+      fail-fast: false
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-test.txt
+          pip install pytest pytest-timeout requests
+
+      - name: Install dcc-mcp-maya in development mode
+        run: |
+          pip install -e .
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Verify Docker and pull Maya image
+        run: |
+          docker --version
+          echo "Pulling Docker image: autodesk/maya:${{ matrix.maya-version }}"
+          docker pull autodesk/maya:${{ matrix.maya-version }} 2>&1 || echo "⚠️  Image pull failed; tests may skip if local pull unavailable"
+
+      - name: Verify installation
+        run: |
+          python -c "from dcc_mcp_maya import start_server; print('✓ dcc_mcp_maya imported successfully')"
+          python -c "from tests.fixtures.maya_instances import MayaInstanceManager; print('✓ MayaInstanceManager imported successfully')"
+          python -c "from tests.fixtures.docker_maya import DockerMayaInstanceManager; print('✓ DockerMayaInstanceManager imported successfully')"
+          python -c "from tests.fixtures.instance_factory import get_instance_manager; print('✓ instance_factory imported successfully')"
+
+      - name: Run gateway failover tests (Docker Maya ${{ matrix.maya-version }})
+        run: |
+          cd tests
+          export DCC_MCP_FORCE_DOCKER=1
+          python -m pytest test_gateway_failover.py -v --tb=short -x
+        continue-on-error: true
+
+      - name: Run discovery tests (Docker Maya ${{ matrix.maya-version }})
+        run: |
+          cd tests
+          export DCC_MCP_FORCE_DOCKER=1
+          python -m pytest test_multi_instance_discovery.py -v --tb=short -x
+        continue-on-error: true
+
+      - name: Run scene update tests (Docker Maya ${{ matrix.maya-version }})
+        run: |
+          cd tests
+          export DCC_MCP_FORCE_DOCKER=1
+          python -m pytest test_scene_update.py -v --tb=short -x
+        continue-on-error: true
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-results-maya${{ matrix.maya-version }}-py${{ matrix.python-version }}
+          path: tests/.pytest_cache/
+
+      - name: Print test summary
+        if: always()
+        run: |
+          echo "====== Test Summary ======"
+          echo "Multi-instance Docker tests completed"
+          echo "Maya version: ${{ matrix.maya-version }}"
+          echo "Python version: ${{ matrix.python-version }}"
+          echo "Note: Some tests may skip if Maya Docker image unavailable"
+
+  local-instance-tests:
+    name: Local Instance Tests (py${{ matrix.python-version }})
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -53,37 +137,31 @@ jobs:
           python -c "from dcc_mcp_maya import start_server; print('✓ dcc_mcp_maya imported successfully')"
           python -c "from tests.fixtures.maya_instances import MayaInstanceManager; print('✓ MayaInstanceManager imported successfully')"
 
-      - name: Run gateway failover tests
+      - name: Run gateway failover tests (local mode)
         run: |
           cd tests
-          python -m pytest test_gateway_failover.py -v --tb=short -x
+          python -m pytest test_gateway_failover.py -v --tb=short -x -k "not docker"
         continue-on-error: true
 
-      - name: Run discovery tests
+      - name: Run discovery tests (local mode)
         run: |
           cd tests
-          python -m pytest test_multi_instance_discovery.py -v --tb=short -x
-        continue-on-error: true
-
-      - name: Run scene update tests
-        run: |
-          cd tests
-          python -m pytest test_scene_update.py -v --tb=short -x
+          python -m pytest test_multi_instance_discovery.py -v --tb=short -x -k "not docker"
         continue-on-error: true
 
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: pytest-results-py${{ matrix.python-version }}
+          name: pytest-results-local-py${{ matrix.python-version }}
           path: tests/.pytest_cache/
 
       - name: Print test summary
         if: always()
         run: |
           echo "====== Test Summary ======"
-          echo "Multi-instance gateway tests completed on Python ${{ matrix.python-version }}"
-          echo "Note: Some tests may skip if Maya is not installed in CI environment"
+          echo "Local instance tests completed on Python ${{ matrix.python-version }}"
+          echo "Note: Tests will skip if mayapy is not installed locally"
 
   gate-check:
     name: Test Gate (Required Checks)
