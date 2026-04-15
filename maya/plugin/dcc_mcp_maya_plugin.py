@@ -328,6 +328,7 @@ def _add_menu() -> None:
         cmds.menuItem(label="Restart MCP Server", command=lambda *_: _restart_deferred())
         cmds.menuItem(label="Stop MCP Server", command=lambda *_: _stop_blocking())
         cmds.menuItem(divider=True)
+        cmds.menuItem(label="Enable/Disable Hot Reload", command=lambda *_: _toggle_hot_reload())
         cmds.menuItem(label="Open MCP in Browser", command=lambda *_: _open_browser())
     except Exception as exc:
         logger.warning("Could not add DCC MCP menu: %s", exc)
@@ -408,3 +409,30 @@ def _open_browser() -> None:
         webbrowser.open(url)
     else:
         cmds.warning("MCP server is not running.")
+
+
+def _toggle_hot_reload() -> None:
+    """Toggle hot-reload on/off for the MCP server."""
+    import dcc_mcp_maya.server as _srv_mod  # noqa: PLC0415
+
+    srv = _srv_mod._server_instance  # noqa: SLF001
+    if srv is None:
+        cmds.warning("MCP server is not running.")
+        return
+
+    try:
+        if srv.is_hot_reload_enabled:
+            srv.disable_hot_reload()
+            cmds.inViewMessage(amg="DCC MCP: hot-reload <b>disabled</b>", pos="topCenter", fade=True, fadeStayTime=2000)
+            print("Hot-reload disabled")  # noqa: T201
+        else:
+            if srv.enable_hot_reload():
+                stats = srv.hot_reload_stats
+                msg = f"DCC MCP: hot-reload <b>enabled</b> ({len(stats['watched_paths'])} paths)"
+                cmds.inViewMessage(amg=msg, pos="topCenter", fade=True, fadeStayTime=2000)
+                print(f"Hot-reload enabled: monitoring {len(stats['watched_paths'])} paths")  # noqa: T201
+            else:
+                cmds.warning("Failed to enable hot-reload")
+    except Exception as exc:
+        logger.error("Hot-reload toggle error: %s", exc)
+        cmds.warning(f"Error toggling hot-reload: {exc}")
