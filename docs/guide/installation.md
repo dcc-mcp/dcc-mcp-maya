@@ -4,7 +4,7 @@
 
 - **Maya**: 2020, 2022, 2023, 2024, or 2025
 - **Python**: 3.7 – 3.12 (embedded in Maya)
-- **dcc-mcp-core**: ≥ 0.12.12 (auto-installed as dependency)
+- **dcc-mcp-core**: ≥ 0.12.29 (auto-installed as dependency)
 
 ## Method 1 — pip into mayapy
 
@@ -39,7 +39,7 @@ Copy the plugin file to a directory on `MAYA_PLUG_IN_PATH`, then load it through
 
 3. Find `dcc_mcp_maya` and check **Loaded** (and optionally **Auto load**)
 
-The server starts automatically on plugin load using the default port 8765.
+The plugin starts the server automatically on load. By default it uses an OS-assigned instance port and participates in the gateway on port `9765`.
 
 ## Method 3 — userSetup.py (Auto-start)
 

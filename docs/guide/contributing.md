@@ -9,7 +9,7 @@ A skill is a directory with the following structure:
 
 ```
 my-skill/
-├── SKILL.md          ← (optional) human-readable description
+├── SKILL.md          ← required skill manifest
 └── scripts/
     ├── do_something.py
     └── get_info.py
@@ -117,7 +117,7 @@ dcc_mcp_maya.start_server()
 import dcc_mcp_maya
 
 dcc_mcp_maya.start_server(
-    skill_paths=[r"C:\Users\me\my-skills"]
+    extra_skill_paths=[r"C:\Users\me\my-skills"]
 )
 ```
 

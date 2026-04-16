@@ -6,7 +6,7 @@
 
 ```
 my-skill/
-├── SKILL.md          ← （可选）人类可读的说明
+├── SKILL.md          ← 必需的 Skill 清单
 └── scripts/
     ├── do_something.py
     └── get_info.py
@@ -113,7 +113,7 @@ dcc_mcp_maya.start_server()
 import dcc_mcp_maya
 
 dcc_mcp_maya.start_server(
-    skill_paths=[r"C:\Users\me\my-skills"]
+    extra_skill_paths=[r"C:\Users\me\my-skills"]
 )
 ```
 
