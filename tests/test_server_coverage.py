@@ -1,9 +1,8 @@
 """Additional server.py tests to close remaining coverage gaps.
 
 Targets:
-- lines 87-91: _BUILTIN_SKILLS_DIR.is_dir() False branch
-- lines 97-100: get_skills_dir() default path appended
-- lines 233-235: load_skill failure warning path
+- collect_skill_search_paths edge cases
+- register_builtin_actions progressive discovery behavior
 - start_server with extra_skill_paths
 """
 
@@ -115,41 +114,30 @@ class TestCollectSkillSearchPathsCoverage:
 
 
 class TestLoadSkillFailure:
-    def test_load_skill_failure_logs_warning_and_continues(self):
-        """If load_skill raises, a warning is logged and iteration continues."""
+    def test_register_builtin_actions_discovers_without_loading_skills(self):
+        """register_builtin_actions should only discover skills, not eagerly load them."""
         server = _make_bare_server()
 
         mock_mcp_server = MagicMock()
         mock_mcp_server.discover.return_value = 1
-        bad_summary = MagicMock()
-        bad_summary.name = "bad_skill"
-        mock_mcp_server.list_skills.return_value = [bad_summary]
-        mock_mcp_server.load_skill.side_effect = RuntimeError("broken skill")
-        mock_mcp_server.discover_and_load_all = MagicMock(side_effect=lambda paths: None)
         server._server = mock_mcp_server
 
-        # register_builtin_actions calls discover_and_load_all which we mocked
         result = server.register_builtin_actions()
         assert result is server
+        mock_mcp_server.discover.assert_called_once()
+        mock_mcp_server.load_skill.assert_not_called()
 
-    def test_load_skill_mixed_success_failure(self):
-        """Counts loaded/failed correctly when some skills succeed and some fail."""
+    def test_register_builtin_actions_keeps_working_when_discover_succeeds(self):
+        """register_builtin_actions should return self after successful discovery."""
         server = _make_bare_server()
 
         mock_mcp_server = MagicMock()
-        mock_mcp_server.discover_and_load_all = MagicMock(side_effect=lambda paths: None)
         mock_mcp_server.discover.return_value = 2
-
-        good = MagicMock()
-        good.name = "good_skill"
-        bad = MagicMock()
-        bad.name = "bad_skill"
-        mock_mcp_server.list_skills.return_value = [good, bad]
-        mock_mcp_server.load_skill.side_effect = [None, RuntimeError("boom")]
         server._server = mock_mcp_server
 
         result = server.register_builtin_actions()
         assert result is server
+        mock_mcp_server.discover.assert_called_once()
 
 
 # ── start_server with extra_skill_paths ───────────────────────────────────────

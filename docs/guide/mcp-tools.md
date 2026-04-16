@@ -4,7 +4,7 @@ This guide is for users who want to control Maya using natural language through 
 
 ## How It Works
 
-Once the `dcc-mcp-maya` server is running inside Maya, your AI assistant gains access to **60+ Maya tools**. Just describe what you want in plain English.
+Once the `dcc-mcp-maya` server is running inside Maya, your AI assistant gains access to **370+ Maya tools across 64 built-in skill packages**. Just describe what you want in plain English.
 
 ## Scene Operations
 

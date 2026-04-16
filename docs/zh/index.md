@@ -21,8 +21,8 @@ features:
     title: 原生 MCP 协议
     details: 实现 2025-03-26 版 MCP Streamable HTTP 规范，兼容 Claude Desktop、Cursor、OpenClaw 及任意 MCP 宿主。
   - icon: 🎬
-    title: 60+ 内置 Action
-    details: 场景管理、几何体创建、材质、动画、灯光、渲染、绑定、UV 操作等，全部开箱即用。
+    title: 370+ MCP 工具
+    details: 内置 64 个 Skill 包，覆盖场景管理、几何体、材质、动画、灯光、渲染、绑定、UV 操作等能力。
   - icon: 📸
     title: 视口截图
     details: 一次 MCP 调用即可将任意 Maya 视口捕获为 base64 编码的 PNG 图像，完美支持 AI 视觉反馈循环。
