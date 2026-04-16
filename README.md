@@ -124,7 +124,12 @@ subprocesses can connect back without any manual configuration.
 
 ## Available MCP Tools
 
-### Scene (7 tools)
+`dcc-mcp-maya` currently ships **64 built-in skill packages** and **370+ Maya MCP tools**.
+The sections below are representative categories, not an exhaustive inventory.
+Skill discovery is **progressive**: `register_builtin_actions()` indexes available skills,
+and individual skill toolsets are loaded on demand by the MCP server.
+
+### Scene
 
 | Tool | Description |
 |------|-------------|
@@ -136,7 +141,7 @@ subprocesses can connect back without any manual configuration.
 | `get_selection` | Get current selection |
 | `set_selection` | Set active selection |
 
-### Geometry (8 tools)
+### Geometry
 
 | Tool | Description |
 |------|-------------|
@@ -149,7 +154,7 @@ subprocesses can connect back without any manual configuration.
 | `get_transform` | Query translate/rotate/scale |
 | `rename_object` | Rename an object |
 
-### Material (4 tools)
+### Material
 
 | Tool | Description |
 |------|-------------|
@@ -158,7 +163,7 @@ subprocesses can connect back without any manual configuration.
 | `set_material_attribute` | Set material color, roughness, etc. |
 | `list_materials` | List all scene materials |
 
-### Animation (5 tools)
+### Animation
 
 | Tool | Description |
 |------|-------------|
@@ -168,7 +173,7 @@ subprocesses can connect back without any manual configuration.
 | `get_current_time` | Get current frame number |
 | `set_current_time` | Set current frame number |
 
-### Render (4 tools)
+### Render
 
 | Tool | Description |
 |------|-------------|
@@ -177,7 +182,7 @@ subprocesses can connect back without any manual configuration.
 | `import_file` | Import FBX/OBJ/Alembic/Maya file |
 | `export_selection` | Export selection to FBX/OBJ/Alembic |
 
-### Scripting (2 tools)
+### Scripting
 
 | Tool | Description |
 |------|-------------|
@@ -201,7 +206,7 @@ Add to `claude_desktop_config.json`:
 ## Requirements
 
 - Maya 2020+ (Python 3.7+)
-- [`dcc-mcp-core`](https://github.com/loonghao/dcc-mcp-core) ≥ 0.12.7
+- [`dcc-mcp-core`](https://github.com/loonghao/dcc-mcp-core) ≥ 0.12.29
 
 ## Development
 

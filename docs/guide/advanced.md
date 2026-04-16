@@ -97,7 +97,7 @@ export DCC_MCP_MAYA_SKILL_PATHS=/studio/maya-skills:/personal/skills
 
 ## Main-Thread Scheduling
 
-Maya's UI and cmds operations must run on the **main thread**. `dcc-mcp-maya` handles this automatically — all action scripts are dispatched to the main thread via Maya's `executeInMainThreadWithResult`.
+Maya's UI and `cmds` operations must run on the **main thread**. The plugin entry points and startup helpers are written with that constraint in mind, and any custom code that touches Maya UI state should still be scheduled carefully.
 
 If you write custom code that needs main-thread execution:
 
@@ -139,7 +139,6 @@ from dcc_mcp_maya.server import MayaMcpServer
 server = MayaMcpServer(
     port=8765,
     server_name="maya-mcp",
-    server_version="1.0.0",
 )
 server.register_builtin_actions(
     extra_skill_paths=["/my/custom/skills"]

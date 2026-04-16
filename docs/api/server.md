@@ -12,6 +12,13 @@ dcc_mcp_maya.start_server(
     server_name: str = "maya-mcp",
     register_builtins: bool = True,
     extra_skill_paths: Optional[List[str]] = None,
+    include_bundled: bool = True,
+    gateway_port: Optional[int] = None,
+    registry_dir: Optional[str] = None,
+    dcc_version: Optional[str] = None,
+    scene: Optional[str] = None,
+    enable_hot_reload: bool = False,
+    enable_gateway_failover: bool = True,
 ) -> McpServerHandle
 ```
 
@@ -23,8 +30,15 @@ Start (or return the already-running) module-level singleton server.
 |-----------|------|---------|-------------|
 | `port` | `int` | `8765` | TCP port. Use `0` for a random available port. |
 | `server_name` | `str` | `"maya-mcp"` | Name shown in MCP `initialize` response. |
-| `register_builtins` | `bool` | `True` | Auto-discover and load all built-in skills. |
+| `register_builtins` | `bool` | `True` | Discover built-in skills during startup; concrete toolsets load on demand. |
 | `extra_skill_paths` | `List[str]` | `None` | Additional directories to scan for `SKILL.md` files. |
+| `include_bundled` | `bool` | `True` | Include bundled `dcc-mcp-core` skills during discovery. |
+| `gateway_port` | `int \| None` | `None` | Port used for multi-instance gateway election. |
+| `registry_dir` | `str \| None` | `None` | Shared registry directory for service discovery metadata. |
+| `dcc_version` | `str \| None` | `None` | Maya version reported to the discovery registry. |
+| `scene` | `str \| None` | `None` | Current scene path reported to the discovery registry. |
+| `enable_hot_reload` | `bool` | `False` | Enable skill hot-reload support. |
+| `enable_gateway_failover` | `bool` | `True` | Allow non-gateway instances to promote themselves on gateway loss. |
 
 **Returns:** `McpServerHandle` with `.mcp_url()`, `.port`, `.shutdown()`.
 
@@ -40,6 +54,7 @@ print(handle.mcp_url())  # http://127.0.0.1:8765/mcp
 handle = dcc_mcp_maya.start_server(
     port=9000,
     extra_skill_paths=["C:/studio/maya-skills"],
+    include_bundled=False,
 )
 ```
 
@@ -68,7 +83,11 @@ MayaMcpServer(
     port: int = 8765,
     server_name: str = "maya-mcp",
     server_version: str = "0.3.0",
-    enable_main_thread_executor: bool = True,
+    gateway_port: Optional[int] = None,
+    registry_dir: Optional[str] = None,
+    dcc_version: Optional[str] = None,
+    scene: Optional[str] = None,
+    enable_gateway_failover: bool = True,
 )
 ```
 
@@ -78,15 +97,16 @@ MayaMcpServer(
 
 ```python
 server.register_builtin_actions(
-    extra_skill_paths: Optional[List[str]] = None
+    extra_skill_paths: Optional[List[str]] = None,
+    include_bundled: bool = True,
 ) -> MayaMcpServer
 ```
 
-Discover and load all built-in Maya skills. Returns `self` for fluent chaining.
+Discover built-in Maya skills and register diagnostics. Returns `self` for fluent chaining.
 
 Uses the dcc-mcp-core SkillCatalog API:
-1. `server.discover(paths, dcc_name="maya")` — scans for `SKILL.md` files
-2. `server.load_skill(name)` — registers each script as an MCP action
+1. `server.discover(...)` — scans for `SKILL.md` files and indexes skills
+2. `load_skill` MCP tooling can then materialize a specific skill on demand
 
 #### `start`
 
@@ -147,7 +167,11 @@ Returned by `server.start()` and `start_server()`.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `DCC_MCP_MAYA_PORT` | `8765` | Default TCP port (used by plugin mode) |
+| `DCC_MCP_MAYA_PORT` | `8765` | Default TCP port when you start the singleton server directly |
 | `DCC_MCP_MAYA_SERVER_NAME` | `maya-mcp` | Default server name |
 | `DCC_MCP_MAYA_SKILL_PATHS` | — | Maya-specific skill directories (`;`-separated) |
 | `DCC_MCP_SKILL_PATHS` | — | Global fallback skill directories |
+| `DCC_MCP_MAYA_HOT_RELOAD` | `0` | Enable skill hot-reload when set to `1` |
+| `DCC_MCP_MAYA_ENABLE_GATEWAY_FAILOVER` | `1` | Enable automatic gateway failover election |
+| `DCC_MCP_GATEWAY_PORT` | `9765` in plugin mode | Gateway competition port; `0` disables gateway mode |
+| `DCC_MCP_REGISTRY_DIR` | OS temp dir | Shared registry directory for service discovery |
