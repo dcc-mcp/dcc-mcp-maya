@@ -12,6 +12,13 @@ dcc_mcp_maya.start_server(
     server_name: str = "maya-mcp",
     register_builtins: bool = True,
     extra_skill_paths: Optional[List[str]] = None,
+    include_bundled: bool = True,
+    gateway_port: Optional[int] = None,
+    registry_dir: Optional[str] = None,
+    dcc_version: Optional[str] = None,
+    scene: Optional[str] = None,
+    enable_hot_reload: bool = False,
+    enable_gateway_failover: bool = True,
 ) -> McpServerHandle
 ```
 
@@ -23,8 +30,15 @@ dcc_mcp_maya.start_server(
 |------|------|--------|------|
 | `port` | `int` | `8765` | TCP 端口。使用 `0` 随机分配可用端口。 |
 | `server_name` | `str` | `"maya-mcp"` | MCP `initialize` 响应中显示的名称。 |
-| `register_builtins` | `bool` | `True` | 自动发现并加载所有内置技能。 |
+| `register_builtins` | `bool` | `True` | 启动时发现内置技能；具体工具集按需加载。 |
 | `extra_skill_paths` | `List[str]` | `None` | 额外扫描 `SKILL.md` 文件的目录列表。 |
+| `include_bundled` | `bool` | `True` | 发现技能时包含 `dcc-mcp-core` 自带技能。 |
+| `gateway_port` | `int \| None` | `None` | 多实例网关选举使用的端口。 |
+| `registry_dir` | `str \| None` | `None` | 用于服务发现元数据的共享注册目录。 |
+| `dcc_version` | `str \| None` | `None` | 上报到发现注册表中的 Maya 版本。 |
+| `scene` | `str \| None` | `None` | 上报到发现注册表中的当前场景路径。 |
+| `enable_hot_reload` | `bool` | `False` | 启用 Skill 热重载。 |
+| `enable_gateway_failover` | `bool` | `True` | 网关失效时允许非网关实例自动晋升。 |
 
 **返回：** `McpServerHandle`，含 `.mcp_url()`、`.port`、`.shutdown()`。
 
@@ -40,6 +54,7 @@ print(handle.mcp_url())  # http://127.0.0.1:8765/mcp
 handle = dcc_mcp_maya.start_server(
     port=9000,
     extra_skill_paths=["C:/studio/maya-skills"],
+    include_bundled=False,
 )
 ```
 
@@ -68,7 +83,11 @@ MayaMcpServer(
     port: int = 8765,
     server_name: str = "maya-mcp",
     server_version: str = "0.3.0",
-    enable_main_thread_executor: bool = True,
+    gateway_port: Optional[int] = None,
+    registry_dir: Optional[str] = None,
+    dcc_version: Optional[str] = None,
+    scene: Optional[str] = None,
+    enable_gateway_failover: bool = True,
 )
 ```
 
@@ -78,15 +97,16 @@ MayaMcpServer(
 
 ```python
 server.register_builtin_actions(
-    extra_skill_paths: Optional[List[str]] = None
+    extra_skill_paths: Optional[List[str]] = None,
+    include_bundled: bool = True,
 ) -> MayaMcpServer
 ```
 
-发现并加载所有内置 Maya 技能。返回 `self` 支持链式调用。
+发现内置 Maya 技能并注册诊断能力。返回 `self` 支持链式调用。
 
 使用 dcc-mcp-core SkillCatalog API：
-1. `server.discover(paths, dcc_name="maya")` — 扫描 `SKILL.md` 文件
-2. `server.load_skill(name)` — 将每个脚本注册为 MCP Action
+1. `server.discover(...)` — 扫描 `SKILL.md` 并建立技能索引
+2. 之后可通过 `load_skill` MCP 工具按需实体化某个技能
 
 #### `start`
 
@@ -134,7 +154,11 @@ server.stop()
 
 | 变量 | 默认值 | 说明 |
 |------|--------|------|
-| `DCC_MCP_MAYA_PORT` | `8765` | 默认 TCP 端口（插件模式使用）|
+| `DCC_MCP_MAYA_PORT` | `8765` | 直接启动单例服务器时的默认 TCP 端口 |
 | `DCC_MCP_MAYA_SERVER_NAME` | `maya-mcp` | 默认服务器名称 |
 | `DCC_MCP_MAYA_SKILL_PATHS` | — | Maya 专用技能目录（`;` 分隔）|
 | `DCC_MCP_SKILL_PATHS` | — | 全局备用技能目录 |
+| `DCC_MCP_MAYA_HOT_RELOAD` | `0` | 设为 `1` 时启用 Skill 热重载 |
+| `DCC_MCP_MAYA_ENABLE_GATEWAY_FAILOVER` | `1` | 启用自动网关故障转移选举 |
+| `DCC_MCP_GATEWAY_PORT` | 插件模式下为 `9765` | 网关竞争端口；设为 `0` 可禁用 |
+| `DCC_MCP_REGISTRY_DIR` | 操作系统临时目录 | 用于服务发现的共享注册目录 |

@@ -89,7 +89,7 @@ export DCC_MCP_MAYA_SKILL_PATHS=/studio/maya-skills:/personal/skills
 
 ## 主线程调度
 
-Maya 的 UI 和 `cmds` 操作必须在**主线程**运行。`dcc-mcp-maya` 会自动通过 `executeInMainThreadWithResult` 将所有 action 脚本派发到主线程。
+Maya 的 UI 和 `cmds` 操作必须在**主线程**运行。插件入口和启动辅助函数都围绕这个约束设计；你自己的自定义代码如果涉及 Maya UI 状态，仍然需要谨慎调度。
 
 如果你的自定义代码需要主线程执行：
 

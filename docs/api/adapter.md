@@ -15,6 +15,11 @@ MayaMcpServer(
     port: int = 8765,
     server_name: str = "maya-mcp",
     server_version: str = "0.3.0",
+    gateway_port: Optional[int] = None,
+    registry_dir: Optional[str] = None,
+    dcc_version: Optional[str] = None,
+    scene: Optional[str] = None,
+    enable_gateway_failover: bool = True,
 )
 ```
 
@@ -23,12 +28,17 @@ MayaMcpServer(
 | `port` | int | `8765` | TCP port. Use `0` for a random available port. |
 | `server_name` | str | `"maya-mcp"` | Name shown in MCP `initialize` response |
 | `server_version` | str | `"0.3.0"` | Version shown in MCP `initialize` response |
+| `gateway_port` | int \| None | `None` | Gateway election port for multi-instance discovery |
+| `registry_dir` | str \| None | `None` | Shared registry directory for discovery metadata |
+| `dcc_version` | str \| None | `None` | Maya version reported to the registry |
+| `scene` | str \| None | `None` | Scene path reported to the registry |
+| `enable_gateway_failover` | bool | `True` | Allow gateway failover auto-promotion |
 
 ### Methods
 
-#### `register_builtin_actions(extra_skill_paths=None)`
+#### `register_builtin_actions(extra_skill_paths=None, include_bundled=True)`
 
-Discover and load all built-in Maya skills.
+Discover built-in Maya skills for progressive loading.
 
 ```python
 server = MayaMcpServer()
@@ -41,6 +51,7 @@ server.register_builtin_actions(extra_skill_paths=["/my/skills"])
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `extra_skill_paths` | list[str] | `None` | Additional skill directories to scan |
+| `include_bundled` | bool | `True` | Include bundled `dcc-mcp-core` skills |
 
 Returns: `self` (fluent interface)
 
@@ -100,6 +111,13 @@ handle = dcc_mcp_maya.start_server(
     server_name="maya-mcp",
     register_builtins=True,
     extra_skill_paths=None,
+    include_bundled=True,
+    gateway_port=None,
+    registry_dir=None,
+    dcc_version=None,
+    scene=None,
+    enable_hot_reload=False,
+    enable_gateway_failover=True,
 )
 ```
 
@@ -107,8 +125,15 @@ handle = dcc_mcp_maya.start_server(
 |-----------|------|---------|-------------|
 | `port` | int | `8765` | TCP port |
 | `server_name` | str | `"maya-mcp"` | MCP server name |
-| `register_builtins` | bool | `True` | Auto-discover and load built-in skills |
+| `register_builtins` | bool | `True` | Discover built-in skills during startup; toolsets load on demand |
 | `extra_skill_paths` | list[str] | `None` | Additional skill paths |
+| `include_bundled` | bool | `True` | Include bundled `dcc-mcp-core` skills |
+| `gateway_port` | int \| None | `None` | Gateway election port for multi-instance discovery |
+| `registry_dir` | str \| None | `None` | Shared registry directory for discovery metadata |
+| `dcc_version` | str \| None | `None` | Maya version reported to the registry |
+| `scene` | str \| None | `None` | Scene path reported to the registry |
+| `enable_hot_reload` | bool | `False` | Enable skill hot-reload support |
+| `enable_gateway_failover` | bool | `True` | Allow gateway failover auto-promotion |
 
 Returns: `McpServerHandle`
 

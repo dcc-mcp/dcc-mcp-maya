@@ -9,7 +9,7 @@ action registry, lifecycle) is provided by the base class.
 Flow::
 
     server = MayaMcpServer(port=8765)
-    server.register_builtin_actions()   # discover & load all skills
+    server.register_builtin_actions()   # discover skills; load on demand
     handle = server.start()
     print(handle.mcp_url())             # http://127.0.0.1:8765/mcp
     handle.shutdown()
@@ -42,7 +42,12 @@ from typing import Any, List, Optional
 # Import third-party modules
 from dcc_mcp_core.server_base import DccServerBase
 
+# Import local modules
+from dcc_mcp_maya.__version__ import __version__
+
 logger = logging.getLogger(__name__)
+
+DEFAULT_SERVER_VERSION = __version__
 
 # Built-in skills directory shipped with this package
 _BUILTIN_SKILLS_DIR = Path(__file__).parent / "skills"
@@ -96,7 +101,7 @@ class MayaMcpServer(DccServerBase):
         self,
         port: int = 8765,
         server_name: str = "maya-mcp",
-        server_version: str = "0.3.0",
+        server_version: str = DEFAULT_SERVER_VERSION,
         gateway_port: Optional[int] = None,
         registry_dir: Optional[str] = None,
         dcc_version: Optional[str] = None,
@@ -123,10 +128,12 @@ class MayaMcpServer(DccServerBase):
         extra_skill_paths: Optional[List[str]] = None,
         include_bundled: bool = True,
     ) -> "MayaMcpServer":
-        """Discover and load all skills, then register diagnostic IPC handlers.
+        """Discover skills, then register diagnostic IPC handlers.
 
-        Calls the base-class implementation to scan all skill directories,
-        then additionally registers the standard diagnostic IPC handlers
+        Calls the base-class implementation to scan all skill directories.
+        Skill metadata becomes available immediately, while concrete skill
+        tools remain progressively loaded by the underlying MCP server.
+        This method then registers the standard diagnostic IPC handlers
         (``get_audit_log``, ``get_action_metrics``, ``dispatch_action``) so
         that skill sub-processes can call back into this server.
 
