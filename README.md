@@ -116,8 +116,8 @@ runtime data** from the running Maya process:
 | Action | Returns |
 |--------|---------|
 | `get_audit_log` | `SandboxContext` audit entries |
-| `get_action_metrics` | `ToolRecorder` performance counters |
-| `dispatch_action` | Relay for `workflow__run_chain` |
+| `get_tool_metrics` | `ToolRecorder` performance counters |
+| `dispatch_tool` | Relay for `workflow__run_chain` |
 
 The `DCC_MCP_IPC_ADDRESS` environment variable is set automatically so skill
 subprocesses can connect back without any manual configuration.
