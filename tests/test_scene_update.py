@@ -10,7 +10,15 @@ import pytest
 
 logger = logging.getLogger(__name__)
 
-pytestmark = pytest.mark.integration
+pytestmark = [
+    pytest.mark.integration,
+    # TODO(#58): Gateway never starts under the Docker matrix runner; tests have been
+    # silently red on main via `continue-on-error: true`. Unskip once the Docker
+    # gateway-startup / wait_for_gateway() path is fixed.
+    pytest.mark.skip(
+        reason="Pre-existing failure tracked in https://github.com/loonghao/dcc-mcp-maya/issues/58"
+    ),
+]
 
 
 @pytest.mark.timeout(90)
