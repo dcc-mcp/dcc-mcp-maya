@@ -17,7 +17,7 @@ def get_blend_shape_weights(blend_shape_node: str) -> dict:
         blend_shape_node: Name of the blendShape node to inspect.
 
     Returns:
-        ActionResultModel dict with ``context.targets`` (list of dicts with
+        ToolResult dict with ``context.targets`` (list of dicts with
         ``index``, ``name``, and ``weight`` keys) and ``context.count``.
     """
     try:

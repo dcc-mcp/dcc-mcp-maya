@@ -21,7 +21,7 @@ def remove_vertex_colors(object_name: str, color_set: Optional[str] = None) -> d
             vertex color data from the mesh.
 
     Returns:
-        ActionResultModel dict.
+        ToolResult dict.
     """
 
     try:

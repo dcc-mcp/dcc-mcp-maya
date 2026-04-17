@@ -28,7 +28,7 @@ def create_blend_shape(
         origin: ``"local"`` (default) or ``"world"`` space blend.
 
     Returns:
-        ActionResultModel dict with ``context.blend_shape_name``,
+        ToolResult dict with ``context.blend_shape_name``,
         ``context.target_count``.
     """
 

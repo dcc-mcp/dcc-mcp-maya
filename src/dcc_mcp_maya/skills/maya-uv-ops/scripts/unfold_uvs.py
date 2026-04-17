@@ -27,7 +27,7 @@ def unfold_uvs(
             they all have the same texel density.  Default: True.
 
     Returns:
-        ActionResultModel dict with ``context.object_name``,
+        ToolResult dict with ``context.object_name``,
         ``context.iterations``.
     """
 

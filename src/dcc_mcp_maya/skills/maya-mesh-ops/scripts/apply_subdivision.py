@@ -24,7 +24,7 @@ def apply_subdivision(
             Default: ``"preview"``.
 
     Returns:
-        ActionResultModel dict.
+        ToolResult dict.
     """
     if method not in ("preview", "subdivide"):
         return skill_error(

@@ -22,7 +22,7 @@ def disconnect_attr(
         dest_attr: Full attribute path of the driven attribute.
 
     Returns:
-        ActionResultModel dict with ``context.source_attr`` and
+        ToolResult dict with ``context.source_attr`` and
         ``context.dest_attr``.
     """
 

@@ -20,7 +20,7 @@ def reload_reference(reference_node: str) -> dict:
             discover reference nodes.
 
     Returns:
-        ActionResultModel dict with ``context.reference_node``,
+        ToolResult dict with ``context.reference_node``,
         ``context.file_path``, and ``context.loaded``.
     """
 

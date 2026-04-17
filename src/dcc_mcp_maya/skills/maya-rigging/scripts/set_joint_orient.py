@@ -30,7 +30,7 @@ def set_joint_orient(
             (``jointOrientX/Y/Z``).  Default: False.
 
     Returns:
-        ActionResultModel dict with ``context.object_name`` and
+        ToolResult dict with ``context.object_name`` and
         ``context.orient``.
     """
 

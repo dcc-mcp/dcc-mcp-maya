@@ -18,7 +18,7 @@ def get_attribute(node_name: str, attribute: str) -> dict:
         attribute: Attribute name (e.g. ``"translateX"``, ``"visibility"``).
 
     Returns:
-        ActionResultModel dict with ``context.value``.
+        ToolResult dict with ``context.value``.
     """
     try:
         import maya.cmds as cmds  # noqa: PLC0415

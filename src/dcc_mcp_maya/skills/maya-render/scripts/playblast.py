@@ -31,7 +31,7 @@ def playblast(
         percent: Resolution percentage (1–100).
 
     Returns:
-        ActionResultModel dict with ``context.image`` (base64 PNG) and
+        ToolResult dict with ``context.image`` (base64 PNG) and
         ``context.frame``.
     """
 

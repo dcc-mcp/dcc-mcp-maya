@@ -18,7 +18,7 @@ def rename_object(object_name: str, new_name: str) -> dict:
         new_name: New name to assign.
 
     Returns:
-        ActionResultModel dict with ``context.object_name`` (new name).
+        ToolResult dict with ``context.object_name`` (new name).
     """
 
     try:

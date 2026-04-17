@@ -32,7 +32,7 @@ def smooth_mesh(
         method: ``"preview"`` (default) or ``"subdivide"``.
 
     Returns:
-        ActionResultModel dict with ``context.object_name``,
+        ToolResult dict with ``context.object_name``,
         ``context.divisions``, ``context.method``.
     """
 

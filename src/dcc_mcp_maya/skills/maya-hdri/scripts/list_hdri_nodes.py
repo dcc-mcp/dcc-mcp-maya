@@ -11,7 +11,7 @@ def list_hdri_nodes() -> dict:
     """List IBL and aiSkyDomeLight nodes in the current scene.
 
     Returns:
-        ActionResultModel dict with ``nodes`` list.  Each entry contains
+        ToolResult dict with ``nodes`` list.  Each entry contains
         ``name``, ``node_type``, ``exposure``, ``rotation_y``, and ``file_path``.
     """
     try:

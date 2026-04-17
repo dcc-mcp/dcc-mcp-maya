@@ -18,7 +18,7 @@ def save_scene(file_path: Optional[str] = None, file_type: str = "mayaBinary") -
         file_type: ``"mayaBinary"`` (default) or ``"mayaAscii"``.
 
     Returns:
-        ActionResultModel dict.
+        ToolResult dict.
     """
 
     try:

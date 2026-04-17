@@ -17,7 +17,7 @@ def delete_objects(object_names: List[str]) -> dict:
         object_names: List of object names to delete.
 
     Returns:
-        ActionResultModel dict.
+        ToolResult dict.
     """
 
     try:

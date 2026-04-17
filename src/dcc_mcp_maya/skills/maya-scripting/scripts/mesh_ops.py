@@ -20,7 +20,7 @@ def get_poly_count(object_name: Optional[str] = None) -> dict:
             scene.
 
     Returns:
-        ActionResultModel dict with ``context.faces``, ``context.vertices``,
+        ToolResult dict with ``context.faces``, ``context.vertices``,
         ``context.edges``, and ``context.triangles``.
     """
 
@@ -100,7 +100,7 @@ def apply_subdivision(
             Default: ``"preview"``.
 
     Returns:
-        ActionResultModel dict.
+        ToolResult dict.
     """
 
     if method not in ("preview", "subdivide"):
@@ -155,7 +155,7 @@ def merge_vertices(
         threshold: Distance threshold for merging.  Default: 0.001.
 
     Returns:
-        ActionResultModel dict with ``context.merged_count`` (approximate).
+        ToolResult dict with ``context.merged_count`` (approximate).
     """
 
     try:
@@ -195,7 +195,7 @@ def triangulate(object_name: str) -> dict:
         object_name: Transform or mesh name.
 
     Returns:
-        ActionResultModel dict with face counts before and after.
+        ToolResult dict with face counts before and after.
     """
 
     try:
@@ -241,7 +241,7 @@ def cleanup_mesh(
             Default: True.
 
     Returns:
-        ActionResultModel dict.
+        ToolResult dict.
     """
 
     try:
@@ -285,7 +285,7 @@ def get_mesh_edge_info(
             If None, all edges are queried (may be slow on dense meshes).
 
     Returns:
-        ActionResultModel dict with ``context.edges`` (list of dicts with
+        ToolResult dict with ``context.edges`` (list of dicts with
         ``index``, ``length``, ``vertices``), ``context.edge_count``.
     """
 
@@ -371,7 +371,7 @@ def select_by_material(material_name: str) -> dict:
             ``"lambert1"``, ``"blinn1"``, ``"aiStandardSurface1"``.
 
     Returns:
-        ActionResultModel dict with ``context.objects`` (list of selected
+        ToolResult dict with ``context.objects`` (list of selected
         object names), ``context.count``, ``context.material``.
     """
 
@@ -455,7 +455,7 @@ def create_proxy_mesh(
             Maya auto-generates a name.
 
     Returns:
-        ActionResultModel dict with ``context.proxy_mesh``,
+        ToolResult dict with ``context.proxy_mesh``,
         ``context.original``, ``context.reduction``,
         ``context.face_count_before``, ``context.face_count_after``.
     """
@@ -534,7 +534,7 @@ def combine_meshes(
         name: Optional name for the resulting combined mesh.
 
     Returns:
-        ActionResultModel dict with ``context.combined_mesh`` (name of the
+        ToolResult dict with ``context.combined_mesh`` (name of the
         result) and ``context.input_count``.
     """
 
@@ -588,7 +588,7 @@ def separate_mesh(
         object_name: Name of the polygon mesh transform to separate.
 
     Returns:
-        ActionResultModel dict with ``context.separated_meshes`` (list of
+        ToolResult dict with ``context.separated_meshes`` (list of
         result transform names) and ``context.count``.
     """
 
@@ -657,7 +657,7 @@ def extract_faces(
             independent mesh.
 
     Returns:
-        ActionResultModel dict with ``context.extracted_mesh`` and
+        ToolResult dict with ``context.extracted_mesh`` and
         ``context.face_count``.
     """
 
@@ -731,7 +731,7 @@ def mirror_mesh(
             border after mirroring.
 
     Returns:
-        ActionResultModel dict with ``context.object_name``, ``context.axis``,
+        ToolResult dict with ``context.object_name``, ``context.axis``,
         ``context.cut_position``.
     """
 

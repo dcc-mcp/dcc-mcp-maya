@@ -35,7 +35,7 @@ def export_animation_curves(
         end_frame: Last frame of the export range.  ``None`` = scene end.
 
     Returns:
-        ActionResultModel dict with ``context.file_path`` and
+        ToolResult dict with ``context.file_path`` and
         ``context.curve_count``.
     """
     try:

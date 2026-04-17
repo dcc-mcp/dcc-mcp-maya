@@ -27,7 +27,7 @@ def create_muscle_capsule(
         radius: Capsule radius. Default ``1.0``.
 
     Returns:
-        ActionResultModel dict with ``context.muscle_node`` and ``context.radius``.
+        ToolResult dict with ``context.muscle_node`` and ``context.radius``.
     """
 
     try:

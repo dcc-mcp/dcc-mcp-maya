@@ -34,7 +34,7 @@ def add_space_switch(
             Falls back to ``control`` when empty.
 
     Returns:
-        ActionResultModel dict with ``context.constraint_node`` and
+        ToolResult dict with ``context.constraint_node`` and
         ``context.space_attribute``.
     """
 

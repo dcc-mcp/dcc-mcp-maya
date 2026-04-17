@@ -18,7 +18,7 @@ def set_nhair_attribute(hair_system: str, attribute: str, value: float) -> dict:
         value: Numeric value to set.
 
     Returns:
-        ActionResultModel dict confirming the attribute change.
+        ToolResult dict confirming the attribute change.
     """
     try:
         import maya.cmds as cmds  # noqa: PLC0415

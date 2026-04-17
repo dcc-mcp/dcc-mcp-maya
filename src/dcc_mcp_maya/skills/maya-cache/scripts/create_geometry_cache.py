@@ -37,7 +37,7 @@ def create_geometry_cache(
             default) or ``"mcc"`` (one file for all frames).
 
     Returns:
-        ActionResultModel dict with ``context.cache_files`` and
+        ToolResult dict with ``context.cache_files`` and
         ``context.cache_nodes``.
     """
     try:

@@ -33,7 +33,7 @@ def create_display_layer(
             ``0`` = Normal, ``1`` = Template, ``2`` = Reference.  Default: 0.
 
     Returns:
-        ActionResultModel dict with ``context.layer_name``,
+        ToolResult dict with ``context.layer_name``,
         ``context.objects_added``, ``context.visible``.
     """
 
@@ -89,7 +89,7 @@ def set_display_layer(
         layer_name: Name of the target display layer.
 
     Returns:
-        ActionResultModel dict with ``context.object_name`` and
+        ToolResult dict with ``context.object_name`` and
         ``context.layer_name``.
     """
 
@@ -138,7 +138,7 @@ def delete_display_layer(
             this layer.  Default: False (objects are moved to the default layer).
 
     Returns:
-        ActionResultModel dict with ``context.layer_name`` and
+        ToolResult dict with ``context.layer_name`` and
         ``context.objects_deleted`` (when ``remove_objects=True``).
     """
 
@@ -189,7 +189,7 @@ def list_display_layers() -> dict:
     """List all display layers in the scene.
 
     Returns:
-        ActionResultModel dict with ``context.layers`` — a list of dicts
+        ToolResult dict with ``context.layers`` — a list of dicts
         with ``name``, ``visible``, ``display_type``, and ``member_count``.
     """
 

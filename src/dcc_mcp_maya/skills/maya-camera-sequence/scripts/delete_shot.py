@@ -17,7 +17,7 @@ def delete_shot(shot_node: str) -> dict:
         shot_node: Name of the shot node to delete.
 
     Returns:
-        ActionResultModel dict with ``shot_node`` (the deleted node name).
+        ToolResult dict with ``shot_node`` (the deleted node name).
     """
     try:
         import maya.cmds as cmds  # noqa: PLC0415

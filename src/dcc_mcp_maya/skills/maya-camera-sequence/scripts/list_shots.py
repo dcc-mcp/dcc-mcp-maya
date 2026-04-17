@@ -12,7 +12,7 @@ def list_shots() -> dict:
     """List all shot nodes in the Maya camera sequencer.
 
     Returns:
-        ActionResultModel dict with ``shots`` list sorted by sequence_start_frame.
+        ToolResult dict with ``shots`` list sorted by sequence_start_frame.
         Each entry: ``shot_node``, ``camera``, ``start_frame``, ``end_frame``,
         ``sequence_start_frame``, ``sequence_end_frame``.
     """

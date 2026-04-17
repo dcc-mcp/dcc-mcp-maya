@@ -25,7 +25,7 @@ def create_color_set(
             Default: ``"RGBA"``.
 
     Returns:
-        ActionResultModel dict.
+        ToolResult dict.
     """
 
     valid_reps = ("RGB", "RGBA")

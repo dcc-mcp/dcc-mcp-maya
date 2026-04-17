@@ -27,7 +27,7 @@ def get_render_settings() -> dict:
     """Return the current Maya render settings.
 
     Returns:
-        ActionResultModel dict with ``context.width``, ``context.height``,
+        ToolResult dict with ``context.width``, ``context.height``,
         ``context.renderer``, ``context.start_frame``, ``context.end_frame``,
         ``context.image_format``, and ``context.output_path``.
     """

@@ -20,7 +20,7 @@ def delete_attribute(node_name: str, attribute: str) -> dict:
         attribute: Attribute name to delete.
 
     Returns:
-        ActionResultModel dict.
+        ToolResult dict.
     """
     try:
         import maya.cmds as cmds  # noqa: PLC0415

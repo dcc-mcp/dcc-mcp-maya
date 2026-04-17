@@ -23,7 +23,7 @@ def get_render_job_status(
             is looked up on PATH.
 
     Returns:
-        ActionResultModel dict with job status, progress, and task summary.
+        ToolResult dict with job status, progress, and task summary.
     """
 
     try:

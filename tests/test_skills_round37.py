@@ -645,20 +645,17 @@ class TestServerSearchAPI:
         from dcc_mcp_maya.server import MayaMcpServer
 
         srv = MayaMcpServer.__new__(MayaMcpServer)
+        srv._dcc_name = "maya"
         srv._config = MagicMock()
         srv._server = MagicMock()
         srv._handle = None
-        # Ensure registry property returns None
-        del srv._server._registry
-        srv._server.__dict__["_registry"] = None
-        # Override the property to return None
         with patch.object(type(srv), "registry", new_callable=lambda: property(lambda self: None)):
-            result = srv.search_actions(query="geometry")
+            result = srv.search_actions(category="geometry")
         assert result == []
 
     def test_search_skills_delegates_to_registry(self):
         mock_registry = MagicMock()
-        mock_registry.search_actions.return_value = ["action1", "action2"]
+        mock_registry.search_actions.return_value = ["tool1", "tool2"]
 
         from dcc_mcp_maya.server import MayaMcpServer
 
@@ -666,10 +663,12 @@ class TestServerSearchAPI:
         srv._dcc_name = "maya"
         srv._handle = None
         with patch.object(type(srv), "registry", new_callable=lambda: property(lambda s: mock_registry)):
-            result = srv.search_actions(query="geometry")
+            result = srv.search_actions(category="geometry", tags=["mesh"])
 
-        mock_registry.search_actions.assert_called_once_with("geometry", dcc_name="maya")
-        assert result == ["action1", "action2"]
+        mock_registry.search_actions.assert_called_once_with(
+            category="geometry", tags=["mesh"], dcc_name="maya"
+        )
+        assert result == ["tool1", "tool2"]
 
     def test_search_skills_uses_custom_dcc_name(self):
         mock_registry = MagicMock()
@@ -681,9 +680,9 @@ class TestServerSearchAPI:
         srv._dcc_name = "maya"
         srv._handle = None
         with patch.object(type(srv), "registry", new_callable=lambda: property(lambda s: mock_registry)):
-            srv.search_actions(query=None, dcc_name="houdini")
+            srv.search_actions(dcc_name="houdini")
 
-        call_kwargs = mock_registry.search_actions.call_args[1]
+        call_kwargs = mock_registry.search_actions.call_args.kwargs
         assert call_kwargs["dcc_name"] == "houdini"
 
     def test_search_skills_exception_returns_empty(self):
@@ -696,7 +695,7 @@ class TestServerSearchAPI:
         srv._dcc_name = "maya"
         srv._handle = None
         with patch.object(type(srv), "registry", new_callable=lambda: property(lambda s: mock_registry)):
-            result = srv.search_actions(query=None)
+            result = srv.search_actions()
         assert result == []
 
     def test_get_skill_categories_returns_sorted_list(self):

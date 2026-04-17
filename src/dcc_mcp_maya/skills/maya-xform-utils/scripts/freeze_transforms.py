@@ -33,7 +33,7 @@ def freeze_transforms(
             ``False`` to perform a dry-run that only validates inputs.
 
     Returns:
-        ActionResultModel dict with ``context.frozen_objects``.
+        ToolResult dict with ``context.frozen_objects``.
     """
 
     try:

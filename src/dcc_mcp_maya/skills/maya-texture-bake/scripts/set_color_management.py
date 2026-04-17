@@ -31,7 +31,7 @@ def set_color_management(
             ``"sRGB gamma"``).  If None, leaves unchanged.
 
     Returns:
-        ActionResultModel dict with current color management configuration.
+        ToolResult dict with current color management configuration.
     """
 
     try:

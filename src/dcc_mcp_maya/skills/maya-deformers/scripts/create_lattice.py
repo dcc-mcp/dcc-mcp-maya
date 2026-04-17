@@ -35,7 +35,7 @@ def create_lattice(
             FFD base.  If ``None``, the bounding-box size is used.
 
     Returns:
-        ActionResultModel dict with ``context.ffd_node``,
+        ToolResult dict with ``context.ffd_node``,
         ``context.lattice_node``, ``context.base_node``,
         ``context.objects``.
     """

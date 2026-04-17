@@ -31,7 +31,7 @@ def connect_attr(
             connecting.  Default: False.
 
     Returns:
-        ActionResultModel dict with ``context.source_attr`` and
+        ToolResult dict with ``context.source_attr`` and
         ``context.dest_attr``.
     """
 
@@ -75,7 +75,7 @@ def disconnect_attr(
         dest_attr: Full attribute path of the driven attribute.
 
     Returns:
-        ActionResultModel dict with ``context.source_attr`` and
+        ToolResult dict with ``context.source_attr`` and
         ``context.dest_attr``.
     """
 
@@ -131,7 +131,7 @@ def list_connections(
         outgoing: Include outgoing connections.  Default: True.
 
     Returns:
-        ActionResultModel dict with ``context.connections`` — a list of
+        ToolResult dict with ``context.connections`` — a list of
         connected attribute path strings, and ``context.count``.
     """
 
@@ -193,7 +193,7 @@ def get_dag_path(
         object_name: Short or partial name of the node.
 
     Returns:
-        ActionResultModel dict with ``context.dag_path`` (full path),
+        ToolResult dict with ``context.dag_path`` (full path),
         ``context.short_name``, and ``context.node_type``.
     """
 
@@ -252,7 +252,7 @@ def smooth_mesh(
         method: ``"preview"`` (default) or ``"subdivide"``.
 
     Returns:
-        ActionResultModel dict with ``context.object_name``,
+        ToolResult dict with ``context.object_name``,
         ``context.divisions``, ``context.method``.
     """
 
@@ -323,7 +323,7 @@ def list_history(
             Default: 0.
 
     Returns:
-        ActionResultModel dict with ``context.history`` — a list of dicts
+        ToolResult dict with ``context.history`` — a list of dicts
         with ``name`` and ``type`` for each history node, and
         ``context.count``.
     """
@@ -370,7 +370,7 @@ def delete_history(
         object_name: Name of the transform or shape node to process.
 
     Returns:
-        ActionResultModel dict with ``context.object_name``.
+        ToolResult dict with ``context.object_name``.
     """
 
     try:
@@ -412,7 +412,7 @@ def apply_symmetry(
             object space.  Default: True.
 
     Returns:
-        ActionResultModel dict with ``context.object_name``,
+        ToolResult dict with ``context.object_name``,
         ``context.axis``, ``context.world_space``.
     """
 
@@ -486,7 +486,7 @@ def transfer_attributes(
         transfer_colors: If True, transfer vertex color sets.  Default: False.
 
     Returns:
-        ActionResultModel dict with ``context.source``, ``context.target``,
+        ToolResult dict with ``context.source``, ``context.target``,
         ``context.transfer_node`` (the created ``transferAttributes`` node).
     """
 

@@ -24,7 +24,7 @@ def convert_selection(target: str = "") -> dict:
             One of: "vertex", "edge", "face", "uv", "object", "shell".
 
     Returns:
-        ActionResultModel dict with ``context.target``, ``context.count``.
+        ToolResult dict with ``context.target``, ``context.count``.
     """
     target = target.lower()
     if target not in _CONVERT_FLAGS:

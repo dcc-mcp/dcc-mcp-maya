@@ -36,7 +36,7 @@ def delete_keyframes(
         end_time: Alias for ``end_frame``.
 
     Returns:
-        ActionResultModel dict with ``context.deleted_count``.
+        ToolResult dict with ``context.deleted_count``.
     """
     # Resolve aliases
     if attribute is not None and not attributes:

@@ -26,7 +26,7 @@ def add_toon_outline(
         name: Name for the created pfxToon node.  Default: ``pfxToon1``.
 
     Returns:
-        ActionResultModel dict with the created node name and linked objects.
+        ToolResult dict with the created node name and linked objects.
     """
 
     try:

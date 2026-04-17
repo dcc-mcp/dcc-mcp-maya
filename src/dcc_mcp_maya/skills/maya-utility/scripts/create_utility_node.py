@@ -31,7 +31,7 @@ def create_utility_node(
             Default ``"input1"``.
 
     Returns:
-        ActionResultModel dict with ``context.node_name`` and ``context.node_type``.
+        ToolResult dict with ``context.node_name`` and ``context.node_type``.
     """
 
     if not node_type:

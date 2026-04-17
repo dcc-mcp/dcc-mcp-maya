@@ -26,7 +26,7 @@ def set_blend_shape_weight(
             Values outside this range produce exaggerated shapes.
 
     Returns:
-        ActionResultModel dict with ``context.blend_shape_node``,
+        ToolResult dict with ``context.blend_shape_node``,
         ``context.target_index``, and ``context.weight``.
     """
     try:

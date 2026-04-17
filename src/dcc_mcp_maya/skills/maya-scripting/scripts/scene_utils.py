@@ -34,7 +34,7 @@ def set_pivot(
         world_space: If True (default), interpret *position* in world space.
 
     Returns:
-        ActionResultModel dict with ``context.object_name``,
+        ToolResult dict with ``context.object_name``,
         ``context.position``, ``context.pivot_type``.
     """
 
@@ -113,7 +113,7 @@ def align_objects(
             bounding box of all *objects* is used.
 
     Returns:
-        ActionResultModel dict with ``context.objects``, ``context.axis``,
+        ToolResult dict with ``context.objects``, ``context.axis``,
         ``context.mode``, ``context.target_value``.
     """
 
@@ -224,7 +224,7 @@ def create_annotation(
             ``[x, y, z]``.  Defaults to slightly above the object's pivot.
 
     Returns:
-        ActionResultModel dict with ``context.annotation_transform``,
+        ToolResult dict with ``context.annotation_transform``,
         ``context.object_name``, ``context.text``.
     """
 
@@ -292,7 +292,7 @@ def set_object_color(
             default wireframe colour.  Default: False.
 
     Returns:
-        ActionResultModel dict with ``context.object_name``,
+        ToolResult dict with ``context.object_name``,
         ``context.color_index``, ``context.use_default``.
     """
 
@@ -352,7 +352,7 @@ def toggle_gpu_override(
             False to restore normal display.  Default: True.
 
     Returns:
-        ActionResultModel dict with ``context.object_name``,
+        ToolResult dict with ``context.object_name``,
         ``context.enabled``, ``context.display_type``.
     """
 
@@ -408,7 +408,7 @@ def create_polygon_text(
             If False, the raw NURBS text curves are returned.
 
     Returns:
-        ActionResultModel dict with ``context.objects`` (list of created
+        ToolResult dict with ``context.objects`` (list of created
         transform names) and ``context.text``.
     """
 
@@ -475,7 +475,7 @@ def set_shading_mode(
             If None, uses the first model panel found via ``cmds.getPanel``.
 
     Returns:
-        ActionResultModel dict with ``context.mode``, ``context.panel``.
+        ToolResult dict with ``context.mode``, ``context.panel``.
     """
 
     _MODE_MAP = {

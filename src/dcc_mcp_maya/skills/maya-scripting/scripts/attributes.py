@@ -26,7 +26,7 @@ def get_attribute(
             ``"color"``).
 
     Returns:
-        ActionResultModel dict with ``context.value`` containing the attribute
+        ToolResult dict with ``context.value`` containing the attribute
         value.
     """
 
@@ -87,7 +87,7 @@ def set_attribute(
             Default: False.
 
     Returns:
-        ActionResultModel dict with ``context.object_name``,
+        ToolResult dict with ``context.object_name``,
         ``context.attribute``, ``context.value``.
     """
 

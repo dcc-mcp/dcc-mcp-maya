@@ -32,7 +32,7 @@ def bake_simulation(
             ``0.5`` = every half-frame).  Default: 1.
 
     Returns:
-        ActionResultModel dict with ``context.object_count`` and frame range.
+        ToolResult dict with ``context.object_count`` and frame range.
     """
     try:
         import maya.cmds as cmds  # noqa: PLC0415

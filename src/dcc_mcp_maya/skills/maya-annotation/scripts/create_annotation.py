@@ -33,7 +33,7 @@ def create_annotation(
         name: Optional name for the annotation transform node.
 
     Returns:
-        ActionResultModel dict with ``context.annotation_node`` and
+        ToolResult dict with ``context.annotation_node`` and
         ``context.transform_node``.
     """
     try:

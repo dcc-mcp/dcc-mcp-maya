@@ -11,7 +11,7 @@ def list_display_layers() -> dict:
     """List all display layers in the current Maya scene.
 
     Returns:
-        ActionResultModel dict with ``context.layers`` — a list of dicts
+        ToolResult dict with ``context.layers`` — a list of dicts
         containing ``name``, ``visibility``, and ``members``.
     """
     try:

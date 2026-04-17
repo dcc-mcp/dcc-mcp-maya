@@ -39,7 +39,7 @@ def set_driven_key(
             ``"flat"``, or ``"step"``.  Default: ``"linear"``.
 
     Returns:
-        ActionResultModel dict with ``context.driver_attr``,
+        ToolResult dict with ``context.driver_attr``,
         ``context.driven_attrs``, ``context.key_count``.
     """
 

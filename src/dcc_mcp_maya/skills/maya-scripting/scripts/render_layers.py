@@ -37,7 +37,7 @@ def create_render_layer(
             Default: False.
 
     Returns:
-        ActionResultModel dict with ``context.layer_name``,
+        ToolResult dict with ``context.layer_name``,
         ``context.objects_added``, and ``context.is_current``.
     """
 
@@ -81,7 +81,7 @@ def set_render_layer(
         layer_name: Name of the target render layer.
 
     Returns:
-        ActionResultModel dict with ``context.object_name`` and
+        ToolResult dict with ``context.object_name`` and
         ``context.layer_name``.
     """
 
@@ -128,7 +128,7 @@ def list_render_layers(include_default: bool = True) -> dict:
             ``"defaultRenderLayer"`` in the result.
 
     Returns:
-        ActionResultModel dict with ``context.layers`` — a list of dicts with
+        ToolResult dict with ``context.layers`` — a list of dicts with
         ``name``, ``renderable``, ``member_count``, and ``is_current``.
     """
 
@@ -181,7 +181,7 @@ def delete_render_layer(layer_name: str) -> dict:
         layer_name: Name of the render layer to delete.
 
     Returns:
-        ActionResultModel dict with ``context.layer_name``.
+        ToolResult dict with ``context.layer_name``.
     """
 
     try:
@@ -238,7 +238,7 @@ def set_render_layer_attribute(
         value: New value.  Scalar or list-of-3 floats for compound attrs.
 
     Returns:
-        ActionResultModel dict with ``context.layer_name``,
+        ToolResult dict with ``context.layer_name``,
         ``context.attribute``, and ``context.value``.
     """
 

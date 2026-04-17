@@ -27,7 +27,7 @@ def create_fluid_container(
         resolution: Voxel resolution along each axis. Default ``10``.
 
     Returns:
-        ActionResultModel dict with ``context.fluid_transform`` and
+        ToolResult dict with ``context.fluid_transform`` and
         ``context.fluid_shape``.
     """
     try:

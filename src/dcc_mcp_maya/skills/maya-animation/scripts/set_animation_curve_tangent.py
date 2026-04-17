@@ -35,7 +35,7 @@ def set_animation_curve_tangent(
         out_tangent_type: Override for the outgoing tangent type only.
 
     Returns:
-        ActionResultModel dict with ``context.object_name``,
+        ToolResult dict with ``context.object_name``,
         ``context.attribute``, ``context.frame``, ``context.tangent_type``.
     """
     _VALID_TANGENTS = ("auto", "linear", "flat", "step", "spline", "clamped", "plateau", "stepnext")

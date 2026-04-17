@@ -25,7 +25,7 @@ def duplicate_object(
         instance: If True, create an instance instead of a full copy.
 
     Returns:
-        ActionResultModel dict with ``context.object_name`` of the new object.
+        ToolResult dict with ``context.object_name`` of the new object.
     """
 
     try:

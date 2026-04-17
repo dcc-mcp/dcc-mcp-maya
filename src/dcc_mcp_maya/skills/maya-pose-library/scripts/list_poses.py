@@ -23,7 +23,7 @@ def list_poses(
             Default: False.
 
     Returns:
-        ActionResultModel dict with ``context.poses`` (list of dicts with
+        ToolResult dict with ``context.poses`` (list of dicts with
         ``file``, ``control_count``) and ``context.count``.
     """
 

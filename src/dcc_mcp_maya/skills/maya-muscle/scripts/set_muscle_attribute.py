@@ -25,7 +25,7 @@ def set_muscle_attribute(
         value: New attribute value.
 
     Returns:
-        ActionResultModel dict confirming the change.
+        ToolResult dict confirming the change.
     """
 
     try:

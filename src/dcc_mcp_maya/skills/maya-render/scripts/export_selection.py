@@ -20,7 +20,7 @@ def export_selection(
             ``"mayaAscii"``, ``"Alembic"``.  Default: ``"FBX export"``.
 
     Returns:
-        ActionResultModel dict.
+        ToolResult dict.
     """
 
     try:

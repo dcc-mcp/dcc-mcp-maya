@@ -22,7 +22,7 @@ def set_render_layer(
         layer_name: Name of the target render layer.
 
     Returns:
-        ActionResultModel dict with ``context.object_name`` and
+        ToolResult dict with ``context.object_name`` and
         ``context.layer_name``.
     """
 

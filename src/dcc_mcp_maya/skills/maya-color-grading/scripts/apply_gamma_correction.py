@@ -31,7 +31,7 @@ def apply_gamma_correction(
         name: Optional name for the ``gammaCorrect`` node.
 
     Returns:
-        ActionResultModel dict with ``context.gamma_node`` and
+        ToolResult dict with ``context.gamma_node`` and
         ``context.texture_node``.
     """
     try:

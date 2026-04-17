@@ -16,7 +16,7 @@ def list_namespaces(root_only: bool = False) -> dict:
             recursively.
 
     Returns:
-        ActionResultModel dict with ``context.namespaces`` — a list of
+        ToolResult dict with ``context.namespaces`` — a list of
         namespace strings — and ``context.count``.
     """
 

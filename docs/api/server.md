@@ -130,7 +130,7 @@ Gracefully stop the server.
 |----------|------|-------------|
 | `is_running` | `bool` | Whether the server is currently running |
 | `mcp_url` | `Optional[str]` | The MCP endpoint URL, or `None` if not running |
-| `registry` | `ActionRegistry` | The underlying action registry |
+| `registry` | `ToolRegistry` | The underlying tool registry |
 
 ### Example: Full Lifecycle
 

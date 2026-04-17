@@ -27,7 +27,7 @@ def set_timeline(
             ``end_frame`` if not specified.
 
     Returns:
-        ActionResultModel dict with timeline range info.
+        ToolResult dict with timeline range info.
     """
     try:
         import maya.cmds as cmds  # noqa: PLC0415

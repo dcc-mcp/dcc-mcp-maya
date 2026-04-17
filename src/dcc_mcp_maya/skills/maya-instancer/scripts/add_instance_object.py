@@ -25,7 +25,7 @@ def add_instance_object(
         object_name: Transform node to add as an instance shape.
 
     Returns:
-        ActionResultModel dict with the updated ``context.instancer_node``.
+        ToolResult dict with the updated ``context.instancer_node``.
     """
     try:
         import maya.cmds as cmds  # noqa: PLC0415

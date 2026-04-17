@@ -20,7 +20,7 @@ def merge_vertices(
         threshold: Distance threshold for merging.  Default: 0.001.
 
     Returns:
-        ActionResultModel dict with ``context.merged_count`` (approximate).
+        ToolResult dict with ``context.merged_count`` (approximate).
     """
     try:
         import maya.cmds as cmds  # noqa: PLC0415

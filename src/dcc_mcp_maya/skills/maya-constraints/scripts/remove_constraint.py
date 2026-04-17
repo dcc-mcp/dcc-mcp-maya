@@ -35,7 +35,7 @@ def remove_constraint(
             constraints of this type.  If None, remove all constraint nodes.
 
     Returns:
-        ActionResultModel dict with ``context.removed`` — list of deleted nodes.
+        ToolResult dict with ``context.removed`` — list of deleted nodes.
     """
     try:
         import maya.cmds as cmds  # noqa: PLC0415

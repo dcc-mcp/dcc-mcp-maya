@@ -44,7 +44,7 @@ def set_instancer_attribute(
             shape to connect.  Pass ``None`` to clear the mapping.
 
     Returns:
-        ActionResultModel dict with ``context.instancer_node``,
+        ToolResult dict with ``context.instancer_node``,
         ``context.attribute``, and ``context.particle_attribute``.
     """
     try:

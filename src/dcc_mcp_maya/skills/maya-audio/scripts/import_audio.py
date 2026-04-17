@@ -27,7 +27,7 @@ def import_audio(
         offset: Frame offset for the audio start.  Default ``0.0``.
 
     Returns:
-        ActionResultModel dict with ``context.sound_node`` and ``context.file_path``.
+        ToolResult dict with ``context.sound_node`` and ``context.file_path``.
     """
     try:
         import maya.cmds as cmds  # noqa: PLC0415

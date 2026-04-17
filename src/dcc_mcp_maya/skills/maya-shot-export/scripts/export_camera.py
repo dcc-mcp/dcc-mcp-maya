@@ -29,7 +29,7 @@ def export_camera(
         file_format: ``"fbx"`` or ``"ma"`` (Maya ASCII).  Default: ``"fbx"``.
 
     Returns:
-        ActionResultModel dict with ``context.file_path``.
+        ToolResult dict with ``context.file_path``.
     """
 
     try:

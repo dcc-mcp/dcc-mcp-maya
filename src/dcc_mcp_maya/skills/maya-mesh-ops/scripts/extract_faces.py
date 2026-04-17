@@ -30,7 +30,7 @@ def extract_faces(
             independent mesh.
 
     Returns:
-        ActionResultModel dict with ``context.extracted_mesh`` and
+        ToolResult dict with ``context.extracted_mesh`` and
         ``context.face_count``.
     """
     if not object_name:

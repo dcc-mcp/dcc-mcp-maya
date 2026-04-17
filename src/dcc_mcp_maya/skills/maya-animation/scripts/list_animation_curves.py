@@ -24,7 +24,7 @@ def list_animation_curves(
             all animCurve nodes connected to the object are returned.
 
     Returns:
-        ActionResultModel dict with ``context.curves`` list of dicts
+        ToolResult dict with ``context.curves`` list of dicts
         containing ``name``, ``type``, ``key_count``, and ``attribute``.
     """
     try:

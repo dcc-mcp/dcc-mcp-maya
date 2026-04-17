@@ -27,7 +27,7 @@ def update_annotation(
             If None, the position is unchanged.
 
     Returns:
-        ActionResultModel dict with ``context.annotation_node`` and
+        ToolResult dict with ``context.annotation_node`` and
         updated ``context.text`` / ``context.position``.
     """
     try:

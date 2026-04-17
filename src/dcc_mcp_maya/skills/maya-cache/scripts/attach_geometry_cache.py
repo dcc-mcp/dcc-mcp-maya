@@ -26,7 +26,7 @@ def attach_geometry_cache(
         cache_xml_path: Absolute path to the ``.xml`` cache descriptor file.
 
     Returns:
-        ActionResultModel dict with ``context.cache_node``.
+        ToolResult dict with ``context.cache_node``.
     """
     try:
         import maya.cmds as cmds  # noqa: PLC0415

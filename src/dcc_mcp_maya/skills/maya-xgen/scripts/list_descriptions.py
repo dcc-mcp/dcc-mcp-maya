@@ -17,7 +17,7 @@ def list_descriptions(collection: Optional[str] = None) -> dict:
             when omitted.
 
     Returns:
-        ActionResultModel dict with ``context.descriptions`` and ``context.count``.
+        ToolResult dict with ``context.descriptions`` and ``context.count``.
     """
     try:
         import xgenm as xg  # noqa: PLC0415

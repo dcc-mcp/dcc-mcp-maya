@@ -27,7 +27,7 @@ def list_lights() -> dict:
     """List all lights in the current Maya scene.
 
     Returns:
-        ActionResultModel dict with ``context.lights`` — list of dicts
+        ToolResult dict with ``context.lights`` — list of dicts
         with ``transform``, ``shape``, ``type``, and ``intensity``.
     """
     try:

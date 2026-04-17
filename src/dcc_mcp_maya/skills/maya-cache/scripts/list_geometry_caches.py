@@ -18,7 +18,7 @@ def list_geometry_caches(mesh: Optional[str] = None) -> dict:
             If None, all ``cacheFile`` nodes in the scene are listed.
 
     Returns:
-        ActionResultModel dict with ``context.cache_nodes`` (list of dicts
+        ToolResult dict with ``context.cache_nodes`` (list of dicts
         with ``node``, ``cache_path``, ``start_frame``, ``end_frame``) and
         ``context.count``.
     """

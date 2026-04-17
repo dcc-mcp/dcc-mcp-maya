@@ -12,7 +12,7 @@ def get_current_time() -> dict:
     """Get the current frame number.
 
     Returns:
-        ActionResultModel dict with ``context.current_time``.
+        ToolResult dict with ``context.current_time``.
     """
     try:
         import maya.cmds as cmds  # noqa: PLC0415

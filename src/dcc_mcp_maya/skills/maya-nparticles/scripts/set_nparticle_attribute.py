@@ -26,7 +26,7 @@ def set_nparticle_attribute(
         value: New value (float, int, or bool).
 
     Returns:
-        ActionResultModel dict confirming the attribute change.
+        ToolResult dict confirming the attribute change.
     """
 
     try:

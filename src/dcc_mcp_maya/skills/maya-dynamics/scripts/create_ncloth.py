@@ -43,7 +43,7 @@ def create_ncloth(
         name: Optional name for the nCloth shape node.
 
     Returns:
-        ActionResultModel dict with ``context.ncloth_node``,
+        ToolResult dict with ``context.ncloth_node``,
         ``context.mesh``, ``context.nucleus``.
     """
     try:

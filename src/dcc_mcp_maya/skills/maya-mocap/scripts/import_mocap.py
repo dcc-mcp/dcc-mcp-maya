@@ -23,7 +23,7 @@ def import_mocap(
         merge_mode: FBX merge mode: ``"add"``, ``"merge"``, or ``"exmerge"``. Default ``"add"``.
 
     Returns:
-        ActionResultModel dict with ``context.root_joints`` and ``context.joint_count``.
+        ToolResult dict with ``context.root_joints`` and ``context.joint_count``.
     """
 
     if not file_path:

@@ -39,7 +39,7 @@ def create_light(
         position: World-space position ``[x, y, z]``.  Default: [0, 0, 0].
 
     Returns:
-        ActionResultModel dict with ``context.light_name`` and
+        ToolResult dict with ``context.light_name`` and
         ``context.light_shape``.
     """
 
@@ -113,7 +113,7 @@ def set_light_attribute(
         value: New value.  Lists/tuples are expanded as ``double3`` vectors.
 
     Returns:
-        ActionResultModel dict.
+        ToolResult dict.
     """
 
     try:
@@ -163,7 +163,7 @@ def list_lights(include_default: bool = False) -> dict:
             internally.  Default: False.
 
     Returns:
-        ActionResultModel dict with ``context.lights`` list of dicts containing
+        ToolResult dict with ``context.lights`` list of dicts containing
         ``name``, ``shape``, ``light_type``, ``intensity``, ``color``,
         ``visible``.
     """
@@ -228,7 +228,7 @@ def delete_light(light_name: str) -> dict:
         light_name: Name of the light transform to delete.
 
     Returns:
-        ActionResultModel dict.
+        ToolResult dict.
     """
 
     try:

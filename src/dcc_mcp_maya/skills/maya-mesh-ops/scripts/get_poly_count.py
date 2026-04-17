@@ -20,7 +20,7 @@ def get_poly_count(object_name: Optional[str] = None) -> dict:
             scene.
 
     Returns:
-        ActionResultModel dict with ``context.faces``, ``context.vertices``,
+        ToolResult dict with ``context.faces``, ``context.vertices``,
         ``context.edges``, and ``context.triangles``.
     """
     try:

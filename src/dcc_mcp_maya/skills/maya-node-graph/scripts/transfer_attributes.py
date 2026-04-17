@@ -38,7 +38,7 @@ def transfer_attributes(
         transfer_colors: If True, transfer vertex color sets.  Default: False.
 
     Returns:
-        ActionResultModel dict with ``context.source``, ``context.target``,
+        ToolResult dict with ``context.source``, ``context.target``,
         ``context.transfer_node`` (the created ``transferAttributes`` node).
     """
 

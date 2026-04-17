@@ -79,14 +79,26 @@ def test_hotreload_attributes_on_core_class():
 
 
 def test_start_server_has_enable_gateway_failover():
-    """Verify start_server() function accepts enable_gateway_failover parameter."""
+    """Verify start_server() forwards enable_gateway_failover through to MayaMcpServer.
+
+    ``start_server`` is generated via ``dcc_mcp_core.factory.make_start_stop``
+    and accepts arbitrary ``**kwargs`` forwarded to ``MayaMcpServer.__init__``.
+    The gateway-failover keyword must therefore be accepted, and the Maya
+    server constructor must still expose it with default ``True``.
+    """
     import inspect
 
     from dcc_mcp_maya import start_server
+    from dcc_mcp_maya.server import MayaMcpServer
 
-    sig = inspect.signature(start_server)
-    assert "enable_gateway_failover" in sig.parameters
-    assert sig.parameters["enable_gateway_failover"].default is True
+    start_sig = inspect.signature(start_server)
+    assert any(
+        p.kind is inspect.Parameter.VAR_KEYWORD for p in start_sig.parameters.values()
+    ), "start_server must accept **kwargs so gateway params pass through to MayaMcpServer"
+
+    srv_sig = inspect.signature(MayaMcpServer.__init__)
+    assert "enable_gateway_failover" in srv_sig.parameters
+    assert srv_sig.parameters["enable_gateway_failover"].default is True
 
 
 def test_config_has_gateway_fields():

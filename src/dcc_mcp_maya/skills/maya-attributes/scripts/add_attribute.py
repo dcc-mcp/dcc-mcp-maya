@@ -50,7 +50,7 @@ def add_attribute(
         keyable: Whether the attribute should appear in the Channel Box.
 
     Returns:
-        ActionResultModel dict with ``context.attribute``.
+        ToolResult dict with ``context.attribute``.
     """
     try:
         import maya.cmds as cmds  # noqa: PLC0415

@@ -23,7 +23,7 @@ def create_display_layer(
         visibility: Initial visibility state of the layer.
 
     Returns:
-        ActionResultModel dict with ``context.layer_name``.
+        ToolResult dict with ``context.layer_name``.
     """
     try:
         import maya.cmds as cmds  # noqa: PLC0415

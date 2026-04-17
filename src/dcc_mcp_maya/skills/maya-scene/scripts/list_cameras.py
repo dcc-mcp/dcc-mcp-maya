@@ -16,7 +16,7 @@ def list_cameras(include_default: bool = True) -> dict:
             only user-created cameras.
 
     Returns:
-        ActionResultModel dict with ``context.cameras`` (list of dicts) and
+        ToolResult dict with ``context.cameras`` (list of dicts) and
         ``context.count``.
     """
 

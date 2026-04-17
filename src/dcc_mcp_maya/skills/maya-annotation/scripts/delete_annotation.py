@@ -19,7 +19,7 @@ def delete_annotation(annotation_node: str) -> dict:
         annotation_node: Name of the annotation shape or transform node to delete.
 
     Returns:
-        ActionResultModel dict with ``context.deleted_node``.
+        ToolResult dict with ``context.deleted_node``.
     """
     try:
         import maya.cmds as cmds  # noqa: PLC0415

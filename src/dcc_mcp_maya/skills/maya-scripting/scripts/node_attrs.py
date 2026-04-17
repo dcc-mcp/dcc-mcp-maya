@@ -56,7 +56,7 @@ def add_attribute(
         keyable: Whether to mark the attribute keyable.  Default: True.
 
     Returns:
-        ActionResultModel dict with ``context.object_name``,
+        ToolResult dict with ``context.object_name``,
         ``context.long_name``, ``context.attr_type``.
     """
 
@@ -135,7 +135,7 @@ def delete_attribute(
         attribute: Long name of the attribute to delete.
 
     Returns:
-        ActionResultModel dict.
+        ToolResult dict.
     """
 
     try:
@@ -189,7 +189,7 @@ def list_attributes(
             set with a single scalar value.
 
     Returns:
-        ActionResultModel dict with ``context.attributes`` — list of dicts
+        ToolResult dict with ``context.attributes`` — list of dicts
         with ``name``, ``type``, ``value``, ``keyable``, ``locked`` keys.
     """
 

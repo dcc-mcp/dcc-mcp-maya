@@ -41,7 +41,7 @@ def create_locator_grid(
         name_prefix: 定位器名称前缀。
 
     Returns:
-        包含 ``context.locators`` 列表的 ActionResultModel dict。
+        包含 ``context.locators`` 列表的 ToolResult dict。
     """
     # 始终在函数内延迟导入 maya.cmds，以允许在 Maya 外部进行技能发现
     import maya.cmds as cmds

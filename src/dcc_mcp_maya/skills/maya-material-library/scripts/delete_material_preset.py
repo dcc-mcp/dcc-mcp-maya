@@ -17,7 +17,7 @@ def delete_material_preset(file_path: str) -> dict:
         file_path: Absolute path to the ``.json`` preset file to remove.
 
     Returns:
-        ActionResultModel dict confirming deletion.
+        ToolResult dict confirming deletion.
     """
     try:
         if not os.path.isfile(file_path):

@@ -36,7 +36,7 @@ def write_render_job(
         priority: Job priority (0=low, 100=high).  Default: 50.
 
     Returns:
-        ActionResultModel dict with ``context.job_file`` path and job spec summary.
+        ToolResult dict with ``context.job_file`` path and job spec summary.
     """
 
     try:

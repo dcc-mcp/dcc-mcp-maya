@@ -16,7 +16,7 @@ def list_shading_groups() -> dict:
     assigned surface shader and the number of members.
 
     Returns:
-        ActionResultModel dict with ``context.shading_groups`` — a list of
+        ToolResult dict with ``context.shading_groups`` — a list of
         dicts with ``name``, ``surface_shader``, ``shader_type``,
         ``member_count`` keys, and ``context.count``.
     """

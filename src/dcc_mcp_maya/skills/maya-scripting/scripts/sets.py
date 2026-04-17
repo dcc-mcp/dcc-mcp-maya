@@ -29,7 +29,7 @@ def create_set(
             If None or empty, an empty set is created.
 
     Returns:
-        ActionResultModel dict with ``context.set_name`` and
+        ToolResult dict with ``context.set_name`` and
         ``context.objects_added``.
     """
 
@@ -72,7 +72,7 @@ def add_to_set(
         objects: List of object names to add.
 
     Returns:
-        ActionResultModel dict with ``context.set_name`` and
+        ToolResult dict with ``context.set_name`` and
         ``context.objects_added``.
     """
 
@@ -121,7 +121,7 @@ def remove_from_set(
         objects: List of object names to remove.
 
     Returns:
-        ActionResultModel dict with ``context.set_name`` and
+        ToolResult dict with ``context.set_name`` and
         ``context.objects_removed``.
     """
 
@@ -174,7 +174,7 @@ def list_sets(include_internal: bool = False) -> dict:
             ``"defaultCreaseDataSet"`` or ``"defaultLightSet"`` are excluded.
 
     Returns:
-        ActionResultModel dict with ``context.sets`` — a list of dicts with
+        ToolResult dict with ``context.sets`` — a list of dicts with
         ``name`` and ``member_count``.
     """
 

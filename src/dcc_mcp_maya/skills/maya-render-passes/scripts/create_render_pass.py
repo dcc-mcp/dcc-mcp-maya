@@ -42,7 +42,7 @@ def create_render_pass(
             For Arnold, uses ``aiAOV`` node type instead.
 
     Returns:
-        ActionResultModel dict with ``context.pass_node`` and
+        ToolResult dict with ``context.pass_node`` and
         ``context.pass_type``.
     """
 

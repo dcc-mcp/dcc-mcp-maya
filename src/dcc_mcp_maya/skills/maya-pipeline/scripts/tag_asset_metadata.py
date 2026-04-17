@@ -33,7 +33,7 @@ def tag_asset_metadata(
         pipeline_step: Pipeline step (e.g. ``"modeling"``, ``"rigging"``, ``"shading"``).
 
     Returns:
-        ActionResultModel dict with ``context.metadata`` dict of written values.
+        ToolResult dict with ``context.metadata`` dict of written values.
     """
 
     if not node_name:

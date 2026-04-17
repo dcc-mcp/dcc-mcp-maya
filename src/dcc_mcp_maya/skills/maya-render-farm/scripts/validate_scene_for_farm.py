@@ -21,7 +21,7 @@ def validate_scene_for_farm() -> dict:
     - Active render layer exists
 
     Returns:
-        ActionResultModel dict with ``context.issues`` list and ``context.valid`` flag.
+        ToolResult dict with ``context.issues`` list and ``context.valid`` flag.
     """
 
     try:

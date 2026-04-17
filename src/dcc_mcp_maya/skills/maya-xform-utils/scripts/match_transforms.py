@@ -28,7 +28,7 @@ def match_transforms(
         scale: Copy world-space scale if ``True``.
 
     Returns:
-        ActionResultModel dict with the new ``context.translate``,
+        ToolResult dict with the new ``context.translate``,
         ``context.rotate``, and ``context.scale`` of *source*.
     """
 

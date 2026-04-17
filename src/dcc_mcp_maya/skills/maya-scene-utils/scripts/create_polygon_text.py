@@ -32,7 +32,7 @@ def create_polygon_text(
             If False, the raw NURBS text curves are returned.
 
     Returns:
-        ActionResultModel dict with ``context.objects`` (list of created
+        ToolResult dict with ``context.objects`` (list of created
         transform names) and ``context.text``.
     """
 

@@ -29,7 +29,7 @@ def blend_shape_add_target(
             index automatically.
 
     Returns:
-        ActionResultModel dict with ``context.blend_shape``,
+        ToolResult dict with ``context.blend_shape``,
         ``context.target_mesh``, ``context.target_index``.
     """
 

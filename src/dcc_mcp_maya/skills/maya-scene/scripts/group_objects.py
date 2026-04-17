@@ -19,7 +19,7 @@ def group_objects(objects: List[str], group_name: Optional[str] = None, world: b
         world: If True, the group is parented to the world (root level).
 
     Returns:
-        ActionResultModel dict with ``context.group_name``.
+        ToolResult dict with ``context.group_name``.
     """
 
     try:

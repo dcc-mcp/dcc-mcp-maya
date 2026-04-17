@@ -21,7 +21,7 @@ def get_uv_info(object_name: str, uv_set: Optional[str] = None) -> dict:
             info about all UV sets without coordinate data.
 
     Returns:
-        ActionResultModel dict with ``context.uv_sets``, ``context.current_uv_set``,
+        ToolResult dict with ``context.uv_sets``, ``context.current_uv_set``,
         and optionally ``context.uv_count`` / ``context.uvs``.
     """
 

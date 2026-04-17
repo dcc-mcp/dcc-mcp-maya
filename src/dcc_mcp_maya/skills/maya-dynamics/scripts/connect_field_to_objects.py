@@ -41,7 +41,7 @@ def connect_field_to_objects(
             nCloth, nRigid) to receive the field influence.
 
     Returns:
-        ActionResultModel dict with ``context.field_node`` and
+        ToolResult dict with ``context.field_node`` and
         ``context.connected_objects``.
     """
     if not objects:

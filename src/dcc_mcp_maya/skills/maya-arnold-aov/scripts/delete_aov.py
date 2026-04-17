@@ -16,7 +16,7 @@ def delete_aov(name: str) -> dict:
             Maya node name).
 
     Returns:
-        ActionResultModel dict with ``context.deleted_node``.
+        ToolResult dict with ``context.deleted_node``.
     """
     try:
         import maya.cmds as cmds  # noqa: PLC0415

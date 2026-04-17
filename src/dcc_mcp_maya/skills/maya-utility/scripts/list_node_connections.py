@@ -24,7 +24,7 @@ def list_node_connections(
         plugs: Whether to include plug names (not just node names). Default True.
 
     Returns:
-        ActionResultModel dict with ``context.connections`` list of
+        ToolResult dict with ``context.connections`` list of
         ``{"source": ..., "destination": ...}`` dicts.
     """
 

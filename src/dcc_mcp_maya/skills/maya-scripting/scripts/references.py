@@ -32,7 +32,7 @@ def create_reference(
             transform group node.  Default: False.
 
     Returns:
-        ActionResultModel dict with ``context.reference_node``,
+        ToolResult dict with ``context.reference_node``,
         ``context.namespace``, and ``context.file_path``.
     """
 
@@ -79,7 +79,7 @@ def list_references() -> dict:
     """List all file references in the current scene.
 
     Returns:
-        ActionResultModel dict with ``context.references`` — a list of dicts
+        ToolResult dict with ``context.references`` — a list of dicts
         with ``reference_node``, ``file_path``, ``namespace``, and ``loaded``.
     """
 
@@ -133,7 +133,7 @@ def remove_reference(
             created for this reference after removal.
 
     Returns:
-        ActionResultModel dict with ``context.reference_node`` and
+        ToolResult dict with ``context.reference_node`` and
         ``context.namespace_removed``.
     """
 
@@ -189,7 +189,7 @@ def reload_reference(reference_node: str) -> dict:
             discover reference nodes.
 
     Returns:
-        ActionResultModel dict with ``context.reference_node``,
+        ToolResult dict with ``context.reference_node``,
         ``context.file_path``, and ``context.loaded``.
     """
 
@@ -236,7 +236,7 @@ def unload_reference(reference_node: str) -> dict:
         reference_node: Name of the reference node to unload.
 
     Returns:
-        ActionResultModel dict with ``context.reference_node`` and
+        ToolResult dict with ``context.reference_node`` and
         ``context.loaded`` (``False`` after success).
     """
 
@@ -276,7 +276,7 @@ def list_namespaces(root_only: bool = False) -> dict:
             recursively.
 
     Returns:
-        ActionResultModel dict with ``context.namespaces`` — a list of
+        ToolResult dict with ``context.namespaces`` — a list of
         namespace strings — and ``context.count``.
     """
 

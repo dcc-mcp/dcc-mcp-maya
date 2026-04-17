@@ -38,7 +38,7 @@ def create_constraint_weighted(
         maintain_offset: Preserve current offsets.
 
     Returns:
-        ActionResultModel dict with ``context.constraint_node`` and
+        ToolResult dict with ``context.constraint_node`` and
         ``context.source_weights``.
     """
     try:

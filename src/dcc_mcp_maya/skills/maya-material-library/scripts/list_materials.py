@@ -18,7 +18,7 @@ def list_materials(library_dir: str) -> dict:
         library_dir: Directory to search for ``.json`` preset files.
 
     Returns:
-        ActionResultModel dict with a list of preset info dicts.
+        ToolResult dict with a list of preset info dicts.
     """
     try:
         if not os.path.isdir(library_dir):

@@ -27,7 +27,7 @@ def set_shot_range(
         sequence_start_frame: New sequence start position.  If ``None``, kept.
 
     Returns:
-        ActionResultModel dict with the updated ``shot_node``, ``start_frame``,
+        ToolResult dict with the updated ``shot_node``, ``start_frame``,
         ``end_frame``, and ``sequence_start_frame``.
     """
     try:

@@ -59,7 +59,7 @@ def set_render_quality(preset: str = "medium") -> dict:
             Default: ``"medium"``.
 
     Returns:
-        ActionResultModel dict with ``context.preset`` and
+        ToolResult dict with ``context.preset`` and
         ``context.applied`` (dict of attribute names and values set).
     """
 

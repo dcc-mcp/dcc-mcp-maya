@@ -36,7 +36,7 @@ def bake_textures(
         overscan: Anti-alias overscan in pixels.  Default: 3.
 
     Returns:
-        ActionResultModel dict with ``context.baked_objects`` and
+        ToolResult dict with ``context.baked_objects`` and
         ``context.file_path``.
     """
 

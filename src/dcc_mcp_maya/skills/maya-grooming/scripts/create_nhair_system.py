@@ -22,7 +22,7 @@ def create_nhair_system(
         hair_length: Approximate hair length in scene units. Default ``5.0``.
 
     Returns:
-        ActionResultModel dict with ``context.hair_system`` and
+        ToolResult dict with ``context.hair_system`` and
         ``context.follicle_count``.
     """
     try:

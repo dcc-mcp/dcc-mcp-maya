@@ -29,7 +29,7 @@ def capture_viewport(
         frame: Frame to capture.  Defaults to the current frame.
 
     Returns:
-        ActionResultModel dict with ``context.image`` (base64 PNG string).
+        ToolResult dict with ``context.image`` (base64 PNG string).
     """
 
     try:

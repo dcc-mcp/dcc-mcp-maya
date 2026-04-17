@@ -28,7 +28,7 @@ def delete_stroke(
         delete_all: If ``True``, delete every stroke in the scene.
 
     Returns:
-        ActionResultModel dict with ``deleted`` list of removed nodes.
+        ToolResult dict with ``deleted`` list of removed nodes.
     """
 
     try:

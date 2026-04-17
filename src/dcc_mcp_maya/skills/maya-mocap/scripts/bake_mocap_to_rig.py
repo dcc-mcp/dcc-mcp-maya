@@ -27,7 +27,7 @@ def bake_mocap_to_rig(
         bake_step: Frame step for baking. Default ``1.0``.
 
     Returns:
-        ActionResultModel dict confirming bake completion.
+        ToolResult dict confirming bake completion.
     """
 
     if not source_character or not target_character:

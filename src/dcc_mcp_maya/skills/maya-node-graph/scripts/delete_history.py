@@ -23,7 +23,7 @@ def delete_history(
         object_name: Name of the transform or shape node to process.
 
     Returns:
-        ActionResultModel dict with ``context.object_name``.
+        ToolResult dict with ``context.object_name``.
     """
 
     try:

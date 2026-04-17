@@ -22,7 +22,7 @@ def delete_display_layer(
             this layer.  Default: False (objects are moved to the default layer).
 
     Returns:
-        ActionResultModel dict with ``context.layer_name`` and
+        ToolResult dict with ``context.layer_name`` and
         ``context.objects_deleted`` (when ``remove_objects=True``).
     """
     try:

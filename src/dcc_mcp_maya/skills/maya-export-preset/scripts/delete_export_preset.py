@@ -17,7 +17,7 @@ def delete_export_preset(preset_path: str) -> dict:
         preset_path: Full path to the ``.json`` preset file.
 
     Returns:
-        ActionResultModel dict confirming deletion.
+        ToolResult dict confirming deletion.
     """
     try:
         if not os.path.isfile(preset_path):

@@ -30,7 +30,7 @@ def create_ik_handle(
             name when None.
 
     Returns:
-        ActionResultModel dict with ``context.handle_name``,
+        ToolResult dict with ``context.handle_name``,
         ``context.effector_name``, and ``context.solver``.
     """
 

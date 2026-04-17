@@ -23,7 +23,7 @@ def create_cylinder(
         name: Optional name for the created object.
 
     Returns:
-        ActionResultModel dict with ``context.object_name``.
+        ToolResult dict with ``context.object_name``.
     """
 
     try:

@@ -19,7 +19,7 @@ def set_visibility(object_name: str, visible: bool) -> dict:
         visible: True to show, False to hide.
 
     Returns:
-        ActionResultModel dict.
+        ToolResult dict.
     """
 
     try:

@@ -11,7 +11,7 @@ def list_instancers() -> dict:
     """List all particle instancer nodes in the scene.
 
     Returns:
-        ActionResultModel dict with ``context.instancers`` (list of dicts with
+        ToolResult dict with ``context.instancers`` (list of dicts with
         ``node``, ``particle_system``, and ``instance_objects`` keys) and
         ``context.count``.
     """

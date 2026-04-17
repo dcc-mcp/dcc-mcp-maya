@@ -19,7 +19,7 @@ def get_shader_assignment(object_name: str) -> dict:
             (e.g. ``"pCube1"`` or ``"pCube1.f[0:5]"``).
 
     Returns:
-        ActionResultModel dict with ``context.shading_groups`` — a list of
+        ToolResult dict with ``context.shading_groups`` — a list of
         dicts with ``shading_group`` and ``material`` keys.
     """
     try:

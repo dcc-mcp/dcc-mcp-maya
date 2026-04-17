@@ -27,7 +27,7 @@ def list_constraints(target: str) -> dict:
         target: Name of the driven (target) object.
 
     Returns:
-        ActionResultModel dict with ``context.constraints`` — list of dicts
+        ToolResult dict with ``context.constraints`` — list of dicts
         with ``node``, ``type``, and ``sources``.
     """
     try:

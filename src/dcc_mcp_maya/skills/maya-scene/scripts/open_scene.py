@@ -17,7 +17,7 @@ def open_scene(file_path: str, force: bool = False) -> dict:
         force: If True, discard unsaved changes without prompting.
 
     Returns:
-        ActionResultModel dict.
+        ToolResult dict.
     """
 
     try:

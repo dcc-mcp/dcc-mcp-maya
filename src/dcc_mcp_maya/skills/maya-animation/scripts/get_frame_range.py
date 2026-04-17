@@ -25,7 +25,7 @@ def get_frame_range() -> dict:
     ``"show"`` → 48, ``"palf"`` → 50, ``"ntscf"`` → 60).
 
     Returns:
-        ActionResultModel dict with ``context.frame_range`` (dict).
+        ToolResult dict with ``context.frame_range`` (dict).
     """
     _FPS_MAP = {
         "game": 15.0,

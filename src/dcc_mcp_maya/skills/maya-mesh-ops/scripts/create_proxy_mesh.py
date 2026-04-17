@@ -32,7 +32,7 @@ def create_proxy_mesh(
             Maya auto-generates a name.
 
     Returns:
-        ActionResultModel dict with ``context.proxy_mesh``,
+        ToolResult dict with ``context.proxy_mesh``,
         ``context.original``, ``context.reduction``,
         ``context.face_count_before``, ``context.face_count_after``.
     """

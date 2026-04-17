@@ -21,7 +21,7 @@ def unload_reference(reference_node: str) -> dict:
         reference_node: Name of the reference node to unload.
 
     Returns:
-        ActionResultModel dict with ``context.reference_node`` and
+        ToolResult dict with ``context.reference_node`` and
         ``context.loaded`` (``False`` after success).
     """
 

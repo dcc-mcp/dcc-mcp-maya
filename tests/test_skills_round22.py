@@ -3,7 +3,7 @@ maya-export-preset, maya-scripting, maya-utility, and maya-pipeline.
 
 Covers all scripts across these skill domains.
 Scripts use the project-standard pattern: named args, lazy imports of
-``maya.cmds`` / ``maya.mel``, and return ``ActionResultModel.to_dict()``.
+``maya.cmds`` / ``maya.mel``, and return ``ToolResult.to_dict()``.
 """
 
 # Import built-in modules
