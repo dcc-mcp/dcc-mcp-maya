@@ -175,6 +175,14 @@ jobs:
         run: |
           set -e
 
+          # The packaged .mod bundles dcc_mcp_core alongside dcc_mcp_maya
+          # under python/. Exporting PYTHONPATH so the tool scripts that
+          # the server spawns as subprocesses can import dcc_mcp_core too
+          # (Phase 3's pytest step does the same). Without this the outer
+          # mayapy process is fine but every tool call returns
+          # "ModuleNotFoundError: No module named 'dcc_mcp_core'".
+          export PYTHONPATH="$HOME/maya/modules/dcc-mcp-maya/python"
+
           # Sentinel file used to signal clean shutdown to mayapy. Polling
           # for it lets mayapy exit through maya.standalone.uninitialize()
           # instead of being SIGTERM'd inside sleep(), which would trigger
