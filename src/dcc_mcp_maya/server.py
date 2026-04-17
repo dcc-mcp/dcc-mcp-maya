@@ -34,11 +34,12 @@ from __future__ import annotations
 
 # Import built-in modules
 import logging
+import threading
 from pathlib import Path
 from typing import Any, List, Optional
 
 # Import third-party modules
-from dcc_mcp_core.factory import make_start_stop
+from dcc_mcp_core.factory import create_dcc_server
 from dcc_mcp_core.server_base import DccServerBase
 
 # Import local modules
@@ -243,40 +244,74 @@ class MayaMcpServer(DccServerBase):
 
 # ── module-level singleton helpers ────────────────────────────────────────────
 #
-# Built on top of :func:`dcc_mcp_core.factory.make_start_stop`, which provides
-# the thread-safe holder/lock, the ``is_running`` check, the optional
-# ``register_builtin_actions()`` call, and the hot-reload env-var override
-# (``DCC_MCP_MAYA_HOT_RELOAD=1``).
+# Thin wrapper around :func:`dcc_mcp_core.factory.create_dcc_server`.  The
+# singleton holder and lock live at module scope so the Maya plugin
+# (``maya/plugin/dcc_mcp_maya_plugin.py``) can reach the live server for
+# UI affordances such as gateway-status display, hot-reload toggling, and
+# non-blocking restart.
 
-start_server, stop_server = make_start_stop(
-    MayaMcpServer,
-    hot_reload_env_var="DCC_MCP_MAYA_HOT_RELOAD",
-)
-start_server.__doc__ = """Start (or return the already-running) Maya MCP server.
+_server_instance: Optional[MayaMcpServer] = None
+_server_lock = threading.Lock()
+_instance_holder: List[Optional[MayaMcpServer]] = [None]
 
-Creates a module-level :class:`MayaMcpServer` singleton, optionally
-discovers all skills, and starts the MCP Streamable HTTP server.
 
-All keyword arguments accepted by :class:`MayaMcpServer` (``server_name``,
-``gateway_port``, ``registry_dir``, ``dcc_version``, ``scene``,
-``enable_gateway_failover``) may be passed through ``**kwargs``.
+def start_server(
+    port: int = 8765,
+    register_builtins: bool = True,
+    extra_skill_paths: Optional[List[str]] = None,
+    include_bundled: bool = True,
+    enable_hot_reload: bool = False,
+    **kwargs: Any,
+) -> Any:
+    """Start (or return the already-running) Maya MCP server.
 
-Args:
-    port: TCP port.  Use ``0`` for a random available port.
-    register_builtins: If ``True``, discovers and loads all skills.
-    extra_skill_paths: Additional directories to scan.
-    include_bundled: Include dcc-mcp-core bundled skills.
-    enable_hot_reload: Enable skill hot-reload on file changes.
-        Also honours ``DCC_MCP_MAYA_HOT_RELOAD=1``.
-    **kwargs: Forwarded to :class:`MayaMcpServer`.
+    Creates a module-level :class:`MayaMcpServer` singleton, optionally
+    discovers all skills, and starts the MCP Streamable HTTP server.
 
-Returns:
-    ``McpServerHandle`` with ``.mcp_url()``, ``.port``, ``.shutdown()``.
+    All keyword arguments accepted by :class:`MayaMcpServer` (``server_name``,
+    ``gateway_port``, ``registry_dir``, ``dcc_version``, ``scene``,
+    ``enable_gateway_failover``) may be passed through ``**kwargs``.
 
-Example::
+    Args:
+        port: TCP port.  Use ``0`` for a random available port.
+        register_builtins: If ``True``, discovers and loads all skills.
+        extra_skill_paths: Additional directories to scan.
+        include_bundled: Include dcc-mcp-core bundled skills.
+        enable_hot_reload: Enable skill hot-reload on file changes.
+            Also honours ``DCC_MCP_MAYA_HOT_RELOAD=1``.
+        **kwargs: Forwarded to :class:`MayaMcpServer`.
 
-    import dcc_mcp_maya
-    handle = dcc_mcp_maya.start_server(port=8765)
-    print(handle.mcp_url())  # http://127.0.0.1:8765/mcp
-"""
-stop_server.__doc__ = "Stop the module-level singleton Maya MCP server."
+    Returns:
+        ``McpServerHandle`` with ``.mcp_url()``, ``.port``, ``.shutdown()``.
+
+    Example::
+
+        import dcc_mcp_maya
+        handle = dcc_mcp_maya.start_server(port=8765)
+        print(handle.mcp_url())  # http://127.0.0.1:8765/mcp
+    """
+    global _server_instance
+    handle = create_dcc_server(
+        instance_holder=_instance_holder,
+        lock=_server_lock,
+        server_class=MayaMcpServer,
+        port=port,
+        register_builtins=register_builtins,
+        extra_skill_paths=extra_skill_paths,
+        include_bundled=include_bundled,
+        enable_hot_reload=enable_hot_reload,
+        hot_reload_env_var="DCC_MCP_MAYA_HOT_RELOAD",
+        **kwargs,
+    )
+    _server_instance = _instance_holder[0]
+    return handle
+
+
+def stop_server() -> None:
+    """Stop the module-level singleton Maya MCP server."""
+    global _server_instance
+    with _server_lock:
+        if _instance_holder[0] is not None:
+            _instance_holder[0].stop()
+            _instance_holder[0] = None
+    _server_instance = None
