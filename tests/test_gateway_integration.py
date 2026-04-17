@@ -249,37 +249,41 @@ class TestGatewayProperties:
 
 
 class TestStartServerGatewayParams:
-    """``start_server`` is generated via ``dcc_mcp_core.factory.make_start_stop``.
-
-    Gateway-related kwargs are forwarded through ``create_dcc_server`` to
-    ``MayaMcpServer.__init__``, so patching ``create_dcc_server`` at the core
-    module level is the correct interception point.
-    """
-
     def test_start_server_passes_gateway_port(self):
         with patch.dict(sys.modules, _make_maya_mock()):
             srv_mod = _import_server()
-            with patch("dcc_mcp_core.factory.create_dcc_server") as mock_create:
-                mock_create.return_value = MagicMock()
-                srv_mod.start_server(port=0, gateway_port=9765, dcc_version="2025")
+            mock_instance = MagicMock()
+            mock_instance.is_running = False
+            mock_instance.register_builtin_actions.return_value = mock_instance
+            mock_instance.start.return_value = MagicMock()
 
-        call_kwargs = mock_create.call_args.kwargs
-        assert call_kwargs.get("server_class") is srv_mod.MayaMcpServer
+            with patch.object(srv_mod, "MayaMcpServer", return_value=mock_instance) as mock_cls:
+                with patch.object(srv_mod, "_server_instance", None):
+                    srv_mod._instance_holder[0] = None
+                    srv_mod.start_server(port=0, gateway_port=9765, dcc_version="2025")
+
+        call_kwargs = mock_cls.call_args[1] if mock_cls.call_args[1] else {}
         assert call_kwargs.get("gateway_port") == 9765
         assert call_kwargs.get("dcc_version") == "2025"
 
     def test_start_server_passes_registry_dir_and_scene(self):
         with patch.dict(sys.modules, _make_maya_mock()):
             srv_mod = _import_server()
-            with patch("dcc_mcp_core.factory.create_dcc_server") as mock_create:
-                mock_create.return_value = MagicMock()
-                srv_mod.start_server(
-                    port=0,
-                    gateway_port=9765,
-                    registry_dir="/tmp/reg",
-                    scene="/proj/shot.ma",
-                )
+            mock_instance = MagicMock()
+            mock_instance.is_running = False
+            mock_instance.register_builtin_actions.return_value = mock_instance
+            mock_instance.start.return_value = MagicMock()
 
-        call_kwargs = mock_create.call_args.kwargs
+            with patch.object(srv_mod, "MayaMcpServer", return_value=mock_instance) as mock_cls:
+                with patch.object(srv_mod, "_server_instance", None):
+                    srv_mod._instance_holder[0] = None
+                    srv_mod.start_server(
+                        port=0,
+                        gateway_port=9765,
+                        registry_dir="/tmp/reg",
+                        scene="/proj/shot.ma",
+                    )
+
+        call_kwargs = mock_cls.call_args[1] if mock_cls.call_args[1] else {}
         assert call_kwargs.get("registry_dir") == "/tmp/reg"
         assert call_kwargs.get("scene") == "/proj/shot.ma"

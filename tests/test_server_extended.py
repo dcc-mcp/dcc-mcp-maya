@@ -59,8 +59,7 @@ class TestServerStopEdgeCases:
     def test_stop_server_when_none(self):
         """stop_server() when singleton is None is a no-op."""
         srv_mod = _import_server()
-        # Fresh import yields a fresh closure-local holder set to ``None``;
-        # calling stop_server must simply return without raising.
+        srv_mod._server_instance = None
         srv_mod.stop_server()
 
     def test_mcp_url_property_running(self):
