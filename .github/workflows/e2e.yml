@@ -239,9 +239,16 @@ jobs:
           # mcporter call can return exit-0 even when the server replies
           # with "Unknown tool", which silently hides real breakage. Wrap
           # each call so any error marker in the output fails the step.
+          #
+          # --name maya-ci is required on every call for ad-hoc servers so
+          # mcporter can resolve the maya-ci.<tool> prefix back to --http-url.
+          # Without it the server is anonymous and every call reports
+          # "Unknown tool" (mcporter README: "you still need to repeat the
+          # same URL/stdio flags for mcporter call").
           mcporter_call() {
               out=$(npx mcporter call \
                   --http-url http://127.0.0.1:7891/mcp \
+                  --name maya-ci \
                   --allow-http \
                   "$@" 2>&1)
               printf '%s\n' "$out"
