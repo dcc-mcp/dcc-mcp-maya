@@ -1,0 +1,39 @@
+# Codecov configuration
+# Docs: https://docs.codecov.com/docs/codecov-yaml
+#
+# Coverage is reported informationally only — it surfaces as a PR comment
+# and a GitHub check, but never blocks the merge.
+
+coverage:
+  precision: 2
+  round: down
+  range: "70...100"
+
+  status:
+    project:
+      default:
+        target: 80%
+        threshold: 1%
+        informational: true
+        only_pulls: false
+    patch:
+      default:
+        target: 80%
+        threshold: 1%
+        informational: true
+
+comment:
+  layout: "header, diff, flags, components, footer"
+  behavior: default
+  require_changes: false
+  require_base: false
+  require_head: true
+
+github_checks:
+  annotations: false
+
+ignore:
+  - "tests/**"
+  - "examples/**"
+  - "docs/**"
+  - "maya/plugin/**"
