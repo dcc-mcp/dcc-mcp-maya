@@ -173,24 +173,42 @@ jobs:
 
       - name: Test MCP connectivity with mcporter
         run: |
+          set -e
+
+          # Sentinel file used to signal clean shutdown to mayapy. Polling
+          # for it lets mayapy exit through maya.standalone.uninitialize()
+          # instead of being SIGTERM'd inside sleep(), which would trigger
+          # Maya's crash handler.
+          SENTINEL=/tmp/mcporter.done
+          rm -f "$SENTINEL"
+
           # Start Maya MCP server in background (standalone mode, port 7891)
           # Use the packaged module's python/ directory on sys.path
           mayapy -c "
           import maya.standalone
           maya.standalone.initialize()
-          import sys, os
+          import sys, os, time
           # Add the packaged module's python/ to sys.path
           mod_python = os.path.expanduser('~/maya/modules/dcc-mcp-maya/python')
           if mod_python not in sys.path:
               sys.path.insert(0, mod_python)
-          import dcc_mcp_maya, time
+          import dcc_mcp_maya
           handle = dcc_mcp_maya.start_server(port=7891)
           print('MCP server running at:', handle.mcp_url())
-          # Keep process alive while mcporter tests run
-          time.sleep(60)
+          # Wait for sentinel file (touched by the outer shell after the
+          # mcporter calls complete) so we can tear down cleanly.
+          sentinel = '$SENTINEL'
+          for _ in range(120):
+              if os.path.exists(sentinel):
+                  break
+              time.sleep(1)
           dcc_mcp_maya.stop_server()
+          maya.standalone.uninitialize()
           " &
           SERVER_PID=$!
+
+          # Always signal mayapy and reap it, even if a step below fails.
+          trap 'touch "$SENTINEL" 2>/dev/null || true; wait $SERVER_PID 2>/dev/null || true' EXIT
 
           # Wait for server to be ready, then verify via Python urllib
           sleep 10
@@ -218,30 +236,48 @@ jobs:
           "
           echo "MCP initialize: OK"
 
+          # mcporter call can return exit-0 even when the server replies
+          # with "Unknown tool", which silently hides real breakage. Wrap
+          # each call so any error marker in the output fails the step.
+          mcporter_call() {
+              out=$(npx mcporter call \
+                  --http-url http://127.0.0.1:7891/mcp \
+                  --allow-http \
+                  "$@" 2>&1)
+              printf '%s\n' "$out"
+              case "$out" in
+                  *"Unknown tool"*|*"Error:"*|*"error:"*)
+                      echo "::error::mcporter call failed: $*"
+                      return 1
+                      ;;
+              esac
+          }
+
           # List Maya tools via mcporter
           npx --yes mcporter list \
             --http-url http://127.0.0.1:7891/mcp \
             --name maya-ci \
             --allow-http
 
+          # After the 0.13 lazy-load refactor, skills are exposed as
+          # __skill__* stubs until load_skill is called. Load the skills we
+          # exercise below so their tools become callable. Issued as three
+          # scalar calls — mcporter's flag-based CLI has known issues
+          # parsing array arguments (steipete/mcporter#126).
+          mcporter_call maya-ci.load_skill skill_name:maya-scene
+          mcporter_call maya-ci.load_skill skill_name:maya-primitives
+          mcporter_call maya-ci.load_skill skill_name:maya-scripting
+
           # Call get_session_info tool
-          npx mcporter call \
-            --http-url http://127.0.0.1:7891/mcp \
-            --allow-http \
-            maya-ci.maya_scene__get_session_info
+          mcporter_call maya-ci.maya_scene__get_session_info
 
           # Call create_sphere tool
-          npx mcporter call \
-            --http-url http://127.0.0.1:7891/mcp \
-            --allow-http \
-            maya-ci.maya_primitives__create_sphere radius:2.0 name:mcporterSphere
+          mcporter_call maya-ci.maya_primitives__create_sphere \
+            radius:2.0 name:mcporterSphere
 
           # Call execute_python tool
-          npx mcporter call \
-            --http-url http://127.0.0.1:7891/mcp \
-            --allow-http \
-            maya-ci.maya_scripting__execute_python \
+          mcporter_call maya-ci.maya_scripting__execute_python \
             "code:import maya.cmds as cmds; cmds.polyCube(n='mcporterCube')"
 
-          kill $SERVER_PID 2>/dev/null || true
           echo "mcporter connectivity tests: PASSED"
+          # EXIT trap signals mayapy via sentinel and waits for clean teardown.
