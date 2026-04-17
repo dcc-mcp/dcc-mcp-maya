@@ -21,7 +21,7 @@ def set_active_camera(camera_name: str, panel: Optional[str] = None) -> dict:
             the first visible model panel is used.
 
     Returns:
-        ActionResultModel dict with ``context.panel`` and ``context.camera_name``.
+        ToolResult dict with ``context.panel`` and ``context.camera_name``.
     """
     try:
         import maya.cmds as cmds  # noqa: PLC0415

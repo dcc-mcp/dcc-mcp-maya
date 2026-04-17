@@ -26,7 +26,7 @@ def create_stroke(
         name: Optional name for the created stroke transform. If empty, Maya assigns one.
 
     Returns:
-        ActionResultModel dict with ``stroke_node``, ``brush_node``, and ``preset``.
+        ToolResult dict with ``stroke_node``, ``brush_node``, and ``preset``.
     """
 
     try:

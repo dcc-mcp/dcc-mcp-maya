@@ -23,7 +23,7 @@ def create_locator(name: Optional[str] = None, position: Optional[List[float]] =
             locator is created at the origin.
 
     Returns:
-        ActionResultModel dict with ``context.object_name`` and
+        ToolResult dict with ``context.object_name`` and
         ``context.position``.
     """
 

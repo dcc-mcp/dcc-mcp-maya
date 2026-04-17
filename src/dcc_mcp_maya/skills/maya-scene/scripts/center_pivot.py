@@ -18,7 +18,7 @@ def center_pivot(object_name: str) -> dict:
         object_name: Name of the object.
 
     Returns:
-        ActionResultModel dict.
+        ToolResult dict.
     """
 
     try:

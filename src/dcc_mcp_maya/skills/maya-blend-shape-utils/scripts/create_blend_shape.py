@@ -32,7 +32,7 @@ def create_blend_shape(
         origin: Deformer origin mode — ``"local"`` (default) or ``"world"``.
 
     Returns:
-        ActionResultModel dict with ``context.blend_shape_node`` and
+        ToolResult dict with ``context.blend_shape_node`` and
         ``context.targets``.
     """
     try:

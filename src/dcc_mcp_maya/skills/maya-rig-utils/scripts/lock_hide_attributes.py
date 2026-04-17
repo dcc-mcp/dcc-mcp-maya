@@ -36,7 +36,7 @@ def lock_hide_attributes(
             Default: True.
 
     Returns:
-        ActionResultModel dict with ``context.processed_attributes``.
+        ToolResult dict with ``context.processed_attributes``.
     """
 
     try:

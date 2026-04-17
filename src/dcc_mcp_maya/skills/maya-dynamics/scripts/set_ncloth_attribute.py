@@ -41,7 +41,7 @@ def set_ncloth_attribute(
         value: Scalar float value, or ``[x, y, z]`` list for triple attrs.
 
     Returns:
-        ActionResultModel dict with ``context.ncloth_node``,
+        ToolResult dict with ``context.ncloth_node``,
         ``context.attribute``, ``context.value``.
     """
     try:

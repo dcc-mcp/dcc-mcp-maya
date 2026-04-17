@@ -34,7 +34,7 @@ def bake_ambient_occlusion(
         file_format: Image format.  Default: ``"png"``.
 
     Returns:
-        ActionResultModel dict with ``baked_files``, ``objects``, ``resolution``.
+        ToolResult dict with ``baked_files``, ``objects``, ``resolution``.
     """
 
     try:

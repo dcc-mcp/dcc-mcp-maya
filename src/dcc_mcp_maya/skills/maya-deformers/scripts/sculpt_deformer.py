@@ -31,7 +31,7 @@ def sculpt_deformer(
         max_displacement: Maximum vertex displacement amount.  Default: ``1.0``.
 
     Returns:
-        ActionResultModel dict with ``context.sculpt_node``,
+        ToolResult dict with ``context.sculpt_node``,
         ``context.sculpt_sphere``, ``context.sculpt_origin``.
     """
     mode_map = {"stretch": 0, "project": 1, "flip": 2}

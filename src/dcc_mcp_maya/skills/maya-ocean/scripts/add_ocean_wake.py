@@ -25,7 +25,7 @@ def add_ocean_wake(
         wake_size: Wake size multiplier (sets ``waveHeightScale``). Default ``1.0``.
 
     Returns:
-        ActionResultModel dict with ``context.wake_locator``.
+        ToolResult dict with ``context.wake_locator``.
     """
 
     try:

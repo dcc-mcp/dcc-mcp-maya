@@ -30,7 +30,7 @@ def set_render_pass_output(
             ``dataType`` attribute.
 
     Returns:
-        ActionResultModel dict with ``context.pass_node``,
+        ToolResult dict with ``context.pass_node``,
         ``context.output_path``, and ``context.image_format``.
     """
 

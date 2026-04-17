@@ -26,7 +26,7 @@ def project_uvs(
             for planar and cylindrical projections.  Default: ``"y"``.
 
     Returns:
-        ActionResultModel dict.
+        ToolResult dict.
     """
 
     valid_types = ("planar", "cylindrical", "spherical")

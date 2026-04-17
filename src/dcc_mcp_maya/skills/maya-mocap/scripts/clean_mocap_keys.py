@@ -27,7 +27,7 @@ def clean_mocap_keys(
         end_frame: End of range to simplify. Optional.
 
     Returns:
-        ActionResultModel dict with ``context.keys_before``, ``context.keys_after``,
+        ToolResult dict with ``context.keys_before``, ``context.keys_after``,
         and ``context.keys_removed``.
     """
 

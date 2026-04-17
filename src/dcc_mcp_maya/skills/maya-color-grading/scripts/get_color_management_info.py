@@ -14,7 +14,7 @@ def get_color_management_info() -> dict:
     and whether OCIO / native color management is enabled.
 
     Returns:
-        ActionResultModel dict with ``context.enabled``, ``context.rendering_space``,
+        ToolResult dict with ``context.enabled``, ``context.rendering_space``,
         ``context.view_transform``, ``context.output_transform``,
         ``context.ocio_config_path``.
     """

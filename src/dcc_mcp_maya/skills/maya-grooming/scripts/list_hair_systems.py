@@ -11,7 +11,7 @@ def list_hair_systems() -> dict:
     """List all hairSystem nodes with follicle and nucleus info.
 
     Returns:
-        ActionResultModel dict with ``context.hair_systems`` (list of dicts)
+        ToolResult dict with ``context.hair_systems`` (list of dicts)
         and ``context.count``.
     """
     try:

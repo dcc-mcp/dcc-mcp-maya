@@ -14,7 +14,7 @@ def invert_selection() -> dict:
     For component mode: inverts within the current component context.
 
     Returns:
-        ActionResultModel dict with ``context.before_count``, ``context.after_count``.
+        ToolResult dict with ``context.before_count``, ``context.after_count``.
     """
     try:
         import maya.cmds as cmds  # noqa: PLC0415

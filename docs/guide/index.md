@@ -23,7 +23,7 @@ It embeds a standards-compliant **MCP Streamable HTTP server** (2025-03-26 spec)
 │                                                          │
 │  ┌─────────────────────────────────────────────────┐   │
 │  │  McpHttpServer  (dcc-mcp-core)                  │   │
-│  │  POST /mcp  ──►  ActionRegistry                 │   │
+│  │  POST /mcp  ──►  ToolRegistry                   │   │
 │  │  GET  /mcp  ──►  SSE stream                     │   │
 │  └─────────────────────────────────────────────────┘   │
 └─────────────────────────────┬───────────────────────────┘

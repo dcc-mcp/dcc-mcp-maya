@@ -21,7 +21,7 @@ def set_attribute(node_name: str, attribute: str, value: object) -> dict:
         value: New value.  Strings are set with ``setAttr -type "string"``.
 
     Returns:
-        ActionResultModel dict with ``context.node_name``, ``context.attribute``,
+        ToolResult dict with ``context.node_name``, ``context.attribute``,
         and ``context.value``.
     """
     try:

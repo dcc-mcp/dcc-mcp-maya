@@ -21,7 +21,7 @@ def get_uv_info(object_name: str, uv_set: Optional[str] = None) -> dict:
             info about all UV sets without coordinate data.
 
     Returns:
-        ActionResultModel dict with ``context.uv_sets``, ``context.current_uv_set``,
+        ToolResult dict with ``context.uv_sets``, ``context.current_uv_set``,
         and optionally ``context.uv_count`` / ``context.uvs``.
     """
 
@@ -70,7 +70,7 @@ def create_uv_set(object_name: str, uv_set_name: str, copy_from: Optional[str] =
         copy_from: Optional existing UV set name to copy UVs from.
 
     Returns:
-        ActionResultModel dict with ``context.uv_set_name``.
+        ToolResult dict with ``context.uv_set_name``.
     """
 
     try:
@@ -112,7 +112,7 @@ def delete_uv_set(object_name: str, uv_set_name: str) -> dict:
         uv_set_name: Name of the UV set to delete.
 
     Returns:
-        ActionResultModel dict.
+        ToolResult dict.
     """
 
     try:
@@ -159,7 +159,7 @@ def project_uvs(
             for planar and cylindrical projections.  Default: ``"y"``.
 
     Returns:
-        ActionResultModel dict.
+        ToolResult dict.
     """
 
     valid_types = ("planar", "cylindrical", "spherical")
@@ -236,7 +236,7 @@ def copy_uvs(
             the current UV set.
 
     Returns:
-        ActionResultModel dict.
+        ToolResult dict.
     """
 
     try:
@@ -284,7 +284,7 @@ def get_uv_shell_info(object_name: str, uv_set: Optional[str] = None) -> dict:
         uv_set: UV set to query.  If None, uses the current active UV set.
 
     Returns:
-        ActionResultModel dict with ``context.shell_count``,
+        ToolResult dict with ``context.shell_count``,
         ``context.shells`` (list of dicts with ``u_min``, ``v_min``,
         ``u_max``, ``v_max``, ``uv_indices``).
     """
@@ -368,7 +368,7 @@ def unfold_uvs(
             they all have the same texel density.  Default: True.
 
     Returns:
-        ActionResultModel dict with ``context.object_name``,
+        ToolResult dict with ``context.object_name``,
         ``context.iterations``.
     """
 
@@ -427,7 +427,7 @@ def normalize_uvs(
             Default: True.
 
     Returns:
-        ActionResultModel dict with ``context.object_name``.
+        ToolResult dict with ``context.object_name``.
     """
 
     if not (0 < layout_u <= 1):

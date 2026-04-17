@@ -14,7 +14,7 @@ def shrink_selection() -> dict:
     (one ring inward).
 
     Returns:
-        ActionResultModel dict with ``context.before_count``, ``context.after_count``.
+        ToolResult dict with ``context.before_count``, ``context.after_count``.
     """
     try:
         import maya.cmds as cmds  # noqa: PLC0415

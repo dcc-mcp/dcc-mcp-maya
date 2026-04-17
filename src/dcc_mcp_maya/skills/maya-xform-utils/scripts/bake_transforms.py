@@ -32,7 +32,7 @@ def bake_transforms(
         simulate: If ``True``, run dynamics simulation during bake.
 
     Returns:
-        ActionResultModel dict with ``context.baked_objects`` and the
+        ToolResult dict with ``context.baked_objects`` and the
         ``context.frame_range`` used.
     """
 

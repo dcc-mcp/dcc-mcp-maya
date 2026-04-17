@@ -11,7 +11,7 @@ def get_selection() -> dict:
     """Return the current Maya selection.
 
     Returns:
-        ActionResultModel dict with ``context.selection`` list.
+        ToolResult dict with ``context.selection`` list.
     """
 
     try:

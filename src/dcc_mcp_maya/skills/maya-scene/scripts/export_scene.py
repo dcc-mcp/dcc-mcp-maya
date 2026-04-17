@@ -21,7 +21,7 @@ def export_scene(file_path: str, file_type: str = "mayaBinary") -> dict:
             ``"mayaBinary"`` (default), ``"mayaAscii"``, ``"FBX export"``.
 
     Returns:
-        ActionResultModel dict with ``context.file_path`` and
+        ToolResult dict with ``context.file_path`` and
         ``context.file_type``.
     """
 

@@ -42,7 +42,7 @@ def get_skin_weights(
             vertices are returned.
 
     Returns:
-        ActionResultModel dict with ``context.weights`` — a dict mapping
+        ToolResult dict with ``context.weights`` — a dict mapping
         vertex index (str) to a dict of ``{joint: weight}``.
         Also includes ``context.skin_cluster``, ``context.joint_count``,
         ``context.vertex_count``.
@@ -118,7 +118,7 @@ def paint_skin_weights(
         normalize: If True, normalise remaining influences after painting.
 
     Returns:
-        ActionResultModel dict with ``context.modified_vertices`` count.
+        ToolResult dict with ``context.modified_vertices`` count.
     """
 
     try:
@@ -193,7 +193,7 @@ def mirror_skin_weights(
         influence_association_2: Secondary influence association method.
 
     Returns:
-        ActionResultModel dict with ``context.skin_cluster`` and
+        ToolResult dict with ``context.skin_cluster`` and
         ``context.mirror_axis``.
     """
 
@@ -265,7 +265,7 @@ def copy_skin_weights(
         normalize: If True, normalise weights after copying.  Default: True.
 
     Returns:
-        ActionResultModel dict with ``context.source``, ``context.target``,
+        ToolResult dict with ``context.source``, ``context.target``,
         ``context.surface_association`` and ``context.influence_association``.
     """
 

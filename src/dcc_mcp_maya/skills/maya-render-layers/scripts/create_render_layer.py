@@ -27,7 +27,7 @@ def create_render_layer(
             Default: False.
 
     Returns:
-        ActionResultModel dict with ``context.layer_name``,
+        ToolResult dict with ``context.layer_name``,
         ``context.objects_added``, and ``context.is_current``.
     """
 

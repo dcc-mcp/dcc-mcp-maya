@@ -38,7 +38,7 @@ def submit_to_deadline(
             tool is looked up on PATH.
 
     Returns:
-        ActionResultModel dict with the Deadline job ID on success.
+        ToolResult dict with the Deadline job ID on success.
     """
 
     try:

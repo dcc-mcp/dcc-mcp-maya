@@ -25,7 +25,7 @@ def bake_cloth_cache(
         end_frame: Simulation end frame. Defaults to timeline end.
 
     Returns:
-        ActionResultModel dict with ``context.start_frame``,
+        ToolResult dict with ``context.start_frame``,
         ``context.end_frame``, and ``context.ncloth_shape``.
     """
     try:

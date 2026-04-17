@@ -32,7 +32,7 @@ def export_gpu_cache(
         write_material_color: Write diffuse color metadata.
 
     Returns:
-        ActionResultModel dict with ``context.file_path`` and ``context.objects``.
+        ToolResult dict with ``context.file_path`` and ``context.objects``.
     """
     try:
         import maya.cmds as cmds  # noqa: PLC0415

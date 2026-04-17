@@ -27,7 +27,7 @@ def set_transform(
         scale: [sx, sy, sz].  None = no change.
 
     Returns:
-        ActionResultModel dict with applied transform values.
+        ToolResult dict with applied transform values.
     """
 
     try:

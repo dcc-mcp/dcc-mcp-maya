@@ -21,7 +21,7 @@ def get_scene_statistics(
         node_types: Specific node types to count additionally. Default ``None``.
 
     Returns:
-        ActionResultModel dict with keys:
+        ToolResult dict with keys:
         ``total_nodes``, ``transform_count``, ``mesh_count``,
         ``poly_vertex_count``, ``poly_face_count``, ``scene_file``,
         ``memory_mb`` (optional).

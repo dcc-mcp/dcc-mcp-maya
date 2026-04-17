@@ -27,7 +27,7 @@ def set_material_attribute(
         value: New value.  Scalar, list-of-3 (RGB), or list-of-4 (RGBA).
 
     Returns:
-        ActionResultModel dict.
+        ToolResult dict.
     """
     try:
         import maya.cmds as cmds  # noqa: PLC0415

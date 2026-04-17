@@ -46,7 +46,7 @@ def save_material(
             error.  Default: True.
 
     Returns:
-        ActionResultModel dict with ``context.file_path`` and attribute count.
+        ToolResult dict with ``context.file_path`` and attribute count.
     """
     try:
         import maya.cmds as cmds  # noqa: PLC0415

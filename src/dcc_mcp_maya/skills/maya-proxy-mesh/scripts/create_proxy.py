@@ -30,7 +30,7 @@ def create_proxy(
         keep_original_visible: If ``False``, hide the original after creating proxy.
 
     Returns:
-        ActionResultModel dict with ``context.proxy``, ``context.source``,
+        ToolResult dict with ``context.proxy``, ``context.source``,
         and ``context.proxy_face_count``.
     """
 

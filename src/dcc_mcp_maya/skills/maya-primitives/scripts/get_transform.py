@@ -17,7 +17,7 @@ def get_transform(object_name: str) -> dict:
         object_name: Name of the object to query.
 
     Returns:
-        ActionResultModel dict with translate, rotate, scale lists.
+        ToolResult dict with translate, rotate, scale lists.
     """
 
     try:

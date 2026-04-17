@@ -27,7 +27,7 @@ def normalize_uvs(
             Default: True.
 
     Returns:
-        ActionResultModel dict with ``context.object_name``.
+        ToolResult dict with ``context.object_name``.
     """
 
     if not (0 < layout_u <= 1):

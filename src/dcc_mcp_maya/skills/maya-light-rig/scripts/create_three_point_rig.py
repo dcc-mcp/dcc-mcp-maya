@@ -35,7 +35,7 @@ def create_three_point_rig(
         rim_color: RGB list for the rim light.  Defaults to neutral white.
 
     Returns:
-        ActionResultModel dict with ``context.rig_group``,
+        ToolResult dict with ``context.rig_group``,
         ``context.key_light``, ``context.fill_light``, ``context.rim_light``.
     """
     try:

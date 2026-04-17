@@ -15,7 +15,7 @@ def list_render_layers(include_default: bool = True) -> dict:
             ``"defaultRenderLayer"`` in the result.
 
     Returns:
-        ActionResultModel dict with ``context.layers`` — a list of dicts with
+        ToolResult dict with ``context.layers`` — a list of dicts with
         ``name``, ``renderable``, ``member_count``, and ``is_current``.
     """
 

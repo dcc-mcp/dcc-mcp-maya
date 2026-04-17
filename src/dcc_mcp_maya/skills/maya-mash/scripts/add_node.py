@@ -21,7 +21,7 @@ def add_node(
             "MASH_Dynamics", "MASH_Spring", "MASH_Curve", "MASH_Signal", "MASH_Offset".
 
     Returns:
-        ActionResultModel dict with ``context.node_name``.
+        ToolResult dict with ``context.node_name``.
     """
     try:
         import maya.cmds as cmds  # noqa: PLC0415

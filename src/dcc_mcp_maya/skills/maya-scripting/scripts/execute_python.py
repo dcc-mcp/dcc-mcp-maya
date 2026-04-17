@@ -22,7 +22,7 @@ def execute_python(code: str, capture_output: bool = False) -> dict:
         capture_output: If True, capture stdout via ``io.StringIO``. Default False.
 
     Returns:
-        ActionResultModel dict with ``context.output`` (str) and ``context.stdout``
+        ToolResult dict with ``context.output`` (str) and ``context.stdout``
         (str, only when ``capture_output=True``).
     """
 

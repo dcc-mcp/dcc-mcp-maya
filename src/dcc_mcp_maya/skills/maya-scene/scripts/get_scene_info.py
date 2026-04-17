@@ -27,7 +27,7 @@ def get_scene_info(include_transforms: bool = True) -> dict:
             schema.
 
     Returns:
-        ActionResultModel dict with ``context.nodes`` (list of dicts) and
+        ToolResult dict with ``context.nodes`` (list of dicts) and
         ``context.count``.
     """
     try:

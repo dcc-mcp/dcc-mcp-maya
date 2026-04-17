@@ -13,7 +13,7 @@ def list_color_spaces() -> dict:
     """List all available color spaces registered in Maya's color management.
 
     Returns:
-        ActionResultModel dict with ``context.color_spaces`` list.
+        ToolResult dict with ``context.color_spaces`` list.
     """
 
     try:

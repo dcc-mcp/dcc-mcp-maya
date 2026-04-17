@@ -44,7 +44,7 @@ def create_locator_grid(
         name_prefix: Prefix for locator names.
 
     Returns:
-        ActionResultModel dict with ``context.locators`` list.
+        ToolResult dict with ``context.locators`` list.
     """
     # Always lazy-import maya.cmds to allow skill discovery outside Maya
     import maya.cmds as cmds

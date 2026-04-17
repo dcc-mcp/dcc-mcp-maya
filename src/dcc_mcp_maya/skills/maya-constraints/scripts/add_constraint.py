@@ -38,7 +38,7 @@ def add_constraint(
         weight: Initial constraint weight.  Default 1.0.
 
     Returns:
-        ActionResultModel dict with ``context.constraint_node``.
+        ToolResult dict with ``context.constraint_node``.
     """
     try:
         import maya.cmds as cmds  # noqa: PLC0415

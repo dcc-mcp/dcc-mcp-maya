@@ -30,7 +30,7 @@ def set_vertex_color(
         color_set: Target color set name.  If None, uses the current set.
 
     Returns:
-        ActionResultModel dict with ``context.colored_count``.
+        ToolResult dict with ``context.colored_count``.
     """
 
     try:
@@ -89,7 +89,7 @@ def get_vertex_color(
         color_set: Color set name to query.  If None, uses the current set.
 
     Returns:
-        ActionResultModel dict with color data.
+        ToolResult dict with color data.
     """
 
     try:
@@ -154,7 +154,7 @@ def create_color_set(
             Default: ``"RGBA"``.
 
     Returns:
-        ActionResultModel dict.
+        ToolResult dict.
     """
 
     valid_reps = ("RGB", "RGBA")
@@ -204,7 +204,7 @@ def remove_vertex_colors(object_name: str, color_set: Optional[str] = None) -> d
             vertex color data from the mesh.
 
     Returns:
-        ActionResultModel dict.
+        ToolResult dict.
     """
 
     try:

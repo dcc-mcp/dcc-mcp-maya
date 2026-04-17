@@ -23,7 +23,7 @@ def create_plane(
         name: Optional name for the created object.
 
     Returns:
-        ActionResultModel dict with ``context.object_name``.
+        ToolResult dict with ``context.object_name``.
     """
 
     try:

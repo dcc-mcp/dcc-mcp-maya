@@ -31,7 +31,7 @@ def set_cluster_weights(
         normalize: When ``True``, clamp weights to ``[0, 1]`` before setting.
 
     Returns:
-        ActionResultModel dict with ``context.vertex_count``.
+        ToolResult dict with ``context.vertex_count``.
     """
     if not weights:
         return skill_error(

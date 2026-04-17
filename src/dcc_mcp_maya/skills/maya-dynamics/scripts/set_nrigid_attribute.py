@@ -38,7 +38,7 @@ def set_nrigid_attribute(
             or string.
 
     Returns:
-        ActionResultModel dict with ``context.nrigid_node``,
+        ToolResult dict with ``context.nrigid_node``,
         ``context.attribute``, ``context.value``.
     """
     if not nrigid_node or not attribute:

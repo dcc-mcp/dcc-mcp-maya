@@ -13,7 +13,7 @@ def list_proxies() -> dict:
     Finds all transform nodes with ``isProxy = True`` custom attribute.
 
     Returns:
-        ActionResultModel dict with ``context.proxies`` list and ``context.count``.
+        ToolResult dict with ``context.proxies`` list and ``context.count``.
     """
 
     try:

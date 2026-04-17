@@ -32,7 +32,7 @@ def set_render_settings(
         output_path: Output directory path for rendered images.
 
     Returns:
-        ActionResultModel dict with applied settings.
+        ToolResult dict with applied settings.
     """
 
     try:

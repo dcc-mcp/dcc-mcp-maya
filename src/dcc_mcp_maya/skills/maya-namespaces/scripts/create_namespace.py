@@ -22,7 +22,7 @@ def create_namespace(
             namespace after creation.  Default: ``False``.
 
     Returns:
-        ActionResultModel dict with ``namespace``, ``parent``, and ``full_path``.
+        ToolResult dict with ``namespace``, ``parent``, and ``full_path``.
     """
 
     try:

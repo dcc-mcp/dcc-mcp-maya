@@ -25,7 +25,7 @@ def set_constraint_weight(
         weight: New weight value (``0.0`` to ``1.0``).
 
     Returns:
-        ActionResultModel dict with ``context.constraint_node``,
+        ToolResult dict with ``context.constraint_node``,
         ``context.driver_index``, ``context.weight``.
     """
     try:

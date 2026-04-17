@@ -21,7 +21,7 @@ def create_bifrost_graph(name: Optional[str] = None) -> dict:
             Maya auto-assigns a name (e.g. ``"bifrostGraph1"``).
 
     Returns:
-        ActionResultModel dict with ``context.graph_node``.
+        ToolResult dict with ``context.graph_node``.
     """
     try:
         import maya.cmds as cmds  # noqa: PLC0415

@@ -29,7 +29,7 @@ def delete_namespace(
             namespace is not empty.
 
     Returns:
-        ActionResultModel dict with ``context.namespace``.
+        ToolResult dict with ``context.namespace``.
     """
 
     try:

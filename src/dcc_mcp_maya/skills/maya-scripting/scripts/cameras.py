@@ -27,7 +27,7 @@ def create_camera(
         rotation: Euler rotation ``[rx, ry, rz]`` in degrees.  Default: none.
 
     Returns:
-        ActionResultModel dict with ``context.camera_name`` (transform) and
+        ToolResult dict with ``context.camera_name`` (transform) and
         ``context.camera_shape``.
     """
 
@@ -93,7 +93,7 @@ def set_camera_attribute(
         value: New value.
 
     Returns:
-        ActionResultModel dict.
+        ToolResult dict.
     """
 
     try:
@@ -140,7 +140,7 @@ def get_camera_info(camera_name: str) -> dict:
         camera_name: Transform or shape name of the camera.
 
     Returns:
-        ActionResultModel dict with ``context`` containing focal_length,
+        ToolResult dict with ``context`` containing focal_length,
         near/far clip, position, rotation, renderable, and field of view.
     """
 
@@ -201,7 +201,7 @@ def list_all_cameras(include_default: bool = True) -> dict:
             (``persp``, ``top``, ``front``, ``side``).  Default: True.
 
     Returns:
-        ActionResultModel dict with ``context.cameras`` list.
+        ToolResult dict with ``context.cameras`` list.
     """
 
     _DEFAULT_CAMERAS = {"persp", "top", "front", "side"}

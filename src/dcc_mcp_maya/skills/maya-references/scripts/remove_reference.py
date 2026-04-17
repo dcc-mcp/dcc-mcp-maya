@@ -25,7 +25,7 @@ def remove_reference(
             created for this reference after removal.
 
     Returns:
-        ActionResultModel dict with ``context.reference_node`` and
+        ToolResult dict with ``context.reference_node`` and
         ``context.namespace_removed``.
     """
 

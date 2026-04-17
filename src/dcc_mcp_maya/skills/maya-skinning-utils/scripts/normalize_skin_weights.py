@@ -23,7 +23,7 @@ def normalize_skin_weights(
             ``0`` = none, ``1`` = interactive (default), ``2`` = post.
 
     Returns:
-        ActionResultModel dict with ``context.skin_cluster_name``.
+        ToolResult dict with ``context.skin_cluster_name``.
     """
 
     try:

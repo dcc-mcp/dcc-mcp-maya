@@ -19,7 +19,7 @@ def get_constraint_weights(constraint_node: str) -> dict:
         constraint_node: Name of the constraint node (e.g., ``parentConstraint1``).
 
     Returns:
-        ActionResultModel dict with ``context.weights`` (list of dicts
+        ToolResult dict with ``context.weights`` (list of dicts
         with ``driver`` and ``weight``) and ``context.constraint_type``.
     """
     try:

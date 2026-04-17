@@ -43,7 +43,7 @@ def create_nrigid(
         name: Optional name for the nRigid shape node.
 
     Returns:
-        ActionResultModel dict with ``context.nrigid_node``,
+        ToolResult dict with ``context.nrigid_node``,
         ``context.mesh``, ``context.nucleus``.
     """
     try:

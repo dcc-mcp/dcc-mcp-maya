@@ -32,7 +32,7 @@ def set_keyframe(
             attribute.
 
     Returns:
-        ActionResultModel dict with ``context.keyframe_count``.
+        ToolResult dict with ``context.keyframe_count``.
     """
     try:
         import maya.cmds as cmds  # noqa: PLC0415

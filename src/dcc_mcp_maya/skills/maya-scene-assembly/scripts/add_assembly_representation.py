@@ -29,7 +29,7 @@ def add_assembly_representation(
         file_path: Optional file path for Cache/GPU/Scene representations.
 
     Returns:
-        ActionResultModel dict with ``context.rep_node`` and ``context.rep_type``.
+        ToolResult dict with ``context.rep_node`` and ``context.rep_type``.
     """
 
     if rep_type not in _VALID_TYPES:

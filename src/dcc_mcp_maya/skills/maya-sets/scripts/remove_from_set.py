@@ -23,7 +23,7 @@ def remove_from_set(
         objects: List of object names to remove.
 
     Returns:
-        ActionResultModel dict with ``context.set_name`` and
+        ToolResult dict with ``context.set_name`` and
         ``context.objects_removed``.
     """
 

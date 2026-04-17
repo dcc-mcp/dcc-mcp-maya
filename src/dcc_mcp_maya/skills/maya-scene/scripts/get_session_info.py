@@ -14,7 +14,7 @@ def get_session_info() -> dict:
     """Return Maya version, scene path, and basic stats.
 
     Returns:
-        ActionResultModel dict with version, scene, fps information.
+        ToolResult dict with version, scene, fps information.
     """
 
     try:

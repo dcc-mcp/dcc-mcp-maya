@@ -32,7 +32,7 @@ def connect_bifrost_ports(
         target_port: Input port name on the target node.
 
     Returns:
-        ActionResultModel dict with connection details.
+        ToolResult dict with connection details.
     """
     try:
         import maya.cmds as cmds  # noqa: PLC0415

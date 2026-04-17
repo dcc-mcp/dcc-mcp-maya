@@ -25,7 +25,7 @@ def create_reference(
             transform group node.  Default: False.
 
     Returns:
-        ActionResultModel dict with ``context.reference_node``,
+        ToolResult dict with ``context.reference_node``,
         ``context.namespace``, and ``context.file_path``.
     """
 

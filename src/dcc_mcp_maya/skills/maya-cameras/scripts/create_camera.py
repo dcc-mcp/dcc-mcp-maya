@@ -25,7 +25,7 @@ def create_camera(
         rotation: Optional ``[rx, ry, rz]`` rotation in degrees.
 
     Returns:
-        ActionResultModel dict with ``context.transform`` and ``context.shape``.
+        ToolResult dict with ``context.transform`` and ``context.shape``.
     """
     try:
         import maya.cmds as cmds  # noqa: PLC0415

@@ -27,7 +27,7 @@ def clean_scene(
         dry_run: If True, only report what would be removed. Default False.
 
     Returns:
-        ActionResultModel dict with ``context.removed`` and ``context.flagged`` lists.
+        ToolResult dict with ``context.removed`` and ``context.flagged`` lists.
     """
 
     try:

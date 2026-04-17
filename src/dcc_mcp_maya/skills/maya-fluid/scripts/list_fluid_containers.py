@@ -12,7 +12,7 @@ def list_fluid_containers() -> dict:
     """List all fluidShape nodes with their transform parents.
 
     Returns:
-        ActionResultModel dict with ``context.containers`` (list of dicts)
+        ToolResult dict with ``context.containers`` (list of dicts)
         and ``context.count``.
     """
     try:

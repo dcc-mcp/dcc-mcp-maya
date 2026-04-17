@@ -20,7 +20,7 @@ def set_timeline_audio(sound_node: str) -> dict:
         sound_node: Name of the audio/sound node to attach to the timeline.
 
     Returns:
-        ActionResultModel dict with ``context.sound_node``.
+        ToolResult dict with ``context.sound_node``.
     """
     try:
         import maya.cmds as cmds  # noqa: PLC0415

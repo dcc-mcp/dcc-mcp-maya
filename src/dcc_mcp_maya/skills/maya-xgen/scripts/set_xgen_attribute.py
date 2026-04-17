@@ -24,7 +24,7 @@ def set_xgen_attribute(
         object_name: Object context for patch attributes (optional).
 
     Returns:
-        ActionResultModel dict.
+        ToolResult dict.
     """
     try:
         import xgenm as xg  # noqa: PLC0415

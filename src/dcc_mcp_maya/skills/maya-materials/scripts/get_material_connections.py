@@ -21,7 +21,7 @@ def get_material_connections(material_name: str) -> dict:
         material_name: Name of the material node to inspect.
 
     Returns:
-        ActionResultModel dict with ``context.connections`` — a list of dicts
+        ToolResult dict with ``context.connections`` — a list of dicts
         with ``source_node``, ``source_attr``, ``dest_attr``, ``node_type``
         keys, and ``context.count``.
     """

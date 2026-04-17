@@ -24,7 +24,7 @@ def list_light_rigs() -> dict:
     """List all lights in the scene grouped by their parent rig transforms.
 
     Returns:
-        ActionResultModel dict with ``context.rigs`` (dict mapping group name
+        ToolResult dict with ``context.rigs`` (dict mapping group name
         → list of light nodes) and ``context.total_lights``.
     """
     try:

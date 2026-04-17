@@ -25,7 +25,7 @@ def edit_expression(
         unit_conversion: Optional — ``"none"``, ``"angularOnly"``, or ``"all"``.
 
     Returns:
-        ActionResultModel dict confirming the update.
+        ToolResult dict confirming the update.
     """
     try:
         import maya.cmds as cmds  # noqa: PLC0415

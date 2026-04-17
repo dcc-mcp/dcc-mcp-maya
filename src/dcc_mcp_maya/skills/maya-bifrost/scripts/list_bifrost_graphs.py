@@ -12,7 +12,7 @@ def list_bifrost_graphs() -> dict:
     """List all ``bifrostGraph`` nodes present in the scene.
 
     Returns:
-        ActionResultModel dict with ``context.graphs`` (list of node names)
+        ToolResult dict with ``context.graphs`` (list of node names)
         and ``context.count``.
     """
     try:

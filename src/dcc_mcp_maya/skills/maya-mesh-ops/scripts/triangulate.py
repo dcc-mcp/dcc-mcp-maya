@@ -16,7 +16,7 @@ def triangulate(object_name: str) -> dict:
         object_name: Transform or mesh name.
 
     Returns:
-        ActionResultModel dict with face counts before and after.
+        ToolResult dict with face counts before and after.
     """
     try:
         import maya.cmds as cmds  # noqa: PLC0415

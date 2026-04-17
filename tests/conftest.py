@@ -99,7 +99,7 @@ def load_and_call(rel_path: str, mock_cmds: MagicMock, func_name: str = "main", 
         **kwargs: Keyword arguments forwarded to the callable.
 
     Returns:
-        Whatever the skill function returns (typically an ActionResultModel dict).
+        Whatever the skill function returns (typically an ToolResult dict).
     """
     _LOAD_COUNTER[0] += 1
     mock_maya = MagicMock()
@@ -136,7 +136,7 @@ def load_and_call_with_mel(
         **kwargs: Keyword arguments forwarded to the callable.
 
     Returns:
-        Whatever the skill function returns (typically an ActionResultModel dict).
+        Whatever the skill function returns (typically an ToolResult dict).
     """
     _LOAD_COUNTER[0] += 1
     if mock_mel is None:

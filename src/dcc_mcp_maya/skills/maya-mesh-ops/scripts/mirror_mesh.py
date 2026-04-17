@@ -34,7 +34,7 @@ def mirror_mesh(
             border after mirroring.
 
     Returns:
-        ActionResultModel dict with ``context.object_name``, ``context.axis``,
+        ToolResult dict with ``context.object_name``, ``context.axis``,
         ``context.cut_position``.
     """
     axis_lower = (axis or "x").lower()

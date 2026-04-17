@@ -30,7 +30,7 @@ def load_pose(
             Default: True.
 
     Returns:
-        ActionResultModel dict with ``context.applied_count`` and
+        ToolResult dict with ``context.applied_count`` and
         ``context.missing_controls``.
     """
 

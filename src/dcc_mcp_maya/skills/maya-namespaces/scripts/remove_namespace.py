@@ -23,7 +23,7 @@ def remove_namespace(
         force: Move objects to parent namespace before removal.  Default: ``False``.
 
     Returns:
-        ActionResultModel dict with ``namespace`` and ``merged_objects``.
+        ToolResult dict with ``namespace`` and ``merged_objects``.
     """
 
     try:

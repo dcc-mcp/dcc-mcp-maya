@@ -35,7 +35,7 @@ def bake_constraints(
             objects after baking.  Default: False.
 
     Returns:
-        ActionResultModel dict with ``context.object_count``,
+        ToolResult dict with ``context.object_count``,
         ``context.objects``, ``context.removed_constraints``.
     """
     try:

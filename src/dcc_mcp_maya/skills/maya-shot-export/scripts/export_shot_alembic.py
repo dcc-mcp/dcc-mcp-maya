@@ -30,7 +30,7 @@ def export_shot_alembic(
         uv_write: Write UV sets.  Default: True.
 
     Returns:
-        ActionResultModel dict with ``context.file_path`` and frame range.
+        ToolResult dict with ``context.file_path`` and frame range.
     """
 
     try:

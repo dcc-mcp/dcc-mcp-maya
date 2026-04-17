@@ -24,7 +24,7 @@ def set_mash_attribute(
         value: New value (numeric or string).
 
     Returns:
-        ActionResultModel dict.
+        ToolResult dict.
     """
     try:
         import maya.cmds as cmds  # noqa: PLC0415

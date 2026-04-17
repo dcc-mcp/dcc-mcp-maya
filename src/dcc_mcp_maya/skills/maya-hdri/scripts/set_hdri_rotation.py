@@ -23,7 +23,7 @@ def set_hdri_rotation(
         rotation_y: Y-axis rotation in degrees (0-360).
 
     Returns:
-        ActionResultModel dict with ``light_node`` and ``rotation_y``.
+        ToolResult dict with ``light_node`` and ``rotation_y``.
     """
     try:
         import maya.cmds as cmds  # noqa: PLC0415

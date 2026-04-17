@@ -29,7 +29,7 @@ def list_connections(
         outgoing: Include outgoing connections.  Default: True.
 
     Returns:
-        ActionResultModel dict with ``context.connections`` — a list of
+        ToolResult dict with ``context.connections`` — a list of
         connected attribute path strings, and ``context.count``.
     """
 

@@ -24,7 +24,7 @@ def combine_meshes(
         name: Optional name for the resulting combined mesh.
 
     Returns:
-        ActionResultModel dict with ``context.combined_mesh`` (name of the
+        ToolResult dict with ``context.combined_mesh`` (name of the
         result) and ``context.input_count``.
     """
     if not objects or len(objects) < 2:

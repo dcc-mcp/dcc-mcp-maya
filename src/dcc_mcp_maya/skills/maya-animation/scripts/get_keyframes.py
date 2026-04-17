@@ -24,7 +24,7 @@ def get_keyframes(
             returns keyframes across all attributes.
 
     Returns:
-        ActionResultModel dict with ``context.keyframes`` list of frame numbers.
+        ToolResult dict with ``context.keyframes`` list of frame numbers.
     """
     try:
         import maya.cmds as cmds  # noqa: PLC0415

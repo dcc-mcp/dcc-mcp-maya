@@ -17,7 +17,7 @@ def delete_fluid_container(name: str) -> dict:
         name: Transform node name of the fluid container to delete.
 
     Returns:
-        ActionResultModel dict confirming deletion.
+        ToolResult dict confirming deletion.
     """
     try:
         import maya.cmds as cmds  # noqa: PLC0415

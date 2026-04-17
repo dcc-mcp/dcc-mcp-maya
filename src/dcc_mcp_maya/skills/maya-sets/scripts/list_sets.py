@@ -17,7 +17,7 @@ def list_sets(include_internal: bool = False) -> dict:
             ``"defaultCreaseDataSet"`` or ``"defaultLightSet"`` are excluded.
 
     Returns:
-        ActionResultModel dict with ``context.sets`` — a list of dicts with
+        ToolResult dict with ``context.sets`` — a list of dicts with
         ``name`` and ``member_count``.
     """
 

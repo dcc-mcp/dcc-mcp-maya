@@ -25,7 +25,7 @@ def add_nhair_cache(
         end_frame: Simulation end frame. Defaults to timeline end.
 
     Returns:
-        ActionResultModel dict with ``context.hair_system``,
+        ToolResult dict with ``context.hair_system``,
         ``context.start_frame``, and ``context.end_frame``.
     """
     try:

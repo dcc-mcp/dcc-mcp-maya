@@ -35,7 +35,7 @@ def load_hdri(
         name: Name for the created light transform.  Default: ``"hdriDome1"``.
 
     Returns:
-        ActionResultModel dict with ``light_node``, ``file_node``, ``backend``.
+        ToolResult dict with ``light_node``, ``file_node``, ``backend``.
     """
     try:
         import maya.cmds as cmds  # noqa: PLC0415

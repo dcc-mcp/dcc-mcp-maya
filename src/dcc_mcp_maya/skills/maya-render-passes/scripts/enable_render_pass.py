@@ -22,7 +22,7 @@ def enable_render_pass(
         enabled: True to enable the pass, False to disable.  Default: True.
 
     Returns:
-        ActionResultModel dict with ``context.pass_node`` and
+        ToolResult dict with ``context.pass_node`` and
         ``context.enabled``.
     """
 

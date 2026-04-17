@@ -18,7 +18,7 @@ def get_bounding_box(object_name: str) -> dict:
         object_name: Name of the object to query.
 
     Returns:
-        ActionResultModel dict with ``context.min``, ``context.max``,
+        ToolResult dict with ``context.min``, ``context.max``,
         ``context.center``, and ``context.size``.
     """
 

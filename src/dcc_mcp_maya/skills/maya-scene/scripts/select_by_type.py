@@ -17,7 +17,7 @@ def select_by_type(object_type: str) -> dict:
             ``"joint"``, ``"camera"``).
 
     Returns:
-        ActionResultModel dict with ``context.selection`` and ``context.count``.
+        ToolResult dict with ``context.selection`` and ``context.count``.
     """
 
     try:

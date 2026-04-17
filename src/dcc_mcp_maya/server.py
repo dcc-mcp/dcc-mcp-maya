@@ -4,7 +4,7 @@ Extends :class:`dcc_mcp_core.server_base.DccServerBase` with Maya-specific
 skill path discovery and version detection.
 
 All generic logic (skill registration, hot-reload, gateway failover,
-action registry, lifecycle) is provided by the base class.
+tool registry, lifecycle) is provided by the base class.
 
 Flow::
 
@@ -34,12 +34,11 @@ from __future__ import annotations
 
 # Import built-in modules
 import logging
-import os
-import threading
 from pathlib import Path
 from typing import Any, List, Optional
 
 # Import third-party modules
+from dcc_mcp_core.factory import make_start_stop
 from dcc_mcp_core.server_base import DccServerBase
 
 # Import local modules
@@ -72,8 +71,9 @@ class MayaMcpServer(DccServerBase):
 
     - Maya builtin skills directory (``skills/``)
     - Maya version detection via ``cmds.about(version=True)``
-    - Optional ``register_builtin_actions()`` override for IPC diagnostic
-      handlers (``dcc_mcp_core.dcc_server.register_diagnostic_handlers``)
+    - Optional ``register_builtin_actions()`` override that also installs
+      IPC diagnostic handlers via
+      ``dcc_mcp_core.dcc_server.register_diagnostic_handlers``
     - Maya-specific TransportManager wrappers
       (``bind_and_register``, ``find_best_service``, ``rank_services``)
 
@@ -242,101 +242,41 @@ class MayaMcpServer(DccServerBase):
 
 
 # ── module-level singleton helpers ────────────────────────────────────────────
+#
+# Built on top of :func:`dcc_mcp_core.factory.make_start_stop`, which provides
+# the thread-safe holder/lock, the ``is_running`` check, the optional
+# ``register_builtin_actions()`` call, and the hot-reload env-var override
+# (``DCC_MCP_MAYA_HOT_RELOAD=1``).
 
-_server_instance: Optional[MayaMcpServer] = None
-_lock = threading.Lock()
+start_server, stop_server = make_start_stop(
+    MayaMcpServer,
+    hot_reload_env_var="DCC_MCP_MAYA_HOT_RELOAD",
+)
+start_server.__doc__ = """Start (or return the already-running) Maya MCP server.
 
+Creates a module-level :class:`MayaMcpServer` singleton, optionally
+discovers all skills, and starts the MCP Streamable HTTP server.
 
-def start_server(
-    port: int = 8765,
-    server_name: str = "maya-mcp",
-    register_builtins: bool = True,
-    extra_skill_paths: Optional[List[str]] = None,
-    include_bundled: bool = True,
-    gateway_port: Optional[int] = None,
-    registry_dir: Optional[str] = None,
-    dcc_version: Optional[str] = None,
-    scene: Optional[str] = None,
-    enable_hot_reload: bool = False,
-    enable_gateway_failover: bool = True,
-) -> Any:
-    """Start (or return the already-running) Maya MCP server.
+All keyword arguments accepted by :class:`MayaMcpServer` (``server_name``,
+``gateway_port``, ``registry_dir``, ``dcc_version``, ``scene``,
+``enable_gateway_failover``) may be passed through ``**kwargs``.
 
-    Creates a module-level :class:`MayaMcpServer` singleton, optionally
-    discovers all skills, and starts the HTTP server.
+Args:
+    port: TCP port.  Use ``0`` for a random available port.
+    register_builtins: If ``True``, discovers and loads all skills.
+    extra_skill_paths: Additional directories to scan.
+    include_bundled: Include dcc-mcp-core bundled skills.
+    enable_hot_reload: Enable skill hot-reload on file changes.
+        Also honours ``DCC_MCP_MAYA_HOT_RELOAD=1``.
+    **kwargs: Forwarded to :class:`MayaMcpServer`.
 
-    **Multi-DCC Gateway** (v0.12.22+):
-    When ``gateway_port`` is set, this instance joins the first-wins
-    gateway port competition.  See :attr:`~dcc_mcp_core.server_base.DccServerBase.is_gateway`.
+Returns:
+    ``McpServerHandle`` with ``.mcp_url()``, ``.port``, ``.shutdown()``.
 
-    **Hot-Reload** (v0.3.0+):
-    When ``enable_hot_reload`` is ``True`` (or ``DCC_MCP_MAYA_HOT_RELOAD=1``),
-    the server monitors skill directories and reloads on file changes.
+Example::
 
-    **Gateway Failover** (v0.4.0+):
-    When ``enable_gateway_failover`` is ``True`` (or
-    ``DCC_MCP_MAYA_ENABLE_GATEWAY_FAILOVER=1``), non-gateway instances
-    promote themselves if the current gateway becomes unreachable.
-
-    Args:
-        port: TCP port.  Use ``0`` for a random available port.
-        server_name: Name shown in MCP ``initialize`` response.
-        register_builtins: If ``True``, discovers and loads all skills.
-        extra_skill_paths: Additional directories to scan.
-        include_bundled: Include dcc-mcp-core bundled skills.
-        gateway_port: Port for multi-DCC gateway competition.
-        registry_dir: Shared ``FileRegistry`` directory.
-        dcc_version: Maya version string for the gateway registry.
-        scene: Currently open scene file path for the gateway registry.
-        enable_hot_reload: Enable skill hot-reload on file changes.
-        enable_gateway_failover: Enable automatic gateway failover election.
-
-    Returns:
-        ``McpServerHandle`` with ``.mcp_url()``, ``.port``, ``.shutdown()``.
-
-    Example::
-
-        import dcc_mcp_maya
-        handle = dcc_mcp_maya.start_server(port=8765)
-        print(handle.mcp_url())  # http://127.0.0.1:8765/mcp
-    """
-    global _server_instance
-    with _lock:
-        if _server_instance is None or not _server_instance.is_running:
-            _server_instance = MayaMcpServer(
-                port=port,
-                server_name=server_name,
-                gateway_port=gateway_port,
-                registry_dir=registry_dir,
-                dcc_version=dcc_version,
-                scene=scene,
-                enable_gateway_failover=enable_gateway_failover,
-            )
-
-            if register_builtins:
-                _server_instance.register_builtin_actions(
-                    extra_skill_paths=extra_skill_paths,
-                    include_bundled=include_bundled,
-                )
-
-            # Hot-reload: explicit arg OR environment variable override
-            hot_reload_active = enable_hot_reload or os.environ.get("DCC_MCP_MAYA_HOT_RELOAD", "0") == "1"
-            if hot_reload_active:
-                try:
-                    if _server_instance.enable_hot_reload():
-                        logger.info("Skill hot-reload enabled")
-                    else:
-                        logger.warning("Failed to enable skill hot-reload")
-                except Exception as exc:
-                    logger.warning("Error enabling hot-reload: %s", exc)
-
-        return _server_instance.start()
-
-
-def stop_server() -> None:
-    """Stop the module-level singleton server."""
-    global _server_instance
-    with _lock:
-        if _server_instance is not None:
-            _server_instance.stop()
-            _server_instance = None
+    import dcc_mcp_maya
+    handle = dcc_mcp_maya.start_server(port=8765)
+    print(handle.mcp_url())  # http://127.0.0.1:8765/mcp
+"""
+stop_server.__doc__ = "Stop the module-level singleton Maya MCP server."

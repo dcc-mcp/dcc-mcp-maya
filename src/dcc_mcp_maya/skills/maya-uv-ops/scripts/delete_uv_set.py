@@ -19,7 +19,7 @@ def delete_uv_set(object_name: str, uv_set_name: str) -> dict:
         uv_set_name: Name of the UV set to delete.
 
     Returns:
-        ActionResultModel dict.
+        ToolResult dict.
     """
 
     try:

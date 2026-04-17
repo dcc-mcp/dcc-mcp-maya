@@ -31,7 +31,7 @@ def create_nparticle_emitter(
             nucleus created by Maya is used.
 
     Returns:
-        ActionResultModel dict with particle shape, emitter, and nucleus names.
+        ToolResult dict with particle shape, emitter, and nucleus names.
     """
 
     try:

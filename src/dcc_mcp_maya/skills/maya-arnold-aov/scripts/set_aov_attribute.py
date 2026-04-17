@@ -22,7 +22,7 @@ def set_aov_attribute(name: str, attribute: str, value: object) -> dict:
             booleans and numbers are set directly.
 
     Returns:
-        ActionResultModel dict with ``context.aov_node``, ``context.attribute``,
+        ToolResult dict with ``context.aov_node``, ``context.attribute``,
         ``context.value``.
     """
     try:

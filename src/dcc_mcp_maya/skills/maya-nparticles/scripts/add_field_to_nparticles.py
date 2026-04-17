@@ -39,7 +39,7 @@ def add_field_to_nparticles(
         field_name: Optional name for the created field node.
 
     Returns:
-        ActionResultModel dict with the field node name and connected particles.
+        ToolResult dict with the field node name and connected particles.
     """
 
     try:

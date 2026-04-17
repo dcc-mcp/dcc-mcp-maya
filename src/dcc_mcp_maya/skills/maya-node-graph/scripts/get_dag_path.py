@@ -22,7 +22,7 @@ def get_dag_path(
         object_name: Short or partial name of the node.
 
     Returns:
-        ActionResultModel dict with ``context.dag_path`` (full path),
+        ToolResult dict with ``context.dag_path`` (full path),
         ``context.short_name``, and ``context.node_type``.
     """
 

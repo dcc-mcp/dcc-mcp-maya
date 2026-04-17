@@ -25,7 +25,7 @@ def connect_attributes(
             Default: False.
 
     Returns:
-        ActionResultModel dict with ``context.connected_count`` and
+        ToolResult dict with ``context.connected_count`` and
         ``context.failed_connections``.
     """
 

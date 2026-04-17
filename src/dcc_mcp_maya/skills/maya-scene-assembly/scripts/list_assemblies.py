@@ -14,7 +14,7 @@ def list_assemblies(node_type: str = "all") -> dict:
         node_type: Filter by ``"definition"``, ``"reference"``, or ``"all"`` (default).
 
     Returns:
-        ActionResultModel dict with ``context.definitions``, ``context.references``,
+        ToolResult dict with ``context.definitions``, ``context.references``,
         and ``context.count``.
     """
 

@@ -15,7 +15,7 @@ def set_current_time(frame: float) -> dict:
         frame: Target frame number.
 
     Returns:
-        ActionResultModel dict with ``context.current_time``.
+        ToolResult dict with ``context.current_time``.
     """
     try:
         import maya.cmds as cmds  # noqa: PLC0415

@@ -25,7 +25,7 @@ def delete_light(light_name: str) -> dict:
         light_name: Name of the light transform to delete.
 
     Returns:
-        ActionResultModel dict.
+        ToolResult dict.
     """
     try:
         import maya.cmds as cmds  # noqa: PLC0415

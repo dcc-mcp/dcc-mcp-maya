@@ -20,7 +20,7 @@ def assign_material(material_name: str, objects: List[str]) -> dict:
         objects: List of mesh/transform object names.
 
     Returns:
-        ActionResultModel dict.
+        ToolResult dict.
     """
     try:
         import maya.cmds as cmds  # noqa: PLC0415

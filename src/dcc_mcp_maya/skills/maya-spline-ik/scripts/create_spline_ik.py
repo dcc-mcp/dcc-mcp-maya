@@ -37,7 +37,7 @@ def create_spline_ik(
         create_curve: Auto-create a curve when no *curve* is given.
 
     Returns:
-        ActionResultModel dict with ``context.ik_handle``, ``context.ik_effector``,
+        ToolResult dict with ``context.ik_handle``, ``context.ik_effector``,
         and ``context.curve``.
     """
 

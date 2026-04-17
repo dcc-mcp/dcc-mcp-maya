@@ -20,7 +20,7 @@ def load_export_preset(preset_path: str, apply_frame_range: bool = True) -> dict
             Default ``True``.
 
     Returns:
-        ActionResultModel dict with ``context.preset_data`` and
+        ToolResult dict with ``context.preset_data`` and
         ``context.applied_frame_range``.
     """
     try:

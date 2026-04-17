@@ -16,7 +16,7 @@ def execute_mel(script: str) -> dict:
         script: MEL code to execute.
 
     Returns:
-        ActionResultModel dict with ``context.output`` (str) and ``context.script``.
+        ToolResult dict with ``context.output`` (str) and ``context.script``.
     """
 
     if not script or not script.strip():

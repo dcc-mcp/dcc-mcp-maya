@@ -32,7 +32,7 @@ def create_expression(
         unit_conversion: One of ``"none"``, ``"angularOnly"``, ``"all"``. Default ``"all"``.
 
     Returns:
-        ActionResultModel dict with ``context.expression_name``, ``context.expression_str``,
+        ToolResult dict with ``context.expression_name``, ``context.expression_str``,
         and optional ``context.object_name``.
     """
     if not expression or not expression.strip():

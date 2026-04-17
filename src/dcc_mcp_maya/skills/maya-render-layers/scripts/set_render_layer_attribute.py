@@ -28,7 +28,7 @@ def set_render_layer_attribute(
         value: New value.  Scalar or list-of-3 floats for compound attrs.
 
     Returns:
-        ActionResultModel dict with ``context.layer_name``,
+        ToolResult dict with ``context.layer_name``,
         ``context.attribute``, and ``context.value``.
     """
 

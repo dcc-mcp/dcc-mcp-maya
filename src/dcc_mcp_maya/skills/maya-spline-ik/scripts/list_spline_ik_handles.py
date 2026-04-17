@@ -13,7 +13,7 @@ def list_spline_ik_handles() -> dict:
     """List all spline IK handles in the current scene.
 
     Returns:
-        ActionResultModel dict with ``context.handles`` (list of dicts with
+        ToolResult dict with ``context.handles`` (list of dicts with
         ``name``, ``start_joint``, ``end_effector``, and ``curve`` keys)
         and ``context.count``.
     """

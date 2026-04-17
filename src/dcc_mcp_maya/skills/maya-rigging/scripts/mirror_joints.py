@@ -35,7 +35,7 @@ def mirror_joints(
             ``"XZ"``.  Default: ``"YZ"``.
 
     Returns:
-        ActionResultModel dict with ``context.mirrored_joints`` list.
+        ToolResult dict with ``context.mirrored_joints`` list.
     """
 
     _VALID_AXES = ("YZ", "XY", "XZ")

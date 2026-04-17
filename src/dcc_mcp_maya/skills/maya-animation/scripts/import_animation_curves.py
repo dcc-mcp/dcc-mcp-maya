@@ -25,7 +25,7 @@ def import_animation_curves(
             than replaced (``cmds.file(i=True, mergeNamespacesOnClash=True)``).
 
     Returns:
-        ActionResultModel dict with ``context.file_path`` and
+        ToolResult dict with ``context.file_path`` and
         ``context.target_object``.
     """
     try:

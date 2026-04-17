@@ -22,7 +22,7 @@ def separate_mesh(
         object_name: Name of the polygon mesh transform to separate.
 
     Returns:
-        ActionResultModel dict with ``context.separated_meshes`` (list of
+        ToolResult dict with ``context.separated_meshes`` (list of
         result transform names) and ``context.count``.
     """
     if not object_name:

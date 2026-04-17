@@ -28,7 +28,7 @@ def create_curve(
         periodic: If True, creates a closed (periodic) curve.  Default: False.
 
     Returns:
-        ActionResultModel dict with ``context.object_name``,
+        ToolResult dict with ``context.object_name``,
         ``context.degree``, ``context.point_count``.
     """
 

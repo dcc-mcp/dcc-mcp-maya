@@ -31,7 +31,7 @@ def set_shading_mode(
             If None, uses the first model panel found via ``cmds.getPanel``.
 
     Returns:
-        ActionResultModel dict with ``context.mode``, ``context.panel``.
+        ToolResult dict with ``context.mode``, ``context.panel``.
     """
 
     _MODE_MAP = {

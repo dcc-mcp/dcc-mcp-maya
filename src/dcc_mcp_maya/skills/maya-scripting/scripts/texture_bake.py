@@ -36,7 +36,7 @@ def bake_textures(
         overscan: Anti-alias overscan in pixels.  Default: 3.
 
     Returns:
-        ActionResultModel dict with ``context.baked_objects`` and
+        ToolResult dict with ``context.baked_objects`` and
         ``context.file_path``.
     """
 
@@ -134,7 +134,7 @@ def set_color_management(
             ``"sRGB gamma"``).  If None, leaves unchanged.
 
     Returns:
-        ActionResultModel dict with current color management configuration.
+        ToolResult dict with current color management configuration.
     """
 
     try:
@@ -195,7 +195,7 @@ def list_color_spaces() -> dict:
     """List all available color spaces registered in Maya's color management.
 
     Returns:
-        ActionResultModel dict with ``context.color_spaces`` list.
+        ToolResult dict with ``context.color_spaces`` list.
     """
 
     try:

@@ -24,7 +24,7 @@ def set_hdri_exposure(
         exposure: Exposure value in stops.  Negative values darken; positive brighten.
 
     Returns:
-        ActionResultModel dict with ``light_node``, ``exposure``, ``attribute_set``.
+        ToolResult dict with ``light_node``, ``exposure``, ``attribute_set``.
     """
     try:
         import maya.cmds as cmds  # noqa: PLC0415

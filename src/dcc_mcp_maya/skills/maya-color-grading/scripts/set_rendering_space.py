@@ -20,7 +20,7 @@ def set_rendering_space(rendering_space: str) -> dict:
         rendering_space: Name of the rendering color space to activate.
 
     Returns:
-        ActionResultModel dict with ``context.rendering_space``.
+        ToolResult dict with ``context.rendering_space``.
     """
     try:
         import maya.cmds as cmds  # noqa: PLC0415

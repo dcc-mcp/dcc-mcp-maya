@@ -27,7 +27,7 @@ def create_material(
         name: Optional name for the created material.
 
     Returns:
-        ActionResultModel dict with ``context.material_name`` and
+        ToolResult dict with ``context.material_name`` and
         ``context.shading_group``.
     """
     try:

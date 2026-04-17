@@ -14,7 +14,7 @@ def get_shot_info() -> dict:
     """Query current shot metadata from the open Maya scene.
 
     Returns:
-        ActionResultModel dict with shot metadata (frame range, camera, scene path).
+        ToolResult dict with shot metadata (frame range, camera, scene path).
     """
 
     try:

@@ -21,7 +21,7 @@ def get_asset_metadata(node_name: str) -> dict:
         node_name: Target node name.
 
     Returns:
-        ActionResultModel dict with ``context.metadata`` dict.
+        ToolResult dict with ``context.metadata`` dict.
         Missing attributes are returned as empty strings.
     """
 

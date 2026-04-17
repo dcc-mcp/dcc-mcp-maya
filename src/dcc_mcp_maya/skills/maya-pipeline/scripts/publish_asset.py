@@ -41,7 +41,7 @@ def publish_asset(
         version: Explicit version number; if omitted, auto-increments.
 
     Returns:
-        ActionResultModel dict with ``context.publish_path`` and ``context.version``.
+        ToolResult dict with ``context.publish_path`` and ``context.version``.
     """
 
     if not asset_name:

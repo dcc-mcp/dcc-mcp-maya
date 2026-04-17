@@ -11,7 +11,7 @@ def list_gpu_caches() -> dict:
     """List all gpuCache nodes currently loaded in the scene.
 
     Returns:
-        ActionResultModel dict with ``context.caches`` (list of dicts with
+        ToolResult dict with ``context.caches`` (list of dicts with
         ``transform``, ``cache_node``, and ``file_path`` keys) and ``context.count``.
     """
     try:

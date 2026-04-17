@@ -15,7 +15,7 @@ def query_scene_time_info() -> dict:
     frame rate, animation range, playback range, and current time.
 
     Returns:
-        ActionResultModel dict with ``context`` keys:
+        ToolResult dict with ``context`` keys:
         ``fps``, ``animation_start``, ``animation_end``,
         ``playback_start``, ``playback_end``, ``current_time``.
     """

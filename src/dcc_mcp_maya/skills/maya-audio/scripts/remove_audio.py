@@ -17,7 +17,7 @@ def remove_audio(sound_node: str) -> dict:
         sound_node: Name of the audio/sound node to delete.
 
     Returns:
-        ActionResultModel dict with ``context.deleted_node``.
+        ToolResult dict with ``context.deleted_node``.
     """
     try:
         import maya.cmds as cmds  # noqa: PLC0415

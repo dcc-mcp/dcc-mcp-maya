@@ -26,7 +26,7 @@ def set_proxy_attribute(
         value: Attribute value (bool, int, or float).
 
     Returns:
-        ActionResultModel dict confirming the change.
+        ToolResult dict confirming the change.
     """
 
     try:

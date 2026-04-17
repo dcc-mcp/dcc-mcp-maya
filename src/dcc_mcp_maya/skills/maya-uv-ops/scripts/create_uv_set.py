@@ -21,7 +21,7 @@ def create_uv_set(object_name: str, uv_set_name: str, copy_from: Optional[str] =
         copy_from: Optional existing UV set name to copy UVs from.
 
     Returns:
-        ActionResultModel dict with ``context.uv_set_name``.
+        ToolResult dict with ``context.uv_set_name``.
     """
 
     try:

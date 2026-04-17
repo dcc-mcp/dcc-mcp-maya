@@ -14,7 +14,7 @@ def list_aovs() -> dict:
     """List all Arnold AOV nodes (``aiAOV``) in the current scene.
 
     Returns:
-        ActionResultModel dict with ``context.aovs`` (list of dicts with
+        ToolResult dict with ``context.aovs`` (list of dicts with
         ``name``, ``type``, ``enabled``, ``node``) and ``context.count``.
     """
     try:
