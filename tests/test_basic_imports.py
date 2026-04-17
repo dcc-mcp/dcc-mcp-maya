@@ -92,9 +92,9 @@ def test_start_server_has_enable_gateway_failover():
     from dcc_mcp_maya.server import MayaMcpServer
 
     start_sig = inspect.signature(start_server)
-    assert any(
-        p.kind is inspect.Parameter.VAR_KEYWORD for p in start_sig.parameters.values()
-    ), "start_server must accept **kwargs so gateway params pass through to MayaMcpServer"
+    assert any(p.kind is inspect.Parameter.VAR_KEYWORD for p in start_sig.parameters.values()), (
+        "start_server must accept **kwargs so gateway params pass through to MayaMcpServer"
+    )
 
     srv_sig = inspect.signature(MayaMcpServer.__init__)
     assert "enable_gateway_failover" in srv_sig.parameters

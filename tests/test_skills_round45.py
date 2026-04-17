@@ -75,14 +75,14 @@ class TestSearchSkills:
         server, reg = _make_server_with_registry()
         reg.search_actions.return_value = []
         server.search_actions(tags=["mesh"])
-        call_kwargs = reg.search_actions.call_args.kwargs
+        call_kwargs = reg.search_actions.call_args[1]
         assert call_kwargs.get("dcc_name") == "maya"
 
     def test_explicit_dcc_name_is_forwarded(self):
         server, reg = _make_server_with_registry()
         reg.search_actions.return_value = []
         server.search_actions(category="node", dcc_name="houdini")
-        call_kwargs = reg.search_actions.call_args.kwargs
+        call_kwargs = reg.search_actions.call_args[1]
         assert call_kwargs.get("dcc_name") == "houdini"
 
     def test_returns_empty_when_registry_none(self):

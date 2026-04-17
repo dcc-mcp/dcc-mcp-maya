@@ -665,9 +665,7 @@ class TestServerSearchAPI:
         with patch.object(type(srv), "registry", new_callable=lambda: property(lambda s: mock_registry)):
             result = srv.search_actions(category="geometry", tags=["mesh"])
 
-        mock_registry.search_actions.assert_called_once_with(
-            category="geometry", tags=["mesh"], dcc_name="maya"
-        )
+        mock_registry.search_actions.assert_called_once_with(category="geometry", tags=["mesh"], dcc_name="maya")
         assert result == ["tool1", "tool2"]
 
     def test_search_skills_uses_custom_dcc_name(self):
@@ -682,7 +680,7 @@ class TestServerSearchAPI:
         with patch.object(type(srv), "registry", new_callable=lambda: property(lambda s: mock_registry)):
             srv.search_actions(dcc_name="houdini")
 
-        call_kwargs = mock_registry.search_actions.call_args.kwargs
+        call_kwargs = mock_registry.search_actions.call_args[1]
         assert call_kwargs["dcc_name"] == "houdini"
 
     def test_search_skills_exception_returns_empty(self):
