@@ -21,7 +21,7 @@ def set_view_transform(view_transform: str) -> dict:
         view_transform: Name of the view transform to apply.
 
     Returns:
-        ActionResultModel dict with ``context.view_transform``.
+        ToolResult dict with ``context.view_transform``.
     """
     try:
         import maya.cmds as cmds  # noqa: PLC0415

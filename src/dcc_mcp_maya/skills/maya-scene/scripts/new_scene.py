@@ -14,7 +14,7 @@ def new_scene(force: bool = False) -> dict:
         force: If True, discard unsaved changes without prompting.
 
     Returns:
-        ActionResultModel dict.
+        ToolResult dict.
     """
 
     try:

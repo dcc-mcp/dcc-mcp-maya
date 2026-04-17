@@ -12,7 +12,7 @@ def list_strokes() -> dict:
     """List all Paint Effects stroke nodes in the scene.
 
     Returns:
-        ActionResultModel dict with ``strokes`` list containing name, transform,
+        ToolResult dict with ``strokes`` list containing name, transform,
         brush node, and visibility for each stroke.
     """
 

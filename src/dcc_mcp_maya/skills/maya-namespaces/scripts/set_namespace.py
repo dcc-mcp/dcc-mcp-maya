@@ -29,7 +29,7 @@ def set_namespace(
             exist.  Default: True.
 
     Returns:
-        ActionResultModel dict with ``context.object_name``,
+        ToolResult dict with ``context.object_name``,
         ``context.namespace``, ``context.new_name``.
     """
 

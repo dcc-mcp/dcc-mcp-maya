@@ -23,7 +23,7 @@ def add_bifrost_node(graph_node: str, compound_name: str) -> dict:
             the installed Bifrost library.
 
     Returns:
-        ActionResultModel dict with ``context.graph_node``,
+        ToolResult dict with ``context.graph_node``,
         ``context.compound_name``.
     """
     try:

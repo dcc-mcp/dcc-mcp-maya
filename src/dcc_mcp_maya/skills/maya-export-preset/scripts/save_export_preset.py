@@ -31,7 +31,7 @@ def save_export_preset(
         custom_settings: Optional additional key-value pairs to store.
 
     Returns:
-        ActionResultModel dict with ``context.preset_path`` and
+        ToolResult dict with ``context.preset_path`` and
         ``context.preset_data``.
     """
     try:

@@ -24,7 +24,7 @@ def set_frame_rate(fps: str = "film") -> dict:
             * ``"ntscf"`` – 60 fps
 
     Returns:
-        ActionResultModel dict with ``context.fps`` (the applied setting).
+        ToolResult dict with ``context.fps`` (the applied setting).
     """
 
     _VALID_FPS = {

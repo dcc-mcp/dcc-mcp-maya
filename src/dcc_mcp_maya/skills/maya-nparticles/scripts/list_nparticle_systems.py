@@ -12,7 +12,7 @@ def list_nparticle_systems() -> dict:
     """List all nParticle systems and nucleus solvers in the scene.
 
     Returns:
-        ActionResultModel dict with particle systems and nucleus info.
+        ToolResult dict with particle systems and nucleus info.
     """
 
     try:

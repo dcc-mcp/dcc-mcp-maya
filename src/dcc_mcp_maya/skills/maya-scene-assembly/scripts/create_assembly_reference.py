@@ -23,7 +23,7 @@ def create_assembly_reference(
         active_rep: Optional name of the initial active representation.
 
     Returns:
-        ActionResultModel dict with ``context.ref_node`` and ``context.definition``.
+        ToolResult dict with ``context.ref_node`` and ``context.definition``.
     """
 
     if not definition:

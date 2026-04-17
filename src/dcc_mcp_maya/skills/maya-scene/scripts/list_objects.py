@@ -18,7 +18,7 @@ def list_objects(object_type: Optional[str] = None, dag: bool = True) -> dict:
         dag: If True, only return DAG nodes.
 
     Returns:
-        ActionResultModel dict with ``context.objects`` list.
+        ToolResult dict with ``context.objects`` list.
     """
 
     try:

@@ -23,7 +23,7 @@ def create_ocean(
         scale: Uniform scale of the ocean plane in scene units. Default ``100.0``.
 
     Returns:
-        ActionResultModel dict with ``context.ocean_transform``,
+        ToolResult dict with ``context.ocean_transform``,
         ``context.shader_name``, and ``context.shading_group``.
     """
 

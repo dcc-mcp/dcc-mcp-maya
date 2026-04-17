@@ -29,7 +29,7 @@ def set_object_color(
             default wireframe colour.  Default: False.
 
     Returns:
-        ActionResultModel dict with ``context.object_name``,
+        ToolResult dict with ``context.object_name``,
         ``context.color_index``, ``context.use_default``.
     """
 

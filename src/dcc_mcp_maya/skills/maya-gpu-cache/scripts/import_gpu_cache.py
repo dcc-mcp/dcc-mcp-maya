@@ -22,7 +22,7 @@ def import_gpu_cache(
         name: Optional name for the gpuCache transform node.
 
     Returns:
-        ActionResultModel dict with ``context.transform_node`` and
+        ToolResult dict with ``context.transform_node`` and
         ``context.cache_node``.
     """
     try:

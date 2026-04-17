@@ -22,7 +22,7 @@ def get_xgen_attribute(
         object_name: Object context (optional).
 
     Returns:
-        ActionResultModel dict with ``context.value``.
+        ToolResult dict with ``context.value``.
     """
     try:
         import xgenm as xg  # noqa: PLC0415

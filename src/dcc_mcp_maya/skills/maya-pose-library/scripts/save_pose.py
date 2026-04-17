@@ -36,7 +36,7 @@ def save_pose(
             of overwriting.  Default: True.
 
     Returns:
-        ActionResultModel dict with ``context.file_path`` and
+        ToolResult dict with ``context.file_path`` and
         ``context.control_count``.
     """
 

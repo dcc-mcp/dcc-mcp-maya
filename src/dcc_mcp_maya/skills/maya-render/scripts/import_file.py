@@ -26,7 +26,7 @@ def import_file(
         merge_namespaces: If True, merge with existing namespaces.
 
     Returns:
-        ActionResultModel dict with ``context.imported_nodes`` list.
+        ToolResult dict with ``context.imported_nodes`` list.
     """
 
     try:

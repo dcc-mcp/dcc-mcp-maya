@@ -20,7 +20,7 @@ def list_blend_shapes(mesh: Optional[str] = None) -> dict:
             If ``None``, all ``blendShape`` nodes in the scene are returned.
 
     Returns:
-        ActionResultModel dict with ``context.blend_shapes`` (list of dicts with
+        ToolResult dict with ``context.blend_shapes`` (list of dicts with
         ``node``, ``base_mesh``, and ``target_count`` keys) and ``context.count``.
     """
     try:

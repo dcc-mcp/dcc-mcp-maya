@@ -31,7 +31,7 @@ def set_render_settings(
             If None, left unchanged.
 
     Returns:
-        ActionResultModel dict with applied render settings.
+        ToolResult dict with applied render settings.
     """
 
     try:
@@ -80,7 +80,7 @@ def capture_viewport(
         frame: Frame to capture.  Defaults to the current frame.
 
     Returns:
-        ActionResultModel dict with ``context.image`` (base64 PNG string).
+        ToolResult dict with ``context.image`` (base64 PNG string).
     """
 
     try:
@@ -146,7 +146,7 @@ def import_file(
         merge_namespaces: If True, merge with existing namespaces.
 
     Returns:
-        ActionResultModel dict with ``context.imported_nodes`` list.
+        ToolResult dict with ``context.imported_nodes`` list.
     """
 
     try:
@@ -186,7 +186,7 @@ def export_selection(
             ``"mayaAscii"``, ``"Alembic"``.  Default: ``"FBX export"``.
 
     Returns:
-        ActionResultModel dict.
+        ToolResult dict.
     """
 
     try:
@@ -259,7 +259,7 @@ def set_render_quality(preset: str = "medium") -> dict:
             Default: ``"medium"``.
 
     Returns:
-        ActionResultModel dict with ``context.preset`` and
+        ToolResult dict with ``context.preset`` and
         ``context.applied`` (dict of attribute names and values set).
     """
 
@@ -302,7 +302,7 @@ def get_scene_render_stats() -> dict:
     the current render quality attributes from ``defaultRenderQuality``.
 
     Returns:
-        ActionResultModel dict with:
+        ToolResult dict with:
         - ``context.renderer`` — current renderer string
         - ``context.width`` / ``context.height`` — render resolution
         - ``context.start_frame`` / ``context.end_frame``

@@ -14,7 +14,7 @@ def grow_selection() -> dict:
     to the current selection (one ring outward).
 
     Returns:
-        ActionResultModel dict with ``context.before_count``, ``context.after_count``.
+        ToolResult dict with ``context.before_count``, ``context.after_count``.
     """
     try:
         import maya.cmds as cmds  # noqa: PLC0415

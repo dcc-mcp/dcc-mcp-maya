@@ -26,7 +26,7 @@ def select_similar(
         prefix: Name prefix when ``criteria="name_prefix"``.
 
     Returns:
-        ActionResultModel dict with ``context.criteria``, ``context.count``.
+        ToolResult dict with ``context.criteria``, ``context.count``.
     """
     if criteria not in _CRITERIA:
         return skill_error(

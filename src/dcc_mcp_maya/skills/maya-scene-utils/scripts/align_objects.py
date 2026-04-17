@@ -38,7 +38,7 @@ def align_objects(
             bounding box of all *objects* is used.
 
     Returns:
-        ActionResultModel dict with ``context.objects``, ``context.axis``,
+        ToolResult dict with ``context.objects``, ``context.axis``,
         ``context.mode``, ``context.target_value``.
     """
 

@@ -29,7 +29,7 @@ def apply_symmetry(
             object space.  Default: True.
 
     Returns:
-        ActionResultModel dict with ``context.object_name``,
+        ToolResult dict with ``context.object_name``,
         ``context.axis``, ``context.world_space``.
     """
 

@@ -28,7 +28,7 @@ def wire_deformer(
             zero.  Default: ``100.0``.
 
     Returns:
-        ActionResultModel dict with ``context.wire_node``,
+        ToolResult dict with ``context.wire_node``,
         ``context.curves``, ``context.objects``.
     """
     if not curves:

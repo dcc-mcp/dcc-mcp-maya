@@ -35,7 +35,7 @@ def create_utility_node(
             auto-generates one.
 
     Returns:
-        ActionResultModel dict with ``context.node_name`` and
+        ToolResult dict with ``context.node_name`` and
         ``context.node_type``.
     """
 
@@ -69,7 +69,7 @@ def get_scene_statistics() -> dict:
     current state of the open scene without listing every individual object.
 
     Returns:
-        ActionResultModel dict with the following context keys:
+        ToolResult dict with the following context keys:
 
         - ``total_nodes`` — total number of DG nodes in the scene
         - ``transform_count`` — number of transform nodes

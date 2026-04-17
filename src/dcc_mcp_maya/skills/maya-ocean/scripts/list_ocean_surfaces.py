@@ -12,7 +12,7 @@ def list_ocean_surfaces() -> dict:
     """List all oceanShader nodes and find their connected geometry.
 
     Returns:
-        ActionResultModel dict with ``context.surfaces`` (list of dicts)
+        ToolResult dict with ``context.surfaces`` (list of dicts)
         and ``context.count``.
     """
 

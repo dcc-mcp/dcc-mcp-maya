@@ -28,7 +28,7 @@ def export_shot_fbx(
         bake_animation: Bake animation curves before export.  Default: True.
 
     Returns:
-        ActionResultModel dict with ``context.file_path`` and frame range.
+        ToolResult dict with ``context.file_path`` and frame range.
     """
 
     try:

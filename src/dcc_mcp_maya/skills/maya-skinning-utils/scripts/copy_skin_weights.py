@@ -33,7 +33,7 @@ def copy_skin_weights(
         name: Optional name for the skin cluster created on the target.
 
     Returns:
-        ActionResultModel dict with ``context.skin_cluster_name``.
+        ToolResult dict with ``context.skin_cluster_name``.
     """
 
     try:

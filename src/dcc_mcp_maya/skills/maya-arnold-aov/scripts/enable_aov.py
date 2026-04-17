@@ -16,7 +16,7 @@ def enable_aov(name: str, enabled: bool = True) -> dict:
         enabled: ``True`` to enable, ``False`` to disable.  Default: True.
 
     Returns:
-        ActionResultModel dict with ``context.aov_node``, ``context.enabled``.
+        ToolResult dict with ``context.aov_node``, ``context.enabled``.
     """
     try:
         import maya.cmds as cmds  # noqa: PLC0415

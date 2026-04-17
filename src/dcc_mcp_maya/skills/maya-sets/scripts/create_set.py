@@ -24,7 +24,7 @@ def create_set(
             If None or empty, an empty set is created.
 
     Returns:
-        ActionResultModel dict with ``context.set_name`` and
+        ToolResult dict with ``context.set_name`` and
         ``context.objects_added``.
     """
 

@@ -19,7 +19,7 @@ def list_materials(shader_type: Optional[str] = None) -> dict:
         shader_type: Optional filter by shader type (e.g. ``"lambert"``).
 
     Returns:
-        ActionResultModel dict with ``context.materials`` list.
+        ToolResult dict with ``context.materials`` list.
     """
     try:
         import maya.cmds as cmds  # noqa: PLC0415

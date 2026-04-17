@@ -24,7 +24,7 @@ def get_mesh_edge_info(
             If None, all edges are queried (may be slow on dense meshes).
 
     Returns:
-        ActionResultModel dict with ``context.edges`` (list of dicts with
+        ToolResult dict with ``context.edges`` (list of dicts with
         ``index``, ``length``, ``vertices``), ``context.edge_count``.
     """
     try:

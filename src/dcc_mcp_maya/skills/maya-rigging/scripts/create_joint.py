@@ -30,7 +30,7 @@ def create_joint(
             under.  If None, the joint is created at the world root.
 
     Returns:
-        ActionResultModel dict with ``context.object_name``,
+        ToolResult dict with ``context.object_name``,
         ``context.position``, and ``context.parent``.
     """
 

@@ -25,7 +25,7 @@ def assign_deformer(
         deformer_type: Deformer type string.  Default: ``"cluster"``.
 
     Returns:
-        ActionResultModel dict with ``context.deformer_name``,
+        ToolResult dict with ``context.deformer_name``,
         ``context.handle_name`` (for cluster/lattice) if applicable.
     """
 

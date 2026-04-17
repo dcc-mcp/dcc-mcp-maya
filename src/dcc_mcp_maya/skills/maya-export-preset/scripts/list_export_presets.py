@@ -20,7 +20,7 @@ def list_export_presets(preset_dir: Optional[str] = None) -> dict:
             ``<project_root>/export_presets``.
 
     Returns:
-        ActionResultModel dict with ``context.presets`` (list of dicts)
+        ToolResult dict with ``context.presets`` (list of dicts)
         and ``context.count``.
     """
     try:

@@ -19,7 +19,7 @@ def set_ocean_attribute(shader: str, attribute: str, value: float) -> dict:
         value: Numeric value to set.
 
     Returns:
-        ActionResultModel dict confirming the attribute change.
+        ToolResult dict confirming the attribute change.
     """
 
     try:

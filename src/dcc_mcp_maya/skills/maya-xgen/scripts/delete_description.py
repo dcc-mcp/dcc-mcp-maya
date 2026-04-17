@@ -18,7 +18,7 @@ def delete_description(
         description: Description name to delete.
 
     Returns:
-        ActionResultModel dict.
+        ToolResult dict.
     """
     try:
         import xgenm as xg  # noqa: PLC0415

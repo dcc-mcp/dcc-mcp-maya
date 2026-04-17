@@ -32,7 +32,7 @@ def toggle_gpu_override(
             False to restore normal display.  Default: True.
 
     Returns:
-        ActionResultModel dict with ``context.object_name``,
+        ToolResult dict with ``context.object_name``,
         ``context.enabled``, ``context.display_type``.
     """
 

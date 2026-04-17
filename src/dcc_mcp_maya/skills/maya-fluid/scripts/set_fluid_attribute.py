@@ -19,7 +19,7 @@ def set_fluid_attribute(fluid_shape: str, attribute: str, value: float) -> dict:
         value: Numeric value to set.
 
     Returns:
-        ActionResultModel dict confirming the attribute change.
+        ToolResult dict confirming the attribute change.
     """
     try:
         import maya.cmds as cmds  # noqa: PLC0415

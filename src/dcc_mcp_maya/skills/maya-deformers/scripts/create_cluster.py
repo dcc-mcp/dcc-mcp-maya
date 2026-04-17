@@ -31,7 +31,7 @@ def create_cluster(
             (deformation relative to the cluster handle pivot).
 
     Returns:
-        ActionResultModel dict with ``context.cluster_node``,
+        ToolResult dict with ``context.cluster_node``,
         ``context.cluster_handle``.
     """
     # Normalise: merge mesh + objects into a single list

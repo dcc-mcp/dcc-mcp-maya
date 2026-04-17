@@ -24,7 +24,7 @@ def prune_skin_weights(
             Default: 0.01.
 
     Returns:
-        ActionResultModel dict with ``context.skin_cluster_name`` and
+        ToolResult dict with ``context.skin_cluster_name`` and
         ``context.prune_value``.
     """
 

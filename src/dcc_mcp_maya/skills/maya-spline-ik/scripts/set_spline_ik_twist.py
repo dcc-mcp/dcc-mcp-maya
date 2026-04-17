@@ -42,7 +42,7 @@ def set_spline_ik_twist(
         twist_type: Interpolation type — ``"linear"`` or ``"easeInOut"``.
 
     Returns:
-        ActionResultModel dict with the configured twist parameters.
+        ToolResult dict with the configured twist parameters.
     """
 
     try:

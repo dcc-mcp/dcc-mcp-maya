@@ -45,7 +45,7 @@ def create_expression(
             ``1`` = all,  ``2`` = angularOnly.  Default: 0.
 
     Returns:
-        ActionResultModel dict with ``context.expression_name``.
+        ToolResult dict with ``context.expression_name``.
     """
 
     _VALID_UNIT_CONVERSIONS = (0, 1, 2)
@@ -106,7 +106,7 @@ def list_expressions(
             this node.  If None, all expression nodes are returned.
 
     Returns:
-        ActionResultModel dict with ``context.expressions`` — a list of
+        ToolResult dict with ``context.expressions`` — a list of
         dicts with ``name`` and ``string`` (the MEL expression body), and
         ``context.count``.
     """
@@ -163,7 +163,7 @@ def delete_expression(
         expression_name: Name of the expression node to delete.
 
     Returns:
-        ActionResultModel dict with ``context.expression_name``.
+        ToolResult dict with ``context.expression_name``.
     """
 
     try:

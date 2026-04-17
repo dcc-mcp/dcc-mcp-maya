@@ -21,7 +21,7 @@ def lock_object(object_name: str, lock: bool = True) -> dict:
         lock: True to lock, False to unlock.
 
     Returns:
-        ActionResultModel dict.
+        ToolResult dict.
     """
 
     try:

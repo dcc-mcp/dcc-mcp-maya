@@ -23,7 +23,7 @@ def get_uv_shell_info(object_name: str, uv_set: Optional[str] = None) -> dict:
         uv_set: UV set to query.  If None, uses the current active UV set.
 
     Returns:
-        ActionResultModel dict with ``context.shell_count``,
+        ToolResult dict with ``context.shell_count``,
         ``context.shells`` (list of dicts with ``u_min``, ``v_min``,
         ``u_max``, ``v_max``, ``uv_indices``).
     """

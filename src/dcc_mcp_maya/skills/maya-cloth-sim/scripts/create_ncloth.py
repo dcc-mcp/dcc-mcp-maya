@@ -26,7 +26,7 @@ def create_ncloth(
             ``'rubber'``. Default ``'cotton'``.
 
     Returns:
-        ActionResultModel dict with ``context.ncloth_shape`` and
+        ToolResult dict with ``context.ncloth_shape`` and
         ``context.nucleus``.
     """
     try:

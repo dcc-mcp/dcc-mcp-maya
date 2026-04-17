@@ -21,7 +21,7 @@ def swap_proxy(proxy: str, show_proxy: Optional[bool] = None) -> dict:
             If ``None``, toggles the current state.
 
     Returns:
-        ActionResultModel dict with ``context.proxy_visible`` and ``context.source_visible``.
+        ToolResult dict with ``context.proxy_visible`` and ``context.source_visible``.
     """
 
     try:

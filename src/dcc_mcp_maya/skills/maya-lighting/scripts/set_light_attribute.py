@@ -26,7 +26,7 @@ def set_light_attribute(
         value: New value.
 
     Returns:
-        ActionResultModel dict.
+        ToolResult dict.
     """
     try:
         import maya.cmds as cmds  # noqa: PLC0415

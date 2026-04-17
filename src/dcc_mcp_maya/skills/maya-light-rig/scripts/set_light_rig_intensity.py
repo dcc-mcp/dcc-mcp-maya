@@ -42,7 +42,7 @@ def set_light_rig_intensity(
             instead of setting an absolute value.  Default: False.
 
     Returns:
-        ActionResultModel dict with ``context.updated_lights`` and
+        ToolResult dict with ``context.updated_lights`` and
         ``context.rig_group``.
     """
     try:

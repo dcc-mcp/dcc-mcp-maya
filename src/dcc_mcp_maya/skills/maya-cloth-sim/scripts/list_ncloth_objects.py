@@ -11,7 +11,7 @@ def list_ncloth_objects() -> dict:
     """List all nCloth shape nodes with mesh and nucleus connections.
 
     Returns:
-        ActionResultModel dict with ``context.cloth_objects`` (list of dicts),
+        ToolResult dict with ``context.cloth_objects`` (list of dicts),
         ``context.nucleus_nodes``, and ``context.count``.
     """
     try:

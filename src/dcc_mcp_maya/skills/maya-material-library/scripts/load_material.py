@@ -26,7 +26,7 @@ def load_material(
             recreated material to.
 
     Returns:
-        ActionResultModel dict with the created node name and assignment info.
+        ToolResult dict with the created node name and assignment info.
     """
     try:
         import maya.cmds as cmds  # noqa: PLC0415

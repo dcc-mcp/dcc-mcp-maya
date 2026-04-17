@@ -21,7 +21,7 @@ def reset_to_default_material(object_name: str) -> dict:
         object_name: Transform or mesh node name to reset.
 
     Returns:
-        ActionResultModel dict with ``context.object_name``.
+        ToolResult dict with ``context.object_name``.
     """
     try:
         import maya.cmds as cmds  # noqa: PLC0415

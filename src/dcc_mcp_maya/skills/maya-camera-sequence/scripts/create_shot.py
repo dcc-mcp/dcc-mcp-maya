@@ -30,7 +30,7 @@ def create_shot(
             Defaults to ``start_frame``.
 
     Returns:
-        ActionResultModel dict with ``shot_node``, ``camera``, ``start_frame``,
+        ToolResult dict with ``shot_node``, ``camera``, ``start_frame``,
         ``end_frame``, and ``sequence_start_frame``.
     """
     try:

@@ -16,7 +16,7 @@ def list_all_cameras(include_default: bool = True) -> dict:
             (``persp``, ``top``, ``front``, ``side``).  Default: True.
 
     Returns:
-        ActionResultModel dict with ``context.cameras`` list.
+        ToolResult dict with ``context.cameras`` list.
     """
     _DEFAULT_CAMERAS = {"persp", "top", "front", "side"}
 

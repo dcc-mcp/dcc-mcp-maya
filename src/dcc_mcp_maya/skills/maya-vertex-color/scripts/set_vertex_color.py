@@ -30,7 +30,7 @@ def set_vertex_color(
         color_set: Target color set name.  If None, uses the current set.
 
     Returns:
-        ActionResultModel dict with ``context.colored_count``.
+        ToolResult dict with ``context.colored_count``.
     """
 
     try:

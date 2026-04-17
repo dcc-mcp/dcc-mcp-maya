@@ -21,7 +21,7 @@ def freeze_transforms(object_name: str) -> dict:
         object_name: Name of the object whose transforms to freeze.
 
     Returns:
-        ActionResultModel dict.
+        ToolResult dict.
     """
 
     try:

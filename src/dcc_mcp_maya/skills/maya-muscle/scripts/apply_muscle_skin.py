@@ -23,7 +23,7 @@ def apply_muscle_skin(
         muscles: List of cMuscleObject nodes to connect. If empty, all scene muscles are used.
 
     Returns:
-        ActionResultModel dict with ``context.system_node`` and ``context.muscles_connected``.
+        ToolResult dict with ``context.system_node`` and ``context.muscles_connected``.
     """
 
     try:

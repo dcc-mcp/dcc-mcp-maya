@@ -25,7 +25,7 @@ def cleanup_mesh(
             Default: True.
 
     Returns:
-        ActionResultModel dict.
+        ToolResult dict.
     """
     try:
         import maya.cmds as cmds  # noqa: PLC0415

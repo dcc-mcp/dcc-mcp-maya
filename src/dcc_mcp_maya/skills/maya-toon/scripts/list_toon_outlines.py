@@ -13,7 +13,7 @@ def list_toon_outlines() -> dict:
     """List all pfxToon outline nodes and their linked meshes.
 
     Returns:
-        ActionResultModel dict with a list of toon outline info dicts.
+        ToolResult dict with a list of toon outline info dicts.
     """
 
     try:

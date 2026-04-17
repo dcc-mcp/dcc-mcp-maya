@@ -34,7 +34,7 @@ def skin_cluster_bind(
         name: Optional name for the skin cluster node.
 
     Returns:
-        ActionResultModel dict with ``context.skin_cluster_name``,
+        ToolResult dict with ``context.skin_cluster_name``,
         ``context.joint_count``.
     """
 

@@ -26,7 +26,7 @@ def get_vertex_color(
         color_set: Color set name to query.  If None, uses the current set.
 
     Returns:
-        ActionResultModel dict with color data.
+        ToolResult dict with color data.
     """
 
     try:

@@ -25,7 +25,7 @@ def create_description(
             "SpherePrimitive".
 
     Returns:
-        ActionResultModel dict with ``context.collection``, ``context.description``.
+        ToolResult dict with ``context.collection``, ``context.description``.
     """
     try:
         import maya.cmds as cmds  # noqa: PLC0415

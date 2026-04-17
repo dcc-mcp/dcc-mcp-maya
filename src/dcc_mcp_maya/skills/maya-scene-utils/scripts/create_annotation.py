@@ -29,7 +29,7 @@ def create_annotation(
             ``[x, y, z]``.  Defaults to slightly above the object's pivot.
 
     Returns:
-        ActionResultModel dict with ``context.annotation_transform``,
+        ToolResult dict with ``context.annotation_transform``,
         ``context.object_name``, ``context.text``.
     """
 

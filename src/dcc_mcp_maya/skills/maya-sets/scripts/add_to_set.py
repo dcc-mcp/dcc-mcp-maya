@@ -23,7 +23,7 @@ def add_to_set(
         objects: List of object names to add.
 
     Returns:
-        ActionResultModel dict with ``context.set_name`` and
+        ToolResult dict with ``context.set_name`` and
         ``context.objects_added``.
     """
 

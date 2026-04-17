@@ -18,7 +18,7 @@ def create_assembly_definition(name: Optional[str] = None) -> dict:
             Defaults to ``"assemblyDefinition1"``.
 
     Returns:
-        ActionResultModel dict with ``context.node``.
+        ToolResult dict with ``context.node``.
     """
 
     try:

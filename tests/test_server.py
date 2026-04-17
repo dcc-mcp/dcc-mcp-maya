@@ -282,13 +282,19 @@ class TestSkillSearchPaths:
 
 class TestModuleSingleton:
     def test_start_stop_module_functions(self):
-        """Module-level start_server / stop_server singleton pattern."""
+        """Module-level start_server / stop_server singleton pattern.
+
+        The singleton holder is encapsulated inside
+        ``dcc_mcp_core.factory.make_start_stop``'s closure; the public
+        contract is only that ``start_server`` returns a handle and that
+        ``stop_server`` is a safe no-op afterwards.
+        """
         srv_mod = _import_server()
         handle = srv_mod.start_server(port=0, register_builtins=False)
         assert handle is not None
         srv_mod.stop_server()
-        # After stop, the instance is reset
-        assert srv_mod._server_instance is None
+        # Calling stop again must remain a no-op.
+        srv_mod.stop_server()
 
     def test_start_server_idempotent(self):
         """Calling start_server twice returns the same handle."""

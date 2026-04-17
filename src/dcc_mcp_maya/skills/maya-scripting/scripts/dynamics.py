@@ -43,7 +43,7 @@ def create_nucleus(
             Defaults to ``[0, 0, 1]`` (positive Z) when not provided.
 
     Returns:
-        ActionResultModel dict with ``context.nucleus_node``,
+        ToolResult dict with ``context.nucleus_node``,
         ``context.gravity``, ``context.wind_speed``.
     """
 
@@ -105,7 +105,7 @@ def set_nucleus_attribute(
             ``"windDirection"``.
 
     Returns:
-        ActionResultModel dict with ``context.nucleus``,
+        ToolResult dict with ``context.nucleus``,
         ``context.attribute``, ``context.value``.
     """
 
@@ -167,7 +167,7 @@ def create_dynamic_field(
             the field to via ``cmds.connectDynamic(fields=...)``.
 
     Returns:
-        ActionResultModel dict with ``context.field_node``,
+        ToolResult dict with ``context.field_node``,
         ``context.field_type``, ``context.magnitude``.
     """
 
@@ -239,7 +239,7 @@ def connect_field_to_objects(
             nCloth, nRigid) to receive the field influence.
 
     Returns:
-        ActionResultModel dict with ``context.field_node`` and
+        ToolResult dict with ``context.field_node`` and
         ``context.connected_objects``.
     """
 
@@ -292,7 +292,7 @@ def create_ncloth(
         name: Optional name for the nCloth shape node.
 
     Returns:
-        ActionResultModel dict with ``context.ncloth_node``,
+        ToolResult dict with ``context.ncloth_node``,
         ``context.mesh``, ``context.nucleus``.
     """
 
@@ -363,7 +363,7 @@ def create_nrigid(
         name: Optional name for the nRigid shape node.
 
     Returns:
-        ActionResultModel dict with ``context.nrigid_node``,
+        ToolResult dict with ``context.nrigid_node``,
         ``context.mesh``, ``context.nucleus``.
     """
 
@@ -432,7 +432,7 @@ def set_ncloth_attribute(
         value: Scalar float value, or ``[x, y, z]`` list for triple attrs.
 
     Returns:
-        ActionResultModel dict with ``context.ncloth_node``,
+        ToolResult dict with ``context.ncloth_node``,
         ``context.attribute``, ``context.value``.
     """
 
@@ -482,7 +482,7 @@ def list_ncloth_nodes() -> dict:
     parent transform, and the connected nucleus solver (if any).
 
     Returns:
-        ActionResultModel dict with ``context.nodes`` (list of dicts) and
+        ToolResult dict with ``context.nodes`` (list of dicts) and
         ``context.count``.
     """
 
@@ -539,7 +539,7 @@ def set_nrigid_attribute(
             or string.
 
     Returns:
-        ActionResultModel dict with ``context.nrigid_node``,
+        ToolResult dict with ``context.nrigid_node``,
         ``context.attribute``, ``context.value``.
     """
 
@@ -596,7 +596,7 @@ def list_nrigid_nodes():
     """List all nRigid (passive collider) shape nodes in the current Maya scene.
 
     Returns:
-        ActionResultModel dict with ``context.nodes`` (list of dicts with
+        ToolResult dict with ``context.nodes`` (list of dicts with
         ``name``, ``transform``, ``nucleus``) and ``context.count``.
     """
 

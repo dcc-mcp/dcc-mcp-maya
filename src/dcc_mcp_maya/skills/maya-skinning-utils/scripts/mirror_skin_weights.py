@@ -32,7 +32,7 @@ def mirror_skin_weights(
             if False, copy from negative to positive.
 
     Returns:
-        ActionResultModel dict with ``context.skin_cluster_name``.
+        ToolResult dict with ``context.skin_cluster_name``.
     """
 
     try:

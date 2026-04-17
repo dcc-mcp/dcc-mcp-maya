@@ -75,7 +75,7 @@ def create_control_curve(
             If None, no override is applied.
 
     Returns:
-        ActionResultModel dict with ``context.curve_name``.
+        ToolResult dict with ``context.curve_name``.
     """
 
     try:

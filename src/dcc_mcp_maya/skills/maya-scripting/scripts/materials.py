@@ -26,7 +26,7 @@ def create_material(
         name: Optional name for the created material.
 
     Returns:
-        ActionResultModel dict with ``context.material_name`` and
+        ToolResult dict with ``context.material_name`` and
         ``context.shading_group``.
     """
 
@@ -59,7 +59,7 @@ def assign_material(material_name: str, objects: List[str]) -> dict:
         objects: List of mesh/transform object names.
 
     Returns:
-        ActionResultModel dict.
+        ToolResult dict.
     """
 
     try:
@@ -113,7 +113,7 @@ def set_material_attribute(
         value: New value.  Scalar, list-of-3 (RGB), or list-of-4 (RGBA).
 
     Returns:
-        ActionResultModel dict.
+        ToolResult dict.
     """
 
     try:
@@ -149,7 +149,7 @@ def list_materials(shader_type: Optional[str] = None) -> dict:
         shader_type: Optional filter by shader type (e.g. ``"lambert"``).
 
     Returns:
-        ActionResultModel dict with ``context.materials`` list.
+        ToolResult dict with ``context.materials`` list.
     """
 
     try:
@@ -191,7 +191,7 @@ def get_shader_assignment(object_name: str) -> dict:
             (e.g. ``"pCube1"`` or ``"pCube1.f[0:5]"``).
 
     Returns:
-        ActionResultModel dict with ``context.shading_groups`` — a list of
+        ToolResult dict with ``context.shading_groups`` — a list of
         dicts with ``shading_group`` and ``material`` keys.
     """
 
@@ -245,7 +245,7 @@ def get_material_connections(material_name: str) -> dict:
         material_name: Name of the material node to inspect.
 
     Returns:
-        ActionResultModel dict with ``context.connections`` — a list of dicts
+        ToolResult dict with ``context.connections`` — a list of dicts
         with ``source_node``, ``source_attr``, ``dest_attr``, ``node_type``
         keys, and ``context.count``.
     """
@@ -311,7 +311,7 @@ def list_shading_groups() -> dict:
     assigned surface shader and the number of members.
 
     Returns:
-        ActionResultModel dict with ``context.shading_groups`` — a list of
+        ToolResult dict with ``context.shading_groups`` — a list of
         dicts with ``name``, ``surface_shader``, ``shader_type``,
         ``member_count`` keys, and ``context.count``.
     """
@@ -361,7 +361,7 @@ def reset_to_default_material(object_name: str) -> dict:
         object_name: Transform or mesh node name to reset.
 
     Returns:
-        ActionResultModel dict with ``context.object_name``.
+        ToolResult dict with ``context.object_name``.
     """
 
     try:

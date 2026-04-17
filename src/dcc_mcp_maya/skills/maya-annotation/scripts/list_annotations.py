@@ -12,7 +12,7 @@ def list_annotations() -> dict:
     """List all annotation nodes in the current Maya scene.
 
     Returns:
-        ActionResultModel dict with ``context.annotations`` (list of dicts
+        ToolResult dict with ``context.annotations`` (list of dicts
         with ``annotation_node``, ``transform_node``, ``text``) and
         ``context.count``.
     """

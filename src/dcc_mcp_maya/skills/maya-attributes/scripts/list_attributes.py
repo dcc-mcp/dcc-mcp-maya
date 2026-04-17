@@ -23,7 +23,7 @@ def list_attributes(
         keyable_only: If True, only return keyable (channel-box) attributes.
 
     Returns:
-        ActionResultModel dict with ``context.attributes`` list.
+        ToolResult dict with ``context.attributes`` list.
     """
     try:
         import maya.cmds as cmds  # noqa: PLC0415

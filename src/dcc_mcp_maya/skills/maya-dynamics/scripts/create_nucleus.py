@@ -41,7 +41,7 @@ def create_nucleus(
             Defaults to ``[0, 0, 1]`` (positive Z) when not provided.
 
     Returns:
-        ActionResultModel dict with ``context.nucleus_node``,
+        ToolResult dict with ``context.nucleus_node``,
         ``context.gravity``, ``context.wind_speed``.
     """
     wind_dir = wind_direction if (wind_direction and len(wind_direction) == 3) else [0.0, 0.0, 1.0]

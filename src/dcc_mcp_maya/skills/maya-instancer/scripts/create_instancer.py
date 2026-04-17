@@ -33,7 +33,7 @@ def create_instancer(
         level_of_detail: ``0`` = Geometry, ``1`` = Bounding Box, ``2`` = Bounding Box / Faces.
 
     Returns:
-        ActionResultModel dict with ``context.instancer_node`` and
+        ToolResult dict with ``context.instancer_node`` and
         ``context.instance_objects``.
     """
     try:

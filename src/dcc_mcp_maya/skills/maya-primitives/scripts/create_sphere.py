@@ -18,7 +18,7 @@ def create_sphere(radius: float = 1.0, name: Optional[str] = None) -> dict:
         name: Optional name for the created object.
 
     Returns:
-        ActionResultModel dict with ``context.object_name``.
+        ToolResult dict with ``context.object_name``.
     """
     try:
         import maya.cmds as cmds  # noqa: PLC0415

@@ -14,7 +14,7 @@ def get_scene_render_stats() -> dict:
     the current render quality attributes from ``defaultRenderQuality``.
 
     Returns:
-        ActionResultModel dict with:
+        ToolResult dict with:
         - ``context.renderer`` — current renderer string
         - ``context.width`` / ``context.height`` — render resolution
         - ``context.start_frame`` / ``context.end_frame``

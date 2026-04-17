@@ -27,7 +27,7 @@ def delete_geometry_cache(
             files from disk.  Default ``False``.
 
     Returns:
-        ActionResultModel dict with ``context.deleted_node`` and
+        ToolResult dict with ``context.deleted_node`` and
         ``context.files_deleted``.
     """
     try:

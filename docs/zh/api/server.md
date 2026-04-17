@@ -130,7 +130,7 @@ server.stop() -> None
 |------|------|------|
 | `is_running` | `bool` | 服务器是否正在运行 |
 | `mcp_url` | `Optional[str]` | MCP 端点 URL，未运行时为 `None` |
-| `registry` | `ActionRegistry` | 底层 Action 注册表 |
+| `registry` | `ToolRegistry` | 底层工具（Tool）注册表 |
 
 ### 完整生命周期示例
 

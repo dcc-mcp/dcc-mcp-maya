@@ -12,7 +12,7 @@ def list_audio() -> dict:
     """List all sound nodes in the current Maya scene.
 
     Returns:
-        ActionResultModel dict with ``context.sound_nodes`` (list of dicts
+        ToolResult dict with ``context.sound_nodes`` (list of dicts
         with ``node``, ``file_path``, ``offset``) and ``context.count``.
     """
     try:

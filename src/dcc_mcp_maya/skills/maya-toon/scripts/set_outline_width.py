@@ -25,7 +25,7 @@ def set_outline_width(
             (default) it is left unchanged.
 
     Returns:
-        ActionResultModel dict confirming the new values.
+        ToolResult dict confirming the new values.
     """
 
     try:

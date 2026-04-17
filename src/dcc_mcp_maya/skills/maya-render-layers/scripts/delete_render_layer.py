@@ -22,7 +22,7 @@ def delete_render_layer(layer_name: str) -> dict:
         layer_name: Name of the render layer to delete.
 
     Returns:
-        ActionResultModel dict with ``context.layer_name``.
+        ToolResult dict with ``context.layer_name``.
     """
 
     try:

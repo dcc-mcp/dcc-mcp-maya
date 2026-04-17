@@ -18,7 +18,7 @@ def list_mel_procedures(pattern: str = "", limit: int = 200) -> dict:
         limit: Maximum number of results to return. Default 200.
 
     Returns:
-        ActionResultModel dict with ``context.procedures`` list and ``context.count``.
+        ToolResult dict with ``context.procedures`` list and ``context.count``.
     """
 
     try:

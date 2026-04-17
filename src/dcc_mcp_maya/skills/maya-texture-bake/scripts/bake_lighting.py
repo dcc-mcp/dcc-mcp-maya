@@ -37,7 +37,7 @@ def bake_lighting(
         bake_shadows: Include shadow contribution.  Default: ``True``.
 
     Returns:
-        ActionResultModel dict with ``baked_files``, ``objects``, ``resolution``.
+        ToolResult dict with ``baked_files``, ``objects``, ``resolution``.
     """
 
     try:

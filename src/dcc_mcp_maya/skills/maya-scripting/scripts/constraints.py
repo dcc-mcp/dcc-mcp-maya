@@ -34,7 +34,7 @@ def add_constraint(
         name: Optional name for the constraint node.
 
     Returns:
-        ActionResultModel dict with ``context.constraint_name``,
+        ToolResult dict with ``context.constraint_name``,
         ``context.constraint_type``, ``context.source``, ``context.target``.
     """
 
@@ -100,7 +100,7 @@ def remove_constraint(
             If None, removes all supported constraints.
 
     Returns:
-        ActionResultModel dict with ``context.removed`` list of removed
+        ToolResult dict with ``context.removed`` list of removed
         constraint node names.
     """
 
@@ -156,7 +156,7 @@ def list_constraints(
         target: Name of the constrained node to query.
 
     Returns:
-        ActionResultModel dict with ``context.constraints`` — a list of dicts
+        ToolResult dict with ``context.constraints`` — a list of dicts
         with ``name`` and ``type`` for each constraint found.
     """
 
@@ -220,7 +220,7 @@ def create_constraint_weighted(
         name: Optional name for the constraint node.
 
     Returns:
-        ActionResultModel dict with ``context.constraint_name``,
+        ToolResult dict with ``context.constraint_name``,
         ``context.sources``, ``context.weights_applied``.
     """
 

@@ -40,7 +40,7 @@ def mirror_pose(
             Default: ``R_``.
 
     Returns:
-        ActionResultModel dict with ``context.mirrored_pairs`` and
+        ToolResult dict with ``context.mirrored_pairs`` and
         ``context.output_path``.
     """
 

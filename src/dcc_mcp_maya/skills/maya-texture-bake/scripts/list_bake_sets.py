@@ -16,7 +16,7 @@ def list_bake_sets() -> dict:
     and Transfer Maps workflows to store bake parameters.
 
     Returns:
-        ActionResultModel dict with ``bake_sets`` list.  Each entry contains
+        ToolResult dict with ``bake_sets`` list.  Each entry contains
         ``name``, ``resolution``, ``file_format``, and ``members``.
     """
 

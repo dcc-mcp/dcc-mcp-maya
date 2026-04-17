@@ -27,7 +27,7 @@ def get_script_node(
         script_type: 0=demand, 1=open/close, 2=ui create, 3=ui delete. Default 0.
 
     Returns:
-        ActionResultModel dict with ``context.script_node`` info dict.
+        ToolResult dict with ``context.script_node`` info dict.
     """
 
     if not node_name:

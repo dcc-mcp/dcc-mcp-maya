@@ -50,7 +50,7 @@ def _make_server():
 
 
 def _make_server_with_registry():
-    """Create server + inject a mock ActionRegistry."""
+    """Create server + inject a mock ToolRegistry."""
     server = _make_server()
     mock_registry = MagicMock()
     # The `registry` property reads `self._server.registry`
@@ -67,41 +67,40 @@ class TestSearchSkills:
     def test_returns_list_from_search_actions(self):
         server, reg = _make_server_with_registry()
         reg.search_actions.return_value = [{"name": "maya_scene__create_object"}]
-        result = server.search_actions(query="geometry")
+        result = server.search_actions(category="geometry")
         assert isinstance(result, list)
         assert len(result) == 1
 
     def test_default_dcc_name_is_maya(self):
         server, reg = _make_server_with_registry()
         reg.search_actions.return_value = []
-        server.search_actions(query="mesh")
-        call_kwargs = reg.search_actions.call_args
-        # search_actions passes dcc_name to registry
-        assert call_kwargs[1].get("dcc_name") == "maya" or call_kwargs[0][1] == "maya"
+        server.search_actions(tags=["mesh"])
+        call_kwargs = reg.search_actions.call_args.kwargs
+        assert call_kwargs.get("dcc_name") == "maya"
 
     def test_explicit_dcc_name_is_forwarded(self):
         server, reg = _make_server_with_registry()
         reg.search_actions.return_value = []
-        server.search_actions(query="node", dcc_name="houdini")
-        call_kwargs = reg.search_actions.call_args
-        assert call_kwargs[1].get("dcc_name") == "houdini"
+        server.search_actions(category="node", dcc_name="houdini")
+        call_kwargs = reg.search_actions.call_args.kwargs
+        assert call_kwargs.get("dcc_name") == "houdini"
 
     def test_returns_empty_when_registry_none(self):
         server = _make_server()
         server._server.registry = None
-        result = server.search_actions(query="x")
+        result = server.search_actions()
         assert result == []
 
     def test_returns_empty_on_exception(self):
         server, reg = _make_server_with_registry()
         reg.search_actions.side_effect = RuntimeError("boom")
-        result = server.search_actions(query="x")
+        result = server.search_actions()
         assert result == []
 
     def test_returns_empty_when_no_registry_attr(self):
         server = _make_server()
         server._server.registry = None
-        result = server.search_actions(query="foo")
+        result = server.search_actions(category="foo")
         assert result == []
 
 

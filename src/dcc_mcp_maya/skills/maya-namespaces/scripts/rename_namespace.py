@@ -23,7 +23,7 @@ def rename_namespace(
         new_name: Target namespace name (relative).
 
     Returns:
-        ActionResultModel dict with ``old_name``, ``new_name``.
+        ToolResult dict with ``old_name``, ``new_name``.
     """
 
     try:

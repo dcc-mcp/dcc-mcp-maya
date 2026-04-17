@@ -29,7 +29,7 @@ def set_keyframe(
             attribute is provided.
 
     Returns:
-        ActionResultModel dict with ``context.keyframe_count``.
+        ToolResult dict with ``context.keyframe_count``.
     """
 
     try:
@@ -74,7 +74,7 @@ def get_keyframes(
             returns keyframes across all attributes.
 
     Returns:
-        ActionResultModel dict with ``context.keyframes`` list of frame numbers.
+        ToolResult dict with ``context.keyframes`` list of frame numbers.
     """
 
     try:
@@ -120,7 +120,7 @@ def set_timeline(
             ``end_frame`` if not specified.
 
     Returns:
-        ActionResultModel dict with timeline range info.
+        ToolResult dict with timeline range info.
     """
 
     try:
@@ -155,7 +155,7 @@ def get_current_time() -> dict:
     """Get the current frame number.
 
     Returns:
-        ActionResultModel dict with ``context.current_time``.
+        ToolResult dict with ``context.current_time``.
     """
 
     try:
@@ -180,7 +180,7 @@ def set_current_time(frame: float) -> dict:
         frame: Target frame number.
 
     Returns:
-        ActionResultModel dict with ``context.current_time``.
+        ToolResult dict with ``context.current_time``.
     """
 
     try:
@@ -216,7 +216,7 @@ def delete_keyframes(
             *start_frame* is also None, all keyframes are deleted.
 
     Returns:
-        ActionResultModel dict with ``context.deleted_count``.
+        ToolResult dict with ``context.deleted_count``.
     """
 
     try:
@@ -272,7 +272,7 @@ def bake_simulation(
             ``0.5`` = every half-frame).  Default: 1.
 
     Returns:
-        ActionResultModel dict with ``context.object_count`` and frame range.
+        ToolResult dict with ``context.object_count`` and frame range.
     """
 
     try:
@@ -327,7 +327,7 @@ def list_animation_curves(
             all animCurve nodes connected to the object are returned.
 
     Returns:
-        ActionResultModel dict with ``context.curves`` list of dicts
+        ToolResult dict with ``context.curves`` list of dicts
         containing ``name``, ``type``, ``key_count``, and ``attribute``.
     """
 
@@ -405,7 +405,7 @@ def set_animation_curve_tangent(
         out_tangent_type: Override for the outgoing tangent type only.
 
     Returns:
-        ActionResultModel dict with ``context.object_name``,
+        ToolResult dict with ``context.object_name``,
         ``context.attribute``, ``context.frame``, ``context.tangent_type``.
     """
 
@@ -485,7 +485,7 @@ def bake_constraints(
             objects after baking.  Default: False.
 
     Returns:
-        ActionResultModel dict with ``context.object_count``,
+        ToolResult dict with ``context.object_count``,
         ``context.objects``, ``context.removed_constraints``.
     """
 
@@ -573,7 +573,7 @@ def export_animation_curves(
         end_frame: Last frame of the export range.  ``None`` = scene end.
 
     Returns:
-        ActionResultModel dict with ``context.file_path`` and
+        ToolResult dict with ``context.file_path`` and
         ``context.curve_count``.
     """
 
@@ -650,7 +650,7 @@ def import_animation_curves(
             than replaced (``cmds.file(i=True, mergeNamespacesOnClash=True)``).
 
     Returns:
-        ActionResultModel dict with ``context.file_path`` and
+        ToolResult dict with ``context.file_path`` and
         ``context.target_object``.
     """
 
@@ -712,7 +712,7 @@ def query_scene_time_info() -> dict:
     frame rate, animation range, playback range, and current time.
 
     Returns:
-        ActionResultModel dict with ``context`` keys:
+        ToolResult dict with ``context`` keys:
         ``fps``, ``animation_start``, ``animation_end``,
         ``playback_start``, ``playback_end``, ``current_time``.
     """

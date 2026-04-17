@@ -29,7 +29,7 @@ def set_ik_fk_blend(
             Default: ``"ikBlend"``.
 
     Returns:
-        ActionResultModel dict with ``context.ik_handle``,
+        ToolResult dict with ``context.ik_handle``,
         ``context.attribute``, ``context.blend``.
     """
 

@@ -26,7 +26,7 @@ def list_nrigid_nodes():
     """List all nRigid (passive collider) shape nodes in the current Maya scene.
 
     Returns:
-        ActionResultModel dict with ``context.nodes`` (list of dicts with
+        ToolResult dict with ``context.nodes`` (list of dicts with
         ``name``, ``transform``, ``nucleus``) and ``context.count``.
     """
     try:

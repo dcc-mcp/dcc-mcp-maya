@@ -49,7 +49,7 @@ def create_hik_definition(
             e.g. ``{"Hips": "mixamorig:Hips", "Spine": "mixamorig:Spine"}``.
 
     Returns:
-        ActionResultModel dict with ``context.character_node``, ``context.mapped``,
+        ToolResult dict with ``context.character_node``, ``context.mapped``,
         ``context.skipped``, and ``context.mapped_count``.
     """
 

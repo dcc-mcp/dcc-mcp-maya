@@ -22,7 +22,7 @@ def parent_object(child: str, parent: Optional[str] = None, world: bool = False)
         world: If True, parent the object to the world regardless of *parent*.
 
     Returns:
-        ActionResultModel dict.
+        ToolResult dict.
     """
 
     try:

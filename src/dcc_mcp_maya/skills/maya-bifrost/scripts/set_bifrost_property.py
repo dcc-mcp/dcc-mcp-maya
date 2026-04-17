@@ -31,7 +31,7 @@ def set_bifrost_property(
             supported; lists are joined as a Bifrost vector string.
 
     Returns:
-        ActionResultModel dict with ``context.graph_node``,
+        ToolResult dict with ``context.graph_node``,
         ``context.node_path``, ``context.port_name``, ``context.value``.
     """
     try:

@@ -50,7 +50,7 @@ def add_aov(
         enabled: Whether to enable the AOV immediately.  Default: True.
 
     Returns:
-        ActionResultModel dict with ``context.aov_node``, ``context.aov_type``.
+        ToolResult dict with ``context.aov_node``, ``context.aov_type``.
     """
     try:
         import maya.cmds as cmds  # noqa: PLC0415

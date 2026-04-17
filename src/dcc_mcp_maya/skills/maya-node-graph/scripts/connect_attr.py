@@ -25,7 +25,7 @@ def connect_attr(
             connecting.  Default: False.
 
     Returns:
-        ActionResultModel dict with ``context.source_attr`` and
+        ToolResult dict with ``context.source_attr`` and
         ``context.dest_attr``.
     """
 

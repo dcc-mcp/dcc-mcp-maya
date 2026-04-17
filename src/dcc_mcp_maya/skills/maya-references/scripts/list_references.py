@@ -11,7 +11,7 @@ def list_references() -> dict:
     """List all file references in the current scene.
 
     Returns:
-        ActionResultModel dict with ``context.references`` — a list of dicts
+        ToolResult dict with ``context.references`` — a list of dicts
         with ``reference_node``, ``file_path``, ``namespace``, and ``loaded``.
     """
 

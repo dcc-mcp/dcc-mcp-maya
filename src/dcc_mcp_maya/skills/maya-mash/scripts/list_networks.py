@@ -11,7 +11,7 @@ def list_networks() -> dict:
     """List all MASH networks present in the current scene.
 
     Returns:
-        ActionResultModel dict with ``context.networks`` and ``context.count``.
+        ToolResult dict with ``context.networks`` and ``context.count``.
     """
     try:
         import maya.cmds as cmds  # noqa: PLC0415

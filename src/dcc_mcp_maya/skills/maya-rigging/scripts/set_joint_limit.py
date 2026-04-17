@@ -36,7 +36,7 @@ def set_joint_limit(
             values.
 
     Returns:
-        ActionResultModel dict with ``context.joint_name``,
+        ToolResult dict with ``context.joint_name``,
         ``context.axis``, ``context.min_angle``, ``context.max_angle``,
         ``context.enable``.
     """

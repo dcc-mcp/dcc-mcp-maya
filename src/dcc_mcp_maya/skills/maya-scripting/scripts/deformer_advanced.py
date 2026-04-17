@@ -27,7 +27,7 @@ def create_cluster(
             (deformation relative to the cluster handle pivot).
 
     Returns:
-        ActionResultModel dict with ``context.cluster_node``,
+        ToolResult dict with ``context.cluster_node``,
         ``context.cluster_handle``.
     """
 
@@ -86,7 +86,7 @@ def set_cluster_weights(
         normalize: When ``True``, clamp weights to ``[0, 1]`` before setting.
 
     Returns:
-        ActionResultModel dict with ``context.vertex_count``.
+        ToolResult dict with ``context.vertex_count``.
     """
 
     if not weights:
@@ -153,7 +153,7 @@ def create_lattice(
             FFD base.  If ``None``, the bounding-box size is used.
 
     Returns:
-        ActionResultModel dict with ``context.ffd_node``,
+        ToolResult dict with ``context.ffd_node``,
         ``context.lattice_node``, ``context.base_node``,
         ``context.objects``.
     """
@@ -221,7 +221,7 @@ def wire_deformer(
             zero.  Default: ``100.0``.
 
     Returns:
-        ActionResultModel dict with ``context.wire_node``,
+        ToolResult dict with ``context.wire_node``,
         ``context.curves``, ``context.objects``.
     """
 
@@ -290,7 +290,7 @@ def sculpt_deformer(
         max_displacement: Maximum vertex displacement amount.  Default: ``1.0``.
 
     Returns:
-        ActionResultModel dict with ``context.sculpt_node``,
+        ToolResult dict with ``context.sculpt_node``,
         ``context.sculpt_sphere``, ``context.sculpt_origin``.
     """
 

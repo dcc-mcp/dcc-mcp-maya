@@ -44,7 +44,7 @@ def create_dynamic_field(
             the field to via ``cmds.connectDynamic(fields=...)``.
 
     Returns:
-        ActionResultModel dict with ``context.field_node``,
+        ToolResult dict with ``context.field_node``,
         ``context.field_type``, ``context.magnitude``.
     """
     ft = field_type.lower()

@@ -19,7 +19,7 @@ def refresh_gpu_cache(cache_node: str) -> dict:
         cache_node: Name of the ``gpuCache`` shape node to refresh.
 
     Returns:
-        ActionResultModel dict with ``context.cache_node`` and
+        ToolResult dict with ``context.cache_node`` and
         ``context.file_path``.
     """
     try:

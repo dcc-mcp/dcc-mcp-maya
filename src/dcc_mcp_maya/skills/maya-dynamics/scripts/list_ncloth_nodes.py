@@ -28,7 +28,7 @@ def list_ncloth_nodes() -> dict:
     parent transform, and the connected nucleus solver (if any).
 
     Returns:
-        ActionResultModel dict with ``context.nodes`` (list of dicts) and
+        ToolResult dict with ``context.nodes`` (list of dicts) and
         ``context.count``.
     """
     try:

@@ -48,7 +48,7 @@ def transfer_maps(
             Default: ``0``.
 
     Returns:
-        ActionResultModel dict with ``baked_files``, ``source``, ``target``.
+        ToolResult dict with ``baked_files``, ``source``, ``target``.
     """
 
     try:

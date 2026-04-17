@@ -22,7 +22,7 @@ def set_camera_attribute(camera_name: str, attribute: str, value: object) -> dic
         value: Value to set.
 
     Returns:
-        ActionResultModel dict with ``context.camera_name`` and ``context.attribute``.
+        ToolResult dict with ``context.camera_name`` and ``context.attribute``.
     """
     try:
         import maya.cmds as cmds  # noqa: PLC0415

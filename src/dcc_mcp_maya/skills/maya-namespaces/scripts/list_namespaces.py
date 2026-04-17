@@ -20,7 +20,7 @@ def list_namespaces(include_defaults: bool = False) -> dict:
             namespaces.  Default: ``False``.
 
     Returns:
-        ActionResultModel dict with ``namespaces`` list.  Each entry contains
+        ToolResult dict with ``namespaces`` list.  Each entry contains
         ``name``, ``full_path``, and ``object_count``.
     """
 

@@ -22,7 +22,7 @@ def list_expressions(
         object_name: Filter by object name. Same behaviour as ``object``.
 
     Returns:
-        ActionResultModel dict with ``context.expressions`` list and ``context.count``.
+        ToolResult dict with ``context.expressions`` list and ``context.count``.
         Each expression entry has keys ``name``, ``node``, ``expression_str``.
     """
     # Normalise filter param

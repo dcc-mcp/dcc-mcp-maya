@@ -29,7 +29,7 @@ def copy_uvs(
             the current UV set.
 
     Returns:
-        ActionResultModel dict.
+        ToolResult dict.
     """
 
     try:

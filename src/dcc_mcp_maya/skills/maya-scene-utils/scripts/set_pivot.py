@@ -30,7 +30,7 @@ def set_pivot(
         world_space: If True (default), interpret *position* in world space.
 
     Returns:
-        ActionResultModel dict with ``context.object_name``,
+        ToolResult dict with ``context.object_name``,
         ``context.position``, ``context.pivot_type``.
     """
 

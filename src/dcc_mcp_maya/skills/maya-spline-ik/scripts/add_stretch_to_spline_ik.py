@@ -32,7 +32,7 @@ def add_stretch_to_spline_ik(
             or ``"z"``.  Maya spline IK joints usually stretch on X.
 
     Returns:
-        ActionResultModel dict with ``context.curve_info``,
+        ToolResult dict with ``context.curve_info``,
         ``context.multiply_divide``, and ``context.joints_driven``.
     """
 

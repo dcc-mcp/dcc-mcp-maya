@@ -22,7 +22,7 @@ def create_network(
         geometry_type: "Instancer" (default) or "Repro".
 
     Returns:
-        ActionResultModel dict with ``context.network_name``, ``context.instancer``.
+        ToolResult dict with ``context.network_name``, ``context.instancer``.
     """
     try:
         import maya.cmds as cmds  # noqa: PLC0415

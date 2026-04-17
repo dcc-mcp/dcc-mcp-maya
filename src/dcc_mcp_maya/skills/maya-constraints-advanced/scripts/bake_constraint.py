@@ -34,7 +34,7 @@ def bake_constraint(
             the objects after baking.
 
     Returns:
-        ActionResultModel dict with ``context.baked_objects`` and
+        ToolResult dict with ``context.baked_objects`` and
         ``context.frame_range``.
     """
     try:

@@ -17,7 +17,7 @@ def get_camera_info(camera_name: str) -> dict:
         camera_name: Name of the camera transform or shape node.
 
     Returns:
-        ActionResultModel dict with focal length, clipping planes, aperture, etc.
+        ToolResult dict with focal length, clipping planes, aperture, etc.
     """
     try:
         import maya.cmds as cmds  # noqa: PLC0415

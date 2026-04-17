@@ -25,7 +25,7 @@ def list_history(
             Default: 0.
 
     Returns:
-        ActionResultModel dict with ``context.history`` — a list of dicts
+        ToolResult dict with ``context.history`` — a list of dicts
         with ``name`` and ``type`` for each history node, and
         ``context.count``.
     """

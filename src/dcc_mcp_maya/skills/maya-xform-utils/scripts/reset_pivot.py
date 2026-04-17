@@ -29,7 +29,7 @@ def reset_pivot(
             - ``"bottom"`` — bottom-centre of the bounding box (useful for floor placement).
 
     Returns:
-        ActionResultModel dict with ``context.updated_objects``.
+        ToolResult dict with ``context.updated_objects``.
     """
 
     try:

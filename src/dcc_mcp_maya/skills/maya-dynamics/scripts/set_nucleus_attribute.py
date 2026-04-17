@@ -38,7 +38,7 @@ def set_nucleus_attribute(
             ``"windDirection"``.
 
     Returns:
-        ActionResultModel dict with ``context.nucleus``,
+        ToolResult dict with ``context.nucleus``,
         ``context.attribute``, ``context.value``.
     """
     try:

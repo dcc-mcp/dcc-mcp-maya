@@ -12,10 +12,10 @@ Key helpers
     (pure-Python, zero compiled-extension dependency).
 
 ``maya_error(message, error, **context)``
-    Build an error ActionResultModel dict.
+    Build an error ToolResult dict.
 
 ``maya_from_exception(exc, message, **context)``
-    Build an error ActionResultModel dict from a live exception, including the
+    Build an error ToolResult dict from a live exception, including the
     full traceback.  Prefer this over ``maya_error("...", str(exc))``.
 
 ``require_cmds()``
@@ -89,7 +89,7 @@ _SENTINEL = object()
 
 
 def maya_success(message: str, prompt: Optional[str] = None, **context: Any) -> Dict[str, Any]:
-    """Return a success ActionResultModel as a plain dict.
+    """Return a success ToolResult as a plain dict.
 
     Thin wrapper around ``dcc_mcp_core.success_result`` so skill scripts do
     not need to import from two packages.
@@ -100,7 +100,7 @@ def maya_success(message: str, prompt: Optional[str] = None, **context: Any) -> 
         **context: Arbitrary key/value pairs stored in ``result["context"]``.
 
     Returns:
-        Serialised ``ActionResultModel`` dict (``success=True``).
+        Serialised ``ToolResult`` dict (``success=True``).
 
     Example::
 
@@ -118,7 +118,7 @@ def maya_error(
     possible_solutions: Optional[List[str]] = None,
     **context: Any,
 ) -> Dict[str, Any]:
-    """Return an error ActionResultModel as a plain dict.
+    """Return an error ToolResult as a plain dict.
 
     Args:
         message: Short human-readable description of what went wrong.
@@ -128,7 +128,7 @@ def maya_error(
         **context: Arbitrary key/value pairs stored in ``result["context"]``.
 
     Returns:
-        Serialised ``ActionResultModel`` dict (``success=False``).
+        Serialised ``ToolResult`` dict (``success=False``).
 
     Example::
 
@@ -150,7 +150,7 @@ def maya_error(
 
 
 def maya_warning(message: str, warning: str = "", prompt: Optional[str] = None, **context: Any) -> Dict[str, Any]:
-    """Return a success ActionResultModel dict with a warning note.
+    """Return a success ToolResult dict with a warning note.
 
     The result is a *success* (``success=True``) but includes a ``warning``
     key in the context to inform the AI agent of a non-fatal issue.
@@ -164,7 +164,7 @@ def maya_warning(message: str, warning: str = "", prompt: Optional[str] = None, 
         **context: Arbitrary key/value pairs stored in ``result["context"]``.
 
     Returns:
-        Serialised ``ActionResultModel`` dict (``success=True``, with
+        Serialised ``ToolResult`` dict (``success=True``, with
         ``context["warning"]`` set).
 
     Example::
@@ -189,7 +189,7 @@ def maya_from_exception(
     include_traceback: bool = True,
     **context: Any,
 ) -> Dict[str, Any]:
-    """Return an error ActionResultModel from a live exception.
+    """Return an error ToolResult from a live exception.
 
     Unlike ``maya_error("...", str(exc))``, this captures the full traceback
     and passes it to the agent for richer diagnostics.
@@ -204,7 +204,7 @@ def maya_from_exception(
         **context: Arbitrary key/value pairs stored in ``result["context"]``.
 
     Returns:
-        Serialised ``ActionResultModel`` dict (``success=False``).
+        Serialised ``ToolResult`` dict (``success=False``).
 
     Example::
 
@@ -287,7 +287,7 @@ def with_maya(func: F) -> F:
     """Decorator that wraps a skill function with the standard Maya error pattern.
 
     The decorated function is called normally.  Any exception is caught and
-    converted to an ``ActionResultModel`` error dict:
+    converted to a ``ToolResult`` error dict:
 
     * ``ImportError``  → ``maya_error("Maya not available", ...)``
     * Any other ``Exception``  → ``maya_from_exception(exc, ...)``
@@ -380,7 +380,7 @@ def missing_param_error(key: str, **context: Any) -> dict:
         **context: Extra context forwarded to :func:`maya_error`.
 
     Returns:
-        Serialised ``ActionResultModel`` dict (``success=False``).
+        Serialised ``ToolResult`` dict (``success=False``).
     """
     return maya_error(
         "Missing required parameter: '{}'".format(key),

@@ -27,7 +27,7 @@ def create_toon_shader(
         assign_to: Optional list of mesh or transform nodes to assign the shader.
 
     Returns:
-        ActionResultModel dict with the shader node name and shading group.
+        ToolResult dict with the shader node name and shading group.
     """
 
     try:

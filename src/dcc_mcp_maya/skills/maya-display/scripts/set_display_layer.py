@@ -20,7 +20,7 @@ def set_display_layer(layer_name: str, objects: List[str]) -> dict:
         objects: List of object names to assign.
 
     Returns:
-        ActionResultModel dict with ``context.assigned``.
+        ToolResult dict with ``context.assigned``.
     """
     try:
         import maya.cmds as cmds  # noqa: PLC0415

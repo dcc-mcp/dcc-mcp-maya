@@ -20,7 +20,7 @@ def select_by_material(material_name: str) -> dict:
             ``"lambert1"``, ``"blinn1"``, ``"aiStandardSurface1"``.
 
     Returns:
-        ActionResultModel dict with ``context.objects`` (list of selected
+        ToolResult dict with ``context.objects`` (list of selected
         object names), ``context.count``, ``context.material``.
     """
     try:

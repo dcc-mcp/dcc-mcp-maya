@@ -11,7 +11,7 @@ def list_render_passes() -> dict:
     """List all render pass elements (renderPass and aiAOV nodes) in the scene.
 
     Returns:
-        ActionResultModel dict with ``context.passes`` (list of dicts with
+        ToolResult dict with ``context.passes`` (list of dicts with
         ``name``, ``type``, ``enabled``) and ``context.count``.
     """
 

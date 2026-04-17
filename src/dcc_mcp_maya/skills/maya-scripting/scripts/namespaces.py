@@ -37,7 +37,7 @@ def set_namespace(
             exist.  Default: True.
 
     Returns:
-        ActionResultModel dict with ``context.object_name``,
+        ToolResult dict with ``context.object_name``,
         ``context.namespace``, ``context.new_name``.
     """
 
@@ -93,7 +93,7 @@ def rename_namespace(
         new_name: Desired new namespace name (without leading ``":"``).
 
     Returns:
-        ActionResultModel dict with ``context.old_name``,
+        ToolResult dict with ``context.old_name``,
         ``context.new_name``.
     """
 
@@ -155,7 +155,7 @@ def delete_namespace(
             namespace is not empty.
 
     Returns:
-        ActionResultModel dict with ``context.namespace``.
+        ToolResult dict with ``context.namespace``.
     """
 
     try:

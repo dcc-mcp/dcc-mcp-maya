@@ -34,7 +34,7 @@ def create_hdri_dome(
         visible_in_specular: Enable specular contribution.  Default: True.
 
     Returns:
-        ActionResultModel dict with ``context.dome_node``,
+        ToolResult dict with ``context.dome_node``,
         ``context.file_node``, ``context.hdri_path``.
     """
     try:

@@ -20,7 +20,7 @@ def set_project(project_path: str, create_if_missing: bool = False) -> dict:
         create_if_missing: Create the directory if it does not exist. Default False.
 
     Returns:
-        ActionResultModel dict with ``context.project_path`` and ``context.workspace_mel``.
+        ToolResult dict with ``context.project_path`` and ``context.workspace_mel``.
     """
 
     if not project_path:

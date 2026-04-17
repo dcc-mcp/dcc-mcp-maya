@@ -17,7 +17,7 @@ def set_selection(objects: List[str]) -> dict:
         objects: List of object names to select.
 
     Returns:
-        ActionResultModel dict.
+        ToolResult dict.
     """
 
     try:

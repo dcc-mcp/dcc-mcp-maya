@@ -12,7 +12,7 @@ def list_muscles() -> dict:
     """List cMuscleObject nodes with their basic attributes.
 
     Returns:
-        ActionResultModel dict with ``context.muscles`` list and ``context.count``.
+        ToolResult dict with ``context.muscles`` list and ``context.count``.
     """
 
     try:

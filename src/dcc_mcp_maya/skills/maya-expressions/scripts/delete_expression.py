@@ -17,7 +17,7 @@ def delete_expression(expression_name: str) -> dict:
         expression_name: Expression node name to delete.
 
     Returns:
-        ActionResultModel dict with ``context.expression_name`` confirming deletion.
+        ToolResult dict with ``context.expression_name`` confirming deletion.
     """
     try:
         import maya.cmds as cmds  # noqa: PLC0415

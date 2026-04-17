@@ -25,7 +25,7 @@ def attach_stroke_to_surface(
         name: Optional name prefix for the created stroke nodes.
 
     Returns:
-        ActionResultModel dict with ``surface``, ``preset``, ``strokes_created``.
+        ToolResult dict with ``surface``, ``preset``, ``strokes_created``.
     """
 
     try:

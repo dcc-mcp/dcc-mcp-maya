@@ -32,7 +32,7 @@ def create_joint(
             under.  If None, the joint is created at the world root.
 
     Returns:
-        ActionResultModel dict with ``context.object_name``,
+        ToolResult dict with ``context.object_name``,
         ``context.position``, and ``context.parent``.
     """
 
@@ -94,7 +94,7 @@ def create_curve(
         periodic: If True, creates a closed (periodic) curve.  Default: False.
 
     Returns:
-        ActionResultModel dict with ``context.object_name``,
+        ToolResult dict with ``context.object_name``,
         ``context.degree``, ``context.point_count``.
     """
 
@@ -156,7 +156,7 @@ def set_joint_orient(
             (``jointOrientX/Y/Z``).  Default: False.
 
     Returns:
-        ActionResultModel dict with ``context.object_name`` and
+        ToolResult dict with ``context.object_name`` and
         ``context.orient``.
     """
 
@@ -218,7 +218,7 @@ def mirror_joints(
             ``"XZ"``.  Default: ``"YZ"``.
 
     Returns:
-        ActionResultModel dict with ``context.mirrored_joints`` list.
+        ToolResult dict with ``context.mirrored_joints`` list.
     """
 
     _VALID_AXES = ("YZ", "XY", "XZ")
@@ -282,7 +282,7 @@ def create_ik_handle(
             name when None.
 
     Returns:
-        ActionResultModel dict with ``context.handle_name``,
+        ToolResult dict with ``context.handle_name``,
         ``context.effector_name``, and ``context.solver``.
     """
 
@@ -346,7 +346,7 @@ def assign_deformer(
         deformer_type: Deformer type string.  Default: ``"cluster"``.
 
     Returns:
-        ActionResultModel dict with ``context.deformer_name``,
+        ToolResult dict with ``context.deformer_name``,
         ``context.handle_name`` (for cluster/lattice) if applicable.
     """
 
@@ -436,7 +436,7 @@ def create_blend_shape(
         origin: ``"local"`` (default) or ``"world"`` space blend.
 
     Returns:
-        ActionResultModel dict with ``context.blend_shape_name``,
+        ToolResult dict with ``context.blend_shape_name``,
         ``context.target_count``.
     """
 
@@ -496,7 +496,7 @@ def skin_cluster_bind(
         name: Optional name for the skin cluster node.
 
     Returns:
-        ActionResultModel dict with ``context.skin_cluster_name``,
+        ToolResult dict with ``context.skin_cluster_name``,
         ``context.joint_count``.
     """
 
@@ -568,7 +568,7 @@ def set_joint_limit(
             values.
 
     Returns:
-        ActionResultModel dict with ``context.joint_name``,
+        ToolResult dict with ``context.joint_name``,
         ``context.axis``, ``context.min_angle``, ``context.max_angle``,
         ``context.enable``.
     """
@@ -646,7 +646,7 @@ def blend_shape_add_target(
             index automatically.
 
     Returns:
-        ActionResultModel dict with ``context.blend_shape``,
+        ToolResult dict with ``context.blend_shape``,
         ``context.target_mesh``, ``context.target_index``.
     """
 
@@ -730,7 +730,7 @@ def set_driven_key(
             ``"flat"``, or ``"step"``.  Default: ``"linear"``.
 
     Returns:
-        ActionResultModel dict with ``context.driver_attr``,
+        ToolResult dict with ``context.driver_attr``,
         ``context.driven_attrs``, ``context.key_count``.
     """
 
@@ -818,7 +818,7 @@ def set_ik_fk_blend(
             Default: ``"ikBlend"``.
 
     Returns:
-        ActionResultModel dict with ``context.ik_handle``,
+        ToolResult dict with ``context.ik_handle``,
         ``context.attribute``, ``context.blend``.
     """
 
