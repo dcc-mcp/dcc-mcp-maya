@@ -135,7 +135,7 @@ class MayaMcpServer(DccServerBase):
         Skill metadata becomes available immediately, while concrete skill
         tools remain progressively loaded by the underlying MCP server.
         This method then registers the standard diagnostic IPC handlers
-        (``get_audit_log``, ``get_action_metrics``, ``dispatch_action``) so
+        (``get_audit_log``, ``get_tool_metrics``, ``dispatch_tool``) so
         that skill sub-processes can call back into this server.
 
         Args:
