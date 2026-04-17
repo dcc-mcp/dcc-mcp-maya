@@ -240,29 +240,31 @@ jobs:
           # with "Unknown tool", which silently hides real breakage. Wrap
           # each call so any error marker in the output fails the step.
           #
-          # --name maya-ci is required on every call for ad-hoc servers so
-          # mcporter can resolve the maya-ci.<tool> prefix back to --http-url.
-          # Without it the server is anonymous and every call reports
-          # "Unknown tool" (mcporter README: "you still need to repeat the
-          # same URL/stdio flags for mcporter call").
+          # Uses the URL-based selector form `<url>.<tool>` documented in
+          # `mcporter call --help` as "Call a tool by full HTTP URL
+          # (auto-registers ad-hoc)". The server.tool form (e.g.
+          # maya-ci.load_skill) only works for pre-configured servers;
+          # --http-url + --name on every call still surfaces as
+          # "Unknown tool: maya-ci.<x>" because the ad-hoc slug isn't
+          # consulted when resolving the call selector.
+          MCP_URL=http://127.0.0.1:7891/mcp
           mcporter_call() {
-              out=$(npx mcporter call \
-                  --http-url http://127.0.0.1:7891/mcp \
-                  --name maya-ci \
-                  --allow-http \
-                  "$@" 2>&1)
+              tool="$1"
+              shift
+              out=$(npx mcporter call --allow-http "$MCP_URL.$tool" "$@" 2>&1)
               printf '%s\n' "$out"
               case "$out" in
                   *"Unknown tool"*|*"Error:"*|*"error:"*)
-                      echo "::error::mcporter call failed: $*"
+                      echo "::error::mcporter call failed: $tool $*"
                       return 1
                       ;;
               esac
           }
 
-          # List Maya tools via mcporter
+          # List Maya tools via mcporter (still uses --name for the
+          # readable "maya-ci" heading in the catalog listing).
           npx --yes mcporter list \
-            --http-url http://127.0.0.1:7891/mcp \
+            --http-url "$MCP_URL" \
             --name maya-ci \
             --allow-http
 
@@ -271,20 +273,20 @@ jobs:
           # exercise below so their tools become callable. Issued as three
           # scalar calls — mcporter's flag-based CLI has known issues
           # parsing array arguments (steipete/mcporter#126).
-          mcporter_call maya-ci.load_skill skill_name:maya-scene
-          mcporter_call maya-ci.load_skill skill_name:maya-primitives
-          mcporter_call maya-ci.load_skill skill_name:maya-scripting
+          mcporter_call load_skill skill_name=maya-scene
+          mcporter_call load_skill skill_name=maya-primitives
+          mcporter_call load_skill skill_name=maya-scripting
 
           # Call get_session_info tool
-          mcporter_call maya-ci.maya_scene__get_session_info
+          mcporter_call maya_scene__get_session_info
 
           # Call create_sphere tool
-          mcporter_call maya-ci.maya_primitives__create_sphere \
-            radius:2.0 name:mcporterSphere
+          mcporter_call maya_primitives__create_sphere \
+            radius=2.0 name=mcporterSphere
 
           # Call execute_python tool
-          mcporter_call maya-ci.maya_scripting__execute_python \
-            "code:import maya.cmds as cmds; cmds.polyCube(n='mcporterCube')"
+          mcporter_call maya_scripting__execute_python \
+            "code=import maya.cmds as cmds; cmds.polyCube(n='mcporterCube')"
 
           echo "mcporter connectivity tests: PASSED"
           # EXIT trap signals mayapy via sentinel and waits for clean teardown.
