@@ -65,19 +65,15 @@ jobs:
 
       - name: Run gateway failover tests (Docker Maya ${{ matrix.maya-version }})
         run: DCC_MCP_FORCE_DOCKER=1 python -m pytest tests/test_gateway_failover.py -v --tb=short -m integration
-        continue-on-error: true
 
       - name: Run discovery tests (Docker Maya ${{ matrix.maya-version }})
         run: DCC_MCP_FORCE_DOCKER=1 python -m pytest tests/test_multi_instance_discovery.py -v --tb=short -m integration
-        continue-on-error: true
 
       - name: Run scene update tests (Docker Maya ${{ matrix.maya-version }})
         run: DCC_MCP_FORCE_DOCKER=1 python -m pytest tests/test_scene_update.py -v --tb=short -m integration
-        continue-on-error: true
 
       - name: Run Docker integration tests
-        run: DCC_MCP_FORCE_DOCKER=1 python -m pytest tests/test_docker_integration.py -v --tb=short -m integration
-        continue-on-error: true
+        run: DCC_MCP_FORCE_DOCKER=1 python -m pytest tests/test_docker_integration.py -v --tb=short -m e2e
 
       - name: Upload test results
         if: always()
@@ -127,11 +123,9 @@ jobs:
 
       - name: Run gateway failover tests (local mode)
         run: python -m pytest tests/test_gateway_failover.py -v --tb=short -x -m integration
-        continue-on-error: true
 
       - name: Run discovery tests (local mode)
         run: python -m pytest tests/test_multi_instance_discovery.py -v --tb=short -x -m integration
-        continue-on-error: true
 
       - name: Upload test results
         if: always()
@@ -150,19 +144,23 @@ jobs:
   gate-check:
     name: Test Gate (Required Checks)
     runs-on: ubuntu-latest
-    needs: docker-multi-instance-tests
+    needs: [docker-multi-instance-tests, local-instance-tests]
     if: always()
 
     steps:
       - name: Check test results
         run: |
-          if [ "${{ needs.multi-instance-tests.result }}" = "success" ]; then
-            echo "✓ All tests passed"
-            exit 0
-          elif [ "${{ needs.multi-instance-tests.result }}" = "failure" ]; then
-            echo "✗ Tests failed"
+          docker_result='${{ needs.docker-multi-instance-tests.result }}'
+          local_result='${{ needs.local-instance-tests.result }}'
+          echo "docker-multi-instance-tests: $docker_result"
+          echo "local-instance-tests:        $local_result"
+          if [ "$docker_result" = "failure" ] || [ "$local_result" = "failure" ]; then
+            echo "✗ One or more test jobs failed"
+            exit 1
+          elif [ "$docker_result" = "cancelled" ] || [ "$local_result" = "cancelled" ]; then
+            echo "⚠ One or more test jobs were cancelled"
             exit 1
           else
-            echo "⚠ Tests skipped or cancelled"
+            echo "✓ All required test jobs succeeded or were skipped"
             exit 0
           fi
