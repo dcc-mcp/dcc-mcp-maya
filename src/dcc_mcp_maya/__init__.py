@@ -57,6 +57,12 @@ from dcc_mcp_maya.api import (
     validate_node_type,
     with_maya,
 )
+from dcc_mcp_maya.dispatcher import (
+    MayaStandaloneDispatcher,
+    MayaUiDispatcher,
+    MayaUiPump,
+    create_dispatcher,
+)
 from dcc_mcp_maya.server import MayaMcpServer, start_server, stop_server
 
 __all__ = [
@@ -65,6 +71,11 @@ __all__ = [
     "MayaMcpServer",
     "start_server",
     "stop_server",
+    # Dispatchers
+    "MayaUiDispatcher",
+    "MayaUiPump",
+    "MayaStandaloneDispatcher",
+    "create_dispatcher",
     # Skill authoring helpers
     "maya_success",
     "maya_error",
