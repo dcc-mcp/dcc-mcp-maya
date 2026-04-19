@@ -282,7 +282,9 @@ class MayaUiDispatcher:
             elapsed_ms = (time.monotonic() - start) * 1000
             logger.debug(
                 "MayaUiPump: drained %d job(s) in %.1f ms, %d remaining",
-                executed, elapsed_ms, remaining,
+                executed,
+                elapsed_ms,
+                remaining,
             )
         return executed, remaining
 
@@ -517,7 +519,8 @@ class MayaUiPump:
             self._installed = True
             logger.info(
                 "MayaUiPump installed (scriptJob=%d, budget=%.1f ms)",
-                self._script_job_id, self._budget_ms,
+                self._script_job_id,
+                self._budget_ms,
             )
             return True
         except ImportError:
