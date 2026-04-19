@@ -55,6 +55,14 @@ Configuration
 
 ``DCC_MCP_REGISTRY_DIR``
     Directory for the shared ``FileRegistry`` JSON.  Defaults to OS temp dir.
+
+``DCC_MCP_PYTHON_EXECUTABLE``
+    Python interpreter for skill worker subprocesses.  Auto-set to
+    ``sys.executable`` (i.e. ``mayapy``) at plugin load time.
+
+``DCC_MCP_PYTHON_INIT_SNIPPET``
+    One-liner executed by each skill worker before running any tool script.
+    Auto-set to ``import maya.standalone; maya.standalone.initialize(name='python')``.
 """
 
 # Import future modules
@@ -200,12 +208,41 @@ def _resolve_config():
     }
 
 
+def _export_worker_env() -> None:
+    """Export env vars so skill worker subprocesses use the correct Maya Python.
+
+    ``DCC_MCP_PYTHON_EXECUTABLE``
+        Points at the ``mayapy`` interpreter currently running so that
+        ``dcc-mcp-core``'s skill launcher spawns workers with the right
+        Python rather than the ambient ``python`` on ``PATH``.
+
+    ``DCC_MCP_PYTHON_INIT_SNIPPET``
+        A one-liner that initialises Maya standalone inside the worker
+        process, giving it a functional ``maya.cmds`` session.
+
+    Uses ``setdefault`` so that advanced users can still override (e.g. to
+    pin a specific ``mayapy`` build or add extra setup).
+
+    See: https://github.com/loonghao/dcc-mcp-maya/issues/63
+    """
+    os.environ.setdefault("DCC_MCP_PYTHON_EXECUTABLE", sys.executable)
+    os.environ.setdefault(
+        "DCC_MCP_PYTHON_INIT_SNIPPET",
+        "import maya.standalone; maya.standalone.initialize(name='python')",
+    )
+    logger.info(
+        "Skill worker env: DCC_MCP_PYTHON_EXECUTABLE=%s",
+        os.environ["DCC_MCP_PYTHON_EXECUTABLE"],
+    )
+
+
 def _start() -> None:
     """Start the MCP server (called from Maya main thread)."""
     global _handle
     try:
         import dcc_mcp_maya  # noqa: PLC0415
 
+        _export_worker_env()
         cfg = _resolve_config()
         _handle = dcc_mcp_maya.start_server(**cfg)
         _print_startup_info(cfg)
