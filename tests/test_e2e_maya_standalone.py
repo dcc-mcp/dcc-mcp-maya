@@ -299,7 +299,9 @@ class TestMcpHttpConnectivity:
         assert scene_stub not in after_names, f"Stub {scene_stub} should be removed after load_skill"
 
         # The loaded skill's real tools should now be present
-        skill_prefix = scene_stub.replace("__skill__", "").replace("-", "_") + "__"
+        # Core 0.13+ uses {skill-name}.{script_stem} naming convention
+        skill_name = scene_stub.replace("__skill__", "")  # e.g. "maya-scene"
+        skill_prefix = skill_name + "."
         real_tools = {n for n in after_names if n.startswith(skill_prefix)}
         assert len(real_tools) >= 1, f"Expected tools prefixed with {skill_prefix!r} after loading"
 
@@ -315,7 +317,7 @@ class TestMcpHttpConnectivity:
                 "jsonrpc": "2.0",
                 "id": 3,
                 "method": "tools/call",
-                "params": {"name": "maya_scene__get_session_info", "arguments": {}},
+                "params": {"name": "maya-scene.get_session_info", "arguments": {}},
             },
         )
         assert code == 200
@@ -338,7 +340,7 @@ class TestMcpHttpConnectivity:
                 "id": 4,
                 "method": "tools/call",
                 "params": {
-                    "name": "maya_primitives__create_sphere",
+                    "name": "maya-primitives.create_sphere",
                     "arguments": {"radius": 1.5, "name": "httpSphere"},
                 },
             },
@@ -363,7 +365,7 @@ class TestMcpHttpConnectivity:
                 "id": 5,
                 "method": "tools/call",
                 "params": {
-                    "name": "maya_scripting__execute_python",
+                    "name": "maya-scripting.execute_python",
                     "arguments": {"code": "import maya.cmds as cmds; cmds.polyCube(n='httpCube')"},
                 },
             },
@@ -1131,7 +1133,7 @@ class TestMultiInstanceConcurrentWorkflows:
                 "id": 10,
                 "method": "tools/call",
                 "params": {
-                    "name": "maya_primitives__create_sphere",
+                    "name": "maya-primitives.create_sphere",
                     "arguments": {"name": "multiSphereA"},
                 },
             },
@@ -1147,7 +1149,7 @@ class TestMultiInstanceConcurrentWorkflows:
                 "id": 11,
                 "method": "tools/call",
                 "params": {
-                    "name": "maya_primitives__create_cube",
+                    "name": "maya-primitives.create_cube",
                     "arguments": {"name": "multiCubeB"},
                 },
             },
@@ -1171,7 +1173,7 @@ class TestMultiInstanceConcurrentWorkflows:
                         "jsonrpc": "2.0",
                         "id": 20,
                         "method": "tools/call",
-                        "params": {"name": "maya_scene__get_session_info", "arguments": {}},
+                        "params": {"name": "maya-scene.get_session_info", "arguments": {}},
                     },
                 )
                 results["a"] = (code, body)
@@ -1186,7 +1188,7 @@ class TestMultiInstanceConcurrentWorkflows:
                         "jsonrpc": "2.0",
                         "id": 21,
                         "method": "tools/call",
-                        "params": {"name": "maya_scene__list_objects", "arguments": {}},
+                        "params": {"name": "maya-scene.list_objects", "arguments": {}},
                     },
                 )
                 results["b"] = (code, body)
@@ -1219,7 +1221,7 @@ class TestMultiInstanceConcurrentWorkflows:
                         "jsonrpc": "2.0",
                         "id": req_id,
                         "method": "tools/call",
-                        "params": {"name": "maya_scene__get_session_info", "arguments": {}},
+                        "params": {"name": "maya-scene.get_session_info", "arguments": {}},
                     },
                 )
             except Exception as exc:
@@ -1256,7 +1258,7 @@ class TestMultiInstanceConcurrentWorkflows:
                 "id": 40,
                 "method": "tools/call",
                 "params": {
-                    "name": "maya_primitives__create_sphere",
+                    "name": "maya-primitives.create_sphere",
                     "arguments": {"name": "crossVisSphere"},
                 },
             },
@@ -1268,7 +1270,7 @@ class TestMultiInstanceConcurrentWorkflows:
                 "jsonrpc": "2.0",
                 "id": 41,
                 "method": "tools/call",
-                "params": {"name": "maya_scene__list_objects", "arguments": {}},
+                "params": {"name": "maya-scene.list_objects", "arguments": {}},
             },
         )
         assert code == 200
