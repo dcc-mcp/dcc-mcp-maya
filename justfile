@@ -92,6 +92,12 @@ lint-all: lint lint-skills
 @test-quick: test-imports test-hotreload test-gateway
     echo "✅ All quick tests passed"
 
+# Live local smoke test: real MCP HTTP server, lazy-load verification, multi-version gateway
+@test-smoke:
+    echo "🧪 Running live local smoke test (real MCP HTTP server)..."
+    python tools/live_smoke.py
+    echo "✅ Live smoke test passed"
+
 # Run tests with coverage
 @test-coverage:
     echo "🧪 Running tests with coverage..."
@@ -117,6 +123,10 @@ lint-all: lint lint-skills
 # Full CI simulation (lint + tests)
 @ci: lint-all test-coverage
     echo "✅ CI simulation complete"
+
+# Local gate: lint + quick tests + live smoke (fast; no mayapy)
+@gate: lint-all test-quick test-smoke
+    echo "✅ Local gate passed"
 
 # Clean build artifacts
 @clean:
