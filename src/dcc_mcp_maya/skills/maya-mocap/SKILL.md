@@ -3,6 +3,7 @@ name: maya-mocap
 description: Motion capture data import, retargeting and cleanup for Maya
 dcc: maya
 tags:
+- maya
 - mocap
 - animation
 - retarget
