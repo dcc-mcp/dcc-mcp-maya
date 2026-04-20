@@ -1,15 +1,36 @@
 ---
 name: maya-selection
-description: "Maya selection utilities — filter, grow, shrink, invert, and convert selections"
+description: Maya selection utilities — filter, grow, shrink, invert, and convert selections
 dcc: maya
-version: "1.0.0"
-tags: [maya, selection, filter, component]
-search-hint: "select, filter, type, hierarchy, component"
-license: "MIT"
-allowed-tools: ["Bash", "Read"]
+version: 1.0.0
+tags:
+- maya
+- selection
+- filter
+- component
+search-hint: select, filter, type, hierarchy, component
+license: MIT
+allowed-tools:
+- Bash
+- Read
 depends: []
+tools:
+- name: convert_selection
+- name: grow_selection
+- name: invert_selection
+- name: select_similar
+- name: shrink_selection
+groups:
+- name: scene-management
+  description: Scene management, organization, and navigation tools
+  default_active: true
+  tools:
+  - convert_selection
+  - grow_selection
+  - invert_selection
+  - select_similar
+  - shrink_selection
 ---
-
 # maya-selection
 
 Maya selection skill. Provides advanced selection utilities beyond basic object selection:
