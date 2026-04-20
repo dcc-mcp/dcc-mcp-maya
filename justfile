@@ -221,3 +221,160 @@ lint-all: lint lint-skills
     echo "  - Installing test requirements..."
     python -m pip install -r requirements-test.txt
     echo "✅ Dependency issues fixed"
+
+# ============================================================================
+# Maya Local Development
+# ============================================================================
+
+# Maya version for local dev (override: just maya-version=2025 maya-link)
+maya-version := env("MAYA_VERSION", "2025")
+
+# Detect Maya modules directory (platform-aware)
+_maya-modules-dir := if os() == "windows" {
+    env("USERPROFILE", "") + "/Documents/maya/modules"
+} else if os() == "macos" {
+    env("HOME", "") + "/Library/Preferences/Autodesk/maya/modules"
+} else {
+    env("HOME", "") + "/maya/modules"
+}
+
+# Create symlinks from source tree into Maya's module directory for live development.
+# After running this, loading Maya will use your local source code directly —
+# edits take effect on next Maya restart (or via hot-reload).
+@maya-link:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")/.." 2>/dev/null && pwd || pwd)"
+    # On Windows in Git Bash, use the script's real location
+    if [ -f "justfile" ]; then PROJECT_ROOT="$(pwd)"; fi
+
+    MOD_DIR="{{ _maya-modules-dir }}"
+    TARGET="$MOD_DIR/dcc-mcp-maya"
+
+    echo "🔗 Setting up Maya dev symlinks (Maya {{ maya-version }})..."
+    echo "   Project  : $PROJECT_ROOT"
+    echo "   Module   : $TARGET"
+    echo ""
+
+    # Create modules dir if needed
+    mkdir -p "$MOD_DIR"
+
+    # Remove old link/dir if exists
+    if [ -L "$TARGET" ]; then
+        rm "$TARGET"
+        echo "   Removed old symlink"
+    elif [ -d "$TARGET" ]; then
+        echo "   ⚠️  $TARGET is a real directory (not a symlink)."
+        echo "   Remove it manually if you want to use dev symlinks."
+        exit 1
+    fi
+
+    # Create module directory structure
+    mkdir -p "$TARGET/plug-ins"
+    mkdir -p "$TARGET/scripts"
+
+    # Symlink python package
+    if [ "$(uname -s)" = "MINGW"* ] || [ "$(uname -s)" = "MSYS"* ] || [ -n "${WINDIR:-}" ]; then
+        # Windows: use mklink (requires admin or developer mode)
+        cmd //c "mklink /D \"$(cygpath -w "$TARGET/python")\" \"$(cygpath -w "$PROJECT_ROOT/src")\"" 2>/dev/null || \
+            cp -r "$PROJECT_ROOT/src" "$TARGET/python"
+        cmd //c "mklink \"$(cygpath -w "$TARGET/plug-ins/dcc_mcp_maya_plugin.py")\" \"$(cygpath -w "$PROJECT_ROOT/maya/plugin/dcc_mcp_maya_plugin.py")\"" 2>/dev/null || \
+            cp "$PROJECT_ROOT/maya/plugin/dcc_mcp_maya_plugin.py" "$TARGET/plug-ins/"
+        cmd //c "mklink \"$(cygpath -w "$TARGET/scripts/userSetup.py")\" \"$(cygpath -w "$PROJECT_ROOT/maya/userSetup.py")\"" 2>/dev/null || \
+            cp "$PROJECT_ROOT/maya/userSetup.py" "$TARGET/scripts/"
+    else
+        # Unix: symlinks just work
+        ln -sf "$PROJECT_ROOT/src" "$TARGET/python"
+        ln -sf "$PROJECT_ROOT/maya/plugin/dcc_mcp_maya_plugin.py" "$TARGET/plug-ins/dcc_mcp_maya_plugin.py"
+        ln -sf "$PROJECT_ROOT/maya/userSetup.py" "$TARGET/scripts/userSetup.py"
+    fi
+
+    # Generate .mod file
+    cat > "$MOD_DIR/dcc-mcp-maya.mod" << MODEOF
+    + dcc-mcp-maya 0.0.0-dev $TARGET
+    PYTHONPATH+:=python
+    MAYA_PLUG_IN_PATH+:=plug-ins
+    MAYA_SCRIPT_PATH+:=scripts
+    MODEOF
+
+    echo ""
+    echo "   ✅ Symlinks created:"
+    echo "      python/     → src/ (live source)"
+    echo "      plug-ins/   → maya/plugin/"
+    echo "      scripts/    → maya/userSetup.py"
+    echo "      .mod file   → $MOD_DIR/dcc-mcp-maya.mod"
+    echo ""
+    echo "   Next: start Maya {{ maya-version }} — the plugin loads automatically."
+    echo "   Edit source → restart Maya (or use hot-reload) to see changes."
+
+# Remove dev symlinks and .mod file
+@maya-unlink:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    MOD_DIR="{{ _maya-modules-dir }}"
+    TARGET="$MOD_DIR/dcc-mcp-maya"
+    MOD_FILE="$MOD_DIR/dcc-mcp-maya.mod"
+
+    echo "🧹 Removing Maya dev symlinks..."
+
+    if [ -d "$TARGET" ]; then
+        rm -rf "$TARGET"
+        echo "   Removed $TARGET"
+    fi
+    if [ -f "$MOD_FILE" ]; then
+        rm "$MOD_FILE"
+        echo "   Removed $MOD_FILE"
+    fi
+
+    echo "   ✅ Dev symlinks cleaned up"
+
+# Show current Maya dev link status
+@maya-status:
+    #!/usr/bin/env bash
+    MOD_DIR="{{ _maya-modules-dir }}"
+    TARGET="$MOD_DIR/dcc-mcp-maya"
+    MOD_FILE="$MOD_DIR/dcc-mcp-maya.mod"
+
+    echo "📋 Maya dev link status:"
+    echo "   Modules dir: $MOD_DIR"
+    echo ""
+
+    if [ -L "$TARGET/python" ]; then
+        REAL=$(readlink "$TARGET/python" 2>/dev/null || echo "?")
+        echo "   ✅ python/   → $REAL (symlink)"
+    elif [ -d "$TARGET/python" ]; then
+        echo "   ⚠️  python/   exists (copied, not linked)"
+    else
+        echo "   ❌ python/   not found"
+    fi
+
+    if [ -L "$TARGET/plug-ins/dcc_mcp_maya_plugin.py" ]; then
+        echo "   ✅ plug-ins/ → linked"
+    elif [ -f "$TARGET/plug-ins/dcc_mcp_maya_plugin.py" ]; then
+        echo "   ⚠️  plug-ins/ exists (copied)"
+    else
+        echo "   ❌ plug-ins/ not found"
+    fi
+
+    if [ -f "$MOD_FILE" ]; then
+        echo "   ✅ .mod file  exists"
+    else
+        echo "   ❌ .mod file  not found"
+    fi
+
+# Install dcc-mcp-core into Maya's Python (requires mayapy on PATH)
+@maya-install-core maya-py="mayapy":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "📦 Installing dcc-mcp-core into Maya Python..."
+    {{ maya-py }} -m pip install dcc-mcp-core --upgrade
+    echo "✅ dcc-mcp-core installed into Maya Python"
+
+# Full local dev setup: link + install core into Maya Python
+maya-dev: maya-link
+    @echo ""
+    @echo "📋 Dev environment linked. Now install dcc-mcp-core into Maya:"
+    @echo "   just maya-install-core maya-py=/path/to/mayapy"
+    @echo ""
+    @echo "   Or if mayapy is on PATH:"
+    @echo "   just maya-install-core"
