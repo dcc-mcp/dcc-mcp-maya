@@ -3,6 +3,7 @@ name: maya-cloth-sim
 description: Maya nCloth simulation setup and management actions
 dcc: maya
 tags:
+- maya
 - cloth
 - ncloth
 - simulation
