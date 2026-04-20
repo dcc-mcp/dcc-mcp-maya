@@ -3,10 +3,10 @@ name: maya-muscle
 description: Maya Muscle system for secondary motion — create muscles, capsules, and skin simulation
 dcc: maya
 tags:
+- maya
 - muscle
 - simulation
 - secondary-motion
-- cMuscle
 - rig
 search-hint: muscle, cMuscle, tissue, deformation
 version: 1.0.0

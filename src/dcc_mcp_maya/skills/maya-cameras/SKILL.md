@@ -6,7 +6,9 @@ version: 1.0.0
 tags:
 - maya
 - camera
-- scene
+- viewport
+- focal
+- film
 search-hint: camera, film, focal, persp, orthographic
 license: MIT
 allowed-tools:

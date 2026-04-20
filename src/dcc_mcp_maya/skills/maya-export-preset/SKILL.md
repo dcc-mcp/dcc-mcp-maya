@@ -3,6 +3,7 @@ name: maya-export-preset
 description: Maya export preset management actions for saving and loading export configurations
 dcc: maya
 tags:
+- maya
 - export
 - preset
 - pipeline
