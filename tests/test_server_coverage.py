@@ -115,14 +115,17 @@ class TestCollectSkillSearchPathsCoverage:
 
 class TestLoadSkillFailure:
     def test_register_builtin_actions_discovers_without_loading_skills(self):
-        """register_builtin_actions should only discover skills, not eagerly load them."""
+        """register_builtin_actions with minimal=False only discovers, no eager load."""
         server = _make_bare_server()
 
         mock_mcp_server = MagicMock()
         mock_mcp_server.discover.return_value = 1
+        mock_mcp_server.list_skills.return_value = []
         server._server = mock_mcp_server
 
-        result = server.register_builtin_actions()
+        # minimal=False → _load_all_discovered_skills is called but list_skills
+        # returns empty, so load_skill is never called
+        result = server.register_builtin_actions(minimal=False)
         assert result is server
         mock_mcp_server.discover.assert_called_once()
         mock_mcp_server.load_skill.assert_not_called()
@@ -161,7 +164,11 @@ class TestStartServerExtraSkillPaths:
                 )
             srv_mod.stop_server()
 
-        mock_reg.assert_called_once_with(extra_skill_paths=[tmp], include_bundled=True)
+        mock_reg.assert_called_once_with(
+            extra_skill_paths=[tmp],
+            include_bundled=True,
+            minimal=None,
+        )
 
     def test_start_server_register_builtins_false_skips_register(self):
         """start_server with register_builtins=False must not call register_builtin_actions."""

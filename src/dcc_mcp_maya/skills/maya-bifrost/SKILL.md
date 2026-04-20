@@ -3,6 +3,7 @@ name: maya-bifrost
 description: Bifrost visual programming graph management for simulations and effects
 dcc: maya
 tags:
+- maya
 - bifrost
 - simulation
 - vfx

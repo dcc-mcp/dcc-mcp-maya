@@ -7,6 +7,9 @@ tags:
 - maya
 - constraint
 - rigging
+- parent
+- orient
+- aim
 search-hint: constraint, parent, orient, aim, point, scale
 license: MIT
 allowed-tools:

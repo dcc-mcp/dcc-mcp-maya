@@ -3,6 +3,7 @@ name: maya-fluid
 description: Maya fluid (nFluid/legacy fluid container) simulation actions
 dcc: maya
 tags:
+- maya
 - fluid
 - simulation
 - dynamics
