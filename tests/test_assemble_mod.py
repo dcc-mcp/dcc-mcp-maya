@@ -4,8 +4,9 @@ These tests verify:
 - resolve_core_version: reads minimum version from pyproject.toml and resolves latest from PyPI
 - download_core_wheels: finds and downloads correct wheel files via PyPI JSON API
 - extract_wheel: correctly extracts wheel contents using zipfile
-- generate_mod_file: generates proper .mod content with python37 support
-- assemble: end-to-end assembly produces correct directory structure
+- generate_mod_file: generates proper .mod content with python37 support and custom path
+- generate_module_info: generates module-info.json metadata
+- assemble_portable/assemble_pipeline: end-to-end assembly produces correct directory structure
 """
 
 from __future__ import annotations
@@ -188,7 +189,6 @@ class TestDownloadCoreWheels:
         mock_resp.__exit__ = MagicMock(return_value=False)
 
         def fake_urlretrieve(url, dest):
-            # Create a minimal wheel file at dest
             fname = Path(dest).name
             if "abi3" in fname:
                 files = {"dcc_mcp_core/__init__.py": b"# abi3", "dcc_mcp_core/_core.pyd": b"\x00abi3"}
@@ -343,123 +343,134 @@ class TestExtractWheel:
         assert not (dest / "dcc_mcp_core-0.12.17.dist-info").exists()
 
 
-# ── generate_module_info / generate_mod_content ───────────────────────────
+# ── generate_mod_file ───────────────────────────────────────────────────────
 
 
-class TestGenerateModuleInfo:
-    def test_with_cp37(self):
-        content = assemble_mod.generate_module_info("0.2.2", has_cp37=True)
-        import json
-
-        info = json.loads(content)
-        assert info["name"] == "dcc_mcp_maya"
-        assert info["version"] == "0.2.2"
-        assert info["has_cp37"] is True
-        assert info["supported_maya_versions"] == ["2022", "2023", "2024", "2025"]
-
-    def test_without_cp37(self):
-        content = assemble_mod.generate_module_info("0.2.2", has_cp37=False)
-        import json
-
-        info = json.loads(content)
-        assert info["has_cp37"] is False
-        assert "2022" not in info["supported_maya_versions"]
-        assert info["supported_maya_versions"] == ["2023", "2024", "2025"]
-
-
-class TestGenerateModContent:
-    def test_win64_all_maya_versions(self):
-        content = assemble_mod.generate_mod_content("0.2.2", "win64", ["2022", "2023", "2024", "2025"], has_cp37=True)
+class TestGenerateModFile:
+    def test_win64_with_cp37_relative_path(self):
+        content = assemble_mod.generate_mod_file("0.2.2", "win64", has_cp37=True, path=".")
         lines = content.strip().split("\n")
-        assert len(lines) == 12  # 4 maya versions * 3 lines each (PYTHONPATH + PLUG_IN_PATH)
+        # 5 maya versions (2022-2026), each with 3 lines
+        assert len(lines) == 15
         assert "MAYAVERSION:2022" in lines[0]
         assert "python37" in lines[1]
         assert "PLUG_IN_PATH+:=plug-ins" in lines[2]
         assert "MAYAVERSION:2023" in lines[3]
         assert "PYTHONPATH+:=python" in lines[4]
-        assert "PLUG_IN_PATH+:=plug-ins" in lines[5]
+        # All lines use "." as the module path
+        assert all("." in line.split("dcc_mcp_maya")[1].strip().split()[0] for line in lines if line.startswith("+"))
 
     def test_win64_no_cp37(self):
-        content = assemble_mod.generate_mod_content("0.2.2", "win64", ["2023", "2024", "2025"], has_cp37=False)
+        content = assemble_mod.generate_mod_file("0.2.2", "win64", has_cp37=False)
         assert "python37" not in content
+        assert "MAYAVERSION:2022" not in content
+        assert "MAYAVERSION:2023" in content
         assert "PLUG_IN_PATH+:=plug-ins" in content
 
+    def test_absolute_path(self):
+        content = assemble_mod.generate_mod_file("0.2.2", "win64", has_cp37=True, path="C:\\tools\\dcc-mcp-maya")
+        assert "C:\\tools\\dcc-mcp-maya" in content
+
     def test_macos_no_2022(self):
-        content = assemble_mod.generate_mod_content("0.2.2", "macos", ["2023", "2024", "2025"], has_cp37=False)
+        content = assemble_mod.generate_mod_file("0.2.2", "macos", has_cp37=False)
         assert "MAYAVERSION:2022" not in content
         assert "MAYAVERSION:2023" in content
         assert "PLUG_IN_PATH+:=plug-ins" in content
 
     def test_linux_all_versions(self):
-        content = assemble_mod.generate_mod_content("0.2.2", "linux", ["2022", "2023", "2024", "2025"], has_cp37=True)
+        content = assemble_mod.generate_mod_file("0.2.2", "linux", has_cp37=True)
         assert "MAYAVERSION:2022" in content
         assert "python37" in content
         assert "PLUG_IN_PATH+:=plug-ins" in content
 
 
-# ── assemble (integration) ──────────────────────────────────────────────────
+# ── generate_module_info ────────────────────────────────────────────────────
+
+
+class TestGenerateModuleInfo:
+    def test_with_cp37(self):
+        content = assemble_mod.generate_module_info("0.2.2", has_cp37=True)
+        info = json.loads(content)
+        assert info["name"] == "dcc_mcp_maya"
+        assert info["version"] == "0.2.2"
+        assert info["has_cp37"] is True
+        assert "2022" in info["supported_maya_versions"]
+
+    def test_without_cp37(self):
+        content = assemble_mod.generate_module_info("0.2.2", has_cp37=False)
+        info = json.loads(content)
+        assert info["has_cp37"] is False
+        assert "2022" not in info["supported_maya_versions"]
+
+
+# ── assemble helpers ────────────────────────────────────────────────────────
+
+
+def _setup_project(tmp_path: Path) -> Path:
+    """Create a minimal project structure for testing assemble()."""
+    project = tmp_path / "project"
+    project.mkdir()
+
+    # pyproject.toml
+    _make_fake_pyproject(project, "0.12.12")
+
+    # Maya plugin
+    plugin_dir = project / "maya" / "plugin"
+    plugin_dir.mkdir(parents=True)
+    (plugin_dir / "dcc_mcp_maya_plugin.py").write_text("# plugin", encoding="utf-8")
+
+    # userSetup.py
+    maya_dir = project / "maya"
+    (maya_dir / "userSetup.py").write_text("# userSetup", encoding="utf-8")
+
+    # dcc_mcp_maya package
+    pkg_src = project / "src" / "dcc_mcp_maya"
+    pkg_src.mkdir(parents=True)
+    (pkg_src / "__init__.py").write_text("# maya package", encoding="utf-8")
+
+    # Packaging scripts
+    pkg_dir = project / "packaging"
+    pkg_dir.mkdir()
+    (pkg_dir / "install.bat").write_text("@echo install", encoding="utf-8")
+    (pkg_dir / "uninstall.bat").write_text("@echo uninstall", encoding="utf-8")
+    (pkg_dir / "install.sh").write_text("#!/bin/bash\necho install", encoding="utf-8")
+    (pkg_dir / "uninstall.sh").write_text("#!/bin/bash\necho uninstall", encoding="utf-8")
+    (pkg_dir / "README.txt").write_text("Readme", encoding="utf-8")
+    (pkg_dir / "README-pipeline.txt").write_text("Pipeline Readme", encoding="utf-8")
+
+    return project
+
+
+def _mock_download_and_resolve(project: Path, tmp_path: Path):
+    """Return mock patches for resolve_core_version and download_core_wheels."""
+    abi3_files = {
+        "dcc_mcp_core/__init__.py": b"# abi3 init",
+        "dcc_mcp_core/_core.pyd": b"\x00abi3_core",
+        "dcc_mcp_core/skill.py": b"class Skill: pass",
+    }
+    cp37_files = {
+        "dcc_mcp_core/__init__.py": b"# cp37 init",
+        "dcc_mcp_core/_core.pyd": b"\x00cp37_core",
+    }
+
+    def fake_download(version, platform, dest):
+        _make_fake_wheel(dest, f"dcc_mcp_core-{version}-cp38-abi3-win_amd64.whl", abi3_files)
+        if platform in ("win64", "linux"):
+            _make_fake_wheel(dest, f"dcc_mcp_core-{version}-cp37-cp37m-win_amd64.whl", cp37_files)
+        return list(dest.glob("dcc_mcp_core-*.whl"))
+
+    return fake_download
+
+
+# ── assemble (shared core) ──────────────────────────────────────────────────
 
 
 class TestAssemble:
-    def _setup_project(self, tmp_path: Path) -> Path:
-        """Create a minimal project structure for testing assemble()."""
-        project = tmp_path / "project"
-        project.mkdir()
-
-        # pyproject.toml
-        _make_fake_pyproject(project, "0.12.12")
-
-        # Maya plugin
-        plugin_dir = project / "maya" / "plugin"
-        plugin_dir.mkdir(parents=True)
-        (plugin_dir / "dcc_mcp_maya_plugin.py").write_text("# plugin", encoding="utf-8")
-
-        # userSetup.py
-        maya_dir = project / "maya"
-        (maya_dir / "userSetup.py").write_text("# userSetup", encoding="utf-8")
-
-        # dcc_mcp_maya package
-        pkg_src = project / "src" / "dcc_mcp_maya"
-        pkg_src.mkdir(parents=True)
-        (pkg_src / "__init__.py").write_text("# maya package", encoding="utf-8")
-
-        # Packaging scripts
-        pkg_dir = project / "packaging"
-        pkg_dir.mkdir()
-        (pkg_dir / "install.bat").write_text("@echo install", encoding="utf-8")
-        (pkg_dir / "uninstall.bat").write_text("@echo uninstall", encoding="utf-8")
-        (pkg_dir / "install.sh").write_text("#!/bin/bash\necho install", encoding="utf-8")
-        (pkg_dir / "uninstall.sh").write_text("#!/bin/bash\necho uninstall", encoding="utf-8")
-        (pkg_dir / "README.txt").write_text("Readme", encoding="utf-8")
-
-        return project
-
-    def _mock_download_and_resolve(self, project: Path, tmp_path: Path):
-        """Return mock patches for resolve_core_version and download_core_wheels."""
-        # Create fake wheels
-        abi3_files = {
-            "dcc_mcp_core/__init__.py": b"# abi3 init",
-            "dcc_mcp_core/_core.pyd": b"\x00abi3_core",
-            "dcc_mcp_core/skill.py": b"class Skill: pass",
-        }
-        cp37_files = {
-            "dcc_mcp_core/__init__.py": b"# cp37 init",
-            "dcc_mcp_core/_core.pyd": b"\x00cp37_core",
-        }
-
-        def fake_download(version, platform, dest):
-            _make_fake_wheel(dest, f"dcc_mcp_core-{version}-cp38-abi3-win_amd64.whl", abi3_files)
-            if platform in ("win64", "linux"):
-                _make_fake_wheel(dest, f"dcc_mcp_core-{version}-cp37-cp37m-win_amd64.whl", cp37_files)
-            return list(dest.glob("dcc_mcp_core-*.whl"))
-
-        return fake_download
-
     def test_win64_creates_python_and_python37(self, tmp_path):
-        project = self._setup_project(tmp_path)
+        project = _setup_project(tmp_path)
         output = tmp_path / "output"
         output.mkdir()
-        fake_download = self._mock_download_and_resolve(project, tmp_path)
+        fake_download = _mock_download_and_resolve(project, tmp_path)
 
         with patch.object(assemble_mod, "resolve_core_version", return_value="0.12.17"), patch.object(
             assemble_mod, "download_core_wheels", side_effect=fake_download
@@ -475,18 +486,16 @@ class TestAssemble:
         assert (result / "python37" / "dcc_mcp_core" / "__init__.py").exists()
         assert (result / "python37" / "dcc_mcp_maya" / "__init__.py").exists()
 
-        # Check module-info.json exists (replaces .mod — generated at install time)
-        assert (result / "module-info.json").exists()
-        import json
-
-        info = json.loads((result / "module-info.json").read_text(encoding="utf-8"))
-        assert info["version"] == "0.2.2"
-        assert info["has_cp37"] is True
-        # .mod file should NOT exist (generated at install time)
-        assert not (result / "dcc_mcp_maya.mod").exists()
+        # Check .mod file exists with relative paths
+        assert (result / "dcc_mcp_maya.mod").exists()
+        mod_content = (result / "dcc_mcp_maya.mod").read_text(encoding="utf-8")
+        assert "MAYAVERSION:2022" in mod_content
+        assert "python37" in mod_content
+        # Relative path uses "."
+        assert " ." in mod_content
 
     def test_macos_no_python37(self, tmp_path):
-        project = self._setup_project(tmp_path)
+        project = _setup_project(tmp_path)
         output = tmp_path / "output"
         output.mkdir()
 
@@ -506,34 +515,15 @@ class TestAssemble:
 
         assert (result / "python" / "dcc_mcp_core").exists()
         assert not (result / "python37").exists()
-
-    def test_module_info_structure(self, tmp_path):
-        project = self._setup_project(tmp_path)
-        output = tmp_path / "output"
-        output.mkdir()
-        fake_download = self._mock_download_and_resolve(project, tmp_path)
-
-        with patch.object(assemble_mod, "resolve_core_version", return_value="0.12.17"), patch.object(
-            assemble_mod, "download_core_wheels", side_effect=fake_download
-        ):
-            result = assemble_mod.assemble(project, "0.2.2", "win64", output)
-
-        # Verify module-info.json
-        import json
-
-        info = json.loads((result / "module-info.json").read_text(encoding="utf-8"))
-        assert info["name"] == "dcc_mcp_maya"
-        assert info["version"] == "0.2.2"
-        assert "2022" in info["supported_maya_versions"]
-        assert "2023" in info["supported_maya_versions"]
-        assert "2024" in info["supported_maya_versions"]
-        assert "2025" in info["supported_maya_versions"]
+        # No MAYAVERSION:2022 in .mod for macos
+        mod_content = (result / "dcc_mcp_maya.mod").read_text(encoding="utf-8")
+        assert "MAYAVERSION:2022" not in mod_content
 
     def test_plugin_and_usersetup_copied(self, tmp_path):
-        project = self._setup_project(tmp_path)
+        project = _setup_project(tmp_path)
         output = tmp_path / "output"
         output.mkdir()
-        fake_download = self._mock_download_and_resolve(project, tmp_path)
+        fake_download = _mock_download_and_resolve(project, tmp_path)
 
         with patch.object(assemble_mod, "resolve_core_version", return_value="0.12.17"), patch.object(
             assemble_mod, "download_core_wheels", side_effect=fake_download
@@ -543,23 +533,32 @@ class TestAssemble:
         assert (result / "plug-ins" / "dcc_mcp_maya_plugin.py").exists()
         assert (result / "scripts" / "userSetup.py").exists()
 
-    def test_install_scripts_win64(self, tmp_path):
-        project = self._setup_project(tmp_path)
+
+# ── assemble_portable ───────────────────────────────────────────────────────
+
+
+class TestAssemblePortable:
+    def test_win64_has_install_scripts(self, tmp_path):
+        project = _setup_project(tmp_path)
         output = tmp_path / "output"
         output.mkdir()
-        fake_download = self._mock_download_and_resolve(project, tmp_path)
+        fake_download = _mock_download_and_resolve(project, tmp_path)
 
         with patch.object(assemble_mod, "resolve_core_version", return_value="0.12.17"), patch.object(
             assemble_mod, "download_core_wheels", side_effect=fake_download
         ):
-            result = assemble_mod.assemble(project, "0.2.2", "win64", output)
+            result = assemble_mod.assemble_portable(project, "0.2.2", "win64", output)
 
         assert (result / "install.bat").exists()
         assert (result / "uninstall.bat").exists()
         assert not (result / "install.sh").exists()
+        assert (result / "dcc_mcp_maya.mod").exists()
+        assert (result / "README.txt").exists()
+        # Portable should NOT have module-info.json
+        assert not (result / "module-info.json").exists()
 
-    def test_install_scripts_linux(self, tmp_path):
-        project = self._setup_project(tmp_path)
+    def test_linux_has_install_sh(self, tmp_path):
+        project = _setup_project(tmp_path)
         output = tmp_path / "output"
         output.mkdir()
 
@@ -574,22 +573,79 @@ class TestAssemble:
         with patch.object(assemble_mod, "resolve_core_version", return_value="0.12.17"), patch.object(
             assemble_mod, "download_core_wheels", side_effect=fake_download
         ):
-            result = assemble_mod.assemble(project, "0.2.2", "linux", output)
+            result = assemble_mod.assemble_portable(project, "0.2.2", "linux", output)
 
         assert (result / "install.sh").exists()
         assert (result / "uninstall.sh").exists()
         assert not (result / "install.bat").exists()
 
-    def test_zip_created_by_main(self, tmp_path):
-        """Test that main() creates the ZIP archive."""
-        project = self._setup_project(tmp_path)
+
+# ── assemble_pipeline ───────────────────────────────────────────────────────
+
+
+class TestAssemblePipeline:
+    def test_has_module_info_and_no_install_scripts(self, tmp_path):
+        project = _setup_project(tmp_path)
         output = tmp_path / "output"
-        fake_download = self._mock_download_and_resolve(project, tmp_path)
+        output.mkdir()
+        fake_download = _mock_download_and_resolve(project, tmp_path)
 
         with patch.object(assemble_mod, "resolve_core_version", return_value="0.12.17"), patch.object(
             assemble_mod, "download_core_wheels", side_effect=fake_download
         ):
-            # Call main with mocked args
+            result = assemble_mod.assemble_pipeline(project, "0.2.2", "win64", output)
+
+        # Pipeline has module-info.json
+        assert (result / "module-info.json").exists()
+        info = json.loads((result / "module-info.json").read_text(encoding="utf-8"))
+        assert info["version"] == "0.2.2"
+        assert info["has_cp37"] is True
+
+        # Pipeline has .mod file
+        assert (result / "dcc_mcp_maya.mod").exists()
+
+        # Pipeline has README-pipeline.txt
+        assert (result / "README-pipeline.txt").exists()
+
+        # Pipeline does NOT have install scripts
+        assert not (result / "install.bat").exists()
+        assert not (result / "install.sh").exists()
+        assert not (result / "uninstall.bat").exists()
+        assert not (result / "uninstall.sh").exists()
+
+    def test_no_module_info_without_cp37(self, tmp_path):
+        project = _setup_project(tmp_path)
+        output = tmp_path / "output"
+        output.mkdir()
+
+        abi3_files = {"dcc_mcp_core/__init__.py": b"# test", "dcc_mcp_core/_core.so": b"\x00"}
+
+        def fake_download(version, platform, dest):
+            _make_fake_wheel(dest, f"dcc_mcp_core-{version}-cp38-abi3-macosx.whl", abi3_files)
+            return list(dest.glob("dcc_mcp_core-*.whl"))
+
+        with patch.object(assemble_mod, "resolve_core_version", return_value="0.12.17"), patch.object(
+            assemble_mod, "download_core_wheels", side_effect=fake_download
+        ):
+            result = assemble_mod.assemble_pipeline(project, "0.2.2", "macos", output)
+
+        info = json.loads((result / "module-info.json").read_text(encoding="utf-8"))
+        assert info["has_cp37"] is False
+        assert "2022" not in info["supported_maya_versions"]
+
+
+# ── main (ZIP creation) ────────────────────────────────────────────────────
+
+
+class TestMain:
+    def test_creates_two_zips(self, tmp_path):
+        project = _setup_project(tmp_path)
+        output = tmp_path / "output"
+        fake_download = _mock_download_and_resolve(project, tmp_path)
+
+        with patch.object(assemble_mod, "resolve_core_version", return_value="0.12.17"), patch.object(
+            assemble_mod, "download_core_wheels", side_effect=fake_download
+        ):
             import sys as real_sys
 
             old_argv = real_sys.argv
@@ -609,10 +665,11 @@ class TestAssemble:
             finally:
                 real_sys.argv = old_argv
 
-        # Verify ZIP was created
-        zip_files = list(output.glob("*.zip"))
-        assert len(zip_files) == 1
-        assert "0.2.2-win64" in zip_files[0].name
+        # Verify both ZIPs were created
+        zip_files = list(output.rglob("*.zip"))
+        names = [z.name for z in zip_files]
+        assert any("0.2.2-win64.zip" in n for n in names), f"Portable ZIP not found in {names}"
+        assert any("0.2.2-win64-pipeline.zip" in n for n in names), f"Pipeline ZIP not found in {names}"
 
 
 # ── Live integration test (requires network) ────────────────────────────────
@@ -649,7 +706,7 @@ class TestAssembleLive:
         result = assemble_mod.assemble(PROJECT_ROOT, "0.2.2", "win64", output)
 
         # Verify core structure
-        assert (result / "module-info.json").exists()
+        assert (result / "dcc_mcp_maya.mod").exists()
         assert (result / "python" / "dcc_mcp_core" / "__init__.py").exists()
         assert (result / "python" / "dcc_mcp_core" / "_core.pyd").exists()
         assert (result / "python" / "dcc_mcp_maya" / "__init__.py").exists()
