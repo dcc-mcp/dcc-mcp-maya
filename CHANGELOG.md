@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.2.10](https://github.com/loonghao/dcc-mcp-maya/compare/v0.2.9...v0.2.10) (2026-04-20)
+
+
+### Features
+
+* **skills:** add ToolAnnotations and SkillGroup to all 64 skills ([c4de362](https://github.com/loonghao/dcc-mcp-maya/commit/c4de362a5be836b393f3133aea24931838946ba3))
+
+
+### Bug Fixes
+
+* **test:** update test_skills_round34 for ToolAnnotations/SkillGroup SKILL.md format ([57ece68](https://github.com/loonghao/dcc-mcp-maya/commit/57ece683b479ebdbe578a755fdd2b592df810514))
+
 ## [0.2.9](https://github.com/loonghao/dcc-mcp-maya/compare/v0.2.8...v0.2.9) (2026-04-20)
 
 
