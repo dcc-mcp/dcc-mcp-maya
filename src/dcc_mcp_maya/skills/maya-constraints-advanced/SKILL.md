@@ -1,15 +1,38 @@
 ---
 name: maya-constraints-advanced
-description: "Advanced Maya constraints — pole vector, IK handle constraints, space-switch baking and constraint blending"
+description: Advanced Maya constraints — pole vector, IK handle constraints, space-switch baking and constraint blending
 dcc: maya
-version: "1.0.0"
-tags: [maya, constraint, rigging, ik, space-switch]
-search-hint: "constraint, parent, aim, orient, advanced"
-license: "MIT"
-allowed-tools: ["Bash", "Read"]
+version: 1.0.0
+tags:
+- maya
+- constraint
+- rigging
+- ik
+- space-switch
+search-hint: constraint, parent, aim, orient, advanced
+license: MIT
+allowed-tools:
+- Bash
+- Read
 depends: []
+tools:
+- name: add_pole_vector_constraint
+- name: bake_constraint
+- name: get_constraint_weights
+  read_only_hint: true
+  idempotent_hint: true
+- name: set_constraint_weight
+  idempotent_hint: true
+groups:
+- name: animation
+  description: Animation, constraints, and motion capture tools
+  default_active: false
+  tools:
+  - add_pole_vector_constraint
+  - bake_constraint
+  - get_constraint_weights
+  - set_constraint_weight
 ---
-
 # maya-constraints-advanced
 
 Advanced Maya constraints skill. Provides actions for pole-vector constraints,

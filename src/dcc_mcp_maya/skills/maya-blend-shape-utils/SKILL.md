@@ -1,15 +1,40 @@
 ---
 name: maya-blend-shape-utils
-description: "Maya blend shape utilities — create, inspect, and drive blend shape deformers"
+description: Maya blend shape utilities — create, inspect, and drive blend shape deformers
 dcc: maya
-version: "1.0.0"
-tags: [maya, blend-shape, deformer, morph, facial]
-search-hint: "blend shape, morph, target, deform"
-license: "MIT"
-allowed-tools: ["Bash", "Read"]
+version: 1.0.0
+tags:
+- maya
+- blend-shape
+- deformer
+- morph
+- facial
+search-hint: blend shape, morph, target, deform
+license: MIT
+allowed-tools:
+- Bash
+- Read
 depends: []
+tools:
+- name: create_blend_shape
+- name: get_blend_shape_weights
+  read_only_hint: true
+  idempotent_hint: true
+- name: list_blend_shapes
+  read_only_hint: true
+  idempotent_hint: true
+- name: set_blend_shape_weight
+  idempotent_hint: true
+groups:
+- name: rigging
+  description: Rigging, deformation, and skinning tools
+  default_active: false
+  tools:
+  - create_blend_shape
+  - get_blend_shape_weights
+  - list_blend_shapes
+  - set_blend_shape_weight
 ---
-
 # maya-blend-shape-utils
 
 Blend shape (morph target) management for Maya. Covers creating blend shape deformers,
