@@ -35,7 +35,7 @@ default:
 @verify-deps:
     echo "🔍 Verifying dependency installation..."
     python -c "from dcc_mcp_maya import start_server; print('✓ dcc_mcp_maya')"
-    python -c "from dcc_mcp_core import create_skill_manager; print('✓ dcc_mcp_core')"
+    python -c "from dcc_mcp_core import create_skill_server; print('✓ dcc_mcp_core')"
     python -c "import pytest; print('✓ pytest')"
     python -c "import requests; print('✓ requests')"
     echo "✅ All core dependencies verified"
@@ -196,7 +196,7 @@ lint-all: lint lint-skills
     echo ""
     echo "Trying imports:"
     python -c "from dcc_mcp_maya import start_server; print('✓ dcc_mcp_maya imports OK')" 2>&1 || echo "✗ dcc_mcp_maya import failed"
-    python -c "from dcc_mcp_core import create_skill_manager; print('✓ dcc_mcp_core imports OK')" 2>&1 || echo "✗ dcc_mcp_core import failed"
+    python -c "from dcc_mcp_core import create_skill_server; print('✓ dcc_mcp_core imports OK')" 2>&1 || echo "✗ dcc_mcp_core import failed"
     echo ""
     echo "✅ Diagnostic complete"
 
