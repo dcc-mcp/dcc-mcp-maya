@@ -2,12 +2,37 @@
 name: maya-bifrost
 description: Bifrost visual programming graph management for simulations and effects
 dcc: maya
-tags: [bifrost, simulation, vfx, graph]
-search-hint: "bifrost, simulation, graph, node, vellum"
-version: "1.0.0"
-license: "MIT"
-allowed-tools: ["Bash", "Read"]
+tags:
+- bifrost
+- simulation
+- vfx
+- graph
+search-hint: bifrost, simulation, graph, node, vellum
+version: 1.0.0
+license: MIT
+allowed-tools:
+- Bash
+- Read
 depends: []
+tools:
+- name: add_bifrost_node
+- name: connect_bifrost_ports
+- name: create_bifrost_graph
+- name: list_bifrost_graphs
+  read_only_hint: true
+  idempotent_hint: true
+- name: set_bifrost_property
+  idempotent_hint: true
+groups:
+- name: simulation-fx
+  description: Dynamics, simulation, particles, and VFX tools
+  default_active: false
+  tools:
+  - add_bifrost_node
+  - connect_bifrost_ports
+  - create_bifrost_graph
+  - list_bifrost_graphs
+  - set_bifrost_property
 ---
 # Maya Bifrost Skill
 
