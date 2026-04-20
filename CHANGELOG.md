@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.11](https://github.com/loonghao/dcc-mcp-maya/compare/v0.2.10...v0.2.11) (2026-04-20)
+
+
+### Bug Fixes
+
+* **tests:** relax tool assertions for progressive skill loading ([#77](https://github.com/loonghao/dcc-mcp-maya/issues/77)) ([5a0f407](https://github.com/loonghao/dcc-mcp-maya/commit/5a0f407308c1759cc7578d5ed9eb78becc36311c))
+* update justfile to use create_skill_server (renamed in core 0.13+) ([#74](https://github.com/loonghao/dcc-mcp-maya/issues/74)) ([4979239](https://github.com/loonghao/dcc-mcp-maya/commit/4979239ef9c1350f005a71a5f29a331ee6ce4360))
+
 ## [0.2.10](https://github.com/loonghao/dcc-mcp-maya/compare/v0.2.9...v0.2.10) (2026-04-20)
 
 
