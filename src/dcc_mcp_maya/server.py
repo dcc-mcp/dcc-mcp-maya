@@ -34,6 +34,7 @@ from __future__ import annotations
 
 # Import built-in modules
 import logging
+import os
 import threading
 from pathlib import Path
 from typing import Any, List, Optional
@@ -51,6 +52,65 @@ DEFAULT_SERVER_VERSION = __version__
 
 # Built-in skills directory shipped with this package
 _BUILTIN_SKILLS_DIR = Path(__file__).parent / "skills"
+
+# ── Minimal-mode defaults ────────────────────────────────────────────────────
+# When minimal=True (the default), only these skills are loaded at startup;
+# all others remain as ``__skill__<name>`` stubs in ``tools/list``.
+_MINIMAL_SKILLS: List[str] = ["maya-scripting", "maya-scene"]
+
+# Groups to deactivate when running in minimal mode.
+# Keys are skill names; values are lists of group names to deactivate.
+# After ``load_skill`` the server calls ``deactivate_group`` for each listed
+# group, collapsing those tools into ``__group__<name>`` stubs.
+_MINIMAL_DEACTIVATE_GROUPS: dict[str, list[str]] = {
+    "maya-scripting": ["extended"],
+    "maya-scene": ["scene-management"],
+}
+
+# Environment variable overrides:
+#   DCC_MCP_MAYA_MINIMAL=0  → pre-load all bundled skills (legacy behaviour)
+#   DCC_MCP_MAYA_DEFAULT_TOOLS="execute_python,get_scene_info,..."  → customise
+#       which skills (and optionally which groups) are active at startup.
+_ENV_MINIMAL = "DCC_MCP_MAYA_MINIMAL"
+_ENV_DEFAULT_TOOLS = "DCC_MCP_MAYA_DEFAULT_TOOLS"
+
+
+def _resolve_minimal_flag(minimal: Optional[bool]) -> bool:
+    """Resolve the minimal-mode flag from the argument and env vars.
+
+    Priority:
+    1. Explicit ``minimal`` argument (not None)
+    2. ``DCC_MCP_MAYA_MINIMAL`` env var (``"0"`` → False, ``"1"`` → True)
+    3. Default: True
+    """
+    if minimal is not None:
+        return minimal
+    env_val = os.environ.get(_ENV_MINIMAL)
+    if env_val is not None:
+        return env_val.strip() != "0"
+    return True
+
+
+def _resolve_default_tools() -> Optional[dict[str, list[str]]]:
+    """Parse ``DCC_MCP_MAYA_DEFAULT_TOOLS`` env var into skill→groups map.
+
+    The env var format is a comma-separated list of skill names.  When
+    present, only the listed skills are loaded at startup, and groups
+    not named in the value are deactivated.
+
+    Returns None if the env var is not set.
+    """
+    raw = os.environ.get(_ENV_DEFAULT_TOOLS)
+    if not raw:
+        return None
+    result: dict[str, list[str]] = {}
+    for token in raw.split(","):
+        token = token.strip()
+        if not token:
+            continue
+        # No group-level granularity in env var for now — just skill names
+        result.setdefault(token, [])
+    return result
 
 
 def _maya_available() -> bool:
@@ -72,6 +132,8 @@ class MayaMcpServer(DccServerBase):
 
     - Maya builtin skills directory (``skills/``)
     - Maya version detection via ``cmds.about(version=True)``
+    - Minimal-mode startup: only core skills are loaded, the rest
+      remain as ``__skill__`` stubs for progressive activation
     - Optional ``register_builtin_actions()`` override that also installs
       IPC diagnostic handlers via
       ``dcc_mcp_core.dcc_server.register_diagnostic_handlers``
@@ -128,34 +190,124 @@ class MayaMcpServer(DccServerBase):
         self,
         extra_skill_paths: Optional[List[str]] = None,
         include_bundled: bool = True,
+        minimal: Optional[bool] = None,
     ) -> "MayaMcpServer":
-        """Discover skills, then register diagnostic IPC handlers.
+        """Discover skills, then optionally load only core skills.
 
-        Calls the base-class implementation to scan all skill directories.
-        Skill metadata becomes available immediately, while concrete skill
-        tools remain progressively loaded by the underlying MCP server.
-        This method then registers the standard diagnostic IPC handlers
-        (``get_audit_log``, ``get_tool_metrics``, ``dispatch_tool``) so
-        that skill sub-processes can call back into this server.
+        Calls the base-class implementation to scan all skill directories
+        so the ``SkillCatalog`` is fully populated (required for
+        ``list_skills`` / ``find_skills`` / ``load_skill`` to work).
+        Then, depending on the *minimal* flag, either loads a small
+        default set of skills or falls back to the legacy "load all"
+        behaviour.
+
+        **Minimal mode** (``minimal=True``, the default):
+
+        - Only ``maya-scripting`` and ``maya-scene`` are loaded.
+        - Within those skills, only the ``core`` tool-group is active;
+          the ``extended`` / ``scene-management`` groups are deactivated
+          and appear as ``__group__<name>`` stubs.
+        - All other skills remain in ``Discovered`` state and appear as
+          ``__skill__<name>`` stubs.
+        - The agent can call ``load_skill("maya-primitives")`` to expand
+          the surface at any time.
+
+        **Full mode** (``minimal=False``):
+
+        - All bundled skills are loaded with all groups active (legacy).
+
+        Environment variable overrides:
+
+        - ``DCC_MCP_MAYA_MINIMAL=0`` → force full mode.
+        - ``DCC_MCP_MAYA_DEFAULT_TOOLS="maya-scripting,maya-scene,..."``
+          → customise which skills are loaded at startup.
 
         Args:
             extra_skill_paths: Additional directories to scan.
             include_bundled: Include dcc-mcp-core bundled skills.
+            minimal: If ``True``, only load core skills.  ``None`` reads
+                the ``DCC_MCP_MAYA_MINIMAL`` env var (default ``True``).
 
         Returns:
             ``self`` for chaining.
         """
+        # Phase 1: discover all skills (populates SkillCatalog)
         super().register_builtin_actions(
             extra_skill_paths=extra_skill_paths,
             include_bundled=include_bundled,
         )
+
+        # Phase 2: resolve minimal mode and load skills selectively
+        is_minimal = _resolve_minimal_flag(minimal)
+        custom_tools = _resolve_default_tools()
+
+        if not is_minimal:
+            # Legacy mode: load all discovered skills
+            self._load_all_discovered_skills()
+        elif custom_tools is not None:
+            # Custom tool list from env var
+            self._load_minimal_skills(list(custom_tools.keys()))
+        else:
+            # Default minimal mode
+            self._load_minimal_skills(_MINIMAL_SKILLS)
+
+        # Phase 3: register diagnostic IPC handlers
         try:
             from dcc_mcp_core.dcc_server import register_diagnostic_handlers  # noqa: PLC0415
 
             register_diagnostic_handlers(self._server, dcc_name="maya")
         except Exception as exc:
             logger.debug("Failed to register diagnostic handlers: %s", exc)
+
         return self
+
+    def _load_all_discovered_skills(self) -> None:
+        """Load every discovered skill (legacy full-load behaviour)."""
+        try:
+            skills = self._server.list_skills()
+            for skill in skills:
+                name = skill.name if hasattr(skill, "name") else skill["name"]
+                try:
+                    self._server.load_skill(name)
+                except Exception as exc:
+                    logger.debug("Failed to load skill %r: %s", name, exc)
+        except Exception as exc:
+            logger.warning("Failed to list skills for full-load: %s", exc)
+
+    def _load_minimal_skills(self, skill_names: List[str]) -> None:
+        """Load only the named skills and deactivate non-core groups.
+
+        For each skill in *skill_names*, calls ``load_skill`` and then
+        deactivates any groups listed in ``_MINIMAL_DEACTIVATE_GROUPS``
+        for that skill.  Other skills stay in ``Discovered`` state.
+        """
+        registry = self._server.registry
+        for name in skill_names:
+            try:
+                self._server.load_skill(name)
+                logger.info("[minimal] Loaded skill %r", name)
+            except Exception as exc:
+                logger.warning("[minimal] Failed to load skill %r: %s", name, exc)
+                continue
+
+            # Deactivate non-core groups for minimal surface
+            groups_to_deactivate = _MINIMAL_DEACTIVATE_GROUPS.get(name, [])
+            for group_name in groups_to_deactivate:
+                try:
+                    count = registry.set_group_enabled(group_name, False)
+                    logger.info(
+                        "[minimal] Deactivated group %r in %r (%d tools collapsed)",
+                        group_name,
+                        name,
+                        count,
+                    )
+                except Exception as exc:
+                    logger.debug(
+                        "[minimal] Failed to deactivate group %r in %r: %s",
+                        group_name,
+                        name,
+                        exc,
+                    )
 
     def _version_string(self) -> str:
         """Return the Maya version via ``cmds.about(version=True)``.
@@ -261,6 +413,7 @@ def start_server(
     extra_skill_paths: Optional[List[str]] = None,
     include_bundled: bool = True,
     enable_hot_reload: bool = False,
+    minimal: Optional[bool] = None,
     **kwargs: Any,
 ) -> Any:
     """Start (or return the already-running) Maya MCP server.
@@ -274,11 +427,14 @@ def start_server(
 
     Args:
         port: TCP port.  Use ``0`` for a random available port.
-        register_builtins: If ``True``, discovers and loads all skills.
+        register_builtins: If ``True``, discovers and loads skills.
         extra_skill_paths: Additional directories to scan.
         include_bundled: Include dcc-mcp-core bundled skills.
         enable_hot_reload: Enable skill hot-reload on file changes.
             Also honours ``DCC_MCP_MAYA_HOT_RELOAD=1``.
+        minimal: If ``True``, only core skills are loaded at startup.
+            ``None`` reads ``DCC_MCP_MAYA_MINIMAL`` env var (default
+            ``True``).  Set to ``False`` for legacy full-load behaviour.
         **kwargs: Forwarded to :class:`MayaMcpServer`.
 
     Returns:
@@ -291,20 +447,54 @@ def start_server(
         print(handle.mcp_url())  # http://127.0.0.1:8765/mcp
     """
     global _server_instance
-    handle = create_dcc_server(
-        instance_holder=_instance_holder,
-        lock=_server_lock,
-        server_class=MayaMcpServer,
-        port=port,
-        register_builtins=register_builtins,
-        extra_skill_paths=extra_skill_paths,
-        include_bundled=include_bundled,
-        enable_hot_reload=enable_hot_reload,
-        hot_reload_env_var="DCC_MCP_MAYA_HOT_RELOAD",
-        **kwargs,
-    )
-    _server_instance = _instance_holder[0]
-    return handle
+
+    if register_builtins:
+        # Create server instance and call register_builtin_actions with minimal
+        with _server_lock:
+            if _instance_holder[0] is not None and _instance_holder[0].is_running:
+                return _instance_holder[0]._handle  # type: ignore[return-value]
+
+            server = MayaMcpServer(port=port, **kwargs)
+            _instance_holder[0] = server
+            server.register_builtin_actions(
+                extra_skill_paths=extra_skill_paths,
+                include_bundled=include_bundled,
+                minimal=minimal,
+            )
+
+            # Hot-reload setup
+            effective_hot_reload = enable_hot_reload
+            if not effective_hot_reload:
+                env_val = os.environ.get("DCC_MCP_MAYA_HOT_RELOAD", "").strip()
+                effective_hot_reload = env_val == "1"
+            if effective_hot_reload:
+                try:
+                    from dcc_mcp_core.hot_reload import HotReloader  # noqa: PLC0415
+
+                    server._hot_reloader = HotReloader(server)  # type: ignore[attr-defined]
+                    server._hot_reloader.start()  # type: ignore[attr-defined]
+                except Exception as exc:
+                    logger.debug("Hot-reload setup failed: %s", exc)
+
+            handle = server.start()
+            _server_instance = server
+            return handle
+    else:
+        # No builtin registration — delegate to factory (backward compat)
+        handle = create_dcc_server(
+            instance_holder=_instance_holder,
+            lock=_server_lock,
+            server_class=MayaMcpServer,
+            port=port,
+            register_builtins=False,
+            extra_skill_paths=extra_skill_paths,
+            include_bundled=include_bundled,
+            enable_hot_reload=enable_hot_reload,
+            hot_reload_env_var="DCC_MCP_MAYA_HOT_RELOAD",
+            **kwargs,
+        )
+        _server_instance = _instance_holder[0]
+        return handle
 
 
 def stop_server() -> None:
