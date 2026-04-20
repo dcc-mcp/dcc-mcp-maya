@@ -1,15 +1,55 @@
 ---
 name: maya-scripting
-description: "Execute MEL/Python scripts inside Maya; broad scripting utilities across all domains"
+description: Execute MEL/Python scripts inside Maya; broad scripting utilities across all domains
 dcc: maya
-version: "1.0.0"
-tags: [maya, scripting, mel, python, utility]
-search-hint: "script, mel, python, expression, execute"
-license: "MIT"
-allowed-tools: ["Bash", "Read"]
+version: 1.0.0
+tags:
+- maya
+- scripting
+- mel
+- python
+- utility
+search-hint: script, mel, python, expression, execute
+license: MIT
+allowed-tools:
+- Bash
+- Read
 depends: []
+tools:
+- name: animation
+- name: attributes
+- name: cameras
+- name: constraints
+- name: deformer_advanced
+- name: display
+- name: dynamics
+- name: execute_mel
+- name: execute_python
+- name: expressions
+- name: get_script_node
+  read_only_hint: true
+  idempotent_hint: true
+- name: lighting
+- name: list_mel_procedures
+  read_only_hint: true
+  idempotent_hint: true
+- name: materials
+- name: mesh_ops
+- name: namespaces
+- name: node_attrs
+- name: node_graph
+- name: references
+- name: render
+- name: render_layers
+- name: rigging
+- name: scene_utils
+- name: sets
+- name: skin_weights
+- name: texture_bake
+- name: utility
+- name: uv_ops
+- name: vertex_color
 ---
-
 # maya-scripting
 
 Maya scripting skill. Provides actions for executing MEL and Python code inside Maya, plus a broad

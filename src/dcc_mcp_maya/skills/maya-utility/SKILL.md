@@ -1,15 +1,29 @@
 ---
 name: maya-utility
-description: "Maya utility nodes and scene statistics"
+description: Maya utility nodes and scene statistics
 dcc: maya
-version: "1.0.0"
-tags: [maya, utility, node, scene]
-search-hint: "utility, transform, freeze, center pivot, convert"
-license: "MIT"
-allowed-tools: ["Bash", "Read"]
+version: 1.0.0
+tags:
+- maya
+- utility
+- node
+- scene
+search-hint: utility, transform, freeze, center pivot, convert
+license: MIT
+allowed-tools:
+- Bash
+- Read
 depends: []
+tools:
+- name: clean_scene
+- name: create_utility_node
+- name: get_scene_statistics
+  read_only_hint: true
+  idempotent_hint: true
+- name: list_node_connections
+  read_only_hint: true
+  idempotent_hint: true
 ---
-
 # maya-utility
 
 Maya utility skill. Provides actions for creating utility/shading nodes and querying scene statistics.

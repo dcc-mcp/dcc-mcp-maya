@@ -1,64 +1,96 @@
 ---
 name: maya-scene
-description: "Maya scene management — create, open, save, list, select and manipulate scene objects"
+description: Maya scene management — create, open, save, list, select and manipulate scene objects
 dcc: maya
-version: "1.0.0"
-tags: [maya, scene, hierarchy]
-search-hint: "new scene, open, save, list objects, hierarchy, select"
-license: "MIT"
-allowed-tools: ["Bash", "Read"]
+version: 1.0.0
+tags:
+- maya
+- scene
+- hierarchy
+search-hint: new scene, open, save, list objects, hierarchy, select
+license: MIT
+allowed-tools:
+- Bash
+- Read
 depends: []
 tools:
-  - name: new_scene
-    description: "Create a new empty Maya scene"
-    source_file: scripts/new_scene.py
-    read_only: false
-    destructive: true
-    idempotent: false
-  - name: save_scene
-    description: "Save the current Maya scene"
-    source_file: scripts/save_scene.py
-    read_only: false
-    destructive: false
-    idempotent: true
-  - name: open_scene
-    description: "Open a Maya scene file from disk"
-    source_file: scripts/open_scene.py
-    read_only: false
-    destructive: true
-    idempotent: false
-  - name: list_objects
-    description: "List objects in the current Maya scene"
-    source_file: scripts/list_objects.py
-    read_only: true
-    destructive: false
-    idempotent: true
-  - name: get_selection
-    description: "Return the current Maya selection"
-    source_file: scripts/get_selection.py
-    read_only: true
-    destructive: false
-    idempotent: true
-  - name: set_selection
-    description: "Set the active Maya selection"
-    source_file: scripts/set_selection.py
-    read_only: false
-    destructive: false
-    idempotent: false
-  - name: get_scene_info
-    description: "Return a hierarchical DAG description of the current scene"
-    source_file: scripts/get_scene_info.py
-    read_only: true
-    destructive: false
-    idempotent: true
-  - name: get_session_info
-    description: "Return Maya version, scene path, and basic session statistics"
-    source_file: scripts/get_session_info.py
-    read_only: true
-    destructive: false
-    idempotent: true
+- name: center_pivot
+- name: create_locator
+- name: duplicate_object
+- name: export_scene
+  read_only_hint: true
+  idempotent_hint: true
+- name: freeze_transforms
+- name: get_bounding_box
+  read_only_hint: true
+  idempotent_hint: true
+- name: get_scene_info
+  description: Return a hierarchical DAG description of the current scene
+  read_only_hint: true
+  idempotent_hint: true
+- name: get_selection
+  description: Return the current Maya selection
+  read_only_hint: true
+  idempotent_hint: true
+- name: get_session_info
+  description: Return Maya version, scene path, and basic session statistics
+  read_only_hint: true
+  idempotent_hint: true
+- name: group_objects
+- name: list_cameras
+  read_only_hint: true
+  idempotent_hint: true
+- name: list_objects
+  description: List objects in the current Maya scene
+  read_only_hint: true
+  idempotent_hint: true
+- name: lock_object
+- name: new_scene
+  description: Create a new empty Maya scene
+  destructive_hint: true
+  idempotent_hint: true
+- name: open_scene
+  description: Open a Maya scene file from disk
+  destructive_hint: true
+  idempotent_hint: true
+- name: parent_object
+- name: save_scene
+  description: Save the current Maya scene
+- name: select_by_type
+- name: set_frame_rate
+  idempotent_hint: true
+- name: set_selection
+  description: Set the active Maya selection
+  idempotent_hint: true
+- name: set_visibility
+  idempotent_hint: true
+groups:
+- name: scene-management
+  description: Scene management, organization, and navigation tools
+  default_active: true
+  tools:
+  - center_pivot
+  - create_locator
+  - duplicate_object
+  - export_scene
+  - freeze_transforms
+  - get_bounding_box
+  - get_scene_info
+  - get_selection
+  - get_session_info
+  - group_objects
+  - list_cameras
+  - list_objects
+  - lock_object
+  - new_scene
+  - open_scene
+  - parent_object
+  - save_scene
+  - select_by_type
+  - set_frame_rate
+  - set_selection
+  - set_visibility
 ---
-
 # maya-scene
 
 Maya scene management skill. Provides actions for creating, opening, saving scenes, listing and selecting objects, managing hierarchy, and querying scene state.

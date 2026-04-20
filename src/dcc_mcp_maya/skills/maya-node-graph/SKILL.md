@@ -1,15 +1,40 @@
 ---
 name: maya-node-graph
-description: "Maya node graph — connect/disconnect attributes, query history and topology"
+description: Maya node graph — connect/disconnect attributes, query history and topology
 dcc: maya
-version: "1.0.0"
-tags: [maya, node, attribute, graph, utility]
-search-hint: "node, graph, connection, attribute, editor"
-license: "MIT"
-allowed-tools: ["Bash", "Read"]
+version: 1.0.0
+tags:
+- maya
+- node
+- attribute
+- graph
+- utility
+search-hint: node, graph, connection, attribute, editor
+license: MIT
+allowed-tools:
+- Bash
+- Read
 depends: []
+tools:
+- name: apply_symmetry
+  idempotent_hint: true
+- name: connect_attr
+- name: delete_history
+  destructive_hint: true
+  idempotent_hint: true
+- name: disconnect_attr
+- name: get_dag_path
+  read_only_hint: true
+  idempotent_hint: true
+- name: list_connections
+  read_only_hint: true
+  idempotent_hint: true
+- name: list_history
+  read_only_hint: true
+  idempotent_hint: true
+- name: smooth_mesh
+- name: transfer_attributes
 ---
-
 # maya-node-graph
 
 Maya node graph skill. Provides actions for connecting and disconnecting attributes, querying history, and managing mesh topology.

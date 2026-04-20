@@ -1,15 +1,37 @@
 ---
 name: maya-render-farm
-description: "Maya render farm — prepare scenes, write render job configs, and submit to local or Deadline render queues"
+description: Maya render farm — prepare scenes, write render job configs, and submit to local or Deadline render queues
 dcc: maya
-version: "1.0.0"
-tags: [maya, render, farm, deadline, pipeline]
-search-hint: "render farm, deadline, batch, submit"
-license: "MIT"
-allowed-tools: ["Bash", "Read"]
+version: 1.0.0
+tags:
+- maya
+- render
+- farm
+- deadline
+- pipeline
+search-hint: render farm, deadline, batch, submit
+license: MIT
+allowed-tools:
+- Bash
+- Read
 depends: []
+tools:
+- name: get_render_job_status
+  read_only_hint: true
+  idempotent_hint: true
+- name: submit_to_deadline
+- name: validate_scene_for_farm
+- name: write_render_job
+groups:
+- name: rendering
+  description: Render settings, layers, passes, and output tools
+  default_active: false
+  tools:
+  - get_render_job_status
+  - submit_to_deadline
+  - validate_scene_for_farm
+  - write_render_job
 ---
-
 # maya-render-farm
 
 Render farm submission utilities for Maya. Exports job configurations, validates
