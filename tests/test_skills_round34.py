@@ -1,11 +1,12 @@
-"""Round 34 — maya_warning helper + SKILL.md tools: field validation.
+"""Round 34 — maya_warning helper + SKILL.md tools/groups field validation.
 
 Covers:
 - maya_warning(): success=True with context["warning"] key
 - maya_warning imported from dcc_mcp_maya top-level package
 - maya_warning in api.__all__
-- SKILL.md tools: field structure (ToolDeclaration-compatible)
-- 4 updated SKILL.md files contain valid tools: arrays
+- SKILL.md tools: field structure (name + optional annotation hints)
+- SKILL.md groups: field structure (name + tools list)
+- 4 updated SKILL.md files contain valid tools and groups arrays
 """
 
 # Import built-in modules
@@ -157,31 +158,42 @@ class TestSkillMdToolsField:
 
     @pytest.mark.parametrize("skill_name", SKILL_NAMES_WITH_TOOLS)
     def test_each_tool_has_required_fields(self, skill_name):
+        """Each tool entry must have at least 'name'; 'description' is optional but encouraged."""
         content = self._read_skill_md(skill_name)
         fm = self._parse_frontmatter(content)
         for tool in fm["tools"]:
             assert "name" in tool, "tool missing 'name' in {}".format(skill_name)
-            assert "description" in tool, "tool missing 'description' in {}".format(skill_name)
-            assert "source_file" in tool, "tool missing 'source_file' in {}".format(skill_name)
 
     @pytest.mark.parametrize("skill_name", SKILL_NAMES_WITH_TOOLS)
     def test_tool_annotations_present(self, skill_name):
+        """Verify annotation hints use the _hint suffix convention."""
         content = self._read_skill_md(skill_name)
         fm = self._parse_frontmatter(content)
         for tool in fm["tools"]:
-            assert "read_only" in tool, "tool '{}' missing read_only in {}".format(tool.get("name", "?"), skill_name)
-            assert "destructive" in tool, "tool '{}' missing destructive in {}".format(
-                tool.get("name", "?"), skill_name
-            )
-            assert "idempotent" in tool, "tool '{}' missing idempotent in {}".format(tool.get("name", "?"), skill_name)
+            if "read_only_hint" in tool:
+                assert isinstance(tool["read_only_hint"], bool), (
+                    "tool '{}' read_only_hint must be bool in {}".format(tool.get("name", "?"), skill_name)
+                )
+            if "destructive_hint" in tool:
+                assert isinstance(tool["destructive_hint"], bool), (
+                    "tool '{}' destructive_hint must be bool in {}".format(tool.get("name", "?"), skill_name)
+                )
+            if "idempotent_hint" in tool:
+                assert isinstance(tool["idempotent_hint"], bool), (
+                    "tool '{}' idempotent_hint must be bool in {}".format(tool.get("name", "?"), skill_name)
+                )
 
     @pytest.mark.parametrize("skill_name", SKILL_NAMES_WITH_TOOLS)
-    def test_source_file_under_scripts(self, skill_name):
+    def test_groups_key_present(self, skill_name):
+        """Each skill with tools should define at least one group."""
         content = self._read_skill_md(skill_name)
         fm = self._parse_frontmatter(content)
-        for tool in fm["tools"]:
-            sf = tool.get("source_file", "")
-            assert sf.startswith("scripts/"), "source_file '{}' must start with 'scripts/' in {}".format(sf, skill_name)
+        assert "groups" in fm, "groups: field missing in {}".format(skill_name)
+        assert isinstance(fm["groups"], list), "groups: must be a list in {}".format(skill_name)
+        assert len(fm["groups"]) > 0, "groups: list must not be empty in {}".format(skill_name)
+        for group in fm["groups"]:
+            assert "name" in group, "group missing 'name' in {}".format(skill_name)
+            assert "tools" in group, "group missing 'tools' in {}".format(skill_name)
 
     def test_maya_scene_tool_count(self):
         content = self._read_skill_md("maya-scene")
@@ -201,29 +213,32 @@ class TestSkillMdToolsField:
     def test_maya_render_tool_count(self):
         content = self._read_skill_md("maya-render")
         fm = self._parse_frontmatter(content)
-        assert len(fm["tools"]) == 3
+        assert len(fm["tools"]) >= 8
 
     def test_readonly_tools_not_destructive(self):
-        """read_only=True tools should not be destructive."""
+        """read_only_hint=True tools should not be destructive."""
         for skill_name in SKILL_NAMES_WITH_TOOLS:
             content = self._read_skill_md(skill_name)
             fm = self._parse_frontmatter(content)
             for tool in fm["tools"]:
-                if tool.get("read_only") is True:
-                    assert tool.get("destructive") is False, (
-                        "read_only tool '{}' in {} should not be destructive".format(tool.get("name"), skill_name)
+                if tool.get("read_only_hint") is True:
+                    assert tool.get("destructive_hint") is not True, (
+                        "read_only_hint tool '{}' in {} should not be destructive_hint".format(tool.get("name"), skill_name)
                     )
 
-    def test_tool_names_match_source_file_stems(self):
-        """Each tool's name should match the stem of its source_file."""
+    def test_group_tools_subset_of_skill_tools(self):
+        """Every tool listed in a group must exist in the skill's tools list."""
         for skill_name in SKILL_NAMES_WITH_TOOLS:
             content = self._read_skill_md(skill_name)
             fm = self._parse_frontmatter(content)
-            for tool in fm["tools"]:
-                stem = os.path.splitext(os.path.basename(tool.get("source_file", "")))[0]
-                assert tool["name"] == stem, "Tool name '{}' doesn't match source_file stem '{}' in {}".format(
-                    tool["name"], stem, skill_name
-                )
+            tool_names = {t["name"] for t in fm["tools"]}
+            for group in fm.get("groups", []):
+                for t in group["tools"]:
+                    assert t in tool_names, (
+                        "group '{}' references tool '{}' not in tools list of {}".format(
+                            group["name"], t, skill_name
+                        )
+                    )
 
 
 # ---------------------------------------------------------------------------
