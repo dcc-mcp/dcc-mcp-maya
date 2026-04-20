@@ -171,16 +171,16 @@ class TestSkillMdToolsField:
         fm = self._parse_frontmatter(content)
         for tool in fm["tools"]:
             if "read_only_hint" in tool:
-                assert isinstance(tool["read_only_hint"], bool), (
-                    "tool '{}' read_only_hint must be bool in {}".format(tool.get("name", "?"), skill_name)
+                assert isinstance(tool["read_only_hint"], bool), "tool '{}' read_only_hint must be bool in {}".format(
+                    tool.get("name", "?"), skill_name
                 )
             if "destructive_hint" in tool:
                 assert isinstance(tool["destructive_hint"], bool), (
                     "tool '{}' destructive_hint must be bool in {}".format(tool.get("name", "?"), skill_name)
                 )
             if "idempotent_hint" in tool:
-                assert isinstance(tool["idempotent_hint"], bool), (
-                    "tool '{}' idempotent_hint must be bool in {}".format(tool.get("name", "?"), skill_name)
+                assert isinstance(tool["idempotent_hint"], bool), "tool '{}' idempotent_hint must be bool in {}".format(
+                    tool.get("name", "?"), skill_name
                 )
 
     @pytest.mark.parametrize("skill_name", SKILL_NAMES_WITH_TOOLS)
@@ -223,7 +223,9 @@ class TestSkillMdToolsField:
             for tool in fm["tools"]:
                 if tool.get("read_only_hint") is True:
                     assert tool.get("destructive_hint") is not True, (
-                        "read_only_hint tool '{}' in {} should not be destructive_hint".format(tool.get("name"), skill_name)
+                        "read_only_hint tool '{}' in {} should not be destructive_hint".format(
+                            tool.get("name"), skill_name
+                        )
                     )
 
     def test_group_tools_subset_of_skill_tools(self):
@@ -234,10 +236,8 @@ class TestSkillMdToolsField:
             tool_names = {t["name"] for t in fm["tools"]}
             for group in fm.get("groups", []):
                 for t in group["tools"]:
-                    assert t in tool_names, (
-                        "group '{}' references tool '{}' not in tools list of {}".format(
-                            group["name"], t, skill_name
-                        )
+                    assert t in tool_names, "group '{}' references tool '{}' not in tools list of {}".format(
+                        group["name"], t, skill_name
                     )
 
 
