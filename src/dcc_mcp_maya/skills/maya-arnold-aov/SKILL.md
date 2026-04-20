@@ -3,6 +3,7 @@ name: maya-arnold-aov
 description: Arnold AOV (Arbitrary Output Variable) management for multi-pass rendering
 dcc: maya
 tags:
+- maya
 - arnold
 - aov
 - render
