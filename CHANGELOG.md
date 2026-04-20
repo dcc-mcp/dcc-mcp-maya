@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.2.9](https://github.com/loonghao/dcc-mcp-maya/compare/v0.2.8...v0.2.9) (2026-04-20)
+
+
+### Features
+
+* **dispatcher:** add MayaUiDispatcher + MayaUiPump + MayaStandaloneDispatcher ([6c78c99](https://github.com/loonghao/dcc-mcp-maya/commit/6c78c997326c3b94210998e0292fa5cd3e95cbae)), closes [#66](https://github.com/loonghao/dcc-mcp-maya/issues/66)
+
+
+### Bug Fixes
+
+* **plugin:** export DCC_MCP_PYTHON_EXECUTABLE / init snippet before server start ([f91f1be](https://github.com/loonghao/dcc-mcp-maya/commit/f91f1be458a66e2b5456787119e89da03829fd36)), closes [#63](https://github.com/loonghao/dcc-mcp-maya/issues/63)
+* **server:** restore module-level _server_instance for plugin compatibility ([6480127](https://github.com/loonghao/dcc-mcp-maya/commit/6480127c06d99e1decc618edc1d15782376eb889))
+* **tests:** relax maya-scene tool assertion for progressive loading ([#71](https://github.com/loonghao/dcc-mcp-maya/issues/71)) ([399b32c](https://github.com/loonghao/dcc-mcp-maya/commit/399b32c3c8f98c08237ae7bf2eb5e442dcab7d62))
+* **test:** update E2E tool name assertions for core 0.13+ naming convention ([b13ab6c](https://github.com/loonghao/dcc-mcp-maya/commit/b13ab6c87dc43c5f3ebbbc86837b6df4b059498f))
+* **test:** update tool name assertions for core 0.13+ naming convention ([429eba2](https://github.com/loonghao/dcc-mcp-maya/commit/429eba2fba1e6c544870289b67af3b799851fc6f))
+
+
+### Code Refactoring
+
+* align with dcc-mcp-core 0.13 API ([31abc6f](https://github.com/loonghao/dcc-mcp-maya/commit/31abc6f2c9e94692375b8f158a67a65532e47d35))
+
 ## [0.2.8](https://github.com/loonghao/dcc-mcp-maya/compare/v0.2.7...v0.2.8) (2026-04-16)
 
 
