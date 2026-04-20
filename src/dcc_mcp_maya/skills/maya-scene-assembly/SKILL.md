@@ -3,8 +3,9 @@ name: maya-scene-assembly
 description: Maya Scene Assembly — manage Assembly Definition, Assembly Reference, and representation LODs
 dcc: maya
 tags:
+- maya
 - scene-assembly
-- LOD
+- lod
 - reference
 - pipeline
 - assembly

@@ -302,3 +302,119 @@ class TestModuleSingleton:
         h2 = srv_mod.start_server(port=0, register_builtins=False)
         assert h1 is h2
         srv_mod.stop_server()
+
+
+class TestMinimalMode:
+    """Tests for the minimal-mode default tool surface."""
+
+    def test_minimal_default_loads_only_core_skills(self):
+        """With minimal=True (default), only maya-scripting and maya-scene are loaded."""
+        srv_mod = _import_server()
+        server = srv_mod.MayaMcpServer(port=0)
+        server.register_builtin_actions(
+            extra_skill_paths=[_builtin_skills_dir()],
+            minimal=True,
+        )
+        # Check loaded skills via is_loaded
+        assert server._server.is_loaded("maya-scripting")
+        assert server._server.is_loaded("maya-scene")
+        assert not server._server.is_loaded("maya-primitives")
+        assert not server._server.is_loaded("maya-render")
+        server.stop()
+
+    def test_minimal_false_loads_all_skills(self):
+        """With minimal=False, all discovered skills are loaded (legacy behaviour)."""
+        srv_mod = _import_server()
+        server = srv_mod.MayaMcpServer(port=0)
+        server.register_builtin_actions(
+            extra_skill_paths=[_builtin_skills_dir()],
+            minimal=False,
+        )
+        # Many skills should be loaded in legacy mode
+        assert server._server.loaded_count() >= 10
+        assert server._server.is_loaded("maya-scripting")
+        assert server._server.is_loaded("maya-scene")
+        assert server._server.is_loaded("maya-primitives")
+        server.stop()
+
+    def test_minimal_env_override(self):
+        """DCC_MCP_MAYA_MINIMAL=0 forces legacy full-load behaviour."""
+        srv_mod = _import_server()
+        with patch.dict("os.environ", {"DCC_MCP_MAYA_MINIMAL": "0"}):
+            server = srv_mod.MayaMcpServer(port=0)
+            server.register_builtin_actions(
+                extra_skill_paths=[_builtin_skills_dir()],
+                minimal=None,  # let env var decide
+            )
+            assert server._server.loaded_count() >= 10
+            server.stop()
+
+    def test_minimal_tools_list_has_core_tools(self):
+        """In minimal mode, tools/list contains execute_python and get_scene_info."""
+        srv_mod = _import_server()
+        server = srv_mod.MayaMcpServer(port=0)
+        server.register_builtin_actions(
+            extra_skill_paths=[_builtin_skills_dir()],
+            minimal=True,
+        )
+        handle = server.start()
+        # Fetch tools/list
+        data = json.dumps({"jsonrpc": "2.0", "id": 1, "method": "tools/list"}).encode()
+        req = urllib.request.Request(
+            handle.mcp_url(),
+            data=data,
+            headers={"Content-Type": "application/json", "Accept": "application/json"},
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            body = json.loads(resp.read())
+        names = {t["name"] for t in body["result"]["tools"]}
+        # Core meta-tools
+        assert "load_skill" in names
+        assert "list_skills" in names
+        # Core skill tools (execute_python, get_scene_info should be present)
+        has_execute_python = any("execute_python" in n for n in names)
+        has_get_scene_info = any("get_scene_info" in n for n in names)
+        assert has_execute_python, f"execute_python not found in tools: {names}"
+        assert has_get_scene_info, f"get_scene_info not found in tools: {names}"
+        # Non-core skills should be stubs
+        skill_stubs = [n for n in names if n.startswith("__skill__")]
+        assert len(skill_stubs) > 0, "Expected __skill__ stubs for unloaded skills"
+        # Extended/scene-management groups should be deactivated
+        # (their tools should NOT appear as full tools)
+        has_mesh_ops = any("mesh_ops" in n for n in names)
+        has_new_scene = any("new_scene" in n for n in names)
+        assert not has_mesh_ops, f"mesh_ops (extended group) should be deactivated: {names}"
+        assert not has_new_scene, f"new_scene (scene-management group) should be deactivated: {names}"
+        server.stop()
+
+    def test_minimal_deactivates_extended_groups(self):
+        """In minimal mode, extended groups are deactivated within loaded skills."""
+        srv_mod = _import_server()
+        server = srv_mod.MayaMcpServer(port=0)
+        server.register_builtin_actions(
+            extra_skill_paths=[_builtin_skills_dir()],
+            minimal=True,
+        )
+        # Check that the registry has the groups but they're disabled
+        registry = server._server.registry
+        groups = registry.list_groups()
+        assert "extended" in groups
+        assert "scene-management" in groups
+        assert "core" in groups
+        server.stop()
+
+    def test_custom_default_tools_env(self):
+        """DCC_MCP_MAYA_DEFAULT_TOOLS customises which skills are loaded."""
+        srv_mod = _import_server()
+        with patch.dict("os.environ", {"DCC_MCP_MAYA_DEFAULT_TOOLS": "maya-scripting,maya-primitives"}):
+            server = srv_mod.MayaMcpServer(port=0)
+            server.register_builtin_actions(
+                extra_skill_paths=[_builtin_skills_dir()],
+                minimal=True,
+            )
+            assert server._server.is_loaded("maya-scripting")
+            assert server._server.is_loaded("maya-primitives")
+            # maya-scene was NOT in the custom list
+            assert not server._server.is_loaded("maya-scene")
+            server.stop()

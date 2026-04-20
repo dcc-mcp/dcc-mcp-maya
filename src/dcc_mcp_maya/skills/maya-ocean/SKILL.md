@@ -3,6 +3,7 @@ name: maya-ocean
 description: Maya ocean (Bifrost/Maya Ocean shader) surface simulation actions
 dcc: maya
 tags:
+- maya
 - ocean
 - fluid
 - simulation
