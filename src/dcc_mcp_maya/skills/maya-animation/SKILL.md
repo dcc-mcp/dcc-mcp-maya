@@ -1,58 +1,79 @@
 ---
 name: maya-animation
-description: "Maya animation keyframes, timeline, curves and simulation baking"
+description: Maya animation keyframes, timeline, curves and simulation baking
 dcc: maya
-version: "1.0.0"
-tags: [maya, animation, keyframe, timeline]
-search-hint: "keyframe, timeline, animate, curves, bake, simulation, constraint, tangent"
-license: "MIT"
-allowed-tools: ["Bash", "Read"]
+version: 1.0.0
+tags:
+- maya
+- animation
+- keyframe
+- timeline
+search-hint: keyframe, timeline, animate, curves, bake, simulation, constraint, tangent
+license: MIT
+allowed-tools:
+- Bash
+- Read
 depends: []
 tools:
-  - name: set_keyframe
-    description: "Set a keyframe on an object at the given time"
-    source_file: scripts/set_keyframe.py
-    read_only: false
-    destructive: false
-    idempotent: false
-  - name: get_keyframes
-    description: "Get all keyframe times for an object / attribute"
-    source_file: scripts/get_keyframes.py
-    read_only: true
-    destructive: false
-    idempotent: true
-  - name: set_timeline
-    description: "Set the playback and animation timeline range"
-    source_file: scripts/set_timeline.py
-    read_only: false
-    destructive: false
-    idempotent: true
-  - name: get_current_time
-    description: "Get the current frame number"
-    source_file: scripts/get_current_time.py
-    read_only: true
-    destructive: false
-    idempotent: true
-  - name: set_current_time
-    description: "Set the current frame number"
-    source_file: scripts/set_current_time.py
-    read_only: false
-    destructive: false
-    idempotent: true
-  - name: delete_keyframes
-    description: "Delete keyframes from an object within an optional frame range"
-    source_file: scripts/delete_keyframes.py
-    read_only: false
-    destructive: true
-    idempotent: false
-  - name: bake_simulation
-    description: "Bake simulation / constraints to keyframes on objects"
-    source_file: scripts/bake_simulation.py
-    read_only: false
-    destructive: false
-    idempotent: false
+- name: bake_constraints
+- name: bake_simulation
+  description: Bake simulation / constraints to keyframes on objects
+- name: delete_keyframes
+  description: Delete keyframes from an object within an optional frame range
+  destructive_hint: true
+  idempotent_hint: true
+- name: export_animation_curves
+  read_only_hint: true
+  idempotent_hint: true
+- name: get_current_time
+  description: Get the current frame number
+  read_only_hint: true
+  idempotent_hint: true
+- name: get_frame_range
+  read_only_hint: true
+  idempotent_hint: true
+- name: get_keyframes
+  description: Get all keyframe times for an object / attribute
+  read_only_hint: true
+  idempotent_hint: true
+- name: import_animation_curves
+- name: list_animation_curves
+  read_only_hint: true
+  idempotent_hint: true
+- name: query_scene_time_info
+  read_only_hint: true
+  idempotent_hint: true
+- name: set_animation_curve_tangent
+  idempotent_hint: true
+- name: set_current_time
+  description: Set the current frame number
+  idempotent_hint: true
+- name: set_keyframe
+  description: Set a keyframe on an object at the given time
+  idempotent_hint: true
+- name: set_timeline
+  description: Set the playback and animation timeline range
+  idempotent_hint: true
+groups:
+- name: animation
+  description: Animation, constraints, and motion capture tools
+  default_active: false
+  tools:
+  - bake_constraints
+  - bake_simulation
+  - delete_keyframes
+  - export_animation_curves
+  - get_current_time
+  - get_frame_range
+  - get_keyframes
+  - import_animation_curves
+  - list_animation_curves
+  - query_scene_time_info
+  - set_animation_curve_tangent
+  - set_current_time
+  - set_keyframe
+  - set_timeline
 ---
-
 # maya-animation
 
 Maya animation skill. Provides actions for managing keyframes, timeline settings, animation curves, baking simulations and constraints, and importing/exporting animation data.

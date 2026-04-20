@@ -1,15 +1,30 @@
 ---
 name: maya-gpu-cache
-description: "Maya GPU cache utilities — export, import, and manage gpuCache nodes for viewport performance"
+description: Maya GPU cache utilities — export, import, and manage gpuCache nodes for viewport performance
 dcc: maya
-version: "1.0.0"
-tags: [maya, gpu-cache, alembic, viewport, performance]
-search-hint: "gpu cache, alembic, cache, performance"
-license: "MIT"
-allowed-tools: ["Bash", "Read"]
+version: 1.0.0
+tags:
+- maya
+- gpu-cache
+- alembic
+- viewport
+- performance
+search-hint: gpu cache, alembic, cache, performance
+license: MIT
+allowed-tools:
+- Bash
+- Read
 depends: []
+tools:
+- name: export_gpu_cache
+  read_only_hint: true
+  idempotent_hint: true
+- name: import_gpu_cache
+- name: list_gpu_caches
+  read_only_hint: true
+  idempotent_hint: true
+- name: refresh_gpu_cache
 ---
-
 # maya-gpu-cache
 
 GPU cache (Alembic-based viewport proxy) management for Maya.
