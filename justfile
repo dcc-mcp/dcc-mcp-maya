@@ -1,6 +1,7 @@
 # dcc-mcp-maya development justfile
 # Unified dependency and task management
 
+set windows-shell := ["powershell.exe", "-NoLogo", "-Command"]
 set shell := ["bash", "-c"]
 set dotenv-load := true
 
