@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.2.12](https://github.com/loonghao/dcc-mcp-maya/compare/v0.2.11...v0.2.12) (2026-04-21)
+
+
+### Features
+
+* add minimal-mode default tool surface with progressive loading ([#80](https://github.com/loonghao/dcc-mcp-maya/issues/80)) ([b73379f](https://github.com/loonghao/dcc-mcp-maya/commit/b73379fee3213d2f39147bd25b0b62d38fe368a1))
+
+
+### Bug Fixes
+
+* **ci:** update e2e.yml for new assemble output paths ([b18ec68](https://github.com/loonghao/dcc-mcp-maya/commit/b18ec687836b635fda149baca2556476f3586671))
+
+
+### Code Refactoring
+
+* **packaging:** rewrite install scripts and add portable/pipeline ZIP variants ([4f9228c](https://github.com/loonghao/dcc-mcp-maya/commit/4f9228c2e3d7587ed0bc2c41a83d89285268ecf3))
+
 ## [0.2.11](https://github.com/loonghao/dcc-mcp-maya/compare/v0.2.10...v0.2.11) (2026-04-20)
 
 
