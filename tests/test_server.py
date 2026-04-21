@@ -161,13 +161,22 @@ class TestMayaMcpServerHttp:
         )
         assert code == 200
         names = {t["name"] for t in body["result"]["tools"]}
-        # Core 0.13+ uses {skill-name}.{script_stem} naming convention
-        # Verify that tools from each loaded skill are present
-        # With progressive skill loading, which skills are eagerly loaded
-        # varies by platform and Python version.  Only assert that SOME
-        # maya-prefixed tools are present alongside the core meta-tools.
-        maya_tools = [n for n in names if n.startswith("maya-")]
-        assert len(maya_tools) >= 3, f"Expected >=3 maya-* tools, got {len(maya_tools)}: {names}"
+        # Core 0.14+ uses bare tool names (e.g. "create_sphere") when unique,
+        # falling back to "<skill>.<action>" prefixed form on collisions.
+        # Stub markers ("__skill__<name>") also carry the maya- prefix.
+        # Verify that SOME skill-derived tools are present alongside the core
+        # meta-tools — either as bare names, prefixed, or stub markers.
+        skill_stubs = {n for n in names if n.startswith("__skill__maya-")}
+        prefixed_tools = {n for n in names if n.startswith("maya-") and not n.startswith("__skill__")}
+        bare_known = {"create_sphere", "create_cube", "create_cylinder", "create_plane",
+                       "get_scene_info", "get_session_info", "get_selection",
+                       "set_transform", "get_transform", "rename_object", "delete_objects",
+                       "execute_python", "execute_mel"}
+        bare_maya = names & bare_known
+        skill_tools = skill_stubs | prefixed_tools | bare_maya
+        assert len(skill_tools) >= 3, (
+            f"Expected >=3 maya skill tools (stubs/prefixed/bare), got {len(skill_tools)}: {names}"
+        )
         # Core meta-tools should always be present
         core_tools = {"list_skills", "find_skills", "search_skills", "load_skill", "unload_skill"}
         assert core_tools.issubset(names), f"Missing core meta-tools: {core_tools - names}"
