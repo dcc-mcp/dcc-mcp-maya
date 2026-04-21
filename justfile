@@ -276,9 +276,9 @@ _maya-modules-dir := if os() == "windows" {
 
     # Symlink python package
     if [ "$(uname -s)" = "MINGW"* ] || [ "$(uname -s)" = "MSYS"* ] || [ -n "${WINDIR:-}" ]; then
-        # Windows: use mklink (requires admin or developer mode)
+        # Windows (Git Bash): use mklink (requires admin or developer mode)
         cmd //c "mklink /D \"$(cygpath -w "$TARGET/python")\" \"$(cygpath -w "$PROJECT_ROOT/src")\"" 2>/dev/null || \
-            cp -r "$PROJECT_ROOT/src" "$TARGET/python"
+            { echo "   ⚠️  Symlink failed, copying instead..."; cp -r "$PROJECT_ROOT/src" "$TARGET/python"; }
         cmd //c "mklink \"$(cygpath -w "$TARGET/plug-ins/dcc_mcp_maya_plugin.py")\" \"$(cygpath -w "$PROJECT_ROOT/maya/plugin/dcc_mcp_maya_plugin.py")\"" 2>/dev/null || \
             cp "$PROJECT_ROOT/maya/plugin/dcc_mcp_maya_plugin.py" "$TARGET/plug-ins/"
         cmd //c "mklink \"$(cygpath -w "$TARGET/scripts/userSetup.py")\" \"$(cygpath -w "$PROJECT_ROOT/maya/userSetup.py")\"" 2>/dev/null || \
@@ -291,12 +291,10 @@ _maya-modules-dir := if os() == "windows" {
     fi
 
     # Generate .mod file
-    cat > "$MOD_DIR/dcc-mcp-maya.mod" << MODEOF
-    + dcc-mcp-maya 0.0.0-dev $TARGET
-    PYTHONPATH+:=python
-    MAYA_PLUG_IN_PATH+:=plug-ins
-    MAYA_SCRIPT_PATH+:=scripts
-    MODEOF
+    echo "+ dcc-mcp-maya 0.0.0-dev $TARGET" > "$MOD_DIR/dcc-mcp-maya.mod"
+    echo "PYTHONPATH+:=python" >> "$MOD_DIR/dcc-mcp-maya.mod"
+    echo "MAYA_PLUG_IN_PATH+:=plug-ins" >> "$MOD_DIR/dcc-mcp-maya.mod"
+    echo "MAYA_SCRIPT_PATH+:=scripts" >> "$MOD_DIR/dcc-mcp-maya.mod"
 
     echo ""
     echo "   ✅ Symlinks created:"
@@ -307,6 +305,10 @@ _maya-modules-dir := if os() == "windows" {
     echo ""
     echo "   Next: start Maya {{ maya-version }} — the plugin loads automatically."
     echo "   Edit source → restart Maya (or use hot-reload) to see changes."
+
+# Windows version: Create symlinks using PowerShell (for native Windows without Git Bash)
+@maya-link-win:
+    powershell -NoProfile -ExecutionPolicy Bypass -File tools/maya-link-win.ps1 -MayaVersion {{ maya-version }}
 
 # Remove dev symlinks and .mod file
 @maya-unlink:
@@ -328,6 +330,10 @@ _maya-modules-dir := if os() == "windows" {
     fi
 
     echo "   ✅ Dev symlinks cleaned up"
+
+# Windows version: Remove dev symlinks using PowerShell
+@maya-unlink-win:
+    powershell -NoProfile -ExecutionPolicy Bypass -File tools/maya-unlink-win.ps1
 
 # Show current Maya dev link status
 @maya-status:
@@ -363,6 +369,10 @@ _maya-modules-dir := if os() == "windows" {
         echo "   ❌ .mod file  not found"
     fi
 
+# Windows version: Show Maya dev link status using PowerShell
+@maya-status-win:
+    powershell -NoProfile -ExecutionPolicy Bypass -File tools/maya-status-win.ps1
+
 # Install dcc-mcp-core into Maya's Python (requires mayapy on PATH)
 @maya-install-core maya-py="mayapy":
     #!/usr/bin/env bash
@@ -371,11 +381,22 @@ _maya-modules-dir := if os() == "windows" {
     {{ maya-py }} -m pip install dcc-mcp-core --upgrade
     echo "✅ dcc-mcp-core installed into Maya Python"
 
+# Windows version: Install dcc-mcp-core into Maya's Python
+@maya-install-core-win maya-version="{{ maya-version }}":
+    powershell -NoProfile -ExecutionPolicy Bypass -File tools/maya-install-core-win.ps1 -MayaVersion {{ maya-version }}
 # Full local dev setup: link + install core into Maya Python
 maya-dev: maya-link
     @echo ""
     @echo "📋 Dev environment linked. Now install dcc-mcp-core into Maya:"
-    @echo "   just maya-install-core maya-py=/path/to/mayapy"
+    @echo "   Unix/macOS:"
+    @echo "     just maya-install-core maya-py=/path/to/mayapy"
+    @echo "     or if mayapy is on PATH:"
+    @echo "     just maya-install-core"
     @echo ""
-    @echo "   Or if mayapy is on PATH:"
-    @echo "   just maya-install-core"
+    @echo "   Windows (PowerShell):"
+    @echo "     just maya-link-win"
+    @echo "     just maya-install-core-win maya-version={{ maya-version }}"
+    @echo ""
+    @echo "   Then verify with:"
+    @echo "     just maya-status       # Unix/macOS"
+    @echo "     just maya-status-win   # Windows"
