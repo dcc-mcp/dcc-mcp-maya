@@ -257,11 +257,67 @@ Add to `claude_desktop_config.json`:
 
 ## Development
 
+### Clone and Install
+
 ```bash
 git clone https://github.com/loonghao/dcc-mcp-maya
 cd dcc-mcp-maya
 pip install -e ".[dev]"
 pytest tests/
+```
+
+### Maya Development Setup
+
+#### Unix/macOS
+
+```bash
+# Link source code to Maya modules directory
+just maya-link
+
+# Install dcc-mcp-core into Maya Python
+just maya-install-core maya-py=/path/to/mayapy
+# Or if mayapy is on PATH:
+just maya-install-core
+
+# Check link status
+just maya-status
+
+# Full setup
+just maya-dev
+```
+
+#### Windows (PowerShell)
+
+```powershell
+# Link source code to Maya modules directory
+just maya-link-win
+
+# Install dcc-mcp-core into Maya Python
+just maya-install-core-win maya-version=2025
+
+# Check link status
+just maya-status-win
+
+# Clean up (remove symlinks)
+just maya-unlink-win
+```
+
+**Note**: Windows symlinks require either:
+- Windows Developer Mode enabled (Windows 10/11)
+- Or running PowerShell as Administrator
+
+If symlinks fail, the scripts will automatically fall back to copying files (changes will require re-running `just maya-link-win`).
+
+### Verify Installation
+
+```bash
+just verify-deps
+```
+
+### Run Tests
+
+```bash
+just test-quick
 ```
 
 ## License
