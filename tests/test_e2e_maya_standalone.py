@@ -265,8 +265,7 @@ class TestMcpHttpConnectivity:
             {"jsonrpc": "2.0", "id": 10, "method": "tools/list"},
         )
         assert code == 200
-        before_tools = body["result"]["tools"]
-        before_names = {t["name"] for t in before_tools}
+        before_names = {t["name"] for t in body["result"]["tools"]}
         stubs_before = {n for n in before_names if n.startswith("__skill__")}
         assert len(stubs_before) >= 1, "Need at least one stub to test progressive loading"
 
@@ -294,27 +293,21 @@ class TestMcpHttpConnectivity:
             {"jsonrpc": "2.0", "id": 12, "method": "tools/list"},
         )
         assert code == 200
-        after_tools = body["result"]["tools"]
-        after_names = {t["name"] for t in after_tools}
+        after_names = {t["name"] for t in body["result"]["tools"]}
 
         # The stub should be gone, replaced by real tools
         assert scene_stub not in after_names, f"Stub {scene_stub} should be removed after load_skill"
 
         # The loaded skill's real tools should now be present.
-        # Core 0.14+ uses bare tool names (e.g. "get_session_info") when
-        # unique within the instance, falling back to "<skill>.<action>"
-        # (e.g. "maya-scene.get_session_info") when there is a collision.
-        # Accept both forms: new tools must have appeared after loading.
+        # Core 0.14.1+ uses bare tool names: when a tool name is unique
+        # within the instance it is published as just the script stem
+        # (e.g. "get_session_info"); collisions fall back to the
+        # "<skill>.<action>" prefixed form.
         skill_name = scene_stub.replace("__skill__", "")  # e.g. "maya-scene"
-        skill_prefix = skill_name + "."
-        prefixed_tools = {n for n in after_names if n.startswith(skill_prefix)}
-        # Bare tools: names in after_names that weren't in before_names and
-        # aren't stubs — these are the freshly loaded real tools.
         new_tools = after_names - before_names - {n for n in after_names if n.startswith("__skill__")}
-        real_tools = prefixed_tools | new_tools
-        assert len(real_tools) >= 1, (
+        assert len(new_tools) >= 1, (
             f"Expected at least one new tool after loading {skill_name!r}, "
-            f"but no prefixed or bare tools appeared. "
+            f"but no bare or prefixed tools appeared. "
             f"before={sorted(before_names)[:5]} after={sorted(after_names)[:5]}"
         )
 
