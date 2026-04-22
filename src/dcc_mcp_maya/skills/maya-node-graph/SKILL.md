@@ -1,11 +1,12 @@
 ---
 name: maya-node-graph
-description: Maya node graph — connect/disconnect attributes, query history and topology
+description: Maya node graph operations — connect and disconnect attributes, query construction history and DG topology. Use when working with dependency graph connections. Not for attribute value editing or scene file operations — use maya-attributes or maya-scene for that.
 license: MIT
 allowed-tools: Bash Read
 metadata:
   dcc-mcp:
     dcc: maya
+    layer: domain
     version: 1.0.0
     tags:
     - maya
@@ -13,7 +14,7 @@ metadata:
     - attribute
     - graph
     - utility
-    search-hint: node, graph, connection, attribute, editor
+    search-hint: node connection, DG topology, construction history, attribute link
     depends: []
     tools: tools.yaml
 ---

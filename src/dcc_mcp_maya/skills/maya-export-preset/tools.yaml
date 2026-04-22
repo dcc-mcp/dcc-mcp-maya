@@ -5,15 +5,34 @@ tools:
   annotations:
     destructive_hint: true
     idempotent_hint: true
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log
+
 - name: list_export_presets
   execution: sync
   affinity: main
   annotations:
     read_only_hint: true
     idempotent_hint: true
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log
+
 - name: load_export_preset
   execution: sync
   affinity: main
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log
+
 - name: save_export_preset
   execution: sync
   affinity: main
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log

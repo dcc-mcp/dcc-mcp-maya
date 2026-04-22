@@ -3,10 +3,20 @@ tools:
   execution: sync
   affinity: main
   group: scene-management
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log
+
 - name: create_set
   execution: sync
   affinity: main
   group: scene-management
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log
+
 - name: list_sets
   execution: sync
   affinity: main
@@ -14,6 +24,11 @@ tools:
     read_only_hint: true
     idempotent_hint: true
   group: scene-management
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log
+
 - name: remove_from_set
   execution: sync
   affinity: main
@@ -21,3 +36,7 @@ tools:
     destructive_hint: true
     idempotent_hint: true
   group: scene-management
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log

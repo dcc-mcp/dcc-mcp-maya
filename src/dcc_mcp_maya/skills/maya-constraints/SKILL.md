@@ -1,11 +1,12 @@
 ---
 name: maya-constraints
-description: Maya constraints — parent, point, orient, scale, aim and weighted constraints
+description: Maya constraints — parent, point, orient, scale, and aim constraints with weights. Use when establishing spatial relationships between objects. Not for advanced space switching or IK handles — use maya-constraints-advanced or maya-rigging for that.
 license: MIT
 allowed-tools: Bash Read
 metadata:
   dcc-mcp:
     dcc: maya
+    layer: domain
     version: 1.0.0
     tags:
     - maya
@@ -14,7 +15,7 @@ metadata:
     - parent
     - orient
     - aim
-    search-hint: constraint, parent, orient, aim, point, scale
+    search-hint: spatial relationship, parent constraint, aim constraint, follow
     depends: []
     tools: tools.yaml
     groups: groups.yaml

@@ -1,12 +1,12 @@
 ---
 name: maya-hdri
-description: Maya HDRI environment lighting — load HDR images, configure IBL domes,
-  adjust exposure and rotation
+description: Maya HDRI environment lighting — load HDR images, configure IBL domes, and adjust exposure. Use when setting up image-based ambient lighting. Not for standard light creation or material authoring — use maya-lighting or maya-materials for that.
 license: MIT
 allowed-tools: Bash Read
 metadata:
   dcc-mcp:
     dcc: maya
+    layer: domain
     version: 1.0.0
     tags:
     - maya
@@ -14,7 +14,7 @@ metadata:
     - ibl
     - lighting
     - environment
-    search-hint: hdri, ibl, environment, dome light, image based lighting
+    search-hint: IBL setup, HDRI dome, environment lighting, ambient illumination
     depends: []
     tools: tools.yaml
     groups: groups.yaml

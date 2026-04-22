@@ -1,12 +1,12 @@
 ---
 name: maya-pipeline
-description: 'Pipeline integration utilities for Maya scenes: metadata, asset publishing
-  and project setup'
+description: Pipeline integration utilities for Maya scenes — metadata tagging, asset publishing, and project workspace setup. Use when managing assets through a production pipeline. Not for individual object creation, mesh editing, or rendering — use maya-primitives, maya-mesh-ops, or maya-render for that.
 license: MIT
 allowed-tools: Bash Read
 metadata:
   dcc-mcp:
     dcc: maya
+    layer: domain
     version: 1.0.0
     tags:
     - maya
@@ -14,7 +14,7 @@ metadata:
     - asset
     - publish
     - project
-    search-hint: pipeline, publish, export, import, workflow
+    search-hint: asset publish, production pipeline, metadata tagging, project workspace
     depends: []
     tools: tools.yaml
     groups: groups.yaml

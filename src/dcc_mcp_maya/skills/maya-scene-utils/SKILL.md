@@ -1,12 +1,12 @@
 ---
 name: maya-scene-utils
-description: Maya scene utilities — pivot, alignment, annotation, color override and
-  viewport shading
+description: Maya scene helper utilities — pivot alignment, annotation, color override, and locator creation. Use when adding helper objects and visual cues to a scene. Not for modeling or rendering — use maya-mesh-ops or maya-render for that.
 license: MIT
 allowed-tools: Bash Read
 metadata:
   dcc-mcp:
     dcc: maya
+    layer: domain
     version: 1.0.0
     tags:
     - maya
@@ -14,7 +14,7 @@ metadata:
     - utility
     - display
     - viewport
-    search-hint: scene, utility, annotation, locator, helper
+    search-hint: scene helper, locator, annotation, color override, alignment
     depends: []
     tools: tools.yaml
     groups: groups.yaml

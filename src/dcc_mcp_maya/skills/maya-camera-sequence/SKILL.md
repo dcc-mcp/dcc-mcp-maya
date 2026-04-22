@@ -1,12 +1,12 @@
 ---
 name: maya-camera-sequence
-description: Maya camera sequencer — create, list, trim, and bake camera cuts for
-  multi-shot sequences
+description: Maya camera sequencer — create, list, trim, and bake camera cuts for multi-shot timelines. Use when managing editorial shot cuts within Maya. Not for single camera setup or rendering — use maya-cameras or maya-render for that.
 license: MIT
 allowed-tools: Bash Read
 metadata:
   dcc-mcp:
     dcc: maya
+    layer: domain
     version: 1.0.0
     tags:
     - maya
@@ -14,7 +14,7 @@ metadata:
     - sequencer
     - shots
     - animation
-    search-hint: camera, sequence, film, multi-camera
+    search-hint: shot cut, camera sequence, editorial timeline, multi-camera
     depends: []
     tools: tools.yaml
     groups: groups.yaml

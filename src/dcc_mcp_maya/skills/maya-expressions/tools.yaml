@@ -3,6 +3,11 @@ tools:
   execution: sync
   affinity: main
   group: animation
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log
+
 - name: delete_expression
   execution: sync
   affinity: main
@@ -10,10 +15,20 @@ tools:
     destructive_hint: true
     idempotent_hint: true
   group: animation
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log
+
 - name: edit_expression
   execution: sync
   affinity: main
   group: animation
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log
+
 - name: list_expressions
   execution: sync
   affinity: main
@@ -21,3 +36,7 @@ tools:
     read_only_hint: true
     idempotent_hint: true
   group: animation
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log

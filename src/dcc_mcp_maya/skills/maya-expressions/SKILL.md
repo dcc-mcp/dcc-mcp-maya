@@ -1,18 +1,19 @@
 ---
 name: maya-expressions
-description: Maya expression nodes — create, list and delete procedural expressions
+description: Maya expression nodes — create, list, and delete procedural expressions that drive attributes. Use when building procedural animation or rig logic. Not for keyframe animation or general scripting — use maya-animation or maya-scripting for that.
 license: MIT
 allowed-tools: Bash Read
 metadata:
   dcc-mcp:
     dcc: maya
+    layer: domain
     version: 1.0.0
     tags:
     - maya
     - expression
     - scripting
     - procedural
-    search-hint: expression, script, attribute, driven key
+    search-hint: procedural animation, expression node, drive attribute
     depends: []
     tools: tools.yaml
     groups: groups.yaml

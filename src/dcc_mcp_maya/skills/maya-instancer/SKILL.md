@@ -1,12 +1,12 @@
 ---
 name: maya-instancer
-description: Maya instancer utilities — create and configure particle instancers for
-  scattering geometry
+description: Maya instancer utilities — create and configure particle instancers for object replication. Use when replicating geometry via particle systems. Not for MASH networks or manual duplication — use maya-mash or maya-scene for that.
 license: MIT
 allowed-tools: Bash Read
 metadata:
   dcc-mcp:
     dcc: maya
+    layer: domain
     version: 1.0.0
     tags:
     - maya
@@ -14,7 +14,7 @@ metadata:
     - particles
     - scatter
     - motion-graphics
-    search-hint: instancer, particle instancer, instance, scatter
+    search-hint: object replication, particle instancer, instance geometry
     depends: []
     tools: tools.yaml
     groups: groups.yaml
