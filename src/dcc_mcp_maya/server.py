@@ -184,6 +184,57 @@ class MayaMcpServer(DccServerBase):
             enable_gateway_failover=enable_gateway_failover,
         )
 
+        # Optional :class:`~dcc_mcp_maya.dispatcher.MayaUiDispatcher`
+        # attached by the plugin (or by tests). When set, :meth:`stop`
+        # drains it before tearing the HTTP server down so any thread
+        # blocked inside ``submit_callable`` returns within the normal
+        # ``event.wait()`` budget instead of hanging indefinitely
+        # (issue #85 / #89).
+        self._maya_dispatcher: Any = None
+
+    def attach_dispatcher(self, dispatcher: Any) -> None:
+        """Register a :class:`MayaUiDispatcher` (or compatible) for lifecycle integration.
+
+        The server does not create the dispatcher itself because Maya
+        needs control over when the :class:`MayaUiPump` is installed
+        (that requires a live ``scriptJob``, which only makes sense
+        inside a real interactive session). Callers that manage a
+        dispatcher should invoke :meth:`attach_dispatcher` after
+        :meth:`start` so :meth:`stop` can drain pending jobs.
+
+        Passing ``None`` detaches a previously-registered dispatcher
+        and is a no-op when nothing is attached.
+        """
+        self._maya_dispatcher = dispatcher
+
+    def stop(self) -> None:
+        """Stop the HTTP server and drain any attached Maya dispatcher.
+
+        Order matters: we drain the dispatcher **before** the HTTP
+        server shuts down so any thread blocked inside
+        ``submit_callable`` observes the drained outcome (``Interrupted``)
+        and returns before the HTTP handler that originally enqueued
+        the job gives up and closes the response.
+        """
+        dispatcher = self._maya_dispatcher
+        if dispatcher is not None:
+            try:
+                shutdown = getattr(dispatcher, "shutdown", None)
+                if callable(shutdown):
+                    signalled = shutdown("Interrupted")
+                    logger.info(
+                        "[%s] dispatcher.shutdown signalled %s job(s)",
+                        self._dcc_name,
+                        signalled,
+                    )
+            except Exception as exc:
+                logger.warning(
+                    "[%s] Error draining Maya dispatcher during stop(): %s",
+                    self._dcc_name,
+                    exc,
+                )
+        super().stop()
+
     # ── Maya-specific overrides ───────────────────────────────────────────────
 
     def register_builtin_actions(
