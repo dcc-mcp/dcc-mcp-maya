@@ -255,6 +255,49 @@ Add to `claude_desktop_config.json`:
 - Maya 2020+ (Python 3.7+)
 - [`dcc-mcp-core`](https://github.com/loonghao/dcc-mcp-core) ≥ 0.12.29
 
+## Cooperative Cancellation in Skill Scripts
+
+Long-running skill scripts (renders, bakes, mocap ingest, …) should poll
+`check_maya_cancelled()` at safe checkpoints so the dispatcher can preempt
+them when the MCP client sends `notifications/cancelled` or when
+`MayaMcpServer.stop()` drains pending jobs:
+
+```python
+from dcc_mcp_maya import check_maya_cancelled, maya_success
+
+def render_frames(frames):
+    for frame in frames:
+        check_maya_cancelled()      # raises CancelledError when cancelled
+        cmds.currentTime(frame)
+        cmds.render()
+    return maya_success("rendered", frames=len(frames))
+```
+
+`check_maya_cancelled()` checks two cancellation sources:
+
+1. **MCP request token** (`dcc_mcp_core.cancellation.check_cancelled`) — set by
+   the HTTP handler when `notifications/cancelled` arrives for the owning
+   `tools/call`.
+2. **Per-job dispatcher flag** — set by `MayaUiDispatcher.cancel(...)` or
+   `MayaUiDispatcher.shutdown(...)`. Covers jobs launched outside an MCP
+   request (queued batch render, scriptJob, …) where the contextvar token
+   is not installed.
+
+Outside any of those contexts the call is a cheap no-op, so dropping it into
+a loop is safe even when the script runs from an interactive REPL or a unit
+test.
+
+`MayaUiPump.stats` exposes `overrun_cycles` (idle ticks where a single
+non-cooperative job exceeded `budget_ms × 2`) and `longest_job_ms` (worst
+single-job wall-clock observed) so operators can tell when a skill needs
+to be chunked behind `check_maya_cancelled()` instead of monopolising the
+UI thread.
+
+`MayaMcpServer.stop()` calls `dispatcher.shutdown("Interrupted")` on any
+dispatcher attached via `server.attach_dispatcher(...)`, so threads blocked
+inside `submit_callable` unblock within the normal `event.wait()` poll
+instead of hanging when Maya restarts mid-job (issue #89).
+
 ## Authoring Skills: Execution & Affinity
 
 Every tool declared in a `tools.yaml` file must tell the MCP gateway **how** it
