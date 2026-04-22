@@ -1,0 +1,17 @@
+tools:
+- name: export_camera
+  annotations:
+    read_only_hint: true
+    idempotent_hint: true
+- name: export_shot_alembic
+  annotations:
+    read_only_hint: true
+    idempotent_hint: true
+- name: export_shot_fbx
+  annotations:
+    read_only_hint: true
+    idempotent_hint: true
+- name: get_shot_info
+  annotations:
+    read_only_hint: true
+    idempotent_hint: true

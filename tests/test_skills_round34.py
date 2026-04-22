@@ -123,7 +123,15 @@ SKILL_NAMES_WITH_TOOLS = [
 
 
 class TestSkillMdToolsField:
-    """Validate that the 4 updated SKILL.md files contain valid tools: arrays."""
+    """Validate tools/groups metadata for the 4 updated skills.
+
+    As of the dcc-mcp-core 0.15 / #356 sibling-file migration, the
+    ``tools:`` and ``groups:`` blocks no longer live inline in
+    ``SKILL.md``. They are referenced from ``metadata.dcc-mcp.tools``
+    and ``metadata.dcc-mcp.groups`` and carried by sibling
+    ``tools.yaml`` / ``groups.yaml`` files next to ``SKILL.md``. These
+    tests therefore resolve the sibling files before asserting shape.
+    """
 
     def _read_skill_md(self, skill_name):
         skill_md = os.path.join(SKILLS_DIR, skill_name, "SKILL.md")
@@ -143,86 +151,132 @@ class TestSkillMdToolsField:
 
         return yaml.safe_load(match.group(1))
 
+    def _dcc_mcp_meta(self, frontmatter):
+        """Return the ``metadata.dcc-mcp`` mapping (supports flat + nested)."""
+        meta = frontmatter.get("metadata") or {}
+        nested = meta.get("dcc-mcp")
+        if isinstance(nested, dict):
+            return nested
+        flat = {}
+        for key, value in meta.items():
+            if isinstance(key, str) and key.startswith("dcc-mcp."):
+                flat[key[len("dcc-mcp.") :]] = value
+        return flat
+
+    def _load_tools(self, skill_name):
+        """Return the tools list from the sibling file referenced by metadata."""
+        # Import third-party modules
+        import yaml
+
+        content = self._read_skill_md(skill_name)
+        fm = self._parse_frontmatter(content)
+        dcc_mcp = self._dcc_mcp_meta(fm)
+        tools_ref = dcc_mcp.get("tools")
+        assert isinstance(tools_ref, str) and tools_ref, (
+            "metadata.dcc-mcp.tools must be a sibling-file reference in {}".format(skill_name)
+        )
+        tools_path = os.path.join(SKILLS_DIR, skill_name, tools_ref)
+        assert os.path.exists(tools_path), "sibling tools file missing: {}".format(tools_path)
+        with open(tools_path, encoding="utf-8") as fh:
+            doc = yaml.safe_load(fh) or {}
+        return doc.get("tools") or []
+
+    def _load_groups(self, skill_name):
+        """Return the groups list from the sibling file referenced by metadata.
+
+        ``groups`` may live in ``groups.yaml`` or be co-located inside
+        ``tools.yaml`` (both are accepted by dcc-mcp-core).
+        """
+        # Import third-party modules
+        import yaml
+
+        content = self._read_skill_md(skill_name)
+        fm = self._parse_frontmatter(content)
+        dcc_mcp = self._dcc_mcp_meta(fm)
+        groups_ref = dcc_mcp.get("groups")
+        if isinstance(groups_ref, str) and groups_ref:
+            groups_path = os.path.join(SKILLS_DIR, skill_name, groups_ref)
+            assert os.path.exists(groups_path), "sibling groups file missing: {}".format(groups_path)
+            with open(groups_path, encoding="utf-8") as fh:
+                doc = yaml.safe_load(fh) or {}
+            return doc.get("groups") or []
+        # Fallback: groups declared inline in tools.yaml
+        tools_ref = dcc_mcp.get("tools")
+        if isinstance(tools_ref, str) and tools_ref:
+            tools_path = os.path.join(SKILLS_DIR, skill_name, tools_ref)
+            if os.path.exists(tools_path):
+                with open(tools_path, encoding="utf-8") as fh:
+                    doc = yaml.safe_load(fh) or {}
+                return doc.get("groups") or []
+        return []
+
+    def _tool_hint(self, tool, key):
+        """Fetch an annotation hint from either the flat or nested form."""
+        if key in tool:
+            return tool[key]
+        ann = tool.get("annotations")
+        if isinstance(ann, dict):
+            return ann.get(key)
+        return None
+
     @pytest.mark.parametrize("skill_name", SKILL_NAMES_WITH_TOOLS)
     def test_tools_key_present(self, skill_name):
         content = self._read_skill_md(skill_name)
         fm = self._parse_frontmatter(content)
-        assert "tools" in fm, "tools: field missing in {}".format(skill_name)
+        dcc_mcp = self._dcc_mcp_meta(fm)
+        assert "tools" in dcc_mcp, "metadata.dcc-mcp.tools missing in {}".format(skill_name)
 
     @pytest.mark.parametrize("skill_name", SKILL_NAMES_WITH_TOOLS)
     def test_tools_is_list(self, skill_name):
-        content = self._read_skill_md(skill_name)
-        fm = self._parse_frontmatter(content)
-        assert isinstance(fm["tools"], list), "tools: must be a list in {}".format(skill_name)
-        assert len(fm["tools"]) > 0, "tools: list must not be empty in {}".format(skill_name)
+        tools = self._load_tools(skill_name)
+        assert isinstance(tools, list), "tools: must be a list in {}".format(skill_name)
+        assert len(tools) > 0, "tools: list must not be empty in {}".format(skill_name)
 
     @pytest.mark.parametrize("skill_name", SKILL_NAMES_WITH_TOOLS)
     def test_each_tool_has_required_fields(self, skill_name):
         """Each tool entry must have at least 'name'; 'description' is optional but encouraged."""
-        content = self._read_skill_md(skill_name)
-        fm = self._parse_frontmatter(content)
-        for tool in fm["tools"]:
+        for tool in self._load_tools(skill_name):
             assert "name" in tool, "tool missing 'name' in {}".format(skill_name)
 
     @pytest.mark.parametrize("skill_name", SKILL_NAMES_WITH_TOOLS)
     def test_tool_annotations_present(self, skill_name):
-        """Verify annotation hints use the _hint suffix convention."""
-        content = self._read_skill_md(skill_name)
-        fm = self._parse_frontmatter(content)
-        for tool in fm["tools"]:
-            if "read_only_hint" in tool:
-                assert isinstance(tool["read_only_hint"], bool), "tool '{}' read_only_hint must be bool in {}".format(
-                    tool.get("name", "?"), skill_name
-                )
-            if "destructive_hint" in tool:
-                assert isinstance(tool["destructive_hint"], bool), (
-                    "tool '{}' destructive_hint must be bool in {}".format(tool.get("name", "?"), skill_name)
-                )
-            if "idempotent_hint" in tool:
-                assert isinstance(tool["idempotent_hint"], bool), "tool '{}' idempotent_hint must be bool in {}".format(
-                    tool.get("name", "?"), skill_name
-                )
+        """Annotation hints must be bool (regardless of flat vs nested form)."""
+        for tool in self._load_tools(skill_name):
+            for hint in ("read_only_hint", "destructive_hint", "idempotent_hint"):
+                value = self._tool_hint(tool, hint)
+                if value is not None:
+                    assert isinstance(value, bool), "tool '{}' {} must be bool in {}".format(
+                        tool.get("name", "?"), hint, skill_name
+                    )
 
     @pytest.mark.parametrize("skill_name", SKILL_NAMES_WITH_TOOLS)
     def test_groups_key_present(self, skill_name):
         """Each skill with tools should define at least one group."""
-        content = self._read_skill_md(skill_name)
-        fm = self._parse_frontmatter(content)
-        assert "groups" in fm, "groups: field missing in {}".format(skill_name)
-        assert isinstance(fm["groups"], list), "groups: must be a list in {}".format(skill_name)
-        assert len(fm["groups"]) > 0, "groups: list must not be empty in {}".format(skill_name)
-        for group in fm["groups"]:
+        groups = self._load_groups(skill_name)
+        assert isinstance(groups, list), "groups: must be a list in {}".format(skill_name)
+        assert len(groups) > 0, "groups: list must not be empty in {}".format(skill_name)
+        for group in groups:
             assert "name" in group, "group missing 'name' in {}".format(skill_name)
             assert "tools" in group, "group missing 'tools' in {}".format(skill_name)
 
     def test_maya_scene_tool_count(self):
-        content = self._read_skill_md("maya-scene")
-        fm = self._parse_frontmatter(content)
-        assert len(fm["tools"]) >= 8
+        assert len(self._load_tools("maya-scene")) >= 8
 
     def test_maya_primitives_tool_count(self):
-        content = self._read_skill_md("maya-primitives")
-        fm = self._parse_frontmatter(content)
-        assert len(fm["tools"]) == 8
+        assert len(self._load_tools("maya-primitives")) == 8
 
     def test_maya_animation_tool_count(self):
-        content = self._read_skill_md("maya-animation")
-        fm = self._parse_frontmatter(content)
-        assert len(fm["tools"]) >= 7
+        assert len(self._load_tools("maya-animation")) >= 7
 
     def test_maya_render_tool_count(self):
-        content = self._read_skill_md("maya-render")
-        fm = self._parse_frontmatter(content)
-        assert len(fm["tools"]) >= 8
+        assert len(self._load_tools("maya-render")) >= 8
 
     def test_readonly_tools_not_destructive(self):
         """read_only_hint=True tools should not be destructive."""
         for skill_name in SKILL_NAMES_WITH_TOOLS:
-            content = self._read_skill_md(skill_name)
-            fm = self._parse_frontmatter(content)
-            for tool in fm["tools"]:
-                if tool.get("read_only_hint") is True:
-                    assert tool.get("destructive_hint") is not True, (
+            for tool in self._load_tools(skill_name):
+                if self._tool_hint(tool, "read_only_hint") is True:
+                    assert self._tool_hint(tool, "destructive_hint") is not True, (
                         "read_only_hint tool '{}' in {} should not be destructive_hint".format(
                             tool.get("name"), skill_name
                         )
@@ -231,10 +285,8 @@ class TestSkillMdToolsField:
     def test_group_tools_subset_of_skill_tools(self):
         """Every tool listed in a group must exist in the skill's tools list."""
         for skill_name in SKILL_NAMES_WITH_TOOLS:
-            content = self._read_skill_md(skill_name)
-            fm = self._parse_frontmatter(content)
-            tool_names = {t["name"] for t in fm["tools"]}
-            for group in fm.get("groups", []):
+            tool_names = {t["name"] for t in self._load_tools(skill_name)}
+            for group in self._load_groups(skill_name):
                 for t in group["tools"]:
                     assert t in tool_names, "group '{}' references tool '{}' not in tools list of {}".format(
                         group["name"], t, skill_name
