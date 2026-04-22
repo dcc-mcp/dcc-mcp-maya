@@ -1,0 +1,20 @@
+# Docs exempted from structural (heading / fence) parity checks performed
+# by tools/check_doc_parity.py. One POSIX-style path per line, relative
+# to docs/.
+#
+# This list seeds the lint with known pre-existing drift so the CI check
+# can be enabled immediately (issue #88).  Remove a path once the ZH
+# translation at docs/zh/<path> has been brought back in sync.
+#
+# New docs MUST NOT be added here — they should land with a matching ZH
+# mirror so the translation debt can only shrink over time.
+
+api/actions.md
+api/adapter.md
+api/scene.md
+api/server.md
+api/snapshot.md
+guide/actions.md
+guide/advanced.md
+guide/scene.md
+guide/snapshot.md
