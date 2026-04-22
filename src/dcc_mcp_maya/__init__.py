@@ -61,6 +61,7 @@ from dcc_mcp_maya.dispatcher import (
     MayaStandaloneDispatcher,
     MayaUiDispatcher,
     MayaUiPump,
+    check_maya_cancelled,
     create_dispatcher,
 )
 from dcc_mcp_maya.server import MayaMcpServer, start_server, stop_server
@@ -76,6 +77,7 @@ __all__ = [
     "MayaUiPump",
     "MayaStandaloneDispatcher",
     "create_dispatcher",
+    "check_maya_cancelled",
     # Skill authoring helpers
     "maya_success",
     "maya_error",
