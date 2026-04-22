@@ -91,6 +91,16 @@ class _JobEntry:
         "event",
         "outcome",
         "cancel_flag",
+        # Issue #85 — async dispatch linkage fields.
+        # ``job_id`` is the opaque identifier from core JobManager (#316);
+        # ``None`` for synchronous (blocking) submissions.
+        "job_id",
+        # ``progress_token`` is echoed from ``_meta.progressToken`` on the
+        # MCP request; ``None`` when the client did not request progress.
+        "progress_token",
+        # ``on_complete`` callback invoked by execute() for async jobs;
+        # receives the outcome dict.  ``None`` for synchronous submissions.
+        "on_complete",
     )
 
     def __init__(
@@ -99,6 +109,10 @@ class _JobEntry:
         affinity: str,
         task: Callable[[], Any],
         timeout_ms: Optional[int] = None,
+        *,
+        job_id: Optional[str] = None,
+        progress_token: Optional[str] = None,
+        on_complete: Optional[Callable[[Dict[str, Any]], None]] = None,
     ) -> None:
         self.request_id = request_id
         self.affinity = affinity
@@ -113,6 +127,9 @@ class _JobEntry:
         # dependency-free for the transport path. See
         # :func:`check_maya_cancelled` for the skill-facing probe.
         self.cancel_flag = threading.Event()
+        self.job_id = job_id
+        self.progress_token = progress_token
+        self.on_complete = on_complete
 
     def cancel(self) -> None:
         """Signal cooperative cancellation to the task — idempotent.
@@ -129,7 +146,13 @@ class _JobEntry:
         return self.cancel_flag.is_set()
 
     def execute(self) -> Dict[str, Any]:
-        """Execute the task and populate ``self.outcome``."""
+        """Execute the task and populate ``self.outcome``.
+
+        For async jobs (``on_complete`` is set) the completion callback is
+        invoked **after** ``self.event`` is fired so callers that poll
+        ``event.wait()`` always see the populated outcome before any
+        side-effects in the callback.
+        """
         token = _current_job.set(self)
         try:
             output = self.task()
@@ -139,6 +162,7 @@ class _JobEntry:
                 "success": True,
                 "output": output,
                 "error": None,
+                "job_id": self.job_id,
             }
         except Exception as exc:
             # :class:`~dcc_mcp_core.cancellation.CancelledError` surfaces
@@ -150,10 +174,16 @@ class _JobEntry:
                 "success": False,
                 "output": None,
                 "error": str(exc),
+                "job_id": self.job_id,
             }
         finally:
             _current_job.reset(token)
         self.event.set()
+        if self.on_complete is not None:
+            try:
+                self.on_complete(self.outcome)
+            except Exception as cb_exc:  # pragma: no cover
+                logger.warning("_JobEntry.on_complete raised: %s", cb_exc)
         return self.outcome
 
 
@@ -318,6 +348,101 @@ class MayaUiDispatcher:
         if affinity == "any":
             return self._run_any(request_id, task, affinity)
         return self._submit_main(request_id, task, affinity, timeout_ms)
+
+    def submit_async_callable(
+        self,
+        request_id: str,
+        task: Callable[[], Any],
+        *,
+        job_id: Optional[str] = None,
+        progress_token: Optional[str] = None,
+        on_complete: Optional[Callable[[Dict[str, Any]], None]] = None,
+        affinity: str = "main",
+        timeout_ms: Optional[int] = None,
+    ) -> Dict[str, Any]:
+        """Enqueue a callable for main-thread execution without blocking.
+
+        Unlike :meth:`submit_callable`, this method returns **immediately**
+        (typically < 1 ms) with a pending envelope. The actual execution
+        happens on Maya's UI thread the next time the pump ticks.
+
+        This is the async dispatch path used by the MCP HTTP server when a
+        ``tools/call`` opts into async mode (issue #85 / core #318):
+
+        1. Client sends ``_meta.dcc.async = true``, or
+        2. Client sends ``_meta.progressToken``, or
+        3. The tool declares ``execution: async`` in ActionMeta.
+
+        Parameters
+        ----------
+        request_id:
+            Unique request identifier (echoed in the return dict and outcome).
+        task:
+            Zero-argument callable executed on the target thread.
+        job_id:
+            Opaque identifier from core ``JobManager`` (#316). Included in
+            the outcome dict so callers can correlate with ``jobs.get_status``.
+        progress_token:
+            Echoed from ``_meta.progressToken`` — stored on the entry for
+            future ``notifications/progress`` frames.
+        on_complete:
+            Optional callback invoked with the final outcome dict when the
+            task finishes. Called from the UI thread.
+        affinity:
+            ``"any"`` or ``"main"`` (default ``"main"``).
+        timeout_ms:
+            Soft timeout in milliseconds (does not block the caller).
+
+        Returns
+        -------
+        dict
+            Pending envelope: ``{"request_id", "job_id", "status": "pending"}``.
+        """
+        affinity = affinity.lower()
+
+        if self._shutdown:
+            return {
+                "request_id": request_id,
+                "job_id": job_id,
+                "status": "interrupted",
+                "success": False,
+                "error": "Interrupted",
+            }
+
+        if affinity == "any":
+            # For "any" affinity, run in a background thread immediately.
+            def _bg():
+                result = self._run_any(request_id, task, affinity)
+                result["job_id"] = job_id
+                if on_complete is not None:
+                    try:
+                        on_complete(result)
+                    except Exception as exc:  # pragma: no cover
+                        logger.warning("submit_async_callable on_complete raised: %s", exc)
+
+            t = threading.Thread(target=_bg, daemon=True, name=f"mcp-async-{request_id}")
+            t.start()
+        else:
+            job = _JobEntry(
+                request_id,
+                affinity,
+                task,
+                timeout_ms,
+                job_id=job_id,
+                progress_token=progress_token,
+                on_complete=on_complete,
+            )
+            with self._lock:
+                self._main_queue.append(job)
+            self._maybe_poke_deferred()
+
+        return {
+            "request_id": request_id,
+            "job_id": job_id,
+            "status": "pending",
+            "success": True,
+            "error": None,
+        }
 
     def cancel(self, request_id: str) -> bool:
         """Signal cancellation for a pending or running main-thread job.
@@ -655,6 +780,33 @@ class MayaStandaloneDispatcher:
                 "output": None,
                 "error": str(exc),
             }
+
+    def submit_async_callable(
+        self,
+        request_id: str,
+        task: Callable[[], Any],
+        *,
+        job_id: Optional[str] = None,
+        progress_token: Optional[str] = None,
+        on_complete: Optional[Callable[[Dict[str, Any]], None]] = None,
+        affinity: str = "any",
+        timeout_ms: Optional[int] = None,
+    ) -> Dict[str, Any]:
+        """Execute a callable synchronously and invoke ``on_complete``.
+
+        Standalone mode has no background queue, so this executes immediately
+        on the calling thread and returns a completed envelope.  The
+        ``on_complete`` callback, if provided, is called before returning.
+        """
+        result = self.submit_callable(request_id, task, affinity, timeout_ms)
+        result["job_id"] = job_id
+        result["status"] = "completed" if result.get("success") else "failed"
+        if on_complete is not None:
+            try:
+                on_complete(result)
+            except Exception as exc:  # pragma: no cover
+                logger.warning("MayaStandaloneDispatcher.submit_async_callable on_complete raised: %s", exc)
+        return result
 
     def supported(self) -> List[str]:
         """Return supported affinity values."""
