@@ -1,19 +1,33 @@
 tools:
 - name: apply_subdivision
+  execution: sync
+  affinity: main
   annotations:
     idempotent_hint: true
   group: rigging
 - name: cleanup_mesh
+  execution: sync
+  affinity: main
   group: rigging
 - name: create_cluster
+  execution: sync
+  affinity: main
   group: rigging
 - name: create_lattice
+  execution: sync
+  affinity: main
   group: rigging
 - name: sculpt_deformer
+  execution: sync
+  affinity: main
   group: rigging
 - name: set_cluster_weights
+  execution: sync
+  affinity: main
   annotations:
     idempotent_hint: true
   group: rigging
 - name: wire_deformer
+  execution: sync
+  affinity: main
   group: rigging

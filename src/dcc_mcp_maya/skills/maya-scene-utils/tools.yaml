@@ -1,23 +1,37 @@
 tools:
 - name: align_objects
+  execution: sync
+  affinity: main
   group: scene-management
 - name: create_annotation
+  execution: sync
+  affinity: main
   group: scene-management
 - name: create_polygon_text
+  execution: sync
+  affinity: main
   group: scene-management
 - name: set_object_color
+  execution: sync
+  affinity: main
   annotations:
     idempotent_hint: true
   group: scene-management
 - name: set_pivot
+  execution: sync
+  affinity: main
   annotations:
     idempotent_hint: true
   group: scene-management
 - name: set_shading_mode
+  execution: sync
+  affinity: main
   annotations:
     idempotent_hint: true
   group: scene-management
 - name: toggle_gpu_override
+  execution: sync
+  affinity: main
   annotations:
     idempotent_hint: true
   group: scene-management

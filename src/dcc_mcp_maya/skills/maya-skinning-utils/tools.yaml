@@ -1,9 +1,17 @@
 tools:
 - name: copy_skin_weights
+  execution: sync
+  affinity: main
   group: rigging
 - name: mirror_skin_weights
+  execution: sync
+  affinity: main
   group: rigging
 - name: normalize_skin_weights
+  execution: sync
+  affinity: main
   group: rigging
 - name: prune_skin_weights
+  execution: sync
+  affinity: main
   group: rigging

@@ -1,14 +1,22 @@
 tools:
 - name: add_stretch_to_spline_ik
+  execution: sync
+  affinity: main
   group: rigging
 - name: create_spline_ik
+  execution: sync
+  affinity: main
   group: rigging
 - name: list_spline_ik_handles
+  execution: sync
+  affinity: main
   annotations:
     read_only_hint: true
     idempotent_hint: true
   group: rigging
 - name: set_spline_ik_twist
+  execution: sync
+  affinity: main
   annotations:
     idempotent_hint: true
   group: rigging

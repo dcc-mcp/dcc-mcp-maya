@@ -1,14 +1,22 @@
 tools:
 - name: add_instance_object
+  execution: sync
+  affinity: main
   group: simulation-fx
 - name: create_instancer
+  execution: sync
+  affinity: main
   group: simulation-fx
 - name: list_instancers
+  execution: sync
+  affinity: main
   annotations:
     read_only_hint: true
     idempotent_hint: true
   group: simulation-fx
 - name: set_instancer_attribute
+  execution: sync
+  affinity: main
   annotations:
     idempotent_hint: true
   group: simulation-fx
