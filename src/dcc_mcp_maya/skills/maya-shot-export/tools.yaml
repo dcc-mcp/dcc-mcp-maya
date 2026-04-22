@@ -6,6 +6,11 @@ tools:
   annotations:
     read_only_hint: true
     idempotent_hint: true
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log
+
 - name: export_shot_alembic
   execution: async
   affinity: main
@@ -13,6 +18,11 @@ tools:
   annotations:
     read_only_hint: true
     idempotent_hint: true
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log
+
 - name: export_shot_fbx
   execution: async
   affinity: main
@@ -20,9 +30,18 @@ tools:
   annotations:
     read_only_hint: true
     idempotent_hint: true
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log
+
 - name: get_shot_info
   execution: sync
   affinity: main
   annotations:
     read_only_hint: true
     idempotent_hint: true
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log

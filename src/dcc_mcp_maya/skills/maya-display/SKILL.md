@@ -1,18 +1,19 @@
 ---
 name: maya-display
-description: Maya display layers and viewport shading mode management
+description: Maya display layers and viewport shading mode management — create layers, toggle visibility, and set wireframe/shaded modes. Use when controlling visual feedback in the viewport. Not for render layer setup or final output — use maya-render-layers or maya-render for that.
 license: MIT
 allowed-tools: Bash Read
 metadata:
   dcc-mcp:
     dcc: maya
+    layer: domain
     version: 1.0.0
     tags:
     - maya
     - display
     - layer
     - visibility
-    search-hint: display, visibility, show, hide, wireframe, layer
+    search-hint: viewport visibility, display layer, wireframe shaded, show hide
     depends: []
     tools: tools.yaml
     groups: groups.yaml

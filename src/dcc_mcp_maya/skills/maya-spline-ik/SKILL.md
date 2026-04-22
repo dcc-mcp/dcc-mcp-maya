@@ -1,12 +1,12 @@
 ---
 name: maya-spline-ik
-description: Maya spline IK utilities — create and configure spline IK chains for
-  ribbon/spine rigs
+description: Maya spline IK utilities — create and configure spline IK chains for spine and ribbon setups. Use when building flexible joint chains in rigs. Not for standard single-chain IK or full rig creation — use maya-rigging or maya-rig-utils for that.
 license: MIT
 allowed-tools: Bash Read
 metadata:
   dcc-mcp:
     dcc: maya
+    layer: domain
     version: 1.0.0
     tags:
     - maya
@@ -14,7 +14,7 @@ metadata:
     - spline
     - rigging
     - spine
-    search-hint: spline IK, curve, ribbon, spine
+    search-hint: spine rig, ribbon setup, flexible joint chain, spline IK
     depends: []
     tools: tools.yaml
     groups: groups.yaml

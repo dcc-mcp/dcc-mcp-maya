@@ -1,18 +1,19 @@
 ---
 name: maya-animation
-description: Maya animation keyframes, timeline, curves and simulation baking
+description: Maya animation keyframes, timeline, curves, constraint baking, and simulation caching. Use when creating or editing time-based motion. Not for rigging setup or render output — use maya-rigging or maya-render for that.
 license: MIT
 allowed-tools: Bash Read
 metadata:
   dcc-mcp:
     dcc: maya
+    layer: domain
     version: 1.0.0
     tags:
     - maya
     - animation
     - keyframe
     - timeline
-    search-hint: keyframe, timeline, animate, curves, bake, simulation, constraint,
+    search-hint: animate motion, keyframe, timeline, curve editing, bake simulation
       tangent
     depends: []
     tools: tools.yaml

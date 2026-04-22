@@ -1,18 +1,19 @@
 ---
 name: maya-render
-description: Maya render settings and viewport capture
+description: Maya render settings and viewport capture — configure render globals, playblast, and viewport snapshots. Use when producing final or preview images. Not for modeling, animation editing, or render farm submission — use maya-mesh-ops, maya-animation, or maya-render-farm for that.
 license: MIT
 allowed-tools: Bash Read
 metadata:
   dcc-mcp:
     dcc: maya
+    layer: domain
     version: 1.0.0
     tags:
     - maya
     - render
     - playblast
     - settings
-    search-hint: render, settings, playblast, capture, viewport
+    search-hint: final output, preview render, playblast, viewport capture
     depends: []
     tools: tools.yaml
     groups: groups.yaml

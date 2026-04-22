@@ -1,11 +1,12 @@
 ---
 name: maya-grooming
-description: Maya XGen / nHair grooming and hair system actions
+description: Maya XGen and nHair grooming and hair system actions. Use when styling hair and fur with interactive grooming tools. Not for XGen procedural generation or simulation — use maya-xgen or maya-dynamics for that.
 license: MIT
 allowed-tools: Bash Read
 metadata:
   dcc-mcp:
     dcc: maya
+    layer: domain
     version: 1.0.0
     tags:
     - maya
@@ -13,7 +14,7 @@ metadata:
     - hair
     - nhair
     - dynamics
-    search-hint: groom, hair, xgen, nhair, follicle
+    search-hint: style hair fur, interactive grooming, nHair system
     depends: []
     tools: tools.yaml
     groups: groups.yaml
