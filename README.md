@@ -303,6 +303,13 @@ their own skill packages before publishing.  See issue
 [#84](https://github.com/loonghao/dcc-mcp-maya/issues/84) for the full
 categorisation matrix.
 
+## Deployment Guides
+
+- [Multi-instance deployment](docs/guide/multi-instance.md) ([中文](docs/zh/guide/multi-instance.md))
+  — run multiple Maya sessions on a single workstation behind one MCP gateway.
+  A drop-in `userSetup.py` is provided under
+  [`examples/multi-instance/`](examples/multi-instance).
+
 ## Development
 
 ### Clone and Install
