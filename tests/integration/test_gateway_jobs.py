@@ -147,9 +147,7 @@ class _FakeGateway:
         with self._lock:
             return self._job_routes.pop(job_id, None) is not None
 
-    def route_get_status(
-        self, job_id: str, job_managers: Dict[int, _FakeJobManager]
-    ) -> Dict[str, Any]:
+    def route_get_status(self, job_id: str, job_managers: Dict[int, _FakeJobManager]) -> Dict[str, Any]:
         owner_pid = self.get_job_owner(job_id)
         if owner_pid is None:
             return {
