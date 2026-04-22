@@ -1,14 +1,22 @@
 tools:
 - name: add_constraint
+  execution: sync
+  affinity: main
   group: animation
 - name: create_constraint_weighted
+  execution: sync
+  affinity: main
   group: animation
 - name: list_constraints
+  execution: sync
+  affinity: main
   annotations:
     read_only_hint: true
     idempotent_hint: true
   group: animation
 - name: remove_constraint
+  execution: sync
+  affinity: main
   annotations:
     destructive_hint: true
     idempotent_hint: true

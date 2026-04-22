@@ -1,11 +1,19 @@
 tools:
 - name: clean_scene
+  execution: sync
+  affinity: main
 - name: create_utility_node
+  execution: sync
+  affinity: main
 - name: get_scene_statistics
+  execution: sync
+  affinity: main
   annotations:
     read_only_hint: true
     idempotent_hint: true
 - name: list_node_connections
+  execution: sync
+  affinity: main
   annotations:
     read_only_hint: true
     idempotent_hint: true
