@@ -1,0 +1,21 @@
+tools:
+- name: apply_subdivision
+  annotations:
+    idempotent_hint: true
+- name: cleanup_mesh
+- name: combine_meshes
+- name: create_proxy_mesh
+- name: extract_faces
+- name: get_mesh_edge_info
+  annotations:
+    read_only_hint: true
+    idempotent_hint: true
+- name: get_poly_count
+  annotations:
+    read_only_hint: true
+    idempotent_hint: true
+- name: merge_vertices
+- name: mirror_mesh
+- name: select_by_material
+- name: separate_mesh
+- name: triangulate

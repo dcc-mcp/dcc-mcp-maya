@@ -1,0 +1,8 @@
+tools:
+- name: get_render_job_status
+  annotations:
+    read_only_hint: true
+    idempotent_hint: true
+- name: submit_to_deadline
+- name: validate_scene_for_farm
+- name: write_render_job

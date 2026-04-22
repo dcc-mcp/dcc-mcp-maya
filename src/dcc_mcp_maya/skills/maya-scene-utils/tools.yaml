@@ -1,0 +1,16 @@
+tools:
+- name: align_objects
+- name: create_annotation
+- name: create_polygon_text
+- name: set_object_color
+  annotations:
+    idempotent_hint: true
+- name: set_pivot
+  annotations:
+    idempotent_hint: true
+- name: set_shading_mode
+  annotations:
+    idempotent_hint: true
+- name: toggle_gpu_override
+  annotations:
+    idempotent_hint: true

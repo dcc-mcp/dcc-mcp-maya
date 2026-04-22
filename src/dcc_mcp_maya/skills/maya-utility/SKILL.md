@@ -1,28 +1,20 @@
 ---
 name: maya-utility
 description: Maya utility nodes and scene statistics
-dcc: maya
-version: 1.0.0
-tags:
-- maya
-- utility
-- node
-- scene
-search-hint: utility, transform, freeze, center pivot, convert
 license: MIT
-allowed-tools:
-- Bash
-- Read
-depends: []
-tools:
-- name: clean_scene
-- name: create_utility_node
-- name: get_scene_statistics
-  read_only_hint: true
-  idempotent_hint: true
-- name: list_node_connections
-  read_only_hint: true
-  idempotent_hint: true
+allowed-tools: Bash Read
+metadata:
+  dcc-mcp:
+    dcc: maya
+    version: 1.0.0
+    tags:
+    - maya
+    - utility
+    - node
+    - scene
+    search-hint: utility, transform, freeze, center pivot, convert
+    depends: []
+    tools: tools.yaml
 ---
 # maya-utility
 

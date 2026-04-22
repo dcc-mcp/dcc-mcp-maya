@@ -1,0 +1,13 @@
+tools:
+- name: create_display_layer
+- name: delete_display_layer
+  annotations:
+    destructive_hint: true
+    idempotent_hint: true
+- name: list_display_layers
+  annotations:
+    read_only_hint: true
+    idempotent_hint: true
+- name: set_display_layer
+  annotations:
+    idempotent_hint: true

@@ -1,37 +1,22 @@
 ---
 name: maya-proxy-mesh
 description: Maya proxy mesh management — create, swap, and manage low-res proxy stand-ins
-dcc: maya
-tags:
-- maya
-- proxy
-- lod
-- performance
-- mesh
-search-hint: proxy, level of detail, LOD, lightweight
-version: 1.0.0
 license: MIT
-allowed-tools:
-- Bash
-- Read
-depends: []
-tools:
-- name: create_proxy
-- name: list_proxies
-  read_only_hint: true
-  idempotent_hint: true
-- name: set_proxy_attribute
-  idempotent_hint: true
-- name: swap_proxy
-groups:
-- name: modeling
-  description: Geometry creation, editing, and UV tools
-  default_active: true
-  tools:
-  - create_proxy
-  - list_proxies
-  - set_proxy_attribute
-  - swap_proxy
+allowed-tools: Bash Read
+metadata:
+  dcc-mcp:
+    dcc: maya
+    version: 1.0.0
+    tags:
+    - maya
+    - proxy
+    - lod
+    - performance
+    - mesh
+    search-hint: proxy, level of detail, LOD, lightweight
+    depends: []
+    tools: tools.yaml
+    groups: groups.yaml
 ---
 # maya-proxy-mesh
 

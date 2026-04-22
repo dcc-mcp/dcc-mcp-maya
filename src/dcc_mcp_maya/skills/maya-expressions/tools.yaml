@@ -1,0 +1,11 @@
+tools:
+- name: create_expression
+- name: delete_expression
+  annotations:
+    destructive_hint: true
+    idempotent_hint: true
+- name: edit_expression
+- name: list_expressions
+  annotations:
+    read_only_hint: true
+    idempotent_hint: true
