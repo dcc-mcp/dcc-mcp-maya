@@ -41,6 +41,7 @@ See: https://github.com/loonghao/dcc-mcp-maya/issues/66
 from __future__ import annotations
 
 # Import built-in modules
+import contextvars
 import logging
 import threading
 import time
@@ -57,6 +58,24 @@ DEFAULT_BUDGET_MS = 8
 #: Default soft timeout for individual jobs (milliseconds).
 DEFAULT_JOB_TIMEOUT_MS = 30_000
 
+#: Overrun threshold — any pump tick that spends more than ``budget_ms`` × this
+#: multiplier counts as an ``overrun_cycles`` in :class:`MayaUiPump.stats`.
+#: Matches the wording in issue #85: *"ticks that exceeded ``budget_ms * 2``"*.
+OVERRUN_MULTIPLIER = 2.0
+
+# ── Per-job cancellation token (contextvars, issue #85) ──────────────────────
+
+#: Context-local slot pointing to the currently-executing :class:`_JobEntry`.
+#: Set by :meth:`MayaUiDispatcher.drain_queue` around :meth:`_JobEntry.execute`
+#: so skill scripts running on the UI thread can discover whether the caller
+#: has signalled cancellation via :meth:`MayaUiDispatcher.cancel` — even when
+#: the script was launched outside an MCP request context (queued batch
+#: render, scriptJob, etc.).
+_current_job: contextvars.ContextVar[Optional["_JobEntry"]] = contextvars.ContextVar(
+    "dcc_mcp_maya_current_job",
+    default=None,
+)
+
 
 # ── Job types ─────────────────────────────────────────────────────────────────
 
@@ -64,7 +83,15 @@ DEFAULT_JOB_TIMEOUT_MS = 30_000
 class _JobEntry:
     """Internal job wrapper queued for main-thread execution."""
 
-    __slots__ = ("request_id", "affinity", "task", "timeout_ms", "event", "outcome")
+    __slots__ = (
+        "request_id",
+        "affinity",
+        "task",
+        "timeout_ms",
+        "event",
+        "outcome",
+        "cancel_flag",
+    )
 
     def __init__(
         self,
@@ -79,9 +106,31 @@ class _JobEntry:
         self.timeout_ms = timeout_ms or DEFAULT_JOB_TIMEOUT_MS
         self.event = threading.Event()
         self.outcome: Optional[Dict[str, Any]] = None
+        # Per-job cancellation flag — set by :meth:`MayaUiDispatcher.cancel`
+        # (pre-execute) or :meth:`MayaUiDispatcher.shutdown` (drain). The
+        # flag is a plain :class:`threading.Event` rather than a
+        # :class:`~dcc_mcp_core.cancellation.CancelToken` so we stay
+        # dependency-free for the transport path. See
+        # :func:`check_maya_cancelled` for the skill-facing probe.
+        self.cancel_flag = threading.Event()
+
+    def cancel(self) -> None:
+        """Signal cooperative cancellation to the task — idempotent.
+
+        Does NOT interrupt a running :meth:`execute`: the task must call
+        :func:`check_maya_cancelled` at a safe checkpoint to observe the
+        flag and raise :class:`~dcc_mcp_core.cancellation.CancelledError`.
+        """
+        self.cancel_flag.set()
+
+    @property
+    def cancelled(self) -> bool:
+        """Whether :meth:`cancel` has been invoked on this job."""
+        return self.cancel_flag.is_set()
 
     def execute(self) -> Dict[str, Any]:
         """Execute the task and populate ``self.outcome``."""
+        token = _current_job.set(self)
         try:
             output = self.task()
             self.outcome = {
@@ -92,6 +141,9 @@ class _JobEntry:
                 "error": None,
             }
         except Exception as exc:
+            # :class:`~dcc_mcp_core.cancellation.CancelledError` surfaces
+            # through this branch too — the outer caller can distinguish
+            # cancellation by checking ``self.cancelled``.
             self.outcome = {
                 "request_id": self.request_id,
                 "affinity": self.affinity,
@@ -99,8 +151,68 @@ class _JobEntry:
                 "output": None,
                 "error": str(exc),
             }
+        finally:
+            _current_job.reset(token)
         self.event.set()
         return self.outcome
+
+
+# ── Cooperative cancellation (issue #85) ─────────────────────────────────────
+
+
+def check_maya_cancelled() -> None:
+    """Raise :class:`~dcc_mcp_core.cancellation.CancelledError` on cancellation.
+
+    Used by skill scripts inside long-running loops so the caller can
+    preempt work without Maya's UI thread running unbounded. The helper
+    respects **both** cancellation sources:
+
+    1. ``dcc_mcp_core.cancellation.check_cancelled()`` — the MCP request
+       context set by the HTTP handler when a ``notifications/cancelled``
+       arrives for the owning ``tools/call``.
+    2. The per-job :attr:`_JobEntry.cancel_flag`, populated by
+       :meth:`MayaUiDispatcher.cancel` / :meth:`MayaUiDispatcher.shutdown`.
+       This path covers jobs launched **outside** an MCP request
+       (queued batch render, scriptJob, etc.) where the
+       contextvar-based core token is not installed.
+
+    When neither source reports cancellation, the call is a cheap no-op.
+
+    Example::
+
+        from dcc_mcp_maya.dispatcher import check_maya_cancelled
+
+        def run(frames):
+            for f in frames:
+                check_maya_cancelled()        # safe checkpoint
+                cmds.currentTime(f)
+                cmds.render()
+
+    Raises
+    ------
+    dcc_mcp_core.cancellation.CancelledError
+        When either the MCP request or the owning dispatcher has
+        signalled cancellation.
+    """
+    # Layer 1: honour the core MCP request token if one is installed.
+    try:
+        from dcc_mcp_core.cancellation import (  # noqa: PLC0415
+            CancelledError,
+            check_cancelled,
+        )
+    except ImportError:  # pragma: no cover — core is a hard dep at runtime
+        CancelledError = RuntimeError  # type: ignore[assignment]
+
+        def check_cancelled() -> None:  # type: ignore[no-redef]
+            return
+
+    check_cancelled()
+
+    # Layer 2: honour the Maya-side per-job flag, if we are inside an
+    # :class:`_JobEntry.execute` call.
+    job = _current_job.get()
+    if job is not None and job.cancelled:
+        raise CancelledError("Maya job cancelled by dispatcher")
 
 
 # ── MayaUiDispatcher ─────────────────────────────────────────────────────────
@@ -120,6 +232,13 @@ class MayaUiDispatcher:
         self._main_queue: Deque[_JobEntry] = deque()
         self._lock = threading.Lock()
         self._cancelled: set = set()
+        # Active in-flight jobs (executing on the UI thread). Populated by
+        # :meth:`drain_queue` and consulted by :meth:`shutdown` so a stop
+        # signal can fire :attr:`_JobEntry.cancel_flag` / ``event`` for
+        # jobs that are already running — otherwise their blocked
+        # :meth:`submit_callable` caller would hang forever (issue #89).
+        self._active: Dict[str, _JobEntry] = {}
+        self._shutdown = False
 
     # ── Public API ────────────────────────────────────────────────────────────
 
@@ -201,15 +320,27 @@ class MayaUiDispatcher:
         return self._submit_main(request_id, task, affinity, timeout_ms)
 
     def cancel(self, request_id: str) -> bool:
-        """Cancel a pending main-thread job.
+        """Signal cancellation for a pending or running main-thread job.
 
-        Returns ``True`` if the job was found and removed from the queue.
-        Jobs already executing cannot be cancelled.
+        If the job is still queued, it is removed and its outcome is
+        populated with ``error="Cancelled"`` before :meth:`execute` ever
+        runs. If the job is already executing, the per-job cancel flag
+        is set so a cooperating task that calls
+        :func:`check_maya_cancelled` at a safe checkpoint can observe the
+        request and raise :class:`~dcc_mcp_core.cancellation.CancelledError`.
+
+        Returns
+        -------
+        bool
+            ``True`` when the job was found (queued or running).
         """
         with self._lock:
             self._cancelled.add(request_id)
+
+            # Queued job: short-circuit now, before drain_queue runs it.
             for job in self._main_queue:
                 if job.request_id == request_id:
+                    job.cancel()
                     job.outcome = {
                         "request_id": request_id,
                         "affinity": job.affinity,
@@ -219,11 +350,84 @@ class MayaUiDispatcher:
                     }
                     job.event.set()
                     return True
+
+            # In-flight job: set the cooperative flag so the task can
+            # observe cancellation at its next check_maya_cancelled() call.
+            active_job = self._active.get(request_id)
+            if active_job is not None:
+                active_job.cancel()
+                return True
+
         return False
 
     def pending_count(self) -> int:
         """Return the number of jobs waiting in the main-thread queue."""
         return len(self._main_queue)
+
+    def shutdown(self, reason: str = "Interrupted") -> int:
+        """Drain the dispatcher — mark every pending and in-flight job as ``Interrupted``.
+
+        Called from :meth:`~dcc_mcp_maya.server.MayaMcpServer.stop` (and
+        from standalone teardown) so any thread currently blocked inside
+        :meth:`submit_callable` / :meth:`submit` unblocks within the
+        usual ``event.wait()`` poll instead of hanging forever after
+        Maya restarts mid-job. Matches the contract in issue #89:
+
+        * Every queued ``_JobEntry`` gets ``outcome.error=reason`` and
+          its :attr:`event` is set so the blocked submitter returns
+          immediately on next ``wait()``.
+        * Every in-flight job has its :attr:`cancel_flag` set so a
+          cooperating task can observe cancellation at its next
+          :func:`check_maya_cancelled` checkpoint and exit cleanly.
+        * After shutdown, further :meth:`submit_callable` calls return
+          the same ``Interrupted`` outcome without enqueuing (so the
+          Python thread that tried to submit during teardown does not
+          leak). Re-use of a shutdown dispatcher is not supported.
+
+        Returns
+        -------
+        int
+            Total number of queued + in-flight jobs that were signalled.
+        """
+        signalled = 0
+        with self._lock:
+            self._shutdown = True
+
+            while self._main_queue:
+                job = self._main_queue.popleft()
+                job.cancel()
+                if job.outcome is None:
+                    job.outcome = {
+                        "request_id": job.request_id,
+                        "affinity": job.affinity,
+                        "success": False,
+                        "output": None,
+                        "error": reason,
+                    }
+                job.event.set()
+                signalled += 1
+
+            for job in list(self._active.values()):
+                job.cancel()
+                # NOTE: we do NOT set ``job.event`` here — the task is
+                # still running on the UI thread. :meth:`execute` will
+                # populate ``outcome`` and fire ``event`` when it returns
+                # or raises ``CancelledError``. Setting ``event`` now
+                # would race with :meth:`execute`.
+                signalled += 1
+
+        if signalled:
+            logger.info(
+                "MayaUiDispatcher.shutdown: signalled %d job(s) with reason=%r",
+                signalled,
+                reason,
+            )
+        return signalled
+
+    @property
+    def is_shutdown(self) -> bool:
+        """``True`` once :meth:`shutdown` has been called."""
+        return self._shutdown
 
     def supported(self) -> List[str]:
         """Return supported affinity values."""
@@ -273,8 +477,15 @@ class MayaUiDispatcher:
                         }
                         job.event.set()
                     continue
+                # Track in-flight job so shutdown() / cancel() can set
+                # the cooperative flag while execute() runs.
+                self._active[job.request_id] = job
 
-            job.execute()
+            try:
+                job.execute()
+            finally:
+                with self._lock:
+                    self._active.pop(job.request_id, None)
             executed += 1
 
         remaining = len(self._main_queue)
@@ -322,6 +533,17 @@ class MayaUiDispatcher:
         job = _JobEntry(request_id, affinity, task, timeout_ms)
 
         with self._lock:
+            if self._shutdown:
+                # Post-shutdown submissions must not hang — return
+                # immediately with the same outcome shape the drain path
+                # produces for interrupted jobs (issue #89).
+                return {
+                    "request_id": request_id,
+                    "affinity": affinity,
+                    "success": False,
+                    "output": None,
+                    "error": "Interrupted",
+                }
             self._main_queue.append(job)
 
         # If no MayaUiPump is installed, fall back to executeDeferred
@@ -478,7 +700,21 @@ class MayaUiPump:
         self._budget_ms = budget_ms
         self._script_job_id: Optional[int] = None
         self._installed = False
-        self._stats = {"total_executed": 0, "total_cycles": 0, "total_elapsed_ms": 0.0}
+        self._stats: Dict[str, float] = {
+            "total_executed": 0,
+            "total_cycles": 0,
+            "total_elapsed_ms": 0.0,
+            # Issue #85 §4 — ticks that exceeded ``budget_ms`` × OVERRUN_MULTIPLIER.
+            # A non-zero value means ``MayaUiPump`` cannot chunk the work
+            # further and the UI thread is being saturated by a single
+            # non-cooperative ``cmds.*`` call. Skill authors should move
+            # the offending logic behind :func:`check_maya_cancelled`
+            # so it yields periodically.
+            "overrun_cycles": 0,
+            # Worst single-job wall-clock time observed across all cycles.
+            # Feeds the ``dcc_maya_job_duration_seconds`` histogram (#87).
+            "longest_job_ms": 0.0,
+        }
 
     # ── Lifecycle ─────────────────────────────────────────────────────────────
 
@@ -550,7 +786,18 @@ class MayaUiPump:
     # ── Pump implementation ───────────────────────────────────────────────────
 
     def _pump_tick(self) -> None:
-        """Idle-event callback: drain pending jobs within the budget."""
+        """Idle-event callback: drain pending jobs within the budget.
+
+        Important preemption caveat (issue #85 §4):
+        ``drain_queue(budget_ms)`` only checks the deadline **between**
+        jobs. When a skill script makes a single, non-cooperative
+        ``cmds.*`` call that blocks the UI thread for seconds, this tick
+        cannot preempt it — Maya itself has no tool to interrupt a
+        running Python callable. The tick will be counted as an
+        ``overrun_cycles`` so operators can tell the difference between
+        "the pump is tuned too aggressively" and "a skill needs to be
+        chunked behind :func:`check_maya_cancelled`".
+        """
         start = time.monotonic()
         executed, remaining = self._dispatcher.drain_queue(self._budget_ms)
 
@@ -558,6 +805,23 @@ class MayaUiPump:
         self._stats["total_executed"] += executed
         self._stats["total_cycles"] += 1
         self._stats["total_elapsed_ms"] += elapsed_ms
+
+        # Overrun bookkeeping — see OVERRUN_MULTIPLIER.
+        if elapsed_ms > self._budget_ms * OVERRUN_MULTIPLIER:
+            self._stats["overrun_cycles"] += 1
+
+        # ``longest_job_ms`` approximates the worst single-job duration.
+        # ``drain_queue`` may execute multiple jobs per tick when each
+        # finishes inside the budget; in that case the per-job worst is
+        # bounded by ``elapsed_ms / max(executed, 1)``. When a single
+        # job blows past the budget it dominates the tick, which is
+        # exactly the case we want this metric to catch, so use the
+        # larger of the two estimates.
+        if executed > 0:
+            avg_job_ms = elapsed_ms / executed
+            worst_job_ms = elapsed_ms if executed == 1 else max(elapsed_ms, avg_job_ms)
+            if worst_job_ms > self._stats["longest_job_ms"]:
+                self._stats["longest_job_ms"] = worst_job_ms
 
         if remaining > 0:
             # Re-poke Maya so we get another idle event quickly
