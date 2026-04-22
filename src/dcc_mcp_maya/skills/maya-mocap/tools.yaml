@@ -1,9 +1,19 @@
 tools:
 - name: bake_mocap_to_rig
+  execution: async
+  affinity: main
+  timeout_hint_secs: 300
   group: animation
 - name: clean_mocap_keys
+  execution: sync
+  affinity: main
   group: animation
 - name: create_hik_definition
+  execution: sync
+  affinity: main
   group: animation
 - name: import_mocap
+  execution: async
+  affinity: main
+  timeout_hint_secs: 300
   group: animation

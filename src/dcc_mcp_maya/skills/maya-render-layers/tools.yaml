@@ -1,21 +1,31 @@
 tools:
 - name: create_render_layer
+  execution: sync
+  affinity: main
   group: rendering
 - name: delete_render_layer
+  execution: sync
+  affinity: main
   annotations:
     destructive_hint: true
     idempotent_hint: true
   group: rendering
 - name: list_render_layers
+  execution: sync
+  affinity: main
   annotations:
     read_only_hint: true
     idempotent_hint: true
   group: rendering
 - name: set_render_layer
+  execution: sync
+  affinity: main
   annotations:
     idempotent_hint: true
   group: rendering
 - name: set_render_layer_attribute
+  execution: sync
+  affinity: main
   annotations:
     idempotent_hint: true
   group: rendering

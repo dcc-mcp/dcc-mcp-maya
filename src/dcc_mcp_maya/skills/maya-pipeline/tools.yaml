@@ -1,14 +1,22 @@
 tools:
 - name: get_asset_metadata
+  execution: sync
+  affinity: main
   annotations:
     read_only_hint: true
     idempotent_hint: true
   group: scene-management
 - name: publish_asset
+  execution: sync
+  affinity: main
   group: scene-management
 - name: set_project
+  execution: sync
+  affinity: main
   annotations:
     idempotent_hint: true
   group: scene-management
 - name: tag_asset_metadata
+  execution: sync
+  affinity: main
   group: scene-management
