@@ -1,0 +1,12 @@
+tools:
+- name: apply_subdivision
+  annotations:
+    idempotent_hint: true
+- name: cleanup_mesh
+- name: create_cluster
+- name: create_lattice
+- name: sculpt_deformer
+- name: set_cluster_weights
+  annotations:
+    idempotent_hint: true
+- name: wire_deformer

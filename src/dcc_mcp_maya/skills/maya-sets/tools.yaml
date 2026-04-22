@@ -1,0 +1,11 @@
+tools:
+- name: add_to_set
+- name: create_set
+- name: list_sets
+  annotations:
+    read_only_hint: true
+    idempotent_hint: true
+- name: remove_from_set
+  annotations:
+    destructive_hint: true
+    idempotent_hint: true

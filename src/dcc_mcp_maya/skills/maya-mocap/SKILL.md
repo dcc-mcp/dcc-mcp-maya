@@ -1,35 +1,23 @@
 ---
 name: maya-mocap
 description: Motion capture data import, retargeting and cleanup for Maya
-dcc: maya
-tags:
-- maya
-- mocap
-- animation
-- retarget
-- hik
-- bvh
-search-hint: mocap, motion capture, retarget, fbx
-version: 1.0.0
 license: MIT
-allowed-tools:
-- Bash
-- Read
-depends: []
-tools:
-- name: bake_mocap_to_rig
-- name: clean_mocap_keys
-- name: create_hik_definition
-- name: import_mocap
-groups:
-- name: animation
-  description: Animation, constraints, and motion capture tools
-  default_active: false
-  tools:
-  - bake_mocap_to_rig
-  - clean_mocap_keys
-  - create_hik_definition
-  - import_mocap
+allowed-tools: Bash Read
+metadata:
+  dcc-mcp:
+    dcc: maya
+    version: 1.0.0
+    tags:
+    - maya
+    - mocap
+    - animation
+    - retarget
+    - hik
+    - bvh
+    search-hint: mocap, motion capture, retarget, fbx
+    depends: []
+    tools: tools.yaml
+    groups: groups.yaml
 ---
 # maya-mocap
 

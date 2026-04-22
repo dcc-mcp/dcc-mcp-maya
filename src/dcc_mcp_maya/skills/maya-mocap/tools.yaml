@@ -1,0 +1,5 @@
+tools:
+- name: bake_mocap_to_rig
+- name: clean_mocap_keys
+- name: create_hik_definition
+- name: import_mocap

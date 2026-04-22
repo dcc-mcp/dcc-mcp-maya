@@ -1,0 +1,13 @@
+tools:
+- name: create_annotation
+- name: delete_annotation
+  annotations:
+    destructive_hint: true
+    idempotent_hint: true
+- name: list_annotations
+  annotations:
+    read_only_hint: true
+    idempotent_hint: true
+- name: update_annotation
+  annotations:
+    idempotent_hint: true
