@@ -1,35 +1,51 @@
 tools:
 - name: assign_material
+  execution: sync
+  affinity: main
   annotations:
     idempotent_hint: true
   group: shading-lighting
 - name: create_material
+  execution: sync
+  affinity: main
   group: shading-lighting
 - name: get_material_connections
+  execution: sync
+  affinity: main
   annotations:
     read_only_hint: true
     idempotent_hint: true
   group: shading-lighting
 - name: get_shader_assignment
+  execution: sync
+  affinity: main
   annotations:
     read_only_hint: true
     idempotent_hint: true
   group: shading-lighting
 - name: list_materials
+  execution: sync
+  affinity: main
   annotations:
     read_only_hint: true
     idempotent_hint: true
   group: shading-lighting
 - name: list_shading_groups
+  execution: sync
+  affinity: main
   annotations:
     read_only_hint: true
     idempotent_hint: true
   group: shading-lighting
 - name: reset_to_default_material
+  execution: sync
+  affinity: main
   annotations:
     idempotent_hint: true
   group: shading-lighting
 - name: set_material_attribute
+  execution: sync
+  affinity: main
   annotations:
     idempotent_hint: true
   group: shading-lighting

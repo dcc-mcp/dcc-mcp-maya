@@ -1,17 +1,25 @@
 tools:
 - name: create_light
+  execution: sync
+  affinity: main
   group: shading-lighting
 - name: delete_light
+  execution: sync
+  affinity: main
   annotations:
     destructive_hint: true
     idempotent_hint: true
   group: shading-lighting
 - name: list_lights
+  execution: sync
+  affinity: main
   annotations:
     read_only_hint: true
     idempotent_hint: true
   group: shading-lighting
 - name: set_light_attribute
+  execution: sync
+  affinity: main
   annotations:
     idempotent_hint: true
   group: shading-lighting
