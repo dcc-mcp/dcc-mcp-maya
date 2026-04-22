@@ -1,14 +1,22 @@
 tools:
 - name: create_hdri_dome
+  execution: sync
+  affinity: main
   group: shading-lighting
 - name: create_three_point_rig
+  execution: sync
+  affinity: main
   group: shading-lighting
 - name: list_light_rigs
+  execution: sync
+  affinity: main
   annotations:
     read_only_hint: true
     idempotent_hint: true
   group: shading-lighting
 - name: set_light_rig_intensity
+  execution: sync
+  affinity: main
   annotations:
     idempotent_hint: true
   group: shading-lighting

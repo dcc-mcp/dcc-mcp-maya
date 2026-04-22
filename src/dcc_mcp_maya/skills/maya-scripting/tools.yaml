@@ -1,68 +1,126 @@
 tools:
 - name: animation
+  execution: sync
+  affinity: main
   group: extended
 - name: attributes
+  execution: sync
+  affinity: main
   group: extended
 - name: cameras
+  execution: sync
+  affinity: main
   group: extended
 - name: constraints
+  execution: sync
+  affinity: main
   group: extended
 - name: deformer_advanced
+  execution: sync
+  affinity: main
   group: extended
 - name: display
+  execution: sync
+  affinity: main
   group: extended
 - name: dynamics
+  execution: sync
+  affinity: main
   group: extended
 - name: execute_mel
+  execution: sync
+  affinity: main
   group: core
 - name: execute_python
+  execution: sync
+  affinity: main
   group: core
 - name: expressions
+  execution: sync
+  affinity: main
   annotations:
     read_only_hint: true
     idempotent_hint: true
   group: extended
 - name: get_script_node
+  execution: sync
+  affinity: main
   annotations:
     read_only_hint: true
     idempotent_hint: true
   group: extended
 - name: lighting
+  execution: sync
+  affinity: main
   group: extended
 - name: list_mel_procedures
+  execution: sync
+  affinity: main
   annotations:
     read_only_hint: true
     idempotent_hint: true
   group: extended
 - name: materials
+  execution: sync
+  affinity: main
   group: extended
 - name: mesh_ops
+  execution: sync
+  affinity: main
   group: extended
 - name: namespaces
+  execution: sync
+  affinity: main
   group: extended
 - name: node_attrs
+  execution: sync
+  affinity: main
   group: extended
 - name: node_graph
+  execution: sync
+  affinity: main
   group: extended
 - name: references
+  execution: sync
+  affinity: main
   group: extended
 - name: render
+  execution: sync
+  affinity: main
   group: extended
 - name: render_layers
+  execution: sync
+  affinity: main
   group: extended
 - name: rigging
+  execution: sync
+  affinity: main
   group: extended
 - name: scene_utils
+  execution: sync
+  affinity: main
   group: extended
 - name: sets
+  execution: sync
+  affinity: main
   group: extended
 - name: skin_weights
+  execution: sync
+  affinity: main
   group: extended
 - name: texture_bake
+  execution: sync
+  affinity: main
   group: extended
 - name: utility
+  execution: sync
+  affinity: main
   group: extended
 - name: uv_ops
+  execution: sync
+  affinity: main
   group: extended
 - name: vertex_color
+  execution: sync
+  affinity: main
   group: extended

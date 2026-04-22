@@ -1,19 +1,29 @@
 tools:
 - name: add_node
+  execution: sync
+  affinity: main
   group: simulation-fx
 - name: create_network
+  execution: sync
+  affinity: main
   group: simulation-fx
 - name: delete_network
+  execution: sync
+  affinity: main
   annotations:
     destructive_hint: true
     idempotent_hint: true
   group: simulation-fx
 - name: list_networks
+  execution: sync
+  affinity: main
   annotations:
     read_only_hint: true
     idempotent_hint: true
   group: simulation-fx
 - name: set_mash_attribute
+  execution: sync
+  affinity: main
   annotations:
     idempotent_hint: true
   group: simulation-fx
