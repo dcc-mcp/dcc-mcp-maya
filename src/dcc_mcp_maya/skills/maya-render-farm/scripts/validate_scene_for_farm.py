@@ -7,7 +7,10 @@ from __future__ import annotations
 import os
 
 # Import local modules
+from dcc_mcp_core.cancellation import CancelledError
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
+
+from dcc_mcp_maya.dispatcher import check_maya_cancelled
 
 
 def validate_scene_for_farm() -> dict:
@@ -19,6 +22,13 @@ def validate_scene_for_farm() -> dict:
     - No unloaded references
     - Render frame range is set (startFrame < endFrame)
     - Active render layer exists
+
+    Cooperative cancellation (issue #85):
+        A scene with thousands of file nodes or references can take several
+        seconds to validate.  We call :func:`check_maya_cancelled` between
+        each node so an MCP ``notifications/cancelled`` or a dispatcher
+        ``cancel(...)`` aborts the scan promptly instead of blocking the
+        UI thread until every node is inspected.
 
     Returns:
         ToolResult dict with ``context.issues`` list and ``context.valid`` flag.
@@ -37,6 +47,10 @@ def validate_scene_for_farm() -> dict:
         # 2. Missing file textures
         file_nodes = cmds.ls(type="file") or []
         for fn in file_nodes:
+            # Cooperative cancellation checkpoint — cheap no-op outside
+            # an MCP request, raises ``CancelledError`` when the owning
+            # ``tools/call`` is cancelled or the dispatcher is shutting down.
+            check_maya_cancelled()
             try:
                 tex_path = cmds.getAttr("{}.fileTextureName".format(fn)) or ""
                 if tex_path and not os.path.isfile(tex_path):
@@ -47,6 +61,7 @@ def validate_scene_for_farm() -> dict:
         # 3. Unloaded references
         refs = cmds.file(q=True, reference=True) or []
         for ref in refs:
+            check_maya_cancelled()
             try:
                 loaded = cmds.referenceQuery(ref, isLoaded=True)
                 if not loaded:
@@ -90,6 +105,11 @@ def validate_scene_for_farm() -> dict:
             )
     except ImportError:
         return skill_error("Maya not available", "maya.cmds could not be imported")
+    except CancelledError:
+        # Cooperative cancellation — propagate so the dispatcher can mark
+        # the job as cancelled rather than reporting it as a generic
+        # skill exception (issue #85).
+        raise
     except Exception as exc:
         return skill_exception(exc, message="Failed to validate scene")
 
