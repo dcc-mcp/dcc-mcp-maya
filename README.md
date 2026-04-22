@@ -291,6 +291,46 @@ the same lint against their own skills root:
 python tools/lint_skill_affinity.py --skills-root /path/to/your/skills
 ```
 
+## Prometheus Metrics (issue #87)
+
+Enable the `/metrics` endpoint for real-time observability (requires a
+wheel built with the `prometheus` feature):
+
+```python
+# Programmatic:
+server = MayaMcpServer(port=8765, metrics_enabled=True)
+
+# Or via env var (useful in Maya's userSetup.py):
+# DCC_MCP_MAYA_METRICS=1
+```
+
+Exposed metrics include `MayaUiPump` overrun cycles, queue depth, and
+per-tool job-duration histograms. Scrape at:
+`http://127.0.0.1:<port>/metrics`
+
+## Job Persistence & Recovery (issue #89)
+
+Enable SQLite job persistence so clients can poll interrupted jobs after
+a Maya restart:
+
+```python
+server = MayaMcpServer(
+    port=8765,
+    job_storage_path="/path/to/maya-jobs.db",  # default: platform data dir
+    job_recovery="requeue",  # "drop" (default) | "requeue" idempotent jobs
+)
+```
+
+Environment variable equivalents:
+
+| Variable | Effect |
+|---|---|
+| `DCC_MCP_MAYA_JOB_STORAGE=<path>` | SQLite job DB path |
+| `DCC_MCP_MAYA_JOB_RECOVERY=requeue` | Re-queue idempotent interrupted jobs |
+
+The `jobs.get_status` built-in MCP tool is automatically available
+whenever `job_storage_path` is configured.
+
 ## Claude Desktop Integration
 
 Add to `claude_desktop_config.json`:
