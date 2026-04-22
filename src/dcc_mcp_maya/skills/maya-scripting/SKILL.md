@@ -1,12 +1,12 @@
 ---
 name: maya-scripting
-description: Execute MEL/Python scripts inside Maya; broad scripting utilities across
-  all domains
+description: Execute MEL and Python scripts inside Maya; broad scripting utilities across the Maya API. Use when automating tasks that lack dedicated tools. Not for specific modeling, animation, or rendering operations — use maya-mesh-ops, maya-animation, or maya-render for those.
 license: MIT
 allowed-tools: Bash Read
 metadata:
   dcc-mcp:
     dcc: maya
+    layer: domain
     version: 1.0.0
     tags:
     - maya
@@ -15,7 +15,7 @@ metadata:
     - python
     - utility
     - dangerous
-    search-hint: script, mel, python, expression, execute
+    search-hint: automate task, run script, MEL Python, custom automation
     depends: []
     tools: tools.yaml
     groups: groups.yaml

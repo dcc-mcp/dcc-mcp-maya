@@ -1,19 +1,19 @@
 ---
 name: maya-audio
-description: Maya audio — import audio files, set timeline audio, list and remove
-  audio nodes
+description: Maya audio management — import audio files, set timeline audio, list and remove sound nodes. Use when synchronizing audio to animation timelines. Not for animation keyframing or video editing — use maya-animation or maya-render for that.
 license: MIT
 allowed-tools: Bash Read
 metadata:
   dcc-mcp:
     dcc: maya
+    layer: domain
     version: 1.0.0
     tags:
     - maya
     - audio
     - sound
     - timeline
-    search-hint: audio, sound, import audio, timeline audio, sound node
+    search-hint: sync audio, timeline sound, import audio, sound node
     depends: []
     tools: tools.yaml
 ---

@@ -3,10 +3,20 @@ tools:
   execution: sync
   affinity: main
   group: rigging
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log
+
 - name: create_spline_ik
   execution: sync
   affinity: main
   group: rigging
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log
+
 - name: list_spline_ik_handles
   execution: sync
   affinity: main
@@ -14,9 +24,18 @@ tools:
     read_only_hint: true
     idempotent_hint: true
   group: rigging
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log
+
 - name: set_spline_ik_twist
   execution: sync
   affinity: main
   annotations:
     idempotent_hint: true
   group: rigging
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log

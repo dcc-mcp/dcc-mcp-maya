@@ -1,18 +1,19 @@
 ---
 name: maya-primitives
-description: Maya polygon primitive creation and basic transform operations
+description: Maya polygon primitive creation and basic transform operations — spheres, cubes, cylinders, planes, and transforms. Use when creating individual basic geometry from scratch. Not for complex mesh editing, UV operations, or material assignment — use maya-mesh-ops, maya-uv-ops, or maya-materials for that.
 license: MIT
 allowed-tools: Bash Read
 metadata:
   dcc-mcp:
     dcc: maya
+    layer: domain
     version: 1.0.0
     tags:
     - maya
     - geometry
     - primitives
     - create
-    search-hint: create, sphere, cube, plane, cylinder, primitive, polygon
+    search-hint: create basic geometry, add primitive, simple shape, individual mesh
     depends: []
     tools: tools.yaml
     groups: groups.yaml

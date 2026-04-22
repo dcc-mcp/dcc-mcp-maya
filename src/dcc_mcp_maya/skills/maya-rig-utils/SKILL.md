@@ -1,12 +1,12 @@
 ---
 name: maya-rig-utils
-description: Maya rig utilities — space switching, control curve shapes, rig connections,
-  and attribute locking
+description: Maya rig utilities — space switching, control curve shapes, rig connections, and mirroring. Use when supporting and extending existing rigs. Not for full rig creation or animation — use maya-rigging or maya-animation for that.
 license: MIT
 allowed-tools: Bash Read
 metadata:
   dcc-mcp:
     dcc: maya
+    layer: domain
     version: 1.0.0
     tags:
     - maya
@@ -14,7 +14,7 @@ metadata:
     - controls
     - space-switch
     - attributes
-    search-hint: rig, utility, mirror, constraint, helper
+    search-hint: rig helper, space switch, control shape, mirror rig
     depends: []
     tools: tools.yaml
     groups: groups.yaml
