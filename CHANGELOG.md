@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.15](https://github.com/loonghao/dcc-mcp-maya/compare/v0.2.14...v0.2.15) (2026-04-22)
+
+
+### Features
+
+* **skills:** implement layered skill architecture with explicit routing ([#100](https://github.com/loonghao/dcc-mcp-maya/issues/100)) ([acd6c7c](https://github.com/loonghao/dcc-mcp-maya/commit/acd6c7cd2bc27b5a438ae6f9ee4a43dafe9ecfdf))
+
 ## [0.2.14](https://github.com/loonghao/dcc-mcp-maya/compare/v0.2.13...v0.2.14) (2026-04-22)
 
 
