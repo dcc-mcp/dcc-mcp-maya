@@ -1,0 +1,24 @@
+tools:
+- name: apply_symmetry
+  annotations:
+    idempotent_hint: true
+- name: connect_attr
+- name: delete_history
+  annotations:
+    destructive_hint: true
+    idempotent_hint: true
+- name: disconnect_attr
+- name: get_dag_path
+  annotations:
+    read_only_hint: true
+    idempotent_hint: true
+- name: list_connections
+  annotations:
+    read_only_hint: true
+    idempotent_hint: true
+- name: list_history
+  annotations:
+    read_only_hint: true
+    idempotent_hint: true
+- name: smooth_mesh
+- name: transfer_attributes

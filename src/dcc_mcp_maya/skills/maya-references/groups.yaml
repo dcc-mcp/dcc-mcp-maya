@@ -1,0 +1,11 @@
+groups:
+- name: scene-management
+  description: Scene management, organization, and navigation tools
+  default_active: true
+  tools:
+  - create_reference
+  - list_namespaces
+  - list_references
+  - reload_reference
+  - remove_reference
+  - unload_reference

@@ -1,0 +1,11 @@
+groups:
+- name: scene-management
+  description: Scene management, organization, and navigation tools
+  default_active: true
+  tools:
+  - create_namespace
+  - delete_namespace
+  - list_namespaces
+  - remove_namespace
+  - rename_namespace
+  - set_namespace

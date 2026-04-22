@@ -1,37 +1,24 @@
 ---
 name: maya-scene-assembly
-description: Maya Scene Assembly — manage Assembly Definition, Assembly Reference, and representation LODs
-dcc: maya
-tags:
-- maya
-- scene-assembly
-- lod
-- reference
-- pipeline
-- assembly
-search-hint: scene assembly, asset, level, publish
-version: 1.0.0
+description: Maya Scene Assembly — manage Assembly Definition, Assembly Reference,
+  and representation LODs
 license: MIT
-allowed-tools:
-- Bash
-- Read
-depends: []
-tools:
-- name: add_assembly_representation
-- name: create_assembly_definition
-- name: create_assembly_reference
-- name: list_assemblies
-  read_only_hint: true
-  idempotent_hint: true
-groups:
-- name: scene-management
-  description: Scene management, organization, and navigation tools
-  default_active: true
-  tools:
-  - add_assembly_representation
-  - create_assembly_definition
-  - create_assembly_reference
-  - list_assemblies
+allowed-tools: Bash Read
+metadata:
+  dcc-mcp:
+    dcc: maya
+    version: 1.0.0
+    tags:
+    - maya
+    - scene-assembly
+    - lod
+    - reference
+    - pipeline
+    - assembly
+    search-hint: scene assembly, asset, level, publish
+    depends: []
+    tools: tools.yaml
+    groups: groups.yaml
 ---
 # maya-scene-assembly
 

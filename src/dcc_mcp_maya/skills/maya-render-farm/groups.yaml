@@ -1,0 +1,9 @@
+groups:
+- name: rendering
+  description: Render settings, layers, passes, and output tools
+  default_active: false
+  tools:
+  - get_render_job_status
+  - submit_to_deadline
+  - validate_scene_for_farm
+  - write_render_job
