@@ -1,44 +1,23 @@
 ---
 name: maya-scene-utils
-description: Maya scene utilities — pivot, alignment, annotation, color override and viewport shading
-dcc: maya
-version: 1.0.0
-tags:
-- maya
-- scene
-- utility
-- display
-- viewport
-search-hint: scene, utility, annotation, locator, helper
+description: Maya scene utilities — pivot, alignment, annotation, color override and
+  viewport shading
 license: MIT
-allowed-tools:
-- Bash
-- Read
-depends: []
-tools:
-- name: align_objects
-- name: create_annotation
-- name: create_polygon_text
-- name: set_object_color
-  idempotent_hint: true
-- name: set_pivot
-  idempotent_hint: true
-- name: set_shading_mode
-  idempotent_hint: true
-- name: toggle_gpu_override
-  idempotent_hint: true
-groups:
-- name: scene-management
-  description: Scene management, organization, and navigation tools
-  default_active: true
-  tools:
-  - align_objects
-  - create_annotation
-  - create_polygon_text
-  - set_object_color
-  - set_pivot
-  - set_shading_mode
-  - toggle_gpu_override
+allowed-tools: Bash Read
+metadata:
+  dcc-mcp:
+    dcc: maya
+    version: 1.0.0
+    tags:
+    - maya
+    - scene
+    - utility
+    - display
+    - viewport
+    search-hint: scene, utility, annotation, locator, helper
+    depends: []
+    tools: tools.yaml
+    groups: groups.yaml
 ---
 # maya-scene-utils
 

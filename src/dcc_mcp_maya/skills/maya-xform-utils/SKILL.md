@@ -1,26 +1,21 @@
 ---
 name: maya-xform-utils
 description: Maya transform utilities — freeze, reset, match, bake, and mirror transforms
-dcc: maya
-version: 1.0.0
-tags:
-- maya
-- transform
-- xform
-- freeze
-- pivot
-search-hint: transform, pivot, align, freeze, reset
 license: MIT
-allowed-tools:
-- Bash
-- Read
-depends: []
-tools:
-- name: bake_transforms
-- name: freeze_transforms
-- name: match_transforms
-- name: reset_pivot
-  idempotent_hint: true
+allowed-tools: Bash Read
+metadata:
+  dcc-mcp:
+    dcc: maya
+    version: 1.0.0
+    tags:
+    - maya
+    - transform
+    - xform
+    - freeze
+    - pivot
+    search-hint: transform, pivot, align, freeze, reset
+    depends: []
+    tools: tools.yaml
 ---
 # maya-xform-utils
 

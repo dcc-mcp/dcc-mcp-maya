@@ -1,43 +1,21 @@
 ---
 name: maya-references
 description: Maya file references and namespace management
-dcc: maya
-version: 1.0.0
-tags:
-- maya
-- reference
-- namespace
-- scene
-search-hint: reference, import, namespace, link, file
 license: MIT
-allowed-tools:
-- Bash
-- Read
-depends: []
-tools:
-- name: create_reference
-- name: list_namespaces
-  read_only_hint: true
-  idempotent_hint: true
-- name: list_references
-  read_only_hint: true
-  idempotent_hint: true
-- name: reload_reference
-- name: remove_reference
-  destructive_hint: true
-  idempotent_hint: true
-- name: unload_reference
-groups:
-- name: scene-management
-  description: Scene management, organization, and navigation tools
-  default_active: true
-  tools:
-  - create_reference
-  - list_namespaces
-  - list_references
-  - reload_reference
-  - remove_reference
-  - unload_reference
+allowed-tools: Bash Read
+metadata:
+  dcc-mcp:
+    dcc: maya
+    version: 1.0.0
+    tags:
+    - maya
+    - reference
+    - namespace
+    - scene
+    search-hint: reference, import, namespace, link, file
+    depends: []
+    tools: tools.yaml
+    groups: groups.yaml
 ---
 # maya-references
 

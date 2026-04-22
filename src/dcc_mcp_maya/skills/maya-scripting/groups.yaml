@@ -1,0 +1,38 @@
+groups:
+- name: core
+  description: "Core scripting tools \u2014 always active in minimal mode"
+  default_active: true
+  tools:
+  - execute_mel
+  - execute_python
+- name: extended
+  description: Extended scripting utilities across all domains
+  default_active: true
+  tools:
+  - animation
+  - attributes
+  - cameras
+  - constraints
+  - deformer_advanced
+  - display
+  - dynamics
+  - expressions
+  - get_script_node
+  - lighting
+  - list_mel_procedures
+  - materials
+  - mesh_ops
+  - namespaces
+  - node_attrs
+  - node_graph
+  - references
+  - render
+  - render_layers
+  - rigging
+  - scene_utils
+  - sets
+  - skin_weights
+  - texture_bake
+  - utility
+  - uv_ops
+  - vertex_color
