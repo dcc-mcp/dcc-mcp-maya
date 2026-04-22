@@ -245,23 +245,31 @@ class TestMayaMcpServerHttp:
         # meta-tools — either as bare names, prefixed, or stub markers.
         skill_stubs = {n for n in names if n.startswith("__skill__maya-")}
         prefixed_tools = {n for n in names if n.startswith("maya-") and not n.startswith("__skill__")}
-        bare_known = {
-            "create_sphere",
-            "create_cube",
-            "create_cylinder",
-            "create_plane",
-            "get_scene_info",
-            "get_session_info",
-            "get_selection",
-            "set_transform",
-            "get_transform",
-            "rename_object",
-            "delete_objects",
-            "execute_python",
-            "execute_mel",
+        # After the sibling-file migration (dcc-mcp-core #356/#385), skill
+        # scripts are exposed with bare names when unique. We compute the
+        # set of "skill-derived" tools by subtracting the known core
+        # meta-tools and subsystem-prefixed tools (`jobs.*`, `diagnostics__*`).
+        core_meta_tools = {
+            "list_skills",
+            "find_skills",
+            "search_skills",
+            "load_skill",
+            "unload_skill",
+            "search_tools",
+            "get_skill_info",
+            "activate_tool_group",
+            "deactivate_tool_group",
+            "list_roots",
         }
-        bare_maya = names & bare_known
-        skill_tools = skill_stubs | prefixed_tools | bare_maya
+        reserved_prefix = ("__skill__", "jobs.", "diagnostics__", "ext.")
+        bare_skill_tools = {
+            n
+            for n in names
+            if n not in core_meta_tools
+            and not n.startswith(reserved_prefix)
+            and not n.startswith("maya-")
+        }
+        skill_tools = skill_stubs | prefixed_tools | bare_skill_tools
         assert len(skill_tools) >= 3, (
             f"Expected >=3 maya skill tools (stubs/prefixed/bare), got {len(skill_tools)}: {names}"
         )
