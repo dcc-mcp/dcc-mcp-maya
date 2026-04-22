@@ -236,6 +236,61 @@ The sections below are representative categories, not an exhaustive inventory.
 | `execute_mel` | Execute a MEL script |
 | `execute_python` | Execute Python inside Maya |
 
+## Authoring Skills (`execution` + `affinity`)
+
+Every tool in a `tools.yaml` **must** declare two fields so the MCP host
+knows how to dispatch it safely. Omitting either breaks async dispatch
+(core #318) or crashes Maya when a main-thread-only Maya API is routed to
+a Tokio worker (core #332):
+
+```yaml
+tools:
+  - name: playblast
+    description: Capture a viewport screenshot as a base64-encoded PNG
+    execution: async            # sync | async — default sync
+    affinity: main              # main | any  — default main for Maya tools
+    timeout_hint_secs: 600      # required when execution: async
+
+  - name: get_render_settings
+    execution: sync
+    affinity: main              # cmds.getAttr must run on the UI thread
+
+  - name: list_export_presets
+    execution: sync
+    affinity: any               # pure filesystem read — worker-thread safe
+    annotations:
+      read_only_hint: true
+      idempotent_hint: true
+```
+
+Classification rules (see [issue #84](https://github.com/loonghao/dcc-mcp-maya/issues/84)):
+
+| Field | When to use | Notes |
+|-------|-------------|-------|
+| `execution: async` | Typical wall-clock > 2s (render, bake, cache, large import/export, simulation) | Must also set `timeout_hint_secs`. Surfaces as MCP `deferredHint=true`. |
+| `execution: sync` | Bounded-time queries and single-attribute setters | Default. |
+| `affinity: main` | Anything that imports `maya.*`, calls `OpenMaya`, or uses `dcc_mcp_maya.api.validate_*` | Safe default for Maya tools. |
+| `affinity: any` | Pure filesystem / pure Python tools that never touch Maya | Verified by grepping the script for `import maya`. |
+| `timeout_hint_secs: N` | Required alongside `execution: async` | Positive integer; becomes `_meta.dcc.timeout_hint_secs` on `tools/list`. |
+
+Annotation workflow for bundled skills:
+
+```bash
+# Apply the per-skill / per-tool classification table to every tools.yaml
+python tools/annotate_skill_affinity.py
+
+# CI lints the result — missing fields or async-without-timeout fail fast
+python tools/lint_skill_affinity.py
+```
+
+The lint runs in the `Lint Skills` CI job, so a PR that adds a new tool
+without these fields will be rejected. Third-party skill authors can run
+the same lint against their own skills root:
+
+```bash
+python tools/lint_skill_affinity.py --skills-root /path/to/your/skills
+```
+
 ## Claude Desktop Integration
 
 Add to `claude_desktop_config.json`:
