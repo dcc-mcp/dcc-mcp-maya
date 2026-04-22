@@ -47,6 +47,67 @@ def _import_server():
     return srv
 
 
+def _core_supports_nested_dcc_mcp_metadata():
+    """True iff the installed dcc-mcp-core honours nested ``metadata.dcc-mcp``.
+
+    After the sibling-file migration, every SKILL.md uses the nested
+    mapping form (``metadata: { dcc-mcp: { tools: "tools.yaml", ... } }``).
+    Cores older than dcc-mcp-core#385 silently drop these overrides,
+    which makes the server-level assertions about ``__skill__`` stubs
+    and group activation meaningless. We probe by scanning a temp skill
+    and checking whether the override is actually applied.
+    """
+    import tempfile
+    from pathlib import Path
+
+    try:
+        from dcc_mcp_core import scan_and_load
+    except ImportError:
+        return False
+
+    with tempfile.TemporaryDirectory() as tmp:
+        probe = Path(tmp) / "probe-skill"
+        probe.mkdir()
+        (probe / "tools.yaml").write_text(
+            "tools:\n  - name: ping\n    description: probe tool\n",
+            encoding="utf-8",
+        )
+        (probe / "SKILL.md").write_text(
+            "---\n"
+            "name: probe-skill\n"
+            "description: probe for nested dcc-mcp metadata support\n"
+            "metadata:\n"
+            "  dcc-mcp:\n"
+            "    dcc: maya\n"
+            "    tools: tools.yaml\n"
+            "---\n# body\n",
+            encoding="utf-8",
+        )
+        try:
+            skills, _ = scan_and_load(extra_paths=[tmp], dcc_name="maya")
+        except Exception:
+            return False
+        for s in skills:
+            if s.name == "probe-skill":
+                tools = getattr(s, "tools", None)
+                if callable(tools):
+                    tools = tools()
+                return bool(tools)
+    return False
+
+
+_CORE_SUPPORTS_NESTED_META = _core_supports_nested_dcc_mcp_metadata()
+
+_skip_without_nested_meta = pytest.mark.skipif(
+    not _CORE_SUPPORTS_NESTED_META,
+    reason=(
+        "Installed dcc-mcp-core does not support nested metadata.dcc-mcp "
+        "(requires dcc-mcp-core#385 / >= 0.15). Skipping assertions that "
+        "depend on skill tools/groups being visible to the scanner."
+    ),
+)
+
+
 def _builtin_skills_dir():
     """Return the built-in skills directory, resolving it from the package."""
     from pathlib import Path
@@ -369,6 +430,7 @@ class TestMinimalMode:
             assert server._server.loaded_count() >= 10
             server.stop()
 
+    @_skip_without_nested_meta
     def test_minimal_tools_list_has_core_tools(self):
         """In minimal mode, tools/list contains execute_python and get_scene_info."""
         srv_mod = _import_server()
@@ -408,6 +470,7 @@ class TestMinimalMode:
         assert not has_new_scene, f"new_scene (scene-management group) should be deactivated: {names}"
         server.stop()
 
+    @_skip_without_nested_meta
     def test_minimal_deactivates_extended_groups(self):
         """In minimal mode, extended groups are deactivated within loaded skills."""
         srv_mod = _import_server()

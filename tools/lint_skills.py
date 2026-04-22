@@ -256,10 +256,34 @@ def check_name_field(skill_dir: Path, skill_name: str, fm: dict) -> List[LintIss
     return issues
 
 
+def _extract_dcc_mcp_field(fm: dict, key: str, default=None):
+    """Read a ``metadata.dcc-mcp.*`` field from either the nested or flat form.
+
+    Supports three SKILL.md layouts:
+
+    1. Top-level shorthand (pre-0.15 dcc-mcp-core):  ``dcc: maya``
+    2. Flat metadata form:  ``metadata: {"dcc-mcp.dcc": "maya"}``
+    3. Nested agentskills.io-compliant form (issue #356):
+       ``metadata: {dcc-mcp: {dcc: maya}}``
+    """
+    if key in fm:
+        return fm[key]
+    metadata = fm.get("metadata") or {}
+    if not isinstance(metadata, dict):
+        return default
+    flat = metadata.get(f"dcc-mcp.{key}")
+    if flat is not None:
+        return flat
+    nested = metadata.get("dcc-mcp")
+    if isinstance(nested, dict) and key in nested:
+        return nested[key]
+    return default
+
+
 def check_dcc_field(skill_dir: Path, skill_name: str, fm: dict) -> List[LintIssue]:
     issues: List[LintIssue] = []
     file_path = str(skill_dir / "SKILL.md")
-    dcc = fm.get("dcc", "python")
+    dcc = _extract_dcc_mcp_field(fm, "dcc", default="python")
 
     if dcc not in VALID_DCC_VALUES:
         issues.append(
@@ -288,7 +312,7 @@ def check_dcc_field(skill_dir: Path, skill_name: str, fm: dict) -> List[LintIssu
 
 def check_version_field(skill_dir: Path, skill_name: str, fm: dict) -> List[LintIssue]:
     issues: List[LintIssue] = []
-    version = fm.get("version", "1.0.0")
+    version = _extract_dcc_mcp_field(fm, "version", default="1.0.0")
     if version and not SEMVER_RE.match(str(version)):
         issues.append(
             LintIssue(
@@ -395,7 +419,7 @@ def check_depends_exist(
 ) -> List[LintIssue]:
     """Warn if depends[] references skill names that don't exist."""
     issues: List[LintIssue] = []
-    depends = fm.get("depends", [])
+    depends = _extract_dcc_mcp_field(fm, "depends", default=[])
     if not depends or not isinstance(depends, list):
         return issues
 
