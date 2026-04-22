@@ -1,5 +1,29 @@
 # Changelog
 
+## [0.2.13](https://github.com/loonghao/dcc-mcp-maya/compare/v0.2.12...v0.2.13) (2026-04-22)
+
+
+### Features
+
+* **dispatcher:** cooperative cancellation + pump overrun stats ([#85](https://github.com/loonghao/dcc-mcp-maya/issues/85)) ([6d76e18](https://github.com/loonghao/dcc-mcp-maya/commit/6d76e18b675013b9205a5ff2684520937f90de3e))
+* **server:** drain attached MayaUiDispatcher on stop() ([#85](https://github.com/loonghao/dcc-mcp-maya/issues/85), [#89](https://github.com/loonghao/dcc-mcp-maya/issues/89)) ([42d9a02](https://github.com/loonghao/dcc-mcp-maya/commit/42d9a020368fb774c78d3028f67c852f7d498b71))
+* **skills:** annotate bundled tools.yaml with execution/affinity ([#84](https://github.com/loonghao/dcc-mcp-maya/issues/84)) ([#91](https://github.com/loonghao/dcc-mcp-maya/issues/91)) ([f0e2c54](https://github.com/loonghao/dcc-mcp-maya/commit/f0e2c5490ad8386750cdac662bbc6cf4ccb9619a))
+
+
+### Bug Fixes
+
+* **tests:** update E2E assertions for bare tool names (dcc-mcp-core 0.14.1+) ([2ba0843](https://github.com/loonghao/dcc-mcp-maya/commit/2ba084321062e7b0dc56b24671a8ac057652329c))
+
+
+### Code Refactoring
+
+* **skills:** migrate all skills to sibling-file pattern (dcc-mcp-core [#356](https://github.com/loonghao/dcc-mcp-maya/issues/356)) ([#90](https://github.com/loonghao/dcc-mcp-maya/issues/90)) ([1456661](https://github.com/loonghao/dcc-mcp-maya/commit/145666179b948e7b19bc815b87db023ab9883145))
+
+
+### Documentation
+
+* multi-Maya-instance deployment on a single workstation ([#88](https://github.com/loonghao/dcc-mcp-maya/issues/88)) ([#92](https://github.com/loonghao/dcc-mcp-maya/issues/92)) ([10893eb](https://github.com/loonghao/dcc-mcp-maya/commit/10893eb55516bb7d5c997c037f54db1276801b49))
+
 ## [0.2.12](https://github.com/loonghao/dcc-mcp-maya/compare/v0.2.11...v0.2.12) (2026-04-21)
 
 
