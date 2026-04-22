@@ -255,6 +255,54 @@ Add to `claude_desktop_config.json`:
 - Maya 2020+ (Python 3.7+)
 - [`dcc-mcp-core`](https://github.com/loonghao/dcc-mcp-core) ≥ 0.12.29
 
+## Authoring Skills: Execution & Affinity
+
+Every tool declared in a `tools.yaml` file must tell the MCP gateway **how** it
+should be dispatched.  This is what lets the gateway return an async `job_id`
+instead of blocking, and what prevents main-thread-affine tools from running
+on a worker thread and crashing Maya.
+
+Each entry in `tools.yaml` supports three dispatch fields:
+
+```yaml
+tools:
+  - name: render_frames
+    execution: async          # long-running — spawn as a Job
+    affinity: main            # cmds.render touches scene state
+    timeout_hint_secs: 600    # required when execution: async
+  - name: get_scene_info
+    execution: sync
+    affinity: main            # cmds.ls is main-thread-only
+  - name: list_render_presets
+    execution: sync
+    affinity: any             # pure filesystem read — worker-thread safe
+```
+
+Rules of thumb:
+
+| Property | Guidance |
+|---|---|
+| `execution: async` | Use for anything that typically runs > 2s (render, bake, simulation, large I/O). Must declare `timeout_hint_secs`. |
+| `execution: sync` | Use for fast queries, attribute edits, and small creations. |
+| `affinity: main` | **Default**. Anything that calls `maya.cmds` or `OpenMaya`. |
+| `affinity: any`  | Pure Python / filesystem only — never touches Maya state. |
+
+Two helpers keep the annotations consistent across the 64 bundled skills:
+
+```bash
+# Annotate every bundled tools.yaml from the SKILL_DEFAULTS table.
+python tools/annotate_skill_affinity.py
+
+# CI enforcement — fails if any tool is missing affinity/execution
+# or if an async tool is missing timeout_hint_secs.
+python tools/lint_skill_affinity.py
+```
+
+Third-party skill authors should run `tools/lint_skill_affinity.py` against
+their own skill packages before publishing.  See issue
+[#84](https://github.com/loonghao/dcc-mcp-maya/issues/84) for the full
+categorisation matrix.
+
 ## Development
 
 ### Clone and Install

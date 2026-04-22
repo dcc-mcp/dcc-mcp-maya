@@ -1,12 +1,20 @@
 tools:
 - name: list_poses
+  execution: sync
+  affinity: main
   annotations:
     read_only_hint: true
     idempotent_hint: true
   group: animation
 - name: load_pose
+  execution: sync
+  affinity: main
   group: animation
 - name: mirror_pose
+  execution: sync
+  affinity: main
   group: animation
 - name: save_pose
+  execution: sync
+  affinity: main
   group: animation

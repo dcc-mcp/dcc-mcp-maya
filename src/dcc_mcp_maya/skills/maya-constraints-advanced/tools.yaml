@@ -1,14 +1,22 @@
 tools:
 - name: add_pole_vector_constraint
+  execution: sync
+  affinity: main
   group: animation
 - name: bake_constraint
+  execution: sync
+  affinity: main
   group: animation
 - name: get_constraint_weights
+  execution: sync
+  affinity: main
   annotations:
     read_only_hint: true
     idempotent_hint: true
   group: animation
 - name: set_constraint_weight
+  execution: sync
+  affinity: main
   annotations:
     idempotent_hint: true
   group: animation

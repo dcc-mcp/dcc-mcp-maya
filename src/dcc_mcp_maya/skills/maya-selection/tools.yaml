@@ -1,11 +1,21 @@
 tools:
 - name: convert_selection
+  execution: sync
+  affinity: main
   group: scene-management
 - name: grow_selection
+  execution: sync
+  affinity: main
   group: scene-management
 - name: invert_selection
+  execution: sync
+  affinity: main
   group: scene-management
 - name: select_similar
+  execution: sync
+  affinity: main
   group: scene-management
 - name: shrink_selection
+  execution: sync
+  affinity: main
   group: scene-management

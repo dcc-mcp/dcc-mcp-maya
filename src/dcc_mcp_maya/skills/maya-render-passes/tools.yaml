@@ -1,16 +1,24 @@
 tools:
 - name: create_render_pass
+  execution: sync
+  affinity: main
   group: rendering
 - name: enable_render_pass
+  execution: sync
+  affinity: main
   annotations:
     idempotent_hint: true
   group: rendering
 - name: list_render_passes
+  execution: sync
+  affinity: main
   annotations:
     read_only_hint: true
     idempotent_hint: true
   group: rendering
 - name: set_render_pass_output
+  execution: sync
+  affinity: main
   annotations:
     idempotent_hint: true
   group: rendering

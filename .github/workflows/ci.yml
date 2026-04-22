@@ -84,3 +84,6 @@ jobs:
 
       - name: Lint SKILL.md files
         run: python tools/lint_skills.py --error-only
+
+      - name: Lint tools.yaml affinity (issue #84)
+        run: python tools/lint_skill_affinity.py
