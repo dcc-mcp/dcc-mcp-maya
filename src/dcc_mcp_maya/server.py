@@ -68,11 +68,27 @@ _MINIMAL_DEACTIVATE_GROUPS: dict[str, list[str]] = {
 }
 
 # Environment variable overrides:
-#   DCC_MCP_MAYA_MINIMAL=0  → pre-load all bundled skills (legacy behaviour)
-#   DCC_MCP_MAYA_DEFAULT_TOOLS="execute_python,get_scene_info,..."  → customise
-#       which skills (and optionally which groups) are active at startup.
+#   DCC_MCP_MAYA_MINIMAL=0          → pre-load all bundled skills (legacy)
+#   DCC_MCP_MAYA_DEFAULT_TOOLS="execute_python,get_scene_info,..."
+#       → customise which skills (and optionally which groups) are active
+#         at startup.
+#   DCC_MCP_MAYA_METRICS=1          → enable Prometheus /metrics endpoint
+#       (issue #87; requires wheel built with prometheus feature).
+#   DCC_MCP_MAYA_JOB_STORAGE=<path> → SQLite job-persistence file path
+#       (issue #89; default: <platform_data_dir>/dcc-mcp-maya/jobs.db).
+#   DCC_MCP_MAYA_JOB_RECOVERY=requeue
+#       → re-queue idempotent interrupted jobs on startup (issue #89;
+#         default behaviour is "drop" as documented in the issue).
 _ENV_MINIMAL = "DCC_MCP_MAYA_MINIMAL"
 _ENV_DEFAULT_TOOLS = "DCC_MCP_MAYA_DEFAULT_TOOLS"
+_ENV_METRICS = "DCC_MCP_MAYA_METRICS"
+_ENV_JOB_STORAGE = "DCC_MCP_MAYA_JOB_STORAGE"
+_ENV_JOB_RECOVERY = "DCC_MCP_MAYA_JOB_RECOVERY"
+
+# Default SQLite file for job persistence — inside the platform data directory
+# so it survives upgrades and is shared across Maya sessions on the same user
+# account (issue #89).
+_DEFAULT_JOB_DB_FILENAME = "jobs.db"
 
 
 def _resolve_minimal_flag(minimal: Optional[bool]) -> bool:
@@ -139,6 +155,8 @@ class MayaMcpServer(DccServerBase):
       ``dcc_mcp_core.dcc_server.register_diagnostic_handlers``
     - Maya-specific TransportManager wrappers
       (``bind_and_register``, ``find_best_service``, ``rank_services``)
+    - Prometheus ``/metrics`` endpoint support (issue #87)
+    - SQLite job persistence and startup recovery policy (issue #89)
 
     Example::
 
@@ -147,6 +165,25 @@ class MayaMcpServer(DccServerBase):
         handle = server.start()
         print(handle.mcp_url())    # http://127.0.0.1:8765/mcp
         handle.shutdown()
+
+    Prometheus metrics (issue #87)::
+
+        # Enable via constructor flag …
+        server = MayaMcpServer(port=8765, metrics_enabled=True)
+        # … or via environment variable:
+        # DCC_MCP_MAYA_METRICS=1 python -m dcc_mcp_maya
+
+        # Then scrape:
+        # curl http://127.0.0.1:8765/metrics
+
+    Job persistence and recovery (issue #89)::
+
+        # Enable SQLite job storage — jobs survive Maya restarts
+        server = MayaMcpServer(
+            port=8765,
+            job_storage_path="/path/to/maya-jobs.db",
+            job_recovery="requeue",   # "drop" (default) or "requeue"
+        )
 
     Args:
         port: TCP port to listen on.  Use ``0`` for a random available port.
@@ -158,6 +195,18 @@ class MayaMcpServer(DccServerBase):
         dcc_version: Maya version string reported to the registry.
         scene: Currently open scene file path reported to the registry.
         enable_gateway_failover: Enable automatic gateway failover election.
+        metrics_enabled: Enable the Prometheus ``/metrics`` endpoint.
+            ``None`` reads ``DCC_MCP_MAYA_METRICS`` env var
+            (``"1"`` → enabled; default disabled).
+        job_storage_path: Path to a SQLite database for job persistence.
+            ``None`` reads ``DCC_MCP_MAYA_JOB_STORAGE`` env var.  When
+            neither is set the server defaults to
+            ``<platform_data_dir>/dcc-mcp-maya/jobs.db``.  Set to ``""``
+            to disable persistence (in-memory only).
+        job_recovery: Recovery policy for interrupted jobs found in the
+            storage on startup.  ``"drop"`` (default) discards them;
+            ``"requeue"`` re-submits idempotent jobs automatically.
+            ``None`` reads ``DCC_MCP_MAYA_JOB_RECOVERY`` env var.
     """
 
     def __init__(
@@ -170,6 +219,9 @@ class MayaMcpServer(DccServerBase):
         dcc_version: Optional[str] = None,
         scene: Optional[str] = None,
         enable_gateway_failover: bool = True,
+        metrics_enabled: Optional[bool] = None,
+        job_storage_path: Optional[str] = None,
+        job_recovery: Optional[str] = None,
     ) -> None:
         super().__init__(
             dcc_name="maya",
@@ -183,6 +235,42 @@ class MayaMcpServer(DccServerBase):
             scene=scene,
             enable_gateway_failover=enable_gateway_failover,
         )
+
+        # ── Prometheus metrics (issue #87) ────────────────────────────────────
+        effective_metrics = metrics_enabled
+        if effective_metrics is None:
+            effective_metrics = os.environ.get(_ENV_METRICS, "").strip() == "1"
+        if effective_metrics:
+            self._config.enable_prometheus = True
+            logger.info("[%s] Prometheus /metrics endpoint enabled", "maya")
+
+        # ── Job persistence + notifications (issue #89) ───────────────────────
+        effective_job_path = job_storage_path
+        if effective_job_path is None:
+            effective_job_path = os.environ.get(_ENV_JOB_STORAGE)
+        if effective_job_path is None:
+            # Default: platform data dir so the DB persists across upgrades.
+            try:
+                from dcc_mcp_core import get_data_dir  # noqa: PLC0415
+
+                data_dir = Path(get_data_dir()) / "dcc-mcp-maya"
+                data_dir.mkdir(parents=True, exist_ok=True)
+                effective_job_path = str(data_dir / _DEFAULT_JOB_DB_FILENAME)
+            except Exception as exc:
+                logger.debug("Could not resolve default job storage path: %s", exc)
+        if effective_job_path:
+            self._config.job_storage_path = effective_job_path
+            logger.info("[%s] Job storage: %s", "maya", effective_job_path)
+
+        # Job-recovery policy (issue #89).  Stored for use in
+        # :meth:`register_builtin_actions` where we can log the effective
+        # policy after the server is configured.
+        effective_recovery = job_recovery
+        if effective_recovery is None:
+            effective_recovery = os.environ.get(_ENV_JOB_RECOVERY, "drop").strip().lower()
+        self._job_recovery: str = effective_recovery if effective_recovery in ("drop", "requeue") else "drop"
+        if self._job_recovery == "requeue":
+            logger.info("[%s] Job recovery policy: requeue idempotent interrupted jobs", "maya")
 
         # Optional :class:`~dcc_mcp_maya.dispatcher.MayaUiDispatcher`
         # attached by the plugin (or by tests). When set, :meth:`stop`
@@ -465,6 +553,9 @@ def start_server(
     include_bundled: bool = True,
     enable_hot_reload: bool = False,
     minimal: Optional[bool] = None,
+    metrics_enabled: Optional[bool] = None,
+    job_storage_path: Optional[str] = None,
+    job_recovery: Optional[str] = None,
     **kwargs: Any,
 ) -> Any:
     """Start (or return the already-running) Maya MCP server.
@@ -486,6 +577,13 @@ def start_server(
         minimal: If ``True``, only core skills are loaded at startup.
             ``None`` reads ``DCC_MCP_MAYA_MINIMAL`` env var (default
             ``True``).  Set to ``False`` for legacy full-load behaviour.
+        metrics_enabled: Enable the Prometheus ``/metrics`` endpoint.
+            Also honours ``DCC_MCP_MAYA_METRICS=1``.
+        job_storage_path: SQLite job-persistence file path.
+            Also honours ``DCC_MCP_MAYA_JOB_STORAGE``.
+        job_recovery: Recovery policy for interrupted jobs: ``"drop"``
+            (default) or ``"requeue"``.  Also honours
+            ``DCC_MCP_MAYA_JOB_RECOVERY``.
         **kwargs: Forwarded to :class:`MayaMcpServer`.
 
     Returns:
@@ -505,7 +603,13 @@ def start_server(
             if _instance_holder[0] is not None and _instance_holder[0].is_running:
                 return _instance_holder[0]._handle  # type: ignore[return-value]
 
-            server = MayaMcpServer(port=port, **kwargs)
+            server = MayaMcpServer(
+                port=port,
+                metrics_enabled=metrics_enabled,
+                job_storage_path=job_storage_path,
+                job_recovery=job_recovery,
+                **kwargs,
+            )
             _instance_holder[0] = server
             server.register_builtin_actions(
                 extra_skill_paths=extra_skill_paths,
