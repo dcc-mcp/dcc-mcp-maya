@@ -1,122 +1,24 @@
 ---
 name: maya-scene
-description: Maya scene management — create, open, save, list, select and manipulate scene objects
-dcc: maya
-version: 1.0.0
-tags:
-- maya
-- scene
-- hierarchy
-- open
-- save
-- manage
-search-hint: new scene, open, save, list objects, hierarchy, select
+description: Maya scene management — create, open, save, list, select and manipulate
+  scene objects
 license: MIT
-allowed-tools:
-- Bash
-- Read
-depends: []
-tools:
-- name: center_pivot
-  group: scene-management
-- name: create_locator
-  group: scene-management
-- name: duplicate_object
-  group: scene-management
-- name: export_scene
-  group: scene-management
-  read_only_hint: true
-  idempotent_hint: true
-- name: freeze_transforms
-  group: scene-management
-- name: get_bounding_box
-  group: scene-management
-  read_only_hint: true
-  idempotent_hint: true
-- name: get_scene_info
-  description: Return a hierarchical DAG description of the current scene
-  group: core
-  read_only_hint: true
-  idempotent_hint: true
-- name: get_selection
-  description: Return the current Maya selection
-  group: core
-  read_only_hint: true
-  idempotent_hint: true
-- name: get_session_info
-  description: Return Maya version, scene path, and basic session statistics
-  group: core
-  read_only_hint: true
-  idempotent_hint: true
-- name: group_objects
-  group: scene-management
-- name: list_cameras
-  group: scene-management
-  read_only_hint: true
-  idempotent_hint: true
-- name: list_objects
-  description: List objects in the current Maya scene
-  group: scene-management
-  read_only_hint: true
-  idempotent_hint: true
-- name: lock_object
-  group: scene-management
-- name: new_scene
-  description: Create a new empty Maya scene
-  group: scene-management
-  destructive_hint: true
-  idempotent_hint: true
-- name: open_scene
-  description: Open a Maya scene file from disk
-  group: scene-management
-  destructive_hint: true
-  idempotent_hint: true
-- name: parent_object
-  group: scene-management
-- name: save_scene
-  description: Save the current Maya scene
-  group: scene-management
-- name: select_by_type
-  group: scene-management
-- name: set_frame_rate
-  group: scene-management
-  idempotent_hint: true
-- name: set_selection
-  description: Set the active Maya selection
-  group: scene-management
-  idempotent_hint: true
-- name: set_visibility
-  group: scene-management
-  idempotent_hint: true
-groups:
-- name: core
-  description: Core read-only scene queries — always active in minimal mode
-  default_active: true
-  tools:
-  - get_scene_info
-  - get_selection
-  - get_session_info
-- name: scene-management
-  description: Scene management, organization, and navigation tools
-  default_active: true
-  tools:
-  - center_pivot
-  - create_locator
-  - duplicate_object
-  - export_scene
-  - freeze_transforms
-  - get_bounding_box
-  - list_cameras
-  - list_objects
-  - lock_object
-  - new_scene
-  - open_scene
-  - parent_object
-  - save_scene
-  - select_by_type
-  - set_frame_rate
-  - set_selection
-  - set_visibility
+allowed-tools: Bash Read
+metadata:
+  dcc-mcp:
+    dcc: maya
+    version: 1.0.0
+    tags:
+    - maya
+    - scene
+    - hierarchy
+    - open
+    - save
+    - manage
+    search-hint: new scene, open, save, list objects, hierarchy, select
+    depends: []
+    tools: tools.yaml
+    groups: groups.yaml
 ---
 # maya-scene
 

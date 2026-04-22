@@ -256,10 +256,34 @@ def check_name_field(skill_dir: Path, skill_name: str, fm: dict) -> List[LintIss
     return issues
 
 
+def _extract_dcc_mcp_field(fm: dict, key: str, default=None):
+    """Read a ``metadata.dcc-mcp.*`` field from either the nested or flat form.
+
+    Supports three SKILL.md layouts:
+
+    1. Top-level shorthand (pre-0.15 dcc-mcp-core):  ``dcc: maya``
+    2. Flat metadata form:  ``metadata: {"dcc-mcp.dcc": "maya"}``
+    3. Nested agentskills.io-compliant form (issue #356):
+       ``metadata: {dcc-mcp: {dcc: maya}}``
+    """
+    if key in fm:
+        return fm[key]
+    metadata = fm.get("metadata") or {}
+    if not isinstance(metadata, dict):
+        return default
+    flat = metadata.get(f"dcc-mcp.{key}")
+    if flat is not None:
+        return flat
+    nested = metadata.get("dcc-mcp")
+    if isinstance(nested, dict) and key in nested:
+        return nested[key]
+    return default
+
+
 def check_dcc_field(skill_dir: Path, skill_name: str, fm: dict) -> List[LintIssue]:
     issues: List[LintIssue] = []
     file_path = str(skill_dir / "SKILL.md")
-    dcc = fm.get("dcc", "python")
+    dcc = _extract_dcc_mcp_field(fm, "dcc", default="python")
 
     if dcc not in VALID_DCC_VALUES:
         issues.append(
@@ -288,7 +312,7 @@ def check_dcc_field(skill_dir: Path, skill_name: str, fm: dict) -> List[LintIssu
 
 def check_version_field(skill_dir: Path, skill_name: str, fm: dict) -> List[LintIssue]:
     issues: List[LintIssue] = []
-    version = fm.get("version", "1.0.0")
+    version = _extract_dcc_mcp_field(fm, "version", default="1.0.0")
     if version and not SEMVER_RE.match(str(version)):
         issues.append(
             LintIssue(
@@ -359,10 +383,77 @@ def check_scripts_section(skill_dir: Path, skill_name: str, content: str) -> Lis
     return issues
 
 
+def _resolve_tools_list(skill_dir: Path, fm: dict) -> list:
+    """Return the skill's tool list, resolving sibling ``tools.yaml`` references.
+
+    Supports three shapes:
+
+    * Inline list (legacy):  ``tools: [{name: ...}, ...]``
+    * Sibling filename:       ``tools: tools.yaml``
+    * Nested + sibling:       ``metadata.dcc-mcp.tools: tools.yaml``
+    """
+    raw = _extract_dcc_mcp_field(fm, "tools", default=None)
+    if raw is None:
+        return []
+    if isinstance(raw, list):
+        return raw
+    if isinstance(raw, str):
+        candidate = skill_dir / raw
+        if not candidate.exists():
+            return []
+        try:
+            import yaml  # type: ignore[import]
+
+            data = yaml.safe_load(candidate.read_text(encoding="utf-8")) or {}
+            tools = data.get("tools") if isinstance(data, dict) else None
+            return tools if isinstance(tools, list) else []
+        except Exception:
+            return []
+    return []
+
+
+def _resolve_groups_list(skill_dir: Path, fm: dict) -> list:
+    """Return the skill's group list, resolving sibling ``groups.yaml`` references.
+
+    Falls back to the ``groups:`` key in the sibling ``tools.yaml`` when the
+    dedicated groups file is not declared.
+    """
+    raw_groups = _extract_dcc_mcp_field(fm, "groups", default=None)
+    if isinstance(raw_groups, list):
+        return raw_groups
+    if isinstance(raw_groups, str):
+        candidate = skill_dir / raw_groups
+        if candidate.exists():
+            try:
+                import yaml  # type: ignore[import]
+
+                data = yaml.safe_load(candidate.read_text(encoding="utf-8")) or {}
+                groups = data.get("groups") if isinstance(data, dict) else None
+                if isinstance(groups, list):
+                    return groups
+            except Exception:
+                pass
+    # Fallback: groups defined inside tools.yaml alongside the tools list.
+    raw_tools = _extract_dcc_mcp_field(fm, "tools", default=None)
+    if isinstance(raw_tools, str):
+        candidate = skill_dir / raw_tools
+        if candidate.exists():
+            try:
+                import yaml  # type: ignore[import]
+
+                data = yaml.safe_load(candidate.read_text(encoding="utf-8")) or {}
+                groups = data.get("groups") if isinstance(data, dict) else None
+                if isinstance(groups, list):
+                    return groups
+            except Exception:
+                pass
+    return []
+
+
 def check_tools_source_files(skill_dir: Path, skill_name: str, fm: dict) -> List[LintIssue]:
     """Warn if tools[].source_file paths don't exist in scripts/ dir."""
     issues: List[LintIssue] = []
-    tools = fm.get("tools", [])
+    tools = _resolve_tools_list(skill_dir, fm)
     if not tools or not isinstance(tools, list):
         return issues
 
@@ -395,7 +486,7 @@ def check_depends_exist(
 ) -> List[LintIssue]:
     """Warn if depends[] references skill names that don't exist."""
     issues: List[LintIssue] = []
-    depends = fm.get("depends", [])
+    depends = _extract_dcc_mcp_field(fm, "depends", default=[])
     if not depends or not isinstance(depends, list):
         return issues
 

@@ -1,37 +1,23 @@
 ---
 name: maya-instancer
-description: Maya instancer utilities — create and configure particle instancers for scattering geometry
-dcc: maya
-version: 1.0.0
-tags:
-- maya
-- instancer
-- particles
-- scatter
-- motion-graphics
-search-hint: instancer, particle instancer, instance, scatter
+description: Maya instancer utilities — create and configure particle instancers for
+  scattering geometry
 license: MIT
-allowed-tools:
-- Bash
-- Read
-depends: []
-tools:
-- name: add_instance_object
-- name: create_instancer
-- name: list_instancers
-  read_only_hint: true
-  idempotent_hint: true
-- name: set_instancer_attribute
-  idempotent_hint: true
-groups:
-- name: simulation-fx
-  description: Dynamics, simulation, particles, and VFX tools
-  default_active: false
-  tools:
-  - add_instance_object
-  - create_instancer
-  - list_instancers
-  - set_instancer_attribute
+allowed-tools: Bash Read
+metadata:
+  dcc-mcp:
+    dcc: maya
+    version: 1.0.0
+    tags:
+    - maya
+    - instancer
+    - particles
+    - scatter
+    - motion-graphics
+    search-hint: instancer, particle instancer, instance, scatter
+    depends: []
+    tools: tools.yaml
+    groups: groups.yaml
 ---
 # maya-instancer
 

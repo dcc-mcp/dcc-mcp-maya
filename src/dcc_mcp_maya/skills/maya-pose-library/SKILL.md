@@ -1,36 +1,23 @@
 ---
 name: maya-pose-library
-description: Maya pose library — save, load, apply, and manage character poses as JSON snapshots
-dcc: maya
-version: 1.0.0
-tags:
-- maya
-- animation
-- pose
-- library
-- rigging
-search-hint: pose, library, save pose, apply pose
+description: Maya pose library — save, load, apply, and manage character poses as
+  JSON snapshots
 license: MIT
-allowed-tools:
-- Bash
-- Read
-depends: []
-tools:
-- name: list_poses
-  read_only_hint: true
-  idempotent_hint: true
-- name: load_pose
-- name: mirror_pose
-- name: save_pose
-groups:
-- name: animation
-  description: Animation, constraints, and motion capture tools
-  default_active: false
-  tools:
-  - list_poses
-  - load_pose
-  - mirror_pose
-  - save_pose
+allowed-tools: Bash Read
+metadata:
+  dcc-mcp:
+    dcc: maya
+    version: 1.0.0
+    tags:
+    - maya
+    - animation
+    - pose
+    - library
+    - rigging
+    search-hint: pose, library, save pose, apply pose
+    depends: []
+    tools: tools.yaml
+    groups: groups.yaml
 ---
 # maya-pose-library
 

@@ -1,0 +1,10 @@
+groups:
+- name: scene-management
+  description: Scene management, organization, and navigation tools
+  default_active: true
+  tools:
+  - convert_selection
+  - grow_selection
+  - invert_selection
+  - select_similar
+  - shrink_selection
