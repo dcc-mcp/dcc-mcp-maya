@@ -87,3 +87,6 @@ jobs:
 
       - name: Lint tools.yaml affinity (issue #84)
         run: python tools/lint_skill_affinity.py
+
+      - name: Check EN/ZH documentation parity (issue #88)
+        run: python tools/check_doc_parity.py
