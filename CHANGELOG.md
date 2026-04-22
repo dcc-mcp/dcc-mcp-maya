@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.2.14](https://github.com/loonghao/dcc-mcp-maya/compare/v0.2.13...v0.2.14) (2026-04-22)
+
+
+### Features
+
+* **dispatcher:** add submit_async_callable + gateway integration tests ([#85](https://github.com/loonghao/dcc-mcp-maya/issues/85) [#86](https://github.com/loonghao/dcc-mcp-maya/issues/86) [#88](https://github.com/loonghao/dcc-mcp-maya/issues/88)) ([30f984a](https://github.com/loonghao/dcc-mcp-maya/commit/30f984a7e85c6cd5fc83948c98e284ab3914c6a2))
+* **server:** wire Prometheus metrics, job persistence, and gateway routing ([#86](https://github.com/loonghao/dcc-mcp-maya/issues/86), [#87](https://github.com/loonghao/dcc-mcp-maya/issues/87), [#89](https://github.com/loonghao/dcc-mcp-maya/issues/89)) ([e1c5cf3](https://github.com/loonghao/dcc-mcp-maya/commit/e1c5cf31c55efde9d963904819a01f03c34d1cbe))
+* **skills:** maya-render-farm honours cooperative cancellation ([#85](https://github.com/loonghao/dcc-mcp-maya/issues/85)) ([a993e76](https://github.com/loonghao/dcc-mcp-maya/commit/a993e76dd33d1620eefaf5a77016da792f2b02a4))
+
 ## [0.2.13](https://github.com/loonghao/dcc-mcp-maya/compare/v0.2.12...v0.2.13) (2026-04-22)
 
 
