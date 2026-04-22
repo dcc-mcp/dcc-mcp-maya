@@ -1,0 +1,8 @@
+tools:
+- name: add_assembly_representation
+- name: create_assembly_definition
+- name: create_assembly_reference
+- name: list_assemblies
+  annotations:
+    read_only_hint: true
+    idempotent_hint: true

@@ -1,0 +1,6 @@
+tools:
+- name: convert_selection
+- name: grow_selection
+- name: invert_selection
+- name: select_similar
+- name: shrink_selection

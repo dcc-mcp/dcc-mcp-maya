@@ -1,0 +1,20 @@
+tools:
+- name: create_namespace
+- name: delete_namespace
+  annotations:
+    destructive_hint: true
+    idempotent_hint: true
+- name: list_namespaces
+  annotations:
+    read_only_hint: true
+    idempotent_hint: true
+- name: remove_namespace
+  annotations:
+    destructive_hint: true
+    idempotent_hint: true
+- name: rename_namespace
+  annotations:
+    idempotent_hint: true
+- name: set_namespace
+  annotations:
+    idempotent_hint: true

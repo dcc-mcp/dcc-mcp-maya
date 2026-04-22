@@ -1,0 +1,10 @@
+tools:
+- name: get_asset_metadata
+  annotations:
+    read_only_hint: true
+    idempotent_hint: true
+- name: publish_asset
+- name: set_project
+  annotations:
+    idempotent_hint: true
+- name: tag_asset_metadata

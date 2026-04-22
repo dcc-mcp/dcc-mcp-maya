@@ -1,0 +1,16 @@
+tools:
+- name: create_reference
+- name: list_namespaces
+  annotations:
+    read_only_hint: true
+    idempotent_hint: true
+- name: list_references
+  annotations:
+    read_only_hint: true
+    idempotent_hint: true
+- name: reload_reference
+- name: remove_reference
+  annotations:
+    destructive_hint: true
+    idempotent_hint: true
+- name: unload_reference

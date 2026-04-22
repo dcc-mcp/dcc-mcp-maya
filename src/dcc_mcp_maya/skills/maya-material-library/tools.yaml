@@ -1,0 +1,11 @@
+tools:
+- name: delete_material_preset
+  annotations:
+    destructive_hint: true
+    idempotent_hint: true
+- name: list_materials
+  annotations:
+    read_only_hint: true
+    idempotent_hint: true
+- name: load_material
+- name: save_material

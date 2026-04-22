@@ -1,30 +1,22 @@
 ---
 name: maya-export-preset
 description: Maya export preset management actions for saving and loading export configurations
-dcc: maya
-tags:
-- maya
-- export
-- preset
-- pipeline
-- fbx
-- alembic
-search-hint: export, preset, format, fbx, obj
-version: 1.0.0
 license: MIT
-allowed-tools:
-- Bash
-- Read
-depends: []
-tools:
-- name: delete_export_preset
-  destructive_hint: true
-  idempotent_hint: true
-- name: list_export_presets
-  read_only_hint: true
-  idempotent_hint: true
-- name: load_export_preset
-- name: save_export_preset
+allowed-tools: Bash Read
+metadata:
+  dcc-mcp:
+    dcc: maya
+    version: 1.0.0
+    tags:
+    - maya
+    - export
+    - preset
+    - pipeline
+    - fbx
+    - alembic
+    search-hint: export, preset, format, fbx, obj
+    depends: []
+    tools: tools.yaml
 ---
 # Maya Export Preset Skill
 

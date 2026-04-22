@@ -1,0 +1,8 @@
+tools:
+- name: list_poses
+  annotations:
+    read_only_hint: true
+    idempotent_hint: true
+- name: load_pose
+- name: mirror_pose
+- name: save_pose

@@ -1,0 +1,27 @@
+tools:
+- name: assign_material
+  annotations:
+    idempotent_hint: true
+- name: create_material
+- name: get_material_connections
+  annotations:
+    read_only_hint: true
+    idempotent_hint: true
+- name: get_shader_assignment
+  annotations:
+    read_only_hint: true
+    idempotent_hint: true
+- name: list_materials
+  annotations:
+    read_only_hint: true
+    idempotent_hint: true
+- name: list_shading_groups
+  annotations:
+    read_only_hint: true
+    idempotent_hint: true
+- name: reset_to_default_material
+  annotations:
+    idempotent_hint: true
+- name: set_material_attribute
+  annotations:
+    idempotent_hint: true

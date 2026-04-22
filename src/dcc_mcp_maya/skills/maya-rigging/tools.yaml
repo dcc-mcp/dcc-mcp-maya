@@ -1,0 +1,23 @@
+tools:
+- name: assign_deformer
+  annotations:
+    idempotent_hint: true
+- name: blend_shape_add_target
+- name: create_blend_shape
+- name: create_curve
+- name: create_ik_handle
+- name: create_joint
+- name: mirror_joints
+- name: set_driven_key
+  annotations:
+    idempotent_hint: true
+- name: set_ik_fk_blend
+  annotations:
+    idempotent_hint: true
+- name: set_joint_limit
+  annotations:
+    idempotent_hint: true
+- name: set_joint_orient
+  annotations:
+    idempotent_hint: true
+- name: skin_cluster_bind

@@ -1,0 +1,7 @@
+tools:
+- name: bake_transforms
+- name: freeze_transforms
+- name: match_transforms
+- name: reset_pivot
+  annotations:
+    idempotent_hint: true
