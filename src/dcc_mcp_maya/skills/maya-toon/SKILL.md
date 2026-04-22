@@ -1,12 +1,12 @@
 ---
 name: maya-toon
-description: Maya toon shading — create toon outlines, fill shaders, and cel-shading
-  looks using Maya's built-in toon system
+description: Maya toon shading — create toon outlines, fill shaders, and cel-shading networks. Use when producing stylized non-photorealistic looks. Not for standard PBR materials or photoreal lighting — use maya-materials or maya-lighting for that.
 license: MIT
 allowed-tools: Bash Read
 metadata:
   dcc-mcp:
     dcc: maya
+    layer: domain
     version: 1.0.0
     tags:
     - maya
@@ -14,7 +14,7 @@ metadata:
     - shading
     - npr
     - stylized
-    search-hint: toon, outline, cartoon, cel shading
+    search-hint: stylized look, cel shading, toon outline, NPR
     depends: []
     tools: tools.yaml
     groups: groups.yaml

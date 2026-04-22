@@ -1,12 +1,12 @@
 ---
 name: maya-render-farm
-description: Maya render farm — prepare scenes, write render job configs, and submit
-  to local or Deadline render queues
+description: Maya render farm integration — prepare scenes, write render job configs, and submit to deadline queues. Use when sending scenes to distributed render systems. Not for local rendering or render layer setup — use maya-render or maya-render-layers for that.
 license: MIT
 allowed-tools: Bash Read
 metadata:
   dcc-mcp:
     dcc: maya
+    layer: domain
     version: 1.0.0
     tags:
     - maya
@@ -14,7 +14,7 @@ metadata:
     - farm
     - deadline
     - pipeline
-    search-hint: render farm, deadline, batch, submit
+    search-hint: submit render job, distributed render, deadline queue, farm submission
     depends: []
     tools: tools.yaml
     groups: groups.yaml

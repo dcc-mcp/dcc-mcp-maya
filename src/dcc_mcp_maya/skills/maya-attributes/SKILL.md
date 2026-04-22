@@ -1,18 +1,19 @@
 ---
 name: maya-attributes
-description: Maya node attribute get/set and custom attribute management
+description: Maya node attribute management — get, set, lock, unlock, and create custom attributes. Use when reading or writing node properties. Not for scene-level operations, node connections, or scripting — use maya-scene, maya-node-graph, or maya-scripting for that.
 license: MIT
 allowed-tools: Bash Read
 metadata:
   dcc-mcp:
     dcc: maya
+    layer: domain
     version: 1.0.0
     tags:
     - maya
     - attribute
     - node
     - utility
-    search-hint: attribute, property, value, lock, unlock, set attr
+    search-hint: node property, custom attribute, get value, set attribute
     depends: []
     tools: tools.yaml
 ---

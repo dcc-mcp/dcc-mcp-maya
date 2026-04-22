@@ -1,18 +1,19 @@
 ---
 name: maya-render-layers
-description: Maya render layers — create, assign, list and manage render layer overrides
+description: Maya render layers — create, assign objects, list, and manage render layer overrides. Use when splitting a scene into multi-pass render configurations. Not for render pass elements or final submission — use maya-render-passes or maya-render-farm for that.
 license: MIT
 allowed-tools: Bash Read
 metadata:
   dcc-mcp:
     dcc: maya
+    layer: domain
     version: 1.0.0
     tags:
     - maya
     - render
     - layer
     - renderlayer
-    search-hint: render layer, override, pass, layer
+    search-hint: multi-pass setup, render layer override, split passes
     depends: []
     tools: tools.yaml
     groups: groups.yaml

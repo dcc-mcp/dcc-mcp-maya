@@ -5,15 +5,34 @@ tools:
   annotations:
     read_only_hint: true
     idempotent_hint: true
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log
+
 - name: import_gpu_cache
   execution: sync
   affinity: main
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log
+
 - name: list_gpu_caches
   execution: sync
   affinity: main
   annotations:
     read_only_hint: true
     idempotent_hint: true
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log
+
 - name: refresh_gpu_cache
   execution: sync
   affinity: main
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log

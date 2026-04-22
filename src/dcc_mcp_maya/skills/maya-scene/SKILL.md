@@ -1,12 +1,12 @@
 ---
 name: maya-scene
-description: Maya scene management — create, open, save, list, select and manipulate
-  scene objects
+description: Maya scene management — create new scenes, open, save, import, export, and list scene contents. Use when managing scene files and top-level hierarchy. Not for individual object creation or mesh editing — use maya-primitives or maya-mesh-ops for that.
 license: MIT
 allowed-tools: Bash Read
 metadata:
   dcc-mcp:
     dcc: maya
+    layer: domain
     version: 1.0.0
     tags:
     - maya
@@ -15,7 +15,7 @@ metadata:
     - open
     - save
     - manage
-    search-hint: new scene, open, save, list objects, hierarchy, select
+    search-hint: manage scene file, open save import export, scene hierarchy
     depends: []
     tools: tools.yaml
     groups: groups.yaml

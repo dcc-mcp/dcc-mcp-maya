@@ -1,12 +1,12 @@
 ---
 name: maya-shot-export
-description: Maya shot export — export shots, frame ranges, cameras, and FBX/Alembic
-  sequences for production pipelines
+description: Maya shot export — export shots, frame ranges, cameras, and FBX/Alembic for editorial. Use when packaging shot data for downstream departments. Not for full pipeline publishing or scene assembly — use maya-pipeline or maya-scene-assembly for that.
 license: MIT
 allowed-tools: Bash Read
 metadata:
   dcc-mcp:
     dcc: maya
+    layer: domain
     version: 1.0.0
     tags:
     - maya
@@ -14,7 +14,7 @@ metadata:
     - shot
     - pipeline
     - production
-    search-hint: shot, export, sequence, frame range, publish
+    search-hint: package shot data, export frame range, editorial delivery
     depends: []
     tools: tools.yaml
 ---

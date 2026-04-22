@@ -1,12 +1,12 @@
 ---
 name: maya-color-grading
-description: Maya color management — query and set color space, apply color correction
-  nodes to render settings
+description: Maya color management — query and set color space, apply LUTs and color correction. Use when managing color pipeline and look consistency. Not for material creation or lighting — use maya-materials or maya-lighting for that.
 license: MIT
 allowed-tools: Bash Read
 metadata:
   dcc-mcp:
     dcc: maya
+    layer: domain
     version: 1.0.0
     tags:
     - maya
@@ -14,7 +14,7 @@ metadata:
     - color-management
     - aces
     - rendering
-    search-hint: color, grading, lut, grade
+    search-hint: color space, LUT, color pipeline, look consistency
     depends: []
     tools: tools.yaml
     groups: groups.yaml

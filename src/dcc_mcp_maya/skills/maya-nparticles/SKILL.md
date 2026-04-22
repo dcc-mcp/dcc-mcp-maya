@@ -1,12 +1,12 @@
 ---
 name: maya-nparticles
-description: Maya nParticles — create and configure nParticle systems, set fields,
-  and query simulation state
+description: Maya nParticles — create and configure nParticle systems, set fields, and adjust properties. Use when creating particle effects like smoke, dust, or sparks. Not for fluid dynamics or cloth simulation — use maya-fluid or maya-cloth-sim for that.
 license: MIT
 allowed-tools: Bash Read
 metadata:
   dcc-mcp:
     dcc: maya
+    layer: domain
     version: 1.0.0
     tags:
     - maya
@@ -14,7 +14,7 @@ metadata:
     - dynamics
     - simulation
     - vfx
-    search-hint: nparticle, particle, dynamics, simulation
+    search-hint: particle effect, smoke dust sparks, nParticle system
     depends: []
     tools: tools.yaml
     groups: groups.yaml

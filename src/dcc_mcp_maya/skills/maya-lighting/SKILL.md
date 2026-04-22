@@ -1,18 +1,19 @@
 ---
 name: maya-lighting
-description: Maya scene lighting — create, modify and query light nodes
+description: Maya scene lighting — create, modify, and query directional, point, spot, area, and ambient lights. Use when setting up illumination for a scene. Not for HDRI environments or toon shading — use maya-hdri or maya-toon for that.
 license: MIT
 allowed-tools: Bash Read
 metadata:
   dcc-mcp:
     dcc: maya
+    layer: domain
     version: 1.0.0
     tags:
     - maya
     - lighting
     - light
     - render
-    search-hint: light, directional, point, spot, area, ambient
+    search-hint: scene illumination, light setup, directional point spot light
     depends: []
     tools: tools.yaml
     groups: groups.yaml

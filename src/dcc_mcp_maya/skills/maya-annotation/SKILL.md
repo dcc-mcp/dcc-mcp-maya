@@ -1,19 +1,19 @@
 ---
 name: maya-annotation
-description: Maya viewport annotations — create, update, list and remove text/arrow
-  annotation nodes
+description: Maya viewport annotations — create, update, list, and remove text and arrow annotations. Use when adding visual notes and markers in the viewport. Not for scene helpers or locators — use maya-scene-utils for that.
 license: MIT
 allowed-tools: Bash Read
 metadata:
   dcc-mcp:
     dcc: maya
+    layer: domain
     version: 1.0.0
     tags:
     - maya
     - annotation
     - viewport
     - text
-    search-hint: annotation, label, text, viewport, note, create annotation
+    search-hint: viewport note, text annotation, arrow marker, visual note
     depends: []
     tools: tools.yaml
 ---

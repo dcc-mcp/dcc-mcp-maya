@@ -1,18 +1,19 @@
 ---
 name: maya-sets
-description: Maya object sets — create, add to, remove from and list Maya sets
+description: Maya object set management — create sets, add and remove members, and query set contents. Use when grouping objects for render, deformation, or organization. Not for display layers or hierarchical grouping — use maya-display or maya-scene for that.
 license: MIT
 allowed-tools: Bash Read
 metadata:
   dcc-mcp:
     dcc: maya
+    layer: domain
     version: 1.0.0
     tags:
     - maya
     - set
     - collection
     - utility
-    search-hint: set, group, partition, render, deformer set
+    search-hint: group objects, object set, render set, deformer set, partition
     depends: []
     tools: tools.yaml
     groups: groups.yaml

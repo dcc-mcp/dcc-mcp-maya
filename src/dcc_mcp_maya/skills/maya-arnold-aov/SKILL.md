@@ -1,11 +1,12 @@
 ---
 name: maya-arnold-aov
-description: Arnold AOV (Arbitrary Output Variable) management for multi-pass rendering
+description: Arnold AOV management for multi-pass rendering — configure beauty, lighting, and custom Arbitrary Output Variables. Use when working with Arnold-specific render outputs. Not for standard Maya render passes or light setup — use maya-render-passes or maya-lighting for that.
 license: MIT
 allowed-tools: Bash Read
 metadata:
   dcc-mcp:
     dcc: maya
+    layer: domain
     version: 1.0.0
     tags:
     - maya
@@ -13,7 +14,7 @@ metadata:
     - aov
     - render
     - passes
-    search-hint: arnold, aov, render pass, beauty, lighting
+    search-hint: Arnold output, AOV configuration, multi-pass Arnold
     depends: []
     tools: tools.yaml
     groups: groups.yaml

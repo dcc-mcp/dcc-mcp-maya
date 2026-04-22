@@ -1,11 +1,12 @@
 ---
 name: maya-blend-shape-utils
-description: Maya blend shape utilities — create, inspect, and drive blend shape deformers
+description: Maya blend shape utilities — create, inspect, and drive blend shape deformers and targets. Use when building facial or morph targets. Not for skin cluster weighting or general deformation — use maya-skinning-utils or maya-deformers for that.
 license: MIT
 allowed-tools: Bash Read
 metadata:
   dcc-mcp:
     dcc: maya
+    layer: domain
     version: 1.0.0
     tags:
     - maya
@@ -13,7 +14,7 @@ metadata:
     - deformer
     - morph
     - facial
-    search-hint: blend shape, morph, target, deform
+    search-hint: morph target, facial expression, blend shape driver
     depends: []
     tools: tools.yaml
     groups: groups.yaml
