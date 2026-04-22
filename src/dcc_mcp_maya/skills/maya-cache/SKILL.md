@@ -1,19 +1,19 @@
 ---
 name: maya-cache
-description: Maya geometry cache — create, attach, list and delete geometry caches
-  for mesh deformations
+description: Maya geometry cache — create, attach, list, and delete geometry caches. Use when baking deformation to disk for playback. Not for GPU cache optimization or render caching — use maya-gpu-cache or maya-render for that.
 license: MIT
 allowed-tools: Bash Read
 metadata:
   dcc-mcp:
     dcc: maya
+    layer: domain
     version: 1.0.0
     tags:
     - maya
     - cache
     - geometry
     - simulation
-    search-hint: cache, geometry cache, bake, deformation
+    search-hint: bake deformation, geometry cache, playback cache, deformation disk
     depends: []
     tools: tools.yaml
 ---

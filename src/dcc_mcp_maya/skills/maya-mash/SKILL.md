@@ -1,11 +1,12 @@
 ---
 name: maya-mash
-description: Maya MASH motion graphics network — create, modify and query MASH networks
+description: Maya MASH motion graphics network — create, modify, and query MASH networks for procedural distribution. Use when scattering or distributing objects procedurally. Not for standard particle effects or instancing — use maya-nparticles or maya-instancer for that.
 license: MIT
 allowed-tools: Bash Read
 metadata:
   dcc-mcp:
     dcc: maya
+    layer: domain
     version: 1.0.0
     tags:
     - maya
@@ -13,7 +14,7 @@ metadata:
     - motion-graphics
     - instancer
     - dynamics
-    search-hint: mash, motion graphics, distribute, scatter
+    search-hint: procedural distribution, scatter objects, motion graphics MASH
     depends: []
     tools: tools.yaml
     groups: groups.yaml

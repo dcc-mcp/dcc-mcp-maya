@@ -4,39 +4,83 @@ tools:
   affinity: main
   annotations:
     idempotent_hint: true
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log
+
 - name: connect_attr
   execution: sync
   affinity: main
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log
+
 - name: delete_history
   execution: sync
   affinity: main
   annotations:
     destructive_hint: true
     idempotent_hint: true
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log
+
 - name: disconnect_attr
   execution: sync
   affinity: main
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log
+
 - name: get_dag_path
   execution: sync
   affinity: main
   annotations:
     read_only_hint: true
     idempotent_hint: true
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log
+
 - name: list_connections
   execution: sync
   affinity: main
   annotations:
     read_only_hint: true
     idempotent_hint: true
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log
+
 - name: list_history
   execution: sync
   affinity: main
   annotations:
     read_only_hint: true
     idempotent_hint: true
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log
+
 - name: smooth_mesh
   execution: sync
   affinity: main
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log
+
 - name: transfer_attributes
   execution: sync
   affinity: main
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log

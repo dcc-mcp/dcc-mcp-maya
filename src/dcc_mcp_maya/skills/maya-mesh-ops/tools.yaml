@@ -5,22 +5,47 @@ tools:
   annotations:
     idempotent_hint: true
   group: modeling
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log
+
 - name: cleanup_mesh
   execution: sync
   affinity: main
   group: modeling
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log
+
 - name: combine_meshes
   execution: sync
   affinity: main
   group: modeling
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log
+
 - name: create_proxy_mesh
   execution: sync
   affinity: main
   group: modeling
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log
+
 - name: extract_faces
   execution: sync
   affinity: main
   group: modeling
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log
+
 - name: get_mesh_edge_info
   execution: sync
   affinity: main
@@ -28,6 +53,11 @@ tools:
     read_only_hint: true
     idempotent_hint: true
   group: modeling
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log
+
 - name: get_poly_count
   execution: sync
   affinity: main
@@ -35,23 +65,52 @@ tools:
     read_only_hint: true
     idempotent_hint: true
   group: modeling
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log
+
 - name: merge_vertices
   execution: sync
   affinity: main
   group: modeling
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log
+
 - name: mirror_mesh
   execution: sync
   affinity: main
   group: modeling
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log
+
 - name: select_by_material
   execution: sync
   affinity: main
   group: modeling
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log
+
 - name: separate_mesh
   execution: sync
   affinity: main
   group: modeling
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log
+
 - name: triangulate
   execution: sync
   affinity: main
   group: modeling
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log

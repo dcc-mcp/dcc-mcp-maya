@@ -3,22 +3,47 @@ tools:
   execution: sync
   affinity: main
   group: simulation-fx
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log
+
 - name: create_dynamic_field
   execution: sync
   affinity: main
   group: simulation-fx
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log
+
 - name: create_ncloth
   execution: sync
   affinity: main
   group: simulation-fx
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log
+
 - name: create_nrigid
   execution: sync
   affinity: main
   group: simulation-fx
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log
+
 - name: create_nucleus
   execution: sync
   affinity: main
   group: simulation-fx
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log
+
 - name: list_ncloth_nodes
   execution: sync
   affinity: main
@@ -26,6 +51,11 @@ tools:
     read_only_hint: true
     idempotent_hint: true
   group: simulation-fx
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log
+
 - name: list_nrigid_nodes
   execution: sync
   affinity: main
@@ -33,21 +63,40 @@ tools:
     read_only_hint: true
     idempotent_hint: true
   group: simulation-fx
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log
+
 - name: set_ncloth_attribute
   execution: sync
   affinity: main
   annotations:
     idempotent_hint: true
   group: simulation-fx
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log
+
 - name: set_nrigid_attribute
   execution: sync
   affinity: main
   annotations:
     idempotent_hint: true
   group: simulation-fx
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log
+
 - name: set_nucleus_attribute
   execution: sync
   affinity: main
   annotations:
     idempotent_hint: true
   group: simulation-fx
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log

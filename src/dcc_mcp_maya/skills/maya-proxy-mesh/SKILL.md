@@ -1,11 +1,12 @@
 ---
 name: maya-proxy-mesh
-description: Maya proxy mesh management — create, swap, and manage low-res proxy stand-ins
+description: Maya proxy mesh management — create, swap, and manage low-res proxy stand-ins. Use when working with level-of-detail workflows. Not for full scene assembly or rendering — use maya-scene-assembly or maya-render for that.
 license: MIT
 allowed-tools: Bash Read
 metadata:
   dcc-mcp:
     dcc: maya
+    layer: domain
     version: 1.0.0
     tags:
     - maya
@@ -13,7 +14,7 @@ metadata:
     - lod
     - performance
     - mesh
-    search-hint: proxy, level of detail, LOD, lightweight
+    search-hint: LOD proxy, low res stand-in, level of detail, swap proxy
     depends: []
     tools: tools.yaml
     groups: groups.yaml

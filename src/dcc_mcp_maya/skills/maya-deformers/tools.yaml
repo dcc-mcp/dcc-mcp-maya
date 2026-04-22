@@ -5,29 +5,63 @@ tools:
   annotations:
     idempotent_hint: true
   group: rigging
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log
+
 - name: cleanup_mesh
   execution: sync
   affinity: main
   group: rigging
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log
+
 - name: create_cluster
   execution: sync
   affinity: main
   group: rigging
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log
+
 - name: create_lattice
   execution: sync
   affinity: main
   group: rigging
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log
+
 - name: sculpt_deformer
   execution: sync
   affinity: main
   group: rigging
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log
+
 - name: set_cluster_weights
   execution: sync
   affinity: main
   annotations:
     idempotent_hint: true
   group: rigging
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log
+
 - name: wire_deformer
   execution: sync
   affinity: main
   group: rigging
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log

@@ -1,12 +1,12 @@
 ---
 name: maya-gpu-cache
-description: Maya GPU cache utilities — export, import, and manage gpuCache nodes
-  for viewport performance
+description: Maya GPU cache utilities — export, import, and manage gpuCache nodes for performance. Use when optimizing heavy scenes with cached geometry. Not for Alembic workflows or standard geometry cache — use maya-cache or maya-scene for that.
 license: MIT
 allowed-tools: Bash Read
 metadata:
   dcc-mcp:
     dcc: maya
+    layer: domain
     version: 1.0.0
     tags:
     - maya
@@ -14,7 +14,7 @@ metadata:
     - alembic
     - viewport
     - performance
-    search-hint: gpu cache, alembic, cache, performance
+    search-hint: optimize scene, GPU cache, heavy geometry, performance cache
     depends: []
     tools: tools.yaml
 ---

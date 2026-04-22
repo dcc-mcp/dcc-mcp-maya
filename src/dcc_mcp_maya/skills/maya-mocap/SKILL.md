@@ -1,11 +1,12 @@
 ---
 name: maya-mocap
-description: Motion capture data import, retargeting and cleanup for Maya
+description: Motion capture data import, retargeting, and cleanup for Maya. Use when bringing external mocap data onto rigs. Not for keyframe animation or rigging — use maya-animation or maya-rigging for that.
 license: MIT
 allowed-tools: Bash Read
 metadata:
   dcc-mcp:
     dcc: maya
+    layer: domain
     version: 1.0.0
     tags:
     - maya
@@ -14,7 +15,7 @@ metadata:
     - retarget
     - hik
     - bvh
-    search-hint: mocap, motion capture, retarget, fbx
+    search-hint: mocap retarget, motion capture import, cleanup retargeting
     depends: []
     tools: tools.yaml
     groups: groups.yaml
