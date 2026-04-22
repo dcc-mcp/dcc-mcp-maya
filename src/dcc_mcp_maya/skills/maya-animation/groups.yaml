@@ -1,0 +1,19 @@
+groups:
+- name: animation
+  description: Animation, constraints, and motion capture tools
+  default_active: false
+  tools:
+  - bake_constraints
+  - bake_simulation
+  - delete_keyframes
+  - export_animation_curves
+  - get_current_time
+  - get_frame_range
+  - get_keyframes
+  - import_animation_curves
+  - list_animation_curves
+  - query_scene_time_info
+  - set_animation_curve_tangent
+  - set_current_time
+  - set_keyframe
+  - set_timeline

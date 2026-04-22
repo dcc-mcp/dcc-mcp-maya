@@ -1,38 +1,21 @@
 ---
 name: maya-lighting
 description: Maya scene lighting — create, modify and query light nodes
-dcc: maya
-version: 1.0.0
-tags:
-- maya
-- lighting
-- light
-- render
-search-hint: light, directional, point, spot, area, ambient
 license: MIT
-allowed-tools:
-- Bash
-- Read
-depends: []
-tools:
-- name: create_light
-- name: delete_light
-  destructive_hint: true
-  idempotent_hint: true
-- name: list_lights
-  read_only_hint: true
-  idempotent_hint: true
-- name: set_light_attribute
-  idempotent_hint: true
-groups:
-- name: shading-lighting
-  description: Materials, shading, lighting, and environment tools
-  default_active: false
-  tools:
-  - create_light
-  - delete_light
-  - list_lights
-  - set_light_attribute
+allowed-tools: Bash Read
+metadata:
+  dcc-mcp:
+    dcc: maya
+    version: 1.0.0
+    tags:
+    - maya
+    - lighting
+    - light
+    - render
+    search-hint: light, directional, point, spot, area, ambient
+    depends: []
+    tools: tools.yaml
+    groups: groups.yaml
 ---
 # maya-lighting
 

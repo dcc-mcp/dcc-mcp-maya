@@ -1,0 +1,11 @@
+tools:
+- name: clean_scene
+- name: create_utility_node
+- name: get_scene_statistics
+  annotations:
+    read_only_hint: true
+    idempotent_hint: true
+- name: list_node_connections
+  annotations:
+    read_only_hint: true
+    idempotent_hint: true

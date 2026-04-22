@@ -1,0 +1,11 @@
+tools:
+- name: attach_geometry_cache
+- name: create_geometry_cache
+- name: delete_geometry_cache
+  annotations:
+    destructive_hint: true
+    idempotent_hint: true
+- name: list_geometry_caches
+  annotations:
+    read_only_hint: true
+    idempotent_hint: true

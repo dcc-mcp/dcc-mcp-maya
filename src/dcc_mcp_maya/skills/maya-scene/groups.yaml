@@ -1,0 +1,29 @@
+groups:
+- name: core
+  description: "Core read-only scene queries \u2014 always active in minimal mode"
+  default_active: true
+  tools:
+  - get_scene_info
+  - get_selection
+  - get_session_info
+- name: scene-management
+  description: Scene management, organization, and navigation tools
+  default_active: true
+  tools:
+  - center_pivot
+  - create_locator
+  - duplicate_object
+  - export_scene
+  - freeze_transforms
+  - get_bounding_box
+  - list_cameras
+  - list_objects
+  - lock_object
+  - new_scene
+  - open_scene
+  - parent_object
+  - save_scene
+  - select_by_type
+  - set_frame_rate
+  - set_selection
+  - set_visibility

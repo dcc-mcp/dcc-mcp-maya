@@ -1,38 +1,23 @@
 ---
 name: maya-muscle
-description: Maya Muscle system for secondary motion — create muscles, capsules, and skin simulation
-dcc: maya
-tags:
-- maya
-- muscle
-- simulation
-- secondary-motion
-- rig
-search-hint: muscle, cMuscle, tissue, deformation
-version: 1.0.0
+description: Maya Muscle system for secondary motion — create muscles, capsules, and
+  skin simulation
 license: MIT
-allowed-tools:
-- Bash
-- Read
-depends: []
-tools:
-- name: apply_muscle_skin
-  idempotent_hint: true
-- name: create_muscle_capsule
-- name: list_muscles
-  read_only_hint: true
-  idempotent_hint: true
-- name: set_muscle_attribute
-  idempotent_hint: true
-groups:
-- name: rigging
-  description: Rigging, deformation, and skinning tools
-  default_active: false
-  tools:
-  - apply_muscle_skin
-  - create_muscle_capsule
-  - list_muscles
-  - set_muscle_attribute
+allowed-tools: Bash Read
+metadata:
+  dcc-mcp:
+    dcc: maya
+    version: 1.0.0
+    tags:
+    - maya
+    - muscle
+    - simulation
+    - secondary-motion
+    - rig
+    search-hint: muscle, cMuscle, tissue, deformation
+    depends: []
+    tools: tools.yaml
+    groups: groups.yaml
 ---
 # maya-muscle
 

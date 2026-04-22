@@ -1,0 +1,11 @@
+tools:
+- name: delete_export_preset
+  annotations:
+    destructive_hint: true
+    idempotent_hint: true
+- name: list_export_presets
+  annotations:
+    read_only_hint: true
+    idempotent_hint: true
+- name: load_export_preset
+- name: save_export_preset
