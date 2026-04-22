@@ -71,9 +71,7 @@ class TestSubmitAsyncCallable:
             outcomes.append(outcome)
             done_event.set()
 
-        self.dispatcher.submit_async_callable(
-            "req-2", task, job_id="jid-2", on_complete=on_complete
-        )
+        self.dispatcher.submit_async_callable("req-2", task, job_id="jid-2", on_complete=on_complete)
         self._drain(budget_ms=200)
         assert done_event.wait(timeout=2.0), "on_complete was never called"
 
@@ -115,9 +113,7 @@ class TestSubmitAsyncCallable:
             outcome_ref.append(outcome)
             done.set()
 
-        self.dispatcher.submit_async_callable(
-            "req-4", lambda: "result", job_id="uuid-xyz", on_complete=on_complete
-        )
+        self.dispatcher.submit_async_callable("req-4", lambda: "result", job_id="uuid-xyz", on_complete=on_complete)
         self._drain()
         assert done.wait(1.0)
         assert outcome_ref[0]["job_id"] == "uuid-xyz"
@@ -142,9 +138,7 @@ class TestSubmitAsyncCallable:
         def on_complete(outcome):
             done.set()
 
-        self.dispatcher.submit_async_callable(
-            "req-6", task, affinity="any", on_complete=on_complete
-        )
+        self.dispatcher.submit_async_callable("req-6", task, affinity="any", on_complete=on_complete)
         assert done.wait(timeout=2.0), "background task never completed"
         assert thread_ids[0] != caller_tid, "task ran on caller thread, not background"
 
