@@ -1,12 +1,12 @@
 ---
 name: maya-constraints-advanced
-description: Advanced Maya constraints — pole vector, IK handle constraints, space-switch
-  baking and constraint blending
+description: Advanced Maya constraints — pole vector, IK handle constraints, space switching, and weighted constraint networks. Use when building complex rigging constraint setups. Not for basic single constraints or non-rigging tasks — use maya-constraints or maya-rig-utils for that.
 license: MIT
 allowed-tools: Bash Read
 metadata:
   dcc-mcp:
     dcc: maya
+    layer: domain
     version: 1.0.0
     tags:
     - maya
@@ -14,7 +14,7 @@ metadata:
     - rigging
     - ik
     - space-switch
-    search-hint: constraint, parent, aim, orient, advanced
+    search-hint: advanced rig constraint, space switch, pole vector, IK handle
     depends: []
     tools: tools.yaml
     groups: groups.yaml

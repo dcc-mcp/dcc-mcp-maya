@@ -1,12 +1,12 @@
 ---
 name: maya-paint-effects
-description: Maya Paint Effects — create, attach, and manage stroke brushes and Paint
-  Effects presets on surfaces
+description: Maya Paint Effects — create, attach, and manage stroke brushes and Paint Effects nodes. Use when painting procedural 2D/3D strokes. Not for texture painting or vertex color — use maya-texture-bake or maya-vertex-color for that.
 license: MIT
 allowed-tools: Bash Read
 metadata:
   dcc-mcp:
     dcc: maya
+    layer: domain
     version: 1.0.0
     tags:
     - maya
@@ -14,7 +14,7 @@ metadata:
     - strokes
     - brushes
     - stylized
-    search-hint: paint effects, stroke, brush, 3d paint
+    search-hint: procedural stroke, paint brush, 2D 3D paint effects
     depends: []
     tools: tools.yaml
     groups: groups.yaml

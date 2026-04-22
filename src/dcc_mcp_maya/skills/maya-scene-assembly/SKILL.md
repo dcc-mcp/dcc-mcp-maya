@@ -1,12 +1,12 @@
 ---
 name: maya-scene-assembly
-description: Maya Scene Assembly — manage Assembly Definition, Assembly Reference,
-  and representation LODs
+description: Maya Scene Assembly — manage Assembly Definition, Assembly Reference, and level-of-detail workflows. Use when assembling large environments from asset references. Not for individual proxy creation or file referencing — use maya-proxy-mesh or maya-references for that.
 license: MIT
 allowed-tools: Bash Read
 metadata:
   dcc-mcp:
     dcc: maya
+    layer: domain
     version: 1.0.0
     tags:
     - maya
@@ -15,7 +15,7 @@ metadata:
     - reference
     - pipeline
     - assembly
-    search-hint: scene assembly, asset, level, publish
+    search-hint: assemble environment, large scene, assembly definition, LOD workflow
     depends: []
     tools: tools.yaml
     groups: groups.yaml

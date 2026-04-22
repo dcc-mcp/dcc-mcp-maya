@@ -1,12 +1,12 @@
 ---
 name: maya-skinning-utils
-description: Maya skinning utilities — copy weights, normalize, mirror, prune, and
-  query skin cluster data
+description: Maya skinning utilities — copy weights, normalize, mirror, prune, and smooth skin weights. Use when refining character skin deformation. Not for joint creation or blend shapes — use maya-rigging or maya-blend-shape-utils for that.
 license: MIT
 allowed-tools: Bash Read
 metadata:
   dcc-mcp:
     dcc: maya
+    layer: domain
     version: 1.0.0
     tags:
     - maya
@@ -14,7 +14,7 @@ metadata:
     - skin-cluster
     - weights
     - rigging
-    search-hint: skin, weight, bind, copy weights, smooth
+    search-hint: refine skin weights, copy mirror weights, smooth deformation
     depends: []
     tools: tools.yaml
     groups: groups.yaml

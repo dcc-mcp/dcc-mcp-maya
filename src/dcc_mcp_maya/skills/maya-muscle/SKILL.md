@@ -1,12 +1,12 @@
 ---
 name: maya-muscle
-description: Maya Muscle system for secondary motion — create muscles, capsules, and
-  skin simulation
+description: Maya Muscle system — create muscles, capsules, and tissue deformers for secondary motion. Use when adding anatomical deformation to characters. Not for standard skin clusters or blend shapes — use maya-skinning-utils or maya-blend-shape-utils for that.
 license: MIT
 allowed-tools: Bash Read
 metadata:
   dcc-mcp:
     dcc: maya
+    layer: domain
     version: 1.0.0
     tags:
     - maya
@@ -14,7 +14,7 @@ metadata:
     - simulation
     - secondary-motion
     - rig
-    search-hint: muscle, cMuscle, tissue, deformation
+    search-hint: anatomical deformation, muscle tissue, secondary motion
     depends: []
     tools: tools.yaml
     groups: groups.yaml

@@ -1,12 +1,12 @@
 ---
 name: maya-texture-bake
-description: Maya texture baking — bake lighting, AO, normals, and custom maps from
-  3D geometry to texture
+description: Maya texture baking — bake lighting, AO, normals, and custom maps from high-res to low-res geometry. Use when generating static texture maps for game or render assets. Not for material assignment or UV layout — use maya-materials or maya-uv-ops for that.
 license: MIT
 allowed-tools: Bash Read
 metadata:
   dcc-mcp:
     dcc: maya
+    layer: domain
     version: 1.0.0
     tags:
     - maya
@@ -15,7 +15,7 @@ metadata:
     - ao
     - lighting
     - normals
-    search-hint: bake, texture, light map, normal map
+    search-hint: bake texture map, AO normal, high to low res, static map
     depends: []
     tools: tools.yaml
     groups: groups.yaml

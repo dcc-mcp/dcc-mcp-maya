@@ -1,12 +1,12 @@
 ---
 name: maya-xgen
-description: Maya XGen hair and fur operations — create, list, preview and manage
-  XGen descriptions
+description: Maya XGen hair and fur operations — create, list, preview, and manage XGen descriptions. Use when generating hair, fur, or feather grooms. Not for nHair dynamics or general grooming — use maya-grooming or maya-dynamics for that.
 license: MIT
 allowed-tools: Bash Read
 metadata:
   dcc-mcp:
     dcc: maya
+    layer: domain
     version: 1.0.0
     tags:
     - maya
@@ -14,7 +14,7 @@ metadata:
     - hair
     - fur
     - grooming
-    search-hint: xgen, hair, fur, feather, groom
+    search-hint: hair fur generation, XGen description, groom hair
     depends: []
     tools: tools.yaml
     groups: groups.yaml

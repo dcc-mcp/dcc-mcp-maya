@@ -1,12 +1,12 @@
 ---
 name: maya-namespaces
-description: Maya namespace management — create, rename, merge, and remove namespaces
-  for asset organization
+description: Maya namespace management — create, rename, merge, and remove namespaces. Use when organizing scenes with references and name collisions. Not for file referencing itself or scene structure — use maya-references or maya-scene for that.
 license: MIT
 allowed-tools: Bash Read
 metadata:
   dcc-mcp:
     dcc: maya
+    layer: domain
     version: 1.0.0
     tags:
     - maya
@@ -14,7 +14,7 @@ metadata:
     - pipeline
     - rigging
     - scene-management
-    search-hint: namespace, reference, scene, organize
+    search-hint: organize namespaces, resolve name collision, namespace hierarchy
     depends: []
     tools: tools.yaml
     groups: groups.yaml

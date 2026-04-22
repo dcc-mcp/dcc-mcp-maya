@@ -1,12 +1,12 @@
 ---
 name: maya-render-passes
-description: Maya render passes — create, list, and configure render pass/AOV elements
-  for multi-pass compositing
+description: Maya render passes and AOV elements — create, list, and configure beauty, diffuse, specular, and custom passes. Use when setting up per-channel image decomposition. Not for render layer management or lighting — use maya-render-layers or maya-lighting for that.
 license: MIT
 allowed-tools: Bash Read
 metadata:
   dcc-mcp:
     dcc: maya
+    layer: domain
     version: 1.0.0
     tags:
     - maya
@@ -14,7 +14,7 @@ metadata:
     - passes
     - aov
     - compositing
-    search-hint: render pass, aov, beauty, diffuse, specular
+    search-hint: AOV setup, beauty diffuse specular, channel decomposition
     depends: []
     tools: tools.yaml
     groups: groups.yaml

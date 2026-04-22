@@ -3,15 +3,30 @@ tools:
   execution: sync
   affinity: main
   group: simulation-fx
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log
+
 - name: connect_bifrost_ports
   execution: sync
   affinity: main
   group: simulation-fx
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log
+
 - name: create_bifrost_graph
   execution: async
   affinity: main
   timeout_hint_secs: 600
   group: simulation-fx
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log
+
 - name: list_bifrost_graphs
   execution: sync
   affinity: main
@@ -19,9 +34,18 @@ tools:
     read_only_hint: true
     idempotent_hint: true
   group: simulation-fx
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log
+
 - name: set_bifrost_property
   execution: sync
   affinity: main
   annotations:
     idempotent_hint: true
   group: simulation-fx
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log

@@ -1,18 +1,19 @@
 ---
 name: maya-utility
-description: Maya utility nodes and scene statistics
+description: Maya utility nodes and scene statistics — freeze transforms, center pivot, and convert units. Use when performing general scene cleanup and normalization. Not for modeling, animation, or rendering — use maya-mesh-ops, maya-animation, or maya-render for that.
 license: MIT
 allowed-tools: Bash Read
 metadata:
   dcc-mcp:
     dcc: maya
+    layer: domain
     version: 1.0.0
     tags:
     - maya
     - utility
     - node
     - scene
-    search-hint: utility, transform, freeze, center pivot, convert
+    search-hint: scene cleanup, freeze transform, center pivot, normalize units
     depends: []
     tools: tools.yaml
 ---

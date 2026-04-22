@@ -1,19 +1,19 @@
 ---
 name: maya-selection
-description: Maya selection utilities — filter, grow, shrink, invert, and convert
-  selections
+description: Maya selection utilities — filter by type, grow, shrink, invert, and convert selections. Use when controlling which objects or components are active. Not for scene hierarchy queries or display visibility — use maya-scene or maya-display for that.
 license: MIT
 allowed-tools: Bash Read
 metadata:
   dcc-mcp:
     dcc: maya
+    layer: domain
     version: 1.0.0
     tags:
     - maya
     - selection
     - filter
     - component
-    search-hint: select, filter, type, hierarchy, component
+    search-hint: filter selection, select by type, component selection, invert selection
     depends: []
     tools: tools.yaml
     groups: groups.yaml

@@ -3,6 +3,11 @@ tools:
   execution: sync
   affinity: main
   group: rendering
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log
+
 - name: delete_render_layer
   execution: sync
   affinity: main
@@ -10,6 +15,11 @@ tools:
     destructive_hint: true
     idempotent_hint: true
   group: rendering
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log
+
 - name: list_render_layers
   execution: sync
   affinity: main
@@ -17,15 +27,29 @@ tools:
     read_only_hint: true
     idempotent_hint: true
   group: rendering
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log
+
 - name: set_render_layer
   execution: sync
   affinity: main
   annotations:
     idempotent_hint: true
   group: rendering
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log
+
 - name: set_render_layer_attribute
   execution: sync
   affinity: main
   annotations:
     idempotent_hint: true
   group: rendering
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log

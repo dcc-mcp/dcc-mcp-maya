@@ -1,11 +1,12 @@
 ---
 name: maya-bifrost
-description: Bifrost visual programming graph management for simulations and effects
+description: Bifrost visual programming graph management for simulations and effects. Use when building complex procedural simulations in Bifrost. Not for traditional Maya dynamics or particle systems — use maya-dynamics or maya-nparticles for that.
 license: MIT
 allowed-tools: Bash Read
 metadata:
   dcc-mcp:
     dcc: maya
+    layer: domain
     version: 1.0.0
     tags:
     - maya
@@ -13,7 +14,7 @@ metadata:
     - simulation
     - vfx
     - graph
-    search-hint: bifrost, simulation, graph, node, vellum
+    search-hint: Bifrost graph, procedural simulation, visual programming
     depends: []
     tools: tools.yaml
     groups: groups.yaml

@@ -3,35 +3,69 @@ tools:
   execution: sync
   affinity: main
   group: scene-management
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log
+
 - name: create_annotation
   execution: sync
   affinity: main
   group: scene-management
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log
+
 - name: create_polygon_text
   execution: sync
   affinity: main
   group: scene-management
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log
+
 - name: set_object_color
   execution: sync
   affinity: main
   annotations:
     idempotent_hint: true
   group: scene-management
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log
+
 - name: set_pivot
   execution: sync
   affinity: main
   annotations:
     idempotent_hint: true
   group: scene-management
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log
+
 - name: set_shading_mode
   execution: sync
   affinity: main
   annotations:
     idempotent_hint: true
   group: scene-management
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log
+
 - name: toggle_gpu_override
   execution: sync
   affinity: main
   annotations:
     idempotent_hint: true
   group: scene-management
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log

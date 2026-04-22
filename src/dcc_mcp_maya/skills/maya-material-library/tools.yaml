@@ -6,6 +6,11 @@ tools:
     destructive_hint: true
     idempotent_hint: true
   group: shading-lighting
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log
+
 - name: list_materials
   execution: sync
   affinity: main
@@ -13,11 +18,25 @@ tools:
     read_only_hint: true
     idempotent_hint: true
   group: shading-lighting
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log
+
 - name: load_material
   execution: sync
   affinity: main
   group: shading-lighting
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log
+
 - name: save_material
   execution: sync
   affinity: main
   group: shading-lighting
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log

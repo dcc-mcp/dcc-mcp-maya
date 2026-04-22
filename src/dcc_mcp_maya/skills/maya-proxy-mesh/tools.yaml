@@ -3,6 +3,11 @@ tools:
   execution: sync
   affinity: main
   group: modeling
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log
+
 - name: list_proxies
   execution: sync
   affinity: main
@@ -10,13 +15,27 @@ tools:
     read_only_hint: true
     idempotent_hint: true
   group: modeling
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log
+
 - name: set_proxy_attribute
   execution: sync
   affinity: main
   annotations:
     idempotent_hint: true
   group: modeling
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log
+
 - name: swap_proxy
   execution: sync
   affinity: main
   group: modeling
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log

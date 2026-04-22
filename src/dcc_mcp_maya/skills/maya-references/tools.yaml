@@ -3,6 +3,11 @@ tools:
   execution: sync
   affinity: main
   group: scene-management
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log
+
 - name: list_namespaces
   execution: sync
   affinity: main
@@ -10,6 +15,11 @@ tools:
     read_only_hint: true
     idempotent_hint: true
   group: scene-management
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log
+
 - name: list_references
   execution: sync
   affinity: main
@@ -17,10 +27,20 @@ tools:
     read_only_hint: true
     idempotent_hint: true
   group: scene-management
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log
+
 - name: reload_reference
   execution: sync
   affinity: main
   group: scene-management
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log
+
 - name: remove_reference
   execution: sync
   affinity: main
@@ -28,7 +48,16 @@ tools:
     destructive_hint: true
     idempotent_hint: true
   group: scene-management
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log
+
 - name: unload_reference
   execution: sync
   affinity: main
   group: scene-management
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log

@@ -1,11 +1,12 @@
 ---
 name: maya-cameras
-description: Maya camera creation and attribute management
+description: Maya camera creation and attribute management — perspective, orthographic, film back, and focal length. Use when setting up viewing cameras for scenes. Not for camera sequencing or shot-based workflows — use maya-camera-sequence or maya-shot-export for that.
 license: MIT
 allowed-tools: Bash Read
 metadata:
   dcc-mcp:
     dcc: maya
+    layer: domain
     version: 1.0.0
     tags:
     - maya
@@ -13,7 +14,7 @@ metadata:
     - viewport
     - focal
     - film
-    search-hint: camera, film, focal, persp, orthographic
+    search-hint: setup camera, film back, focal length, perspective orthographic
     depends: []
     tools: tools.yaml
     groups: groups.yaml
