@@ -1,13 +1,21 @@
 tools:
 - name: import_audio
+  execution: sync
+  affinity: main
 - name: list_audio
+  execution: sync
+  affinity: main
   annotations:
     read_only_hint: true
     idempotent_hint: true
 - name: remove_audio
+  execution: sync
+  affinity: main
   annotations:
     destructive_hint: true
     idempotent_hint: true
 - name: set_timeline_audio
+  execution: sync
+  affinity: main
   annotations:
     idempotent_hint: true

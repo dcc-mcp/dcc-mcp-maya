@@ -1,21 +1,31 @@
 tools:
 - name: create_camera
+  execution: sync
+  affinity: main
   group: rendering
 - name: get_camera_info
+  execution: sync
+  affinity: main
   annotations:
     read_only_hint: true
     idempotent_hint: true
   group: rendering
 - name: list_all_cameras
+  execution: sync
+  affinity: main
   annotations:
     read_only_hint: true
     idempotent_hint: true
   group: rendering
 - name: set_active_camera
+  execution: sync
+  affinity: main
   annotations:
     idempotent_hint: true
   group: rendering
 - name: set_camera_attribute
+  execution: sync
+  affinity: main
   annotations:
     idempotent_hint: true
   group: rendering
