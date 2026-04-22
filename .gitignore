@@ -48,6 +48,7 @@ desktop.ini
 *.log
 *.txt
 !packaging/README.txt
+!tools/doc_parity_allowlist.txt
 tmp/
 temp/
 
