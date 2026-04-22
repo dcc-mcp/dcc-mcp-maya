@@ -1,5 +1,9 @@
 tools:
 - name: copy_skin_weights
+  group: rigging
 - name: mirror_skin_weights
+  group: rigging
 - name: normalize_skin_weights
+  group: rigging
 - name: prune_skin_weights
+  group: rigging

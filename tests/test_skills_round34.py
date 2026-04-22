@@ -160,7 +160,7 @@ class TestSkillMdToolsField:
         flat = {}
         for key, value in meta.items():
             if isinstance(key, str) and key.startswith("dcc-mcp."):
-                flat[key[len("dcc-mcp."):]] = value
+                flat[key[len("dcc-mcp.") :]] = value
         return flat
 
     def _load_tools(self, skill_name):

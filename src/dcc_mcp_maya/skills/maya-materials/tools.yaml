@@ -2,26 +2,34 @@ tools:
 - name: assign_material
   annotations:
     idempotent_hint: true
+  group: shading-lighting
 - name: create_material
+  group: shading-lighting
 - name: get_material_connections
   annotations:
     read_only_hint: true
     idempotent_hint: true
+  group: shading-lighting
 - name: get_shader_assignment
   annotations:
     read_only_hint: true
     idempotent_hint: true
+  group: shading-lighting
 - name: list_materials
   annotations:
     read_only_hint: true
     idempotent_hint: true
+  group: shading-lighting
 - name: list_shading_groups
   annotations:
     read_only_hint: true
     idempotent_hint: true
+  group: shading-lighting
 - name: reset_to_default_material
   annotations:
     idempotent_hint: true
+  group: shading-lighting
 - name: set_material_attribute
   annotations:
     idempotent_hint: true
+  group: shading-lighting

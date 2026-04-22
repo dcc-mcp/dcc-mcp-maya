@@ -1,13 +1,17 @@
 tools:
 - name: create_color_set
+  group: modeling
 - name: get_vertex_color
   annotations:
     read_only_hint: true
     idempotent_hint: true
+  group: modeling
 - name: remove_vertex_colors
   annotations:
     destructive_hint: true
     idempotent_hint: true
+  group: modeling
 - name: set_vertex_color
   annotations:
     idempotent_hint: true
+  group: modeling

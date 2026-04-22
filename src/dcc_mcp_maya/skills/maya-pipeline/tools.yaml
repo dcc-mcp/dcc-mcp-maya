@@ -3,8 +3,12 @@ tools:
   annotations:
     read_only_hint: true
     idempotent_hint: true
+  group: scene-management
 - name: publish_asset
+  group: scene-management
 - name: set_project
   annotations:
     idempotent_hint: true
+  group: scene-management
 - name: tag_asset_metadata
+  group: scene-management

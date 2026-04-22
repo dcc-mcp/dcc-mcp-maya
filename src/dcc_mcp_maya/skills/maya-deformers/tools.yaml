@@ -2,11 +2,18 @@ tools:
 - name: apply_subdivision
   annotations:
     idempotent_hint: true
+  group: rigging
 - name: cleanup_mesh
+  group: rigging
 - name: create_cluster
+  group: rigging
 - name: create_lattice
+  group: rigging
 - name: sculpt_deformer
+  group: rigging
 - name: set_cluster_weights
   annotations:
     idempotent_hint: true
+  group: rigging
 - name: wire_deformer
+  group: rigging

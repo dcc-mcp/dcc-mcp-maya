@@ -1,11 +1,15 @@
 tools:
 - name: create_expression
+  group: animation
 - name: delete_expression
   annotations:
     destructive_hint: true
     idempotent_hint: true
+  group: animation
 - name: edit_expression
+  group: animation
 - name: list_expressions
   annotations:
     read_only_hint: true
     idempotent_hint: true
+  group: animation

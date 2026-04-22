@@ -2,20 +2,32 @@ tools:
 - name: apply_subdivision
   annotations:
     idempotent_hint: true
+  group: modeling
 - name: cleanup_mesh
+  group: modeling
 - name: combine_meshes
+  group: modeling
 - name: create_proxy_mesh
+  group: modeling
 - name: extract_faces
+  group: modeling
 - name: get_mesh_edge_info
   annotations:
     read_only_hint: true
     idempotent_hint: true
+  group: modeling
 - name: get_poly_count
   annotations:
     read_only_hint: true
     idempotent_hint: true
+  group: modeling
 - name: merge_vertices
+  group: modeling
 - name: mirror_mesh
+  group: modeling
 - name: select_by_material
+  group: modeling
 - name: separate_mesh
+  group: modeling
 - name: triangulate
+  group: modeling

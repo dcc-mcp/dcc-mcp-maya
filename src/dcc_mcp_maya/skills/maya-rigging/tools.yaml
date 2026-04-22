@@ -2,22 +2,34 @@ tools:
 - name: assign_deformer
   annotations:
     idempotent_hint: true
+  group: rigging
 - name: blend_shape_add_target
+  group: rigging
 - name: create_blend_shape
+  group: rigging
 - name: create_curve
+  group: rigging
 - name: create_ik_handle
+  group: rigging
 - name: create_joint
+  group: rigging
 - name: mirror_joints
+  group: rigging
 - name: set_driven_key
   annotations:
     idempotent_hint: true
+  group: rigging
 - name: set_ik_fk_blend
   annotations:
     idempotent_hint: true
+  group: rigging
 - name: set_joint_limit
   annotations:
     idempotent_hint: true
+  group: rigging
 - name: set_joint_orient
   annotations:
     idempotent_hint: true
+  group: rigging
 - name: skin_cluster_bind
+  group: rigging

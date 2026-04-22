@@ -1,23 +1,33 @@
 tools:
 - name: connect_field_to_objects
+  group: simulation-fx
 - name: create_dynamic_field
+  group: simulation-fx
 - name: create_ncloth
+  group: simulation-fx
 - name: create_nrigid
+  group: simulation-fx
 - name: create_nucleus
+  group: simulation-fx
 - name: list_ncloth_nodes
   annotations:
     read_only_hint: true
     idempotent_hint: true
+  group: simulation-fx
 - name: list_nrigid_nodes
   annotations:
     read_only_hint: true
     idempotent_hint: true
+  group: simulation-fx
 - name: set_ncloth_attribute
   annotations:
     idempotent_hint: true
+  group: simulation-fx
 - name: set_nrigid_attribute
   annotations:
     idempotent_hint: true
+  group: simulation-fx
 - name: set_nucleus_attribute
   annotations:
     idempotent_hint: true
+  group: simulation-fx

@@ -1,16 +1,21 @@
 tools:
 - name: create_render_layer
+  group: rendering
 - name: delete_render_layer
   annotations:
     destructive_hint: true
     idempotent_hint: true
+  group: rendering
 - name: list_render_layers
   annotations:
     read_only_hint: true
     idempotent_hint: true
+  group: rendering
 - name: set_render_layer
   annotations:
     idempotent_hint: true
+  group: rendering
 - name: set_render_layer_attribute
   annotations:
     idempotent_hint: true
+  group: rendering

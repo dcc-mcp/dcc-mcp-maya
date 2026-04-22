@@ -1,13 +1,17 @@
 tools:
 - name: create_light
+  group: shading-lighting
 - name: delete_light
   annotations:
     destructive_hint: true
     idempotent_hint: true
+  group: shading-lighting
 - name: list_lights
   annotations:
     read_only_hint: true
     idempotent_hint: true
+  group: shading-lighting
 - name: set_light_attribute
   annotations:
     idempotent_hint: true
+  group: shading-lighting

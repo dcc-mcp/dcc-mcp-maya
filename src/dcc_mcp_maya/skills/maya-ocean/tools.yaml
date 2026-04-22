@@ -1,10 +1,14 @@
 tools:
 - name: add_ocean_wake
+  group: simulation-fx
 - name: create_ocean
+  group: simulation-fx
 - name: list_ocean_surfaces
   annotations:
     read_only_hint: true
     idempotent_hint: true
+  group: simulation-fx
 - name: set_ocean_attribute
   annotations:
     idempotent_hint: true
+  group: simulation-fx

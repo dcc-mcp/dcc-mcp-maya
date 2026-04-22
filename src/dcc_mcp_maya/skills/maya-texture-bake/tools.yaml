@@ -1,16 +1,23 @@
 tools:
 - name: bake_ambient_occlusion
+  group: shading-lighting
 - name: bake_lighting
+  group: shading-lighting
 - name: bake_textures
+  group: shading-lighting
 - name: list_bake_sets
   annotations:
     read_only_hint: true
     idempotent_hint: true
+  group: shading-lighting
 - name: list_color_spaces
   annotations:
     read_only_hint: true
     idempotent_hint: true
+  group: shading-lighting
 - name: set_color_management
   annotations:
     idempotent_hint: true
+  group: shading-lighting
 - name: transfer_maps
+  group: shading-lighting

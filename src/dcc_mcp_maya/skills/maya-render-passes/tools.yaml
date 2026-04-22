@@ -1,12 +1,16 @@
 tools:
 - name: create_render_pass
+  group: rendering
 - name: enable_render_pass
   annotations:
     idempotent_hint: true
+  group: rendering
 - name: list_render_passes
   annotations:
     read_only_hint: true
     idempotent_hint: true
+  group: rendering
 - name: set_render_pass_output
   annotations:
     idempotent_hint: true
+  group: rendering

@@ -1,11 +1,15 @@
 tools:
 - name: attach_stroke_to_surface
+  group: simulation-fx
 - name: create_stroke
+  group: simulation-fx
 - name: delete_stroke
   annotations:
     destructive_hint: true
     idempotent_hint: true
+  group: simulation-fx
 - name: list_strokes
   annotations:
     read_only_hint: true
     idempotent_hint: true
+  group: simulation-fx

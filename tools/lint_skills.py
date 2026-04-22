@@ -383,10 +383,77 @@ def check_scripts_section(skill_dir: Path, skill_name: str, content: str) -> Lis
     return issues
 
 
+def _resolve_tools_list(skill_dir: Path, fm: dict) -> list:
+    """Return the skill's tool list, resolving sibling ``tools.yaml`` references.
+
+    Supports three shapes:
+
+    * Inline list (legacy):  ``tools: [{name: ...}, ...]``
+    * Sibling filename:       ``tools: tools.yaml``
+    * Nested + sibling:       ``metadata.dcc-mcp.tools: tools.yaml``
+    """
+    raw = _extract_dcc_mcp_field(fm, "tools", default=None)
+    if raw is None:
+        return []
+    if isinstance(raw, list):
+        return raw
+    if isinstance(raw, str):
+        candidate = skill_dir / raw
+        if not candidate.exists():
+            return []
+        try:
+            import yaml  # type: ignore[import]
+
+            data = yaml.safe_load(candidate.read_text(encoding="utf-8")) or {}
+            tools = data.get("tools") if isinstance(data, dict) else None
+            return tools if isinstance(tools, list) else []
+        except Exception:
+            return []
+    return []
+
+
+def _resolve_groups_list(skill_dir: Path, fm: dict) -> list:
+    """Return the skill's group list, resolving sibling ``groups.yaml`` references.
+
+    Falls back to the ``groups:`` key in the sibling ``tools.yaml`` when the
+    dedicated groups file is not declared.
+    """
+    raw_groups = _extract_dcc_mcp_field(fm, "groups", default=None)
+    if isinstance(raw_groups, list):
+        return raw_groups
+    if isinstance(raw_groups, str):
+        candidate = skill_dir / raw_groups
+        if candidate.exists():
+            try:
+                import yaml  # type: ignore[import]
+
+                data = yaml.safe_load(candidate.read_text(encoding="utf-8")) or {}
+                groups = data.get("groups") if isinstance(data, dict) else None
+                if isinstance(groups, list):
+                    return groups
+            except Exception:
+                pass
+    # Fallback: groups defined inside tools.yaml alongside the tools list.
+    raw_tools = _extract_dcc_mcp_field(fm, "tools", default=None)
+    if isinstance(raw_tools, str):
+        candidate = skill_dir / raw_tools
+        if candidate.exists():
+            try:
+                import yaml  # type: ignore[import]
+
+                data = yaml.safe_load(candidate.read_text(encoding="utf-8")) or {}
+                groups = data.get("groups") if isinstance(data, dict) else None
+                if isinstance(groups, list):
+                    return groups
+            except Exception:
+                pass
+    return []
+
+
 def check_tools_source_files(skill_dir: Path, skill_name: str, fm: dict) -> List[LintIssue]:
     """Warn if tools[].source_file paths don't exist in scripts/ dir."""
     issues: List[LintIssue] = []
-    tools = fm.get("tools", [])
+    tools = _resolve_tools_list(skill_dir, fm)
     if not tools or not isinstance(tools, list):
         return issues
 

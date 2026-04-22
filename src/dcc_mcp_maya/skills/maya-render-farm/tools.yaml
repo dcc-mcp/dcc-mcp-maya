@@ -3,6 +3,10 @@ tools:
   annotations:
     read_only_hint: true
     idempotent_hint: true
+  group: rendering
 - name: submit_to_deadline
+  group: rendering
 - name: validate_scene_for_farm
+  group: rendering
 - name: write_render_job
+  group: rendering

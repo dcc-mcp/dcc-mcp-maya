@@ -3,6 +3,10 @@ tools:
   annotations:
     read_only_hint: true
     idempotent_hint: true
+  group: animation
 - name: load_pose
+  group: animation
 - name: mirror_pose
+  group: animation
 - name: save_pose
+  group: animation

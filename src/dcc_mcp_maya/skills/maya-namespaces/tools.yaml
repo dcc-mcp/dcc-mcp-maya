@@ -1,20 +1,26 @@
 tools:
 - name: create_namespace
+  group: scene-management
 - name: delete_namespace
   annotations:
     destructive_hint: true
     idempotent_hint: true
+  group: scene-management
 - name: list_namespaces
   annotations:
     read_only_hint: true
     idempotent_hint: true
+  group: scene-management
 - name: remove_namespace
   annotations:
     destructive_hint: true
     idempotent_hint: true
+  group: scene-management
 - name: rename_namespace
   annotations:
     idempotent_hint: true
+  group: scene-management
 - name: set_namespace
   annotations:
     idempotent_hint: true
+  group: scene-management

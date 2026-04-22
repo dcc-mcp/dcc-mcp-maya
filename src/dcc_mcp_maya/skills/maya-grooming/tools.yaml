@@ -1,10 +1,14 @@
 tools:
 - name: add_nhair_cache
+  group: simulation-fx
 - name: create_nhair_system
+  group: simulation-fx
 - name: list_hair_systems
   annotations:
     read_only_hint: true
     idempotent_hint: true
+  group: simulation-fx
 - name: set_nhair_attribute
   annotations:
     idempotent_hint: true
+  group: simulation-fx

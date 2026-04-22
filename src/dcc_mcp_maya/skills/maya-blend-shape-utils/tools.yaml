@@ -1,13 +1,17 @@
 tools:
 - name: create_blend_shape
+  group: rigging
 - name: get_blend_shape_weights
   annotations:
     read_only_hint: true
     idempotent_hint: true
+  group: rigging
 - name: list_blend_shapes
   annotations:
     read_only_hint: true
     idempotent_hint: true
+  group: rigging
 - name: set_blend_shape_weight
   annotations:
     idempotent_hint: true
+  group: rigging

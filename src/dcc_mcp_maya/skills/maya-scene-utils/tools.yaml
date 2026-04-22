@@ -1,16 +1,23 @@
 tools:
 - name: align_objects
+  group: scene-management
 - name: create_annotation
+  group: scene-management
 - name: create_polygon_text
+  group: scene-management
 - name: set_object_color
   annotations:
     idempotent_hint: true
+  group: scene-management
 - name: set_pivot
   annotations:
     idempotent_hint: true
+  group: scene-management
 - name: set_shading_mode
   annotations:
     idempotent_hint: true
+  group: scene-management
 - name: toggle_gpu_override
   annotations:
     idempotent_hint: true
+  group: scene-management

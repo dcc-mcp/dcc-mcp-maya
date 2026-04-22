@@ -3,10 +3,14 @@ tools:
   annotations:
     read_only_hint: true
     idempotent_hint: true
+  group: shading-lighting
 - name: load_hdri
+  group: shading-lighting
 - name: set_hdri_exposure
   annotations:
     idempotent_hint: true
+  group: shading-lighting
 - name: set_hdri_rotation
   annotations:
     idempotent_hint: true
+  group: shading-lighting

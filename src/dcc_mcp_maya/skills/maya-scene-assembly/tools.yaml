@@ -1,8 +1,12 @@
 tools:
 - name: add_assembly_representation
+  group: scene-management
 - name: create_assembly_definition
+  group: scene-management
 - name: create_assembly_reference
+  group: scene-management
 - name: list_assemblies
   annotations:
     read_only_hint: true
     idempotent_hint: true
+  group: scene-management

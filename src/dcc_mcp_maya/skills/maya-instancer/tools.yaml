@@ -1,10 +1,14 @@
 tools:
 - name: add_instance_object
+  group: simulation-fx
 - name: create_instancer
+  group: simulation-fx
 - name: list_instancers
   annotations:
     read_only_hint: true
     idempotent_hint: true
+  group: simulation-fx
 - name: set_instancer_attribute
   annotations:
     idempotent_hint: true
+  group: simulation-fx

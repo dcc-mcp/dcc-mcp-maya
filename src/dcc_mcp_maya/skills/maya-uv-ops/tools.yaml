@@ -1,18 +1,26 @@
 tools:
 - name: copy_uvs
+  group: modeling
 - name: create_uv_set
+  group: modeling
 - name: delete_uv_set
   annotations:
     destructive_hint: true
     idempotent_hint: true
+  group: modeling
 - name: get_uv_info
   annotations:
     read_only_hint: true
     idempotent_hint: true
+  group: modeling
 - name: get_uv_shell_info
   annotations:
     read_only_hint: true
     idempotent_hint: true
+  group: modeling
 - name: normalize_uvs
+  group: modeling
 - name: project_uvs
+  group: modeling
 - name: unfold_uvs
+  group: modeling

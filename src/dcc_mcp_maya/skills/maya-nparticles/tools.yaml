@@ -1,10 +1,14 @@
 tools:
 - name: add_field_to_nparticles
+  group: simulation-fx
 - name: create_nparticle_emitter
+  group: simulation-fx
 - name: list_nparticle_systems
   annotations:
     read_only_hint: true
     idempotent_hint: true
+  group: simulation-fx
 - name: set_nparticle_attribute
   annotations:
     idempotent_hint: true
+  group: simulation-fx

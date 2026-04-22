@@ -1,51 +1,65 @@
 tools:
 - name: bake_constraints
+  group: animation
 - name: bake_simulation
   description: Bake simulation / constraints to keyframes on objects
+  group: animation
 - name: delete_keyframes
   description: Delete keyframes from an object within an optional frame range
   annotations:
     destructive_hint: true
     idempotent_hint: true
+  group: animation
 - name: export_animation_curves
   annotations:
     read_only_hint: true
     idempotent_hint: true
+  group: animation
 - name: get_current_time
   description: Get the current frame number
   annotations:
     read_only_hint: true
     idempotent_hint: true
+  group: animation
 - name: get_frame_range
   annotations:
     read_only_hint: true
     idempotent_hint: true
+  group: animation
 - name: get_keyframes
   description: Get all keyframe times for an object / attribute
   annotations:
     read_only_hint: true
     idempotent_hint: true
+  group: animation
 - name: import_animation_curves
+  group: animation
 - name: list_animation_curves
   annotations:
     read_only_hint: true
     idempotent_hint: true
+  group: animation
 - name: query_scene_time_info
   annotations:
     read_only_hint: true
     idempotent_hint: true
+  group: animation
 - name: set_animation_curve_tangent
   annotations:
     idempotent_hint: true
+  group: animation
 - name: set_current_time
   description: Set the current frame number
   annotations:
     idempotent_hint: true
+  group: animation
 - name: set_keyframe
   description: Set a keyframe on an object at the given time
   annotations:
     idempotent_hint: true
+  group: animation
 - name: set_timeline
   description: Set the playback and animation timeline range
   annotations:
     idempotent_hint: true
+  group: animation

@@ -1,25 +1,33 @@
 tools:
 - name: capture_viewport
+  group: rendering
 - name: export_selection
   annotations:
     read_only_hint: true
     idempotent_hint: true
+  group: rendering
 - name: get_render_settings
   description: Query current render settings
   annotations:
     read_only_hint: true
     idempotent_hint: true
+  group: rendering
 - name: get_scene_render_stats
   annotations:
     read_only_hint: true
     idempotent_hint: true
+  group: rendering
 - name: import_file
+  group: rendering
 - name: playblast
   description: Capture a viewport screenshot as a base64-encoded PNG
+  group: rendering
 - name: set_render_quality
   annotations:
     idempotent_hint: true
+  group: rendering
 - name: set_render_settings
   description: Set render parameters (resolution, frame range, renderer, image format)
   annotations:
     idempotent_hint: true
+  group: rendering

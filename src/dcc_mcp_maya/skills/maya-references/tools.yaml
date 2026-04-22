@@ -1,16 +1,22 @@
 tools:
 - name: create_reference
+  group: scene-management
 - name: list_namespaces
   annotations:
     read_only_hint: true
     idempotent_hint: true
+  group: scene-management
 - name: list_references
   annotations:
     read_only_hint: true
     idempotent_hint: true
+  group: scene-management
 - name: reload_reference
+  group: scene-management
 - name: remove_reference
   annotations:
     destructive_hint: true
     idempotent_hint: true
+  group: scene-management
 - name: unload_reference
+  group: scene-management

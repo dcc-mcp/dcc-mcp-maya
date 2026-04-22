@@ -1,27 +1,35 @@
 tools:
 - name: create_cube
   description: Create a polygon cube
+  group: modeling
 - name: create_cylinder
   description: Create a polygon cylinder
+  group: modeling
 - name: create_plane
   description: Create a polygon plane
+  group: modeling
 - name: create_sphere
   description: Create a polygon sphere
+  group: modeling
 - name: delete_objects
   description: Delete objects from the Maya scene
   annotations:
     destructive_hint: true
     idempotent_hint: true
+  group: modeling
 - name: get_transform
   description: Get translate/rotate/scale of an object
   annotations:
     read_only_hint: true
     idempotent_hint: true
+  group: modeling
 - name: rename_object
   description: Rename an object in the scene
   annotations:
     idempotent_hint: true
+  group: modeling
 - name: set_transform
   description: Set translate/rotate/scale on an object
   annotations:
     idempotent_hint: true
+  group: modeling

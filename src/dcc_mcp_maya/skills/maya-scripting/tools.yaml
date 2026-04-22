@@ -1,39 +1,68 @@
 tools:
 - name: animation
+  group: extended
 - name: attributes
+  group: extended
 - name: cameras
+  group: extended
 - name: constraints
+  group: extended
 - name: deformer_advanced
+  group: extended
 - name: display
+  group: extended
 - name: dynamics
+  group: extended
 - name: execute_mel
+  group: core
 - name: execute_python
+  group: core
 - name: expressions
   annotations:
     read_only_hint: true
     idempotent_hint: true
+  group: extended
 - name: get_script_node
   annotations:
     read_only_hint: true
     idempotent_hint: true
+  group: extended
 - name: lighting
+  group: extended
 - name: list_mel_procedures
   annotations:
     read_only_hint: true
     idempotent_hint: true
+  group: extended
 - name: materials
+  group: extended
 - name: mesh_ops
+  group: extended
 - name: namespaces
+  group: extended
 - name: node_attrs
+  group: extended
 - name: node_graph
+  group: extended
 - name: references
+  group: extended
 - name: render
+  group: extended
 - name: render_layers
+  group: extended
 - name: rigging
+  group: extended
 - name: scene_utils
+  group: extended
 - name: sets
+  group: extended
 - name: skin_weights
+  group: extended
 - name: texture_bake
+  group: extended
 - name: utility
+  group: extended
 - name: uv_ops
+  group: extended
 - name: vertex_color
+  group: extended

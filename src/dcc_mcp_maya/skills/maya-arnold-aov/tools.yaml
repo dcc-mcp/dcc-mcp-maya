@@ -1,16 +1,21 @@
 tools:
 - name: add_aov
+  group: rendering
 - name: delete_aov
   annotations:
     destructive_hint: true
     idempotent_hint: true
+  group: rendering
 - name: enable_aov
   annotations:
     idempotent_hint: true
+  group: rendering
 - name: list_aovs
   annotations:
     read_only_hint: true
     idempotent_hint: true
+  group: rendering
 - name: set_aov_attribute
   annotations:
     idempotent_hint: true
+  group: rendering

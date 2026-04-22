@@ -1,17 +1,22 @@
 tools:
 - name: create_description
+  group: simulation-fx
 - name: delete_description
   annotations:
     destructive_hint: true
     idempotent_hint: true
+  group: simulation-fx
 - name: get_xgen_attribute
   annotations:
     read_only_hint: true
     idempotent_hint: true
+  group: simulation-fx
 - name: list_descriptions
   annotations:
     read_only_hint: true
     idempotent_hint: true
+  group: simulation-fx
 - name: set_xgen_attribute
   annotations:
     idempotent_hint: true
+  group: simulation-fx

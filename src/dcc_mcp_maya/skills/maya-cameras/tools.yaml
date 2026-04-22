@@ -1,16 +1,21 @@
 tools:
 - name: create_camera
+  group: rendering
 - name: get_camera_info
   annotations:
     read_only_hint: true
     idempotent_hint: true
+  group: rendering
 - name: list_all_cameras
   annotations:
     read_only_hint: true
     idempotent_hint: true
+  group: rendering
 - name: set_active_camera
   annotations:
     idempotent_hint: true
+  group: rendering
 - name: set_camera_attribute
   annotations:
     idempotent_hint: true
+  group: rendering

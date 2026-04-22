@@ -265,9 +265,7 @@ class TestMayaMcpServerHttp:
         bare_skill_tools = {
             n
             for n in names
-            if n not in core_meta_tools
-            and not n.startswith(reserved_prefix)
-            and not n.startswith("maya-")
+            if n not in core_meta_tools and not n.startswith(reserved_prefix) and not n.startswith("maya-")
         }
         skill_tools = skill_stubs | prefixed_tools | bare_skill_tools
         assert len(skill_tools) >= 3, (

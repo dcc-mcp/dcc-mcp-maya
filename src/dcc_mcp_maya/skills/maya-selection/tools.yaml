@@ -1,6 +1,11 @@
 tools:
 - name: convert_selection
+  group: scene-management
 - name: grow_selection
+  group: scene-management
 - name: invert_selection
+  group: scene-management
 - name: select_similar
+  group: scene-management
 - name: shrink_selection
+  group: scene-management

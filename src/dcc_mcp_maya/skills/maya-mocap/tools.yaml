@@ -1,5 +1,9 @@
 tools:
 - name: bake_mocap_to_rig
+  group: animation
 - name: clean_mocap_keys
+  group: animation
 - name: create_hik_definition
+  group: animation
 - name: import_mocap
+  group: animation
