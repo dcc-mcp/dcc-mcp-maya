@@ -1,0 +1,9 @@
+groups:
+- name: scene-management
+  description: Scene management, organization, and navigation tools
+  default_active: true
+  tools:
+  - get_asset_metadata
+  - publish_asset
+  - set_project
+  - tag_asset_metadata

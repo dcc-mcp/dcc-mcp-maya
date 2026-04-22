@@ -1,0 +1,5 @@
+tools:
+- name: add_space_switch
+- name: connect_attributes
+- name: create_control_curve
+- name: lock_hide_attributes

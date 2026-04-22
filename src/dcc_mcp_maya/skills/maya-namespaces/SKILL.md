@@ -1,46 +1,23 @@
 ---
 name: maya-namespaces
-description: Maya namespace management — create, rename, merge, and remove namespaces for asset organization
-dcc: maya
-version: 1.0.0
-tags:
-- maya
-- namespaces
-- pipeline
-- rigging
-- scene-management
-search-hint: namespace, reference, scene, organize
+description: Maya namespace management — create, rename, merge, and remove namespaces
+  for asset organization
 license: MIT
-allowed-tools:
-- Bash
-- Read
-depends: []
-tools:
-- name: create_namespace
-- name: delete_namespace
-  destructive_hint: true
-  idempotent_hint: true
-- name: list_namespaces
-  read_only_hint: true
-  idempotent_hint: true
-- name: remove_namespace
-  destructive_hint: true
-  idempotent_hint: true
-- name: rename_namespace
-  idempotent_hint: true
-- name: set_namespace
-  idempotent_hint: true
-groups:
-- name: scene-management
-  description: Scene management, organization, and navigation tools
-  default_active: true
-  tools:
-  - create_namespace
-  - delete_namespace
-  - list_namespaces
-  - remove_namespace
-  - rename_namespace
-  - set_namespace
+allowed-tools: Bash Read
+metadata:
+  dcc-mcp:
+    dcc: maya
+    version: 1.0.0
+    tags:
+    - maya
+    - namespaces
+    - pipeline
+    - rigging
+    - scene-management
+    search-hint: namespace, reference, scene, organize
+    depends: []
+    tools: tools.yaml
+    groups: groups.yaml
 ---
 # maya-namespaces
 

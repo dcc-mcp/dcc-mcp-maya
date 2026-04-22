@@ -1,0 +1,5 @@
+tools:
+- name: copy_skin_weights
+- name: mirror_skin_weights
+- name: normalize_skin_weights
+- name: prune_skin_weights

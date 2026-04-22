@@ -1,0 +1,12 @@
+tools:
+- name: list_hdri_nodes
+  annotations:
+    read_only_hint: true
+    idempotent_hint: true
+- name: load_hdri
+- name: set_hdri_exposure
+  annotations:
+    idempotent_hint: true
+- name: set_hdri_rotation
+  annotations:
+    idempotent_hint: true

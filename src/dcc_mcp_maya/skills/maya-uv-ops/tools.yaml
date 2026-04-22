@@ -1,0 +1,18 @@
+tools:
+- name: copy_uvs
+- name: create_uv_set
+- name: delete_uv_set
+  annotations:
+    destructive_hint: true
+    idempotent_hint: true
+- name: get_uv_info
+  annotations:
+    read_only_hint: true
+    idempotent_hint: true
+- name: get_uv_shell_info
+  annotations:
+    read_only_hint: true
+    idempotent_hint: true
+- name: normalize_uvs
+- name: project_uvs
+- name: unfold_uvs

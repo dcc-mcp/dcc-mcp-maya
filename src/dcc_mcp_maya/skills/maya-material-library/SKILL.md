@@ -1,38 +1,23 @@
 ---
 name: maya-material-library
-description: Maya material library — save, load, and manage reusable material presets stored as JSON or Maya files
-dcc: maya
-version: 1.0.0
-tags:
-- maya
-- materials
-- library
-- shading
-- presets
-search-hint: material, library, shader, preset
+description: Maya material library — save, load, and manage reusable material presets
+  stored as JSON or Maya files
 license: MIT
-allowed-tools:
-- Bash
-- Read
-depends: []
-tools:
-- name: delete_material_preset
-  destructive_hint: true
-  idempotent_hint: true
-- name: list_materials
-  read_only_hint: true
-  idempotent_hint: true
-- name: load_material
-- name: save_material
-groups:
-- name: shading-lighting
-  description: Materials, shading, lighting, and environment tools
-  default_active: false
-  tools:
-  - delete_material_preset
-  - list_materials
-  - load_material
-  - save_material
+allowed-tools: Bash Read
+metadata:
+  dcc-mcp:
+    dcc: maya
+    version: 1.0.0
+    tags:
+    - maya
+    - materials
+    - library
+    - shading
+    - presets
+    search-hint: material, library, shader, preset
+    depends: []
+    tools: tools.yaml
+    groups: groups.yaml
 ---
 # maya-material-library
 

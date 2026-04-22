@@ -1,42 +1,22 @@
 ---
 name: maya-cameras
 description: Maya camera creation and attribute management
-dcc: maya
-version: 1.0.0
-tags:
-- maya
-- camera
-- viewport
-- focal
-- film
-search-hint: camera, film, focal, persp, orthographic
 license: MIT
-allowed-tools:
-- Bash
-- Read
-depends: []
-tools:
-- name: create_camera
-- name: get_camera_info
-  read_only_hint: true
-  idempotent_hint: true
-- name: list_all_cameras
-  read_only_hint: true
-  idempotent_hint: true
-- name: set_active_camera
-  idempotent_hint: true
-- name: set_camera_attribute
-  idempotent_hint: true
-groups:
-- name: rendering
-  description: Render settings, layers, passes, and output tools
-  default_active: false
-  tools:
-  - create_camera
-  - get_camera_info
-  - list_all_cameras
-  - set_active_camera
-  - set_camera_attribute
+allowed-tools: Bash Read
+metadata:
+  dcc-mcp:
+    dcc: maya
+    version: 1.0.0
+    tags:
+    - maya
+    - camera
+    - viewport
+    - focal
+    - film
+    search-hint: camera, film, focal, persp, orthographic
+    depends: []
+    tools: tools.yaml
+    groups: groups.yaml
 ---
 # maya-cameras
 

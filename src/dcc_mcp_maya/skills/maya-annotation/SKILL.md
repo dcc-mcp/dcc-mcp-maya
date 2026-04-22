@@ -1,29 +1,21 @@
 ---
 name: maya-annotation
-description: Maya viewport annotations — create, update, list and remove text/arrow annotation nodes
-dcc: maya
-version: 1.0.0
-tags:
-- maya
-- annotation
-- viewport
-- text
-search-hint: annotation, label, text, viewport, note, create annotation
+description: Maya viewport annotations — create, update, list and remove text/arrow
+  annotation nodes
 license: MIT
-allowed-tools:
-- Bash
-- Read
-depends: []
-tools:
-- name: create_annotation
-- name: delete_annotation
-  destructive_hint: true
-  idempotent_hint: true
-- name: list_annotations
-  read_only_hint: true
-  idempotent_hint: true
-- name: update_annotation
-  idempotent_hint: true
+allowed-tools: Bash Read
+metadata:
+  dcc-mcp:
+    dcc: maya
+    version: 1.0.0
+    tags:
+    - maya
+    - annotation
+    - viewport
+    - text
+    search-hint: annotation, label, text, viewport, note, create annotation
+    depends: []
+    tools: tools.yaml
 ---
 # maya-annotation
 

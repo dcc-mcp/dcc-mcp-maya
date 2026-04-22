@@ -1,78 +1,22 @@
 ---
 name: maya-animation
 description: Maya animation keyframes, timeline, curves and simulation baking
-dcc: maya
-version: 1.0.0
-tags:
-- maya
-- animation
-- keyframe
-- timeline
-search-hint: keyframe, timeline, animate, curves, bake, simulation, constraint, tangent
 license: MIT
-allowed-tools:
-- Bash
-- Read
-depends: []
-tools:
-- name: bake_constraints
-- name: bake_simulation
-  description: Bake simulation / constraints to keyframes on objects
-- name: delete_keyframes
-  description: Delete keyframes from an object within an optional frame range
-  destructive_hint: true
-  idempotent_hint: true
-- name: export_animation_curves
-  read_only_hint: true
-  idempotent_hint: true
-- name: get_current_time
-  description: Get the current frame number
-  read_only_hint: true
-  idempotent_hint: true
-- name: get_frame_range
-  read_only_hint: true
-  idempotent_hint: true
-- name: get_keyframes
-  description: Get all keyframe times for an object / attribute
-  read_only_hint: true
-  idempotent_hint: true
-- name: import_animation_curves
-- name: list_animation_curves
-  read_only_hint: true
-  idempotent_hint: true
-- name: query_scene_time_info
-  read_only_hint: true
-  idempotent_hint: true
-- name: set_animation_curve_tangent
-  idempotent_hint: true
-- name: set_current_time
-  description: Set the current frame number
-  idempotent_hint: true
-- name: set_keyframe
-  description: Set a keyframe on an object at the given time
-  idempotent_hint: true
-- name: set_timeline
-  description: Set the playback and animation timeline range
-  idempotent_hint: true
-groups:
-- name: animation
-  description: Animation, constraints, and motion capture tools
-  default_active: false
-  tools:
-  - bake_constraints
-  - bake_simulation
-  - delete_keyframes
-  - export_animation_curves
-  - get_current_time
-  - get_frame_range
-  - get_keyframes
-  - import_animation_curves
-  - list_animation_curves
-  - query_scene_time_info
-  - set_animation_curve_tangent
-  - set_current_time
-  - set_keyframe
-  - set_timeline
+allowed-tools: Bash Read
+metadata:
+  dcc-mcp:
+    dcc: maya
+    version: 1.0.0
+    tags:
+    - maya
+    - animation
+    - keyframe
+    - timeline
+    search-hint: keyframe, timeline, animate, curves, bake, simulation, constraint,
+      tangent
+    depends: []
+    tools: tools.yaml
+    groups: groups.yaml
 ---
 # maya-animation
 
