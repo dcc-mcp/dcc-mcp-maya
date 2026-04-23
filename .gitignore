@@ -49,6 +49,8 @@ desktop.ini
 *.txt
 !packaging/README.txt
 !tools/doc_parity_allowlist.txt
+!llms.txt
+!llms-full.txt
 tmp/
 temp/
 
