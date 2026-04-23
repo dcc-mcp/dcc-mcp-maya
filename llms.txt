@@ -1,0 +1,142 @@
+# llms.txt — dcc-mcp-maya Core Reference for AI Agents
+
+> One-page cheat sheet. For the exhaustive reference see llms-full.txt.
+
+---
+
+## Project
+
+**dcc-mcp-maya** — Embed a standards-compliant MCP Streamable HTTP server directly inside Autodesk Maya.  
+**Version:** 0.2.15  
+**License:** MIT  
+**Repo:** https://github.com/loonghao/dcc-mcp-maya  
+**Python:** >=3.7  
+**Maya:** 2020+  
+**Core dep:** `dcc-mcp-core>=0.13.2,<1.0.0`
+
+---
+
+## Quick Start
+
+```python
+import dcc_mcp_maya
+handle = dcc_mcp_maya.start_server(port=8765)
+# MCP client → http://127.0.0.1:8765/mcp
+handle.shutdown()
+```
+
+Plugin mode: copy `maya/plugin/dcc_mcp_maya_plugin.py` to `MAYA_PLUG_IN_PATH` and load it. Server auto-starts.
+
+---
+
+## Core API
+
+### Module-Level Functions
+
+```python
+start_server(
+    port: int = 8765,
+    server_name: str = "maya-mcp",
+    register_builtins: bool = True,
+    extra_skill_paths: Optional[List[str]] = None,
+    include_bundled: bool = True,
+    gateway_port: Optional[int] = None,
+    registry_dir: Optional[str] = None,
+    dcc_version: Optional[str] = None,
+    scene: Optional[str] = None,
+    enable_hot_reload: bool = False,
+    enable_gateway_failover: bool = True,
+) -> McpServerHandle
+
+stop_server() -> None
+```
+
+### MayaMcpServer Constructor
+
+```python
+MayaMcpServer(
+    port: int = 8765,
+    server_name: str = "maya-mcp",
+    server_version: str = "0.2.15",
+    gateway_port: Optional[int] = None,
+    registry_dir: Optional[str] = None,
+    dcc_version: Optional[str] = None,
+    scene: Optional[str] = None,
+    enable_gateway_failover: bool = True,
+    metrics_enabled: Optional[bool] = None,      # env: DCC_MCP_MAYA_METRICS=1
+    job_storage_path: Optional[str] = None,      # env: DCC_MCP_MAYA_JOB_STORAGE
+    job_recovery: Optional[str] = None,          # env: DCC_MCP_MAYA_JOB_RECOVERY
+)
+```
+
+Key methods: `register_builtin_actions()`, `start()`, `stop()`, `attach_dispatcher(dispatcher)`.
+
+---
+
+## Skill Authoring Helpers (api.py)
+
+```python
+from dcc_mcp_maya.api import (
+    maya_success, maya_error, maya_warning, maya_from_exception,
+    with_maya, require_cmds, get_cmds, is_maya_available,
+    require_param, require_any_param, get_param_list, missing_param_error, MissingParamError,
+    validate_node_exists, validate_node_type, batch_validate_nodes,
+    ensure_valid_name, build_context_dict,
+    scene_object_from_node, object_transform_from_node, bounding_box_from_node,
+    maya_capabilities,
+)
+```
+
+Decorator pattern (recommended for simple scripts):
+```python
+@with_maya
+def create_sphere(radius: float = 1.0) -> dict:
+    import maya.cmds as cmds
+    result = cmds.polySphere(radius=radius)
+    return maya_success("Created sphere", object_name=result[0])
+```
+
+---
+
+## Skill Discovery & Loading
+
+Agent workflow:
+1. `search_tools(query)` or `find_skills("keyword")` — search by name/description/search_hint.
+2. `load_skill("maya-primitives")` — activate skill, return list of registered action names.
+3. `activate_group("extended")` — enable additional tool groups within a loaded skill.
+
+Tool naming: `{skill_name.replace("-","_")}__{script_stem}` (e.g. `maya_scene__new_scene`).
+
+---
+
+## Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `DCC_MCP_MAYA_PORT` | `8765` | TCP port |
+| `DCC_MCP_MAYA_SERVER_NAME` | `maya-mcp` | MCP init name |
+| `DCC_MCP_MAYA_SKILL_PATHS` | — | Extra skill dirs (`;` Win / `:` Unix) |
+| `DCC_MCP_SKILL_PATHS` | — | Global fallback skill dirs |
+| `DCC_MCP_MAYA_MINIMAL` | `1` | `0`=preload all, `1`=minimal startup |
+| `DCC_MCP_MAYA_DEFAULT_TOOLS` | — | Comma-separated preload skill list |
+| `DCC_MCP_MAYA_METRICS` | `0` | `1`=Prometheus `/metrics` |
+| `DCC_MCP_MAYA_JOB_STORAGE` | `<data_dir>/jobs.db` | SQLite persistence path |
+| `DCC_MCP_MAYA_JOB_RECOVERY` | `drop` | `requeue`=resume idempotent jobs |
+| `DCC_MCP_GATEWAY_PORT` | `9765` | Multi-instance gateway port (`0`=off) |
+| `DCC_MCP_REGISTRY_DIR` | OS temp | Shared discovery registry |
+| `DCC_MCP_MAYA_HOT_RELOAD` | `0` | `1`=watch skills for disk changes |
+
+---
+
+## Key Files
+
+| File | Purpose |
+|------|---------|
+| `src/dcc_mcp_maya/server.py` | `MayaMcpServer`, builtin skill discovery, metrics, jobs |
+| `src/dcc_mcp_maya/dispatcher.py` | `MayaUiDispatcher`, `MayaUiPump`, `check_maya_cancelled` |
+| `src/dcc_mcp_maya/api.py` | Skill authoring helpers (18 symbols) |
+| `src/dcc_mcp_maya/plugin.py` | Maya plugin entry point |
+| `src/dcc_mcp_maya/skills/` | 64 built-in skill packages |
+| `docs/` | VitePress docs (EN + ZH) |
+| `README.md` | Human overview |
+| `AGENTS.md` | Progressive disclosure map |
