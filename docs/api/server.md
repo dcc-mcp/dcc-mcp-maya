@@ -39,6 +39,9 @@ Start (or return the already-running) module-level singleton server.
 | `scene` | `str \| None` | `None` | Current scene path reported to the discovery registry. |
 | `enable_hot_reload` | `bool` | `False` | Enable skill hot-reload support. |
 | `enable_gateway_failover` | `bool` | `True` | Allow non-gateway instances to promote themselves on gateway loss. |
+| `metrics_enabled` | `bool \| None` | `None` | Enable Prometheus `/metrics` endpoint. `None` reads `DCC_MCP_MAYA_METRICS=1`. |
+| `job_storage_path` | `str \| None` | `None` | SQLite job persistence DB path. `None` reads `DCC_MCP_MAYA_JOB_STORAGE`, else defaults to `<data_dir>/jobs.db`. Set `""` to disable. |
+| `job_recovery` | `str \| None` | `None` | Interrupted job recovery: `"drop"` (default) or `"requeue"`. `None` reads `DCC_MCP_MAYA_JOB_RECOVERY`. |
 
 **Returns:** `McpServerHandle` with `.mcp_url()`, `.port`, `.shutdown()`.
 
@@ -82,12 +85,15 @@ from dcc_mcp_maya.server import MayaMcpServer
 MayaMcpServer(
     port: int = 8765,
     server_name: str = "maya-mcp",
-    server_version: str = "0.3.0",
+    server_version: str = "0.2.15",
     gateway_port: Optional[int] = None,
     registry_dir: Optional[str] = None,
     dcc_version: Optional[str] = None,
     scene: Optional[str] = None,
     enable_gateway_failover: bool = True,
+    metrics_enabled: Optional[bool] = None,
+    job_storage_path: Optional[str] = None,
+    job_recovery: Optional[str] = None,
 )
 ```
 
@@ -172,6 +178,9 @@ Returned by `server.start()` and `start_server()`.
 | `DCC_MCP_MAYA_SKILL_PATHS` | — | Maya-specific skill directories (`;`-separated) |
 | `DCC_MCP_SKILL_PATHS` | — | Global fallback skill directories |
 | `DCC_MCP_MAYA_HOT_RELOAD` | `0` | Enable skill hot-reload when set to `1` |
+| `DCC_MCP_MAYA_METRICS` | `0` | Enable Prometheus `/metrics` endpoint when set to `1` |
+| `DCC_MCP_MAYA_JOB_STORAGE` | `<data_dir>/jobs.db` | SQLite job persistence database path |
+| `DCC_MCP_MAYA_JOB_RECOVERY` | `drop` | `requeue` to resume idempotent interrupted jobs on startup |
 | `DCC_MCP_MAYA_ENABLE_GATEWAY_FAILOVER` | `1` | Enable automatic gateway failover election |
 | `DCC_MCP_GATEWAY_PORT` | `9765` in plugin mode | Gateway competition port; `0` disables gateway mode |
 | `DCC_MCP_REGISTRY_DIR` | OS temp dir | Shared registry directory for service discovery |

@@ -14,12 +14,15 @@ from dcc_mcp_maya.server import MayaMcpServer
 MayaMcpServer(
     port: int = 8765,
     server_name: str = "maya-mcp",
-    server_version: str = "0.3.0",
+    server_version: str = "0.2.15",
     gateway_port: Optional[int] = None,
     registry_dir: Optional[str] = None,
     dcc_version: Optional[str] = None,
     scene: Optional[str] = None,
     enable_gateway_failover: bool = True,
+    metrics_enabled: Optional[bool] = None,
+    job_storage_path: Optional[str] = None,
+    job_recovery: Optional[str] = None,
 )
 ```
 
@@ -27,12 +30,15 @@ MayaMcpServer(
 |-----------|------|---------|-------------|
 | `port` | int | `8765` | TCP port. Use `0` for a random available port. |
 | `server_name` | str | `"maya-mcp"` | Name shown in MCP `initialize` response |
-| `server_version` | str | `"0.3.0"` | Version shown in MCP `initialize` response |
+| `server_version` | str | `"0.2.15"` | Version shown in MCP `initialize` response |
 | `gateway_port` | int \| None | `None` | Gateway election port for multi-instance discovery |
 | `registry_dir` | str \| None | `None` | Shared registry directory for discovery metadata |
 | `dcc_version` | str \| None | `None` | Maya version reported to the registry |
 | `scene` | str \| None | `None` | Scene path reported to the registry |
 | `enable_gateway_failover` | bool | `True` | Allow gateway failover auto-promotion |
+| `metrics_enabled` | bool \| None | `None` | Enable Prometheus `/metrics`. `None` reads `DCC_MCP_MAYA_METRICS=1` |
+| `job_storage_path` | str \| None | `None` | SQLite job DB path. `None` reads env or defaults to `<data_dir>/jobs.db`. `""` disables |
+| `job_recovery` | str \| None | `None` | Interrupted job policy: `"drop"` or `"requeue"`. `None` reads `DCC_MCP_MAYA_JOB_RECOVERY` |
 
 ### Methods
 

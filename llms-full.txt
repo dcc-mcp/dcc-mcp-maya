@@ -1,0 +1,484 @@
+# llms-full.txt — dcc-mcp-maya Complete API Reference for AI Agents
+
+> Exhaustive reference. For a condensed one-page version see llms.txt.
+
+---
+
+## Project Metadata
+
+**dcc-mcp-maya** — Maya plugin for the DCC Model Context Protocol (MCP) ecosystem.  
+Embeds a standards-compliant MCP Streamable HTTP server (2025-03-26 spec) directly inside Maya.
+
+- **Version:** 0.2.15
+- **License:** MIT
+- **Repository:** https://github.com/loonghao/dcc-mcp-maya
+- **Python:** >=3.7
+- **Maya:** 2020+
+- **Core dependency:** `dcc-mcp-core>=0.13.2,<1.0.0`
+- **Entry point:** `dcc_mcp.adapters` → `maya = "dcc_mcp_maya:MayaMcpServer"`
+
+---
+
+## Quick Start
+
+```python
+import dcc_mcp_maya
+
+# Singleton helper
+handle = dcc_mcp_maya.start_server(port=8765)
+print(handle.mcp_url())   # http://127.0.0.1:8765/mcp
+handle.shutdown()
+
+# Or full control
+from dcc_mcp_maya.server import MayaMcpServer
+server = MayaMcpServer(port=8765)
+server.register_builtin_actions()
+handle = server.start()
+server.stop()
+```
+
+Plugin mode: copy `maya/plugin/dcc_mcp_maya_plugin.py` to a directory on `MAYA_PLUG_IN_PATH`.
+The server starts automatically when the plugin loads. In interactive mode a "DCC MCP" menu is added to Maya.
+
+---
+
+## MayaMcpServer — Complete API
+
+### Constructor
+
+```python
+MayaMcpServer(
+    port: int = 8765,
+    server_name: str = "maya-mcp",
+    server_version: str = "0.2.15",
+    gateway_port: Optional[int] = None,
+    registry_dir: Optional[str] = None,
+    dcc_version: Optional[str] = None,
+    scene: Optional[str] = None,
+    enable_gateway_failover: bool = True,
+    metrics_enabled: Optional[bool] = None,
+    job_storage_path: Optional[str] = None,
+    job_recovery: Optional[str] = None,
+)
+```
+
+**Parameter reference:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `port` | `int` | `8765` | TCP port. Use `0` for OS-assigned. |
+| `server_name` | `str` | `"maya-mcp"` | Name in MCP `initialize` response. |
+| `server_version` | `str` | `"0.2.15"` | Version reported in `initialize`. |
+| `gateway_port` | `int \| None` | `None` | First-wins gateway election port. `None` reads `DCC_MCP_GATEWAY_PORT`; `0` disables. |
+| `registry_dir` | `str \| None` | `None` | Shared `FileRegistry` directory for service discovery. |
+| `dcc_version` | `str \| None` | `None` | Maya version string advertised to the registry. |
+| `scene` | `str \| None` | `None` | Current scene path advertised to the registry. |
+| `enable_gateway_failover` | `bool` | `True` | Allow non-gateway instances to promote on gateway loss. |
+| `metrics_enabled` | `bool \| None` | `None` | Enable Prometheus `/metrics`. `None` reads `DCC_MCP_MAYA_METRICS=1`. |
+| `job_storage_path` | `str \| None` | `None` | SQLite job DB path. `None` reads `DCC_MCP_MAYA_JOB_STORAGE`, else defaults to `<data_dir>/dcc-mcp-maya/jobs.db`. Set `""` to disable. |
+| `job_recovery` | `str \| None` | `None` | Interrupted job policy: `"drop"` (default) or `"requeue"`. `None` reads `DCC_MCP_MAYA_JOB_RECOVERY`. |
+
+### Methods
+
+```python
+register_builtin_actions(
+    extra_skill_paths: Optional[List[str]] = None,
+    include_bundled: bool = True,
+) -> MayaMcpServer
+```
+Discover built-in Maya skills + bundled `dcc-mcp-core` skills. Returns `self` for chaining.
+
+```python
+start() -> McpServerHandle
+```
+Start the HTTP server. Returns handle with `.mcp_url()`, `.port`, `.shutdown()`.
+
+```python
+stop() -> None
+```
+Gracefully stop the server. Drains any attached `MayaUiDispatcher` before teardown.
+
+```python
+attach_dispatcher(dispatcher: Any) -> None
+```
+Register a `MayaUiDispatcher` for lifecycle integration. `None` detaches.
+
+### Inherited from DccServerBase (dcc-mcp-core)
+
+```python
+discover(extra_paths: Optional[List[str]] = None, dcc_name: str = "maya") -> int
+```
+Scan for `SKILL.md` files and index skills. Returns number of packages discovered.
+
+```python
+load_skill(name: str, dcc_name: str = "maya") -> List[str]
+```
+Register a skill's scripts as MCP actions. Returns list of registered action names.
+
+```python
+search_skills(category: Optional[str] = None, tags: Optional[List[str]] = None, dcc_name: str = "maya") -> List[dict]
+```
+Search indexed skills by category and/or tags.
+
+```python
+find_skills(query: str, tags: Optional[List[str]] = None, dcc: Optional[str] = None) -> List[dict]
+```
+Full-text search via SkillCatalog. Matches name, description, search_hint, and tool names.
+
+```python
+get_skill_categories() -> List[str]
+get_skill_tags() -> List[str]
+```
+List available categories and tags.
+
+```python
+unregister_skill(name: str, dcc_name: str = "maya") -> bool
+```
+Remove a skill from the registry.
+
+```python
+bind_and_register() -> bool
+find_best_service() -> Optional[dict]
+rank_services() -> List[dict]
+```
+Service discovery helpers (TransportManager wrappers).
+
+### Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `is_running` | `bool` | Whether the server is currently running. |
+| `mcp_url` | `Optional[str]` | The MCP endpoint URL, or `None` if not running. |
+
+---
+
+## Module-Level Helpers
+
+```python
+start_server(
+    port: int = 8765,
+    server_name: str = "maya-mcp",
+    register_builtins: bool = True,
+    extra_skill_paths: Optional[List[str]] = None,
+    include_bundled: bool = True,
+    gateway_port: Optional[int] = None,
+    registry_dir: Optional[str] = None,
+    dcc_version: Optional[str] = None,
+    scene: Optional[str] = None,
+    enable_hot_reload: bool = False,
+    enable_gateway_failover: bool = True,
+) -> McpServerHandle
+
+stop_server() -> None
+```
+
+---
+
+## Dispatcher API (dispatcher.py)
+
+### MayaUiDispatcher
+
+```python
+from dcc_mcp_maya.dispatcher import MayaUiDispatcher, MayaUiPump, check_maya_cancelled
+
+dispatcher = MayaUiDispatcher()
+pump = MayaUiPump(dispatcher, budget_ms=8)
+pump.install()   # registers cmds.scriptJob(event=['idle', pump])
+
+# Blocking submission
+result = dispatcher.submit_callable(
+    request_id="uuid",
+    task=lambda: cmds.polySphere(),
+    affinity="main",          # "main" | "any"
+    timeout_ms=30000,
+)
+
+# Non-blocking async submission (returns immediately)
+envelope = dispatcher.submit_async_callable(
+    request_id="uuid",
+    task=lambda: cmds.render(),
+    job_id="job-123",
+    affinity="main",
+    timeout_ms=600000,
+)
+# envelope == {"request_id": "uuid", "job_id": "job-123", "status": "pending"}
+
+pump.uninstall()
+```
+
+### MayaStandaloneDispatcher
+
+For `mayapy` / batch contexts where there is no event loop. All jobs execute directly on the calling thread.
+
+```python
+from dcc_mcp_maya.dispatcher import MayaStandaloneDispatcher
+
+dispatcher = MayaStandaloneDispatcher()
+result = dispatcher.submit_callable(request_id="x", task=..., affinity="main")
+```
+
+### MayaUiPump
+
+Cooperative time-slice scheduler registered via `cmds.scriptJob(event=['idle', pump])`. Drains the pending main-thread job queue up to `budget_ms` per idle tick, then yields back to Maya so the viewport stays responsive.
+
+```python
+MayaUiPump(dispatcher: MayaUiDispatcher, budget_ms: int = 8)
+```
+
+Stats available at `pump.stats`: `overrun_cycles` (ticks exceeding `budget_ms * 2`) and `longest_job_ms`.
+
+### Cooperative Cancellation
+
+```python
+check_maya_cancelled() -> None
+```
+Raise `CancelledError` when the MCP client sends `notifications/cancelled` or the dispatcher drains. Safe to call in loops — is a cheap no-op outside cancellation contexts.
+
+---
+
+## Skill Authoring API (api.py)
+
+### Result Helpers
+
+```python
+maya_success(message: str, prompt: Optional[str] = None, **context: Any) -> Dict[str, Any]
+maya_error(
+    message: str, error: str = "", prompt: Optional[str] = None,
+    possible_solutions: Optional[List[str]] = None, **context: Any,
+) -> Dict[str, Any]
+maya_warning(message: str, warning: str = "", prompt: Optional[str] = None, **context: Any) -> Dict[str, Any]
+maya_from_exception(
+    exc: BaseException, message: str = "Maya operation failed",
+    prompt: Optional[str] = None, possible_solutions: Optional[List[str]] = None,
+    include_traceback: bool = True, **context: Any,
+) -> Dict[str, Any]
+```
+
+### Decorator
+
+```python
+@with_maya
+def my_tool(...) -> dict:
+    ...
+```
+Wraps the function with standard try/except: `ImportError` → `maya_error`, any other `Exception` → `maya_from_exception` (with traceback and auto-generated message).
+
+### Maya Availability
+
+```python
+require_cmds() -> Generator[Any, None, None]   # context manager yielding maya.cmds
+get_cmds() -> Any                               # returns maya.cmds module
+is_maya_available() -> bool
+```
+
+### Parameter Helpers
+
+```python
+require_param(params: Any, key: str, default: Any = SENTINEL) -> Any
+require_any_param(params: Any, *keys: str) -> Any
+get_param_list(params: Any, key: str, default: Any = None) -> List[Any]
+missing_param_error(key: str, **context: Any) -> Dict[str, Any]
+class MissingParamError(ValueError): ...
+```
+
+### Node Validation
+
+```python
+validate_node_exists(cmds: Any, name: str) -> Optional[Dict[str, Any]]
+validate_node_type(cmds: Any, name: str, expected_type: str) -> Optional[Dict[str, Any]]
+batch_validate_nodes(cmds: Any, names: List[str]) -> Optional[Dict[str, Any]]
+```
+Return `None` on success, error dict on failure. Designed for early-exit guard patterns.
+
+### Name & Context Helpers
+
+```python
+ensure_valid_name(name: Any, param: str = "name") -> Optional[Dict[str, Any]]
+build_context_dict(**kwargs: Any) -> Dict[str, Any]   # strips None values
+```
+
+### Cross-DCC Data Model
+
+```python
+scene_object_from_node(cmds: Any, long_name: str) -> Dict[str, Any]
+# Returns: {"name", "long_name", "object_type", "parent", "visible", "metadata"}
+
+object_transform_from_node(cmds: Any, node_name: str) -> Dict[str, Any]
+# Returns: {"translate": [tx,ty,tz], "rotate": [rx,ry,rz], "scale": [sx,sy,sz]}
+
+bounding_box_from_node(cmds: Any, node_name: str) -> Dict[str, Any]
+# Returns: {"min", "max", "center", "size"}
+```
+
+### Capabilities
+
+```python
+maya_capabilities() -> DccCapabilities
+```
+Declares: scene_manager, transform, hierarchy, selection, render_capture, snapshot, undo_redo, file_operations, etc.
+
+---
+
+## Skill Package Format
+
+### Directory Layout
+
+```
+my-skill/
+├── SKILL.md          ← required manifest
+├── tools.yaml        ← tool metadata (execution, affinity, groups, annotations)
+├── groups.yaml       ← group definitions
+└── scripts/
+    ├── do_something.py
+    └── get_info.py
+```
+
+### SKILL.md Frontmatter
+
+```yaml
+---
+name: my-custom-skill
+description: "My custom Maya automation skill"
+license: MIT
+allowed-tools: ["Bash", "Read"]
+metadata:
+  dcc-mcp:
+    dcc: maya
+    version: "1.0.0"
+    tags: [maya, custom]
+    search-hint: keywords for agent discovery
+    depends: []
+    tools: tools.yaml
+    groups: groups.yaml
+---
+```
+
+### tools.yaml Fields
+
+```yaml
+tools:
+  - name: render_frames
+    description: Render a frame range
+    execution: async          # sync | async
+    affinity: main            # main | any
+    timeout_hint_secs: 600    # required when execution: async
+    group: render             # references groups.yaml
+    annotations:
+      read_only_hint: false
+      idempotent_hint: false
+```
+
+**Rules:**
+- `execution: async` → must set `timeout_hint_secs`. Surfaces as MCP `deferredHint=true`.
+- `affinity: main` → default for Maya tools (anything touching `maya.cmds` / `OpenMaya`).
+- `affinity: any` → pure Python / filesystem only; verified by grepping for `import maya`.
+
+---
+
+## Built-in Skills (64 Packages)
+
+**Core:** maya-scene, maya-scripting
+**Geometry:** maya-primitives, maya-mesh-ops, maya-uv-ops, maya-vertex-color, maya-xform-utils, maya-blend-shape-utils, maya-deformers, maya-display
+**Materials & Texturing:** maya-materials, maya-material-library, maya-texture-bake, maya-hdri, maya-color-grading
+**Animation & Rigging:** maya-animation, maya-rigging, maya-rig-utils, maya-skinning-utils, maya-spline-ik, maya-constraints, maya-constraints-advanced, maya-mocap, maya-muscle, maya-pose-library
+**Lighting & Cameras:** maya-lighting, maya-cameras, maya-light-rig, maya-camera-sequence
+**Rendering:** maya-render, maya-render-layers, maya-render-passes, maya-render-farm, maya-arnold-aov, maya-gpu-cache
+**Dynamics & FX:** maya-dynamics, maya-fluid, maya-nparticles, maya-ocean, maya-cloth-sim, maya-paint-effects, maya-bifrost, maya-mash, maya-instancer, maya-xgen, maya-grooming
+**Scene & Pipeline:** maya-node-graph, maya-attributes, maya-sets, maya-references, maya-expressions, maya-namespaces, maya-scene-assembly, maya-scene-utils, maya-pipeline, maya-shot-export, maya-export-preset, maya-proxy-mesh, maya-toon
+**Utility:** maya-utility, maya-scripting (expanded), maya-selection, maya-color-grading, maya-cache, maya-gpu-cache, maya-audio, maya-annotation
+**External integrations:** maya-render-farm (cooperative cancellation), maya-mocap, maya-pose-library
+
+---
+
+## Environment Variables — Complete Table
+
+| Variable | Default | Scope | Description |
+|----------|---------|-------|-------------|
+| `DCC_MCP_MAYA_PORT` | `8765` | per-process | TCP port for MCP HTTP server. `0` = OS-assigned. |
+| `DCC_MCP_MAYA_SERVER_NAME` | `maya-mcp` | per-process | Name in MCP `initialize`. |
+| `DCC_MCP_MAYA_SKILL_PATHS` | — | per-process | Extra skill dirs (`;` Win, `:` Unix). |
+| `DCC_MCP_SKILL_PATHS` | — | global fallback | Global skill dirs for all DCC adapters. |
+| `DCC_MCP_MAYA_MINIMAL` | `1` | per-process | `0`=preload all; `1`=core skills only. |
+| `DCC_MCP_MAYA_DEFAULT_TOOLS` | — | per-process | Comma-separated skill names overriding minimal mode. |
+| `DCC_MCP_MAYA_METRICS` | `0` | per-process | `1`=enable Prometheus `/metrics`. |
+| `DCC_MCP_MAYA_JOB_STORAGE` | `<data_dir>/jobs.db` | per-process | SQLite job persistence path. `""`=disable. |
+| `DCC_MCP_MAYA_JOB_RECOVERY` | `drop` | per-process | `requeue`=resume idempotent interrupted jobs on startup. |
+| `DCC_MCP_MAYA_HOT_RELOAD` | `0` | per-process | `1`=watch bundled skills for edit-on-disk reload. |
+| `DCC_MCP_MAYA_ENABLE_GATEWAY_FAILOVER` | `1` | per-process | Auto-promote on gateway loss. |
+| `DCC_MCP_MAYA_DCC_PID` | `os.getpid()` | per-process | PID advertised to gateway for diagnostics routing. |
+| `DCC_MCP_GATEWAY_PORT` | `9765` | per-host | Gateway election port. `0`=disable gateway mode. |
+| `DCC_MCP_REGISTRY_DIR` | OS temp dir | per-user | Shared FileRegistry directory. |
+| `DCC_MCP_PYTHON_EXECUTABLE` | `sys.executable` | per-process | Python interpreter for skill worker subprocesses. |
+| `DCC_MCP_PYTHON_INIT_SNIPPET` | `import maya.standalone; maya.standalone.initialize(name='python')` | per-process | One-liner run by workers before tool scripts. |
+
+---
+
+## Cancellation & Thread Safety
+
+Long-running skills must poll `check_maya_cancelled()` at safe checkpoints:
+
+```python
+from dcc_mcp_maya import check_maya_cancelled, maya_success
+
+def render_frames(frames):
+    for frame in frames:
+        check_maya_cancelled()
+        cmds.currentTime(frame)
+        cmds.render()
+    return maya_success("Rendered", frames=len(frames))
+```
+
+`check_maya_cancelled()` respects two sources:
+1. MCP request token (`notifications/cancelled` from the HTTP handler).
+2. Per-job dispatcher flag (`MayaUiDispatcher.cancel` / `shutdown`).
+
+Outside those contexts it is a cheap no-op.
+
+---
+
+## Multi-Instance Deployment
+
+Run N Maya sessions on one workstation behind a single gateway:
+
+```python
+# examples/multi-instance/userSetup.py
+PORT_RANGE = range(8765, 8776)
+# Picks first free port, sets DCC_MCP_GATEWAY_PORT=9765,
+# DCC_MCP_MAYA_DCC_PID=os.getpid(), then auto-starts server.
+```
+
+Gateway exposes meta-tools: `list_dcc_instances`, `connect_to_dcc`, `get_dcc_instance`.
+
+---
+
+## Testing
+
+| Suite | Command | Notes |
+|-------|---------|-------|
+| Unit tests | `python -m pytest tests/ -m "not e2e and not integration and not packaging"` | 1800+ tests, no Maya required |
+| E2E | `mayapy -m pytest tests/ -m e2e` | Requires tahv/mayapy Docker image |
+| Lint | `ruff check src/ tests/` | Also `ruff format --check src/ tests/` |
+| Skills lint | `python tools/lint_skill_affinity.py` | Validates execution/affinity in all tools.yaml |
+
+---
+
+## File Index
+
+| File | Purpose |
+|------|---------|
+| `README.md` | Human overview, installation, badges |
+| `AGENTS.md` | Progressive disclosure map for agents |
+| `llms.txt` | Condensed one-page AI reference |
+| `llms-full.txt` | This file — exhaustive reference |
+| `src/dcc_mcp_maya/__init__.py` | Public API exports (29 symbols) |
+| `src/dcc_mcp_maya/server.py` | `MayaMcpServer`, discovery, metrics, jobs |
+| `src/dcc_mcp_maya/dispatcher.py` | Thread dispatchers, pump, cancellation |
+| `src/dcc_mcp_maya/api.py` | 18 skill-authoring helpers |
+| `src/dcc_mcp_maya/plugin.py` | Maya plugin entry point |
+| `src/dcc_mcp_maya/capabilities.py` | DCC capability declarations |
+| `src/dcc_mcp_maya/skill_executor.py` | In-process skill execution |
+| `src/dcc_mcp_maya/skills/` | 64 built-in skill packages |
+| `docs/` | VitePress site (EN + ZH) |
+| `tests/` | pytest suite |
+| `maya/plugin/dcc_mcp_maya_plugin.py` | Maya plugin file for `MAYA_PLUG_IN_PATH` |
+| `examples/multi-instance/userSetup.py` | Drop-in multi-instance setup |
