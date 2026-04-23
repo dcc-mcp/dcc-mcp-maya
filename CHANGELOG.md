@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.16](https://github.com/loonghao/dcc-mcp-maya/compare/v0.2.15...v0.2.16) (2026-04-23)
+
+
+### Documentation
+
+* add AI-friendly documentation and fix VitePress navigation ([9eb4258](https://github.com/loonghao/dcc-mcp-maya/commit/9eb42589295f05a002609990ffcfa1a0d47b7935))
+
 ## [0.2.15](https://github.com/loonghao/dcc-mcp-maya/compare/v0.2.14...v0.2.15) (2026-04-22)
 
 
