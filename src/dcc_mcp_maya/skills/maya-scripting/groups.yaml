@@ -7,7 +7,7 @@ groups:
   - execute_python
 - name: extended
   description: Extended scripting utilities across all domains
-  default_active: true
+  default_active: false
   tools:
   - animation
   - attributes
