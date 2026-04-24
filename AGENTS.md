@@ -63,8 +63,7 @@ def create_sphere(radius: float = 1.0) -> dict:
 
 - **src/dcc_mcp_maya/server.py** — `MayaMcpServer` (constructor, `register_builtin_actions`, `start`, `stop`, metrics, job persistence).
 - **src/dcc_mcp_maya/dispatcher.py** — `MayaUiDispatcher`, `MayaStandaloneDispatcher`, `MayaUiPump`, `check_maya_cancelled`.
-- **src/dcc_mcp_maya/plugin.py** — Maya plugin entry point (`initializePlugin`, `uninitializePlugin`, menu, gateway auto-config).
-- **src/dcc_mcp_maya/skill_executor.py** — `MayaInternalSkillExecutor` (in-process `exec()` path).
+- **maya/plugin/dcc_mcp_maya_plugin.py** — Maya plugin entry point (`initializePlugin`, `uninitializePlugin`, menu, gateway auto-config).
 - **tests/** — 50+ unit tests, E2E tests (tahv/mayapy 2022–2025), multi-instance gateway tests.
 
 ### Layer 4 — You Are an AI Agent Reading This

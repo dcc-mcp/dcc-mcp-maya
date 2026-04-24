@@ -474,9 +474,7 @@ Gateway exposes meta-tools: `list_dcc_instances`, `connect_to_dcc`, `get_dcc_ins
 | `src/dcc_mcp_maya/server.py` | `MayaMcpServer`, discovery, metrics, jobs |
 | `src/dcc_mcp_maya/dispatcher.py` | Thread dispatchers, pump, cancellation |
 | `src/dcc_mcp_maya/api.py` | 18 skill-authoring helpers |
-| `src/dcc_mcp_maya/plugin.py` | Maya plugin entry point |
 | `src/dcc_mcp_maya/capabilities.py` | DCC capability declarations |
-| `src/dcc_mcp_maya/skill_executor.py` | In-process skill execution |
 | `src/dcc_mcp_maya/skills/` | 64 built-in skill packages |
 | `docs/` | VitePress site (EN + ZH) |
 | `tests/` | pytest suite |
