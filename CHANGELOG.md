@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.2.17](https://github.com/loonghao/dcc-mcp-maya/compare/v0.2.16...v0.2.17) (2026-04-24)
+
+
+### Bug Fixes
+
+* **server:** clear job_storage_path when empty string disables persistence ([f8f2dd8](https://github.com/loonghao/dcc-mcp-maya/commit/f8f2dd8180d85187fbdda4b9358a15ca5edc122f))
+
+
+### Documentation
+
+* remove stale skill_executor references; fix plugin path in AGENTS ([ec1c76c](https://github.com/loonghao/dcc-mcp-maya/commit/ec1c76c5db2168e271bc65154037b82773304b84))
+
 ## [0.2.16](https://github.com/loonghao/dcc-mcp-maya/compare/v0.2.15...v0.2.16) (2026-04-23)
 
 
