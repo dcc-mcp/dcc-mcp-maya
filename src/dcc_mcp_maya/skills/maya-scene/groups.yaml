@@ -8,7 +8,7 @@ groups:
   - get_session_info
 - name: scene-management
   description: Scene management, organization, and navigation tools
-  default_active: true
+  default_active: false
   tools:
   - center_pivot
   - create_locator

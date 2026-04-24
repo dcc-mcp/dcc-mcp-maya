@@ -1,7 +1,7 @@
 groups:
 - name: scene-management
   description: Scene management, organization, and navigation tools
-  default_active: true
+  default_active: false
   tools:
   - add_assembly_representation
   - create_assembly_definition
