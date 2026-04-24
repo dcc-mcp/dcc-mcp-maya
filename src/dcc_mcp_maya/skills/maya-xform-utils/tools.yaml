@@ -1,17 +1,15 @@
-defaults:
-  affinity: main
-  next-tools:
-    on-failure:
-    - dcc_diagnostics__screenshot
-    - dcc_diagnostics__audit_log
-
 tools:
 - name: bake_transforms
-
+  execution: sync
+  affinity: main
 - name: freeze_transforms
-
+  execution: sync
+  affinity: main
 - name: match_transforms
-
+  execution: sync
+  affinity: main
 - name: reset_pivot
+  execution: sync
+  affinity: main
   annotations:
     idempotent_hint: true

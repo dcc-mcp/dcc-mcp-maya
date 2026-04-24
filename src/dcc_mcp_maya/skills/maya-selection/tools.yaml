@@ -1,22 +1,21 @@
-defaults:
-  affinity: main
-  next-tools:
-    on-failure:
-    - dcc_diagnostics__screenshot
-    - dcc_diagnostics__audit_log
-
 tools:
 - name: convert_selection
+  execution: sync
+  affinity: main
   group: scene-management
-
 - name: grow_selection
+  execution: sync
+  affinity: main
   group: scene-management
-
 - name: invert_selection
+  execution: sync
+  affinity: main
   group: scene-management
-
 - name: select_similar
+  execution: sync
+  affinity: main
   group: scene-management
-
 - name: shrink_selection
+  execution: sync
+  affinity: main
   group: scene-management
