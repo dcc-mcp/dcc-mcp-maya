@@ -1,118 +1,53 @@
+defaults:
+  affinity: main
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log
+
 tools:
 - name: assign_deformer
-  execution: sync
-  affinity: main
   annotations:
     idempotent_hint: true
   group: rigging
-  next-tools:
-    on-failure:
-    - dcc_diagnostics__screenshot
-    - dcc_diagnostics__audit_log
 
 - name: blend_shape_add_target
-  execution: sync
-  affinity: main
   group: rigging
-  next-tools:
-    on-failure:
-    - dcc_diagnostics__screenshot
-    - dcc_diagnostics__audit_log
 
 - name: create_blend_shape
-  execution: sync
-  affinity: main
   group: rigging
-  next-tools:
-    on-failure:
-    - dcc_diagnostics__screenshot
-    - dcc_diagnostics__audit_log
 
 - name: create_curve
-  execution: sync
-  affinity: main
   group: rigging
-  next-tools:
-    on-failure:
-    - dcc_diagnostics__screenshot
-    - dcc_diagnostics__audit_log
 
 - name: create_ik_handle
-  execution: sync
-  affinity: main
   group: rigging
-  next-tools:
-    on-failure:
-    - dcc_diagnostics__screenshot
-    - dcc_diagnostics__audit_log
 
 - name: create_joint
-  execution: sync
-  affinity: main
   group: rigging
-  next-tools:
-    on-failure:
-    - dcc_diagnostics__screenshot
-    - dcc_diagnostics__audit_log
 
 - name: mirror_joints
-  execution: sync
-  affinity: main
   group: rigging
-  next-tools:
-    on-failure:
-    - dcc_diagnostics__screenshot
-    - dcc_diagnostics__audit_log
 
 - name: set_driven_key
-  execution: sync
-  affinity: main
   annotations:
     idempotent_hint: true
   group: rigging
-  next-tools:
-    on-failure:
-    - dcc_diagnostics__screenshot
-    - dcc_diagnostics__audit_log
 
 - name: set_ik_fk_blend
-  execution: sync
-  affinity: main
   annotations:
     idempotent_hint: true
   group: rigging
-  next-tools:
-    on-failure:
-    - dcc_diagnostics__screenshot
-    - dcc_diagnostics__audit_log
 
 - name: set_joint_limit
-  execution: sync
-  affinity: main
   annotations:
     idempotent_hint: true
   group: rigging
-  next-tools:
-    on-failure:
-    - dcc_diagnostics__screenshot
-    - dcc_diagnostics__audit_log
 
 - name: set_joint_orient
-  execution: sync
-  affinity: main
   annotations:
     idempotent_hint: true
   group: rigging
-  next-tools:
-    on-failure:
-    - dcc_diagnostics__screenshot
-    - dcc_diagnostics__audit_log
 
 - name: skin_cluster_bind
-  execution: sync
-  affinity: main
   group: rigging
-  next-tools:
-    on-failure:
-    - dcc_diagnostics__screenshot
-    - dcc_diagnostics__audit_log

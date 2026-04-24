@@ -1,41 +1,24 @@
-tools:
-- name: create_proxy
-  execution: sync
+defaults:
   affinity: main
-  group: modeling
   next-tools:
     on-failure:
     - dcc_diagnostics__screenshot
     - dcc_diagnostics__audit_log
 
+tools:
+- name: create_proxy
+  group: modeling
+
 - name: list_proxies
-  execution: sync
-  affinity: main
   annotations:
     read_only_hint: true
     idempotent_hint: true
   group: modeling
-  next-tools:
-    on-failure:
-    - dcc_diagnostics__screenshot
-    - dcc_diagnostics__audit_log
 
 - name: set_proxy_attribute
-  execution: sync
-  affinity: main
   annotations:
     idempotent_hint: true
   group: modeling
-  next-tools:
-    on-failure:
-    - dcc_diagnostics__screenshot
-    - dcc_diagnostics__audit_log
 
 - name: swap_proxy
-  execution: sync
-  affinity: main
   group: modeling
-  next-tools:
-    on-failure:
-    - dcc_diagnostics__screenshot
-    - dcc_diagnostics__audit_log

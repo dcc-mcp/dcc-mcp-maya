@@ -1,45 +1,22 @@
+defaults:
+  affinity: main
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log
+
 tools:
 - name: convert_selection
-  execution: sync
-  affinity: main
   group: scene-management
-  next-tools:
-    on-failure:
-    - dcc_diagnostics__screenshot
-    - dcc_diagnostics__audit_log
 
 - name: grow_selection
-  execution: sync
-  affinity: main
   group: scene-management
-  next-tools:
-    on-failure:
-    - dcc_diagnostics__screenshot
-    - dcc_diagnostics__audit_log
 
 - name: invert_selection
-  execution: sync
-  affinity: main
   group: scene-management
-  next-tools:
-    on-failure:
-    - dcc_diagnostics__screenshot
-    - dcc_diagnostics__audit_log
 
 - name: select_similar
-  execution: sync
-  affinity: main
   group: scene-management
-  next-tools:
-    on-failure:
-    - dcc_diagnostics__screenshot
-    - dcc_diagnostics__audit_log
 
 - name: shrink_selection
-  execution: sync
-  affinity: main
   group: scene-management
-  next-tools:
-    on-failure:
-    - dcc_diagnostics__screenshot
-    - dcc_diagnostics__audit_log

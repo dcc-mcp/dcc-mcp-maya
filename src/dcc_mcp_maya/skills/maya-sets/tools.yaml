@@ -1,42 +1,25 @@
+defaults:
+  affinity: main
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log
+
 tools:
 - name: add_to_set
-  execution: sync
-  affinity: main
   group: scene-management
-  next-tools:
-    on-failure:
-    - dcc_diagnostics__screenshot
-    - dcc_diagnostics__audit_log
 
 - name: create_set
-  execution: sync
-  affinity: main
   group: scene-management
-  next-tools:
-    on-failure:
-    - dcc_diagnostics__screenshot
-    - dcc_diagnostics__audit_log
 
 - name: list_sets
-  execution: sync
-  affinity: main
   annotations:
     read_only_hint: true
     idempotent_hint: true
   group: scene-management
-  next-tools:
-    on-failure:
-    - dcc_diagnostics__screenshot
-    - dcc_diagnostics__audit_log
 
 - name: remove_from_set
-  execution: sync
-  affinity: main
   annotations:
     destructive_hint: true
     idempotent_hint: true
   group: scene-management
-  next-tools:
-    on-failure:
-    - dcc_diagnostics__screenshot
-    - dcc_diagnostics__audit_log

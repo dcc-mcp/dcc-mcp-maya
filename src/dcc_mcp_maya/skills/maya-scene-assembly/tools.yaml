@@ -1,41 +1,28 @@
-tools:
-- name: add_assembly_representation
-  execution: sync
+defaults:
   affinity: main
-  group: scene-management
   next-tools:
     on-failure:
     - dcc_diagnostics__screenshot
     - dcc_diagnostics__audit_log
+
+tools:
+- name: add_assembly_representation
+  group: scene-management
 
 - name: create_assembly_definition
   execution: async
-  affinity: main
+
   timeout_hint_secs: 120
   group: scene-management
-  next-tools:
-    on-failure:
-    - dcc_diagnostics__screenshot
-    - dcc_diagnostics__audit_log
 
 - name: create_assembly_reference
   execution: async
-  affinity: main
+
   timeout_hint_secs: 120
   group: scene-management
-  next-tools:
-    on-failure:
-    - dcc_diagnostics__screenshot
-    - dcc_diagnostics__audit_log
 
 - name: list_assemblies
-  execution: sync
-  affinity: main
   annotations:
     read_only_hint: true
     idempotent_hint: true
   group: scene-management
-  next-tools:
-    on-failure:
-    - dcc_diagnostics__screenshot
-    - dcc_diagnostics__audit_log

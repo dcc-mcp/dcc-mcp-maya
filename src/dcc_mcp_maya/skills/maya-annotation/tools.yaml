@@ -1,40 +1,23 @@
-tools:
-- name: create_annotation
-  execution: sync
+defaults:
   affinity: main
   next-tools:
     on-failure:
     - dcc_diagnostics__screenshot
     - dcc_diagnostics__audit_log
 
+tools:
+- name: create_annotation
+
 - name: delete_annotation
-  execution: sync
-  affinity: main
   annotations:
     destructive_hint: true
     idempotent_hint: true
-  next-tools:
-    on-failure:
-    - dcc_diagnostics__screenshot
-    - dcc_diagnostics__audit_log
 
 - name: list_annotations
-  execution: sync
-  affinity: main
   annotations:
     read_only_hint: true
     idempotent_hint: true
-  next-tools:
-    on-failure:
-    - dcc_diagnostics__screenshot
-    - dcc_diagnostics__audit_log
 
 - name: update_annotation
-  execution: sync
-  affinity: main
   annotations:
     idempotent_hint: true
-  next-tools:
-    on-failure:
-    - dcc_diagnostics__screenshot
-    - dcc_diagnostics__audit_log

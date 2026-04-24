@@ -1,44 +1,27 @@
-tools:
-- name: create_color_set
-  execution: sync
+defaults:
   affinity: main
-  group: modeling
   next-tools:
     on-failure:
     - dcc_diagnostics__screenshot
     - dcc_diagnostics__audit_log
 
+tools:
+- name: create_color_set
+  group: modeling
+
 - name: get_vertex_color
-  execution: sync
-  affinity: main
   annotations:
     read_only_hint: true
     idempotent_hint: true
   group: modeling
-  next-tools:
-    on-failure:
-    - dcc_diagnostics__screenshot
-    - dcc_diagnostics__audit_log
 
 - name: remove_vertex_colors
-  execution: sync
-  affinity: main
   annotations:
     destructive_hint: true
     idempotent_hint: true
   group: modeling
-  next-tools:
-    on-failure:
-    - dcc_diagnostics__screenshot
-    - dcc_diagnostics__audit_log
 
 - name: set_vertex_color
-  execution: sync
-  affinity: main
   annotations:
     idempotent_hint: true
   group: modeling
-  next-tools:
-    on-failure:
-    - dcc_diagnostics__screenshot
-    - dcc_diagnostics__audit_log
