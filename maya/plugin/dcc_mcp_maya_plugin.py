@@ -56,6 +56,12 @@ Configuration
 ``DCC_MCP_REGISTRY_DIR``
     Directory for the shared ``FileRegistry`` JSON.  Defaults to OS temp dir.
 
+``DCC_MCP_MAYA_WINDOW_TITLE``
+    Optional substring of the main Maya window title, passed to the MCP server
+    as ``dcc_window_title`` for instance-bound diagnostics and screenshot routing
+    (``dcc-mcp-core`` 0.14+).  Usually unnecessary; same-process PID resolution
+    is the default.
+
 ``DCC_MCP_PYTHON_EXECUTABLE``
     Python interpreter for skill worker subprocesses.  Auto-set to
     ``sys.executable`` (i.e. ``mayapy``) at plugin load time.
@@ -199,13 +205,18 @@ def _resolve_config():
         dcc_version = str(cmds.about(version=True))
     except Exception:
         dcc_version = None
-    return {
+    out = {
         "port": port,
         "server_name": server_name,
         "gateway_port": gateway_port if gateway_port > 0 else None,
         "registry_dir": registry_dir,
         "dcc_version": dcc_version,
     }
+    # Optional: helps WindowFinder / diagnostics__screenshot when PIDs are ambiguous
+    wtitle = os.environ.get("DCC_MCP_MAYA_WINDOW_TITLE", "").strip()
+    if wtitle:
+        out["dcc_window_title"] = wtitle
+    return out
 
 
 def _export_worker_env() -> None:
