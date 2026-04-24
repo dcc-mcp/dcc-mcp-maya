@@ -1,7 +1,7 @@
 groups:
 - name: modeling
   description: Geometry creation, editing, and UV tools
-  default_active: true
+  default_active: false
   tools:
   - copy_uvs
   - create_uv_set
