@@ -1,38 +1,25 @@
+defaults:
+  affinity: main
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log
+
 tools:
 - name: bake_mocap_to_rig
   execution: async
-  affinity: main
+
   timeout_hint_secs: 300
   group: animation
-  next-tools:
-    on-failure:
-    - dcc_diagnostics__screenshot
-    - dcc_diagnostics__audit_log
 
 - name: clean_mocap_keys
-  execution: sync
-  affinity: main
   group: animation
-  next-tools:
-    on-failure:
-    - dcc_diagnostics__screenshot
-    - dcc_diagnostics__audit_log
 
 - name: create_hik_definition
-  execution: sync
-  affinity: main
   group: animation
-  next-tools:
-    on-failure:
-    - dcc_diagnostics__screenshot
-    - dcc_diagnostics__audit_log
 
 - name: import_mocap
   execution: async
-  affinity: main
+
   timeout_hint_secs: 300
   group: animation
-  next-tools:
-    on-failure:
-    - dcc_diagnostics__screenshot
-    - dcc_diagnostics__audit_log

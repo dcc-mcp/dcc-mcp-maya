@@ -1,42 +1,25 @@
+defaults:
+  affinity: main
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log
+
 tools:
 - name: attach_stroke_to_surface
-  execution: sync
-  affinity: main
   group: simulation-fx
-  next-tools:
-    on-failure:
-    - dcc_diagnostics__screenshot
-    - dcc_diagnostics__audit_log
 
 - name: create_stroke
-  execution: sync
-  affinity: main
   group: simulation-fx
-  next-tools:
-    on-failure:
-    - dcc_diagnostics__screenshot
-    - dcc_diagnostics__audit_log
 
 - name: delete_stroke
-  execution: sync
-  affinity: main
   annotations:
     destructive_hint: true
     idempotent_hint: true
   group: simulation-fx
-  next-tools:
-    on-failure:
-    - dcc_diagnostics__screenshot
-    - dcc_diagnostics__audit_log
 
 - name: list_strokes
-  execution: sync
-  affinity: main
   annotations:
     read_only_hint: true
     idempotent_hint: true
   group: simulation-fx
-  next-tools:
-    on-failure:
-    - dcc_diagnostics__screenshot
-    - dcc_diagnostics__audit_log

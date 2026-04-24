@@ -1,55 +1,32 @@
-tools:
-- name: add_aov
-  execution: sync
+defaults:
   affinity: main
-  group: rendering
   next-tools:
     on-failure:
     - dcc_diagnostics__screenshot
     - dcc_diagnostics__audit_log
 
+tools:
+- name: add_aov
+  group: rendering
+
 - name: delete_aov
-  execution: sync
-  affinity: main
   annotations:
     destructive_hint: true
     idempotent_hint: true
   group: rendering
-  next-tools:
-    on-failure:
-    - dcc_diagnostics__screenshot
-    - dcc_diagnostics__audit_log
 
 - name: enable_aov
-  execution: sync
-  affinity: main
   annotations:
     idempotent_hint: true
   group: rendering
-  next-tools:
-    on-failure:
-    - dcc_diagnostics__screenshot
-    - dcc_diagnostics__audit_log
 
 - name: list_aovs
-  execution: sync
-  affinity: main
   annotations:
     read_only_hint: true
     idempotent_hint: true
   group: rendering
-  next-tools:
-    on-failure:
-    - dcc_diagnostics__screenshot
-    - dcc_diagnostics__audit_log
 
 - name: set_aov_attribute
-  execution: sync
-  affinity: main
   annotations:
     idempotent_hint: true
   group: rendering
-  next-tools:
-    on-failure:
-    - dcc_diagnostics__screenshot
-    - dcc_diagnostics__audit_log
