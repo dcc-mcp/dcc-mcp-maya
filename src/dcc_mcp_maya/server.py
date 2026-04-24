@@ -279,6 +279,10 @@ class MayaMcpServer(DccServerBase):
         if effective_job_path:
             self._config.job_storage_path = effective_job_path
             logger.info("[%s] Job storage: %s", "maya", effective_job_path)
+        elif job_storage_path is not None and not str(job_storage_path).strip():
+            # ``""`` means disable persistence; clear path set by :class:`DccServerBase`
+            # in ``_init_job_persistence`` (see tests/test_server_job_metrics.py).
+            self._config.job_storage_path = ""
 
         # Job-recovery policy (issue #89).  Stored for use in
         # :meth:`register_builtin_actions` where we can log the effective
