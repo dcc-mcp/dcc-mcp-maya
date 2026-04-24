@@ -1,40 +1,23 @@
-tools:
-- name: import_audio
-  execution: sync
+defaults:
   affinity: main
   next-tools:
     on-failure:
     - dcc_diagnostics__screenshot
     - dcc_diagnostics__audit_log
 
+tools:
+- name: import_audio
+
 - name: list_audio
-  execution: sync
-  affinity: main
   annotations:
     read_only_hint: true
     idempotent_hint: true
-  next-tools:
-    on-failure:
-    - dcc_diagnostics__screenshot
-    - dcc_diagnostics__audit_log
 
 - name: remove_audio
-  execution: sync
-  affinity: main
   annotations:
     destructive_hint: true
     idempotent_hint: true
-  next-tools:
-    on-failure:
-    - dcc_diagnostics__screenshot
-    - dcc_diagnostics__audit_log
 
 - name: set_timeline_audio
-  execution: sync
-  affinity: main
   annotations:
     idempotent_hint: true
-  next-tools:
-    on-failure:
-    - dcc_diagnostics__screenshot
-    - dcc_diagnostics__audit_log

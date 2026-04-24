@@ -1,42 +1,32 @@
+defaults:
+  affinity: main
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log
+
 tools:
 - name: get_render_job_status
-  execution: sync
   affinity: any
   annotations:
     read_only_hint: true
     idempotent_hint: true
   group: rendering
-  next-tools:
-    on-failure:
-    - dcc_diagnostics__screenshot
-    - dcc_diagnostics__audit_log
 
 - name: submit_to_deadline
   execution: async
-  affinity: main
+
   timeout_hint_secs: 900
   group: rendering
-  next-tools:
-    on-failure:
-    - dcc_diagnostics__screenshot
-    - dcc_diagnostics__audit_log
 
 - name: validate_scene_for_farm
   execution: async
-  affinity: main
+
   timeout_hint_secs: 900
   group: rendering
-  next-tools:
-    on-failure:
-    - dcc_diagnostics__screenshot
-    - dcc_diagnostics__audit_log
 
 - name: write_render_job
   execution: async
-  affinity: main
+
   timeout_hint_secs: 900
   group: rendering
-  next-tools:
-    on-failure:
-    - dcc_diagnostics__screenshot
-    - dcc_diagnostics__audit_log
