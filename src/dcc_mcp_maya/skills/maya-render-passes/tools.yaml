@@ -1,43 +1,26 @@
-tools:
-- name: create_render_pass
-  execution: sync
+defaults:
   affinity: main
-  group: rendering
   next-tools:
     on-failure:
     - dcc_diagnostics__screenshot
     - dcc_diagnostics__audit_log
 
+tools:
+- name: create_render_pass
+  group: rendering
+
 - name: enable_render_pass
-  execution: sync
-  affinity: main
   annotations:
     idempotent_hint: true
   group: rendering
-  next-tools:
-    on-failure:
-    - dcc_diagnostics__screenshot
-    - dcc_diagnostics__audit_log
 
 - name: list_render_passes
-  execution: sync
-  affinity: main
   annotations:
     read_only_hint: true
     idempotent_hint: true
   group: rendering
-  next-tools:
-    on-failure:
-    - dcc_diagnostics__screenshot
-    - dcc_diagnostics__audit_log
 
 - name: set_render_pass_output
-  execution: sync
-  affinity: main
   annotations:
     idempotent_hint: true
   group: rendering
-  next-tools:
-    on-failure:
-    - dcc_diagnostics__screenshot
-    - dcc_diagnostics__audit_log

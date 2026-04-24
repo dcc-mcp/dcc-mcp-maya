@@ -1,51 +1,28 @@
-tools:
-- name: add_attribute
-  execution: sync
+defaults:
   affinity: main
   next-tools:
     on-failure:
     - dcc_diagnostics__screenshot
     - dcc_diagnostics__audit_log
 
+tools:
+- name: add_attribute
+
 - name: delete_attribute
-  execution: sync
-  affinity: main
   annotations:
     destructive_hint: true
     idempotent_hint: true
-  next-tools:
-    on-failure:
-    - dcc_diagnostics__screenshot
-    - dcc_diagnostics__audit_log
 
 - name: get_attribute
-  execution: sync
-  affinity: main
   annotations:
     read_only_hint: true
     idempotent_hint: true
-  next-tools:
-    on-failure:
-    - dcc_diagnostics__screenshot
-    - dcc_diagnostics__audit_log
 
 - name: list_attributes
-  execution: sync
-  affinity: main
   annotations:
     read_only_hint: true
     idempotent_hint: true
-  next-tools:
-    on-failure:
-    - dcc_diagnostics__screenshot
-    - dcc_diagnostics__audit_log
 
 - name: set_attribute
-  execution: sync
-  affinity: main
   annotations:
     idempotent_hint: true
-  next-tools:
-    on-failure:
-    - dcc_diagnostics__screenshot
-    - dcc_diagnostics__audit_log

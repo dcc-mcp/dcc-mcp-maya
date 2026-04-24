@@ -1,36 +1,19 @@
+defaults:
+  affinity: main
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log
+
 tools:
 - name: copy_skin_weights
-  execution: sync
-  affinity: main
   group: rigging
-  next-tools:
-    on-failure:
-    - dcc_diagnostics__screenshot
-    - dcc_diagnostics__audit_log
 
 - name: mirror_skin_weights
-  execution: sync
-  affinity: main
   group: rigging
-  next-tools:
-    on-failure:
-    - dcc_diagnostics__screenshot
-    - dcc_diagnostics__audit_log
 
 - name: normalize_skin_weights
-  execution: sync
-  affinity: main
   group: rigging
-  next-tools:
-    on-failure:
-    - dcc_diagnostics__screenshot
-    - dcc_diagnostics__audit_log
 
 - name: prune_skin_weights
-  execution: sync
-  affinity: main
   group: rigging
-  next-tools:
-    on-failure:
-    - dcc_diagnostics__screenshot
-    - dcc_diagnostics__audit_log

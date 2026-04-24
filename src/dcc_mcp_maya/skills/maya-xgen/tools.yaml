@@ -1,58 +1,39 @@
-tools:
-- name: create_description
-  execution: async
+defaults:
   affinity: main
-  timeout_hint_secs: 300
-  group: simulation-fx
   next-tools:
     on-failure:
     - dcc_diagnostics__screenshot
     - dcc_diagnostics__audit_log
 
+tools:
+- name: create_description
+  execution: async
+
+  timeout_hint_secs: 300
+  group: simulation-fx
+
 - name: delete_description
   execution: async
-  affinity: main
+
   timeout_hint_secs: 300
   annotations:
     destructive_hint: true
     idempotent_hint: true
   group: simulation-fx
-  next-tools:
-    on-failure:
-    - dcc_diagnostics__screenshot
-    - dcc_diagnostics__audit_log
 
 - name: get_xgen_attribute
-  execution: sync
-  affinity: main
   annotations:
     read_only_hint: true
     idempotent_hint: true
   group: simulation-fx
-  next-tools:
-    on-failure:
-    - dcc_diagnostics__screenshot
-    - dcc_diagnostics__audit_log
 
 - name: list_descriptions
-  execution: sync
-  affinity: main
   annotations:
     read_only_hint: true
     idempotent_hint: true
   group: simulation-fx
-  next-tools:
-    on-failure:
-    - dcc_diagnostics__screenshot
-    - dcc_diagnostics__audit_log
 
 - name: set_xgen_attribute
-  execution: sync
-  affinity: main
   annotations:
     idempotent_hint: true
   group: simulation-fx
-  next-tools:
-    on-failure:
-    - dcc_diagnostics__screenshot
-    - dcc_diagnostics__audit_log
