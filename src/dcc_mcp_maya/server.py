@@ -79,6 +79,10 @@ _MINIMAL_DEACTIVATE_GROUPS: dict[str, list[str]] = {
 #   DCC_MCP_MAYA_JOB_RECOVERY=requeue
 #       → re-queue idempotent interrupted jobs on startup (issue #89;
 #         default behaviour is "drop" as documented in the issue).
+#   DCC_MCP_MAYA_WINDOW_TITLE=...
+#       → passed as ``dcc_window_title`` to :class:`MayaMcpServer` (diagnostics
+#         / screenshot routing; dcc-mcp-core 0.14+).  The Maya plugin sets this
+#         when the env var is non-empty.
 _ENV_MINIMAL = "DCC_MCP_MAYA_MINIMAL"
 _ENV_DEFAULT_TOOLS = "DCC_MCP_MAYA_DEFAULT_TOOLS"
 _ENV_METRICS = "DCC_MCP_MAYA_METRICS"
@@ -150,9 +154,9 @@ class MayaMcpServer(DccServerBase):
     - Maya version detection via ``cmds.about(version=True)``
     - Minimal-mode startup: only core skills are loaded, the rest
       remain as ``__skill__`` stubs for progressive activation
-    - Optional ``register_builtin_actions()`` override that also installs
-      IPC diagnostic handlers via
-      ``dcc_mcp_core.dcc_server.register_diagnostic_handlers``
+    - ``register_builtin_actions()`` (minimal / full skill loading); instance-bound
+      diagnostic IPC + MCP tools are registered in
+      :meth:`~dcc_mcp_core.server_base.DccServerBase.start` (0.14+)
     - Maya-specific TransportManager wrappers
       (``bind_and_register``, ``find_best_service``, ``rank_services``)
     - Prometheus ``/metrics`` endpoint support (issue #87)
@@ -207,6 +211,14 @@ class MayaMcpServer(DccServerBase):
             storage on startup.  ``"drop"`` (default) discards them;
             ``"requeue"`` re-submits idempotent jobs automatically.
             ``None`` reads ``DCC_MCP_MAYA_JOB_RECOVERY`` env var.
+        dcc_pid: Owning Maya process id for ``diagnostics__*`` tools and IPC
+            screenshot routing.  Defaults to :func:`os.getpid` (same as
+            :class:`~dcc_mcp_core.server_base.DccServerBase`).
+        dcc_window_title: Substring to locate the Maya main window (e.g. for
+            captures) when no handle is set.  Optional; PID-based lookup
+            usually suffices.
+        dcc_window_handle: Native window handle (HWND, etc.) when pre-resolved;
+            takes precedence over title/PID resolution.
     """
 
     def __init__(
@@ -222,6 +234,9 @@ class MayaMcpServer(DccServerBase):
         metrics_enabled: Optional[bool] = None,
         job_storage_path: Optional[str] = None,
         job_recovery: Optional[str] = None,
+        dcc_pid: Optional[int] = None,
+        dcc_window_title: Optional[str] = None,
+        dcc_window_handle: Optional[int] = None,
     ) -> None:
         super().__init__(
             dcc_name="maya",
@@ -234,6 +249,9 @@ class MayaMcpServer(DccServerBase):
             dcc_version=dcc_version,
             scene=scene,
             enable_gateway_failover=enable_gateway_failover,
+            dcc_pid=dcc_pid,
+            dcc_window_title=dcc_window_title,
+            dcc_window_handle=dcc_window_handle,
         )
 
         # ── Prometheus metrics (issue #87) ────────────────────────────────────
@@ -390,13 +408,8 @@ class MayaMcpServer(DccServerBase):
             # Default minimal mode
             self._load_minimal_skills(_MINIMAL_SKILLS)
 
-        # Phase 3: register diagnostic IPC handlers
-        try:
-            from dcc_mcp_core.dcc_server import register_diagnostic_handlers  # noqa: PLC0415
-
-            register_diagnostic_handlers(self._server, dcc_name="maya")
-        except Exception as exc:
-            logger.debug("Failed to register diagnostic handlers: %s", exc)
+        # Diagnostic IPC + ``diagnostics__*`` MCP tools are registered in
+        # :meth:`DccServerBase.start` with full instance context (pid / window).
 
         return self
 
@@ -556,6 +569,9 @@ def start_server(
     metrics_enabled: Optional[bool] = None,
     job_storage_path: Optional[str] = None,
     job_recovery: Optional[str] = None,
+    dcc_pid: Optional[int] = None,
+    dcc_window_title: Optional[str] = None,
+    dcc_window_handle: Optional[int] = None,
     **kwargs: Any,
 ) -> Any:
     """Start (or return the already-running) Maya MCP server.
@@ -584,6 +600,9 @@ def start_server(
         job_recovery: Recovery policy for interrupted jobs: ``"drop"``
             (default) or ``"requeue"``.  Also honours
             ``DCC_MCP_MAYA_JOB_RECOVERY``.
+        dcc_pid: Maya process id for diagnostics (see :class:`MayaMcpServer`).
+        dcc_window_title: Window title substring for diagnostic capture.
+        dcc_window_handle: Pre-resolved native window handle.
         **kwargs: Forwarded to :class:`MayaMcpServer`.
 
     Returns:
@@ -597,6 +616,11 @@ def start_server(
     """
     global _server_instance
 
+    if dcc_window_title is None:
+        w = os.environ.get("DCC_MCP_MAYA_WINDOW_TITLE", "").strip()
+        if w:
+            dcc_window_title = w
+
     if register_builtins:
         # Create server instance and call register_builtin_actions with minimal
         with _server_lock:
@@ -608,6 +632,9 @@ def start_server(
                 metrics_enabled=metrics_enabled,
                 job_storage_path=job_storage_path,
                 job_recovery=job_recovery,
+                dcc_pid=dcc_pid,
+                dcc_window_title=dcc_window_title,
+                dcc_window_handle=dcc_window_handle,
                 **kwargs,
             )
             _instance_holder[0] = server
@@ -646,6 +673,12 @@ def start_server(
             include_bundled=include_bundled,
             enable_hot_reload=enable_hot_reload,
             hot_reload_env_var="DCC_MCP_MAYA_HOT_RELOAD",
+            metrics_enabled=metrics_enabled,
+            job_storage_path=job_storage_path,
+            job_recovery=job_recovery,
+            dcc_pid=dcc_pid,
+            dcc_window_title=dcc_window_title,
+            dcc_window_handle=dcc_window_handle,
             **kwargs,
         )
         _server_instance = _instance_holder[0]
