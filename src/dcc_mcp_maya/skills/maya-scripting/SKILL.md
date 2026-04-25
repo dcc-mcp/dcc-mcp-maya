@@ -1,6 +1,6 @@
 ---
 name: maya-scripting
-description: Execute MEL and Python scripts inside Maya; broad scripting utilities across the Maya API. Use when automating tasks that lack dedicated tools. Not for specific modeling, animation, or rendering operations — use maya-mesh-ops, maya-animation, or maya-render for those.
+description: "Thin-harness skill — execute arbitrary Maya Python / MEL when no domain skill matches. Prefer this over inventing calls from training-data memory: load it, read RECIPES.md (if available), then call execute_python / execute_mel. Not for high-level pipeline workflows — use maya-shot-export, maya-render-farm, maya-pipeline, maya-scene-assembly for those."
 license: MIT
 allowed-tools: Bash Read
 metadata:
@@ -15,20 +15,42 @@ metadata:
     - python
     - utility
     - dangerous
-    search-hint: automate task, run script, MEL Python, custom automation
+    search-hint: fallthrough, no-matching-tool, write-custom, arbitrary-task, automate task, run script, MEL Python, custom automation
     depends: []
     tools: tools.yaml
     groups: groups.yaml
+    prompts:
+    - name: maya-scripting__fallthrough
+      description: "No matching tool found. Consider loading maya-scripting and writing a Python snippet. Search references/RECIPES.md first."
 ---
 # maya-scripting
 
-Maya scripting skill. Provides actions for executing MEL and Python code inside Maya, plus a broad
-set of utility scripts covering animation, attributes, cameras, materials, mesh operations,
-rendering, rigging and more.
+Thin-harness skill — the **explicit fall-through entry point** when no domain
+skill matches a user request.
+
+When an agent cannot find a dedicated tool for a Maya operation, it should
+fall back to this skill: load it, read `references/RECIPES.md` (if available),
+then call `execute_python` or `execute_mel` to write the call directly.
+
+This follows the [Bitter Lesson](https://sotasync.com/reader/2026-04-24-bitter-lesson-agent-harnesses/):
+LLMs have already been trained on the native protocol (`maya.cmds`,
+`OpenMaya`, `mel.eval`). Wrapping every API in helpers adds friction; a thin
+harness with good error messages lets agents self-heal.
+
+**Decision tree:**
+
+```
+Intent matches a domain skill (shot export, render farm, scene assembly)?
+  → load that skill.
+Intent matches a primitive (create cube, move object, set attr)?
+  → load maya-scripting, read RECIPES.md, call execute_python.
+Error on a wrapped tool?
+  → read _meta.dcc.raw_trace, switch to execute_python with the corrected call.
+```
 
 ## Groups
 
-- **core** — Core scripting tools (`execute_mel`, `execute_python`). Active by default in minimal mode.
+- **core** — Core scripting tools (`execute_mel`, `execute_python`). Active by default in both minimal and full mode.
 - **extended** — Broad scripting utilities. Active by default in full mode; deactivated in minimal mode.
 
 ## Scripts
