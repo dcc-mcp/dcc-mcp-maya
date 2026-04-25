@@ -258,36 +258,51 @@ class TestMcpHttpConnectivity:
                 )
 
     def test_load_skill_exposes_full_tools(self):
-        """Calling load_skill replaces a stub with fully-schemad tools."""
-        # First, list tools to find a skill stub
+        """Calling load_skill + activate_tool_group replaces stubs with fully-schemad tools.
+
+        In progressive (minimal) mode, loading a skill does NOT automatically
+        expose tools from groups marked ``default_active: false``.  The full
+        workflow is: load the skill, then activate the desired group.
+        """
+        # Grab baseline tool names
         code, body = _mcp_post(
             self._mcp_url,
             {"jsonrpc": "2.0", "id": 10, "method": "tools/list"},
         )
         assert code == 200
         before_names = {t["name"] for t in body["result"]["tools"]}
-        stubs_before = {n for n in before_names if n.startswith("__skill__")}
-        assert len(stubs_before) >= 1, "Need at least one stub to test progressive loading"
 
-        # Pick the maya-scene stub (guaranteed in E2E with real skills)
-        scene_stub = "__skill__maya-scene"
-        if scene_stub not in stubs_before:
-            # Pick first available stub
-            scene_stub = next(iter(stubs_before))
+        # maya-scene is already loaded (core group active), but its
+        # scene-management group is inactive and appears as __group__scene-management.
+        # Activating it should surface the group's real tools.
+        group_stub = "__group__scene-management"
+        if group_stub not in before_names:
+            # If scene-management is somehow already active, pick any __group__ stub
+            group_stubs = {n for n in before_names if n.startswith("__group__")}
+            assert len(group_stubs) >= 1, "Need at least one __group__ stub to test progressive loading"
+            group_stub = next(iter(group_stubs))
 
-        # Load the skill via tools/call
+        group_name = group_stub.replace("__group__", "")
+
+        # Activate the tool group via tools/call
         code, body = _mcp_post(
             self._mcp_url,
             {
                 "jsonrpc": "2.0",
                 "id": 11,
                 "method": "tools/call",
-                "params": {"name": "load_skill", "arguments": {"skill_name": scene_stub.replace("__skill__", "")}},
+                "params": {
+                    "name": "activate_tool_group",
+                    "arguments": {
+                        "skill_name": "maya-scene",
+                        "group_name": group_name,
+                    },
+                },
             },
         )
         assert code == 200
 
-        # Now tools/list should show the skill's real tools instead of the stub
+        # Now tools/list should show the group's real tools instead of the stub
         code, body = _mcp_post(
             self._mcp_url,
             {"jsonrpc": "2.0", "id": 12, "method": "tools/list"},
@@ -295,18 +310,13 @@ class TestMcpHttpConnectivity:
         assert code == 200
         after_names = {t["name"] for t in body["result"]["tools"]}
 
-        # The stub should be gone, replaced by real tools
-        assert scene_stub not in after_names, f"Stub {scene_stub} should be removed after load_skill"
+        # The group stub should be gone
+        assert group_stub not in after_names, f"Stub {group_stub} should be removed after activate_tool_group"
 
-        # The loaded skill's real tools should now be present.
-        # Core 0.14.1+ uses bare tool names: when a tool name is unique
-        # within the instance it is published as just the script stem
-        # (e.g. "get_session_info"); collisions fall back to the
-        # "<skill>.<action>" prefixed form.
-        skill_name = scene_stub.replace("__skill__", "")  # e.g. "maya-scene"
-        new_tools = after_names - before_names - {n for n in after_names if n.startswith("__skill__")}
+        # The activated group's real tools should now be present.
+        new_tools = after_names - before_names - {n for n in after_names if n.startswith("__")}
         assert len(new_tools) >= 1, (
-            f"Expected at least one new tool after loading {skill_name!r}, "
+            f"Expected at least one new tool after activating group {group_name!r}, "
             f"but no bare or prefixed tools appeared. "
             f"before={sorted(before_names)[:5]} after={sorted(after_names)[:5]}"
         )
