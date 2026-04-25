@@ -421,8 +421,8 @@ def eval_expr(expression: str, timeout_secs: float = 2.0) -> dict:
         )
 
     try:
-        import maya.cmds as cmds  # noqa: PLC0415
         import maya.api.OpenMaya as om  # noqa: PLC0415
+        import maya.cmds as cmds  # noqa: PLC0415
     except ImportError:
         cmds = None  # type: ignore[assignment]
         om = None    # type: ignore[assignment]

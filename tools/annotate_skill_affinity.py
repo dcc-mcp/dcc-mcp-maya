@@ -192,6 +192,12 @@ TOOL_OVERRIDES: Dict[Tuple[str, str], ExecAffinity] = {
     ("maya-texture-bake", "set_color_management"): ("sync", "main", None),
     # maya-shot-export meta
     ("maya-shot-export", "get_shot_info"): ("sync", "main", None),
+    # maya-scripting introspect tools: list/signature/search are worker-safe (no DAG access)
+    ("maya-scripting", "introspect_list_module"): ("sync", "any", None),
+    ("maya-scripting", "introspect_signature"): ("sync", "any", None),
+    ("maya-scripting", "introspect_search"): ("sync", "any", None),
+    # introspect_eval touches DAG via expression, must stay main-thread
+    ("maya-scripting", "introspect_eval"): ("sync", "main", None),
 }
 
 
