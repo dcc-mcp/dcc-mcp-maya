@@ -1,0 +1,373 @@
+{
+  "version": "2024",
+  "generated_by": "tools/generate_openmaya_index.py",
+  "generated_at": "2024-07-01T00:00:00Z",
+  "_note": "Placeholder — regenerate with: just regen-openmaya-index --maya-version 2024",
+  "changelog": {},
+  "modules": {
+    "maya.api.OpenMaya": {
+      "MSpace": {
+        "kind": "class",
+        "bases": [],
+        "doc": "Defines the coordinate spaces used by many OpenMaya methods.",
+        "methods": {},
+        "constants": {
+          "kInvalid":    { "value": 0, "doc": "Invalid space." },
+          "kTransform":  { "value": 1, "doc": "Transform space (parent of object)." },
+          "kPreTransform": { "value": 2, "doc": "Pre-transform (same as object but ignores pivots)." },
+          "kObject":     { "value": 3, "doc": "Object (local) space." },
+          "kWorld":      { "value": 4, "doc": "World space. Most common default." },
+          "kLast":       { "value": 5, "doc": "Sentinel." }
+        }
+      },
+      "MSelectionList": {
+        "kind": "class",
+        "bases": [],
+        "doc": "Ordered list of selected objects and components.",
+        "methods": {
+          "add": {
+            "signature": "(selection: Union[str, MPlug, MDagPath, MObject, tuple], mergeWithExisting: bool = True) -> None",
+            "doc": "Adds the given item to the selection list. Pass a string to resolve by name.",
+            "version_added": null,
+            "version_removed": null
+          },
+          "getDagPath": {
+            "signature": "(index: int) -> MDagPath",
+            "doc": "Returns the MDagPath at the given index. Raises IndexError if out of range.",
+            "version_added": null,
+            "version_removed": null
+          },
+          "getDependNode": {
+            "signature": "(index: int) -> MObject",
+            "doc": "Returns the MObject (dependency node) at the given index.",
+            "version_added": null,
+            "version_removed": null
+          },
+          "getPlug": {
+            "signature": "(index: int) -> MPlug",
+            "doc": "Returns the MPlug at the given index (only valid if the item is a plug).",
+            "version_added": null,
+            "version_removed": null
+          },
+          "length": {
+            "signature": "() -> int",
+            "doc": "Returns the number of items in the list.",
+            "version_added": null,
+            "version_removed": null
+          }
+        }
+      },
+      "MDagPath": {
+        "kind": "class",
+        "bases": [],
+        "doc": "Path from the world root to a DAG node, uniquely identifying the node in the DAG.",
+        "methods": {
+          "fullPathName": {
+            "signature": "() -> str",
+            "doc": "Returns the full path name of the node, e.g. '|group1|myCube'.",
+            "version_added": null,
+            "version_removed": null
+          },
+          "partialPathName": {
+            "signature": "() -> str",
+            "doc": "Returns the shortest unique path name.",
+            "version_added": null,
+            "version_removed": null
+          },
+          "node": {
+            "signature": "() -> MObject",
+            "doc": "Returns the MObject at the end of the path.",
+            "version_added": null,
+            "version_removed": null
+          },
+          "push": {
+            "signature": "(child: MObject) -> None",
+            "doc": "Extends the path by appending the given child.",
+            "version_added": null,
+            "version_removed": null
+          },
+          "pop": {
+            "signature": "(num: int = 1) -> None",
+            "doc": "Removes the last num elements from the path.",
+            "version_added": null,
+            "version_removed": null
+          }
+        }
+      },
+      "MFnDependencyNode": {
+        "kind": "class",
+        "bases": [],
+        "doc": "Function set for operating on dependency-graph nodes.",
+        "methods": {
+          "name": {
+            "signature": "() -> str",
+            "doc": "Returns the name of the node.",
+            "version_added": null,
+            "version_removed": null
+          },
+          "typeName": {
+            "signature": "() -> str",
+            "doc": "Returns the type name string of the node.",
+            "version_added": null,
+            "version_removed": null
+          },
+          "attribute": {
+            "signature": "(name: str) -> MObject",
+            "doc": "Returns the MObject for a named attribute on this node.",
+            "version_added": null,
+            "version_removed": null
+          },
+          "findPlug": {
+            "signature": "(attrName: str, wantNetworkedPlug: bool) -> MPlug",
+            "doc": "Returns the plug for the named attribute. wantNetworkedPlug=True for DG evaluation.",
+            "version_added": null,
+            "version_removed": null
+          },
+          "hasAttribute": {
+            "signature": "(name: str) -> bool",
+            "doc": "Returns True if the node has an attribute with the given name.",
+            "version_added": null,
+            "version_removed": null
+          }
+        }
+      },
+      "MFnDagNode": {
+        "kind": "class",
+        "bases": ["MFnDependencyNode"],
+        "doc": "Function set for DAG nodes — nodes that exist in the scene hierarchy.",
+        "methods": {
+          "dagPath": {
+            "signature": "() -> MDagPath",
+            "doc": "Returns the DAG path to the node associated with this function set.",
+            "version_added": null,
+            "version_removed": null
+          },
+          "parent": {
+            "signature": "(index: int) -> MObject",
+            "doc": "Returns the MObject for the parent at the given index.",
+            "version_added": null,
+            "version_removed": null
+          },
+          "parentCount": {
+            "signature": "() -> int",
+            "doc": "Returns the number of parents this node has.",
+            "version_added": null,
+            "version_removed": null
+          },
+          "child": {
+            "signature": "(index: int) -> MObject",
+            "doc": "Returns the MObject for the child at the given index.",
+            "version_added": null,
+            "version_removed": null
+          },
+          "childCount": {
+            "signature": "() -> int",
+            "doc": "Returns the number of children this node has.",
+            "version_added": null,
+            "version_removed": null
+          }
+        }
+      },
+      "MFnTransform": {
+        "kind": "class",
+        "bases": ["MFnDagNode"],
+        "doc": "Function set for transformation nodes.",
+        "methods": {
+          "translation": {
+            "signature": "(space: int) -> MVector",
+            "doc": "Returns the translation component of the transformation matrix in the given space. Use MSpace.kWorld or MSpace.kObject.",
+            "version_added": null,
+            "version_removed": null
+          },
+          "setTranslation": {
+            "signature": "(vector: MVector, space: int) -> None",
+            "doc": "Sets the translation component in the given space.",
+            "version_added": null,
+            "version_removed": null
+          },
+          "rotation": {
+            "signature": "(space: int = 1, asQuaternion: bool = False) -> Union[MEulerRotation, MQuaternion]",
+            "doc": "Returns the rotation component. asQuaternion=False returns MEulerRotation.",
+            "version_added": null,
+            "version_removed": null
+          },
+          "transformation": {
+            "signature": "() -> MTransformationMatrix",
+            "doc": "Returns the full transformation matrix of the node.",
+            "version_added": null,
+            "version_removed": null
+          }
+        }
+      },
+      "MFnMesh": {
+        "kind": "class",
+        "bases": ["MFnDagNode"],
+        "doc": "Function set for mesh (polygon) geometry.",
+        "methods": {
+          "numVertices": {
+            "signature": "() -> int",
+            "doc": "Returns the number of vertices in the mesh.",
+            "version_added": null,
+            "version_removed": null
+          },
+          "numPolygons": {
+            "signature": "() -> int",
+            "doc": "Returns the number of polygons (faces) in the mesh.",
+            "version_added": null,
+            "version_removed": null
+          },
+          "getPoints": {
+            "signature": "(space: int = 4) -> MPointArray",
+            "doc": "Returns the positions of all vertices. Default space is kWorld (4). Pass kObject (3) for local positions.",
+            "version_added": null,
+            "version_removed": null
+          },
+          "setPoints": {
+            "signature": "(points: MPointArray, space: int = 4) -> None",
+            "doc": "Sets all vertex positions.",
+            "version_added": null,
+            "version_removed": null
+          },
+          "getPolygonVertices": {
+            "signature": "(faceIndex: int) -> MIntArray",
+            "doc": "Returns the vertex indices for the given polygon.",
+            "version_added": null,
+            "version_removed": null
+          },
+          "getVertexNormals": {
+            "signature": "(angleWeighted: bool, space: int = 4) -> MVectorArray",
+            "doc": "Returns per-vertex normals. angleWeighted=True averages by face angle.",
+            "version_added": null,
+            "version_removed": null
+          }
+        }
+      },
+      "MFnNurbsCurve": {
+        "kind": "class",
+        "bases": ["MFnDagNode"],
+        "doc": "Function set for NURBS curves.",
+        "methods": {
+          "numCVs": {
+            "signature": "() -> int",
+            "doc": "Returns the number of control vertices.",
+            "version_added": null,
+            "version_removed": null
+          },
+          "getPointAtParam": {
+            "signature": "(param: float, space: int = 4) -> MPoint",
+            "doc": "Returns the curve point at the given parameter value.",
+            "version_added": null,
+            "version_removed": null
+          },
+          "length": {
+            "signature": "(tolerance: float = 0.001) -> float",
+            "doc": "Returns the arc length of the curve.",
+            "version_added": null,
+            "version_removed": null
+          }
+        }
+      },
+      "MPlug": {
+        "kind": "class",
+        "bases": [],
+        "doc": "Provides access to the value of an attribute on a specific dependency node.",
+        "methods": {
+          "asFloat": {
+            "signature": "() -> float",
+            "doc": "Returns the plug value as a float.",
+            "version_added": null,
+            "version_removed": null
+          },
+          "asInt": {
+            "signature": "() -> int",
+            "doc": "Returns the plug value as an int.",
+            "version_added": null,
+            "version_removed": null
+          },
+          "asBool": {
+            "signature": "() -> bool",
+            "doc": "Returns the plug value as a bool.",
+            "version_added": null,
+            "version_removed": null
+          },
+          "asString": {
+            "signature": "() -> str",
+            "doc": "Returns the plug value as a string.",
+            "version_added": null,
+            "version_removed": null
+          },
+          "setFloat": {
+            "signature": "(value: float) -> None",
+            "doc": "Sets the plug value to a float.",
+            "version_added": null,
+            "version_removed": null
+          },
+          "isConnected": {
+            "signature": "() -> bool",
+            "doc": "Returns True if this plug has an incoming connection.",
+            "version_added": null,
+            "version_removed": null
+          },
+          "name": {
+            "signature": "() -> str",
+            "doc": "Returns the full attribute path, e.g. 'nodeName.attrName'.",
+            "version_added": null,
+            "version_removed": null
+          }
+        }
+      }
+    },
+    "maya.api.OpenMayaAnim": {
+      "MFnAnimCurve": {
+        "kind": "class",
+        "bases": ["MFnDependencyNode"],
+        "doc": "Function set for animation curve nodes.",
+        "methods": {
+          "numKeys": {
+            "signature": "() -> int",
+            "doc": "Returns the number of keyframes on the curve.",
+            "version_added": null,
+            "version_removed": null
+          },
+          "input": {
+            "signature": "(index: int) -> MTime",
+            "doc": "Returns the time (input) of the keyframe at the given index.",
+            "version_added": null,
+            "version_removed": null
+          },
+          "value": {
+            "signature": "(index: int) -> float",
+            "doc": "Returns the value (output) of the keyframe at the given index.",
+            "version_added": null,
+            "version_removed": null
+          },
+          "evaluate": {
+            "signature": "(time: MTime) -> float",
+            "doc": "Evaluates the curve at the given time and returns the interpolated value.",
+            "version_added": null,
+            "version_removed": null
+          },
+          "addKey": {
+            "signature": "(time: MTime, value: float, tangentInType: int = 3, tangentOutType: int = 3, change: MDGModifier = None) -> int",
+            "doc": "Adds a key at the given time with the given value. Returns the new key index.",
+            "version_added": null,
+            "version_removed": null
+          }
+        },
+        "constants": {
+          "kTangentGlobal":  { "value": 0, "doc": "Use global tangent setting." },
+          "kTangentFixed":   { "value": 1, "doc": "Fixed tangent." },
+          "kTangentLinear":  { "value": 2, "doc": "Linear tangent." },
+          "kTangentFlat":    { "value": 3, "doc": "Flat (zero slope) tangent." },
+          "kTangentSmooth":  { "value": 4, "doc": "Smooth (auto) tangent." },
+          "kTangentStep":    { "value": 5, "doc": "Step tangent." },
+          "kTangentSlow":    { "value": 11, "doc": "Slow ease tangent." },
+          "kTangentFast":    { "value": 12, "doc": "Fast ease tangent." },
+          "kTangentClamped": { "value": 13, "doc": "Clamped tangent." },
+          "kTangentPlateau": { "value": 16, "doc": "Plateau tangent." },
+          "kTangentStepNext":{ "value": 17, "doc": "Step-next tangent." }
+        }
+      }
+    }
+  }
+}
