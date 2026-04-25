@@ -229,6 +229,25 @@ The sections below are representative categories, not an exhaustive inventory.
 | `import_file` | Import FBX/OBJ/Alembic/Maya file |
 | `export_selection` | Export selection to FBX/OBJ/Alembic |
 
+### Skill Routing Decision Tree
+
+When an agent receives a request that requires a Maya operation, follow this
+routing logic:
+
+```
+Intent matches a domain skill (shot export, render farm, scene assembly)?
+  → load that skill.
+Intent matches a primitive (create cube, move object, set attr)?
+  → load maya-scripting, read RECIPES.md (if available), call execute_python.
+Error on a wrapped tool?
+  → read _meta.dcc.raw_trace, switch to execute_python with the corrected call.
+```
+
+`maya-scripting` is the **explicit fall-through entry point** — when no
+dedicated domain skill covers the request, the agent should use
+`execute_python` / `execute_mel` to write the call directly rather than
+guess or invent API usage from memory.
+
 ### Scripting
 
 | Tool | Description |
