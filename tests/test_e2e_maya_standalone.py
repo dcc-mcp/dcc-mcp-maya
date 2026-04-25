@@ -293,10 +293,7 @@ class TestMcpHttpConnectivity:
                 "method": "tools/call",
                 "params": {
                     "name": "activate_tool_group",
-                    "arguments": {
-                        "skill_name": "maya-scene",
-                        "group_name": group_name,
-                    },
+                    "arguments": {"group": group_name},
                 },
             },
         )
