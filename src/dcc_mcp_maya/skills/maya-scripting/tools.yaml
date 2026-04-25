@@ -1,4 +1,31 @@
 tools:
+- name: introspect_list_module
+  execution: sync
+  affinity: any
+  annotations:
+    read_only_hint: true
+    idempotent_hint: true
+  group: introspect
+- name: introspect_signature
+  execution: sync
+  affinity: any
+  annotations:
+    read_only_hint: true
+    idempotent_hint: true
+  group: introspect
+- name: introspect_search
+  execution: sync
+  affinity: any
+  annotations:
+    read_only_hint: true
+    idempotent_hint: true
+  group: introspect
+- name: introspect_eval
+  execution: sync
+  affinity: main
+  annotations:
+    read_only_hint: true
+  group: introspect
 - name: animation
   execution: sync
   affinity: main
