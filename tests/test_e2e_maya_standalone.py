@@ -300,9 +300,7 @@ class TestMcpHttpConnectivity:
         assert code == 200
         after_names = {t["name"] for t in body["result"]["tools"]}
 
-        assert skill_stub not in after_names, (
-            f"Stub {skill_stub} should be removed after load_skill"
-        )
+        assert skill_stub not in after_names, f"Stub {skill_stub} should be removed after load_skill"
 
     def test_activate_tool_group_replaces_group_stub(self):
         """Calling activate_tool_group removes a __group__ stub and exposes its tools.
@@ -349,9 +347,7 @@ class TestMcpHttpConnectivity:
         assert code == 200
         after_names = {t["name"] for t in body["result"]["tools"]}
 
-        assert group_stub not in after_names, (
-            f"Stub {group_stub} should be removed after activate_tool_group"
-        )
+        assert group_stub not in after_names, f"Stub {group_stub} should be removed after activate_tool_group"
 
         # The activated group's real tools should now be present.
         new_tools = after_names - before_names - {n for n in after_names if n.startswith("__")}
