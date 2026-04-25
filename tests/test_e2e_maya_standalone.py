@@ -257,12 +257,13 @@ class TestMcpHttpConnectivity:
                     f"Stub {t['name']} should not have full input_schema"
                 )
 
-    def test_load_skill_exposes_full_tools(self):
-        """Calling load_skill + activate_tool_group replaces stubs with fully-schemad tools.
+    def test_load_skill_replaces_skill_stub(self):
+        """Calling load_skill removes a __skill__ stub and exposes its tools.
 
-        In progressive (minimal) mode, loading a skill does NOT automatically
-        expose tools from groups marked ``default_active: false``.  The full
-        workflow is: load the skill, then activate the desired group.
+        In progressive (minimal) mode, undiscovered skills appear as
+        ``__skill__<name>`` stubs.  Loading a skill replaces the stub with
+        the skill's real tools (from groups that have ``default_active: true``)
+        and any ``__group__`` stubs for inactive groups.
         """
         # Grab baseline tool names
         code, body = _mcp_post(
@@ -272,16 +273,57 @@ class TestMcpHttpConnectivity:
         assert code == 200
         before_names = {t["name"] for t in body["result"]["tools"]}
 
-        # maya-scene is already loaded (core group active), but its
-        # scene-management group is inactive and appears as __group__scene-management.
-        # Activating it should surface the group's real tools.
-        group_stub = "__group__scene-management"
-        if group_stub not in before_names:
-            # If scene-management is somehow already active, pick any __group__ stub
-            group_stubs = {n for n in before_names if n.startswith("__group__")}
-            assert len(group_stubs) >= 1, "Need at least one __group__ stub to test progressive loading"
-            group_stub = next(iter(group_stubs))
+        # Pick any __skill__ stub to load
+        skill_stubs = sorted(n for n in before_names if n.startswith("__skill__"))
+        assert len(skill_stubs) >= 1, "Need at least one __skill__ stub to test load_skill"
 
+        skill_stub = skill_stubs[0]
+        skill_name = skill_stub.replace("__skill__", "")
+
+        # Load the skill via tools/call
+        code, body = _mcp_post(
+            self._mcp_url,
+            {
+                "jsonrpc": "2.0",
+                "id": 11,
+                "method": "tools/call",
+                "params": {"name": "load_skill", "arguments": {"skill_name": skill_name}},
+            },
+        )
+        assert code == 200
+
+        # tools/list should no longer contain the __skill__ stub
+        code, body = _mcp_post(
+            self._mcp_url,
+            {"jsonrpc": "2.0", "id": 12, "method": "tools/list"},
+        )
+        assert code == 200
+        after_names = {t["name"] for t in body["result"]["tools"]}
+
+        assert skill_stub not in after_names, (
+            f"Stub {skill_stub} should be removed after load_skill"
+        )
+
+    def test_activate_tool_group_replaces_group_stub(self):
+        """Calling activate_tool_group removes a __group__ stub and exposes its tools.
+
+        In progressive (minimal) mode, loaded skills may have groups marked
+        ``default_active: false`` that appear as ``__group__<name>`` stubs.
+        Activating such a group replaces the stub with the group's real tools.
+        """
+        # Grab baseline tool names
+        code, body = _mcp_post(
+            self._mcp_url,
+            {"jsonrpc": "2.0", "id": 20, "method": "tools/list"},
+        )
+        assert code == 200
+        before_names = {t["name"] for t in body["result"]["tools"]}
+
+        # Pick any __group__ stub to activate
+        group_stubs = sorted(n for n in before_names if n.startswith("__group__"))
+        assert len(group_stubs) >= 1, "Need at least one __group__ stub to test activate_tool_group"
+
+        group_stub = group_stubs[0]
         group_name = group_stub.replace("__group__", "")
 
         # Activate the tool group via tools/call
@@ -289,7 +331,7 @@ class TestMcpHttpConnectivity:
             self._mcp_url,
             {
                 "jsonrpc": "2.0",
-                "id": 11,
+                "id": 21,
                 "method": "tools/call",
                 "params": {
                     "name": "activate_tool_group",
@@ -299,16 +341,17 @@ class TestMcpHttpConnectivity:
         )
         assert code == 200
 
-        # Now tools/list should show the group's real tools instead of the stub
+        # tools/list should no longer contain the __group__ stub
         code, body = _mcp_post(
             self._mcp_url,
-            {"jsonrpc": "2.0", "id": 12, "method": "tools/list"},
+            {"jsonrpc": "2.0", "id": 22, "method": "tools/list"},
         )
         assert code == 200
         after_names = {t["name"] for t in body["result"]["tools"]}
 
-        # The group stub should be gone
-        assert group_stub not in after_names, f"Stub {group_stub} should be removed after activate_tool_group"
+        assert group_stub not in after_names, (
+            f"Stub {group_stub} should be removed after activate_tool_group"
+        )
 
         # The activated group's real tools should now be present.
         new_tools = after_names - before_names - {n for n in after_names if n.startswith("__")}
