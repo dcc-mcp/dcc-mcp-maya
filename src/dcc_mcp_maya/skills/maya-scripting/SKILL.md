@@ -19,6 +19,8 @@ metadata:
     depends: []
     tools: tools.yaml
     groups: groups.yaml
+    recipes: references/RECIPES.md
+    introspection: references/INTROSPECTION.md
     prompts:
     - name: maya-scripting__fallthrough
       description: "No matching tool found. Consider loading maya-scripting and writing a Python snippet. Search references/RECIPES.md first."
@@ -51,12 +53,17 @@ Error on a wrapped tool?
 ## Groups
 
 - **core** — Core scripting tools (`execute_mel`, `execute_python`). Active by default in both minimal and full mode.
+- **introspect** — Maya API introspection tools (`introspect_list_module`, `introspect_signature`, `introspect_search`, `introspect_eval`). Deactivated in minimal mode; load with `activate_group("introspect")` or `load_skill("maya-scripting")`. Consult `references/INTROSPECTION.md` for usage patterns.
 - **extended** — Broad scripting utilities. Active by default in full mode; deactivated in minimal mode.
 
 ## Scripts
 
 - `execute_mel` — Execute a MEL script inside Maya
 - `execute_python` — Execute Python code inside Maya's interpreter
+- `introspect_list_module` — List public names in maya.cmds, OpenMaya, or any Python module (paginated)
+- `introspect_signature` — Return flag list / method signature for a fully-qualified Maya API name
+- `introspect_search` — Case-insensitive search over module names and cmds flag names
+- `introspect_eval` — Evaluate a single read-only Python expression inside Maya (main-thread)
 - `animation` — Animation curve and keyframe scripting utilities
 - `attributes` — Attribute query and set utilities
 - `cameras` — Camera creation and property utilities
