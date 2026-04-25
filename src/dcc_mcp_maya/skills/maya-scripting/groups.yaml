@@ -1,4 +1,12 @@
 groups:
+- name: introspect
+  description: "Maya API introspection tools — list_module, signature, search, eval. affinity:any except eval which is main-thread. Load before calling dcc_introspect__* tools."
+  default_active: false
+  tools:
+  - introspect_list_module
+  - introspect_signature
+  - introspect_search
+  - introspect_eval
 - name: core
   description: "Core scripting tools \u2014 always active in minimal mode"
   default_active: true
