@@ -18,6 +18,10 @@ metadata:
     tools: tools.yaml
     groups: groups.yaml
 ---
+> **Deprecated (merge bucket):** This skill contains only thin \maya.cmds\ wrappers.
+> Use \xecute_python\ with \maya-scripting/references/RECIPES.md#sets\ instead.
+> Will be removed in the next release.
+
 # maya-sets
 
 Maya sets skill. Provides actions for creating, managing, and listing Maya object sets.

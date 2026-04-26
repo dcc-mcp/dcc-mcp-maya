@@ -18,6 +18,10 @@ metadata:
     tools: tools.yaml
     groups: groups.yaml
 ---
+> **Deprecated (merge bucket):** This skill contains only thin \maya.cmds\ wrappers.
+> Use \xecute_python\ with \maya-scripting/references/RECIPES.md#selection\ instead.
+> Will be removed in the next release.
+
 # maya-selection
 
 Maya selection skill. Provides advanced selection utilities beyond basic object selection:
