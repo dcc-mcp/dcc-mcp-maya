@@ -81,6 +81,11 @@ def _resolve_skills_root() -> Path:
 
 _SKILLS_ROOT = _resolve_skills_root()
 
+# Legacy bundled-skill workflows were removed when the project adopted the
+# thin-harness model (keep only 12 core skills). E2E classes below that rely
+# on deleted skill packages are conditionally skipped.
+_LEGACY_SKILLS_AVAILABLE = (_SKILLS_ROOT / "maya-primitives").is_dir()
+
 
 # Ensure dcc_mcp_maya is importable in packaged module mode
 # (Maya standalone does not process .mod PYTHONPATH directives)
@@ -175,11 +180,10 @@ class TestServerLifecycle:
         # list_skills() returns all discovered skills regardless of status.
         all_skills = {s.name if hasattr(s, "name") else s["name"] for s in server._server.list_skills()}
         # Key skills must be discoverable
-        assert "maya-primitives" in all_skills
         assert "maya-scripting" in all_skills
         assert "maya-scene" in all_skills
-        assert "maya-animation" in all_skills
-        assert len(all_skills) >= 20
+        assert "maya-render" in all_skills
+        assert len(all_skills) >= 12
 
 
 # ---------------------------------------------------------------------------
@@ -472,6 +476,7 @@ class TestSceneActions:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.skipif(not _LEGACY_SKILLS_AVAILABLE, reason="legacy bundled skills removed in thin-harness mode")
 class TestPrimitiveActions:
     """Primitive creation skill scripts produce real Maya nodes."""
 
@@ -544,6 +549,7 @@ class TestScriptingActions:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.skipif(not _LEGACY_SKILLS_AVAILABLE, reason="legacy bundled skills removed in thin-harness mode")
 class TestAnimationActions:
     """Keyframe and timeline skill scripts work in Maya standalone."""
 
@@ -584,6 +590,7 @@ class TestAnimationActions:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.skipif(not _LEGACY_SKILLS_AVAILABLE, reason="legacy bundled skills removed in thin-harness mode")
 class TestMaterialActions:
     """Material creation and assignment skill scripts work in Maya standalone."""
 
@@ -615,6 +622,7 @@ class TestMaterialActions:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.skipif(not _LEGACY_SKILLS_AVAILABLE, reason="legacy bundled skills removed in thin-harness mode")
 class TestRiggingWorkflow:
     """Multi-step rigging workflows: joints, skin, IK, blend shapes."""
 
@@ -690,6 +698,7 @@ class TestRiggingWorkflow:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.skipif(not _LEGACY_SKILLS_AVAILABLE, reason="legacy bundled skills removed in thin-harness mode")
 class TestAnimationWorkflow:
     """Multi-attribute keyframe sequences, timeline, bake, curve queries."""
 
@@ -765,6 +774,7 @@ class TestAnimationWorkflow:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.skipif(not _LEGACY_SKILLS_AVAILABLE, reason="legacy bundled skills removed in thin-harness mode")
 class TestMeshAndMaterialWorkflow:
     """Subdivision, merge, cleanup, UV ops, material assignment chain."""
 
@@ -851,6 +861,7 @@ class TestMeshAndMaterialWorkflow:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.skipif(not _LEGACY_SKILLS_AVAILABLE, reason="legacy bundled skills removed in thin-harness mode")
 class TestNodeGraphWorkflow:
     """Attribute ops, connect/disconnect, expressions, display layers."""
 
