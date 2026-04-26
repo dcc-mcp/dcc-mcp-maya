@@ -1,9 +1,0 @@
-groups:
-- name: animation
-  description: Animation, constraints, and motion capture tools
-  default_active: false
-  tools:
-  - bake_mocap_to_rig
-  - clean_mocap_keys
-  - create_hik_definition
-  - import_mocap

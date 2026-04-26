@@ -1,9 +1,0 @@
-groups:
-- name: simulation-fx
-  description: Dynamics, simulation, particles, and VFX tools
-  default_active: false
-  tools:
-  - create_fluid_container
-  - delete_fluid_container
-  - list_fluid_containers
-  - set_fluid_attribute

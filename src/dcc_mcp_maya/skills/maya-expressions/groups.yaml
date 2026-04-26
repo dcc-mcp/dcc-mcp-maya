@@ -1,9 +1,0 @@
-groups:
-- name: animation
-  description: Animation, constraints, and motion capture tools
-  default_active: false
-  tools:
-  - create_expression
-  - delete_expression
-  - edit_expression
-  - list_expressions

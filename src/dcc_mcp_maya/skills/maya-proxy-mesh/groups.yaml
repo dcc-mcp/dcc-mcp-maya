@@ -1,9 +1,0 @@
-groups:
-- name: modeling
-  description: Geometry creation, editing, and UV tools
-  default_active: false
-  tools:
-  - create_proxy
-  - list_proxies
-  - set_proxy_attribute
-  - swap_proxy

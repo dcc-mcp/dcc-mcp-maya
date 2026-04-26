@@ -1,9 +1,0 @@
-groups:
-- name: simulation-fx
-  description: Dynamics, simulation, particles, and VFX tools
-  default_active: false
-  tools:
-  - attach_stroke_to_surface
-  - create_stroke
-  - delete_stroke
-  - list_strokes

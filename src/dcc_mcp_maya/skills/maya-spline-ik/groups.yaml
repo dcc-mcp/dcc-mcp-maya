@@ -1,9 +1,0 @@
-groups:
-- name: rigging
-  description: Rigging, deformation, and skinning tools
-  default_active: false
-  tools:
-  - add_stretch_to_spline_ik
-  - create_spline_ik
-  - list_spline_ik_handles
-  - set_spline_ik_twist

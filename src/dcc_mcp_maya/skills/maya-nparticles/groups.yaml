@@ -1,9 +1,0 @@
-groups:
-- name: simulation-fx
-  description: Dynamics, simulation, particles, and VFX tools
-  default_active: false
-  tools:
-  - add_field_to_nparticles
-  - create_nparticle_emitter
-  - list_nparticle_systems
-  - set_nparticle_attribute
