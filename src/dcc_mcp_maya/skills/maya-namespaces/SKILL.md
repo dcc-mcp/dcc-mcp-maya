@@ -19,6 +19,10 @@ metadata:
     tools: tools.yaml
     groups: groups.yaml
 ---
+> **Deprecated (merge bucket):** This skill contains only thin \maya.cmds\ wrappers.
+> Use \xecute_python\ with \maya-scripting/references/RECIPES.md#namespaces\ instead.
+> Will be removed in the next release.
+
 # maya-namespaces
 
 Namespace utilities for Maya pipeline workflows. Manage asset namespaces for clean

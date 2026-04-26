@@ -4,7 +4,7 @@ Starts a real MayaMcpServer (no Maya required), speaks MCP JSON-RPC over
 HTTP and verifies:
 
     1. Agent → MCP gateway connectivity (initialize handshake).
-    2. Skill discovery via the gateway (list_skills / find_skills tools).
+    2. Skill discovery via the gateway (list_skills / search_skills tools).
     3. On-demand (progressive / lazy) tool loading — skills appear as
        ``__skill__<name>`` stubs and only expand to real tools after
        ``load_skill`` is called.
@@ -93,7 +93,7 @@ def main() -> int:
         _section("3. Agent discovers skills via gateway")
         tools = _tools_list(url_a)
         names = {t["name"] for t in tools}
-        core = {"find_skills", "list_skills", "get_skill_info", "load_skill", "unload_skill"}
+        core = {"search_skills", "list_skills", "get_skill_info", "load_skill", "unload_skill"}
         missing = core - names
         assert not missing, f"missing core tools: {missing}"
         print(f"  core discovery tools: {sorted(core)}")
@@ -155,7 +155,7 @@ def main() -> int:
     try:
         tools_b = _tools_list(url_b)
         names_b = {t["name"] for t in tools_b}
-        assert "find_skills" in names_b
+        assert "search_skills" in names_b
         print(f"  gateway #2 exposes {len(names_b)} tools (incl. stubs)")
         assert url_b != url_a, "two gateways should listen on different ports"
         print(f"  version-switch ok: A={url_a} (2024)  B={url_b} (2025)")

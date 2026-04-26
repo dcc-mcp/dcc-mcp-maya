@@ -18,6 +18,10 @@ metadata:
     tools: tools.yaml
     groups: groups.yaml
 ---
+> **Deprecated (merge bucket):** This skill contains only thin \maya.cmds\ wrappers.
+> Use \xecute_python\ with \maya-scripting/references/RECIPES.md#references\ instead.
+> Will be removed in the next release.
+
 # maya-references
 
 Maya references skill. Provides actions for creating, listing, removing, reloading, and unloading file references, as well as listing namespaces.

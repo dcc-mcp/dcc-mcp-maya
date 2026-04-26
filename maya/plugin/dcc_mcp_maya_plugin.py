@@ -220,29 +220,31 @@ def _resolve_config():
 
 
 def _export_worker_env() -> None:
-    """Export env vars so skill worker subprocesses use the correct Maya Python.
+    """Export env vars for the subprocess fallback path.
+
+    ``MayaMcpServer.register_builtin_actions`` wires an in-process executor
+    (issue #108) so skills normally run inside the live Maya interpreter.
+    This function is still called as a safety net: if the in-process path is
+    unavailable (dcc-mcp-core < 0.14) the core skill launcher falls back to
+    spawning a subprocess and these env vars ensure it uses the correct
+    ``mayapy`` and initialises Maya standalone.
 
     ``DCC_MCP_PYTHON_EXECUTABLE``
-        Points at the ``mayapy`` interpreter currently running so that
-        ``dcc-mcp-core``'s skill launcher spawns workers with the right
-        Python rather than the ambient ``python`` on ``PATH``.
+        Points at ``mayapy`` so the subprocess uses the same interpreter.
 
     ``DCC_MCP_PYTHON_INIT_SNIPPET``
-        A one-liner that initialises Maya standalone inside the worker
-        process, giving it a functional ``maya.cmds`` session.
+        Initialises Maya standalone in the worker process.
 
-    Uses ``setdefault`` so that advanced users can still override (e.g. to
-    pin a specific ``mayapy`` build or add extra setup).
-
-    See: https://github.com/loonghao/dcc-mcp-maya/issues/63
+    Uses ``setdefault`` so advanced users can still override.
+    See: https://github.com/loonghao/dcc-mcp-maya/issues/63, #108
     """
     os.environ.setdefault("DCC_MCP_PYTHON_EXECUTABLE", sys.executable)
     os.environ.setdefault(
         "DCC_MCP_PYTHON_INIT_SNIPPET",
         "import maya.standalone; maya.standalone.initialize(name='python')",
     )
-    logger.info(
-        "Skill worker env: DCC_MCP_PYTHON_EXECUTABLE=%s",
+    logger.debug(
+        "Subprocess fallback env set: DCC_MCP_PYTHON_EXECUTABLE=%s",
         os.environ["DCC_MCP_PYTHON_EXECUTABLE"],
     )
 

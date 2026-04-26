@@ -18,6 +18,10 @@ metadata:
     tools: tools.yaml
     groups: groups.yaml
 ---
+> **Deprecated (merge bucket):** This skill contains only thin \maya.cmds\ wrappers.
+> Use \xecute_python\ with \maya-scripting/references/RECIPES.md#expressions\ instead.
+> Will be removed in the next release.
+
 # maya-expressions
 
 Maya expressions skill. Provides actions for creating, listing, and deleting Maya expression nodes.
