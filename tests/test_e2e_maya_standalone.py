@@ -228,7 +228,7 @@ class TestMcpHttpConnectivity:
         """tools/list returns core discovery tools + skill stubs (progressive loading).
 
         In the progressive (lazy) loading model, tools/list returns three layers:
-        1. Core discovery tools (find_skills, list_skills, get_skill_info, load_skill, ...)
+        1. Core discovery tools (search_skills, list_skills, get_skill_info, load_skill, ...)
         2. Already-loaded skill tools with full input_schema
         3. Unloaded skill stubs as ``__skill__<name>`` with minimal description
         """
@@ -241,7 +241,7 @@ class TestMcpHttpConnectivity:
         names = {t["name"] for t in tools}
 
         # Layer 1: core discovery tools must always be present
-        for core_tool in ("find_skills", "list_skills", "get_skill_info", "load_skill", "unload_skill"):
+        for core_tool in ("search_skills", "list_skills", "get_skill_info", "load_skill", "unload_skill"):
             assert core_tool in names, f"Core tool {core_tool!r} missing from tools/list"
 
         # Layer 3: unloaded skills appear as stubs (__skill__<name>)
@@ -1032,7 +1032,7 @@ class TestMultiInstanceIsolation:
                 tools = body["result"]["tools"]
                 names = {t["name"] for t in tools}
                 # Core discovery tools must be present
-                assert "find_skills" in names
+                assert "search_skills" in names
                 assert "load_skill" in names
         finally:
             for srv, handle in servers:
@@ -1299,7 +1299,7 @@ class TestMultiInstanceConcurrentWorkflows:
             assert code == 200
             tools = body["result"]["tools"]
             names = {t["name"] for t in tools}
-            assert "find_skills" in names
+            assert "search_skills" in names
 
     def test_cross_server_scene_visibility(self):
         """Nodes created via server A are visible when queried via server B."""

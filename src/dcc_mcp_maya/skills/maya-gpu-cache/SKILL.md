@@ -18,6 +18,10 @@ metadata:
     depends: []
     tools: tools.yaml
 ---
+> **Deprecated (merge bucket):** This skill contains only thin \maya.cmds\ wrappers.
+> Use \xecute_python\ with \maya-scripting/references/RECIPES.md#gpu-cache\ instead.
+> Will be removed in the next release.
+
 # maya-gpu-cache
 
 GPU cache (Alembic-based viewport proxy) management for Maya.

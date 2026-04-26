@@ -18,6 +18,10 @@ metadata:
     tools: tools.yaml
     groups: groups.yaml
 ---
+> **Deprecated (merge bucket):** This skill contains only thin \maya.cmds\ wrappers.
+> Use \xecute_python\ with \maya-scripting/references/RECIPES.md#primitives\ instead.
+> Will be removed in the next release.
+
 # maya-primitives
 
 Maya polygon primitive creation skill. Provides actions for creating basic geometry (sphere, cube, cylinder, plane), deleting objects, and managing transforms.
