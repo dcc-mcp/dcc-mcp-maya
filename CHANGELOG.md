@@ -1,5 +1,32 @@
 # Changelog
 
+## [0.2.18](https://github.com/loonghao/dcc-mcp-maya/compare/v0.2.17...v0.2.18) (2026-04-26)
+
+
+### Features
+
+* add defaults block to all skill tools.yaml files ([c5926d6](https://github.com/loonghao/dcc-mcp-maya/commit/c5926d63a12a574e7231693e8d571a83d4ee555f))
+* **skills:** add defaults block to tools.yaml for DRY configuration ([bce59f1](https://github.com/loonghao/dcc-mcp-maya/commit/bce59f15763432d245ac14038f8f7a1d7503abfa))
+* **skills:** add Maya introspect provider + OpenMaya per-version index ([#117](https://github.com/loonghao/dcc-mcp-maya/issues/117), [#115](https://github.com/loonghao/dcc-mcp-maya/issues/115)) ([b8adaa1](https://github.com/loonghao/dcc-mcp-maya/commit/b8adaa1b1dda92a2c4e93cf3b38e10c68657fb5a))
+* **skills:** elevate maya-scripting as primary fall-through entry (bitter-lesson) ([2a93266](https://github.com/loonghao/dcc-mcp-maya/commit/2a932662c5e3bef868cc8fe217bf69ee64d8d6da)), closes [#114](https://github.com/loonghao/dcc-mcp-maya/issues/114)
+
+
+### Bug Fixes
+
+* align with dcc-mcp-core 0.14.13 API (find_skills -&gt; search_skills) ([e4eae4a](https://github.com/loonghao/dcc-mcp-maya/commit/e4eae4a7ca0de3e809d5faa623e9644f768d5db8))
+* **ci:** fix ruff I001 import order and annotator idempotency ([a3a262e](https://github.com/loonghao/dcc-mcp-maya/commit/a3a262e0fe6b93fb4b2905c54e864be0a56ac75f))
+* **server:** correctly call main(**params) in in-process executor ([#108](https://github.com/loonghao/dcc-mcp-maya/issues/108)) ([38b0f24](https://github.com/loonghao/dcc-mcp-maya/commit/38b0f24a8b664b677fd46e61590603613b0e3f84))
+* set non-core tool groups to default_active: false for progressive exposure ([4e83d19](https://github.com/loonghao/dcc-mcp-maya/commit/4e83d19034ab3dc5d7ed61f386972ddb40f5dfd2))
+* **tests:** make search_skills mock assertions Python 3.7 compatible ([7d283f1](https://github.com/loonghao/dcc-mcp-maya/commit/7d283f151f3586d91cbf6f759ef2bd303fedbb0a))
+* **test:** update e2e test for progressive skill/group loading ([3fd597f](https://github.com/loonghao/dcc-mcp-maya/commit/3fd597fa4c86581021f79d0e8459b7c141ee15aa))
+* **test:** use correct param name for activate_tool_group ([3d590cb](https://github.com/loonghao/dcc-mcp-maya/commit/3d590cb9e11c4b3c32849e427822145badfb5ed7))
+
+
+### Code Refactoring
+
+* reduce bundled skills from 64 to 12 core pipeline skills ([04d0c65](https://github.com/loonghao/dcc-mcp-maya/commit/04d0c65fc321b88cdc4a838a932d2dede2e8f72d))
+* **test:** split progressive-loading test into two focused tests ([c495f45](https://github.com/loonghao/dcc-mcp-maya/commit/c495f45ea706bbf2610044e8c520f13253ddcf8e))
+
 ## [0.2.17](https://github.com/loonghao/dcc-mcp-maya/compare/v0.2.16...v0.2.17) (2026-04-24)
 
 
