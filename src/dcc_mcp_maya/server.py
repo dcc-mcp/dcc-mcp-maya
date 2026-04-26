@@ -455,8 +455,14 @@ class MayaMcpServer(DccServerBase):
         def _maya_in_process_executor(script_path: str, params: dict) -> dict:
             """Execute a skill script in the current Maya Python process.
 
-            Loads the script as a module, injects params via ``__mcp_params__``,
-            executes it, and returns ``__mcp_result__`` (set by ``run_main``).
+            Loads the script as a module, resolves the ``main`` entry point,
+            calls it with *params* as keyword arguments, and returns the result.
+
+            The script must expose ``main(**kwargs) -> dict`` at module level
+            (bare or decorated with ``@skill_entry``).  The standard
+            ``if __name__ == "__main__": run_main(main)`` guard is intentionally
+            **not** triggered — we call ``main()`` directly so params are
+            forwarded correctly without going through a subprocess stdout pipe.
             """
             import importlib.util  # noqa: PLC0415
 
@@ -465,13 +471,37 @@ class MayaMcpServer(DccServerBase):
                 return {"success": False, "message": "Cannot load skill script: {}".format(script_path)}
 
             mod = importlib.util.module_from_spec(spec)
-            mod.__mcp_params__ = params  # type: ignore[attr-defined]
             try:
                 spec.loader.exec_module(mod)  # type: ignore[union-attr]
             except SystemExit:
-                # run_main calls sys.exit(0/1); catch it and read the result
                 pass
-            return getattr(mod, "__mcp_result__", {"success": True, "message": "Script executed"})
+            except Exception as exc:  # noqa: BLE001
+                from dcc_mcp_core.skill import skill_exception  # noqa: PLC0415
+
+                return skill_exception(exc, message="Error loading skill script: {}".format(script_path))
+
+            # Unusual: module-level code already stored a result
+            if hasattr(mod, "__mcp_result__"):
+                return mod.__mcp_result__  # type: ignore[return-value]
+
+            # Standard path: call main(**params) directly so the skill
+            # receives the correct parameters (bypasses run_main/stdout pipe).
+            main_fn = getattr(mod, "main", None)
+            if main_fn is None:
+                return {
+                    "success": False,
+                    "message": "Skill script has no main() entry point: {}".format(script_path),
+                }
+
+            try:
+                result = main_fn(**params)
+                return result if isinstance(result, dict) else {"success": True, "message": str(result)}
+            except SystemExit:
+                return getattr(mod, "__mcp_result__", {"success": True, "message": "Script executed"})
+            except Exception as exc:  # noqa: BLE001
+                from dcc_mcp_core.skill import skill_exception  # noqa: PLC0415
+
+                return skill_exception(exc)
 
         try:
             catalog.set_in_process_executor(_maya_in_process_executor)
