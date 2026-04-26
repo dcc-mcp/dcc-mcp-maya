@@ -61,8 +61,12 @@ from dcc_mcp_maya.dispatcher import (
     MayaStandaloneDispatcher,
     MayaUiDispatcher,
     MayaUiPump,
+    PyPumpedDispatcher,
+    PyStandaloneDispatcher,
+    _CorePump,
     check_maya_cancelled,
     create_dispatcher,
+    create_pumped_dispatcher,
 )
 from dcc_mcp_maya.server import MayaMcpServer, start_server, stop_server
 
@@ -72,12 +76,17 @@ __all__ = [
     "MayaMcpServer",
     "start_server",
     "stop_server",
-    # Dispatchers
+    # Dispatchers — Python-side (callable dispatch, main-thread affinity)
     "MayaUiDispatcher",
     "MayaUiPump",
     "MayaStandaloneDispatcher",
     "create_dispatcher",
     "check_maya_cancelled",
+    # Dispatchers — Rust-backed (string-payload dispatch, dcc-mcp-core 0.14.14+)
+    "PyPumpedDispatcher",
+    "PyStandaloneDispatcher",
+    "_CorePump",
+    "create_pumped_dispatcher",
     # Skill authoring helpers
     "maya_success",
     "maya_error",
