@@ -19,6 +19,10 @@ metadata:
     tools: tools.yaml
     groups: groups.yaml
 ---
+> **Deprecated (merge bucket):** This skill contains only thin \maya.cmds\ wrappers.
+> Use \xecute_python\ with \maya-scripting/references/RECIPES.md#cameras\ instead.
+> Will be removed in the next release.
+
 # maya-cameras
 
 Maya cameras skill. Provides actions for creating cameras, querying and setting

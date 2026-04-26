@@ -251,8 +251,7 @@ class TestMayaMcpServerHttp:
         # meta-tools and subsystem-prefixed tools (`jobs.*`, `diagnostics__*`).
         core_meta_tools = {
             "list_skills",
-            "find_skills",
-            "search_skills",
+            "search_skills",  # replaces find_skills (renamed in dcc-mcp-core >= 0.14)
             "load_skill",
             "unload_skill",
             "search_tools",
@@ -271,8 +270,8 @@ class TestMayaMcpServerHttp:
         assert len(skill_tools) >= 3, (
             f"Expected >=3 maya skill tools (stubs/prefixed/bare), got {len(skill_tools)}: {names}"
         )
-        # Core meta-tools should always be present
-        core_tools = {"list_skills", "find_skills", "search_skills", "load_skill", "unload_skill"}
+        # Core meta-tools should always be present (find_skills removed in core >= 0.14)
+        core_tools = {"list_skills", "search_skills", "load_skill", "unload_skill"}
         assert core_tools.issubset(names), f"Missing core meta-tools: {core_tools - names}"
 
     def test_tools_call_dispatches_action(self, running_server):

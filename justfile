@@ -67,6 +67,23 @@ default:
 lint-all: lint lint-skills
     echo "✅ All lint checks passed"
 
+# Pre-commit gate: auto-fix, format, annotate, lint, quick tests.
+# Run this before every commit/push to avoid CI failures.
+# Usage: vx just prek   or   just prek
+@prek:
+    echo "🔧 Auto-fixing ruff errors..."
+    python -m ruff check --fix src/ tests/
+    echo "🎨 Formatting with ruff..."
+    python -m ruff format src/ tests/
+    echo "🏷️  Running skill affinity annotator (idempotency check)..."
+    python tools/annotate_skill_affinity.py --skills-root src/dcc_mcp_maya/skills
+    echo "🔍 Running all lint checks..."
+    python -m ruff check src/ tests/
+    python tools/lint_skills.py --error-only
+    echo "🧪 Running quick tests..."
+    python -m pytest tests/ -x -q --ignore=tests/test_e2e_maya_standalone.py
+    echo "✅ prek passed — safe to commit"
+
 # ============================================================================
 # Testing
 # ============================================================================

@@ -2,7 +2,7 @@
 
 Covers:
 - dcc_mcp_maya.api: scene_object_from_node, object_transform_from_node, bounding_box_from_node
-- server.py: find_skills, bind_and_register, find_best_service, rank_services
+- server.py: search_skills, bind_and_register, find_best_service, rank_services
 - maya-scene/get_scene_info.py  (now uses scene_object_from_node)
 - maya-primitives/get_transform.py  (now uses object_transform_from_node)
 - maya-scene/get_bounding_box.py  (now uses bounding_box_from_node)
@@ -387,7 +387,7 @@ class TestGetBoundingBoxCrossModel:
 
 
 class TestServerFindSkills:
-    """server.MayaMcpServer.find_skills wraps SkillCatalog.find_skills (v0.12.12+)."""
+    """server.MayaMcpServer.search_skills wraps DccServerBase.search_skills (v0.14.0+)."""
 
     def _make_server(self, catalog_server=None):
         from dcc_mcp_maya.server import MayaMcpServer
@@ -401,37 +401,43 @@ class TestServerFindSkills:
 
     def test_method_exists(self):
         server = self._make_server()
-        assert hasattr(server, "find_skills")
-        assert callable(server.find_skills)
+        assert hasattr(server, "search_skills")
+        assert callable(server.search_skills)
 
-    def test_delegates_to_catalog_find_skills(self):
+    def test_delegates_to_catalog_search_skills(self):
         mock_catalog = MagicMock()
-        mock_catalog.find_skills.return_value = ["skill_a", "skill_b"]
+        mock_catalog.search_skills.return_value = ["skill_a", "skill_b"]
         server = self._make_server(mock_catalog)
-        result = server.find_skills(query="scene", tags=["create"], dcc="maya")
-        mock_catalog.find_skills.assert_called_once_with(query="scene", tags=["create"], dcc="maya")
+        result = server.search_skills(query="scene", tags=["create"], dcc="maya")
+        call_kwargs = mock_catalog.search_skills.call_args.kwargs
+        assert call_kwargs["query"] == "scene"
+        assert call_kwargs["tags"] == ["create"]
+        assert call_kwargs["dcc"] == "maya"
         assert result == ["skill_a", "skill_b"]
 
     def test_returns_empty_list_on_exception(self):
         mock_catalog = MagicMock()
-        mock_catalog.find_skills.side_effect = RuntimeError("catalog error")
+        mock_catalog.search_skills.side_effect = RuntimeError("catalog error")
         server = self._make_server(mock_catalog)
-        result = server.find_skills(query="something")
+        result = server.search_skills(query="something")
         assert result == []
 
     def test_returns_list_type(self):
         mock_catalog = MagicMock()
-        mock_catalog.find_skills.return_value = iter(["a", "b"])
+        mock_catalog.search_skills.return_value = iter(["a", "b"])
         server = self._make_server(mock_catalog)
-        result = server.find_skills()
+        result = server.search_skills()
         assert isinstance(result, list)
 
     def test_no_args_passes_none_defaults(self):
         mock_catalog = MagicMock()
-        mock_catalog.find_skills.return_value = []
+        mock_catalog.search_skills.return_value = []
         server = self._make_server(mock_catalog)
-        server.find_skills()
-        mock_catalog.find_skills.assert_called_once_with(query=None, tags=None, dcc=None)
+        server.search_skills()
+        mock_catalog.search_skills.assert_called_once()
+        call_kwargs = mock_catalog.search_skills.call_args.kwargs
+        assert call_kwargs.get("query") is None
+        assert call_kwargs.get("dcc") is None
 
 
 # ---------------------------------------------------------------------------
