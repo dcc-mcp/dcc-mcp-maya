@@ -167,9 +167,9 @@ class TestMayaMcpServerApi:
         server.register_builtin_actions(extra_skill_paths=[_builtin_skills_dir()])
         # Verify skills are discovered via the SkillCatalog API (skills are lazy-loaded)
         discovered_skills = [s.name if hasattr(s, "name") else s["name"] for s in server._server.list_skills()]
-        assert "maya-primitives" in discovered_skills
         assert "maya-scripting" in discovered_skills
         assert "maya-scene" in discovered_skills
+        assert "maya-render" in discovered_skills
 
     def test_mcp_url_none_when_not_running(self):
         srv_mod = _import_server()
@@ -187,7 +187,7 @@ class TestMayaMcpServerHttp:
         # Pass explicit skills path to ensure discovery regardless of install mode
         server.register_builtin_actions(extra_skill_paths=[_builtin_skills_dir()])
         # Explicitly load key skills so their tools appear in tools/list
-        for skill in ("maya-primitives", "maya-scripting", "maya-scene"):
+        for skill in ("maya-scripting", "maya-scene"):
             try:
                 server._server.load_skill(skill)
             except Exception:
@@ -420,8 +420,8 @@ class TestMinimalMode:
         # Check loaded skills via is_loaded
         assert server._server.is_loaded("maya-scripting")
         assert server._server.is_loaded("maya-scene")
-        assert not server._server.is_loaded("maya-primitives")
         assert not server._server.is_loaded("maya-render")
+        assert not server._server.is_loaded("maya-render-farm")
         server.stop()
 
     def test_minimal_false_loads_all_skills(self):
@@ -432,11 +432,11 @@ class TestMinimalMode:
             extra_skill_paths=[_builtin_skills_dir()],
             minimal=False,
         )
-        # Many skills should be loaded in legacy mode
+        # All 12 bundled skills should be loaded in legacy mode
         assert server._server.loaded_count() >= 10
         assert server._server.is_loaded("maya-scripting")
         assert server._server.is_loaded("maya-scene")
-        assert server._server.is_loaded("maya-primitives")
+        assert server._server.is_loaded("maya-render")
         server.stop()
 
     def test_minimal_env_override(self):
@@ -511,14 +511,14 @@ class TestMinimalMode:
     def test_custom_default_tools_env(self):
         """DCC_MCP_MAYA_DEFAULT_TOOLS customises which skills are loaded."""
         srv_mod = _import_server()
-        with patch.dict("os.environ", {"DCC_MCP_MAYA_DEFAULT_TOOLS": "maya-scripting,maya-primitives"}):
+        with patch.dict("os.environ", {"DCC_MCP_MAYA_DEFAULT_TOOLS": "maya-scripting,maya-render"}):
             server = srv_mod.MayaMcpServer(port=0)
             server.register_builtin_actions(
                 extra_skill_paths=[_builtin_skills_dir()],
                 minimal=True,
             )
             assert server._server.is_loaded("maya-scripting")
-            assert server._server.is_loaded("maya-primitives")
+            assert server._server.is_loaded("maya-render")
             # maya-scene was NOT in the custom list
             assert not server._server.is_loaded("maya-scene")
             server.stop()

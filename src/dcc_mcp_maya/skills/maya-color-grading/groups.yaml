@@ -1,9 +1,0 @@
-groups:
-- name: shading-lighting
-  description: Materials, shading, lighting, and environment tools
-  default_active: false
-  tools:
-  - apply_gamma_correction
-  - get_color_management_info
-  - set_rendering_space
-  - set_view_transform

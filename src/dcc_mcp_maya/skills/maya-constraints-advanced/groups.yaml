@@ -1,9 +1,0 @@
-groups:
-- name: animation
-  description: Animation, constraints, and motion capture tools
-  default_active: false
-  tools:
-  - add_pole_vector_constraint
-  - bake_constraint
-  - get_constraint_weights
-  - set_constraint_weight

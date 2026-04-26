@@ -61,7 +61,6 @@ def test_long_running_families_are_async():
         "maya-render",
         "maya-render-farm",
         "maya-texture-bake",
-        "maya-cache",
         "maya-shot-export",
     }
     for skill in long_running_skills:

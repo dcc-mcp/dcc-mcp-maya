@@ -1,9 +1,0 @@
-groups:
-- name: animation
-  description: Animation, constraints, and motion capture tools
-  default_active: false
-  tools:
-  - add_constraint
-  - create_constraint_weighted
-  - list_constraints
-  - remove_constraint

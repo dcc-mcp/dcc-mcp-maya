@@ -1,9 +1,0 @@
-groups:
-- name: rigging
-  description: Rigging, deformation, and skinning tools
-  default_active: false
-  tools:
-  - apply_muscle_skin
-  - create_muscle_capsule
-  - list_muscles
-  - set_muscle_attribute

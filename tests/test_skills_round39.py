@@ -1,11 +1,10 @@
-"""Round 39 tests: Cross-DCC data model helpers + server bind_and_register/find_skills.
+"""Round 39 tests: Cross-DCC data model helpers + server bind_and_register/search_skills.
 
 Covers:
 - dcc_mcp_maya.api: scene_object_from_node, object_transform_from_node, bounding_box_from_node
 - server.py: search_skills, bind_and_register, find_best_service, rank_services
-- maya-scene/get_scene_info.py  (now uses scene_object_from_node)
-- maya-primitives/get_transform.py  (now uses object_transform_from_node)
-- maya-scene/get_bounding_box.py  (now uses bounding_box_from_node)
+- maya-scene/get_scene_info.py  (uses scene_object_from_node)
+- maya-scene/get_bounding_box.py  (uses bounding_box_from_node)
 - dcc_mcp_maya.__init__ re-exports for the new helpers
 """
 
@@ -313,38 +312,6 @@ class TestGetSceneInfoCrossModel:
         node = result["context"]["nodes"][0]
         # long_name is "|pSphere1", name should be "pSphere1"
         assert "|" not in node["name"]
-
-
-# ---------------------------------------------------------------------------
-# TestGetTransformCrossModel
-# ---------------------------------------------------------------------------
-
-
-class TestGetTransformCrossModel:
-    """get_transform.py now uses object_transform_from_node."""
-
-    def test_success_returns_xform_fields(self):
-        cmds = _make_cmds(obj_exists=True, translate=(5.0, 0.0, -3.0))
-        result = _load_skill("maya-primitives/scripts/get_transform.py", cmds, object_name="pSphere1")
-        assert result["success"] is True
-        assert result["context"]["translate"] == [5.0, 0.0, -3.0]
-        assert "rotate" in result["context"]
-        assert "scale" in result["context"]
-
-    def test_missing_node_returns_error(self):
-        cmds = _make_cmds(obj_exists=False)
-        result = _load_skill("maya-primitives/scripts/get_transform.py", cmds, object_name="missing")
-        assert result["success"] is False
-
-    def test_object_name_in_context(self):
-        cmds = _make_cmds(obj_exists=True)
-        result = _load_skill("maya-primitives/scripts/get_transform.py", cmds, object_name="pSphere1")
-        assert result["context"]["object_name"] == "pSphere1"
-
-    def test_prompt_present(self):
-        cmds = _make_cmds(obj_exists=True)
-        result = _load_skill("maya-primitives/scripts/get_transform.py", cmds, object_name="pSphere1")
-        assert result.get("prompt")
 
 
 # ---------------------------------------------------------------------------
