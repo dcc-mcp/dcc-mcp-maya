@@ -155,10 +155,15 @@ class TestCatalogSearchSkills:
         server = _make_server()
         server._server.search_skills.return_value = []
         server.search_skills(query="bounding", tags=["mesh"], dcc="maya")
-        call_kwargs = server._server.search_skills.call_args.kwargs
-        assert call_kwargs["query"] == "bounding"
-        assert call_kwargs["tags"] == ["mesh"]
-        assert call_kwargs["dcc"] == "maya"
+        call_args, call_kwargs = server._server.search_skills.call_args
+        if call_kwargs:
+            assert call_kwargs["query"] == "bounding"
+            assert call_kwargs["tags"] == ["mesh"]
+            assert call_kwargs["dcc"] == "maya"
+        else:
+            assert call_args[0] == "bounding"
+            assert call_args[1] == ["mesh"]
+            assert call_args[2] == "maya"
 
     def test_returns_empty_on_exception(self):
         server = _make_server()
@@ -171,9 +176,13 @@ class TestCatalogSearchSkills:
         server._server.search_skills.return_value = []
         server.search_skills()
         server._server.search_skills.assert_called_once()
-        call_kwargs = server._server.search_skills.call_args.kwargs
-        assert call_kwargs.get("query") is None
-        assert call_kwargs.get("dcc") is None
+        call_args, call_kwargs = server._server.search_skills.call_args
+        if call_kwargs:
+            assert call_kwargs.get("query") is None
+            assert call_kwargs.get("dcc") is None
+        else:
+            assert call_args[0] is None
+            assert call_args[2] is None
 
 
 # ---------------------------------------------------------------------------
