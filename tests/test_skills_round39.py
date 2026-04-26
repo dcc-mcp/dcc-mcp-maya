@@ -376,10 +376,15 @@ class TestServerFindSkills:
         mock_catalog.search_skills.return_value = ["skill_a", "skill_b"]
         server = self._make_server(mock_catalog)
         result = server.search_skills(query="scene", tags=["create"], dcc="maya")
-        call_kwargs = mock_catalog.search_skills.call_args.kwargs
-        assert call_kwargs["query"] == "scene"
-        assert call_kwargs["tags"] == ["create"]
-        assert call_kwargs["dcc"] == "maya"
+        call_args, call_kwargs = mock_catalog.search_skills.call_args
+        if call_kwargs:
+            assert call_kwargs["query"] == "scene"
+            assert call_kwargs["tags"] == ["create"]
+            assert call_kwargs["dcc"] == "maya"
+        else:
+            assert call_args[0] == "scene"
+            assert call_args[1] == ["create"]
+            assert call_args[2] == "maya"
         assert result == ["skill_a", "skill_b"]
 
     def test_returns_empty_list_on_exception(self):
@@ -402,9 +407,13 @@ class TestServerFindSkills:
         server = self._make_server(mock_catalog)
         server.search_skills()
         mock_catalog.search_skills.assert_called_once()
-        call_kwargs = mock_catalog.search_skills.call_args.kwargs
-        assert call_kwargs.get("query") is None
-        assert call_kwargs.get("dcc") is None
+        call_args, call_kwargs = mock_catalog.search_skills.call_args
+        if call_kwargs:
+            assert call_kwargs.get("query") is None
+            assert call_kwargs.get("dcc") is None
+        else:
+            assert call_args[0] is None
+            assert call_args[2] is None
 
 
 # ---------------------------------------------------------------------------
