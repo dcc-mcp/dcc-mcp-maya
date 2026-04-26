@@ -143,6 +143,69 @@ def _maya_available() -> bool:
         return False
 
 
+def _run_skill_script(script_path: str, params: dict) -> dict:
+    """Load and execute a skill script in the current Python process.
+
+    Implements the ``main(**params)`` calling convention used by all
+    ``dcc-mcp-maya`` skill scripts.  The ``if __name__ == "__main__":
+    run_main(main)`` guard is intentionally **not** triggered so that
+    parameters are forwarded directly without subprocess stdout.
+
+    Parameters
+    ----------
+    script_path:
+        Path to the skill Python script.
+    params:
+        Keyword arguments forwarded to ``main(**params)``.
+
+    Returns
+    -------
+    dict
+        The ``{"success": ..., "message": ..., ...}`` result dict.
+    """
+    import importlib.util  # noqa: PLC0415
+
+    spec = importlib.util.spec_from_file_location("_maya_skill_script", script_path)
+    if spec is None or spec.loader is None:
+        return {"success": False, "message": "Cannot load skill script: {}".format(script_path)}
+
+    mod = importlib.util.module_from_spec(spec)
+    try:
+        spec.loader.exec_module(mod)  # type: ignore[union-attr]
+    except SystemExit:
+        pass
+    except Exception as exc:  # noqa: BLE001
+        try:
+            from dcc_mcp_core.skill import skill_exception  # noqa: PLC0415
+
+            return skill_exception(exc, message="Error loading skill script: {}".format(script_path))
+        except ImportError:
+            return {"success": False, "message": "Error loading {}: {}".format(script_path, exc)}
+
+    if hasattr(mod, "__mcp_result__"):
+        return mod.__mcp_result__  # type: ignore[return-value]
+
+    main_fn = getattr(mod, "main", None)
+    if main_fn is None:
+        return {
+            "success": False,
+            "message": "Skill script has no main() entry point: {}".format(script_path),
+        }
+
+    try:
+        result = main_fn(**params)
+        return result if isinstance(result, dict) else {"success": True, "message": str(result)}
+    except SystemExit:
+        return getattr(mod, "__mcp_result__", {"success": True, "message": "Script executed"})
+    except Exception as exc:  # noqa: BLE001
+        try:
+            from dcc_mcp_core.skill import skill_exception  # noqa: PLC0415
+
+            return skill_exception(exc)
+        except ImportError:
+            return {"success": False, "message": str(exc)}
+
+
 class MayaMcpServer(DccServerBase):
     """MCP Streamable HTTP server embedded inside Maya.
 
@@ -423,91 +486,171 @@ class MayaMcpServer(DccServerBase):
         return self
 
     # ------------------------------------------------------------------
-    # In-process executor (issue #108)
+    # In-process executor (issue #108, #122)
     # ------------------------------------------------------------------
 
     def _wire_in_process_executor(self) -> None:
-        """Register the Maya in-process skill executor on the SkillCatalog.
+        """Register the Maya in-process skill executor via register_handler.
 
-        When registered, skill scripts execute inside the **current** Maya
-        Python interpreter rather than spawning a ``mayapy`` subprocess.
-        This avoids the overhead and race conditions of subprocess-based
-        execution and gives skills direct access to the live Maya session.
+        In dcc-mcp-core 0.14.x, ``McpHttpServer.catalog`` returns a plain string
+        representation — ``SkillCatalog.set_in_process_executor`` is no longer
+        accessible through the server object.  We instead use
+        ``McpHttpServer.register_handler`` to wire in-process execution for each
+        **currently loaded** action.
 
-        The executor is compatible with the ``@skill_entry`` / ``run_main``
-        contract: it sets ``__mcp_params__`` on the module before executing
-        so that ``run_main`` picks up the parameters correctly.
-
-        Falls back silently if ``SkillCatalog.set_in_process_executor`` is
-        not available (dcc-mcp-core < 0.14) so older environments keep
-        working via the subprocess path.
+        Call this after :meth:`load_skill` / :meth:`register_builtin_actions`
+        to cover skills loaded at startup.  Dynamic loads (triggered by the
+        ``load_skill`` MCP tool) are handled by the overridden
+        :meth:`load_skill` method which calls
+        :meth:`_register_inprocess_handlers` automatically.
         """
         try:
-            catalog = self._server.catalog
+            actions = self._server.registry.list_actions_enabled()
         except AttributeError:
-            logger.debug("SkillCatalog.catalog not available — skipping in-process executor wiring")
+            logger.debug("server.registry not available — skipping in-process executor wiring")
             return
 
-        if not hasattr(catalog, "set_in_process_executor"):
-            logger.debug("set_in_process_executor not available in this core version — using subprocess fallback")
-            return
+        action_names = [a["name"] for a in actions if isinstance(a, dict) and a.get("name")]
+        registered = self._register_inprocess_handlers(action_names)
+        if registered > 0:
+            logger.info("Maya in-process executor: registered %d handler(s) via register_handler", registered)
+        else:
+            logger.debug("Maya in-process executor: no new handlers registered (no loaded actions found)")
 
-        def _maya_in_process_executor(script_path: str, params: dict) -> dict:
-            """Execute a skill script in the current Maya Python process.
+    def _register_inprocess_handlers(self, action_names: List[str]) -> int:
+        """Register in-process Python handlers for the given action names.
 
-            Loads the script as a module, resolves the ``main`` entry point,
-            calls it with *params* as keyword arguments, and returns the result.
+        For each action that has a ``source_file`` and no handler registered
+        yet, wraps :meth:`_execute_in_process` as an
+        ``McpHttpServer.register_handler`` callable so that ``tools/call``
+        dispatches to the live Maya interpreter instead of spawning a
+        ``mayapy`` subprocess.
 
-            The script must expose ``main(**kwargs) -> dict`` at module level
-            (bare or decorated with ``@skill_entry``).  The standard
-            ``if __name__ == "__main__": run_main(main)`` guard is intentionally
-            **not** triggered — we call ``main()`` directly so params are
-            forwarded correctly without going through a subprocess stdout pipe.
-            """
-            import importlib.util  # noqa: PLC0415
+        Parameters
+        ----------
+        action_names:
+            List of action names returned by ``load_skill`` or discovered via
+            ``registry.list_actions_enabled()``.
 
-            spec = importlib.util.spec_from_file_location("_maya_skill_script", script_path)
-            if spec is None or spec.loader is None:
-                return {"success": False, "message": "Cannot load skill script: {}".format(script_path)}
-
-            mod = importlib.util.module_from_spec(spec)
-            try:
-                spec.loader.exec_module(mod)  # type: ignore[union-attr]
-            except SystemExit:
-                pass
-            except Exception as exc:  # noqa: BLE001
-                from dcc_mcp_core.skill import skill_exception  # noqa: PLC0415
-
-                return skill_exception(exc, message="Error loading skill script: {}".format(script_path))
-
-            # Unusual: module-level code already stored a result
-            if hasattr(mod, "__mcp_result__"):
-                return mod.__mcp_result__  # type: ignore[return-value]
-
-            # Standard path: call main(**params) directly so the skill
-            # receives the correct parameters (bypasses run_main/stdout pipe).
-            main_fn = getattr(mod, "main", None)
-            if main_fn is None:
-                return {
-                    "success": False,
-                    "message": "Skill script has no main() entry point: {}".format(script_path),
-                }
+        Returns
+        -------
+        int
+            Number of handlers newly registered.
+        """
+        registered = 0
+        for action_name in action_names:
+            if self._server.has_handler(action_name):
+                continue
 
             try:
-                result = main_fn(**params)
-                return result if isinstance(result, dict) else {"success": True, "message": str(result)}
-            except SystemExit:
-                return getattr(mod, "__mcp_result__", {"success": True, "message": "Script executed"})
-            except Exception as exc:  # noqa: BLE001
-                from dcc_mcp_core.skill import skill_exception  # noqa: PLC0415
+                action = self._server.registry.get_action(action_name)
+            except Exception:
+                continue
 
-                return skill_exception(exc)
+            if not action:
+                continue
 
+            script_path = action.get("source_file") if isinstance(action, dict) else None
+            if not script_path:
+                continue
+
+            def _make_handler(spath: str, aname: str):
+                def handler(params: dict) -> dict:
+                    return self._execute_in_process(spath, params, aname)
+
+                return handler
+
+            try:
+                self._server.register_handler(action_name, _make_handler(script_path, action_name))
+                registered += 1
+            except Exception as exc:
+                logger.warning("Failed to register in-process handler for %r: %s", action_name, exc)
+
+        return registered
+
+    def _execute_in_process(self, script_path: str, params: dict, action_name: str) -> dict:
+        """Execute a skill script inside the current Maya Python process.
+
+        Routes through the attached :class:`~dcc_mcp_maya.dispatcher.MayaUiDispatcher`
+        (if present) so the script runs on Maya's UI thread, which is required
+        for any ``maya.cmds`` or ``maya.api`` calls.  Falls back to running
+        directly on the calling thread when no dispatcher is attached (standalone
+        / ``mayapy`` mode).
+
+        The script must expose ``main(**kwargs) -> dict`` at module level.
+        The ``if __name__ == "__main__": run_main(main)`` guard is intentionally
+        **not** triggered — we call ``main()`` directly so parameters are
+        forwarded without going through a subprocess stdout pipe.
+
+        Parameters
+        ----------
+        script_path:
+            Absolute (or cwd-relative) path to the skill Python script.
+        params:
+            Keyword arguments to pass to ``main(**params)``.
+        action_name:
+            Logical action name used as the dispatcher request id and for
+            logging.
+
+        Returns
+        -------
+        dict
+            The ``{"success": ..., "message": ..., ...}`` result dict from
+            the skill's ``main()`` function.
+        """
+        dispatcher = self._maya_dispatcher
+        if dispatcher is not None and hasattr(dispatcher, "submit_callable"):
+            # Route to Maya's UI thread — required for maya.cmds / maya.api.
+            result = dispatcher.submit_callable(
+                action_name,
+                lambda: _run_skill_script(script_path, params),
+                affinity="main",
+            )
+            if isinstance(result, dict):
+                output = result.get("output")
+                if isinstance(output, dict):
+                    return output
+                if not result.get("success", True):
+                    return {
+                        "success": False,
+                        "message": result.get("error") or "Dispatcher returned failure for {}".format(action_name),
+                    }
+                if output is not None:
+                    return {"success": True, "message": str(output)}
+            return {"success": False, "message": "Dispatcher returned unexpected result for {}".format(action_name)}
+
+        # Standalone / mayapy mode — run directly on the calling thread.
+        return _run_skill_script(script_path, params)
+
+    def load_skill(self, skill_name: str) -> bool:
+        """Load *skill_name* and register in-process handlers for its actions.
+
+        Extends the base-class implementation so that skills loaded
+        dynamically (via the ``load_skill`` MCP tool at runtime) also get
+        in-process Python handlers, not just skills loaded during startup via
+        :meth:`register_builtin_actions`.
+
+        Returns
+        -------
+        bool
+            ``True`` on success (matches :class:`DccServerBase` return type).
+        """
         try:
-            catalog.set_in_process_executor(_maya_in_process_executor)
-            logger.info("Maya in-process skill executor registered (subprocess spawning disabled)")
+            action_names: List[str] = self._server.load_skill(skill_name) or []
         except Exception as exc:
-            logger.warning("Failed to register in-process executor: %s — falling back to subprocess", exc)
+            logger.debug("[%s] load_skill(%r) failed: %s", self._dcc_name, skill_name, exc)
+            return False
+
+        if action_names:
+            newly_registered = self._register_inprocess_handlers(action_names)
+            if newly_registered:
+                logger.debug(
+                    "[%s] load_skill(%r): registered %d in-process handler(s)",
+                    self._dcc_name,
+                    skill_name,
+                    newly_registered,
+                )
+        return True
 
     def _load_all_discovered_skills(self) -> None:
         """Load every discovered skill (legacy full-load behaviour)."""

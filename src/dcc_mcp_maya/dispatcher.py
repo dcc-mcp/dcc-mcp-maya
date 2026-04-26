@@ -50,6 +50,22 @@ from typing import Any, Callable, Deque, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
+# ── Core dispatcher re-exports ────────────────────────────────────────────────
+# dcc-mcp-core 0.14.14 ships ``PyPumpedDispatcher`` (Rust-backed, main-thread
+# pump) and ``PyStandaloneDispatcher`` (immediate synchronous dispatch).  We
+# re-export them here so callers can import from a single module without caring
+# whether the Rust extension is present.
+#
+# ``PyPumpedDispatcher`` is the Rust equivalent of :class:`MayaUiDispatcher`
+# for *string-payload* dispatch (IPC-style).  For *callable* dispatch —
+# required by the in-process executor — :class:`MayaUiDispatcher` must be
+# used.  The two dispatchers are complementary, not mutually exclusive.
+try:
+    from dcc_mcp_core import PyPumpedDispatcher, PyStandaloneDispatcher  # noqa: F401
+except ImportError:  # pragma: no cover — core is a hard dep at runtime
+    PyPumpedDispatcher = None  # type: ignore[assignment,misc]
+    PyStandaloneDispatcher = None  # type: ignore[assignment,misc]
+
 # ── Constants ─────────────────────────────────────────────────────────────────
 
 #: Default time budget (milliseconds) per idle-event pump cycle.
@@ -985,13 +1001,24 @@ class MayaUiPump:
                 pass
 
 
-# ── Factory helper ────────────────────────────────────────────────────────────
+# ── Factory helpers ───────────────────────────────────────────────────────────
 
 
 def create_dispatcher(
     budget_ms: float = DEFAULT_BUDGET_MS,
 ) -> Tuple[Any, Optional[MayaUiPump]]:
     """Create the appropriate dispatcher for the current Maya environment.
+
+    Returns a ``(dispatcher, pump)`` pair where *dispatcher* is a
+    :class:`MayaUiDispatcher` (interactive) or
+    :class:`MayaStandaloneDispatcher` (batch / ``mayapy``), and *pump* is a
+    :class:`MayaUiPump` or ``None`` respectively.
+
+    The returned :class:`MayaUiDispatcher` supports ``submit_callable`` for
+    routing arbitrary Python callables to Maya's UI thread — required by the
+    in-process skill executor.  Use :func:`create_pumped_dispatcher` when
+    you want the Rust-backed :class:`PyPumpedDispatcher` (string-payload
+    dispatch only) instead.
 
     Returns
     -------
@@ -1011,3 +1038,131 @@ def create_dispatcher(
     dispatcher = MayaUiDispatcher()
     pump = MayaUiPump(dispatcher, budget_ms=budget_ms)
     return dispatcher, pump
+
+
+def create_pumped_dispatcher(
+    budget_ms: float = DEFAULT_BUDGET_MS,
+) -> Tuple[Any, Optional["_CorePump"]]:
+    """Create a Rust-backed :class:`PyPumpedDispatcher` for the current Maya environment.
+
+    This is an alternative to :func:`create_dispatcher` that returns the
+    core's ``PyPumpedDispatcher`` instead of :class:`MayaUiDispatcher`.
+    Use it when you need IPC-style string-payload dispatch routed through
+    the Rust main-thread pump.
+
+    .. note::
+        ``PyPumpedDispatcher`` only supports ``submit(action_name, payload,
+        affinity)`` where *payload* is a string.  It cannot dispatch arbitrary
+        Python callables.  For in-process skill execution, the
+        :class:`MayaUiDispatcher` returned by :func:`create_dispatcher` must
+        be used.
+
+    Returns
+    -------
+    tuple[PyPumpedDispatcher | MayaStandaloneDispatcher, _CorePump | None]
+        A ``(dispatcher, pump)`` pair.  Returns
+        ``(MayaStandaloneDispatcher(), None)`` when not inside an interactive
+        Maya session or when ``PyPumpedDispatcher`` is not available.
+    """
+    if PyPumpedDispatcher is None:
+        logger.warning("PyPumpedDispatcher not available — falling back to MayaStandaloneDispatcher")
+        return MayaStandaloneDispatcher(), None
+
+    try:
+        import maya.cmds as cmds  # noqa: PLC0415
+
+        is_batch = cmds.about(batch=True)
+    except ImportError:
+        is_batch = True
+
+    if is_batch:
+        return MayaStandaloneDispatcher(), None
+
+    core_dispatcher = PyPumpedDispatcher(budget_ms=int(budget_ms))
+    pump = _CorePump(core_dispatcher, budget_ms=budget_ms)
+    return core_dispatcher, pump
+
+
+class _CorePump:
+    """Idle-event pump adapter for :class:`PyPumpedDispatcher`.
+
+    Wraps :class:`PyPumpedDispatcher` in the same scriptJob-based idle hook
+    that :class:`MayaUiPump` uses for :class:`MayaUiDispatcher`, so callers
+    can treat both pump types identically (``install()`` / ``uninstall()``).
+
+    Parameters
+    ----------
+    dispatcher:
+        A :class:`PyPumpedDispatcher` instance whose :meth:`pump` method
+        should be called on each idle tick.
+    budget_ms:
+        Maximum milliseconds for each pump call.  Passed to
+        :meth:`PyPumpedDispatcher.pump_with_budget`.
+    """
+
+    def __init__(self, dispatcher: Any, budget_ms: float = DEFAULT_BUDGET_MS) -> None:
+        self._dispatcher = dispatcher
+        self._budget_ms = budget_ms
+        self._script_job_id: Optional[int] = None
+        self._installed = False
+
+    @property
+    def is_installed(self) -> bool:
+        """``True`` if the idle scriptJob is currently active."""
+        return self._installed
+
+    def install(self) -> bool:
+        """Register the idle-event scriptJob with Maya."""
+        if self._installed:
+            return True
+        try:
+            import maya.cmds as cmds  # noqa: PLC0415
+
+            self._script_job_id = cmds.scriptJob(
+                event=["idle", self._pump_tick],
+                protected=True,
+            )
+            self._installed = True
+            logger.info(
+                "_CorePump installed (scriptJob=%d, budget=%.1f ms)",
+                self._script_job_id,
+                self._budget_ms,
+            )
+            return True
+        except ImportError:
+            logger.warning("_CorePump: maya.cmds not available — install skipped")
+            return False
+        except Exception as exc:
+            logger.error("_CorePump: failed to install scriptJob: %s", exc)
+            return False
+
+    def uninstall(self) -> None:
+        """Remove the idle-event scriptJob from Maya."""
+        if not self._installed:
+            return
+        try:
+            import maya.cmds as cmds  # noqa: PLC0415
+
+            if self._script_job_id is not None:
+                cmds.scriptJob(kill=self._script_job_id, force=True)
+                logger.info("_CorePump uninstalled (scriptJob=%d)", self._script_job_id)
+        except Exception as exc:
+            logger.warning("_CorePump: error removing scriptJob: %s", exc)
+        finally:
+            self._script_job_id = None
+            self._installed = False
+
+    def _pump_tick(self) -> None:
+        """Idle-event callback — drain pending Rust-side main-thread jobs."""
+        try:
+            stats = self._dispatcher.pump_with_budget(int(self._budget_ms))
+            remaining = stats.get("remaining", 0) if isinstance(stats, dict) else 0
+            if remaining > 0:
+                try:
+                    import maya.cmds as cmds  # noqa: PLC0415
+
+                    cmds.refresh(force=True)
+                except Exception:
+                    pass
+        except Exception as exc:
+            logger.debug("_CorePump._pump_tick error: %s", exc)
