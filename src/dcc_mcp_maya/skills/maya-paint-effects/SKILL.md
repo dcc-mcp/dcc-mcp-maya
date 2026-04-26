@@ -19,6 +19,10 @@ metadata:
     tools: tools.yaml
     groups: groups.yaml
 ---
+> **Deprecated (merge bucket):** This skill contains only thin \maya.cmds\ wrappers.
+> Use \xecute_python\ with \maya-scripting/references/RECIPES.md#paint-effects\ instead.
+> Will be removed in the next release.
+
 # maya-paint-effects
 
 Maya Paint Effects utilities: create brush strokes, attach presets to NURBS/polygon surfaces,

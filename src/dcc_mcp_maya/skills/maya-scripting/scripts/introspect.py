@@ -45,6 +45,7 @@ def _maya_major_version() -> str:
     """Return the current Maya major version string, e.g. '2024'."""
     try:
         import maya.cmds as cmds  # noqa: PLC0415
+
         return str(cmds.about(majorVersion=True))
     except Exception:
         return "2024"
@@ -87,18 +88,18 @@ def _load_openmaya_index(requested_version: Optional[str] = None) -> Dict[str, A
 # ---------------------------------------------------------------------------
 
 _TYPE_MAP = {
-    "string":      "str",
-    "length":      "float",
-    "float":       "float",
-    "angle":       "float",
-    "int":         "int",
+    "string": "str",
+    "length": "float",
+    "float": "float",
+    "angle": "float",
+    "int": "int",
     "unsignedint": "int",
-    "on|off":      "bool",
-    "boolean":     "bool",
-    "script":      "callable",
-    "name":        "str",
-    "time":        "float",
-    "uint":        "int",
+    "on|off": "bool",
+    "boolean": "bool",
+    "script": "callable",
+    "name": "str",
+    "time": "float",
+    "uint": "int",
 }
 
 # Per-process LRU cache keyed by command name — Maya's flag table is stable
@@ -119,6 +120,7 @@ def _parse_cmds_help(command: str) -> Dict[str, Any]:
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
+
         raw = cmds.help(cmd=command) or ""
     except Exception as exc:
         return {"error": str(exc), "synopsis": "", "flags": []}
@@ -140,7 +142,7 @@ def _parse_cmds_help(command: str) -> Dict[str, Any]:
             continue
 
         short_flag = tokens[0].lstrip("-")
-        long_flag  = tokens[1].lstrip("-") if len(tokens) > 1 else short_flag
+        long_flag = tokens[1].lstrip("-") if len(tokens) > 1 else short_flag
 
         # Modes are in trailing parentheses: (create,edit,query)
         modes: List[str] = []
@@ -152,16 +154,18 @@ def _parse_cmds_help(command: str) -> Dict[str, Any]:
 
         # Types are tokens between flag names and mode parenthesis
         mode_start = cleaned.rfind("(") if mode_match else len(cleaned)
-        type_tokens = cleaned[len(tokens[0]) + len(tokens[1]) + 2:mode_start].split()
+        type_tokens = cleaned[len(tokens[0]) + len(tokens[1]) + 2 : mode_start].split()
         py_types = [_TYPE_MAP.get(t.lower(), t.lower()) for t in type_tokens]
 
-        flags.append({
-            "short":    short_flag,
-            "long":     long_flag,
-            "type":     py_types[0] if len(py_types) == 1 else py_types or "bool",
-            "modes":    modes,
-            "multiuse": multiuse,
-        })
+        flags.append(
+            {
+                "short": short_flag,
+                "long": long_flag,
+                "type": py_types[0] if len(py_types) == 1 else py_types or "bool",
+                "modes": modes,
+                "multiuse": multiuse,
+            }
+        )
 
     result: Dict[str, Any] = {"synopsis": synopsis, "flags": flags}
     _CMDS_HELP_CACHE[command] = result
@@ -171,6 +175,7 @@ def _parse_cmds_help(command: str) -> Dict[str, Any]:
 # ---------------------------------------------------------------------------
 # OpenMaya signature lookup
 # ---------------------------------------------------------------------------
+
 
 def _openmaya_signature(qualified_name: str) -> Optional[Dict[str, Any]]:
     """Look up ``module.ClassName.method`` in the bundled JSON index.
@@ -237,6 +242,7 @@ def _inspect_openmaya(qualified_name: str) -> Optional[Dict[str, Any]]:
 # Public skill functions
 # ---------------------------------------------------------------------------
 
+
 def list_module(module: str, page: int = 0, per_page: int = 200) -> dict:
     """List public names in a Maya Python module.
 
@@ -265,9 +271,7 @@ def list_module(module: str, page: int = 0, per_page: int = 200) -> dict:
     page_names = names[start : start + per_page]
 
     return skill_success(
-        "Listed {} names in '{}' (page {}/{})".format(
-            len(page_names), module, page, max(0, (total - 1) // per_page)
-        ),
+        "Listed {} names in '{}' (page {}/{})".format(len(page_names), module, page, max(0, (total - 1) // per_page)),
         names=page_names,
         total=total,
         page=page,
@@ -279,10 +283,8 @@ def _get_module_names(module: str) -> List[str]:
     """Return sorted public names for *module*."""
     if module == "maya.cmds":
         import maya.cmds as cmds  # noqa: PLC0415
-        return sorted(
-            n for n in dir(cmds)
-            if not n.startswith("_")
-        )
+
+        return sorted(n for n in dir(cmds) if not n.startswith("_"))
 
     if module.startswith("maya.api."):
         index = _load_openmaya_index()
@@ -330,7 +332,7 @@ def signature(name: str) -> dict:
 def _resolve_signature(name: str) -> Optional[Dict[str, Any]]:
     """Dispatch signature lookup based on namespace prefix."""
     if name.startswith("maya.cmds."):
-        cmd = name[len("maya.cmds."):]
+        cmd = name[len("maya.cmds.") :]
         return _parse_cmds_help(cmd)
 
     if name.startswith("maya.mel"):
@@ -347,6 +349,7 @@ def _mel_signature(name: str) -> Optional[Dict[str, Any]]:
     """Use MEL ``whatIs`` to describe a MEL procedure."""
     try:
         import maya.mel as mel  # noqa: PLC0415
+
         proc = name.split(".")[-1]
         description = mel.eval('whatIs "{}"'.format(proc))
         return {"name": proc, "description": description}
@@ -425,12 +428,22 @@ def eval_expr(expression: str, timeout_secs: float = 2.0) -> dict:
         import maya.cmds as cmds  # noqa: PLC0415
     except ImportError:
         cmds = None  # type: ignore[assignment]
-        om = None    # type: ignore[assignment]
+        om = None  # type: ignore[assignment]
 
     eval_globals = {
-        "__builtins__": {"len": len, "str": str, "int": int, "float": float,
-                         "bool": bool, "list": list, "dict": dict, "tuple": tuple,
-                         "repr": repr, "sorted": sorted, "type": type},
+        "__builtins__": {
+            "len": len,
+            "str": str,
+            "int": int,
+            "float": float,
+            "bool": bool,
+            "list": list,
+            "dict": dict,
+            "tuple": tuple,
+            "repr": repr,
+            "sorted": sorted,
+            "type": type,
+        },
         "cmds": cmds,
         "om": om,
     }
@@ -447,6 +460,7 @@ def eval_expr(expression: str, timeout_secs: float = 2.0) -> dict:
 # ---------------------------------------------------------------------------
 # Skill entry points
 # ---------------------------------------------------------------------------
+
 
 @skill_entry
 def main_list_module(**kwargs) -> dict:
@@ -474,4 +488,5 @@ def main_eval(**kwargs) -> dict:
 
 if __name__ == "__main__":
     from dcc_mcp_core.skill import run_main
+
     run_main(main_signature)
