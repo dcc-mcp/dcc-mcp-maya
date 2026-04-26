@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.19](https://github.com/loonghao/dcc-mcp-maya/compare/v0.2.18...v0.2.19) (2026-04-26)
+
+
+### Bug Fixes
+
+* **executor:** replace catalog.set_in_process_executor with register_handler for core 0.14.14 ([0e7885d](https://github.com/loonghao/dcc-mcp-maya/commit/0e7885d78e2da76c701180dd88a1a686ab69a757)), closes [#122](https://github.com/loonghao/dcc-mcp-maya/issues/122)
+* **lint:** remove unused call import and fix import order in test_skills_round46 ([f762092](https://github.com/loonghao/dcc-mcp-maya/commit/f762092e870dfb4198295bb4d8a0003a2042b3f3))
+
 ## [0.2.18](https://github.com/loonghao/dcc-mcp-maya/compare/v0.2.17...v0.2.18) (2026-04-26)
 
 
