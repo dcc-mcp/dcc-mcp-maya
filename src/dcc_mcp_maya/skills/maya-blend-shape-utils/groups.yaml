@@ -1,9 +1,0 @@
-groups:
-- name: rigging
-  description: Rigging, deformation, and skinning tools
-  default_active: false
-  tools:
-  - create_blend_shape
-  - get_blend_shape_weights
-  - list_blend_shapes
-  - set_blend_shape_weight

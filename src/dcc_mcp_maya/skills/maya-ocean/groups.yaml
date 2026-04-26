@@ -1,9 +1,0 @@
-groups:
-- name: simulation-fx
-  description: Dynamics, simulation, particles, and VFX tools
-  default_active: false
-  tools:
-  - add_ocean_wake
-  - create_ocean
-  - list_ocean_surfaces
-  - set_ocean_attribute

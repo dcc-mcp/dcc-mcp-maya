@@ -1,9 +1,0 @@
-groups:
-- name: shading-lighting
-  description: Materials, shading, lighting, and environment tools
-  default_active: false
-  tools:
-  - create_light
-  - delete_light
-  - list_lights
-  - set_light_attribute

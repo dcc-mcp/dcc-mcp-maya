@@ -1,9 +1,0 @@
-groups:
-- name: rigging
-  description: Rigging, deformation, and skinning tools
-  default_active: false
-  tools:
-  - copy_skin_weights
-  - mirror_skin_weights
-  - normalize_skin_weights
-  - prune_skin_weights

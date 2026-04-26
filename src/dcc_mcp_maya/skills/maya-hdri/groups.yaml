@@ -1,9 +1,0 @@
-groups:
-- name: shading-lighting
-  description: Materials, shading, lighting, and environment tools
-  default_active: false
-  tools:
-  - list_hdri_nodes
-  - load_hdri
-  - set_hdri_exposure
-  - set_hdri_rotation

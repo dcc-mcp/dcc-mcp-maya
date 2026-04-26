@@ -1,9 +1,0 @@
-groups:
-- name: rigging
-  description: Rigging, deformation, and skinning tools
-  default_active: false
-  tools:
-  - add_space_switch
-  - connect_attributes
-  - create_control_curve
-  - lock_hide_attributes

@@ -1,9 +1,0 @@
-groups:
-- name: simulation-fx
-  description: Dynamics, simulation, particles, and VFX tools
-  default_active: false
-  tools:
-  - bake_cloth_cache
-  - create_ncloth
-  - list_ncloth_objects
-  - set_ncloth_attribute

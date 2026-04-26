@@ -1,9 +1,0 @@
-groups:
-- name: shading-lighting
-  description: Materials, shading, lighting, and environment tools
-  default_active: false
-  tools:
-  - add_toon_outline
-  - create_toon_shader
-  - list_toon_outlines
-  - set_outline_width
