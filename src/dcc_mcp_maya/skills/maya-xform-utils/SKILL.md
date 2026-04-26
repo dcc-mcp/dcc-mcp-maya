@@ -18,6 +18,10 @@ metadata:
     depends: []
     tools: tools.yaml
 ---
+> **Deprecated (merge bucket):** This skill contains only thin \maya.cmds\ wrappers.
+> Use \xecute_python\ with \maya-scripting/references/RECIPES.md#xform\ instead.
+> Will be removed in the next release.
+
 # maya-xform-utils
 
 Advanced transform operations for Maya objects. Provides freeze/reset transforms,

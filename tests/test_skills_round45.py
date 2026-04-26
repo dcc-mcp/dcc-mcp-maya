@@ -6,7 +6,7 @@ Tests verify the Maya adapter exposes them correctly.
 Covers:
 1. MayaMcpServer.search_actions() — inherited from DccServerBase
 2. MayaMcpServer.unregister_skill() — inherited
-3. MayaMcpServer.find_skills() — inherited
+3. MayaMcpServer.search_skills() — inherited (renamed from find_skills in v0.14.0)
 4. MayaMcpServer.get_skill_categories() — inherited
 5. MayaMcpServer.get_skill_tags() — inherited
 6. MayaMcpServer.rank_services() — Maya-specific static method
@@ -137,37 +137,43 @@ class TestUnregisterSkill:
 
 
 # ---------------------------------------------------------------------------
-# 3. find_skills
+# 3. search_skills (catalog-level discovery, v0.14.0+)
 # ---------------------------------------------------------------------------
 
 
-class TestFindSkills:
+class TestCatalogSearchSkills:
     def test_returns_list(self):
         server = _make_server()
         mock_summary = MagicMock()
         mock_summary.name = "maya-scene"
-        server._server.find_skills.return_value = [mock_summary]
-        result = server.find_skills(query="scene")
+        server._server.search_skills.return_value = [mock_summary]
+        result = server.search_skills(query="scene")
         assert isinstance(result, list)
         assert len(result) == 1
 
     def test_forwards_query_tags_dcc(self):
         server = _make_server()
-        server._server.find_skills.return_value = []
-        server.find_skills(query="bounding", tags=["mesh"], dcc="maya")
-        server._server.find_skills.assert_called_once_with(query="bounding", tags=["mesh"], dcc="maya")
+        server._server.search_skills.return_value = []
+        server.search_skills(query="bounding", tags=["mesh"], dcc="maya")
+        call_kwargs = server._server.search_skills.call_args.kwargs
+        assert call_kwargs["query"] == "bounding"
+        assert call_kwargs["tags"] == ["mesh"]
+        assert call_kwargs["dcc"] == "maya"
 
     def test_returns_empty_on_exception(self):
         server = _make_server()
-        server._server.find_skills.side_effect = AttributeError("no catalog")
-        result = server.find_skills(query="x")
+        server._server.search_skills.side_effect = AttributeError("no catalog")
+        result = server.search_skills(query="x")
         assert result == []
 
     def test_none_args_forwarded(self):
         server = _make_server()
-        server._server.find_skills.return_value = []
-        server.find_skills()
-        server._server.find_skills.assert_called_once_with(query=None, tags=None, dcc=None)
+        server._server.search_skills.return_value = []
+        server.search_skills()
+        server._server.search_skills.assert_called_once()
+        call_kwargs = server._server.search_skills.call_args.kwargs
+        assert call_kwargs.get("query") is None
+        assert call_kwargs.get("dcc") is None
 
 
 # ---------------------------------------------------------------------------
@@ -409,13 +415,12 @@ class TestServerStructural:
     def test_search_skills_in_server_class(self):
         from dcc_mcp_maya.server import MayaMcpServer
 
-        # search_actions is the inherited name (search_skills was the old name)
-        assert hasattr(MayaMcpServer, "search_actions")
+        assert hasattr(MayaMcpServer, "search_skills")
 
-    def test_find_skills_in_server_class(self):
+    def test_search_actions_in_server_class(self):
         from dcc_mcp_maya.server import MayaMcpServer
 
-        assert hasattr(MayaMcpServer, "find_skills")
+        assert hasattr(MayaMcpServer, "search_actions")
 
     def test_rank_services_is_static(self):
         from dcc_mcp_maya.server import MayaMcpServer

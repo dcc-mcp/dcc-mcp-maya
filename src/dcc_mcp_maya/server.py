@@ -357,7 +357,7 @@ class MayaMcpServer(DccServerBase):
 
         Calls the base-class implementation to scan all skill directories
         so the ``SkillCatalog`` is fully populated (required for
-        ``list_skills`` / ``find_skills`` / ``load_skill`` to work).
+        ``list_skills`` / ``search_skills`` / ``load_skill`` to work).
         Then, depending on the *minimal* flag, either loads a small
         default set of skills or falls back to the legacy "load all"
         behaviour.
@@ -398,7 +398,12 @@ class MayaMcpServer(DccServerBase):
             include_bundled=include_bundled,
         )
 
-        # Phase 2: resolve minimal mode and load skills selectively
+        # Phase 2: wire in-process executor so skills run inside the live Maya
+        # interpreter instead of spawning a subprocess.  This is the correct
+        # execution path for any embedded DCC (issue #108).
+        self._wire_in_process_executor()
+
+        # Phase 3: resolve minimal mode and load skills selectively
         is_minimal = _resolve_minimal_flag(minimal)
         custom_tools = _resolve_default_tools()
 
@@ -416,6 +421,63 @@ class MayaMcpServer(DccServerBase):
         # :meth:`DccServerBase.start` with full instance context (pid / window).
 
         return self
+
+    # ------------------------------------------------------------------
+    # In-process executor (issue #108)
+    # ------------------------------------------------------------------
+
+    def _wire_in_process_executor(self) -> None:
+        """Register the Maya in-process skill executor on the SkillCatalog.
+
+        When registered, skill scripts execute inside the **current** Maya
+        Python interpreter rather than spawning a ``mayapy`` subprocess.
+        This avoids the overhead and race conditions of subprocess-based
+        execution and gives skills direct access to the live Maya session.
+
+        The executor is compatible with the ``@skill_entry`` / ``run_main``
+        contract: it sets ``__mcp_params__`` on the module before executing
+        so that ``run_main`` picks up the parameters correctly.
+
+        Falls back silently if ``SkillCatalog.set_in_process_executor`` is
+        not available (dcc-mcp-core < 0.14) so older environments keep
+        working via the subprocess path.
+        """
+        try:
+            catalog = self._server.catalog
+        except AttributeError:
+            logger.debug("SkillCatalog.catalog not available — skipping in-process executor wiring")
+            return
+
+        if not hasattr(catalog, "set_in_process_executor"):
+            logger.debug("set_in_process_executor not available in this core version — using subprocess fallback")
+            return
+
+        def _maya_in_process_executor(script_path: str, params: dict) -> dict:
+            """Execute a skill script in the current Maya Python process.
+
+            Loads the script as a module, injects params via ``__mcp_params__``,
+            executes it, and returns ``__mcp_result__`` (set by ``run_main``).
+            """
+            import importlib.util  # noqa: PLC0415
+
+            spec = importlib.util.spec_from_file_location("_maya_skill_script", script_path)
+            if spec is None or spec.loader is None:
+                return {"success": False, "message": "Cannot load skill script: {}".format(script_path)}
+
+            mod = importlib.util.module_from_spec(spec)
+            mod.__mcp_params__ = params  # type: ignore[attr-defined]
+            try:
+                spec.loader.exec_module(mod)  # type: ignore[union-attr]
+            except SystemExit:
+                # run_main calls sys.exit(0/1); catch it and read the result
+                pass
+            return getattr(mod, "__mcp_result__", {"success": True, "message": "Script executed"})
+
+        try:
+            catalog.set_in_process_executor(_maya_in_process_executor)
+            logger.info("Maya in-process skill executor registered (subprocess spawning disabled)")
+        except Exception as exc:
+            logger.warning("Failed to register in-process executor: %s — falling back to subprocess", exc)
 
     def _load_all_discovered_skills(self) -> None:
         """Load every discovered skill (legacy full-load behaviour)."""
