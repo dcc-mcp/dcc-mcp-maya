@@ -1,9 +1,0 @@
-groups:
-- name: simulation-fx
-  description: Dynamics, simulation, particles, and VFX tools
-  default_active: false
-  tools:
-  - add_instance_object
-  - create_instancer
-  - list_instancers
-  - set_instancer_attribute

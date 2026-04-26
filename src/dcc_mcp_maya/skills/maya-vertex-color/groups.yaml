@@ -1,9 +1,0 @@
-groups:
-- name: modeling
-  description: Geometry creation, editing, and UV tools
-  default_active: false
-  tools:
-  - create_color_set
-  - get_vertex_color
-  - remove_vertex_colors
-  - set_vertex_color

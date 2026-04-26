@@ -1,9 +1,0 @@
-groups:
-- name: rendering
-  description: Render settings, layers, passes, and output tools
-  default_active: false
-  tools:
-  - create_render_pass
-  - enable_render_pass
-  - list_render_passes
-  - set_render_pass_output

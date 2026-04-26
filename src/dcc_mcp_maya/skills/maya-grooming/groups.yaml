@@ -1,9 +1,0 @@
-groups:
-- name: simulation-fx
-  description: Dynamics, simulation, particles, and VFX tools
-  default_active: false
-  tools:
-  - add_nhair_cache
-  - create_nhair_system
-  - list_hair_systems
-  - set_nhair_attribute

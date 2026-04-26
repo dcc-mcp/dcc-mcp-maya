@@ -1,9 +1,0 @@
-groups:
-- name: scene-management
-  description: Scene management, organization, and navigation tools
-  default_active: false
-  tools:
-  - add_to_set
-  - create_set
-  - list_sets
-  - remove_from_set
