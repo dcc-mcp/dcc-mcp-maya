@@ -860,6 +860,10 @@ def start_server(
         if w:
             dcc_window_title = w
 
+    # Issue #125 — fix DCC_MCP_PYTHON_EXECUTABLE if it points at a GUI binary.
+    from dcc_mcp_maya._pyexec import auto_correct as _auto_correct_pyexec  # noqa: PLC0415
+    _auto_correct_pyexec()
+
     if register_builtins:
         # Create server instance and call register_builtin_actions with minimal
         with _server_lock:

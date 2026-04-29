@@ -243,6 +243,15 @@ def _export_worker_env() -> None:
         "DCC_MCP_PYTHON_INIT_SNIPPET",
         "import maya.standalone; maya.standalone.initialize(name='python')",
     )
+    # Issue #125 — auto-correct DCC_MCP_PYTHON_EXECUTABLE if it points at maya.exe
+    # (GUI) instead of mayapy.exe (headless).  Idempotent; no-op when the env
+    # var already points at a Python interpreter or when core < 0.14.17.
+    try:
+        from dcc_mcp_maya._pyexec import auto_correct as _auto_correct_pyexec  # noqa: PLC0415
+
+        _auto_correct_pyexec()
+    except Exception as exc:  # noqa: BLE001 — never block plugin load
+        logger.debug("DCC_MCP_PYTHON_EXECUTABLE auto-correct skipped: %s", exc)
     logger.debug(
         "Subprocess fallback env set: DCC_MCP_PYTHON_EXECUTABLE=%s",
         os.environ["DCC_MCP_PYTHON_EXECUTABLE"],
