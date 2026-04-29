@@ -862,6 +862,7 @@ def start_server(
 
     # Issue #125 — fix DCC_MCP_PYTHON_EXECUTABLE if it points at a GUI binary.
     from dcc_mcp_maya._pyexec import auto_correct as _auto_correct_pyexec  # noqa: PLC0415
+
     _auto_correct_pyexec()
 
     if register_builtins:
