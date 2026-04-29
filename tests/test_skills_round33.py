@@ -384,39 +384,16 @@ class TestBoundingBoxFromNode:
 
 
 # ---------------------------------------------------------------------------
-# server.py line 164 — registry property when _server has no _registry attr
+# server.py — registry property forwards to the underlying skill client.
+# (DccServerBase.registry was decomposed in dcc-mcp-core 0.14.17 and now
+# delegates to ``_skill_client.registry`` instead of ``_server._registry``.)
 # ---------------------------------------------------------------------------
 
 
 class TestServerRegistryProperty:
-    """Cover the registry property fallback (server.py line 164)."""
+    """Cover the inherited ``registry`` property after the core decomposition."""
 
-    def test_registry_returns_none_when_no_internal_registry(self):
-        """When _server has no _registry attr, registry property returns None."""
-        import importlib
-
-        for mod in list(sys.modules):
-            if "dcc_mcp_maya" in mod:
-                del sys.modules[mod]
-
-        mock_maya = MagicMock()
-        modules = {
-            "maya": mock_maya,
-            "maya.cmds": MagicMock(),
-            "maya.mel": MagicMock(),
-            "maya.utils": MagicMock(),
-        }
-        with patch.dict(sys.modules, modules):
-            srv_mod2 = importlib.import_module("dcc_mcp_maya.server")
-            server = srv_mod2.MayaMcpServer(port=0)
-            # Replace the Rust McpHttpServer with a plain Python object that has no _registry
-            plain_obj = object()
-            server._server = plain_obj
-            result = server.registry
-            assert result is None
-
-    def test_registry_returns_registry_when_attr_exists(self):
-        """When _server has _registry, registry property returns it."""
+    def _import_server(self):
         import importlib
 
         for mod in list(sys.modules):
@@ -432,14 +409,22 @@ class TestServerRegistryProperty:
         }
         with patch.dict(sys.modules, modules):
             srv_mod = importlib.import_module("dcc_mcp_maya.server")
-            server = srv_mod.MayaMcpServer(port=0)
-            # Replace Rust object with a simple namespace that has _registry
-            fake_registry = MagicMock()
+            return srv_mod.MayaMcpServer(port=0)
 
-            server._server = MagicMock()
-            server._server.registry = fake_registry
-            result = server.registry
-            assert result is fake_registry
+    def test_registry_forwards_to_skill_client(self):
+        """``server.registry`` returns whatever ``_skill_client.registry`` returns."""
+        server = self._import_server()
+        fake_registry = MagicMock(name="fake_registry")
+        server._skill_client = MagicMock()
+        server._skill_client.registry = fake_registry
+        assert server.registry is fake_registry
+
+    def test_registry_returns_none_when_skill_client_has_none(self):
+        """When the skill client exposes no registry, the property returns None."""
+        server = self._import_server()
+        server._skill_client = MagicMock()
+        server._skill_client.registry = None
+        assert server.registry is None
 
 
 # ---------------------------------------------------------------------------
