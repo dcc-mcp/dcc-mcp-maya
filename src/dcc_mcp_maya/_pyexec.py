@@ -12,6 +12,7 @@ that is safe to call repeatedly (idempotent) and on any platform — when the
 helpers are unavailable (older core), it falls back to the previous behaviour
 of leaving the env var untouched.
 """
+
 # Import future modules
 from __future__ import annotations
 
