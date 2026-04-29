@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.2.20](https://github.com/loonghao/dcc-mcp-maya/compare/v0.2.19...v0.2.20) (2026-04-29)
+
+
+### Bug Fixes
+
+* **plugin:** robust cleanup in uninitializePlugin + stale instance warning ([#130](https://github.com/loonghao/dcc-mcp-maya/issues/130)) ([042764c](https://github.com/loonghao/dcc-mcp-maya/commit/042764cdcdefb12be974755e8da9998e90cc8fa7))
+* **pyexec:** auto-correct DCC_MCP_PYTHON_EXECUTABLE when set to a GUI binary ([#129](https://github.com/loonghao/dcc-mcp-maya/issues/129)) ([d1a0666](https://github.com/loonghao/dcc-mcp-maya/commit/d1a0666974ad479a2c3ade1207068ba6aa002781))
+
+
+### Code Refactoring
+
+* **dispatcher:** split dispatcher.py into a dispatcher/ directory module ([#131](https://github.com/loonghao/dcc-mcp-maya/issues/131)) ([be2e023](https://github.com/loonghao/dcc-mcp-maya/commit/be2e0230a10c83efe5d3c9ea534251a5393261fa))
+* **server:** split MayaMcpServer per SRP into env / executor / loader / probe / transport modules ([#133](https://github.com/loonghao/dcc-mcp-maya/issues/133)) ([80601a0](https://github.com/loonghao/dcc-mcp-maya/commit/80601a0f5965d0fd13492fad9f8ff5373425e1ef))
+
 ## [0.2.19](https://github.com/loonghao/dcc-mcp-maya/compare/v0.2.18...v0.2.19) (2026-04-26)
 
 
