@@ -61,8 +61,8 @@ def create_sphere(radius: float = 1.0) -> dict:
 ### Layer 3 — You Are a Core Developer
 *Goal: Modify the server, dispatcher, or plugin behavior.*
 
-- **src/dcc_mcp_maya/server.py** — `MayaMcpServer` (constructor, `register_builtin_actions`, `start`, `stop`, metrics, job persistence).
-- **src/dcc_mcp_maya/dispatcher.py** — `MayaUiDispatcher`, `MayaStandaloneDispatcher`, `MayaUiPump`, `check_maya_cancelled`.
+- **src/dcc_mcp_maya/server.py** — `MayaMcpServer` composition root (constructor, `register_builtin_actions`, `start`, `stop`, metrics, job persistence). Heavy lifting lives in private siblings: `_env`, `_executor`, `_skill_loader`, `_version_probe`, `_transport`, `_pyexec`, `_stale_cleanup`.
+- **src/dcc_mcp_maya/dispatcher/** — `MayaUiDispatcher`, `MayaStandaloneDispatcher`, `MayaUiPump`, `check_maya_cancelled` (split into `job` / `cancel` / `ui` / `standalone` / `pump` submodules — public symbols re-exported from the package).
 - **maya/plugin/dcc_mcp_maya_plugin.py** — Maya plugin entry point (`initializePlugin`, `uninitializePlugin`, menu, gateway auto-config).
 - **tests/** — 50+ unit tests, E2E tests (tahv/mayapy 2022–2025), multi-instance gateway tests.
 
@@ -162,8 +162,15 @@ A: `src/dcc_mcp_maya/skills/` (64 packages, ~370 scripts). Each package contains
 | `llms.txt` | Condensed AI reference (this project's "man page") |
 | `llms-full.txt` | Exhaustive API reference |
 | `src/dcc_mcp_maya/__init__.py` | Public API exports |
-| `src/dcc_mcp_maya/server.py` | `MayaMcpServer` — lifecycle, discovery, metrics, jobs |
-| `src/dcc_mcp_maya/dispatcher.py` | Thread-affinity dispatchers + cancellation |
+| `src/dcc_mcp_maya/server.py` | `MayaMcpServer` composition root — lifecycle, discovery, metrics, jobs |
+| `src/dcc_mcp_maya/_env.py` | `DCC_MCP_MAYA_*` env-var resolution helpers |
+| `src/dcc_mcp_maya/_executor.py` | In-process skill execution + handler registration |
+| `src/dcc_mcp_maya/_skill_loader.py` | Minimal-mode skill loading (constants + loaders) |
+| `src/dcc_mcp_maya/_version_probe.py` | Maya availability + version string detection |
+| `src/dcc_mcp_maya/_transport.py` | `TransportManager` wrappers (bind / find / rank) |
+| `src/dcc_mcp_maya/_pyexec.py` | Auto-correct `DCC_MCP_PYTHON_EXECUTABLE` (issue #125) |
+| `src/dcc_mcp_maya/_stale_cleanup.py` | Stale FileRegistry detection + warning (issue #126) |
+| `src/dcc_mcp_maya/dispatcher/` | Thread-affinity dispatchers + cancellation (directory module) |
 | `src/dcc_mcp_maya/api.py` | Skill authoring helpers |
 | `src/dcc_mcp_maya/plugin.py` | Maya plugin (`initializePlugin` / menu) |
 | `src/dcc_mcp_maya/skills/` | 64 built-in skill packages |
