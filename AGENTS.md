@@ -65,12 +65,14 @@ def create_sphere(radius: float = 1.0) -> dict:
 - **src/dcc_mcp_maya/dispatcher/** — `MayaUiDispatcher`, `MayaStandaloneDispatcher`, `MayaUiPump`, `check_maya_cancelled` (split into `job` / `cancel` / `ui` / `standalone` / `pump` submodules — public symbols re-exported from the package).
 - **maya/plugin/dcc_mcp_maya_plugin.py** — Maya plugin entry point (`initializePlugin`, `uninitializePlugin`, menu, gateway auto-config).
 - **tests/** — 50+ unit tests, E2E tests (tahv/mayapy 2022–2025), multi-instance gateway tests.
+- **Upstream `dcc-mcp-core` API reference** — https://github.com/loonghao/dcc-mcp-core/blob/main/llms.txt — authoritative one-page index of every public symbol re-used by this repo (`DccServerBase`, `MinimalModeConfig`, `BaseDccCallableDispatcher`, `register_inprocess_executor`, `is_gui_executable` / `correct_python_executable`, `FileRegistry`, `check_dcc_cancelled`, `JobHandle`, result-envelope factories, etc.). Always consult this first before adding a new helper locally — most "missing" utilities already exist upstream and are simply waiting to be wired in.
 
 ### Layer 4 — You Are an AI Agent Reading This
 *Goal: Discover and use tools effectively inside a live Maya session.*
 
 - **llms.txt** — Core API surface, environment variables, key files (fits in a small context window).
 - **llms-full.txt** — Complete public API signatures, all environment variables, 64 built-in skill categories.
+- **Upstream core reference** — https://github.com/loonghao/dcc-mcp-core/blob/main/llms.txt (and the deeper [`llms-full.txt`](https://github.com/loonghao/dcc-mcp-core/blob/main/llms-full.txt)) — exhaustive `dcc_mcp_core` API surface; use it whenever a tool/skill needs to leverage core primitives that are not surfaced in this repo's own `llms.txt`.
 - **Skill discovery workflow:**
   1. Call `search_tools(query="bevel")` or `find_skills("bevel")` to locate relevant skills.
   2. Call `load_skill("maya-mesh-ops")` to materialize the skill's tools.
