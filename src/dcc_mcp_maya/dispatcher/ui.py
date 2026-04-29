@@ -496,3 +496,44 @@ class MayaUiDispatcher:
     def _deferred_drain(self) -> None:
         """Drain all pending main-thread jobs (one-shot fallback)."""
         self.drain_queue(budget_ms=50)
+
+    # ------------------------------------------------------------------
+    # BaseDccCallableDispatcher protocol implementation (issue #136)
+    # ------------------------------------------------------------------
+    def dispatch_callable(self, func: Callable[..., Any], *args: Any, **kwargs: Any) -> Any:
+        """Run *func* on Maya's UI thread and return the result.
+
+        This method satisfies the :class:`~dcc_mcp_core._server.inprocess_executor.BaseDccCallableDispatcher`
+        protocol required by :meth:`DccServerBase.register_inprocess_executor`.
+
+        The callable is submitted to the main-thread queue (affinity="main")
+        and the calling thread blocks until the UI thread finishes execution.
+
+        Returns
+        -------
+        Any
+            Whatever ``func(*args, **kwargs)`` returns.
+
+        Raises
+        ------
+        Exception
+            Propagates any exception raised by *func*.
+        """
+        import uuid
+
+        # Use submit_callable with affinity="main" and wait for the result.
+        request_id = f"dispatch_{uuid.uuid4().hex}"
+        result = self.submit_callable(
+            request_id=request_id,
+            task=lambda: func(*args, **kwargs),
+            affinity="main",
+        )
+
+        if not isinstance(result, dict):
+            raise RuntimeError(f"dispatch_callable: unexpected result type {type(result)}")
+
+        if not result.get("success", True):
+            error_msg = result.get("error", "Unknown error")
+            raise RuntimeError(f"dispatch_callable: {error_msg}")
+
+        return result.get("output")
