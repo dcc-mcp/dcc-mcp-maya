@@ -5,6 +5,7 @@ sets it to a DCC GUI binary instead of the headless Python sibling.
 
 See: https://github.com/loonghao/dcc-mcp-maya/issues/125
 """
+
 # Import future modules
 from __future__ import annotations
 
