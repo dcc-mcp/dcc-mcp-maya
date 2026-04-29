@@ -171,21 +171,43 @@ def initializePlugin(plugin):
         if _is_interactive():
             _add_menu()
         _start()
+        # Issue #126 — surface a single warning when the FileRegistry has
+        # accumulated stale entries from previous Maya crashes.  Best-effort,
+        # never blocks startup.
+        try:
+            from dcc_mcp_maya._stale_cleanup import warn_if_too_many_stale  # noqa: PLC0415
+
+            warn_if_too_many_stale(
+                registry_dir=os.environ.get("DCC_MCP_REGISTRY_DIR") or None,
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("stale-instance scan skipped: %s", exc)
     except Exception as exc:
         logger.error("dcc-mcp-maya plugin failed to initialize: %s", exc)
         raise RuntimeError(f"dcc-mcp-maya init failed: {exc}") from exc
 
 
 def uninitializePlugin(plugin):
-    """Called by Maya when the plugin is unloaded."""
+    """Called by Maya when the plugin is unloaded.
+
+    Issue #126 — every cleanup step runs even when an earlier one raises so
+    the FileRegistry entry is always released.  ``_stop_blocking()`` is
+    invoked from a ``finally`` block so a menu-removal failure (e.g. partial
+    UI shutdown) cannot leak the running server.
+    """
     om.MFnPlugin(plugin)
     try:
-        _stop_blocking()
         if _is_interactive():
-            _remove_menu()
+            try:
+                _remove_menu()
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("dcc-mcp-maya menu removal error: %s", exc)
+    finally:
+        try:
+            _stop_blocking()
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("dcc-mcp-maya server stop error: %s", exc)
         logger.info("dcc-mcp-maya plugin unloaded")
-    except Exception as exc:
-        logger.warning("dcc-mcp-maya cleanup error: %s", exc)
 
 
 # ── server helpers ────────────────────────────────────────────────────────────
