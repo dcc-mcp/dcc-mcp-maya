@@ -9,9 +9,9 @@
 
 `dcc-mcp-maya` embeds a standards-compliant MCP Streamable HTTP server directly inside Autodesk Maya. It exposes 370+ Maya operations as MCP tools that any AI agent (Claude, Cursor, Gemini, etc.) can call over HTTP — no external gateway, no subprocess bridge.
 
-**Current version:** 0.2.15  
-**Core dependency:** `dcc-mcp-core>=0.13.2,<1.0.0`  
-**Python:** 3.7+  
+**Current version:** 0.2.20
+**Core dependency:** `dcc-mcp-core>=0.14.17,<1.0.0`
+**Python:** 3.7+
 **Maya:** 2020+
 
 ---
@@ -178,3 +178,5 @@ A: `src/dcc_mcp_maya/skills/` (64 packages, ~370 scripts). Each package contains
 | `src/dcc_mcp_maya/skills/` | 64 built-in skill packages |
 | `docs/` | VitePress documentation site (EN + ZH) |
 | `tests/` | pytest suite (unit + E2E + integration) |
+
+**New in 0.2.20:** Rust-backed dispatchers (`PyPumpedDispatcher`, `PyStandaloneDispatcher`, `_CorePump`, `create_pumped_dispatcher`) provide higher performance via Rust core (requires `dcc-mcp-core>=0.14.17`). See `llms-full.txt` for details. |

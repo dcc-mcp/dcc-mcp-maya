@@ -9,12 +9,12 @@
 **dcc-mcp-maya** — Maya plugin for the DCC Model Context Protocol (MCP) ecosystem.  
 Embeds a standards-compliant MCP Streamable HTTP server (2025-03-26 spec) directly inside Maya.
 
-- **Version:** 0.2.15
+- **Version:** 0.2.20
 - **License:** MIT
 - **Repository:** https://github.com/loonghao/dcc-mcp-maya
 - **Python:** >=3.7
 - **Maya:** 2020+
-- **Core dependency:** `dcc-mcp-core>=0.13.2,<1.0.0`
+- **Core dependency:** `dcc-mcp-core>=0.14.17,<1.0.0`
 - **Entry point:** `dcc_mcp.adapters` → `maya = "dcc_mcp_maya:MayaMcpServer"`
 
 ---
@@ -50,7 +50,7 @@ The server starts automatically when the plugin loads. In interactive mode a "DC
 MayaMcpServer(
     port: int = 8765,
     server_name: str = "maya-mcp",
-    server_version: str = "0.2.15",
+    server_version: str = "0.2.20",
     gateway_port: Optional[int] = None,
     registry_dir: Optional[str] = None,
     dcc_version: Optional[str] = None,
@@ -216,6 +216,48 @@ from dcc_mcp_maya.dispatcher import MayaStandaloneDispatcher
 dispatcher = MayaStandaloneDispatcher()
 result = dispatcher.submit_callable(request_id="x", task=..., affinity="main")
 ```
+
+### PyPumpedDispatcher (Rust-backed, dcc-mcp-core 0.14.14+)
+
+High-performance dispatcher backed by Rust core. Uses string-payload dispatch for better performance:
+
+```python
+from dcc_mcp_maya.dispatcher import PyPumpedDispatcher, create_pumped_dispatcher
+
+# Factory function (recommended)
+dispatcher = create_pumped_dispatcher()
+
+# Or direct construction
+dispatcher = PyPumpedDispatcher()
+pump = dispatcher.get_pump()  # Returns _CorePump instance
+pump.install()
+```
+
+Key differences from `MayaUiDispatcher`:
+- Dispatch logic runs in Rust (faster, more stable)
+- `_CorePump` replaces `MayaUiPump` (same interface)
+- `submit_callable` and `submit_async_callable` work identically
+
+### PyStandaloneDispatcher (Rust-backed)
+
+Rust-backed standalone dispatcher for `mayapy` / batch contexts:
+
+```python
+from dcc_mcp_maya.dispatcher import PyStandaloneDispatcher
+
+dispatcher = PyStandaloneDispatcher()
+result = dispatcher.submit_callable(request_id="x", task=..., affinity="main")
+```
+
+### _CorePump
+
+Internal pump class (replaces `MayaUiPump` when using Rust-backed dispatchers):
+
+```python
+_CorePump(dispatcher: PyPumpedDispatcher, budget_ms: int = 8)
+```
+
+Same interface as `MayaUiPump`: `install()`, `uninstall()`, `stats` property.
 
 ### MayaUiPump
 
