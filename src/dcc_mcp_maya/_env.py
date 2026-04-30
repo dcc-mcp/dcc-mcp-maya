@@ -32,6 +32,10 @@ ENV_WINDOW_TITLE = "DCC_MCP_MAYA_WINDOW_TITLE"
 #: silently-skipped skill directory raises ``ValueError`` at startup
 #: instead of disappearing into a debug-level log line.
 ENV_STRICT_SKILL_SCAN = "DCC_MCP_MAYA_STRICT_SKILL_SCAN"
+#: Issue #139 / dcc-mcp-core#565 — opt-in workflow engine surface
+#: (``workflows.run``, ``workflows.resume``, ``workflows.list_runs`` MCP
+#: tools).  Off by default so the minimal-mode tools/list stays small.
+ENV_ENABLE_WORKFLOWS = "DCC_MCP_MAYA_ENABLE_WORKFLOWS"
 
 #: Default SQLite filename inside the platform data directory.
 DEFAULT_JOB_DB_FILENAME = "jobs.db"
@@ -158,6 +162,23 @@ def resolve_strict_skill_scan(strict: Optional[bool] = None) -> bool:
     if strict is not None:
         return bool(strict)
     return os.environ.get(ENV_STRICT_SKILL_SCAN, "").strip() == "1"
+
+
+def resolve_enable_workflows(enable_workflows: Optional[bool] = None) -> bool:
+    """Resolve whether to enable the upstream workflow engine.
+
+    When ``True``, ``McpHttpConfig.enable_workflows`` is flipped so the
+    upstream ``workflows.run`` / ``workflows.resume`` / ``workflows.list_runs``
+    MCP tools (added by dcc-mcp-core#565) become reachable from
+    ``tools/list``.  Off by default to keep the minimal-mode tools list
+    tight (issue #139).
+
+    Priority: explicit ``enable_workflows`` argument >
+    ``DCC_MCP_MAYA_ENABLE_WORKFLOWS=1`` > ``False``.
+    """
+    if enable_workflows is not None:
+        return bool(enable_workflows)
+    return os.environ.get(ENV_ENABLE_WORKFLOWS, "").strip() == "1"
 
 
 # Backwards-compatibility aliases — the leading-underscore names mirror the
