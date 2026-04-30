@@ -27,10 +27,10 @@ classifiers = [
 ]
 
 dependencies = [
-    # 0.14.19 lands the three-tier gateway election (issue #137) and the
+    # 0.14.19 lands the three-tier gateway election (issue #137), the
     # stale-aware list_dcc_instances + scan_and_load_strict pair (issue #138)
-    # plus the workflow.resume / SqliteIdempotencyStore / JobRecoveryPolicy
-    # surface this adapter wires through (tracking issue #139).
+    # and the workflows.resume / SqliteIdempotencyStore / JobRecoveryPolicy
+    # surface this adapter wires through (issue #139).
     "dcc-mcp-core>=0.14.19,<1.0.0",
 ]
 

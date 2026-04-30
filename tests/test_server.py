@@ -232,6 +232,83 @@ class TestStrictSkillScan:
                 pass
 
 
+# ── Issue #139: workflow engine + job recovery propagation ───────────────────
+
+
+class TestWorkflowEngineAndJobRecovery:
+    """Issue #139 — wire upstream resume/retry/idempotency surface."""
+
+    def test_workflows_disabled_by_default(self):
+        srv_mod = _import_server()
+        server = srv_mod.MayaMcpServer(port=0)
+        try:
+            assert server._config.enable_workflows is False
+        finally:
+            try:
+                server.stop()
+            except Exception:  # noqa: BLE001
+                pass
+
+    def test_workflows_enabled_via_constructor_kwarg(self):
+        srv_mod = _import_server()
+        server = srv_mod.MayaMcpServer(port=0, enable_workflows=True)
+        try:
+            assert server._config.enable_workflows is True
+        finally:
+            try:
+                server.stop()
+            except Exception:  # noqa: BLE001
+                pass
+
+    def test_workflows_enabled_via_env_var(self, monkeypatch):
+        from dcc_mcp_maya import _env
+
+        monkeypatch.setenv(_env.ENV_ENABLE_WORKFLOWS, "1")
+        srv_mod = _import_server()
+        server = srv_mod.MayaMcpServer(port=0)
+        try:
+            assert server._config.enable_workflows is True
+        finally:
+            try:
+                server.stop()
+            except Exception:  # noqa: BLE001
+                pass
+
+    def test_job_recovery_default_drop_propagates(self):
+        srv_mod = _import_server()
+        server = srv_mod.MayaMcpServer(port=0)
+        try:
+            assert server._config.job_recovery == "drop"
+            assert server._job_recovery == "drop"
+        finally:
+            try:
+                server.stop()
+            except Exception:  # noqa: BLE001
+                pass
+
+    def test_job_recovery_requeue_propagates_to_inner_config(self, monkeypatch):
+        """``DCC_MCP_MAYA_JOB_RECOVERY=requeue`` must reach ``_config.job_recovery``.
+
+        Without the propagation added in this PR, the upstream Rust
+        :class:`JobRecoveryPolicy` (dcc-mcp-core#567) defaulted to
+        ``drop`` regardless of the env var, so interrupted idempotent
+        jobs were never resumed on plugin restart (issue #139).
+        """
+        from dcc_mcp_maya import _env
+
+        monkeypatch.setenv(_env.ENV_JOB_RECOVERY, "requeue")
+        srv_mod = _import_server()
+        server = srv_mod.MayaMcpServer(port=0)
+        try:
+            assert server._job_recovery == "requeue"
+            assert server._config.job_recovery == "requeue"
+        finally:
+            try:
+                server.stop()
+            except Exception:  # noqa: BLE001
+                pass
+
+
 class TestMayaMcpServerHttp:
     """End-to-end HTTP tests against a real McpHttpServer (no Maya needed)."""
 
