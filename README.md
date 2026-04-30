@@ -170,7 +170,7 @@ subprocesses can connect back without any manual configuration.
 
 ## Available MCP Tools
 
-`dcc-mcp-maya` ships **64 built-in skill packages** and **370+ Maya MCP tools**.
+`dcc-mcp-maya` ships **12 built-in skill packages** and **73+ Maya MCP tools**.
 In the default minimal mode, only the core tools above are active at startup;
 the rest are progressively loaded via `load_skill`.
 
@@ -444,7 +444,7 @@ Rules of thumb:
 | `affinity: main` | **Default**. Anything that calls `maya.cmds` or `OpenMaya`. |
 | `affinity: any`  | Pure Python / filesystem only — never touches Maya state. |
 
-Two helpers keep the annotations consistent across the 64 bundled skills:
+Two helpers keep the annotations consistent across the 12 bundled skills:
 
 ```bash
 # Annotate every bundled tools.yaml from the SKILL_DEFAULTS table.

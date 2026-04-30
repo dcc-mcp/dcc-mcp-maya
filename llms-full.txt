@@ -417,18 +417,21 @@ tools:
 
 ---
 
-## Built-in Skills (64 Packages)
+## Built-in Skills (12 Packages)
 
-**Core:** maya-scene, maya-scripting
-**Geometry:** maya-primitives, maya-mesh-ops, maya-uv-ops, maya-vertex-color, maya-xform-utils, maya-blend-shape-utils, maya-deformers, maya-display
-**Materials & Texturing:** maya-materials, maya-material-library, maya-texture-bake, maya-hdri, maya-color-grading
-**Animation & Rigging:** maya-animation, maya-rigging, maya-rig-utils, maya-skinning-utils, maya-spline-ik, maya-constraints, maya-constraints-advanced, maya-mocap, maya-muscle, maya-pose-library
-**Lighting & Cameras:** maya-lighting, maya-cameras, maya-light-rig, maya-camera-sequence
-**Rendering:** maya-render, maya-render-layers, maya-render-passes, maya-render-farm, maya-arnold-aov, maya-gpu-cache
-**Dynamics & FX:** maya-dynamics, maya-fluid, maya-nparticles, maya-ocean, maya-cloth-sim, maya-paint-effects, maya-bifrost, maya-mash, maya-instancer, maya-xgen, maya-grooming
-**Scene & Pipeline:** maya-node-graph, maya-attributes, maya-sets, maya-references, maya-expressions, maya-namespaces, maya-scene-assembly, maya-scene-utils, maya-pipeline, maya-shot-export, maya-export-preset, maya-proxy-mesh, maya-toon
-**Utility:** maya-utility, maya-scripting (expanded), maya-selection, maya-color-grading, maya-cache, maya-gpu-cache, maya-audio, maya-annotation
-**External integrations:** maya-render-farm (cooperative cancellation), maya-mocap, maya-pose-library
+**Core pipeline skills:**
+- `maya-scene` — scene info, new scene, open/save scene, selection, session info
+- `maya-scripting` — execute_python, execute_mel
+- `maya-export-preset` — export preset management
+- `maya-light-rig` — lighting rig creation and management
+- `maya-material-library` — material library and assignment
+- `maya-pipeline` — pipeline integration utilities
+- `maya-pose-library` — pose library operations
+- `maya-render` — render settings and rendering
+- `maya-render-farm` — render farm integration with cooperative cancellation
+- `maya-scene-assembly` — scene assembly and referencing
+- `maya-shot-export` — shot export workflows
+- `maya-texture-bake` — texture baking operations
 
 ---
 
@@ -514,10 +517,10 @@ Gateway exposes meta-tools: `list_dcc_instances`, `connect_to_dcc`, `get_dcc_ins
 | `llms-full.txt` | This file — exhaustive reference |
 | `src/dcc_mcp_maya/__init__.py` | Public API exports (29 symbols) |
 | `src/dcc_mcp_maya/server.py` | `MayaMcpServer`, discovery, metrics, jobs |
-| `src/dcc_mcp_maya/dispatcher.py` | Thread dispatchers, pump, cancellation |
+| `src/dcc_mcp_maya/dispatcher/` | Thread-affinity dispatchers + cancellation (directory module) |
 | `src/dcc_mcp_maya/api.py` | 18 skill-authoring helpers |
 | `src/dcc_mcp_maya/capabilities.py` | DCC capability declarations |
-| `src/dcc_mcp_maya/skills/` | 64 built-in skill packages |
+| `src/dcc_mcp_maya/skills/` | 12 built-in skill packages, 73 scripts |
 | `docs/` | VitePress site (EN + ZH) |
 | `tests/` | pytest suite |
 | `maya/plugin/dcc_mcp_maya_plugin.py` | Maya plugin file for `MAYA_PLUG_IN_PATH` |
