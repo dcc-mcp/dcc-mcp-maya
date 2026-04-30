@@ -16,7 +16,12 @@
           "path": "pyproject.toml",
           "jsonpath": "$.project.version"
         },
-        "src/dcc_mcp_maya/__version__.py"
+        {"type": "generic", "path": "src/dcc_mcp_maya/__version__.py"},
+        {"type": "generic", "path": "AGENTS.md"},
+        {"type": "generic", "path": "llms.txt"},
+        {"type": "generic", "path": "llms-full.txt"},
+        {"type": "generic", "path": "docs/api/adapter.md"},
+        {"type": "generic", "path": "docs/api/server.md"}
       ]
     }
   },
