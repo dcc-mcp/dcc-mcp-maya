@@ -270,6 +270,102 @@ class TestMayaUiDispatcher:
         assert len(results) == 10
         assert all(r["success"] for r in results)
 
+    # ── BaseDccCallableDispatcher protocol (issue #136) ───────────────────────
+
+    def test_dispatch_callable_routes_to_main_thread(self):
+        """``dispatch_callable`` must enqueue on the main queue and block."""
+        from dcc_mcp_maya.dispatcher import MayaUiDispatcher
+
+        d = MayaUiDispatcher()
+        result_holder = [None]
+        error_holder = [None]
+
+        def _runner(script_path, params):
+            return {"script": script_path, "params": dict(params)}
+
+        def _worker():
+            try:
+                result_holder[0] = d.dispatch_callable(_runner, "skills/foo/scripts/bar.py", {"x": 1})
+            except Exception as exc:  # noqa: BLE001
+                error_holder[0] = exc
+
+        t = threading.Thread(target=_worker)
+        t.start()
+
+        # Give the worker a chance to enqueue, then drain on this thread.
+        # Poll for up to 1s — Windows scheduling can be slower than 50ms.
+        deadline = time.monotonic() + 1.0
+        while d.pending_count() == 0 and time.monotonic() < deadline:
+            time.sleep(0.01)
+        assert d.pending_count() >= 1, f"worker error: {error_holder[0]!r}"
+        d.drain_queue(budget_ms=100)
+
+        t.join(timeout=5)
+        assert error_holder[0] is None, error_holder[0]
+        assert result_holder[0] == {
+            "script": "skills/foo/scripts/bar.py",
+            "params": {"x": 1},
+        }
+
+    def test_dispatch_callable_propagates_exceptions(self):
+        """Exceptions raised in *func* must surface from ``dispatch_callable``."""
+        from dcc_mcp_maya.dispatcher import MayaUiDispatcher
+
+        d = MayaUiDispatcher()
+        captured = [None]
+
+        def _bad(*_a, **_kw):
+            raise ValueError("boom")
+
+        def _worker():
+            try:
+                d.dispatch_callable(_bad)
+            except Exception as exc:  # noqa: BLE001
+                captured[0] = exc
+
+        t = threading.Thread(target=_worker)
+        t.start()
+        deadline = time.monotonic() + 1.0
+        while d.pending_count() == 0 and time.monotonic() < deadline:
+            time.sleep(0.01)
+        d.drain_queue(budget_ms=100)
+        t.join(timeout=5)
+
+        assert captured[0] is not None
+        assert "boom" in str(captured[0])
+
+    def test_dispatch_callable_satisfies_protocol(self):
+        """:class:`MayaUiDispatcher` must satisfy ``BaseDccCallableDispatcher``.
+
+        Regression for issue #136: without this, ``register_inprocess_executor``
+        cannot route ``affinity: main`` tools through the UI thread and they
+        fall back to a ``mayapy`` subprocess.
+        """
+        from dcc_mcp_maya.dispatcher import MayaUiDispatcher
+
+        d = MayaUiDispatcher()
+        assert hasattr(d, "dispatch_callable")
+        assert callable(d.dispatch_callable)
+
+        if sys.version_info < (3, 8):
+            # typing.Protocol predates 3.8; on 3.7 the upstream class is a
+            # regular ABC and isinstance() returns False because we duck-type
+            # the contract rather than inherit. The structural assertions
+            # above are the binding contract on 3.7.
+            pytest.skip("Protocol isinstance check requires Python >= 3.8")
+
+        try:
+            from dcc_mcp_core._server.inprocess_executor import (
+                BaseDccCallableDispatcher,
+            )
+        except ImportError:
+            pytest.skip("dcc-mcp-core inprocess_executor not available")
+
+        try:
+            assert isinstance(d, BaseDccCallableDispatcher)
+        except TypeError:
+            pytest.skip("isinstance(Protocol) requires @runtime_checkable on this Python")
+
 
 # ── MayaStandaloneDispatcher tests ───────────────────────────────────────────
 
