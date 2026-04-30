@@ -163,12 +163,32 @@ class MayaMcpServer(DccServerBase):
         control over when the :class:`MayaUiPump` is installed (that
         requires a live ``scriptJob``, which only makes sense inside a
         real interactive session).  Callers that manage a dispatcher
-        should invoke :meth:`attach_dispatcher` after :meth:`start` so
-        :meth:`stop` can drain pending jobs.
+        should invoke :meth:`attach_dispatcher` **before**
+        :meth:`register_builtin_actions` so that
+        :meth:`DccServerBase.register_inprocess_executor` can wire
+        the dispatcher before any tools are registered (issue #136).
 
         Passing ``None`` detaches a previously-registered dispatcher.
+
+        .. note::
+
+            This method also calls :meth:`DccServerBase.register_inprocess_executor`
+            (issue #136) so that tools declaring ``affinity: main`` are
+            executed on Maya's UI thread via the dispatcher, instead of
+            falling back to a ``mayapy`` subprocess.
         """
         self._maya_dispatcher = dispatcher
+        # Wire the in-process executor so that ``affinity: main`` tools
+        # execute on the UI thread (issue #136).
+        if dispatcher is not None:
+            self.register_inprocess_executor(dispatcher)
+        else:
+            # Detach: clear the in-process executor so tools fall back to
+            # subprocess execution (or inline if no dispatcher is attached).
+            try:
+                self._server.set_in_process_executor(None)
+            except Exception as exc:  # noqa: BLE001
+                logger.debug("[%s] Could not clear in-process executor: %s", self._dcc_name, exc)
 
     def stop(self) -> None:
         """Stop the HTTP server and drain any attached Maya dispatcher.
