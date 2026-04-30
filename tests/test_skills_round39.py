@@ -480,6 +480,72 @@ class TestServerBindAndRegister:
 
 
 # ---------------------------------------------------------------------------
+# Issue #137 — gateway-election adapter version + DCC type stamping
+# ---------------------------------------------------------------------------
+
+
+class TestGatewayElectionAdapterMetadata:
+    """Issue #137: McpHttpConfig must carry adapter dcc_type + adapter version.
+
+    The upstream three-tier election (dcc-mcp-core 0.14.19, PR #568) reads:
+
+    1. dcc-mcp-http crate version (stamped by the core itself)
+    2. ``server_version`` (the adapter package version)
+    3. ``dcc_type`` real-DCC tiebreaker
+
+    This adapter must therefore stamp both ``server_version`` and
+    ``dcc_type`` on its inner :class:`McpHttpConfig` so that a freshly
+    installed Maya plugin wins gateway election against an older
+    standalone server with ``dcc_type="unknown"``.
+    """
+
+    def test_dcc_type_stamped_as_maya(self):
+        """``MayaMcpServer`` must stamp ``dcc_type='maya'`` on the inner config."""
+        from dcc_mcp_maya.server import MayaMcpServer
+
+        server = MayaMcpServer(port=0)
+        try:
+            assert server._config.dcc_type == "maya"
+        finally:
+            try:
+                server.stop()
+            except Exception:  # noqa: BLE001
+                pass
+
+    def test_server_version_matches_package_version(self):
+        """``server_version`` on the inner config must equal the adapter's __version__.
+
+        That value flows into the gateway sentinel as ``adapter_version``
+        (or the fallback equivalent) for the three-tier comparison.
+        """
+        from dcc_mcp_maya import __version__ as adapter_version
+        from dcc_mcp_maya.server import MayaMcpServer
+
+        server = MayaMcpServer(port=0)
+        try:
+            assert server._config.server_version == adapter_version
+        finally:
+            try:
+                server.stop()
+            except Exception:  # noqa: BLE001
+                pass
+
+    def test_explicit_server_version_override(self):
+        """``server_version`` constructor kwarg must override the default."""
+        from dcc_mcp_maya.server import MayaMcpServer
+
+        server = MayaMcpServer(port=0, server_version="9.9.9")
+        try:
+            assert server._config.server_version == "9.9.9"
+            assert server._config.dcc_type == "maya"
+        finally:
+            try:
+                server.stop()
+            except Exception:  # noqa: BLE001
+                pass
+
+
+# ---------------------------------------------------------------------------
 # TestServerFindBestService
 # ---------------------------------------------------------------------------
 
