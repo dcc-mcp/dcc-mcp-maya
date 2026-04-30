@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.2.21](https://github.com/loonghao/dcc-mcp-maya/compare/v0.2.20...v0.2.21) (2026-04-30)
+
+
+### Features
+
+* **server:** DCC_MCP_MAYA_STRICT_SKILL_SCAN + stale-aware discovery ([#144](https://github.com/loonghao/dcc-mcp-maya/issues/144)) ([9554dc8](https://github.com/loonghao/dcc-mcp-maya/commit/9554dc8da31bcd6cc58b55308e884e055c26f8b3))
+* **server:** wire workflows + job recovery knobs ([#145](https://github.com/loonghao/dcc-mcp-maya/issues/145)) ([5548ff4](https://github.com/loonghao/dcc-mcp-maya/commit/5548ff4973f1f0d57702888c1060e7863e48b55a))
+
+
+### Bug Fixes
+
+* **deps:** bump dcc-mcp-core to 0.14.19 for three-tier gateway election ([#143](https://github.com/loonghao/dcc-mcp-maya/issues/143)) ([96bd336](https://github.com/loonghao/dcc-mcp-maya/commit/96bd336ca79d8440ea8e704522545c87bfa08b4e))
+* **server:** wire in-process executor on dispatcher attach ([#142](https://github.com/loonghao/dcc-mcp-maya/issues/142)) ([89123ea](https://github.com/loonghao/dcc-mcp-maya/commit/89123ea07a08e2e6d0f1735ec4a7fa4085f29b4f))
+
+
+### Documentation
+
+* **agents:** link upstream dcc-mcp-core llms.txt as authoritative API reference ([#134](https://github.com/loonghao/dcc-mcp-maya/issues/134)) ([2de112f](https://github.com/loonghao/dcc-mcp-maya/commit/2de112f503e4a42c6ba382d73a793b18cea7148d))
+* update skill count from 64 to 12 packages (73 scripts) ([#141](https://github.com/loonghao/dcc-mcp-maya/issues/141)) ([28ddd3c](https://github.com/loonghao/dcc-mcp-maya/commit/28ddd3c303aeb5628f482eb52150652e80765252))
+* update version to 0.2.20 and add Rust-backed dispatcher documentation ([946026a](https://github.com/loonghao/dcc-mcp-maya/commit/946026ab7924ce7d438075bbc5e8175e8a08a1b6))
+* update version to 0.2.20 and add Rust-backed dispatcher documentation ([b7b6ee0](https://github.com/loonghao/dcc-mcp-maya/commit/b7b6ee09d25f5272dd5902283b777f87bde99c07))
+
 ## [0.2.20](https://github.com/loonghao/dcc-mcp-maya/compare/v0.2.19...v0.2.20) (2026-04-29)
 
 
