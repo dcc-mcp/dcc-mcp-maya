@@ -177,6 +177,61 @@ class TestMayaMcpServerApi:
         assert server.mcp_url is None
 
 
+# ── Issue #138: strict skill scan opt-in ──────────────────────────────────────
+
+
+class TestStrictSkillScan:
+    """Issue #138 — ``DCC_MCP_MAYA_STRICT_SKILL_SCAN=1`` surfaces skipped dirs."""
+
+    def test_env_var_default_off(self, monkeypatch):
+        from dcc_mcp_maya import _env
+
+        monkeypatch.delenv(_env.ENV_STRICT_SKILL_SCAN, raising=False)
+        assert _env.resolve_strict_skill_scan() is False
+
+    def test_env_var_set_to_one_enables_strict(self, monkeypatch):
+        from dcc_mcp_maya import _env
+
+        monkeypatch.setenv(_env.ENV_STRICT_SKILL_SCAN, "1")
+        assert _env.resolve_strict_skill_scan() is True
+
+    def test_explicit_arg_overrides_env(self, monkeypatch):
+        from dcc_mcp_maya import _env
+
+        monkeypatch.setenv(_env.ENV_STRICT_SKILL_SCAN, "0")
+        assert _env.resolve_strict_skill_scan(True) is True
+
+    def test_strict_scan_raises_value_error_on_skipped_dirs(self, tmp_path):
+        """When strict scan finds a malformed skill dir, startup must raise.
+
+        Builds a fake skills directory containing an unparseable
+        ``SKILL.md`` and asserts that ``register_builtin_actions(strict_scan=True)``
+        propagates the ``ValueError`` from
+        :func:`dcc_mcp_core.scan_and_load_strict`.
+        """
+        bad_skill = tmp_path / "bad-skill"
+        bad_skill.mkdir()
+        (bad_skill / "SKILL.md").write_text(
+            "---\nthis is: not: valid: yaml: at: all\n---\n",
+            encoding="utf-8",
+        )
+
+        srv_mod = _import_server()
+        server = srv_mod.MayaMcpServer(port=0)
+        try:
+            with pytest.raises(ValueError):
+                server.register_builtin_actions(
+                    extra_skill_paths=[str(tmp_path)],
+                    include_bundled=False,
+                    strict_scan=True,
+                )
+        finally:
+            try:
+                server.stop()
+            except Exception:  # noqa: BLE001
+                pass
+
+
 class TestMayaMcpServerHttp:
     """End-to-end HTTP tests against a real McpHttpServer (no Maya needed)."""
 
