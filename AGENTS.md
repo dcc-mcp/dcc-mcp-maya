@@ -7,7 +7,7 @@
 
 ## 30-Second Summary
 
-`dcc-mcp-maya` embeds a standards-compliant MCP Streamable HTTP server directly inside Autodesk Maya. It exposes 370+ Maya operations as MCP tools that any AI agent (Claude, Cursor, Gemini, etc.) can call over HTTP — no external gateway, no subprocess bridge.
+`dcc-mcp-maya` embeds a standards-compliant MCP Streamable HTTP server directly inside Autodesk Maya. It exposes 73+ Maya operations as MCP tools that any AI agent (Claude, Cursor, Gemini, etc.) can call over HTTP — no external gateway, no subprocess bridge.
 
 **Current version:** 0.2.20
 **Core dependency:** `dcc-mcp-core>=0.14.17,<1.0.0`
@@ -71,7 +71,7 @@ def create_sphere(radius: float = 1.0) -> dict:
 *Goal: Discover and use tools effectively inside a live Maya session.*
 
 - **llms.txt** — Core API surface, environment variables, key files (fits in a small context window).
-- **llms-full.txt** — Complete public API signatures, all environment variables, 64 built-in skill categories.
+- **llms-full.txt** — Complete public API signatures, all environment variables, 12 built-in skill categories.
 - **Upstream core reference** — https://github.com/loonghao/dcc-mcp-core/blob/main/llms.txt (and the deeper [`llms-full.txt`](https://github.com/loonghao/dcc-mcp-core/blob/main/llms-full.txt)) — exhaustive `dcc_mcp_core` API surface; use it whenever a tool/skill needs to leverage core primitives that are not surfaced in this repo's own `llms.txt`.
 - **Skill discovery workflow:**
   1. Call `search_tools(query="bevel")` or `find_skills("bevel")` to locate relevant skills.
@@ -152,7 +152,7 @@ A: Poll `check_maya_cancelled()` inside the loop. It raises `CancelledError` whe
 A: Same API — `dcc_mcp_maya.start_server(port=0)`. In batch mode the `MayaStandaloneDispatcher` runs jobs on the calling thread directly.
 
 **Q: Where are the built-in skills?**  
-A: `src/dcc_mcp_maya/skills/` (64 packages, ~370 scripts). Each package contains `SKILL.md`, `tools.yaml`, `groups.yaml`, and `scripts/*.py`.
+A: `src/dcc_mcp_maya/skills/` (12 packages, 73 scripts). Each package contains `SKILL.md`, `tools.yaml`, `groups.yaml`, and `scripts/*.py`.
 
 ---
 
@@ -175,7 +175,7 @@ A: `src/dcc_mcp_maya/skills/` (64 packages, ~370 scripts). Each package contains
 | `src/dcc_mcp_maya/dispatcher/` | Thread-affinity dispatchers + cancellation (directory module) |
 | `src/dcc_mcp_maya/api.py` | Skill authoring helpers |
 | `src/dcc_mcp_maya/plugin.py` | Maya plugin (`initializePlugin` / menu) |
-| `src/dcc_mcp_maya/skills/` | 64 built-in skill packages |
+| `src/dcc_mcp_maya/skills/` | 12 built-in skill packages, 73 scripts |
 | `docs/` | VitePress documentation site (EN + ZH) |
 | `tests/` | pytest suite (unit + E2E + integration) |
 
