@@ -45,7 +45,7 @@ For async tools (`execution: async` in `tools.yaml`), the server returns a `job_
 ## OpenAI-Specific Tips
 
 - **System prompt:** Include a summary of [llms.txt](llms.txt) in your system prompt so the model knows the available tool surface.
-- **Tool selection:** With 370+ tools, the initial `tools/list` in minimal mode is small (~8 tools). The model should learn to call `load_skill` before attempting specialized operations.
+- **Tool selection:** With 73+ tools, the initial `tools/list` in minimal mode is small (~8 tools). The model should learn to call `load_skill` before attempting specialized operations.
 - **Async handling:** Long renders return a `job_id`. Use `jobs.get_status` with the same `job_id` to poll. Set a reasonable polling interval (2–5s).
 
 ---
