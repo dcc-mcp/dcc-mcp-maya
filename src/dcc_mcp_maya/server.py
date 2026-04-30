@@ -181,6 +181,7 @@ class MayaMcpServer(DccServerBase):
         extra_skill_paths: Optional[List[str]] = None,
         include_bundled: bool = True,
         minimal: Optional[bool] = None,
+        strict_scan: Optional[bool] = None,
     ) -> "MayaMcpServer":
         """Discover skills, then optionally load only core skills.
 
@@ -199,6 +200,11 @@ class MayaMcpServer(DccServerBase):
         * ``DCC_MCP_MAYA_DEFAULT_TOOLS=skill1,skill2`` → load those
           skills only (overrides ``minimal``).
 
+        When ``strict_scan=True`` (or ``DCC_MCP_MAYA_STRICT_SKILL_SCAN=1``),
+        the discovery is followed by :func:`dcc_mcp_core.scan_and_load_strict`
+        which raises :class:`ValueError` if any skill directory was
+        silently skipped (issue #138).
+
         Returns ``self`` for chaining.
         """
         # Phase 1 — discover all skills.
@@ -206,6 +212,11 @@ class MayaMcpServer(DccServerBase):
             extra_skill_paths=extra_skill_paths,
             include_bundled=include_bundled,
         )
+
+        # Phase 1a — strict validation pass (issue #138). Raises
+        # ``ValueError`` when any skill directory was silently skipped.
+        if _env.resolve_strict_skill_scan(strict_scan):
+            self._strict_skill_scan(extra_skill_paths, include_bundled)
 
         # Phase 2 — wire in-process executor for already-loaded actions.
         _executor.wire_in_process_executor(self)
@@ -222,6 +233,41 @@ class MayaMcpServer(DccServerBase):
             _skill_loader.load_minimal_skills(self._server, _skill_loader.MINIMAL_SKILLS)
 
         return self
+
+    def _strict_skill_scan(
+        self,
+        extra_skill_paths: Optional[List[str]] = None,
+        include_bundled: bool = True,
+    ) -> None:
+        """Re-scan with :func:`scan_and_load_strict` and raise on skipped dirs.
+
+        Issue #138: surfaces silently-skipped skill directories at
+        startup so packaging / CI failures are visible instead of
+        appearing as missing tools at run-time.
+
+        Raises
+        ------
+        ValueError
+            When any skill directory failed validation. The exception
+            message lists the offending directories.
+        """
+        from dcc_mcp_core import scan_and_load_strict  # noqa: PLC0415
+
+        scan_paths = self.collect_skill_search_paths(
+            extra_paths=extra_skill_paths,
+            include_bundled=include_bundled,
+            filter_existing=True,
+        )
+        try:
+            scan_and_load_strict(extra_paths=scan_paths, dcc_name=self._dcc_name)
+        except ValueError:
+            raise
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(
+                "[%s] strict skill scan unavailable, falling back to lenient discovery: %s",
+                self._dcc_name,
+                exc,
+            )
 
     def load_skill(self, skill_name: str) -> bool:
         """Load *skill_name* and register in-process handlers for its actions.

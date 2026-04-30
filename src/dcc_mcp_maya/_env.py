@@ -27,6 +27,11 @@ ENV_METRICS = "DCC_MCP_MAYA_METRICS"
 ENV_JOB_STORAGE = "DCC_MCP_MAYA_JOB_STORAGE"
 ENV_JOB_RECOVERY = "DCC_MCP_MAYA_JOB_RECOVERY"
 ENV_WINDOW_TITLE = "DCC_MCP_MAYA_WINDOW_TITLE"
+#: Issue #138 — when set to ``"1"``, ``register_builtin_actions`` runs
+#: :func:`dcc_mcp_core.scan_and_load_strict` after discovery so any
+#: silently-skipped skill directory raises ``ValueError`` at startup
+#: instead of disappearing into a debug-level log line.
+ENV_STRICT_SKILL_SCAN = "DCC_MCP_MAYA_STRICT_SKILL_SCAN"
 
 #: Default SQLite filename inside the platform data directory.
 DEFAULT_JOB_DB_FILENAME = "jobs.db"
@@ -139,6 +144,20 @@ def resolve_window_title(dcc_window_title: Optional[str]) -> Optional[str]:
         return dcc_window_title
     raw = os.environ.get(ENV_WINDOW_TITLE, "").strip()
     return raw or None
+
+
+def resolve_strict_skill_scan(strict: Optional[bool] = None) -> bool:
+    """Resolve whether to run :func:`scan_and_load_strict` after discovery.
+
+    Issue #138 acceptance criterion: a ``--strict`` knob so CI can fail
+    when skill packages don't validate (today they silently disappear).
+
+    Priority: explicit ``strict`` argument > ``DCC_MCP_MAYA_STRICT_SKILL_SCAN=1``
+    > ``False``.
+    """
+    if strict is not None:
+        return bool(strict)
+    return os.environ.get(ENV_STRICT_SKILL_SCAN, "").strip() == "1"
 
 
 # Backwards-compatibility aliases — the leading-underscore names mirror the
