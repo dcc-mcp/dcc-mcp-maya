@@ -86,6 +86,7 @@ class MayaMcpServer(DccServerBase):
         dcc_pid: Optional[int] = None,
         dcc_window_title: Optional[str] = None,
         dcc_window_handle: Optional[int] = None,
+        enable_workflows: Optional[bool] = None,
     ) -> None:
         super().__init__(
             dcc_name="maya",
@@ -119,8 +120,31 @@ class MayaMcpServer(DccServerBase):
             self._config.job_storage_path = ""
 
         self._job_recovery: str = _env.resolve_job_recovery(job_recovery)
+        # Propagate the chosen recovery policy into the inner Rust config so
+        # the upstream JobRecoveryPolicy contract (dcc-mcp-core#567) actually
+        # honours ``DCC_MCP_MAYA_JOB_RECOVERY=requeue`` instead of always
+        # dropping interrupted jobs (issue #139).
+        try:
+            self._config.job_recovery = self._job_recovery
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("[%s] Could not propagate job_recovery to inner config: %s", "maya", exc)
         if self._job_recovery == "requeue":
             logger.info("[%s] Job recovery policy: requeue idempotent interrupted jobs", "maya")
+
+        # ── Workflow engine (issue #139 / dcc-mcp-core#565) ─────────────
+        if _env.resolve_enable_workflows(enable_workflows):
+            try:
+                self._config.enable_workflows = True
+                logger.info(
+                    "[%s] Workflow engine enabled (workflows.run / .resume / .list_runs)",
+                    "maya",
+                )
+            except Exception as exc:  # noqa: BLE001
+                logger.warning(
+                    "[%s] Could not enable workflows on inner config: %s",
+                    "maya",
+                    exc,
+                )
 
         # Optional :class:`~dcc_mcp_maya.dispatcher.MayaUiDispatcher`
         # attached by the plugin (or by tests).  When set, :meth:`stop`
