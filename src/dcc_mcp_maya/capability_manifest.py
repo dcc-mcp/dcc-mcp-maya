@@ -379,7 +379,13 @@ def register_capability_mcp_tool(server: Any, *, builder: MayaCapabilityManifest
                 tags=["capability", "manifest", "dcc", "maya"],
                 dcc="maya",
                 input_schema=input_schema,
-                skill_name="",  # adapter-builtin, not a real skill
+                # Use a stable synthetic skill name so core's registry
+                # keeps the record in its own bucket instead of leaking
+                # into real-skill group bookkeeping (issue #163 regression
+                # note: passing "" here caused Maya 2025 E2E to drop the
+                # __group__ stubs emitted by MINIMAL_DEACTIVATE_GROUPS).
+                skill_name="dcc-adapter",
+                group="capability",
                 execution="sync",
                 thread_affinity="any",
                 enabled=True,
