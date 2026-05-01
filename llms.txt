@@ -12,7 +12,7 @@
 **Repo:** https://github.com/loonghao/dcc-mcp-maya
 **Python:** >=3.7
 **Maya:** 2020+
-**Core dep:** `dcc-mcp-core>=0.14.17,<1.0.0`
+**Core dep:** `dcc-mcp-core>=0.14.20,<1.0.0`
 
 ---
 
@@ -69,7 +69,41 @@ MayaMcpServer(
 )
 ```
 
-Key methods: `register_builtin_actions()`, `start()`, `stop()`, `attach_dispatcher(dispatcher)`.
+Key methods: `register_builtin_actions()`, `start()`, `stop()`, `attach_dispatcher(dispatcher)`, `publish_capability_snapshot()`, `build_capability_manifest(loaded_only=False)`.
+
+---
+
+## Gateway Capability Surface (issues #163 / #164 / #165)
+
+The adapter exposes a compact manifest on top of the MCP channel so gateways and AI agents can enumerate every discoverable action (loaded *or* unloaded) without inflating `tools/list`:
+
+```python
+from dcc_mcp_maya import (
+    MayaCapabilityManifestBuilder,   # SOLID projection catalog → records
+    CapabilityRecord,                # compact per-action value object
+    build_manifest_payload,          # add metadata + totals header
+    MayaContextSnapshotProvider,     # scene / selection / frame snapshot
+    collect_gateway_metadata,        # project snapshot → gateway fields
+)
+
+# Option 1 — programmatic access
+server = MayaMcpServer(port=8765)
+server.register_builtin_actions(minimal=True)
+manifest = server.build_capability_manifest()
+# {'schema_version': '1', 'dcc_type': 'maya', 'metadata': {...},
+#  'totals': {'actions': N, 'loaded_actions': M, ...},
+#  'capabilities': [{tool_slug, backend_tool, skill_name, summary, tags, ...}]}
+
+# Option 2 — MCP tool (always registered before start)
+# Agents call `dcc_capability_manifest` with `{loaded_only: bool}`.
+```
+
+Each record is <=640 B serialised and omits `inputSchema` — roughly 4× cheaper than a full `tools/list` entry.  Loaded-skill actions are exposed that MCP `tools/list` intentionally skips (core uses `__skill__*` stubs), so the manifest fills a real discovery gap.
+
+Live sync with the gateway FileRegistry:
+
+* `server.publish_capability_snapshot(reason="...")` — push current Maya `scene / version / documents / display_name` via `DccServerBase.update_gateway_metadata`.  Invoked automatically on `start()`, `load_skill(...)`, and `unload_skill(...)`.
+* `server.set_context_snapshot_provider(MayaContextSnapshotProvider())` — already wired at construction.  Exposes `maya.cmds` state (scene, selection, frame, frame_range, up_axis, units, version) to core's post-tool `append_context_snapshot` wrapper and the per-DCC REST `/v1/context` (when mounted by core).
 
 ---
 

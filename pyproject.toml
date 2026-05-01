@@ -27,13 +27,14 @@ classifiers = [
 ]
 
 dependencies = [
-    # 0.14.20 lands the building blocks this branch wires through:
-    #   * normalize_script_execution_params      → issue #150 (code/script alias)
-    #   * ScriptExecutionCapture / Result        → issue #151 (stdout capture)
-    #   * mark tools with fallback inputSchema   → issue #149 (auto _meta marker)
-    #   * DeferredToolResult + HostExecutionBridge → issue #153 (long-running)
-    #   * exception_to_error_envelope            → issue #151 (structured errors)
-    #   * gateway health-probe filtering         → issue #148 (commandPort skip)
+    # 0.14.20 lands the Maya gateway-adapter building blocks this branch
+    # wires through.  We deliberately do NOT pin >=0.14.21 because the
+    # 0.14.21 release bundles a new `dcc-diagnostics` skill that changes
+    # the alphabetic order of `__skill__*` stubs in progressive mode — a
+    # multi-instance E2E test depends on that order and is outside the
+    # scope of this PR to fix.  The APIs we need (``HostExecutionBridge``,
+    # ``set_context_snapshot_provider``, ``update_gateway_metadata``,
+    # ``plugin_manifest``) are all already in 0.14.20.
     "dcc-mcp-core>=0.14.20,<1.0.0",
 ]
 
