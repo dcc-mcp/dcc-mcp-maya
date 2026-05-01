@@ -70,5 +70,5 @@ maya-scene/
 
 - [快速开始](./getting-started) — 5 分钟让 Maya 与 Claude Desktop 联通
 - [Action 完整列表](./actions) — 所有内置 MCP 工具的完整目录
-- [高级用法](./advanced) — 自定义 Skill、主线程调度
+- [高级用法](./advanced) — 自定义 Skill、主线程调度、`defer=True` 长任务执行
 - [单机多实例部署](./multi-instance) — 在同一台工作站上运行多个 Maya 实例

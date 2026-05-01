@@ -196,6 +196,125 @@ Or set the environment variable:
 set DCC_MCP_LOG_LEVEL=DEBUG
 ```
 
+## Long-Running Scripts: `defer=True`
+
+`execute_python` and any custom skill that returns a `DeferredToolResult` can keep the MCP request thread responsive while a long-running script (bake, render, simulation, IO) runs on Maya's idle queue.
+
+### When to use it
+
+| Scenario | Recommendation |
+|---|---|
+| Quick query / attribute write (< 1s) | `defer=False` (default) — synchronous reply |
+| Wall-clock 1–60s, no UI needed | `defer=True` — client polls until done |
+| Multi-minute work (renders, caches) | `defer=True` + raise `timeout_secs` |
+| Anything that must block the request | `defer=False` (default) |
+
+### From an MCP client (Claude / Cursor / Gemini)
+
+```jsonc
+// tools/call request
+{
+  "jsonrpc": "2.0", "id": 7, "method": "tools/call",
+  "params": {
+    "name": "maya_scripting__execute_python",
+    "arguments": {
+      "code": "import maya.cmds as cmds\nfor f in range(1, 240):\n    cmds.currentTime(f)\n    cmds.refresh()\n",
+      "defer": true,
+      "timeout_secs": 600
+    }
+  }
+}
+```
+
+The server returns immediately with a deferred handle; `dcc-mcp-core` polls the handle every 100&nbsp;ms and streams the final `ToolResult` back to the client when the script completes (or `timeout_secs` elapses).
+
+### Cancellation
+
+Long-running scripts that opt into `defer=True` should also cooperate with cancellation:
+
+```python
+from dcc_mcp_maya import check_maya_cancelled
+
+for frame in frames:
+    check_maya_cancelled()       # raises CancelledError when cancelled
+    cmds.currentTime(frame)
+    cmds.render()
+```
+
+When the MCP client sends `notifications/cancelled` (or the dispatcher signals cancellation), `check_maya_cancelled()` raises and the deferred handle resolves with a structured error envelope.
+
+### Returning `DeferredToolResult` from a custom skill
+
+Any skill can adopt the same pattern by importing the helper from `dcc-mcp-core`:
+
+```python
+"""my_long_action.py"""
+from typing import Any, Dict
+
+
+def _runner(state: Dict[str, Any], target: str) -> None:
+    import maya.cmds as cmds
+    cmds.bakeResults(target, simulation=True, time=(1, 240))
+    state["result"] = {"success": True, "message": "Bake complete"}
+    state["done"] = True
+
+
+def main(target: str, defer: bool = True, timeout_secs: float = 600.0):
+    if not defer:
+        # Synchronous fallback (blocks the request thread).
+        state: Dict[str, Any] = {"done": False, "result": None}
+        _runner(state, target)
+        return state["result"]
+
+    from dcc_mcp_core._server import DeferredToolResult  # lazy import
+
+    state = {"done": False, "result": None}
+
+    def _kick() -> None:
+        _runner(state, target)
+
+    try:
+        import maya.utils
+        maya.utils.executeDeferred(_kick)
+    except ImportError:
+        # mayapy / standalone — no idle queue; run inline.
+        _kick()
+
+    return DeferredToolResult(
+        check_is_finished=lambda: state["result"] if state["done"] else None,
+        timeout_secs=float(timeout_secs),
+        poll_interval_secs=0.1,
+    )
+```
+
+Declare it as `execution: async` in `tools.yaml` so the dispatcher allocates a worker slot:
+
+```yaml
+- name: my_long_action
+  execution: async
+  affinity: main
+  timeout_hint_secs: 600
+  inputSchema:
+    type: object
+    properties:
+      target: { type: string }
+      defer: { type: boolean, default: true }
+      timeout_secs: { type: integer, default: 600, minimum: 1 }
+```
+
+### How the dispatcher routes deferred results
+
+`MayaMcpServer._executor` duck-types the return value: if it exposes `check_is_finished`, the result is passed straight through to `dcc-mcp-core`'s poll loop. No wrapping, no copy, no main-thread reflection. This means dispatcher errors raised before the deferred kick-off are still caught and returned as structured `{"success": False, ...}` envelopes, while the polled completion uses your skill's own envelope.
+
+### Configuration knobs
+
+| Env / arg | Default | Effect |
+|---|---|---|
+| `defer=True` (per-call argument) | `false` | Opt the call into the deferred path. |
+| `timeout_secs` (per-call argument) | `3600` | Hard timeout enforced by the core poll loop. |
+| `poll_interval_secs` (constructor) | `0.1` | How often the core re-checks `check_is_finished`. |
+| Tool's `timeout_hint_secs` (`tools.yaml`) | — | Advisory hint surfaced to the MCP host UI. |
+
 ## Production Considerations
 
 ### Security
