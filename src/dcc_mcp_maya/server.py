@@ -35,6 +35,15 @@ from dcc_mcp_core.server_base import DccServerBase
 # Import local modules
 from dcc_mcp_maya import _env, _executor, _skill_loader, _transport, _version_probe
 from dcc_mcp_maya.__version__ import __version__
+from dcc_mcp_maya.capability_manifest import (
+    MayaCapabilityManifestBuilder,
+    build_manifest_payload,
+    register_capability_mcp_tool,
+)
+from dcc_mcp_maya.context_snapshot import (
+    MayaContextSnapshotProvider,
+    collect_gateway_metadata,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -153,6 +162,25 @@ class MayaMcpServer(DccServerBase):
         # ``event.wait()`` budget instead of hanging indefinitely
         # (issue #85 / #89).
         self._maya_dispatcher: Any = None
+
+        # ── Context snapshot + capability manifest (issues #163 / #165) ──
+        # Maya-specific context provider feeds both:
+        #   * the core post-tool ``append_context_snapshot`` wrapper, and
+        #   * the per-DCC ``GET /v1/context`` REST endpoint.
+        # The builder is instantiated here so it shares lifetime with the
+        # server and can be exposed via ``_capability_builder`` for tests.
+        self._snapshot_provider_impl: MayaContextSnapshotProvider = MayaContextSnapshotProvider()
+        try:
+            self.set_context_snapshot_provider(self._snapshot_provider_impl)
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("[%s] set_context_snapshot_provider failed: %s", "maya", exc)
+
+        self._capability_builder: MayaCapabilityManifestBuilder = MayaCapabilityManifestBuilder(
+            dcc_name="maya",
+            skill_lister=self.list_skills,
+            action_lister=self.list_actions,
+            is_loaded=self.is_skill_loaded,
+        )
 
     # ── Lifecycle additions ────────────────────────────────────────────
 
@@ -282,6 +310,15 @@ class MayaMcpServer(DccServerBase):
         # actions need a second pass or they fall back to subprocess execution.
         _executor.wire_in_process_executor(self)
 
+        # Phase 5 — expose the compact Maya capability manifest as an MCP
+        # tool (issue #163).  Registered here — *before* ``start()`` — per
+        # the "register all actions before start" rule.  Safe to skip if
+        # the core build does not expose a compatible registration API.
+        try:
+            register_capability_mcp_tool(self, builder=self._capability_builder)
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("[%s] capability manifest MCP tool registration failed: %s", "maya", exc)
+
         return self
 
     def _strict_skill_scan(
@@ -326,6 +363,12 @@ class MayaMcpServer(DccServerBase):
         (via the ``load_skill`` MCP tool) also get in-process Python
         handlers — not just skills loaded during startup via
         :meth:`register_builtin_actions`.
+
+        After a successful load, :meth:`publish_capability_snapshot` is
+        called so the gateway capability index (issue #163) and the
+        per-DCC REST ``/v1/skills`` feed (issue #165) reflect the change
+        within one heartbeat tick instead of waiting for the next
+        scheduled sync.
         """
         try:
             action_names: List[str] = self._server.load_skill(skill_name) or []
@@ -342,7 +385,105 @@ class MayaMcpServer(DccServerBase):
                     skill_name,
                     newly_registered,
                 )
+        # Notify the gateway so the capability index observes the new
+        # loaded-action set (#163).  Best-effort — never fail load_skill.
+        self.publish_capability_snapshot(reason="load_skill:{}".format(skill_name))
         return True
+
+    def unload_skill(self, skill_name: str) -> bool:
+        """Unload *skill_name* and push an updated manifest to the gateway.
+
+        Wraps :meth:`DccServerBase.unload_skill` so unload events also
+        trigger :meth:`publish_capability_snapshot` (issue #163 / #165).
+        """
+        try:
+            ok = super().unload_skill(skill_name)
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("[%s] unload_skill(%r) failed: %s", self._dcc_name, skill_name, exc)
+            return False
+        # Always publish — even when unload itself returned False, because
+        # the gateway-side view may have drifted for other reasons.
+        self.publish_capability_snapshot(reason="unload_skill:{}".format(skill_name))
+        return bool(ok)
+
+    # ── Gateway capability manifest + metadata (issues #163 / #165) ────
+
+    def start(self) -> Any:
+        """Start the HTTP server and publish the initial capability snapshot.
+
+        The base class ``start()`` brings the Rust ``McpHttpServer`` up;
+        afterwards we synchronise :meth:`update_gateway_metadata` with the
+        live Maya context so the gateway FileRegistry sees an accurate
+        ``scene / version / display_name`` pair on the very first tick
+        (issue #165).
+        """
+        handle = super().start()
+        self.publish_capability_snapshot(reason="start")
+        return handle
+
+    def publish_capability_snapshot(self, *, reason: str = "manual") -> bool:
+        """Push current Maya context into the gateway registry.
+
+        Returns ``True`` when :meth:`update_gateway_metadata` succeeded.  No
+        exception escapes — this is a best-effort housekeeping call.
+
+        ``reason`` is only used for log lines; it lets us trace **why** the
+        capability index was bumped (startup / load_skill / unload_skill /
+        manual).
+        """
+        if not self.is_running:
+            return False
+        gateway_port = getattr(self._config, "gateway_port", 0)
+        if not gateway_port or gateway_port <= 0:
+            # Single-process mode: nothing to publish to.
+            return False
+        try:
+            meta = collect_gateway_metadata(self._snapshot_provider_impl)
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("[%s] capability snapshot: provider failed: %s", self._dcc_name, exc)
+            return False
+
+        try:
+            ok = self.update_gateway_metadata(
+                scene=meta.get("scene"),
+                version=meta.get("version"),
+                documents=meta.get("documents"),
+                display_name=meta.get("display_name"),
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("[%s] update_gateway_metadata failed (%s): %s", self._dcc_name, reason, exc)
+            return False
+
+        if ok:
+            logger.debug(
+                "[%s] published capability snapshot (%s): scene=%s version=%s",
+                self._dcc_name,
+                reason,
+                meta.get("scene"),
+                meta.get("version"),
+            )
+        return bool(ok)
+
+    def build_capability_manifest(self, *, loaded_only: bool = False) -> dict:
+        """Return the compact Maya capability manifest as a dict.
+
+        Mirrors the payload emitted by the ``dcc_capability_manifest`` MCP
+        tool so tests (and programmatic callers) can inspect it without
+        going through HTTP.
+        """
+        records = self._capability_builder.build()
+        if loaded_only:
+            records = [r for r in records if r.loaded]
+        instance_id = getattr(self, "instance_id", None)
+        scene = getattr(self._config, "scene", None)
+        version = getattr(self._config, "dcc_version", None)
+        return build_manifest_payload(
+            records,
+            dcc_name="maya",
+            dcc_version=version,
+            scene=scene,
+            instance_id=instance_id,
+        )
 
     # ── Maya version + transport wrappers ──────────────────────────────
 
