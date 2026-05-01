@@ -7,7 +7,7 @@
 
 ## What This Project Does
 
-`dcc-mcp-maya` embeds an MCP Streamable HTTP server directly inside Autodesk Maya. Gemini (via an MCP-compatible client or custom integration) can discover and invoke 370+ Maya tools over HTTP.
+`dcc-mcp-maya` embeds an MCP Streamable HTTP server directly inside Autodesk Maya. Gemini (via an MCP-compatible client or custom integration) can discover and invoke 73+ Maya tools over HTTP.
 
 ---
 

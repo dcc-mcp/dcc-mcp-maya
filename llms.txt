@@ -136,7 +136,7 @@ Tool naming: `{skill_name.replace("-","_")}__{script_stem}` (e.g. `maya_scene__n
 | `src/dcc_mcp_maya/dispatcher/` | Thread-affinity dispatchers + cancellation (directory module) |
 | `src/dcc_mcp_maya/api.py` | Skill authoring helpers (18 symbols) |
 | `src/dcc_mcp_maya/plugin.py` | Maya plugin entry point |
-| `src/dcc_mcp_maya/skills/` | 64 built-in skill packages |
+| `src/dcc_mcp_maya/skills/` | 12 built-in skill packages (73 scripts) |
 | `docs/` | VitePress docs (EN + ZH) |
 | `README.md` | Human overview |
 | `AGENTS.md` | Progressive disclosure map |

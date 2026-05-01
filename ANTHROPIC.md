@@ -7,7 +7,7 @@
 
 ## What This Project Does
 
-`dcc-mcp-maya` embeds an MCP Streamable HTTP server directly inside Autodesk Maya. Any Anthropic API client (Claude Code, Claude Desktop, custom integrations) that speaks MCP Streamable HTTP can discover and invoke 370+ Maya tools.
+`dcc-mcp-maya` embeds an MCP Streamable HTTP server directly inside Autodesk Maya. Any Anthropic API client (Claude Code, Claude Desktop, custom integrations) that speaks MCP Streamable HTTP can discover and invoke 73+ Maya tools.
 
 ---
 
