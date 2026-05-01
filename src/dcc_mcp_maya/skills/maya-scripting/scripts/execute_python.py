@@ -1,10 +1,36 @@
-"""Execute Python code inside Maya's interpreter."""
+"""Execute Python code inside Maya's interpreter.
+
+Supports two execution modes:
+
+* **Inline (default)** — ``exec()`` runs synchronously on the calling
+  thread.  ``maya.cmds`` output is captured via both
+  :class:`~dcc_mcp_core.script_execution.ScriptExecutionCapture` and
+  :class:`~dcc_mcp_maya._maya_output.MayaOutputCapture` so ``print()``,
+  ``cmds.warning(...)``, ``cmds.error(...)`` and MEL ``print`` all reach
+  the MCP client (issue #151).
+
+* **Deferred (``defer=True``)** — the snippet is scheduled via
+  ``maya.utils.executeDeferred`` and a
+  :class:`~dcc_mcp_core._server.DeferredToolResult` is returned so the
+  MCP request thread is freed immediately (issue #153).  A cooperative
+  ``sys.settrace`` interrupt checks the request-level cancellation token
+  between Python lines so long-running pure-Python loops can be aborted
+  when a client sends ``notifications/cancelled`` — no manual
+  :func:`check_maya_cancelled` call required.  Blocking C++ calls
+  (``cmds.file(open=...)``, ``cmds.render``, simulations) cannot be
+  preempted and will finish the current step before the cancel is
+  observed; callers should place
+  :func:`dcc_mcp_maya.check_maya_cancelled` inside their own loops for
+  finer control.
+"""
 
 # Import future modules
 from __future__ import annotations
 
 # Import built-in modules
-from typing import Any, Dict
+import sys
+import threading
+from typing import Any, Dict, Optional
 
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
@@ -33,15 +59,40 @@ def _normalize(params: Dict[str, Any]):
         return None, skill_error("Invalid script parameter", str(exc))
 
 
-def _run_inline(code: str, capture_output: bool) -> dict:
+def _merge_capture(primary: str, extra: str) -> str:
+    """Concatenate two capture buffers, preserving blank-line separation."""
+    if not extra:
+        return primary
+    if not primary:
+        return extra
+    if primary.endswith("\n"):
+        return primary + extra
+    return primary + "\n" + extra
+
+
+def _run_inline(
+    code: str,
+    capture_output: bool,
+    cancel_event: Optional[threading.Event] = None,
+) -> dict:
     """Run *code* synchronously and return the structured envelope.
 
     Uses :class:`dcc_mcp_core.script_execution.ScriptExecutionCapture`
-    (issue #151) to capture ``print()`` and ``cmds.warning(...)`` output
-    while preserving the historical ``context.output`` / ``context.stdout``
-    keys so existing MCP clients keep working.
+    plus :class:`dcc_mcp_maya._maya_output.MayaOutputCapture` (issue
+    #151) so ``print()``, ``cmds.warning(...)`` and MEL ``print``
+    statements all reach the client while the artist still sees output
+    in the Script Editor.
+
+    When *cancel_event* is provided a lightweight :func:`sys.settrace`
+    hook checks it between Python lines and raises
+    :class:`~dcc_mcp_core.cancellation.CancelledError` when set — this
+    is the cooperative preemption used by the deferred path (issue
+    #153).
     """
     from dcc_mcp_core.script_execution import ScriptExecutionCapture  # noqa: PLC0415
+
+    # Import local modules
+    from dcc_mcp_maya._maya_output import MayaOutputCapture  # noqa: PLC0415
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
@@ -49,23 +100,58 @@ def _run_inline(code: str, capture_output: bool) -> dict:
         cmds = None  # type: ignore[assignment]
 
     exec_globals: Dict[str, Any] = {"cmds": cmds, "__name__": "__maya_exec__"}
-    capture = ScriptExecutionCapture(tee=True) if capture_output else None
+    py_capture = ScriptExecutionCapture(tee=True) if capture_output else None
+    maya_capture = MayaOutputCapture() if capture_output else None
+
+    # Optional cooperative cancel tracer (deferred path only).  Guarded
+    # so the sync path does not pay the ``sys.settrace`` cost.
+    trace_installed = False
+    previous_trace = None
+
+    def _cancel_tracer(_frame: Any, event: str, _arg: Any):
+        if event == "line" and cancel_event is not None and cancel_event.is_set():
+            from dcc_mcp_core.cancellation import CancelledError  # noqa: PLC0415
+
+            raise CancelledError("execute_python cancelled by client")
+        return _cancel_tracer
+
     try:
-        if capture is not None:
-            with capture:
-                exec(compile(code, "<maya-python>", "exec"), exec_globals)  # noqa: S102
-            stdout, stderr = capture.stdout, capture.stderr
-        else:
+        if py_capture is not None:
+            py_capture.__enter__()
+        if maya_capture is not None:
+            maya_capture.__enter__()
+
+        if cancel_event is not None:
+            previous_trace = sys.gettrace()
+            sys.settrace(_cancel_tracer)
+            trace_installed = True
+
+        exc_info: Optional[BaseException] = None
+        try:
             exec(compile(code, "<maya-python>", "exec"), exec_globals)  # noqa: S102
-            stdout, stderr = "", ""
-    except BaseException as exc:  # noqa: BLE001 — relay traceback to client
-        captured_out = capture.stdout if capture is not None else ""
-        captured_err = capture.stderr if capture is not None else ""
+        except BaseException as exc:  # noqa: BLE001 — relay traceback to client
+            exc_info = exc
+    finally:
+        if trace_installed:
+            sys.settrace(previous_trace)
+        if maya_capture is not None:
+            maya_capture.__exit__(None, None, None)
+        if py_capture is not None:
+            py_capture.__exit__(None, None, None)
+
+    py_stdout = py_capture.stdout if py_capture is not None else ""
+    py_stderr = py_capture.stderr if py_capture is not None else ""
+    maya_stdout = maya_capture.stdout if maya_capture is not None else ""
+    maya_stderr = maya_capture.stderr if maya_capture is not None else ""
+    stdout = _merge_capture(py_stdout, maya_stdout)
+    stderr = _merge_capture(py_stderr, maya_stderr)
+
+    if exc_info is not None:
         return skill_exception(
-            exc,
+            exc_info,
             message="Python execution failed",
-            stdout=captured_out,
-            stderr=captured_err,
+            stdout=stdout,
+            stderr=stderr,
         )
 
     raw = exec_globals.get("result")
@@ -83,14 +169,35 @@ def _run_deferred(code: str, capture_output: bool, timeout_secs: float):
 
     The MCP request returns immediately; the dispatcher polls
     :attr:`DeferredToolResult.check_is_finished` until the script
-    completes (or :attr:`timeout_secs` elapses).
+    completes (or ``timeout_secs`` elapses).
+
+    Cancellation (issue #153)
+    -------------------------
+    Two cooperative hooks keep the deferred job aligned with MCP
+    ``notifications/cancelled``:
+
+    1. The polling callback calls
+       :func:`~dcc_mcp_maya.check_maya_cancelled` on every invocation.
+       When cancelled, it sets ``cancel_event`` (so the worker can
+       notice) and re-raises :class:`CancelledError` — the core poll
+       loop then returns an error envelope to the client immediately,
+       freeing the request thread instead of waiting for the background
+       job to finish.
+    2. The worker runs under a :func:`sys.settrace` hook that checks
+       ``cancel_event`` between Python lines, raising
+       :class:`CancelledError` so pure-Python loops abort without the
+       caller having to embed manual ``check_maya_cancelled()`` calls.
     """
     from dcc_mcp_core._server import DeferredToolResult  # noqa: PLC0415
 
+    # Import local modules
+    from dcc_mcp_maya.dispatcher import check_maya_cancelled  # noqa: PLC0415
+
+    cancel_event = threading.Event()
     state: Dict[str, Any] = {"done": False, "result": None}
 
     def _runner() -> None:
-        state["result"] = _run_inline(code, capture_output)
+        state["result"] = _run_inline(code, capture_output, cancel_event=cancel_event)
         state["done"] = True
 
     try:
@@ -101,8 +208,17 @@ def _run_deferred(code: str, capture_output: bool, timeout_secs: float):
         # mayapy / standalone — no executeDeferred queue; run inline.
         _runner()
 
+    def _check_is_finished():
+        # Propagate MCP cancellation to the worker + the core poll loop.
+        try:
+            check_maya_cancelled()
+        except BaseException:  # noqa: BLE001 — flag worker + re-raise
+            cancel_event.set()
+            raise
+        return state["result"] if state["done"] else None
+
     return DeferredToolResult(
-        check_is_finished=lambda: state["result"] if state["done"] else None,
+        check_is_finished=_check_is_finished,
         timeout_secs=float(timeout_secs),
         poll_interval_secs=0.1,
     )
@@ -113,11 +229,11 @@ def execute_python(**params: Any):
 
     Accepts the source via ``code`` (preferred), ``script``, or ``source``
     (issue #150 / dcc-mcp-core #591).  When ``capture_output=True``
-    (default) ``print()`` and ``cmds.warning(...)`` output are captured
-    via :class:`ScriptExecutionCapture` (issue #151).  When ``defer=True``
-    the script is scheduled on Maya's idle queue and a
-    :class:`DeferredToolResult` is returned so long-running scripts no
-    longer block the MCP request thread (issue #153).
+    (default) ``print()``, ``cmds.warning(...)`` and MEL ``print`` output
+    are all captured (issue #151).  When ``defer=True`` the script is
+    scheduled on Maya's idle queue and a :class:`DeferredToolResult` is
+    returned so long-running scripts no longer block the MCP request
+    thread, with cooperative cancellation wired in (issue #153).
     """
     normalized, err = _normalize(params)
     if err is not None:
