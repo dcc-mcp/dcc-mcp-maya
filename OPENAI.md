@@ -7,7 +7,7 @@
 
 ## What This Project Does
 
-`dcc-mcp-maya` embeds an MCP Streamable HTTP server directly inside Autodesk Maya. Any OpenAI-powered client that speaks MCP Streamable HTTP can call 370+ Maya tools.
+`dcc-mcp-maya` embeds an MCP Streamable HTTP server directly inside Autodesk Maya. Any OpenAI-powered client that speaks MCP Streamable HTTP can call 73+ Maya tools.
 
 ---
 
