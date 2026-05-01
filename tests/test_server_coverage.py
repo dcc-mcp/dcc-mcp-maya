@@ -62,6 +62,11 @@ def _make_bare_server(builtin_dir=None):
 
     srv._config = McpHttpConfig()
     srv._server = MagicMock()
+    # Core 0.14.20 register_builtin_actions touches these attributes; normally
+    # populated by DccServerBase.__init__, which we bypass here.
+    srv._dcc_dispatcher = None
+    srv._execution_bridge = None
+    srv._inprocess_executor_registered = False
     return srv
 
 
