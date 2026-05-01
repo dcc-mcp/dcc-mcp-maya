@@ -603,6 +603,25 @@ class TestMinimalMode:
         assert not server._server.is_loaded("maya-render-farm")
         server.stop()
 
+    def test_minimal_default_registers_core_skill_handlers(self):
+        """Minimal startup must wire newly-loaded core tools in-process.
+
+        Regression for issue #136: without the post-load wiring pass,
+        ``maya_scripting__execute_python`` is visible but has no Python handler,
+        so the core falls back to subprocess execution (mayapy).
+        """
+        srv_mod = _import_server()
+        server = srv_mod.MayaMcpServer(port=0)
+        try:
+            server.register_builtin_actions(
+                extra_skill_paths=[_builtin_skills_dir()],
+                minimal=True,
+            )
+
+            assert server._server.has_handler("maya_scripting__execute_python")
+        finally:
+            server.stop()
+
     def test_minimal_false_loads_all_skills(self):
         """With minimal=False, all discovered skills are loaded (legacy behaviour)."""
         srv_mod = _import_server()
