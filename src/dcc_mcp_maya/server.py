@@ -310,14 +310,21 @@ class MayaMcpServer(DccServerBase):
         # actions need a second pass or they fall back to subprocess execution.
         _executor.wire_in_process_executor(self)
 
-        # Phase 5 — expose the compact Maya capability manifest as an MCP
-        # tool (issue #163).  Registered here — *before* ``start()`` — per
-        # the "register all actions before start" rule.  Safe to skip if
-        # the core build does not expose a compatible registration API.
-        try:
-            register_capability_mcp_tool(self, builder=self._capability_builder)
-        except Exception as exc:  # noqa: BLE001
-            logger.debug("[%s] capability manifest MCP tool registration failed: %s", "maya", exc)
+        # Phase 5 — optionally expose the compact Maya capability manifest
+        # as an MCP tool (issue #163).  Disabled by default because the
+        # ``registry.register`` call bumps the registry generation, which
+        # in multi-instance gateway mode can perturb __group__ stub
+        # aggregation.  Opt in via env var ``DCC_MCP_MAYA_CAPABILITY_MCP_TOOL=1``
+        # when you need it as a discoverable MCP tool.  The Python API
+        # (``MayaMcpServer.build_capability_manifest`` and
+        # ``publish_capability_snapshot``) remains available regardless.
+        if os.environ.get("DCC_MCP_MAYA_CAPABILITY_MCP_TOOL", "0").strip() == "1":
+            try:
+                register_capability_mcp_tool(self, builder=self._capability_builder)
+            except Exception as exc:  # noqa: BLE001
+                logger.debug(
+                    "[%s] capability manifest MCP tool registration failed: %s", "maya", exc
+                )
 
         return self
 
@@ -364,11 +371,14 @@ class MayaMcpServer(DccServerBase):
         handlers — not just skills loaded during startup via
         :meth:`register_builtin_actions`.
 
-        After a successful load, :meth:`publish_capability_snapshot` is
-        called so the gateway capability index (issue #163) and the
-        per-DCC REST ``/v1/skills`` feed (issue #165) reflect the change
-        within one heartbeat tick instead of waiting for the next
-        scheduled sync.
+        The gateway capability index refreshes on its own schedule via the
+        FileRegistry heartbeat; we deliberately do **not** call
+        :meth:`publish_capability_snapshot` here because an unconditional
+        ``update_gateway_metadata`` during load_skill was observed to
+        perturb the registry's group-stub bookkeeping in multi-instance
+        runs (dropping ``__group__scene-management`` after a sibling
+        skill was loaded).  Callers that must force an immediate
+        publish can invoke :meth:`publish_capability_snapshot` directly.
         """
         try:
             action_names: List[str] = self._server.load_skill(skill_name) or []
@@ -385,41 +395,36 @@ class MayaMcpServer(DccServerBase):
                     skill_name,
                     newly_registered,
                 )
-        # Notify the gateway so the capability index observes the new
-        # loaded-action set (#163).  Best-effort — never fail load_skill.
-        self.publish_capability_snapshot(reason="load_skill:{}".format(skill_name))
         return True
 
     def unload_skill(self, skill_name: str) -> bool:
-        """Unload *skill_name* and push an updated manifest to the gateway.
+        """Unload *skill_name*.
 
-        Wraps :meth:`DccServerBase.unload_skill` so unload events also
-        trigger :meth:`publish_capability_snapshot` (issue #163 / #165).
+        Wraps :meth:`DccServerBase.unload_skill`.  Like :meth:`load_skill`,
+        we avoid calling :meth:`publish_capability_snapshot` automatically —
+        see the note there for the multi-instance rationale.
         """
         try:
-            ok = super().unload_skill(skill_name)
+            return bool(super().unload_skill(skill_name))
         except Exception as exc:  # noqa: BLE001
             logger.debug("[%s] unload_skill(%r) failed: %s", self._dcc_name, skill_name, exc)
             return False
-        # Always publish — even when unload itself returned False, because
-        # the gateway-side view may have drifted for other reasons.
-        self.publish_capability_snapshot(reason="unload_skill:{}".format(skill_name))
-        return bool(ok)
 
     # ── Gateway capability manifest + metadata (issues #163 / #165) ────
 
     def start(self) -> Any:
-        """Start the HTTP server and publish the initial capability snapshot.
+        """Start the HTTP server.
 
-        The base class ``start()`` brings the Rust ``McpHttpServer`` up;
-        afterwards we synchronise :meth:`update_gateway_metadata` with the
-        live Maya context so the gateway FileRegistry sees an accurate
-        ``scene / version / display_name`` pair on the very first tick
-        (issue #165).
+        The base class ``start()`` brings the Rust ``McpHttpServer`` up.
+        The initial ``update_gateway_metadata`` publish is intentionally
+        **deferred** until the first ``load_skill`` / ``unload_skill``
+        call (or an explicit :meth:`publish_capability_snapshot`): pushing
+        a half-formed snapshot during startup can clobber fresh
+        FileRegistry entries written by sibling Maya instances that
+        registered before the local election won.  The gateway's own
+        heartbeat (5 s) publishes our metadata anyway.
         """
-        handle = super().start()
-        self.publish_capability_snapshot(reason="start")
-        return handle
+        return super().start()
 
     def publish_capability_snapshot(self, *, reason: str = "manual") -> bool:
         """Push current Maya context into the gateway registry.
@@ -430,6 +435,15 @@ class MayaMcpServer(DccServerBase):
         ``reason`` is only used for log lines; it lets us trace **why** the
         capability index was bumped (startup / load_skill / unload_skill /
         manual).
+
+        Safety
+        ------
+        When the context snapshot reports no actionable Maya state
+        (``available=False``, empty scene, no version), the call is
+        short-circuited.  This prevents clobbering existing FileRegistry
+        entries with "empty" metadata during startup — the registry will
+        pick up accurate values on the first meaningful scene change
+        instead.
         """
         if not self.is_running:
             return False
@@ -443,6 +457,17 @@ class MayaMcpServer(DccServerBase):
             logger.debug("[%s] capability snapshot: provider failed: %s", self._dcc_name, exc)
             return False
 
+        # Short-circuit when there's nothing useful to push — avoids
+        # clobbering fresh FileRegistry entries with empty values during
+        # headless/standalone startup.
+        if not any((meta.get("scene"), meta.get("version"), meta.get("display_name"))):
+            logger.debug(
+                "[%s] capability snapshot (%s): skipped — no actionable Maya state",
+                self._dcc_name,
+                reason,
+            )
+            return False
+
         try:
             ok = self.update_gateway_metadata(
                 scene=meta.get("scene"),
@@ -451,7 +476,12 @@ class MayaMcpServer(DccServerBase):
                 display_name=meta.get("display_name"),
             )
         except Exception as exc:  # noqa: BLE001
-            logger.debug("[%s] update_gateway_metadata failed (%s): %s", self._dcc_name, reason, exc)
+            logger.debug(
+                "[%s] update_gateway_metadata failed (%s): %s",
+                self._dcc_name,
+                reason,
+                exc,
+            )
             return False
 
         if ok:
