@@ -10,7 +10,7 @@
 `dcc-mcp-maya` embeds a standards-compliant MCP Streamable HTTP server directly inside Autodesk Maya. It exposes 73+ Maya operations as MCP tools that any AI agent (Claude, Cursor, Gemini, etc.) can call over HTTP — no external gateway, no subprocess bridge.
 
 **Current version:** 0.2.24 <!-- x-release-please-version -->
-**Core dependency:** `dcc-mcp-core>=0.14.20,<1.0.0`
+**Core dependency:** `dcc-mcp-core>=0.14.21,<1.0.0`
 **Python:** 3.7+
 **Maya:** 2020+
 
@@ -86,6 +86,32 @@ def create_sphere(radius: float = 1.0) -> dict:
       cmds.currentTime(frame)
       cmds.render()
   ```
+
+---
+
+## Project-State Persistence (issue #576 / core 0.14.21)
+
+The Maya adapter wires `dcc_mcp_core.register_project_tools` into `MayaMcpServer.register_builtin_actions()`, exposing four MCP tools that persist a Maya scene's working set under `<scene_dir>/.dcc-mcp/project.json`:
+
+| Tool             | Purpose                                                                 |
+|------------------|-------------------------------------------------------------------------|
+| `project.save`   | Persist current state (loaded assets, active skills/tool-groups, checkpoint IDs, free-form metadata) for a given `scene_path`. |
+| `project.load`   | Read an existing `project.json` (returns failure when absent — never auto-creates). |
+| `project.resume` | Return the rehydration payload (scene path, assets, skills, tool groups, checkpoints, session id, timestamps, project dir) an agent needs to restore a session across Maya restarts. |
+| `project.status` | Pure read: current state + project_dir + state_path. |
+
+Key Python symbols:
+
+```python
+from dcc_mcp_maya import (
+    ENV_PROJECT_TOOLS,        # "DCC_MCP_MAYA_PROJECT_TOOLS" — set "0" to disable
+    MayaSceneResolver,        # strategy: returns current scene path or None
+    ProjectToolsIntegration,  # SOLID binder used by the server
+    attach_project_tools,     # one-shot helper invoked from register_builtin_actions
+)
+```
+
+Operator opt-out: `DCC_MCP_MAYA_PROJECT_TOOLS=0`.  Each `project.*` entry adds <800 B to `tools/list` and is guaranteed safe to register before any dispatcher is attached (pure filesystem operations, never touches `maya.cmds`).
 
 ---
 
@@ -212,6 +238,7 @@ A: `src/dcc_mcp_maya/skills/` (12 packages, 73 scripts). Each package contains `
 | `src/dcc_mcp_maya/_transport.py` | `TransportManager` wrappers (bind / find / rank) |
 | `src/dcc_mcp_maya/_pyexec.py` | Auto-correct `DCC_MCP_PYTHON_EXECUTABLE` (issue #125) |
 | `src/dcc_mcp_maya/_stale_cleanup.py` | Stale FileRegistry detection + warning (issue #126) |
+| `src/dcc_mcp_maya/_project_tools.py` | `register_project_tools` integration — `project.save/load/resume/status` MCP tools (issue #576 / core 0.14.21) |
 | `src/dcc_mcp_maya/dispatcher/` | Thread-affinity dispatchers + cancellation (directory module) |
 | `src/dcc_mcp_maya/api.py` | Skill authoring helpers |
 | `src/dcc_mcp_maya/plugin.py` | Maya plugin (`initializePlugin` / menu) |

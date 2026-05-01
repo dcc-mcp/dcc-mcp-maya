@@ -105,6 +105,11 @@ Live sync with the gateway FileRegistry:
 * `server.publish_capability_snapshot(reason="...")` — push current Maya `scene / version / documents / display_name` via `DccServerBase.update_gateway_metadata`.  Invoked automatically on `start()`, `load_skill(...)`, and `unload_skill(...)`.
 * `server.set_context_snapshot_provider(MayaContextSnapshotProvider())` — already wired at construction.  Exposes `maya.cmds` state (scene, selection, frame, frame_range, up_axis, units, version) to core's post-tool `append_context_snapshot` wrapper and the per-DCC REST `/v1/context` (when mounted by core).
 
+Project-state persistence (issue #576 / core 0.14.21):
+
+* `dcc_mcp_maya._project_tools.attach_to_server(server)` — registers `project.save / project.load / project.resume / project.status` MCP tools that persist scene state to `<scene_dir>/.dcc-mcp/project.json`.  Auto-invoked by `register_builtin_actions()`; opt out with `DCC_MCP_MAYA_PROJECT_TOOLS=0`.
+* Public symbols: `ProjectToolsIntegration`, `MayaSceneResolver`, `attach_project_tools`, `ENV_PROJECT_TOOLS`.
+
 ---
 
 ## Skill Authoring Helpers (api.py)

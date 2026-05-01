@@ -33,6 +33,14 @@ from __future__ import annotations
 
 # Import local modules
 from dcc_mcp_maya.__version__ import __version__
+from dcc_mcp_maya._project_tools import (
+    ENV_PROJECT_TOOLS,
+    MayaSceneResolver,
+    ProjectToolsIntegration,
+)
+from dcc_mcp_maya._project_tools import (
+    attach_to_server as attach_project_tools,
+)
 from dcc_mcp_maya.api import (
     MissingParamError,
     batch_validate_nodes,
@@ -135,4 +143,9 @@ __all__ = [
     "MayaContextSnapshotProvider",
     "collect_gateway_metadata",
     "make_snapshot_provider",
+    # Project-state persistence (issue #576 / core 0.14.21)
+    "ENV_PROJECT_TOOLS",
+    "MayaSceneResolver",
+    "ProjectToolsIntegration",
+    "attach_project_tools",
 ]
