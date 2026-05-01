@@ -27,11 +27,14 @@ classifiers = [
 ]
 
 dependencies = [
-    # 0.14.19 lands the three-tier gateway election (issue #137), the
-    # stale-aware list_dcc_instances + scan_and_load_strict pair (issue #138)
-    # and the workflows.resume / SqliteIdempotencyStore / JobRecoveryPolicy
-    # surface this adapter wires through (issue #139).
-    "dcc-mcp-core>=0.14.19,<1.0.0",
+    # 0.14.20 lands the building blocks this branch wires through:
+    #   * normalize_script_execution_params      → issue #150 (code/script alias)
+    #   * ScriptExecutionCapture / Result        → issue #151 (stdout capture)
+    #   * mark tools with fallback inputSchema   → issue #149 (auto _meta marker)
+    #   * DeferredToolResult + HostExecutionBridge → issue #153 (long-running)
+    #   * exception_to_error_envelope            → issue #151 (structured errors)
+    #   * gateway health-probe filtering         → issue #148 (commandPort skip)
+    "dcc-mcp-core>=0.14.20,<1.0.0",
 ]
 
 [project.optional-dependencies]
