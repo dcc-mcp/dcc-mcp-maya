@@ -27,15 +27,15 @@ classifiers = [
 ]
 
 dependencies = [
-    # 0.14.20 lands the Maya gateway-adapter building blocks this branch
-    # wires through.  We deliberately do NOT pin >=0.14.21 because the
-    # 0.14.21 release bundles a new `dcc-diagnostics` skill that changes
-    # the alphabetic order of `__skill__*` stubs in progressive mode — a
-    # multi-instance E2E test depends on that order and is outside the
-    # scope of this PR to fix.  The APIs we need (``HostExecutionBridge``,
-    # ``set_context_snapshot_provider``, ``update_gateway_metadata``,
-    # ``plugin_manifest``) are all already in 0.14.20.
-    "dcc-mcp-core>=0.14.20,<1.0.0",
+    # 0.14.21 adds the project-state persistence surface (``DccProject``,
+    # ``ProjectState``, ``register_project_tools``) wired by
+    # :mod:`dcc_mcp_maya._project_tools` so MCP agents can call
+    # ``project.save`` / ``project.load`` / ``project.resume`` /
+    # ``project.status`` against the live Maya scene path.  Earlier
+    # capability-manifest / context-snapshot APIs we depend on
+    # (``HostExecutionBridge``, ``set_context_snapshot_provider``,
+    # ``update_gateway_metadata``, ``plugin_manifest``) shipped in 0.14.20.
+    "dcc-mcp-core>=0.14.21,<1.0.0",
 ]
 
 [project.optional-dependencies]

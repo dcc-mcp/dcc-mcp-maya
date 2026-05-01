@@ -33,7 +33,14 @@ from dcc_mcp_core.factory import create_dcc_server
 from dcc_mcp_core.server_base import DccServerBase
 
 # Import local modules
-from dcc_mcp_maya import _env, _executor, _skill_loader, _transport, _version_probe
+from dcc_mcp_maya import (
+    _env,
+    _executor,
+    _project_tools,
+    _skill_loader,
+    _transport,
+    _version_probe,
+)
 from dcc_mcp_maya.__version__ import __version__
 from dcc_mcp_maya.capability_manifest import (
     MayaCapabilityManifestBuilder,
@@ -182,6 +189,13 @@ class MayaMcpServer(DccServerBase):
             is_loaded=self.is_skill_loaded,
         )
 
+        # ── Project-state persistence (issue #576 / core 0.14.21) ──────
+        # Populated by :meth:`register_builtin_actions` once the inner
+        # registry is fully wired.  ``None`` means the surface was
+        # disabled by the operator (``DCC_MCP_MAYA_PROJECT_TOOLS=0``)
+        # or the underlying core call failed at registration time.
+        self._project_tools: Optional[_project_tools.ProjectToolsIntegration] = None
+
     # ── Lifecycle additions ────────────────────────────────────────────
 
     def attach_dispatcher(self, dispatcher: Any) -> None:
@@ -323,6 +337,22 @@ class MayaMcpServer(DccServerBase):
                 register_capability_mcp_tool(self, builder=self._capability_builder)
             except Exception as exc:  # noqa: BLE001
                 logger.debug("[%s] capability manifest MCP tool registration failed: %s", "maya", exc)
+
+        # Phase 6 — project-state persistence MCP/REST tools (issue #576).
+        # Adds ``project.save`` / ``project.load`` / ``project.resume`` /
+        # ``project.status`` so MCP agents can persist a Maya scene's
+        # working set (loaded assets, active skills, active tool groups,
+        # checkpoint IDs, free-form metadata) under
+        # ``<scene_dir>/.dcc-mcp/project.json`` and rehydrate it across
+        # Maya restarts.  The four handlers are pure filesystem
+        # operations — no Maya state is touched — so they are safe to
+        # register before any dispatcher is attached.  Opt out via
+        # ``DCC_MCP_MAYA_PROJECT_TOOLS=0`` when an embedding host wants
+        # to expose its own project surface.
+        try:
+            self._project_tools = _project_tools.attach_to_server(self)
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("[%s] project tools registration failed: %s", "maya", exc)
 
         return self
 

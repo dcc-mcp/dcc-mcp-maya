@@ -140,6 +140,38 @@ def _mcp_post(url, body):
         return resp.status, json.loads(resp.read())
 
 
+def _mcp_list_all_tools(url, request_id=100):
+    """Fetch every page of ``tools/list`` and return the aggregated tool list.
+
+    Core's ``tools/list`` paginates at ~32 entries per page and returns a
+    ``nextCursor`` string on the result.  Tests that assert on the shape
+    of the *entire* tool surface must follow the cursor — otherwise a
+    single registration that shifts alphabetic ordering can push
+    expected tools onto page 2 and produce a spurious failure (issue
+    observed when ``register_project_tools`` was wired in: four new
+    ``project.*`` entries were enough to shift ``__skill__*`` stubs
+    onto the next page for a suite running under core 0.14.21).
+    """
+    tools = []
+    cursor = None
+    guard = 0
+    while True:
+        params = {"jsonrpc": "2.0", "id": request_id, "method": "tools/list"}
+        if cursor:
+            params["params"] = {"cursor": cursor}
+        code, body = _mcp_post(url, params)
+        assert code == 200
+        result = body.get("result", {})
+        tools.extend(result.get("tools", []))
+        cursor = result.get("nextCursor")
+        if not cursor:
+            break
+        guard += 1
+        if guard > 50:  # pragma: no cover — pagination runaway safety net
+            raise RuntimeError("tools/list pagination exceeded 50 pages")
+    return tools
+
+
 # ---------------------------------------------------------------------------
 # Server lifecycle
 # ---------------------------------------------------------------------------
@@ -235,13 +267,12 @@ class TestMcpHttpConnectivity:
         1. Core discovery tools (search_skills, list_skills, get_skill_info, load_skill, ...)
         2. Already-loaded skill tools with full input_schema
         3. Unloaded skill stubs as ``__skill__<name>`` with minimal description
+
+        Core paginates the response (~32 tools/page); we aggregate every
+        page before asserting so a future tool registration that shifts
+        alphabetic ordering cannot silently push stubs off page 1.
         """
-        code, body = _mcp_post(
-            self._mcp_url,
-            {"jsonrpc": "2.0", "id": 2, "method": "tools/list"},
-        )
-        assert code == 200
-        tools = body["result"]["tools"]
+        tools = _mcp_list_all_tools(self._mcp_url, request_id=2)
         names = {t["name"] for t in tools}
 
         # Layer 1: core discovery tools must always be present
@@ -269,13 +300,8 @@ class TestMcpHttpConnectivity:
         the skill's real tools (from groups that have ``default_active: true``)
         and any ``__group__`` stubs for inactive groups.
         """
-        # Grab baseline tool names
-        code, body = _mcp_post(
-            self._mcp_url,
-            {"jsonrpc": "2.0", "id": 10, "method": "tools/list"},
-        )
-        assert code == 200
-        before_names = {t["name"] for t in body["result"]["tools"]}
+        # Grab baseline tool names (paginated aggregate — see docstring on _mcp_list_all_tools).
+        before_names = {t["name"] for t in _mcp_list_all_tools(self._mcp_url, request_id=10)}
 
         # Pick any __skill__ stub to load
         skill_stubs = sorted(n for n in before_names if n.startswith("__skill__"))
@@ -296,14 +322,8 @@ class TestMcpHttpConnectivity:
         )
         assert code == 200
 
-        # tools/list should no longer contain the __skill__ stub
-        code, body = _mcp_post(
-            self._mcp_url,
-            {"jsonrpc": "2.0", "id": 12, "method": "tools/list"},
-        )
-        assert code == 200
-        after_names = {t["name"] for t in body["result"]["tools"]}
-
+        # tools/list (aggregated) should no longer contain the __skill__ stub
+        after_names = {t["name"] for t in _mcp_list_all_tools(self._mcp_url, request_id=12)}
         assert skill_stub not in after_names, f"Stub {skill_stub} should be removed after load_skill"
 
     def test_activate_tool_group_replaces_group_stub(self):
@@ -313,13 +333,8 @@ class TestMcpHttpConnectivity:
         ``default_active: false`` that appear as ``__group__<name>`` stubs.
         Activating such a group replaces the stub with the group's real tools.
         """
-        # Grab baseline tool names
-        code, body = _mcp_post(
-            self._mcp_url,
-            {"jsonrpc": "2.0", "id": 20, "method": "tools/list"},
-        )
-        assert code == 200
-        before_names = {t["name"] for t in body["result"]["tools"]}
+        # Grab baseline tool names (paginated aggregate)
+        before_names = {t["name"] for t in _mcp_list_all_tools(self._mcp_url, request_id=20)}
 
         # Pick any __group__ stub to activate
         group_stubs = sorted(n for n in before_names if n.startswith("__group__"))
@@ -343,14 +358,8 @@ class TestMcpHttpConnectivity:
         )
         assert code == 200
 
-        # tools/list should no longer contain the __group__ stub
-        code, body = _mcp_post(
-            self._mcp_url,
-            {"jsonrpc": "2.0", "id": 22, "method": "tools/list"},
-        )
-        assert code == 200
-        after_names = {t["name"] for t in body["result"]["tools"]}
-
+        # tools/list (aggregated) should no longer contain the __group__ stub
+        after_names = {t["name"] for t in _mcp_list_all_tools(self._mcp_url, request_id=22)}
         assert group_stub not in after_names, f"Stub {group_stub} should be removed after activate_tool_group"
 
         # The activated group's real tools should now be present.
