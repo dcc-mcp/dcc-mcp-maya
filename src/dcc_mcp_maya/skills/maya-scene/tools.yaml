@@ -55,8 +55,26 @@ tools:
     idempotent_hint: true
   group: core
 - name: group_objects
+  description: Group a list of objects under a new transform node.
   execution: sync
   affinity: main
+  inputSchema:
+    type: object
+    required: [objects]
+    properties:
+      objects:
+        type: array
+        items:
+          type: string
+        minItems: 1
+        description: Names of the objects to group.
+      group_name:
+        type: string
+        description: Optional name for the new group node.
+      world:
+        type: boolean
+        default: false
+        description: When true, parent the group at the world root.
 - name: list_cameras
   execution: sync
   affinity: main
