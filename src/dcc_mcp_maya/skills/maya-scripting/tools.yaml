@@ -1,6 +1,7 @@
 tools:
 - name: execute_mel
-  description: Execute MEL code inside Maya. Accepts `code` (preferred), `script`, or `source` aliases.
+  description: Execute MEL code inside Maya. Accepts `code` (preferred), `script`, or
+    `source` aliases.
   execution: sync
   affinity: main
   group: core
@@ -9,7 +10,8 @@ tools:
     properties:
       code:
         type: string
-        description: MEL code to execute. Aliases `script` and `source` accepted for backward compatibility.
+        description: MEL code to execute. Aliases `script` and `source` accepted for
+          backward compatibility.
       script:
         type: string
         description: Deprecated alias for `code`.
@@ -17,7 +19,11 @@ tools:
         type: string
         description: Alias for `code`.
 - name: execute_python
-  description: Execute Python code inside Maya. Accepts `code` (preferred), `script`, or `source` aliases. Captures stdout/stderr.
+  description: Execute Python code inside Maya.  Accepts `code` (preferred), `script`,
+    or `source` aliases.  Captures stdout/stderr from both Python (`print`) and Maya's
+    Script Editor (`cmds.warning`, `cmds.error`, MEL `print`).  When `defer=true` the
+    snippet is scheduled via Maya's deferred queue so long-running scripts do not block
+    the MCP request thread (cooperatively cancellable via `notifications/cancelled`).
   execution: sync
   affinity: main
   group: core
@@ -35,11 +41,13 @@ tools:
         description: Alias for `code`.
       capture_output:
         type: boolean
-        description: When true, captured stdout is returned in `context.stdout`. Default true.
+        description: When true, captured stdout is returned in `context.stdout`. Default
+          true.
         default: true
       timeout_secs:
         type: integer
-        description: Maximum execution time in seconds. Aliases `timeout`. Defaults to no limit.
+        description: Maximum execution time in seconds. Aliases `timeout`. Defaults
+          to no limit.
         minimum: 1
       timeout:
         type: integer
@@ -47,7 +55,9 @@ tools:
         minimum: 1
       defer:
         type: boolean
-        description: When true, schedule code via Maya's deferred queue and return a DeferredToolResult that the client polls. Use for long-running scripts that would otherwise block the MCP request.
+        description: When true, schedule code via Maya's deferred queue and return a
+          DeferredToolResult that the client polls. Use for long-running scripts that
+          would otherwise block the MCP request.
         default: false
 - name: get_script_node
   description: Get, create, or delete a Maya scriptNode.
@@ -59,14 +69,18 @@ tools:
   group: core
   inputSchema:
     type: object
-    required: [node_name]
+    required:
+    - node_name
     properties:
       node_name:
         type: string
         description: scriptNode name in the scene.
       action:
         type: string
-        enum: [get, create, delete]
+        enum:
+        - get
+        - create
+        - delete
         default: get
         description: Operation to perform on the scriptNode.
       script:
@@ -74,7 +88,11 @@ tools:
         description: Script body (required when `action=create`).
       script_type:
         type: integer
-        enum: [0, 1, 2, 3]
+        enum:
+        - 0
+        - 1
+        - 2
+        - 3
         default: 0
         description: 0=demand, 1=open/close, 2=ui create, 3=ui delete.
 - name: list_mel_procedures

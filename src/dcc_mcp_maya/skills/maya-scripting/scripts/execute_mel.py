@@ -10,14 +10,28 @@ from typing import Any, Dict
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
+def _merge_capture(primary: str, extra: str) -> str:
+    """Concatenate two capture buffers, preserving blank-line separation."""
+    if not extra:
+        return primary
+    if not primary:
+        return extra
+    if primary.endswith("\n"):
+        return primary + extra
+    return primary + "\n" + extra
+
+
 def execute_mel(**params: Any) -> dict:
     """Execute a MEL expression and return its string result.
 
     Accepts the source via ``code`` (preferred), ``script``, or ``source``
     aliases via :func:`dcc_mcp_core.normalize_script_execution_params` so
     ``execute_mel`` and ``execute_python`` share a common parameter
-    contract (issue #150 / dcc-mcp-core #591).  Captured stdout/stderr
-    are returned in the structured envelope (issue #151).
+    contract (issue #150 / dcc-mcp-core #591).
+
+    Captures both Python stdout/stderr **and** Maya's native Script
+    Editor channel (``MCommandMessage``) so MEL ``print`` and
+    ``warning`` statements are visible to MCP clients (issue #151).
 
     Returns:
         ToolResult dict with ``context.result`` (MEL return value),
@@ -27,6 +41,9 @@ def execute_mel(**params: Any) -> dict:
         ScriptExecutionCapture,
         normalize_script_execution_params,
     )
+
+    # Import local modules
+    from dcc_mcp_maya._maya_output import MayaOutputCapture  # noqa: PLC0415
 
     try:
         normalized = normalize_script_execution_params(params)
@@ -50,25 +67,31 @@ def execute_mel(**params: Any) -> dict:
     except ImportError:
         return skill_error("Maya not available", "maya.mel could not be imported")
 
-    capture = ScriptExecutionCapture(tee=True)
+    py_capture = ScriptExecutionCapture(tee=True)
+    maya_capture = MayaOutputCapture()
     try:
-        with capture:
+        with py_capture, maya_capture:
             raw = mel.eval(code)
-        return skill_success(
-            "MEL executed successfully",
-            prompt="MEL script finished. Check 'output' for any return value.",
-            output=str(raw) if raw is not None else "",
-            stdout=capture.stdout,
-            stderr=capture.stderr,
-            script=code,
-        )
     except BaseException as exc:  # noqa: BLE001 — relay traceback to client
+        stdout = _merge_capture(py_capture.stdout, maya_capture.stdout)
+        stderr = _merge_capture(py_capture.stderr, maya_capture.stderr)
         return skill_exception(
             exc,
             message="MEL execution failed",
-            stdout=capture.stdout,
-            stderr=capture.stderr,
+            stdout=stdout,
+            stderr=stderr,
         )
+
+    stdout = _merge_capture(py_capture.stdout, maya_capture.stdout)
+    stderr = _merge_capture(py_capture.stderr, maya_capture.stderr)
+    return skill_success(
+        "MEL executed successfully",
+        prompt="MEL script finished. Check 'output' for any return value.",
+        output=str(raw) if raw is not None else "",
+        stdout=stdout,
+        stderr=stderr,
+        script=code,
+    )
 
 
 @skill_entry
