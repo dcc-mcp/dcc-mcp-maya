@@ -102,6 +102,81 @@ class TestScriptingE2E:
         assert result["success"] is True
         assert "script" in result["context"] or "node_name" in result["context"]
 
+    def test_execute_mel_warning_captured(self):
+        """Issue #151 — MEL ``warning`` flows through MCommandMessage and
+        must reach the client via the structured envelope's stderr field.
+        """
+        mod = _load("maya-scripting", "execute_mel")
+        result = mod.execute_mel(code='warning "e2e-mel-warning";')
+        assert isinstance(result, dict)
+        # ``warning`` does not abort MEL, so success=True is expected.
+        assert result.get("success") is True
+        ctx = result.get("context", {})
+        combined = (ctx.get("stdout") or "") + (ctx.get("stderr") or "")
+        assert "e2e-mel-warning" in combined, (
+            "MayaOutputCapture should have captured MEL 'warning' output via MCommandMessage. Got: {!r}".format(
+                combined
+            )
+        )
+
+    def test_execute_python_cmds_warning_captured(self):
+        """Issue #151 — ``cmds.warning`` output is captured alongside print()."""
+        mod = _load("maya-scripting", "execute_python")
+        result = mod.execute_python(
+            code=("import maya.cmds as cmds\nprint('from-print')\ncmds.warning('from-cmds-warning')\n")
+        )
+        assert result.get("success") is True
+        ctx = result.get("context", {})
+        combined = (ctx.get("stdout") or "") + (ctx.get("stderr") or "")
+        assert "from-print" in combined
+        assert "from-cmds-warning" in combined
+
+    def test_execute_python_defer_cancels_long_loop(self):
+        """Issue #153 — a ``defer=True`` infinite loop must abort when
+        the active job's cancel flag fires.
+
+        Uses the real in-Maya path: ``maya.utils.executeDeferred`` is
+        available, so the snippet runs on the main thread's idle queue.
+        Because ``mayapy`` drives that queue synchronously when the main
+        thread is idle, the snippet would otherwise block indefinitely.
+        The ``sys.settrace`` hook installed by ``_run_inline`` observes
+        the cancel event between Python lines and raises ``CancelledError``.
+        """
+        # Import local modules
+        from dcc_mcp_maya.dispatcher.job import _current_job, _JobEntry
+
+        mod = _load("maya-scripting", "execute_python")
+        job = _JobEntry(
+            request_id="e2e-defer-cancel",
+            affinity="main",
+            task=lambda: None,
+        )
+        token = _current_job.set(job)
+        try:
+            deferred = mod._run_deferred(
+                code=("i = 0\nwhile True:\n    i += 1\n"),
+                capture_output=False,
+                timeout_secs=5.0,
+            )
+            # Cancel before polling so the first settrace checkpoint sees it.
+            job.cancel()
+            envelope = None
+            # Drive the poll loop a few times; CancelledError will surface
+            # from check_is_finished as soon as the tracer trips.
+            try:
+                for _ in range(50):
+                    envelope = deferred.check_is_finished()
+                    if envelope is not None:
+                        break
+            except Exception as exc:  # core cancellation raises
+                assert "cancel" in type(exc).__name__.lower()
+                return
+            # If we reached here, the snippet either finished (not expected
+            # given the infinite loop) or returned a cancelled envelope.
+            assert envelope is not None and envelope.get("success") is False
+        finally:
+            _current_job.reset(token)
+
 
 class TestUtilityE2E:
     def setup_method(self):
