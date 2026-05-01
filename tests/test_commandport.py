@@ -116,7 +116,9 @@ class TestSuppressSecurityWarnings:
                 assert _commandport.suppress_security_warnings() == 2
         # Each port: close then reopen with sw=False, sourceType="mel".
         assert fake_cmds.commandPort.call_count == 4
-        kwargs_seq = [c.kwargs for c in fake_cmds.commandPort.call_args_list]
+        # call.kwargs was added in Python 3.8; use tuple indexing for 3.7
+        # compatibility (``call[1]`` is always the kwargs dict).
+        kwargs_seq = [c[1] for c in fake_cmds.commandPort.call_args_list]
         assert kwargs_seq[0] == {"name": "p1", "close": True}
         assert kwargs_seq[1] == {"name": "p1", "securityWarning": False, "sourceType": "mel"}
         assert kwargs_seq[2] == {"name": "p2", "close": True}
