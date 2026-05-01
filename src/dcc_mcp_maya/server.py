@@ -276,6 +276,12 @@ class MayaMcpServer(DccServerBase):
         else:
             _skill_loader.load_minimal_skills(self._server, _skill_loader.MINIMAL_SKILLS)
 
+        # Phase 4 — wire handlers for actions registered by Phase 3.
+        # Phase 2 only sees actions that were already loaded during discovery;
+        # minimal/default skill loading happens afterwards, so those new
+        # actions need a second pass or they fall back to subprocess execution.
+        _executor.wire_in_process_executor(self)
+
         return self
 
     def _strict_skill_scan(
