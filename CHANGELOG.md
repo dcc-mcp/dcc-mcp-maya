@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.24](https://github.com/loonghao/dcc-mcp-maya/compare/v0.2.23...v0.2.24) (2026-05-01)
+
+
+### Bug Fixes
+
+* **scripting:** wire minimal skill handlers after load ([7a519c7](https://github.com/loonghao/dcc-mcp-maya/commit/7a519c70db901ba1234334f6b0ba1695379d5224))
+
 ## [0.2.23](https://github.com/loonghao/dcc-mcp-maya/compare/v0.2.22...v0.2.23) (2026-05-01)
 
 
