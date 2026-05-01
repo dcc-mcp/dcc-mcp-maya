@@ -1,19 +1,82 @@
 tools:
 - name: execute_mel
+  description: Execute MEL code inside Maya. Accepts `code` (preferred), `script`, or `source` aliases.
   execution: sync
   affinity: main
   group: core
+  inputSchema:
+    type: object
+    properties:
+      code:
+        type: string
+        description: MEL code to execute. Aliases `script` and `source` accepted for backward compatibility.
+      script:
+        type: string
+        description: Deprecated alias for `code`.
+      source:
+        type: string
+        description: Alias for `code`.
 - name: execute_python
+  description: Execute Python code inside Maya. Accepts `code` (preferred), `script`, or `source` aliases. Captures stdout/stderr.
   execution: sync
   affinity: main
   group: core
+  inputSchema:
+    type: object
+    properties:
+      code:
+        type: string
+        description: Python source to execute in Maya's interpreter (cmds pre-imported).
+      script:
+        type: string
+        description: Alias for `code`.
+      source:
+        type: string
+        description: Alias for `code`.
+      capture_output:
+        type: boolean
+        description: When true, captured stdout is returned in `context.stdout`. Default true.
+        default: true
+      timeout_secs:
+        type: integer
+        description: Maximum execution time in seconds. Aliases `timeout`. Defaults to no limit.
+        minimum: 1
+      timeout:
+        type: integer
+        description: Alias for `timeout_secs`.
+        minimum: 1
+      defer:
+        type: boolean
+        description: When true, schedule code via Maya's deferred queue and return a DeferredToolResult that the client polls. Use for long-running scripts that would otherwise block the MCP request.
+        default: false
 - name: get_script_node
+  description: Get, create, or delete a Maya scriptNode.
   execution: sync
   affinity: main
   annotations:
     read_only_hint: true
     idempotent_hint: true
   group: core
+  inputSchema:
+    type: object
+    required: [node_name]
+    properties:
+      node_name:
+        type: string
+        description: scriptNode name in the scene.
+      action:
+        type: string
+        enum: [get, create, delete]
+        default: get
+        description: Operation to perform on the scriptNode.
+      script:
+        type: string
+        description: Script body (required when `action=create`).
+      script_type:
+        type: integer
+        enum: [0, 1, 2, 3]
+        default: 0
+        description: 0=demand, 1=open/close, 2=ui create, 3=ui delete.
 - name: list_mel_procedures
   execution: sync
   affinity: main
