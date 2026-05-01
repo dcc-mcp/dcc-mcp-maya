@@ -149,6 +149,13 @@ tools:
 | `affinity: main` | Anything importing `maya.*` or touching scene state. Safe default. |
 | `affinity: any` | Pure filesystem / pure Python that never touches Maya. |
 
+The adapter now **honors `affinity: any` at runtime**: such actions execute
+inline on the HTTP worker thread instead of being queued behind the Maya
+UI dispatcher, freeing the main thread for viewport work.  Resolution is
+done once per script by `dcc_mcp_maya._affinity.resolve_affinity`
+(reads the co-located `tools.yaml` — safe-defaults to `main` on any
+lookup failure).
+
 ### Minimal Mode (Default)
 At startup only 2 skills are fully loaded: `maya-scripting` and `maya-scene` (core groups only).
 All other skills appear as `__skill__<name>` stubs. Call `load_skill(name)` to activate on demand.
@@ -198,7 +205,8 @@ A: `src/dcc_mcp_maya/skills/` (12 packages, 73 scripts). Each package contains `
 | `src/dcc_mcp_maya/__init__.py` | Public API exports |
 | `src/dcc_mcp_maya/server.py` | `MayaMcpServer` composition root — lifecycle, discovery, metrics, jobs |
 | `src/dcc_mcp_maya/_env.py` | `DCC_MCP_MAYA_*` env-var resolution helpers |
-| `src/dcc_mcp_maya/_executor.py` | In-process skill execution + handler registration |
+| `src/dcc_mcp_maya/_executor.py` | In-process skill execution + handler registration (respects `_affinity`) |
+| `src/dcc_mcp_maya/_affinity.py` | Per-action thread-affinity lookup from sibling `tools.yaml` |
 | `src/dcc_mcp_maya/_skill_loader.py` | Minimal-mode skill loading (constants + loaders) |
 | `src/dcc_mcp_maya/_version_probe.py` | Maya availability + version string detection |
 | `src/dcc_mcp_maya/_transport.py` | `TransportManager` wrappers (bind / find / rank) |

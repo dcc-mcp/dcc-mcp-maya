@@ -25,6 +25,9 @@ from __future__ import annotations
 import logging
 from typing import Any, Callable, Dict, List
 
+# Import local modules
+from dcc_mcp_maya import _affinity
+
 logger = logging.getLogger(__name__)
 
 
@@ -101,17 +104,23 @@ def execute_in_process(
 ) -> Dict[str, Any]:
     """Execute a skill script via the attached Maya UI dispatcher.
 
-    Routes through ``server_obj._maya_dispatcher.submit_callable`` when a
-    dispatcher is attached so the script runs on Maya's UI thread.
-    Falls back to executing inline on the calling thread otherwise
-    (standalone / ``mayapy`` mode).
+    Routes through ``server_obj._maya_dispatcher.submit_callable`` when
+    a dispatcher is attached **and** the action declares
+    ``affinity: main`` in its ``tools.yaml``.  Actions declared
+    ``affinity: any`` (pure filesystem / no ``maya.cmds`` access —
+    e.g. the ``introspect_*`` family) execute inline on the calling
+    thread so they do not compete with viewport work on Maya's UI
+    thread.  Falls back to executing inline when no dispatcher is
+    attached (standalone / ``mayapy`` mode).
 
     The ``server_obj`` argument is the :class:`MayaMcpServer` instance
     (a ``DccServerBase``); we only access ``_maya_dispatcher`` so a
     duck-typed object suffices for testing.
     """
+    affinity = _affinity.resolve_affinity(script_path)
     dispatcher = getattr(server_obj, "_maya_dispatcher", None)
-    if dispatcher is not None and hasattr(dispatcher, "submit_callable"):
+    dispatcher_usable = affinity == "main" and dispatcher is not None and hasattr(dispatcher, "submit_callable")
+    if dispatcher_usable:
         # Issue #151 — surface dispatcher-side exceptions (cancellation,
         # main-thread crashes, timeouts) as structured envelopes instead
         # of letting them propagate as Internal Errors.
