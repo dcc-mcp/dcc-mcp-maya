@@ -1,5 +1,30 @@
 # Changelog
 
+## [0.2.22](https://github.com/loonghao/dcc-mcp-maya/compare/v0.2.21...v0.2.22) (2026-05-01)
+
+
+### Features
+
+* **server:** DCC_MCP_MAYA_STRICT_SKILL_SCAN + stale-aware discovery ([#144](https://github.com/loonghao/dcc-mcp-maya/issues/144)) ([e51cbf7](https://github.com/loonghao/dcc-mcp-maya/commit/e51cbf7a81c8e334a24e63e8a2d70d18c9ad98a6))
+* **server:** wire workflows + job recovery knobs ([#145](https://github.com/loonghao/dcc-mcp-maya/issues/145)) ([335e5c5](https://github.com/loonghao/dcc-mcp-maya/commit/335e5c5e1f1a4fdab7f249ecc0a6bba3b2d34962))
+* **skills:** add inputSchema to high-impact tools ([#149](https://github.com/loonghao/dcc-mcp-maya/issues/149)) ([9e27849](https://github.com/loonghao/dcc-mcp-maya/commit/9e27849060b4735bce0e067fe75f56ae0c21b5a6))
+
+
+### Bug Fixes
+
+* **deps:** bump dcc-mcp-core to 0.14.19 for three-tier gateway election ([#143](https://github.com/loonghao/dcc-mcp-maya/issues/143)) ([efe91e4](https://github.com/loonghao/dcc-mcp-maya/commit/efe91e421d1415fce179b8cc1faeb7f0334d6011))
+* **executor:** wrap dispatcher errors + pass DeferredToolResult through ([#151](https://github.com/loonghao/dcc-mcp-maya/issues/151), [#153](https://github.com/loonghao/dcc-mcp-maya/issues/153)) ([0d50c7e](https://github.com/loonghao/dcc-mcp-maya/commit/0d50c7ed37f040ead9ad17e107da730ca8c1ddc4))
+* **plugin:** suppress commandPort security warning at startup ([#148](https://github.com/loonghao/dcc-mcp-maya/issues/148)) ([0aa51c3](https://github.com/loonghao/dcc-mcp-maya/commit/0aa51c3445bf95650614e3695eb3af0f0447b39b))
+* **render:** capture_viewport falls back to off-screen render ([#152](https://github.com/loonghao/dcc-mcp-maya/issues/152)) ([288b039](https://github.com/loonghao/dcc-mcp-maya/commit/288b0399d7e64cc3615c92810ddaa3c201d0ac51))
+* **server:** wire in-process executor on dispatcher attach ([#142](https://github.com/loonghao/dcc-mcp-maya/issues/142)) ([4fcd6bf](https://github.com/loonghao/dcc-mcp-maya/commit/4fcd6bff289b11d9f252c23342bc430c31503a58))
+* **skills:** normalize execute_python/execute_mel params + capture stdout ([#150](https://github.com/loonghao/dcc-mcp-maya/issues/150), [#151](https://github.com/loonghao/dcc-mcp-maya/issues/151), [#153](https://github.com/loonghao/dcc-mcp-maya/issues/153)) ([7aabc19](https://github.com/loonghao/dcc-mcp-maya/commit/7aabc19ed665d3b8b58f7dbd0b9a099bfd27e43d))
+
+
+### Documentation
+
+* fix tool/skill count errors and add README_zh.md ([35bc326](https://github.com/loonghao/dcc-mcp-maya/commit/35bc326010615eb3e13f1d5091849d8786032c47))
+* fix tool/skill count errors and add README_zh.md ([1e82e5a](https://github.com/loonghao/dcc-mcp-maya/commit/1e82e5ac8ef48ae8f6ab657d3cd1b31f33be722d))
+
 ## [0.2.21](https://github.com/loonghao/dcc-mcp-maya/compare/v0.2.20...v0.2.21) (2026-04-30)
 
 
