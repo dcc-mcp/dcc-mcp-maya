@@ -1,9 +1,27 @@
 tools:
 - name: capture_viewport
+  description: Capture the active Maya viewport as a base64 PNG. Works when Maya is minimized or in batch mode (auto-falls back to off-screen rendering — issue #152).
   execution: async
   affinity: main
   timeout_hint_secs: 600
   group: rendering
+  inputSchema:
+    type: object
+    properties:
+      width:
+        type: integer
+        minimum: 1
+        default: 1920
+      height:
+        type: integer
+        minimum: 1
+        default: 1080
+      frame:
+        type: number
+        description: Frame to capture; defaults to current frame.
+      off_screen:
+        type: boolean
+        description: Force off-screen capture. Auto-enabled in batch mode and when no model panel is visible.
 - name: export_selection
   execution: async
   affinity: main
