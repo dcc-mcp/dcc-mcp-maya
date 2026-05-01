@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.2.23](https://github.com/loonghao/dcc-mcp-maya/compare/v0.2.22...v0.2.23) (2026-05-01)
+
+
+### Bug Fixes
+
+* **scripting:** cooperative defer cancellation + native stdout capture ([#151](https://github.com/loonghao/dcc-mcp-maya/issues/151), [#153](https://github.com/loonghao/dcc-mcp-maya/issues/153)) ([3e1714d](https://github.com/loonghao/dcc-mcp-maya/commit/3e1714d1aa97f7d314eaebe6a490f03049ac12f2))
+* **tests:** use tuple indexing for mock.call kwargs on Python 3.7 ([43e41a3](https://github.com/loonghao/dcc-mcp-maya/commit/43e41a30f48a98308d9b70d6bdaa456f2e804fe8))
+
+
+### Documentation
+
+* **advanced:** document defer=True long-running script workflow ([#153](https://github.com/loonghao/dcc-mcp-maya/issues/153)) ([8230341](https://github.com/loonghao/dcc-mcp-maya/commit/82303412339865a085015bdd0337f5f7f45984c5))
+
 ## [0.2.22](https://github.com/loonghao/dcc-mcp-maya/compare/v0.2.21...v0.2.22) (2026-05-01)
 
 
