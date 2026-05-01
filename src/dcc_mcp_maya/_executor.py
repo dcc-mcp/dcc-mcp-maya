@@ -112,13 +112,36 @@ def execute_in_process(
     """
     dispatcher = getattr(server_obj, "_maya_dispatcher", None)
     if dispatcher is not None and hasattr(dispatcher, "submit_callable"):
-        result = dispatcher.submit_callable(
-            action_name,
-            lambda: run_skill_script(script_path, params),
-            affinity="main",
-        )
+        # Issue #151 — surface dispatcher-side exceptions (cancellation,
+        # main-thread crashes, timeouts) as structured envelopes instead
+        # of letting them propagate as Internal Errors.
+        try:
+            result = dispatcher.submit_callable(
+                action_name,
+                lambda: run_skill_script(script_path, params),
+                affinity="main",
+            )
+        except BaseException as exc:  # noqa: BLE001 — relay everything
+            try:
+                from dcc_mcp_core.skill import skill_exception  # noqa: PLC0415
+
+                return skill_exception(
+                    exc,
+                    message="Dispatcher failed to execute {}".format(action_name),
+                )
+            except ImportError:
+                return {"success": False, "message": "{}: {}".format(action_name, exc)}
+
+        # Issue #153 — pass a DeferredToolResult straight through so the
+        # core poll loop owns the lifecycle.  Detection is duck-typed on
+        # ``check_is_finished`` to avoid hard-importing core internals.
+        if hasattr(result, "check_is_finished"):
+            return result  # type: ignore[return-value]
+
         if isinstance(result, dict):
             output = result.get("output")
+            if hasattr(output, "check_is_finished"):
+                return output  # type: ignore[return-value]
             if isinstance(output, dict):
                 return output
             if not result.get("success", True):
