@@ -144,6 +144,125 @@ logging.getLogger("dcc_mcp_maya").setLevel(logging.DEBUG)
 logging.getLogger("dcc_mcp_core").setLevel(logging.DEBUG)
 ```
 
+## 长任务执行：`defer=True`
+
+`execute_python` 以及任何返回 `DeferredToolResult` 的自定义技能都可以让 MCP 请求线程保持响应，而长任务（烘焙、渲染、模拟、IO）在 Maya 的 idle 队列上运行。
+
+### 何时使用
+
+| 场景 | 推荐 |
+|---|---|
+| 快速查询 / 属性写入（< 1s） | `defer=False`（默认）— 同步返回 |
+| 1–60s，无需 UI | `defer=True` — 客户端轮询直至完成 |
+| 多分钟任务（渲染、缓存） | `defer=True` 并提高 `timeout_secs` |
+| 必须阻塞请求 | `defer=False`（默认） |
+
+### 在 MCP 客户端中使用（Claude / Cursor / Gemini）
+
+```jsonc
+// tools/call 请求
+{
+  "jsonrpc": "2.0", "id": 7, "method": "tools/call",
+  "params": {
+    "name": "maya_scripting__execute_python",
+    "arguments": {
+      "code": "import maya.cmds as cmds\nfor f in range(1, 240):\n    cmds.currentTime(f)\n    cmds.refresh()\n",
+      "defer": true,
+      "timeout_secs": 600
+    }
+  }
+}
+```
+
+服务端立即返回一个延迟句柄；`dcc-mcp-core` 每 100&nbsp;ms 轮询一次该句柄，并在脚本完成（或 `timeout_secs` 到期）时把最终的 `ToolResult` 推送给客户端。
+
+### 取消支持
+
+启用 `defer=True` 的长任务也应配合取消机制：
+
+```python
+from dcc_mcp_maya import check_maya_cancelled
+
+for frame in frames:
+    check_maya_cancelled()       # 取消时抛出 CancelledError
+    cmds.currentTime(frame)
+    cmds.render()
+```
+
+当 MCP 客户端发出 `notifications/cancelled`（或 dispatcher 触发取消）时，`check_maya_cancelled()` 抛出异常，延迟句柄会以结构化错误信封解析。
+
+### 在自定义技能中返回 `DeferredToolResult`
+
+任何技能都可以通过引入 `dcc-mcp-core` 的辅助类来采用同样的模式：
+
+```python
+"""my_long_action.py"""
+from typing import Any, Dict
+
+
+def _runner(state: Dict[str, Any], target: str) -> None:
+    import maya.cmds as cmds
+    cmds.bakeResults(target, simulation=True, time=(1, 240))
+    state["result"] = {"success": True, "message": "Bake complete"}
+    state["done"] = True
+
+
+def main(target: str, defer: bool = True, timeout_secs: float = 600.0):
+    if not defer:
+        # 同步回退（会阻塞请求线程）。
+        state: Dict[str, Any] = {"done": False, "result": None}
+        _runner(state, target)
+        return state["result"]
+
+    from dcc_mcp_core._server import DeferredToolResult  # 延迟导入
+
+    state = {"done": False, "result": None}
+
+    def _kick() -> None:
+        _runner(state, target)
+
+    try:
+        import maya.utils
+        maya.utils.executeDeferred(_kick)
+    except ImportError:
+        # mayapy / standalone — 没有 idle 队列；同步执行。
+        _kick()
+
+    return DeferredToolResult(
+        check_is_finished=lambda: state["result"] if state["done"] else None,
+        timeout_secs=float(timeout_secs),
+        poll_interval_secs=0.1,
+    )
+```
+
+在 `tools.yaml` 中声明为 `execution: async`，dispatcher 会为其分配 worker 槽位：
+
+```yaml
+- name: my_long_action
+  execution: async
+  affinity: main
+  timeout_hint_secs: 600
+  inputSchema:
+    type: object
+    properties:
+      target: { type: string }
+      defer: { type: boolean, default: true }
+      timeout_secs: { type: integer, default: 600, minimum: 1 }
+```
+
+### Dispatcher 如何路由延迟结果
+
+`MayaMcpServer._executor` 通过鸭子类型识别返回值：只要带有 `check_is_finished` 属性，结果就直接透传给 `dcc-mcp-core` 的轮询循环，无需包装、无需复制、无需主线程反射。这意味着延迟启动前抛出的 dispatcher 异常仍会被捕获并以结构化的 `{"success": False, ...}` 信封返回，而轮询完成时则使用技能自身的信封。
+
+### 配置项
+
+| 环境变量 / 参数 | 默认 | 作用 |
+|---|---|---|
+| `defer=True`（每次调用参数） | `false` | 让本次调用进入延迟路径 |
+| `timeout_secs`（每次调用参数） | `3600` | 由 core 轮询循环强制执行的硬超时 |
+| `poll_interval_secs`（构造器参数） | `0.1` | core 重新检查 `check_is_finished` 的间隔 |
+| `tools.yaml` 中的 `timeout_hint_secs` | — | 透传给 MCP 宿主 UI 的提示值 |
+
 ## 生产环境注意事项
 
 ### 安全
