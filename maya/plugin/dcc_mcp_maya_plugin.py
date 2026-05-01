@@ -287,6 +287,15 @@ def _start() -> None:
         import dcc_mcp_maya  # noqa: PLC0415
 
         _export_worker_env()
+        # Issue #148 — defuse the modal commandPort security warning that
+        # would otherwise freeze Maya's main thread when a stray client
+        # (or the gateway probe) connects to the legacy commandPort.
+        try:
+            from dcc_mcp_maya._commandport import suppress_security_warnings  # noqa: PLC0415
+
+            suppress_security_warnings()
+        except Exception as exc:  # noqa: BLE001 — never block plugin load
+            logger.debug("commandPort warning suppression skipped: %s", exc)
         cfg = _resolve_config()
         _handle = dcc_mcp_maya.start_server(**cfg)
         _print_startup_info(cfg)
