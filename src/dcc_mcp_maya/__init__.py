@@ -57,6 +57,17 @@ from dcc_mcp_maya.api import (
     validate_node_type,
     with_maya,
 )
+from dcc_mcp_maya.capability_manifest import (
+    CapabilityRecord,
+    MayaCapabilityManifestBuilder,
+    build_manifest_payload,
+    register_capability_mcp_tool,
+)
+from dcc_mcp_maya.context_snapshot import (
+    MayaContextSnapshotProvider,
+    collect_gateway_metadata,
+    make_snapshot_provider,
+)
 from dcc_mcp_maya.dispatcher import (
     MayaStandaloneDispatcher,
     MayaUiDispatcher,
@@ -115,4 +126,13 @@ __all__ = [
     "bounding_box_from_node",
     # DCC capabilities
     "maya_capabilities",
+    # Capability manifest (issue #163)
+    "CapabilityRecord",
+    "MayaCapabilityManifestBuilder",
+    "build_manifest_payload",
+    "register_capability_mcp_tool",
+    # Context snapshot (issue #165)
+    "MayaContextSnapshotProvider",
+    "collect_gateway_metadata",
+    "make_snapshot_provider",
 ]
