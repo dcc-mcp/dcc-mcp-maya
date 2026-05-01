@@ -10,7 +10,7 @@
 `dcc-mcp-maya` embeds a standards-compliant MCP Streamable HTTP server directly inside Autodesk Maya. It exposes 73+ Maya operations as MCP tools that any AI agent (Claude, Cursor, Gemini, etc.) can call over HTTP — no external gateway, no subprocess bridge.
 
 **Current version:** 0.2.24 <!-- x-release-please-version -->
-**Core dependency:** `dcc-mcp-core>=0.14.17,<1.0.0`
+**Core dependency:** `dcc-mcp-core>=0.14.20,<1.0.0`
 **Python:** 3.7+
 **Maya:** 2020+
 
@@ -86,6 +86,38 @@ def create_sphere(radius: float = 1.0) -> dict:
       cmds.currentTime(frame)
       cmds.render()
   ```
+
+---
+
+## Gateway Capability Surface (issues #163 / #164 / #165)
+
+The Maya adapter publishes a **compact capability manifest** so the gateway — and agents that query Maya directly — can enumerate every action (loaded *and* unloaded) without paying the cost of full per-tool JSON Schemas.
+
+Entry points:
+
+| Surface                             | Where                                                                                                                          |
+|-------------------------------------|--------------------------------------------------------------------------------------------------------------------------------|
+| Programmatic                        | `MayaMcpServer.build_capability_manifest(loaded_only=False)`                                                                   |
+| MCP tool (agents)                   | `dcc_capability_manifest({"loaded_only": bool})` — registered before `start()`                                                 |
+| Record shape                        | `{tool_slug, backend_tool, skill_name, summary (<=200 ch), tags, execution, affinity, timeout_hint_secs, has_schema, group}`   |
+| Live sync                           | `publish_capability_snapshot(reason=...)` invoked automatically on `start()` / `load_skill` / `unload_skill`                   |
+| Scene context (→ REST `/v1/context`)| `MayaContextSnapshotProvider` wired via `set_context_snapshot_provider` in `__init__`                                          |
+
+Each record is **<= 640 B** serialised JSON and omits `inputSchema` — roughly 4× cheaper than a full `tools/list` entry.  The manifest deliberately exposes skill actions that MCP `tools/list` intentionally skips (core only emits `__skill__*` stubs there), so an agent can decide which skill to load without polling.
+
+Key Python symbols exported from the top-level package:
+
+```python
+from dcc_mcp_maya import (
+    MayaCapabilityManifestBuilder,   # catalog → list[CapabilityRecord]
+    CapabilityRecord,
+    build_manifest_payload,
+    register_capability_mcp_tool,
+    MayaContextSnapshotProvider,
+    collect_gateway_metadata,
+    make_snapshot_provider,
+)
+```
 
 ---
 
