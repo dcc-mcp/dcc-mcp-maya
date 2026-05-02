@@ -95,6 +95,7 @@ from dcc_mcp_maya.dispatcher import (
     create_dispatcher,
     create_pumped_dispatcher,
 )
+from dcc_mcp_maya.host import MayaCallableDispatcher, MayaHost
 from dcc_mcp_maya.server import MayaMcpServer, start_server, stop_server
 
 __all__ = [
@@ -103,6 +104,9 @@ __all__ = [
     "MayaMcpServer",
     "start_server",
     "stop_server",
+    # Host adapter (core 0.14.23 main-thread dispatcher)
+    "MayaHost",
+    "MayaCallableDispatcher",
     # Dispatchers — Python-side (callable dispatch, main-thread affinity)
     "MayaUiDispatcher",
     "MayaUiPump",

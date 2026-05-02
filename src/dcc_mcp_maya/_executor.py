@@ -1,19 +1,10 @@
 """In-process skill executor (issue #127).
 
-Extracted from the previous monolithic ``server.py``.  Provides three
-entry points consumed by :class:`MayaMcpServer`:
+Extracted from the previous monolithic ``server.py``.  The old per-action
+``register_handler`` wiring has been removed; core 0.14.23 owns skill routing
+through its host dispatcher and global in-process executor.
 
-* :func:`run_skill_script` — load a skill ``main()`` and execute it on
-  the calling thread.  No Maya / dispatcher dependencies.
-* :func:`wire_in_process_executor` — register Python in-process handlers
-  for every action currently in the registry (called once after
-  startup-time skill loading).
-* :func:`register_inprocess_handlers` — register handlers for an explicit
-  action-name list (called by :meth:`MayaMcpServer.load_skill` for
-  dynamic loads).
-
-The dispatcher routing logic also lives here in
-:func:`execute_in_process` so the composition root can stay small.
+This module keeps the direct script runner used by tests and internal helpers.
 
 See: https://github.com/loonghao/dcc-mcp-maya/issues/127
 """
@@ -23,7 +14,7 @@ from __future__ import annotations
 
 # Import built-in modules
 import logging
-from typing import Any, Callable, Dict, List
+from typing import Any, Dict
 
 # Import local modules
 from dcc_mcp_maya import _affinity
@@ -166,73 +157,3 @@ def execute_in_process(
         }
 
     return run_skill_script(script_path, params)
-
-
-def register_inprocess_handlers(server_obj: Any, action_names: List[str]) -> int:
-    """Register in-process Python handlers for ``action_names``.
-
-    For each action that has a ``source_file`` and no handler registered
-    yet, wraps :func:`execute_in_process` as an
-    :meth:`McpHttpServer.register_handler` callable so ``tools/call``
-    dispatches to the live Maya interpreter instead of spawning a
-    ``mayapy`` subprocess.
-
-    Returns the number of handlers newly registered.
-    """
-    inner = server_obj._server
-    registered = 0
-    for action_name in action_names:
-        if inner.has_handler(action_name):
-            continue
-
-        try:
-            action = inner.registry.get_action(action_name)
-        except Exception:  # noqa: BLE001
-            continue
-
-        if not action:
-            continue
-
-        script_path = action.get("source_file") if isinstance(action, dict) else None
-        if not script_path:
-            continue
-
-        def _make_handler(spath: str, aname: str) -> Callable[[Dict[str, Any]], Dict[str, Any]]:
-            def handler(params: Dict[str, Any]) -> Dict[str, Any]:
-                return execute_in_process(server_obj, spath, params, aname)
-
-            return handler
-
-        try:
-            inner.register_handler(action_name, _make_handler(script_path, action_name))
-            registered += 1
-        except Exception as exc:  # noqa: BLE001
-            logger.warning("Failed to register in-process handler for %r: %s", action_name, exc)
-
-    return registered
-
-
-def wire_in_process_executor(server_obj: Any) -> None:
-    """Register in-process handlers for every loaded action.
-
-    Called once after :meth:`MayaMcpServer.register_builtin_actions`
-    (and once after any dynamic :meth:`load_skill` call) so all loaded
-    actions route through :func:`run_skill_script` instead of the
-    subprocess executor.
-    """
-    inner = server_obj._server
-    try:
-        actions = inner.registry.list_actions_enabled()
-    except AttributeError:
-        logger.debug("server.registry not available — skipping in-process executor wiring")
-        return
-
-    action_names = [a["name"] for a in actions if isinstance(a, dict) and a.get("name")]
-    registered = register_inprocess_handlers(server_obj, action_names)
-    if registered > 0:
-        logger.info(
-            "Maya in-process executor: registered %d handler(s) via register_handler",
-            registered,
-        )
-    else:
-        logger.debug("Maya in-process executor: no new handlers registered (no loaded actions found)")

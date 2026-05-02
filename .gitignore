@@ -70,3 +70,6 @@ target/
 DOCKER_CHANGES.md
 DOCKER_QUICK_START.md
 .codebuddy/automations/
+
+# Mock artefacts occasionally produced by tests that patch `cmds.file`
+/MagicMock/

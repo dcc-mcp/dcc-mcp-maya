@@ -4,7 +4,7 @@
 
 - **Maya**: 2020, 2022, 2023, 2024, or 2025
 - **Python**: 3.7 – 3.12 (embedded in Maya)
-- **dcc-mcp-core**: ≥ 0.12.29 (auto-installed as dependency)
+- **dcc-mcp-core**: ≥ 0.14.23 (auto-installed as dependency)
 
 ## Method 1 — pip into mayapy
 
@@ -41,7 +41,19 @@ Copy the plugin file to a directory on `MAYA_PLUG_IN_PATH`, then load it through
 
 The plugin starts the server automatically on load. By default it uses an OS-assigned instance port and participates in the gateway on port `9765`.
 
-## Method 3 — userSetup.py (Auto-start)
+## Method 3 — mayapy bootstrap
+
+For headless E2E or service-style runs, start Maya through the bundled bootstrap:
+
+```bash
+mayapy maya_bootstrap.py
+```
+
+The bootstrap creates a core `BlockingDispatcher` in batch mode, exposes MCP at `/mcp`, and exposes the per-DCC REST skill API at `/v1/*` when using `dcc-mcp-core>=0.14.23`.
+
+Maya licensing is required for CI. Gate this command behind a self-hosted runner or a licensed Maya environment.
+
+## Method 4 — userSetup.py (Auto-start)
 
 To start the server automatically every time Maya opens, add to `userSetup.py`:
 

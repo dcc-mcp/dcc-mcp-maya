@@ -1,0 +1,14 @@
+groups:
+- name: core
+  description: Pure filesystem geometry helpers
+  default_active: true
+  tools:
+  - file_exists
+- name: geometry
+  description: Maya geometry creation and export tools
+  default_active: true
+  tools:
+  - create_sphere
+  - save_scene
+  - export_fbx
+  - export_obj

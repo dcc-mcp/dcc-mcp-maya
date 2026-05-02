@@ -90,6 +90,7 @@ SKILL_DEFAULTS: Dict[str, ExecAffinity] = {
     "maya-hdri": ("sync", "main", None),
     "maya-instancer": ("sync", "main", None),
     "maya-light-rig": ("sync", "main", None),
+    "maya-geometry": ("sync", "main", None),
     "maya-lighting": ("sync", "main", None),
     "maya-mash": ("sync", "main", None),
     "maya-materials": ("sync", "main", None),
@@ -135,6 +136,11 @@ TOOL_OVERRIDES: Dict[Tuple[str, str], ExecAffinity] = {
     ("maya-render", "import_file"): ("async", "main", 300),
     # maya-render-farm — all async
     ("maya-render-farm", "get_render_job_status"): ("sync", "any", None),
+    # maya-geometry
+    ("maya-geometry", "file_exists"): ("sync", "any", None),
+    ("maya-geometry", "save_scene"): ("async", "main", 120),
+    ("maya-geometry", "export_fbx"): ("async", "main", 300),
+    ("maya-geometry", "export_obj"): ("async", "main", 300),
     # maya-scripting execute_* stays sync; long scripts submitted separately
     # maya-cache
     ("maya-cache", "list_geometry_caches"): ("sync", "main", None),

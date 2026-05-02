@@ -139,6 +139,8 @@ VERSION = _get_version()
 
 # ── module-level state ────────────────────────────────────────────────────────
 _handle = None
+_host = None
+_host_dispatcher = None
 _menu_name = "DccMcpMenu"
 _restart_lock = threading.Lock()  # prevent overlapping restart calls
 
@@ -282,8 +284,14 @@ def _export_worker_env() -> None:
 
 def _start() -> None:
     """Start the MCP server (called from Maya main thread)."""
-    global _handle
+    global _handle, _host, _host_dispatcher
     try:
+        try:
+            from dcc_mcp_core.host import BlockingDispatcher, QueueDispatcher  # noqa: PLC0415
+        except (ImportError, SyntaxError):
+            BlockingDispatcher = None
+            QueueDispatcher = None
+
         import dcc_mcp_maya  # noqa: PLC0415
 
         _export_worker_env()
@@ -297,7 +305,19 @@ def _start() -> None:
         except Exception as exc:  # noqa: BLE001 — never block plugin load
             logger.debug("commandPort warning suppression skipped: %s", exc)
         cfg = _resolve_config()
-        _handle = dcc_mcp_maya.start_server(**cfg)
+        if BlockingDispatcher is not None and QueueDispatcher is not None:
+            _host_dispatcher = BlockingDispatcher() if cmds.about(batch=True) else QueueDispatcher()
+            _host = dcc_mcp_maya.MayaHost(_host_dispatcher)
+            _handle = dcc_mcp_maya.start_server(host_dispatcher=_host_dispatcher, **cfg)
+            _host.start()
+        else:
+            # Python 3.7 / Maya 2022 fallback: core's host module cannot load.
+            # Start the server with the inline in-process executor and let
+            # skills run synchronously on Maya's main thread.
+            logger.warning(
+                "dcc-mcp-core host dispatchers unavailable; starting MCP server without host adapter",
+            )
+            _handle = dcc_mcp_maya.start_server(**cfg)
         _print_startup_info(cfg)
     except Exception as exc:
         logger.error("Failed to start MCP server: %s", exc)
@@ -365,8 +385,12 @@ def _stop_blocking() -> None:
     which calls handle.shutdown() (blocking).  Only used during plugin
     unload (``uninitializePlugin``), where blocking is acceptable.
     """
-    global _handle
+    global _handle, _host, _host_dispatcher
     try:
+        if _host is not None:
+            _host.stop()
+            _host = None
+            _host_dispatcher = None
         import dcc_mcp_maya  # noqa: PLC0415
 
         dcc_mcp_maya.stop_server()
@@ -381,7 +405,7 @@ def _stop_async() -> None:
     Sends a non-blocking shutdown signal, then waits in a background
     thread.  Used by the Restart menu item to avoid freezing Maya.
     """
-    global _handle
+    global _handle, _host, _host_dispatcher
     try:
         import dcc_mcp_maya.server as _srv_mod  # noqa: PLC0415
 
@@ -389,6 +413,11 @@ def _stop_async() -> None:
         srv = _srv_mod._server_instance  # noqa: SLF001
         if srv and srv._handle:
             srv._handle.signal_shutdown()
+
+        if _host is not None:
+            _host.stop()
+            _host = None
+            _host_dispatcher = None
 
         # Deregister singleton so start_server() creates a fresh instance
         _srv_mod._server_instance = None  # noqa: SLF001
