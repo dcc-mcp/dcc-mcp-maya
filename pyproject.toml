@@ -27,15 +27,22 @@ classifiers = [
 ]
 
 dependencies = [
-    # 0.14.21 adds the project-state persistence surface (``DccProject``,
-    # ``ProjectState``, ``register_project_tools``) wired by
-    # :mod:`dcc_mcp_maya._project_tools` so MCP agents can call
-    # ``project.save`` / ``project.load`` / ``project.resume`` /
-    # ``project.status`` against the live Maya scene path.  Earlier
-    # capability-manifest / context-snapshot APIs we depend on
-    # (``HostExecutionBridge``, ``set_context_snapshot_provider``,
-    # ``update_gateway_metadata``, ``plugin_manifest``) shipped in 0.14.20.
-    "dcc-mcp-core>=0.14.21,<1.0.0",
+    # 0.14.22 adds the per-DCC RESTful skill-API surface
+    # (``SkillRestService``, ``build_skill_rest_router``), the
+    # ``gateway_tool_exposure`` slim/rest/both modes, cursor-safe tool
+    # names, and ``tool_spec_from_callable`` / ``output_schema`` on
+    # ``ToolSpec``.  ``DCC_MCP_MAYA_TOOL_EXPOSURE`` and
+    # ``DCC_MCP_MAYA_CURSOR_SAFE_TOOL_NAMES`` env vars (see
+    # :mod:`dcc_mcp_maya._env`) rely on those config fields; the
+    # forward-compat tests in ``tests/test_skill_rest_mcp_parity.py``
+    # activate automatically when 0.14.22 is installed.
+    # Earlier APIs we still depend on: 0.14.21's
+    # ``register_project_tools`` (wired by
+    # :mod:`dcc_mcp_maya._project_tools`), 0.14.20's capability-manifest
+    # / context-snapshot surface (``HostExecutionBridge``,
+    # ``set_context_snapshot_provider``, ``update_gateway_metadata``,
+    # ``plugin_manifest``).
+    "dcc-mcp-core>=0.14.22,<1.0.0",
 ]
 
 [project.optional-dependencies]

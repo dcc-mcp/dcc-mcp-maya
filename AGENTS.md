@@ -158,6 +158,7 @@ Use helpers from `dcc_mcp_maya.api`:
 - `maya_success(message, **context)` → `{"success": True, "message": ..., "context": {...}}`
 - `maya_error(message, error, possible_solutions=[...], **context)` → `{"success": False, ...}`
 - `maya_from_exception(exc, message, **context)` → includes full traceback (preferred over `str(exc)`)
+- `maya_typed_success(message, data, return_type=None, **context)` *(core 0.14.22+)* → `maya_success` envelope augmented with an auto-derived JSON Schema under `context.output_schema` and the serialised dataclass under `context.typed_result`. Use when your handler returns a `@dataclass` / `TypedDict` so downstream agents can validate the payload without waiting on upstream tools.yaml `outputSchema` propagation.
 
 ### Execution & Affinity (tools.yaml)
 Every tool declaration **must** include:
@@ -197,6 +198,8 @@ All other skills appear as `__skill__<name>` stubs. Call `load_skill(name)` to a
 | `DCC_MCP_MAYA_METRICS` | `0` | `1` = enable Prometheus `/metrics` endpoint. |
 | `DCC_MCP_MAYA_JOB_STORAGE` | `<data_dir>/jobs.db` | SQLite job persistence path. |
 | `DCC_MCP_MAYA_JOB_RECOVERY` | `drop` | `requeue` = resume idempotent jobs on startup. |
+| `DCC_MCP_MAYA_TOOL_EXPOSURE` | — (core default `full`) | Gateway `tools/list` shaping (core 0.14.22 / #652): `full` \| `slim` \| `both` \| `rest`. Invalid values fall back to the inner default. |
+| `DCC_MCP_MAYA_CURSOR_SAFE_TOOL_NAMES` | — (core default `1`) | Toggle Cursor-safe gateway tool names (core 0.14.22 / #656). Set `0` during SEP-986 migration. |
 | `DCC_MCP_GATEWAY_PORT` | `9765` | Multi-instance gateway election port. `0` = disable. |
 | `DCC_MCP_REGISTRY_DIR` | OS temp dir | Shared service-discovery registry directory. |
 

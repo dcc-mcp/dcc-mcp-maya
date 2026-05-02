@@ -103,6 +103,8 @@ class MayaMcpServer(DccServerBase):
         dcc_window_title: Optional[str] = None,
         dcc_window_handle: Optional[int] = None,
         enable_workflows: Optional[bool] = None,
+        tool_exposure: Optional[str] = None,
+        cursor_safe_tool_names: Optional[bool] = None,
     ) -> None:
         super().__init__(
             dcc_name="maya",
@@ -158,6 +160,52 @@ class MayaMcpServer(DccServerBase):
             except Exception as exc:  # noqa: BLE001
                 logger.warning(
                     "[%s] Could not enable workflows on inner config: %s",
+                    "maya",
+                    exc,
+                )
+
+        # ── Gateway tool-exposure mode (dcc-mcp-core#652, 0.14.22) ──────
+        # ``DCC_MCP_MAYA_TOOL_EXPOSURE=slim|rest`` lets operators shrink
+        # the gateway ``tools/list`` page to just the meta-tools.  When
+        # unset we leave ``gateway_tool_exposure`` at whatever default
+        # the installed core wheel ships (today ``"full"``) so behaviour
+        # stays backward-compatible.
+        effective_exposure = _env.resolve_tool_exposure(tool_exposure)
+        if effective_exposure is not None:
+            try:
+                self._config.gateway_tool_exposure = effective_exposure
+                logger.info(
+                    "[%s] gateway_tool_exposure=%s",
+                    "maya",
+                    effective_exposure,
+                )
+            except Exception as exc:  # noqa: BLE001
+                # Older core wheels that predate #652 won't expose this
+                # attribute — that's fine; log at debug so a future
+                # Maya-compatible downgrade stays quiet.
+                logger.debug(
+                    "[%s] gateway_tool_exposure unavailable on inner config: %s",
+                    "maya",
+                    exc,
+                )
+
+        # ── Cursor-safe tool names (dcc-mcp-core#656, 0.14.22) ──────────
+        # Agents pointing Cursor/VS Code at a gateway want tool names
+        # matching ``^[A-Za-z0-9_]+$``; set
+        # ``DCC_MCP_MAYA_CURSOR_SAFE_TOOL_NAMES=0`` to opt out during a
+        # migration window where SEP-986 dotted names are still needed.
+        effective_cursor_safe = _env.resolve_cursor_safe_tool_names(cursor_safe_tool_names)
+        if effective_cursor_safe is not None:
+            try:
+                self._config.gateway_cursor_safe_tool_names = bool(effective_cursor_safe)
+                logger.info(
+                    "[%s] gateway_cursor_safe_tool_names=%s",
+                    "maya",
+                    effective_cursor_safe,
+                )
+            except Exception as exc:  # noqa: BLE001
+                logger.debug(
+                    "[%s] gateway_cursor_safe_tool_names unavailable on inner config: %s",
                     "maya",
                     exc,
                 )

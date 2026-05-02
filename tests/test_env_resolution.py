@@ -150,3 +150,96 @@ class TestResolveWindowTitle:
         env.pop(_env.ENV_WINDOW_TITLE, None)
         with patch.dict(os.environ, env, clear=True):
             assert _env.resolve_window_title(None) is None
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Gateway tool-exposure mode (core 0.14.22 / dcc-mcp-core#652)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class TestResolveToolExposure:
+    """Cover the full priority table for ``resolve_tool_exposure``.
+
+    The resolver is the only place where a typo in
+    ``DCC_MCP_MAYA_TOOL_EXPOSURE`` can be contained; every downstream
+    caller trusts its output implicitly, so we exercise every branch.
+    """
+
+    def test_unset_returns_none(self):
+        env = os.environ.copy()
+        env.pop(_env.ENV_TOOL_EXPOSURE, None)
+        with patch.dict(os.environ, env, clear=True):
+            assert _env.resolve_tool_exposure(None) is None
+
+    def test_explicit_argument_overrides_env(self):
+        with patch.dict(os.environ, {_env.ENV_TOOL_EXPOSURE: "full"}):
+            assert _env.resolve_tool_exposure("slim") == "slim"
+
+    def test_env_var_used_when_argument_missing(self):
+        with patch.dict(os.environ, {_env.ENV_TOOL_EXPOSURE: "rest"}):
+            assert _env.resolve_tool_exposure(None) == "rest"
+
+    @pytest.mark.parametrize("mode", list(_env.VALID_TOOL_EXPOSURE_MODES))
+    def test_every_valid_mode_round_trips(self, mode):
+        with patch.dict(os.environ, {_env.ENV_TOOL_EXPOSURE: mode}):
+            assert _env.resolve_tool_exposure(None) == mode
+
+    def test_uppercase_and_whitespace_normalised(self):
+        # Operators on Windows occasionally set env vars mixed-case; we
+        # accept that as long as the normalised lowercase value maps to
+        # a known mode.
+        with patch.dict(os.environ, {_env.ENV_TOOL_EXPOSURE: "  SLIM  "}):
+            assert _env.resolve_tool_exposure(None) == "slim"
+
+    def test_invalid_value_falls_back_to_none_and_logs(self, caplog):
+        import logging
+
+        with caplog.at_level(logging.WARNING, logger="dcc_mcp_maya._env"):
+            with patch.dict(os.environ, {_env.ENV_TOOL_EXPOSURE: "bogus"}):
+                assert _env.resolve_tool_exposure(None) is None
+        assert any("bogus" in rec.getMessage() for rec in caplog.records)
+
+    def test_empty_string_is_treated_as_unset(self):
+        with patch.dict(os.environ, {_env.ENV_TOOL_EXPOSURE: ""}):
+            assert _env.resolve_tool_exposure(None) is None
+
+
+class TestResolveCursorSafeToolNames:
+    """``DCC_MCP_MAYA_CURSOR_SAFE_TOOL_NAMES`` is a tri-state resolver:
+
+    * ``True`` / ``False`` when the caller intentionally opts in or out.
+    * ``None`` when unset, so callers leave the inner-config default
+      alone instead of flipping it to an arbitrary value.
+    """
+
+    def test_unset_returns_none(self):
+        env = os.environ.copy()
+        env.pop(_env.ENV_CURSOR_SAFE_TOOL_NAMES, None)
+        with patch.dict(os.environ, env, clear=True):
+            assert _env.resolve_cursor_safe_tool_names(None) is None
+
+    def test_explicit_argument_true(self):
+        # Explicit argument wins even when env says otherwise.
+        with patch.dict(os.environ, {_env.ENV_CURSOR_SAFE_TOOL_NAMES: "0"}):
+            assert _env.resolve_cursor_safe_tool_names(True) is True
+
+    def test_explicit_argument_false(self):
+        with patch.dict(os.environ, {_env.ENV_CURSOR_SAFE_TOOL_NAMES: "1"}):
+            assert _env.resolve_cursor_safe_tool_names(False) is False
+
+    @pytest.mark.parametrize("raw", ["0", "false", "FALSE", "no", "off"])
+    def test_env_disables_when_falsy(self, raw):
+        with patch.dict(os.environ, {_env.ENV_CURSOR_SAFE_TOOL_NAMES: raw}):
+            assert _env.resolve_cursor_safe_tool_names(None) is False
+
+    @pytest.mark.parametrize("raw", ["1", "true", "TRUE", "yes", "on"])
+    def test_env_enables_when_truthy(self, raw):
+        with patch.dict(os.environ, {_env.ENV_CURSOR_SAFE_TOOL_NAMES: raw}):
+            assert _env.resolve_cursor_safe_tool_names(None) is True
+
+    def test_invalid_value_returns_none(self):
+        # We intentionally preserve the inner default rather than
+        # collapsing to ``False`` — flipping a boolean silently on typos
+        # would be a footgun for operators.
+        with patch.dict(os.environ, {_env.ENV_CURSOR_SAFE_TOOL_NAMES: "maybe"}):
+            assert _env.resolve_cursor_safe_tool_names(None) is None

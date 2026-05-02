@@ -33,6 +33,13 @@ from __future__ import annotations
 
 # Import local modules
 from dcc_mcp_maya.__version__ import __version__
+from dcc_mcp_maya._env import (
+    ENV_CURSOR_SAFE_TOOL_NAMES,
+    ENV_TOOL_EXPOSURE,
+    VALID_TOOL_EXPOSURE_MODES,
+    resolve_cursor_safe_tool_names,
+    resolve_tool_exposure,
+)
 from dcc_mcp_maya._project_tools import (
     ENV_PROJECT_TOOLS,
     MayaSceneResolver,
@@ -54,6 +61,7 @@ from dcc_mcp_maya.api import (
     maya_error,
     maya_from_exception,
     maya_success,
+    maya_typed_success,
     maya_warning,
     missing_param_error,
     object_transform_from_node,
@@ -111,6 +119,7 @@ __all__ = [
     "maya_error",
     "maya_warning",
     "maya_from_exception",
+    "maya_typed_success",
     "require_cmds",
     "get_cmds",
     "is_maya_available",
@@ -148,4 +157,10 @@ __all__ = [
     "MayaSceneResolver",
     "ProjectToolsIntegration",
     "attach_project_tools",
+    # Gateway tool-exposure + cursor-safe naming (core 0.14.22)
+    "ENV_TOOL_EXPOSURE",
+    "ENV_CURSOR_SAFE_TOOL_NAMES",
+    "VALID_TOOL_EXPOSURE_MODES",
+    "resolve_tool_exposure",
+    "resolve_cursor_safe_tool_names",
 ]
