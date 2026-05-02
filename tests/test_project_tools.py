@@ -588,16 +588,14 @@ class TestProjectToolsViaRestChannel:
         (server, handle), scene = rest_server
         base = self._rest_base(handle)
         status, body = self._safe_post(
-            base + "/v1/tools/call",
-            {"name": "project.save", "arguments": {"scene_path": str(scene)}},
+            base + "/v1/call",
+            {"tool_slug": "maya.core.project.save", "params": {"scene_path": str(scene)}},
         )
-        if status == 404:
-            pytest.skip("Core build did not mount /v1/tools/call — REST surface optional")
-        assert status < 500, body[:200]
+        assert status == 200, body[:200]
         try:
             payload = json.loads(body)
         except json.JSONDecodeError:
-            pytest.fail(f"Non-JSON {status} from /v1/tools/call: {body[:200]!r}")
+            pytest.fail(f"Non-JSON {status} from /v1/call: {body[:200]!r}")
         # REST contract mirrors MCP: the envelope returned by the
         # handler is wrapped in a ``content``-style structure.  We do
         # not over-specify the wrapper here so this test stays resilient
