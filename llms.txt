@@ -66,6 +66,8 @@ MayaMcpServer(
     metrics_enabled: Optional[bool] = None,      # env: DCC_MCP_MAYA_METRICS=1
     job_storage_path: Optional[str] = None,      # env: DCC_MCP_MAYA_JOB_STORAGE
     job_recovery: Optional[str] = None,          # env: DCC_MCP_MAYA_JOB_RECOVERY
+    tool_exposure: Optional[str] = None,         # env: DCC_MCP_MAYA_TOOL_EXPOSURE (full|slim|both|rest)
+    cursor_safe_tool_names: Optional[bool] = None,  # env: DCC_MCP_MAYA_CURSOR_SAFE_TOOL_NAMES
 )
 ```
 
@@ -161,6 +163,8 @@ Tool naming: `{skill_name.replace("-","_")}__{script_stem}` (e.g. `maya_scene__n
 | `DCC_MCP_MAYA_METRICS` | `0` | `1`=Prometheus `/metrics` |
 | `DCC_MCP_MAYA_JOB_STORAGE` | `<data_dir>/jobs.db` | SQLite persistence path |
 | `DCC_MCP_MAYA_JOB_RECOVERY` | `drop` | `requeue`=resume idempotent jobs |
+| `DCC_MCP_MAYA_TOOL_EXPOSURE` | — | core 0.14.22: `full` \| `slim` \| `both` \| `rest` gateway shaping |
+| `DCC_MCP_MAYA_CURSOR_SAFE_TOOL_NAMES` | — | core 0.14.22: `0`=legacy dotted names, `1`=`i_<id8>__<tool>` |
 | `DCC_MCP_GATEWAY_PORT` | `9765` | Multi-instance gateway port (`0`=off) |
 | `DCC_MCP_REGISTRY_DIR` | OS temp | Shared discovery registry |
 | `DCC_MCP_MAYA_HOT_RELOAD` | `0` | `1`=watch skills for disk changes |
