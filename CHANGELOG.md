@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.2.25](https://github.com/loonghao/dcc-mcp-maya/compare/v0.2.24...v0.2.25) (2026-05-02)
+
+
+### Features
+
+* **gateway:** compact capability manifest + context snapshot ([#163](https://github.com/loonghao/dcc-mcp-maya/issues/163), [#164](https://github.com/loonghao/dcc-mcp-maya/issues/164), [#165](https://github.com/loonghao/dcc-mcp-maya/issues/165)) ([#166](https://github.com/loonghao/dcc-mcp-maya/issues/166)) ([cec2bed](https://github.com/loonghao/dcc-mcp-maya/commit/cec2bede2e14fb6b33298949df52543d3e8ca80a))
+* **project:** wire dcc-mcp-core register_project_tools into MayaMcpServer ([#576](https://github.com/loonghao/dcc-mcp-maya/issues/576)) ([#169](https://github.com/loonghao/dcc-mcp-maya/issues/169)) ([4733b8a](https://github.com/loonghao/dcc-mcp-maya/commit/4733b8a1570179a59486cbd3616130652d267ad9))
+
+
+### Bug Fixes
+
+* **executor:** honor tools.yaml affinity: any at runtime ([#168](https://github.com/loonghao/dcc-mcp-maya/issues/168)) ([d09d18c](https://github.com/loonghao/dcc-mcp-maya/commit/d09d18c3d1bf6f39a5b4c43ce56a25fd68568dd5))
+
+
+### Documentation
+
+* fix core dependency version inconsistency ([c0c4f28](https://github.com/loonghao/dcc-mcp-maya/commit/c0c4f2829ffcea4d12132fcb0f835c463959ab34))
+* fix core dependency version inconsistency in llms.txt and llms-full.txt ([7cc8237](https://github.com/loonghao/dcc-mcp-maya/commit/7cc82373617c05b136caeca946c6df48b0764ab6))
+
 ## [0.2.24](https://github.com/loonghao/dcc-mcp-maya/compare/v0.2.23...v0.2.24) (2026-05-01)
 
 
