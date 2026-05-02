@@ -719,11 +719,147 @@ def bounding_box_from_node(cmds: Any, node_name: str) -> Dict[str, Any]:
 # Convenience re-exports so callers only need one import
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# Typed-output helper (dcc-mcp-core#242, 0.14.22) -----------------------------
+# ---------------------------------------------------------------------------
+#
+# Motivation
+#   * ``tools/list`` on the per-DCC MCP server emits ``outputSchema`` only
+#     when the upstream ToolSpec was registered with one — today
+#     (core 0.14.22) tools.yaml's ``outputSchema`` key is silently dropped
+#     and there is no Python-level API to mutate a registered action's
+#     ``output_schema`` field without re-registering it in full.
+#   * Until core grows that propagation path, skill authors can still get
+#     typed-output semantics into the envelope agents actually receive:
+#     attach a ``derive_schema``-derived JSON Schema and a serialised
+#     representation of the dataclass/``TypedDict`` on the result dict.
+#   * Agents that speak the forward-compatible ``outputSchema`` key
+#     (core's own ``McpClient`` does, as do the REST ``/v1/call``
+#     envelopes scheduled for #660) can then validate returned data
+#     without the server ever having to grow a new MCP surface.
+#
+# Design (SOLID)
+#   * Single responsibility — builds a forward-compat dict, nothing else.
+#     No IO, no Maya imports, no registry mutation.
+#   * Dependency injection — ``_schema_deriver`` can be swapped for
+#     testing / older core wheels without the upstream import in sight.
+#   * Open/closed — if/when core propagates tools.yaml ``outputSchema``
+#     we can layer the registry-side hook on top without touching skill
+#     scripts that already use :func:`maya_typed_success`.
+# ---------------------------------------------------------------------------
+
+
+def _default_schema_deriver(tp: Any) -> Optional[Dict[str, Any]]:
+    """Default schema deriver: prefer core's ``derive_schema`` when present."""
+    try:
+        from dcc_mcp_core.schema import derive_schema  # noqa: PLC0415
+    except ImportError:  # pragma: no cover — core always ships .schema on 0.14.22+
+        return None
+    try:
+        schema = derive_schema(tp)
+    except Exception:  # noqa: BLE001 — never fail a skill over schema derivation
+        return None
+    return schema if isinstance(schema, dict) else None
+
+
+def _default_as_plain_dict(value: Any) -> Dict[str, Any]:
+    """Convert a dataclass / ``TypedDict`` / plain-dict value to a dict.
+
+    Keeps the helper dependency-free: falls back to ``vars(value)`` for
+    simple objects with a ``__dict__`` and to a single-key wrapper for
+    plain scalars so the caller always receives a JSON-serialisable dict.
+    """
+    if isinstance(value, dict):
+        return dict(value)
+    try:
+        from dataclasses import asdict, is_dataclass  # noqa: PLC0415
+
+        if is_dataclass(value):
+            return asdict(value)
+    except Exception:  # noqa: BLE001
+        pass
+    if hasattr(value, "_asdict"):  # namedtuple
+        try:
+            return dict(value._asdict())
+        except Exception:  # noqa: BLE001
+            pass
+    if hasattr(value, "__dict__"):
+        return {k: v for k, v in vars(value).items() if not k.startswith("_")}
+    return {"value": value}
+
+
+def maya_typed_success(
+    message: str,
+    data: Any,
+    return_type: Optional[Any] = None,
+    *,
+    prompt: Optional[str] = None,
+    _schema_deriver: Optional[Any] = None,
+    _to_dict: Optional[Any] = None,
+    **context: Any,
+) -> Dict[str, Any]:
+    """Build a success envelope augmented with an ``outputSchema`` hint.
+
+    A forward-compatible sibling of :func:`maya_success` that:
+
+    1. Serialises ``data`` (usually a ``@dataclass`` instance) into a
+       plain dict via :func:`_default_as_plain_dict`.
+    2. Derives a JSON Schema from ``return_type`` (defaulting to
+       ``type(data)``) via :func:`dcc_mcp_core.schema.derive_schema`.
+    3. Attaches the schema to the result's ``context`` under the
+       ``output_schema`` key so agents can validate the payload even
+       before upstream core propagates tools.yaml ``outputSchema``.
+
+    Parameters
+    ----------
+    message:
+        Human-readable success message.
+    data:
+        The typed result (dataclass instance, ``TypedDict``, ``namedtuple``,
+        or any ``__dict__``-friendly object).
+    return_type:
+        Explicit type to derive the schema from; defaults to
+        ``type(data)``.  Use this when ``data`` is a ``dict`` that
+        conforms to a ``TypedDict`` (``type(data)`` would just yield
+        ``dict``).
+    prompt, context:
+        Forwarded to :func:`maya_success` verbatim.
+    _schema_deriver, _to_dict:
+        Injection seams for unit tests.  Callers should not use them.
+
+    Returns
+    -------
+    dict
+        ``maya_success``-compatible envelope with two extra context keys:
+        ``output_schema`` (the JSON Schema) and ``typed_result`` (the
+        serialised data dict).  Both are omitted gracefully when
+        derivation fails so the helper never breaks a skill.
+    """
+    schema_fn = _schema_deriver or _default_schema_deriver
+    to_dict_fn = _to_dict or _default_as_plain_dict
+
+    tp = return_type if return_type is not None else type(data)
+    schema = schema_fn(tp)
+    payload = to_dict_fn(data)
+
+    enriched: Dict[str, Any] = dict(context)
+    if schema is not None:
+        enriched["output_schema"] = schema
+    if payload:
+        enriched["typed_result"] = payload
+    return maya_success(message, prompt=prompt, **enriched)
+
+
+# ---------------------------------------------------------------------------
+# Module exports
+# ---------------------------------------------------------------------------
+
 __all__ = [
     "maya_success",
     "maya_error",
     "maya_warning",
     "maya_from_exception",
+    "maya_typed_success",
     "require_cmds",
     "get_cmds",
     "is_maya_available",

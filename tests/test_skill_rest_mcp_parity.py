@@ -54,6 +54,7 @@ import os
 import sys
 import time
 import urllib.request
+from dataclasses import dataclass
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 from urllib.error import HTTPError, URLError
 
@@ -691,3 +692,105 @@ def test_bundled_tools_declare_execution_and_affinity():
             if tool.get("execution") == "async" and "timeout_hint_secs" not in tool:
                 missing.append(("timeout_hint_secs", skill_name, name))
     assert not missing, "bundled tools.yaml missing required fields: {}".format(missing)
+
+
+# ---------------------------------------------------------------------------
+# 7. Forward-compat coverage for core 0.14.22 (dcc-mcp-core#242, #658)
+# ---------------------------------------------------------------------------
+
+
+def test_output_schema_field_exists_on_registered_actions_when_core_22():
+    """Regression lock — ``output_schema`` must be a first-class action
+    field exposed by the core registry on 0.14.22+.
+
+    Skill authors rely on this to layer per-action output validation.
+    If a future core downgrade strips the field, fail loudly in CI
+    rather than silently lose the contract.
+    """
+    try:
+        import dcc_mcp_core
+    except Exception:  # pragma: no cover
+        pytest.skip("dcc-mcp-core not importable")
+
+    server = MayaMcpServer(port=0, enable_gateway_failover=False, gateway_port=0)
+    server.register_builtin_actions(minimal=True)
+    try:
+        actions = server._server.registry.list_actions_enabled()
+        assert actions, "minimal mode must register at least one action"
+        first = actions[0]
+        # The key must be present (value may legitimately be ``None``
+        # until core propagates tools.yaml ``outputSchema``; see the
+        # upstream gap referenced below).
+        assert "output_schema" in first, "core {} no longer exposes output_schema on registered actions".format(
+            dcc_mcp_core.__version__
+        )
+    finally:
+        server.stop()
+
+
+@dataclass
+class _ToolSpecFromCallableFixture:
+    """Module-level dataclass so :func:`typing.get_type_hints` can
+    resolve the forward reference Python 3.12 emits for return
+    annotations of nested functions.
+    """
+
+    x: int
+
+
+def test_tool_spec_from_callable_is_importable_on_core_22():
+    """dcc-mcp-core#242 shipped :func:`tool_spec_from_callable` in 0.14.22.
+
+    ``dcc_mcp_maya.api.maya_typed_success`` relies on
+    :func:`derive_schema` from the same ``dcc_mcp_core.schema`` module.
+    If core ever drops either, our typed-output helper silently stops
+    producing ``output_schema`` — this test surfaces the regression
+    immediately.
+    """
+    try:
+        from dcc_mcp_core.schema import derive_schema, tool_spec_from_callable  # noqa: F401
+    except ImportError:
+        pytest.skip("core build lacks .schema module (pre-0.14.22)")
+
+    def handler(n: int = 1) -> _ToolSpecFromCallableFixture:
+        """Fixture handler — int in, dataclass out."""
+        return _ToolSpecFromCallableFixture(x=n)
+
+    spec = tool_spec_from_callable(handler)
+    assert spec.input_schema.get("type") == "object"
+    assert spec.output_schema.get("type") == "object"
+    assert spec.output_schema.get("title") == "_ToolSpecFromCallableFixture"
+
+
+def test_per_dcc_skill_rest_surface_tracking():
+    """Upstream gap tracker.
+
+    On core 0.14.22 the ``SkillRestService`` / ``build_skill_rest_router``
+    crate compiles and is exposed on the **gateway**, but is NOT yet
+    mounted on the per-DCC :class:`McpHttpServer`.  Today all of
+    ``/v1/healthz``, ``/v1/readyz``, ``/v1/openapi.json``,
+    ``/v1/skills``, ``/v1/context``, ``/v1/search``, ``/v1/describe``,
+    ``/v1/call`` return 404 when queried against a per-DCC server.
+
+    When upstream closes that gap this test flips green automatically —
+    giving the Maya adapter an immediate signal to bump the pin and
+    unmark the previously-skipped parity tests.
+    """
+    server = MayaMcpServer(port=0, enable_gateway_failover=False, gateway_port=0)
+    handle = server.start()
+    try:
+        rest = _RestClient(handle.mcp_url().rsplit("/", 1)[0])
+        # The canonical liveness probe we would LIKE to succeed.  On
+        # core 0.14.22 this returns 404 — expected.  On future core
+        # versions that mount ``skill_rest`` per-DCC it returns 200 and
+        # the test becomes a positive contract lock.
+        status, body = rest.get("/v1/healthz")
+        if status == 200:
+            assert len(body) <= 256, "healthz body too large after per-DCC mount: {}".format(len(body))
+        else:
+            # Upstream gap still present — record the expected 404 so
+            # a silent regression to 500 / 502 trips this test even
+            # before the mount is wired.
+            assert status == 404, "per-DCC /v1/healthz returned unexpected {} (expected 404 or 200)".format(status)
+    finally:
+        server.stop()
