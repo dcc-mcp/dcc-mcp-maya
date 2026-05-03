@@ -1,0 +1,51 @@
+tools:
+- name: apply_symmetry
+  execution: sync
+  affinity: main
+  group: node_graph
+  annotations:
+    idempotent_hint: true
+- name: connect_attr
+  execution: sync
+  affinity: main
+  group: node_graph
+- name: delete_history
+  execution: sync
+  affinity: main
+  group: node_graph
+  annotations:
+    destructive_hint: true
+    idempotent_hint: true
+- name: disconnect_attr
+  execution: sync
+  affinity: main
+  group: node_graph
+- name: get_dag_path
+  execution: sync
+  affinity: main
+  group: node_graph
+  annotations:
+    read_only_hint: true
+    idempotent_hint: true
+- name: list_connections
+  execution: sync
+  affinity: main
+  group: node_graph
+  annotations:
+    read_only_hint: true
+    idempotent_hint: true
+- name: list_history
+  execution: sync
+  affinity: main
+  group: node_graph
+  annotations:
+    read_only_hint: true
+    idempotent_hint: true
+- name: smooth_mesh
+  execution: sync
+  affinity: main
+  group: node_graph
+- name: transfer_attributes
+  execution: sync
+  affinity: main
+  group: node_graph

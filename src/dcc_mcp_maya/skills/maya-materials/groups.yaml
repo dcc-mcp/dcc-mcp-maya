@@ -1,0 +1,13 @@
+groups:
+- name: shading-lighting
+  description: Materials, shading, lighting, and environment tools
+  default_active: false
+  tools:
+  - assign_material
+  - create_material
+  - get_material_connections
+  - get_shader_assignment
+  - list_materials
+  - list_shading_groups
+  - reset_to_default_material
+  - set_material_attribute
