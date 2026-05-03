@@ -1,0 +1,9 @@
+groups:
+- name: scene-management
+  description: Scene management, organization, and navigation tools
+  default_active: false
+  tools:
+  - create_display_layer
+  - delete_display_layer
+  - list_display_layers
+  - set_display_layer
