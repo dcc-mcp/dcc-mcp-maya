@@ -1,0 +1,57 @@
+tools:
+- name: apply_subdivision
+  execution: sync
+  affinity: main
+  annotations:
+    idempotent_hint: true
+  group: modeling
+- name: cleanup_mesh
+  execution: sync
+  affinity: main
+  group: modeling
+- name: combine_meshes
+  execution: sync
+  affinity: main
+  group: modeling
+- name: create_proxy_mesh
+  execution: sync
+  affinity: main
+  group: modeling
+- name: extract_faces
+  execution: sync
+  affinity: main
+  group: modeling
+- name: get_mesh_edge_info
+  execution: sync
+  affinity: main
+  annotations:
+    read_only_hint: true
+    idempotent_hint: true
+  group: modeling
+- name: get_poly_count
+  execution: sync
+  affinity: main
+  annotations:
+    read_only_hint: true
+    idempotent_hint: true
+  group: modeling
+- name: merge_vertices
+  execution: sync
+  affinity: main
+  group: modeling
+- name: mirror_mesh
+  execution: sync
+  affinity: main
+  group: modeling
+- name: select_by_material
+  execution: sync
+  affinity: main
+  group: modeling
+- name: separate_mesh
+  execution: sync
+  affinity: main
+  group: modeling
+- name: triangulate
+  execution: sync
+  affinity: main
+  group: modeling
