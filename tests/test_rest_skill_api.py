@@ -375,19 +375,15 @@ def test_search_tools_then_call_roundtrip(running_server):
         },
         session_id=session,
     )
-    # ``search_tools`` may or may not be registered depending on the
-    # core build — skip gracefully when missing rather than failing.
-    if "error" in search and search.get("error", {}).get("code") == -32601:
-        pytest.skip("search_tools not registered in this core build")
+    # ``search_tools`` is a required meta-tool on core 0.14.23+ (the
+    # lower bound declared in pyproject.toml). If it is missing the build
+    # is broken; fail loudly instead of skipping.
+    assert "error" not in search, "search_tools returned error envelope: {}".format(search.get("error"))
     result = search.get("result")
-    if result is None:
-        pytest.skip("search_tools returned error: {}".format(search.get("error")))
+    assert result is not None, "search_tools returned no result: {}".format(search)
 
     text = _extract_text(result)
-    try:
-        hits = json.loads(text)
-    except json.JSONDecodeError:
-        pytest.skip("search_tools response not JSON: {!r}".format(text[:120]))
+    hits = json.loads(text)
 
     # Core's search_tools uses a ``tools`` key; some older builds use
     # ``hits``.  Accept either.
