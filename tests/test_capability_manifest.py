@@ -279,8 +279,10 @@ def test_build_manifest_payload_headers_and_totals():
     assert payload["totals"] == {
         "actions": 2,
         "loaded_actions": 1,
+        "unloaded_actions": 1,
         "skills": 2,
         "loaded_skills": 1,
+        "unloaded_skills": 1,
     }
     assert len(payload["capabilities"]) == 2
 
@@ -340,6 +342,136 @@ def test_register_capability_mcp_tool_returns_manifest_via_handler():
     assert result["success"] is True
     assert result["context"]["totals"]["loaded_actions"] == 1
     assert result["context"]["capabilities"][0]["backend_tool"] == "maya_scene__new_scene"
+
+
+# ---------------------------------------------------------------------------
+# Unloaded-skill projection (issue #174)
+# ---------------------------------------------------------------------------
+
+
+def test_builder_projects_unloaded_skills_with_load_hint():
+    """Unloaded skills contribute records with load hints and requires_load_skill."""
+    actions = [_action("maya_scene__new_scene", skill="maya-scene")]
+    skills = [_skill("maya-scene"), _skill("maya-geometry", tags=["mesh"])]
+    skill_info_map = {
+        "maya-geometry": {
+            "tags": ["mesh"],
+            "tools": [
+                {
+                    "name": "create_sphere",
+                    "description": "Create a polygon sphere in the current Maya scene.",
+                    "execution": "sync",
+                    "group": "geometry",
+                    "input_schema": {"type": "object", "properties": {"radius": {"type": "number"}}},
+                },
+                {
+                    "name": "file_exists",
+                    "description": "Check whether a file exists on disk.",
+                    "execution": "sync",
+                    "group": "core",
+                    "input_schema": {"type": "object"},
+                },
+                # Stubs must never leak into user-visible capabilities.
+                {"name": "__skill__maya-geometry"},
+            ],
+        },
+    }
+
+    builder = MayaCapabilityManifestBuilder(
+        skill_lister=lambda: skills,
+        action_lister=lambda: actions,
+        is_loaded=lambda name: name == "maya-scene",
+        skill_info_lister=lambda name: skill_info_map.get(name),
+    )
+
+    records = builder.build()
+    by_tool = {r.backend_tool: r for r in records}
+
+    assert by_tool["maya_scene__new_scene"].loaded is True
+    assert by_tool["maya_scene__new_scene"].requires_load_skill is False
+    assert by_tool["maya_scene__new_scene"].load_hint == {}
+
+    sphere = by_tool["maya_geometry__create_sphere"]
+    assert sphere.loaded is False
+    assert sphere.requires_load_skill is True
+    assert sphere.load_hint == {
+        "tool": "load_skill",
+        "arguments": {"skill_name": "maya-geometry"},
+    }
+    assert sphere.callable_id == "maya_geometry__create_sphere"
+    assert "mesh" in sphere.tags
+    assert sphere.has_schema is True
+
+    # to_dict() preserves requires_load_skill for unloaded records but
+    # strips the duplicate callable_id (since it equals backend_tool).
+    sphere_dict = sphere.to_dict()
+    assert sphere_dict["requires_load_skill"] is True
+    assert "callable_id" not in sphere_dict
+    assert sphere_dict["load_hint"] == {
+        "tool": "load_skill",
+        "arguments": {"skill_name": "maya-geometry"},
+    }
+
+    exists = by_tool["maya_geometry__file_exists"]
+    assert exists.requires_load_skill is True
+    assert exists.group == "core"
+
+    # __skill__* stub never produces a capability.
+    assert not any(r.backend_tool.startswith("__skill__") for r in records)
+
+
+def test_manifest_totals_report_unloaded_counts():
+    actions = [_action("maya_scene__new_scene", skill="maya-scene")]
+    skills = [_skill("maya-scene"), _skill("maya-render"), _skill("maya-geometry")]
+    skill_info_map = {
+        "maya-render": {
+            "tools": [
+                {"name": "render_frames", "execution": "async", "timeout_hint_secs": 600},
+            ],
+        },
+        "maya-geometry": {
+            "tools": [
+                {"name": "create_sphere", "execution": "sync"},
+                {"name": "file_exists", "execution": "sync"},
+            ],
+        },
+    }
+    builder = MayaCapabilityManifestBuilder(
+        skill_lister=lambda: skills,
+        action_lister=lambda: actions,
+        is_loaded=lambda name: name == "maya-scene",
+        skill_info_lister=lambda name: skill_info_map.get(name),
+    )
+    payload = build_manifest_payload(builder.build())
+    assert payload["totals"]["loaded_actions"] == 1
+    assert payload["totals"]["unloaded_actions"] == 3
+    assert payload["totals"]["unloaded_skills"] == 2
+
+
+def test_unloaded_records_preserve_callable_id_exact_match():
+    """Callable id must round-trip to ``{skill_snake}__{tool}`` for gateway routing."""
+    skills = [_skill("maya-geometry")]
+    skill_info_map = {
+        "maya-geometry": {"tools": [{"name": "export_fbx", "execution": "async", "timeout_hint_secs": 300}]},
+    }
+    builder = MayaCapabilityManifestBuilder(
+        skill_lister=lambda: skills,
+        action_lister=lambda: [],
+        is_loaded=lambda _: False,
+        skill_info_lister=lambda name: skill_info_map.get(name),
+    )
+    records = builder.build()
+    assert len(records) == 1
+    record = records[0]
+    assert record.callable_id == "maya_geometry__export_fbx"
+    assert record.backend_tool == "maya_geometry__export_fbx"
+    assert record.tool_slug == "maya.instance.maya_geometry__export_fbx"
+    assert record.load_hint["arguments"]["skill_name"] == "maya-geometry"
+    # Serialisation keeps load_hint but drops the duplicate callable_id to
+    # respect the 640 B / record manifest budget.
+    dumped = record.to_dict()
+    assert dumped["load_hint"]["arguments"]["skill_name"] == "maya-geometry"
+    assert "callable_id" not in dumped
 
 
 def test_register_capability_mcp_tool_honours_loaded_only_param():

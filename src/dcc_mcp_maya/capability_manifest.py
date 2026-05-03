@@ -96,11 +96,37 @@ class CapabilityRecord:
     #: The group this action belongs to (when declared).
     group: Optional[str] = None
 
+    #: When the capability is not immediately callable, describes what the
+    #: agent must do first (e.g. ``{"tool": "load_skill", "arguments":
+    #: {"skill_name": "maya-geometry"}}``).  Empty / omitted for directly
+    #: callable tools.
+    load_hint: Dict[str, Any] = field(default_factory=dict)
+
+    #: True when the record exists only because its skill is not loaded.
+    #: Agents can branch on this flag instead of comparing ``loaded`` + the
+    #: presence of ``load_hint``.
+    requires_load_skill: bool = False
+
+    #: The fully-qualified callable id the gateway should route to when the
+    #: skill is loaded (``{skill}__{tool}``).  For unloaded records this is
+    #: the **target** identifier that will be valid after ``load_skill``.
+    callable_id: Optional[str] = None
+
     def to_dict(self) -> Dict[str, Any]:
         """Plain dict form suitable for JSON serialisation."""
         payload = asdict(self)
         # Drop empty/None optional fields for token-budget friendliness.
-        return {k: v for k, v in payload.items() if v not in (None, [], "")}
+        out = {k: v for k, v in payload.items() if v not in (None, [], "", {})}
+        # ``requires_load_skill=False`` is the implied default — omit to save
+        # bytes on the per-record gateway budget.
+        if out.get("requires_load_skill") is False:
+            out.pop("requires_load_skill", None)
+        # ``callable_id`` is identical to ``backend_tool`` for in-catalog
+        # actions; keep it only when the gateway needs the future-form (i.e.
+        # on unloaded-skill records where the two may legitimately diverge).
+        if out.get("callable_id") == out.get("backend_tool"):
+            out.pop("callable_id", None)
+        return out
 
 
 # ---------------------------------------------------------------------------
@@ -132,22 +158,52 @@ class MayaCapabilityManifestBuilder:
         skill_lister: Optional[Callable[[], List[Any]]] = None,
         action_lister: Optional[Callable[[], List[Any]]] = None,
         is_loaded: Optional[Callable[[str], bool]] = None,
+        skill_info_lister: Optional[Callable[[str], Any]] = None,
     ) -> None:
         self._dcc_name = dcc_name
         self._skill_lister = skill_lister
         self._action_lister = action_lister
         self._is_loaded = is_loaded
+        self._skill_info_lister = skill_info_lister
 
     # ------------------------------------------------------------------ API
 
     def build(self) -> List[CapabilityRecord]:
-        """Return records for every non-stub action in the catalog."""
+        """Return records for every non-stub action in the catalog.
+
+        Includes entries for tools declared by **unloaded** skills so
+        agents and REST search hits can discover them without expanding
+        :meth:`McpHttpServer.tools_list`.  Unloaded records carry
+        ``requires_load_skill=True`` and a ``load_hint`` describing the
+        ``load_skill`` call that would make them callable.
+        """
         skills_by_name = self._collect_skill_info()
         records: List[CapabilityRecord] = []
+        covered_tools: set[str] = set()
+
         for action in self._collect_actions():
             record = self._project_action(action, skills_by_name)
-            if record is not None:
+            if record is None:
+                continue
+            records.append(record)
+            covered_tools.add(record.backend_tool)
+
+        for skill_name, skill_info in skills_by_name.items():
+            if self._is_loaded_safe(skill_name):
+                continue
+            for tool in self._collect_skill_tools(skill_name, skill_info):
+                record = self._project_unloaded_action(
+                    skill_name=skill_name,
+                    tool=tool,
+                    skill_info=skill_info,
+                )
+                if record is None:
+                    continue
+                if record.backend_tool in covered_tools:
+                    continue
                 records.append(record)
+                covered_tools.add(record.backend_tool)
+
         return records
 
     # ------------------------------------------------------------ internals
@@ -234,6 +290,85 @@ class MayaCapabilityManifestBuilder:
             timeout_hint_secs=timeout_hint,
             has_schema=has_schema,
             group=_maybe_str(action.get("group")),
+            callable_id=name,
+        )
+
+    def _collect_skill_tools(
+        self,
+        skill_name: str,
+        skill_info: Dict[str, Any],
+    ) -> List[Dict[str, Any]]:
+        """Return per-tool entries declared by an unloaded skill.
+
+        Falls back to ``skill_info_lister`` injected at construction time
+        so tests can pass a fake catalog without needing a live server.
+        """
+        tools = skill_info.get("tools") or skill_info.get("actions")
+        if isinstance(tools, list) and tools and isinstance(tools[0], dict):
+            return [dict(t) for t in tools]
+
+        if self._skill_info_lister is None:
+            return []
+        try:
+            info = self._skill_info_lister(skill_name)
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("capability manifest: skill_info(%r) raised %s", skill_name, exc)
+            return []
+        if not info:
+            return []
+        entry = _as_dict(info)
+        collected = entry.get("tools") or entry.get("actions") or []
+        return [_as_dict(t) for t in collected if t]
+
+    def _project_unloaded_action(
+        self,
+        *,
+        skill_name: str,
+        tool: Dict[str, Any],
+        skill_info: Dict[str, Any],
+    ) -> Optional[CapabilityRecord]:
+        tool_name = tool.get("name") or tool.get("tool")
+        if not tool_name or _is_stub(tool_name):
+            return None
+
+        backend_tool = "{}__{}".format(skill_name.replace("-", "_"), tool_name)
+        summary = _truncate(
+            _first_nonempty(
+                tool.get("summary"),
+                tool.get("description"),
+                "",
+            ),
+            160,
+        )
+
+        tags: List[str] = []
+        for source in (
+            tool.get("tags"),
+            skill_info.get("tags"),
+            [tool.get("category")],
+            [tool.get("group")],
+        ):
+            tags.extend(_as_str_list(source))
+        tags = sorted({t for t in tags if t})
+
+        schema = tool.get("input_schema") or tool.get("inputSchema")
+        has_schema = bool(schema) and not _is_stub(tool_name)
+
+        return CapabilityRecord(
+            tool_slug=_slugify_tool_slug(self._dcc_name, backend_tool),
+            backend_tool=backend_tool,
+            skill_name=skill_name,
+            summary=summary,
+            loaded=False,
+            tags=tags,
+            execution=_maybe_str(tool.get("execution")),
+            affinity=_maybe_str(tool.get("affinity")),
+            timeout_hint_secs=_maybe_int(tool.get("timeout_hint_secs")),
+            has_schema=has_schema,
+            group=_maybe_str(tool.get("group")),
+            requires_load_skill=True,
+            load_hint={"tool": "load_skill", "arguments": {"skill_name": skill_name}},
+            callable_id=backend_tool,
         )
 
     def _is_loaded_safe(self, skill_name: str) -> bool:
@@ -269,6 +404,7 @@ def build_manifest_payload(
     for routing decisions.
     """
     loaded_records = [r for r in records if r.loaded]
+    unloaded_records = [r for r in records if not r.loaded]
     manifest = {
         "schema_version": "1",
         "dcc_type": dcc_name,
@@ -282,8 +418,10 @@ def build_manifest_payload(
         "totals": {
             "actions": len(records),
             "loaded_actions": len(loaded_records),
+            "unloaded_actions": len(unloaded_records),
             "skills": len({r.skill_name for r in records if r.skill_name}),
             "loaded_skills": len({r.skill_name for r in loaded_records if r.skill_name}),
+            "unloaded_skills": len({r.skill_name for r in unloaded_records if r.skill_name}),
         },
         "capabilities": [r.to_dict() for r in records],
     }
