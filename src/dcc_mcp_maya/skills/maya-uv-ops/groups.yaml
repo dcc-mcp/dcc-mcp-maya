@@ -1,0 +1,13 @@
+groups:
+- name: modeling
+  description: Geometry creation, editing, and UV tools
+  default_active: false
+  tools:
+  - copy_uvs
+  - create_uv_set
+  - delete_uv_set
+  - get_uv_info
+  - get_uv_shell_info
+  - normalize_uvs
+  - project_uvs
+  - unfold_uvs
