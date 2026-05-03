@@ -1508,6 +1508,457 @@ class TestMultiInstanceConcurrentWorkflows:
 
 
 # ---------------------------------------------------------------------------
+# Full MCP skill lifecycle: search -> load -> activate -> call -> unload
+# ---------------------------------------------------------------------------
+#
+# Issue #180 restored ten bundled skills so `TestPrimitiveActions` et al. can
+# exercise the in-process dispatcher.  This class closes the remaining gap:
+# the *wire* contract — proving that an external MCP agent (Codebuddy,
+# Claude, Cursor, ...) can go from "I don't know what's available" to
+# "I called the tool and then cleaned up" using only HTTP JSON-RPC.
+#
+# The chain is intentionally built against the restored `maya-primitives`
+# skill so the test also functions as a regression guard for #180 at the
+# transport layer — if that skill ever regresses out of `tools/list`
+# again, this test will flag it before any in-process test notices.
+# ---------------------------------------------------------------------------
+
+
+class TestMcpSkillLifecycle:
+    """search_skills -> load_skill -> activate_tool_group -> tools/call -> unload_skill over HTTP.
+
+    Uses the `DCC_MCP_ALLOW_AMBIENT_PYTHON=1` escape hatch (same as
+    `TestScriptingHttpE2E`) because the in-process executor refuses to
+    execute skill scripts unless it can prove `import maya.cmds` works
+    under the ambient interpreter.  Inside mayapy that guarantee holds
+    but core has no way to auto-detect it — the env flag is the
+    documented workaround (upstream dcc-mcp-core#231).
+
+    Tool-naming note
+    ----------------
+    Depending on the registration mode, a skill action may be exposed as
+    either the bare script stem (``create_sphere``) or the fully
+    qualified form (``maya_primitives__create_sphere``).  The test
+    resolves the live name via ``_resolve_action_name`` instead of
+    hard-coding either spelling (same approach
+    ``TestScriptingHttpE2E._resolve_execute_python_tool_name`` uses).
+    """
+
+    _TARGET_SKILL = "maya-primitives"
+    _TARGET_GROUP = "modeling"
+    _TARGET_ACTION_STEM = "create_sphere"
+    _SPHERE_NAME = "mcpLifecycleSphere"
+
+    @pytest.fixture(autouse=True, scope="class")
+    def _start_server(self, request):
+        import os  # noqa: PLC0415
+
+        from dcc_mcp_maya.server import MayaMcpServer  # noqa: PLC0415
+
+        ambient_env = "DCC_MCP_ALLOW_AMBIENT_PYTHON"
+        previous_env = os.environ.get(ambient_env)
+        os.environ[ambient_env] = "1"
+
+        _new_scene()
+        server = MayaMcpServer(port=0)
+        server.register_builtin_actions()
+        handle = server.start()
+        request.cls._mcp_url = handle.mcp_url()
+        try:
+            yield
+        finally:
+            server.stop()
+            if previous_env is None:
+                os.environ.pop(ambient_env, None)
+            else:
+                os.environ[ambient_env] = previous_env
+
+    @staticmethod
+    def _tools_call(mcp_url, tool_name, arguments, request_id):
+        code, body = _mcp_post(
+            mcp_url,
+            {
+                "jsonrpc": "2.0",
+                "id": request_id,
+                "method": "tools/call",
+                "params": {"name": tool_name, "arguments": arguments},
+            },
+        )
+        assert code == 200, "HTTP {} from tools/call({!r})".format(code, tool_name)
+        return body
+
+    @staticmethod
+    def _resolve_action_name(names, skill, stem):
+        """Return the wire-name of ``<skill>/scripts/<stem>.py`` in *names*, else None.
+
+        Accepts both the fully-qualified (``maya_primitives__create_sphere``)
+        and the bare (``create_sphere``) registration spellings so the
+        test works against either convention core picks at registration
+        time.
+        """
+        qualified = "{}__{}".format(skill.replace("-", "_"), stem)
+        if qualified in names:
+            return qualified
+        if stem in names:
+            return stem
+        return None
+
+    @staticmethod
+    def _names_for_skill(names, skill):
+        """Return the subset of *names* that look like they belong to *skill*."""
+        prefix = skill.replace("-", "_") + "__"
+        return {n for n in names if n.startswith(prefix)}
+
+    def test_search_load_activate_call_unload_roundtrip(self):
+        """End-to-end HTTP lifecycle against the restored maya-primitives skill."""
+        # 1) SEARCH — prove the skill is discoverable without prior knowledge.
+        search_body = self._tools_call(
+            self._mcp_url,
+            "search_skills",
+            {"query": "primitives"},
+            request_id=2100,
+        )
+        search_text = search_body["result"]["content"][0].get("text", "")
+        assert self._TARGET_SKILL in search_text, (
+            "search_skills(query='primitives') did not surface {!r}; got: {}".format(
+                self._TARGET_SKILL, search_text[:400]
+            )
+        )
+
+        # 2) LOAD — the skill's stub should disappear and real tools appear.
+        before_names = {t["name"] for t in _mcp_list_all_tools(self._mcp_url, request_id=2101)}
+        assert "__skill__" + self._TARGET_SKILL in before_names, (
+            "Expected stub __skill__{} before load, saw stubs: {}".format(
+                self._TARGET_SKILL,
+                sorted(n for n in before_names if n.startswith("__skill__")),
+            )
+        )
+
+        self._tools_call(
+            self._mcp_url,
+            "load_skill",
+            {"skill_name": self._TARGET_SKILL},
+            request_id=2102,
+        )
+
+        # 3) ACTIVATE — maya-primitives' `modeling` group has
+        # default_active: false so its tools arrive as a __group__ stub;
+        # activate it so the create_sphere action is callable.
+        after_load = {t["name"] for t in _mcp_list_all_tools(self._mcp_url, request_id=2103)}
+        assert "__skill__" + self._TARGET_SKILL not in after_load, (
+            "Stub __skill__{} should be gone after load_skill".format(self._TARGET_SKILL)
+        )
+        group_stub = "__group__" + self._TARGET_GROUP
+        if group_stub in after_load:
+            self._tools_call(
+                self._mcp_url,
+                "activate_tool_group",
+                {"group": self._TARGET_GROUP},
+                request_id=2104,
+            )
+            after_activate = {t["name"] for t in _mcp_list_all_tools(self._mcp_url, request_id=2105)}
+        else:
+            after_activate = after_load
+
+        target_tool = self._resolve_action_name(after_activate, self._TARGET_SKILL, self._TARGET_ACTION_STEM)
+        if target_tool is None:
+            # Failure diagnostic: show exactly what load_skill + activate added
+            # so future rename / namespace changes surface clearly.
+            added = sorted(after_activate - before_names)
+            removed = sorted(before_names - after_activate)
+            raise AssertionError(
+                "Could not locate create_sphere action after load+activate of {!r}. "
+                "Expected either {!r} (qualified) or {!r} (bare) in tools/list. "
+                "Tools ADDED by load+activate ({}): {}. Tools REMOVED: {}.".format(
+                    self._TARGET_SKILL,
+                    "maya_primitives__" + self._TARGET_ACTION_STEM,
+                    self._TARGET_ACTION_STEM,
+                    len(added),
+                    added[:40],
+                    removed[:20],
+                )
+            )
+
+        # 4) CALL — the canonical agent action; verify the sphere actually
+        # exists in the live Maya scene, not just that MCP returned 200.
+        call_body = self._tools_call(
+            self._mcp_url,
+            target_tool,
+            {"radius": 1.25, "name": self._SPHERE_NAME},
+            request_id=2106,
+        )
+        content = call_body["result"].get("content", [])
+        assert content, "tools/call response missing content: {}".format(call_body)
+        call_text = content[0].get("text", "")
+        assert "success" in call_text or self._SPHERE_NAME in call_text, (
+            "tools/call for {!r} did not look successful: {}".format(target_tool, call_text[:400])
+        )
+        assert cmds.objExists(self._SPHERE_NAME), "Expected Maya node {!r} to exist after tools/call {!r}".format(
+            self._SPHERE_NAME, target_tool
+        )
+
+        # 5) UNLOAD — the action tool must disappear from tools/list and
+        # the skill must be back in stub form.
+        self._tools_call(
+            self._mcp_url,
+            "unload_skill",
+            {"skill_name": self._TARGET_SKILL},
+            request_id=2107,
+        )
+        after_unload = {t["name"] for t in _mcp_list_all_tools(self._mcp_url, request_id=2108)}
+        assert target_tool not in after_unload, "{!r} should be removed from tools/list after unload_skill".format(
+            target_tool
+        )
+        # And nothing else that looks like a maya-primitives action tool
+        # should linger either.
+        leaks = self._names_for_skill(after_unload, self._TARGET_SKILL)
+        assert not leaks, "No maya_primitives__* tools should be exposed after unload_skill; saw: {}".format(
+            sorted(leaks)
+        )
+
+
+# ---------------------------------------------------------------------------
+# Multi-instance capability divergence
+# ---------------------------------------------------------------------------
+#
+# The existing `TestMultiInstanceIsolation` / `TestMultiInstanceConcurrentWorkflows`
+# classes prove that two servers share a scene and route calls correctly,
+# but they load the *same* default skill set on both instances — a
+# genuinely differentiated deployment (server A hosts the animator's
+# skills, server B hosts the FX artist's skills) is never exercised.
+#
+# This class closes that gap: two servers run in parallel, each loads a
+# disjoint set of restored skills, and the test asserts that their
+# MCP capability surfaces diverge in both directions — the tools one
+# exposes do not show up on the other.
+# ---------------------------------------------------------------------------
+
+
+class TestMultiInstanceCapabilityDivergence:
+    """Two concurrent servers with disjoint loaded-skill sets expose
+    disjoint tools over MCP.
+
+    Server A loads ``maya-primitives`` + activates the ``modeling`` group.
+    Server B loads ``maya-animation``  + activates the ``animation`` group.
+
+    The fixture records each server's ``tools/list`` both *before* and
+    *after* driving it into its load+activate state so the assertions
+    can compare DELTAs — i.e. "the action tools server A gained by
+    loading maya-primitives must not be the same ones server B
+    gained by loading maya-animation".  This keeps the test valid
+    regardless of whether the underlying registry uses bare
+    (``create_sphere``) or qualified (``maya_primitives__create_sphere``)
+    naming.
+    """
+
+    _SKILL_A = "maya-primitives"
+    _GROUP_A = "modeling"
+    _SAMPLE_ACTION_A = "create_sphere"
+
+    _SKILL_B = "maya-animation"
+    _GROUP_B = "animation"
+    _SAMPLE_ACTION_B = "set_timeline"
+
+    @pytest.fixture(autouse=True, scope="class")
+    def _start_two_servers(self, request):
+        import os  # noqa: PLC0415
+
+        from dcc_mcp_maya.server import MayaMcpServer  # noqa: PLC0415
+
+        ambient_env = "DCC_MCP_ALLOW_AMBIENT_PYTHON"
+        previous_env = os.environ.get(ambient_env)
+        os.environ[ambient_env] = "1"
+
+        _new_scene()
+
+        # Two distinct server_names so we can differentiate them in
+        # `initialize` responses too (not strictly required by this class
+        # but keeps parity with TestMultiInstanceConcurrentWorkflows).
+        srv_a = MayaMcpServer(port=0, server_name="maya-capability-a")
+        srv_a.register_builtin_actions()
+        h_a = srv_a.start()
+
+        srv_b = MayaMcpServer(port=0, server_name="maya-capability-b")
+        srv_b.register_builtin_actions()
+        h_b = srv_b.start()
+
+        request.cls._url_a = h_a.mcp_url()
+        request.cls._url_b = h_b.mcp_url()
+
+        # Snapshot each server's tool surface before driving it into
+        # a distinct loaded-skill state.
+        baseline_a = {t["name"] for t in _mcp_list_all_tools(request.cls._url_a, request_id=2900)}
+        baseline_b = {t["name"] for t in _mcp_list_all_tools(request.cls._url_b, request_id=2901)}
+
+        TestMultiInstanceCapabilityDivergence._load_and_activate(
+            request.cls._url_a, request.cls._SKILL_A, request.cls._GROUP_A, base_id=3000
+        )
+        TestMultiInstanceCapabilityDivergence._load_and_activate(
+            request.cls._url_b, request.cls._SKILL_B, request.cls._GROUP_B, base_id=3100
+        )
+
+        # Final snapshots after skill activation.
+        final_a = {t["name"] for t in _mcp_list_all_tools(request.cls._url_a, request_id=3150)}
+        final_b = {t["name"] for t in _mcp_list_all_tools(request.cls._url_b, request_id=3151)}
+
+        # Expose every piece of evidence the assertions need.  Using
+        # request.cls so every test method in the class sees the same
+        # class-level view.
+        request.cls._baseline_a = baseline_a
+        request.cls._baseline_b = baseline_b
+        request.cls._final_a = final_a
+        request.cls._final_b = final_b
+
+        try:
+            yield
+        finally:
+            srv_a.stop()
+            srv_b.stop()
+            if previous_env is None:
+                os.environ.pop(ambient_env, None)
+            else:
+                os.environ[ambient_env] = previous_env
+
+    @staticmethod
+    def _load_and_activate(mcp_url, skill_name, group_name, base_id):
+        """Load *skill_name* and, if the group is default_active: false, activate it."""
+        _mcp_post(
+            mcp_url,
+            {
+                "jsonrpc": "2.0",
+                "id": base_id,
+                "method": "tools/call",
+                "params": {
+                    "name": "load_skill",
+                    "arguments": {"skill_name": skill_name},
+                },
+            },
+        )
+        names = {t["name"] for t in _mcp_list_all_tools(mcp_url, request_id=base_id + 1)}
+        if "__group__" + group_name in names:
+            _mcp_post(
+                mcp_url,
+                {
+                    "jsonrpc": "2.0",
+                    "id": base_id + 2,
+                    "method": "tools/call",
+                    "params": {
+                        "name": "activate_tool_group",
+                        "arguments": {"group": group_name},
+                    },
+                },
+            )
+
+    @staticmethod
+    def _real_tools(names):
+        """Drop stubs (__skill__*, __group__*) — leave only real action tools."""
+        return {n for n in names if not n.startswith("__")}
+
+    def test_each_server_exposes_distinct_action_tool_sets(self):
+        """The set of *real* tools A gained from loading maya-primitives
+        must not be the same set B gained from loading maya-animation.
+
+        Compared as set-deltas over the pre-load baseline so the
+        assertion is immune to whether tools end up registered under
+        bare (``create_sphere``) or qualified
+        (``maya_primitives__create_sphere``) names.
+        """
+        gained_a = self._real_tools(self._final_a - self._baseline_a)
+        gained_b = self._real_tools(self._final_b - self._baseline_b)
+
+        # Each server must have genuinely gained at least one new
+        # action tool from its load (otherwise the test is vacuous).
+        assert gained_a, "Server A gained no real tools from loading {!r}. Final set: {}".format(
+            self._SKILL_A, sorted(self._final_a)[:50]
+        )
+        assert gained_b, "Server B gained no real tools from loading {!r}. Final set: {}".format(
+            self._SKILL_B, sorted(self._final_b)[:50]
+        )
+
+        # Sample actions must be present on their own server under
+        # either naming convention.
+        qualified_a = "{}__{}".format(self._SKILL_A.replace("-", "_"), self._SAMPLE_ACTION_A)
+        qualified_b = "{}__{}".format(self._SKILL_B.replace("-", "_"), self._SAMPLE_ACTION_B)
+        has_sample_a = self._SAMPLE_ACTION_A in gained_a or qualified_a in gained_a
+        has_sample_b = self._SAMPLE_ACTION_B in gained_b or qualified_b in gained_b
+        assert has_sample_a, "Server A should expose a {!r} tool (bare or {!r}); gained only: {}".format(
+            self._SAMPLE_ACTION_A, qualified_a, sorted(gained_a)
+        )
+        assert has_sample_b, "Server B should expose a {!r} tool (bare or {!r}); gained only: {}".format(
+            self._SAMPLE_ACTION_B, qualified_b, sorted(gained_b)
+        )
+
+        # THE headline assertion: the gained-tool sets must differ.
+        # Bare-name registration is known to produce overlap on common
+        # names like ``create_sphere`` (maya-geometry already ships one),
+        # so we do NOT assert the sets are disjoint — we assert that
+        # each server gained at least one tool the OTHER did not.
+        a_only = gained_a - gained_b
+        b_only = gained_b - gained_a
+        assert a_only, (
+            "Server A's gained tools are a subset of Server B's — skill-set "
+            "divergence not observable via tools/list. gained_a={}, gained_b={}".format(
+                sorted(gained_a), sorted(gained_b)
+            )
+        )
+        assert b_only, (
+            "Server B's gained tools are a subset of Server A's — skill-set "
+            "divergence not observable via tools/list. gained_a={}, gained_b={}".format(
+                sorted(gained_a), sorted(gained_b)
+            )
+        )
+
+    def test_tool_call_for_unloaded_skill_is_rejected(self):
+        """Calling a skill action against a server that never loaded it
+        returns an error envelope — not a silent 200 with garbage, and
+        not a 500 either.
+
+        We target a tool that only exists under the qualified
+        ``maya_animation__*`` namespace so the check is valid regardless
+        of whether bare-name registration caused any overlap on the
+        positive test above.
+        """
+        animation_only = "maya_animation__set_timeline"
+        # Sanity: this tool must actually exist on server B.
+        assert animation_only in self._final_b or self._SAMPLE_ACTION_B in self._final_b, (
+            "Precondition failed: server B does not expose any recognisable set_timeline tool; "
+            "cannot meaningfully assert its absence on server A. final_b sample: {}".format(
+                sorted(n for n in self._final_b if "timeline" in n or "animation" in n)
+            )
+        )
+        # And it must NOT be present on server A — which is what makes
+        # the negative call below meaningful.
+        assert animation_only not in self._final_a, (
+            "Precondition failed: server A unexpectedly exposes {!r}, so the "
+            "negative-tool-call assertion below would pass trivially.".format(animation_only)
+        )
+
+        # Server A has only maya-primitives loaded; try to call an
+        # unambiguously-qualified maya-animation action against it.
+        code, body = _mcp_post(
+            self._url_a,
+            {
+                "jsonrpc": "2.0",
+                "id": 3300,
+                "method": "tools/call",
+                "params": {
+                    "name": animation_only,
+                    "arguments": {"start_frame": 1, "end_frame": 24},
+                },
+            },
+        )
+        # Core's contract: an unknown tool returns either a JSON-RPC
+        # error object or a result with isError=true (issue #165).
+        # Accept either shape; both are documented as valid.
+        assert code == 200, "Transport errors should not surface as HTTP {}".format(code)
+        has_jsonrpc_error = "error" in body
+        has_iserror = bool(body.get("result", {}).get("isError"))
+        assert has_jsonrpc_error or has_iserror, (
+            "Expected structured error for unknown tool {!r} on server A; got: {}".format(animation_only, body)
+        )
+
+
+# ---------------------------------------------------------------------------
 # Plugin entry-point (initializePlugin / uninitializePlugin)
 # ---------------------------------------------------------------------------
 
