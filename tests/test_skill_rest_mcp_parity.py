@@ -314,8 +314,10 @@ def test_manifest_actions_discoverable_via_search_tools(mcp):
     # search_tools lives as an MCP tool on DccServerBase.
     resp = mcp.tools_call("search_tools", {"query": "python", "limit": 10})
     result = resp.get("result")
-    if result is None or (isinstance(resp.get("error"), dict) and resp["error"].get("code") == -32601):
-        pytest.skip("search_tools not registered in this core build")
+    assert result is not None, "search_tools required on core 0.14.23+: {}".format(resp)
+    assert not (isinstance(resp.get("error"), dict) and resp["error"].get("code") == -32601), (
+        "search_tools returned method-not-found on core 0.14.23+ build: {}".format(resp)
+    )
 
     hits_text = _extract_text(result)
     hits_payload = json.loads(hits_text)
@@ -454,12 +456,10 @@ def test_search_tools_strips_heavy_fields(mcp):
     """
     resp = mcp.tools_call("search_tools", {"query": "maya", "limit": 10})
     result = resp.get("result")
-    if result is None:
-        pytest.skip("search_tools unavailable in this build")
+    assert result is not None, "search_tools required on core 0.14.23+: {}".format(resp)
     payload = json.loads(_extract_text(result))
     hits = payload.get("tools") or payload.get("hits") or []
-    if not hits:
-        pytest.skip("no hits to compare")
+    assert hits, "search_tools('maya') must return matching hits on the bundled catalogue"
     for hit in hits[:10]:
         assert "inputSchema" not in hit, "search hit inlined schema: {}".format(hit)
         assert "input_schema" not in hit
