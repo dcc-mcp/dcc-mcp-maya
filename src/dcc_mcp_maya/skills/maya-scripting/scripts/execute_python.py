@@ -201,9 +201,13 @@ def _run_deferred(code: str, capture_output: bool, timeout_secs: float):
         state["done"] = True
 
     try:
+        import maya.cmds as cmds  # noqa: PLC0415
         import maya.utils  # noqa: PLC0415
 
-        maya.utils.executeDeferred(_runner)
+        if cmds.about(batch=True):
+            _runner()
+        else:
+            maya.utils.executeDeferred(_runner)
     except ImportError:
         # mayapy / standalone — no executeDeferred queue; run inline.
         _runner()

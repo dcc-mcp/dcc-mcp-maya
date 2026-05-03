@@ -36,7 +36,6 @@ import os
 import sys
 import time
 import urllib.request
-from urllib.error import HTTPError, URLError
 
 import pytest
 
@@ -453,37 +452,47 @@ def rest_base(running_server):
     return handle.mcp_url().rsplit("/", 1)[0]
 
 
-@pytest.mark.parametrize("endpoint", ["/v1/healthz", "/v1/skills", "/v1/context"])
-def test_rest_endpoints_respond_or_are_absent(rest_base, endpoint):
-    """``/v1/*`` endpoints either serve valid content or are explicitly absent.
+def _rest_get_json(base_url: str, endpoint: str) -> dict:
+    with urllib.request.urlopen(base_url + endpoint, timeout=5) as resp:
+        assert resp.status == 200
+        return json.loads(resp.read() or b"{}")
 
-    Issue #165 depends on core's Rust-side ``SkillRestService`` being
-    mounted.  In core 0.14.21 the mount is not yet auto-enabled for
-    per-DCC servers in all configurations, so we accept 404 (endpoint
-    not registered) as a valid state — but we must never see 5xx or an
-    unparseable body.
-    """
-    url = rest_base + endpoint
-    try:
-        with urllib.request.urlopen(url, timeout=5) as resp:
-            status = resp.status
-            body = resp.read()
-    except HTTPError as exc:
-        status = exc.code
-        body = exc.read() or b""
-    except URLError as exc:  # pragma: no cover — defensive
-        pytest.fail("REST endpoint unreachable: {}".format(exc))
 
-    assert status < 500, "5xx on {}: {!r}".format(endpoint, body[:200])
-    # When served, the body must be valid JSON (or empty for healthz).
-    if status == 200 and body:
-        # Some endpoints return non-JSON (plain text) — allow either.
-        try:
-            json.loads(body)
-        except json.JSONDecodeError:
-            # Accept plain text for healthz.
-            if endpoint != "/v1/healthz":
-                pytest.fail("Non-JSON 200 body on {}: {!r}".format(endpoint, body[:200]))
+def _rest_post_json(base_url: str, endpoint: str, payload: dict) -> dict:
+    req = urllib.request.Request(
+        base_url + endpoint,
+        data=json.dumps(payload).encode(),
+        headers={"Content-Type": "application/json", "Accept": "application/json"},
+        method="POST",
+    )
+    with urllib.request.urlopen(req, timeout=10) as resp:
+        assert resp.status == 200
+        return json.loads(resp.read() or b"{}")
+
+
+@pytest.mark.parametrize("endpoint", ["/v1/healthz", "/v1/readyz", "/v1/openapi.json", "/v1/skills", "/v1/context"])
+def test_rest_endpoints_are_mounted(rest_base, endpoint):
+    """Core 0.14.23 exposes the real per-DCC REST skill API on Maya."""
+    body = _rest_get_json(rest_base, endpoint)
+    assert isinstance(body, dict)
+
+
+def test_rest_search_describe_call_round_trip(rest_base):
+    search = _rest_post_json(rest_base, "/v1/search", {"query": "scene", "loaded_only": True, "limit": 20})
+    hits = search.get("hits") or search.get("tools") or []
+    assert hits
+
+    skills = _rest_get_json(rest_base, "/v1/skills")
+    assert skills
+
+    slug = hits[0].get("slug") or hits[0].get("tool_slug") or hits[0].get("name")
+    described = _rest_post_json(rest_base, "/v1/describe", {"tool_slug": slug, "include_schema": True})
+    assert described.get("entry") or described.get("tool") or described.get("schema") is not None
+
+    called = _rest_post_json(
+        rest_base, "/v1/call", {"tool_slug": "maya.core.diagnostics__process_status", "params": {}}
+    )
+    assert called
 
 
 # ---------------------------------------------------------------------------

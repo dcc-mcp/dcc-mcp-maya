@@ -80,60 +80,28 @@ def tmp_skill(tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# 1. _wire_in_process_executor uses register_handler (new core 0.14.x API)
+# 1. core 0.14.23 host dispatcher replaces per-action register_handler wiring
 # ---------------------------------------------------------------------------
 
 
 class TestExecutorRegistration:
-    def test_no_op_when_no_actions(self):
-        """_wire_in_process_executor must not raise when no actions are loaded."""
-        server = _make_server()
-        server._wire_in_process_executor()  # must not raise
-
-    def test_skips_when_registry_missing(self):
-        """Gracefully skips when server.registry raises AttributeError."""
-        server = _make_server()
-        del server._server.registry
-        server._wire_in_process_executor()  # must not raise
-
-    def test_registers_handler_for_action_with_source_file(self, tmp_skill):
-        """A handler is registered for every action that has a source_file."""
-        script = tmp_skill("def main(**kwargs):\n    return {'success': True, 'message': 'ok'}\n")
-        actions = [{"name": "test__skill", "source_file": str(script), "enabled": True}]
-        server = _make_server_with_actions(actions)
-        server._wire_in_process_executor()
-        server._server.register_handler.assert_called_once()
-        name_arg = server._server.register_handler.call_args[0][0]
-        assert name_arg == "test__skill"
-
-    def test_skips_action_without_source_file(self):
-        """Actions with no source_file must be silently skipped."""
-        actions = [{"name": "test__skill", "source_file": None, "enabled": True}]
-        server = _make_server_with_actions(actions)
-        server._wire_in_process_executor()
+    def test_removed_per_action_wiring_does_not_register_handlers(self):
+        """Regression for #136: Maya no longer skips because a subprocess handler exists."""
+        server = _make_server_with_actions([{"name": "test__skill", "source_file": "x.py", "enabled": True}])
+        assert not hasattr(server, "_wire_in_process_executor")
+        assert not hasattr(server, "_register_inprocess_handlers")
         server._server.register_handler.assert_not_called()
 
-    def test_skips_action_with_existing_handler(self, tmp_skill):
-        """Actions that already have a handler must not be double-registered."""
-        script = tmp_skill("def main(**kwargs):\n    return {'success': True}\n")
-        actions = [{"name": "test__skill", "source_file": str(script), "enabled": True}]
-        server = _make_server_with_actions(actions)
-        server._server.has_handler.return_value = True
-        server._wire_in_process_executor()
-        server._server.register_handler.assert_not_called()
+    def test_attach_dispatcher_installs_core_dispatcher_and_executor(self):
+        from dcc_mcp_maya.server import MayaMcpServer
 
-    def test_registers_multiple_actions(self, tmp_path):
-        """All actions with source_file get individual handlers."""
-        scripts = []
-        for i in range(3):
-            p = tmp_path / f"skill_{i}.py"
-            p.write_text("def main(**kwargs):\n    return {'success': True}\n")
-            scripts.append(p)
-
-        actions = [{"name": f"skill__{i}", "source_file": str(scripts[i]), "enabled": True} for i in range(3)]
-        server = _make_server_with_actions(actions)
-        server._wire_in_process_executor()
-        assert server._server.register_handler.call_count == 3
+        server = object.__new__(MayaMcpServer)
+        server._dcc_name = "maya"
+        server._server = MagicMock()
+        dispatcher = MagicMock()
+        server.attach_dispatcher(dispatcher)
+        server._server.attach_dispatcher.assert_called_once_with(dispatcher)
+        server._server.set_in_process_executor.assert_called_once()
 
 
 # ---------------------------------------------------------------------------
@@ -255,16 +223,20 @@ class TestExecuteInProcess:
     def test_runs_directly_without_dispatcher(self, tmp_skill):
         """Without a dispatcher, scripts run on the calling thread directly."""
         script = tmp_skill("def main(**kwargs):\n    return {'success': True, 'message': 'direct'}\n")
+        from dcc_mcp_maya import _executor
+
         server = _make_server()
-        result = server._execute_in_process(str(script), {}, "test__action")
+        result = _executor.execute_in_process(server, str(script), {}, "test__action")
         assert result["success"] is True
         assert result["message"] == "direct"
 
     def test_routes_through_dispatcher_when_attached(self, tmp_skill):
         """With a MayaUiDispatcher attached, submit_callable must be called."""
         script = tmp_skill("def main(**kwargs):\n    return {'success': True, 'message': 'dispatched'}\n")
+        from dcc_mcp_maya import _executor
+
         server = _make_server(with_dispatcher=True)
-        result = server._execute_in_process(str(script), {}, "test__action")
+        result = _executor.execute_in_process(server, str(script), {}, "test__action")
         # Dispatcher was consulted
         server._maya_dispatcher.submit_callable.assert_called_once()
         assert result["success"] is True
@@ -279,8 +251,10 @@ class TestExecuteInProcess:
             "output": None,
             "error": "Interrupted",
         }
+        from dcc_mcp_maya import _executor
+
         server._maya_dispatcher = dispatcher
-        result = server._execute_in_process(str(script), {}, "test__action")
+        result = _executor.execute_in_process(server, str(script), {}, "test__action")
         assert result["success"] is False
 
 
@@ -290,23 +264,15 @@ class TestExecuteInProcess:
 
 
 class TestDynamicLoadSkill:
-    def test_load_skill_registers_handlers(self, tmp_skill):
-        """load_skill() must register in-process handlers after inner load returns actions."""
-        script = tmp_skill("def main(**kwargs):\n    return {'success': True}\n")
+    def test_load_skill_uses_core_global_executor(self, tmp_skill):
+        """load_skill() no longer registers per-action handlers that subprocess can win."""
+        _ = tmp_skill("def main(**kwargs):\n    return {'success': True}\n")
         server = _make_server()
-
-        # Simulate inner server.load_skill() returning action names
-        action_names = ["my_skill__action"]
-        server._server.load_skill = MagicMock(return_value=action_names)
-        server._server.registry.get_action.return_value = {
-            "name": "my_skill__action",
-            "source_file": str(script),
-            "enabled": True,
-        }
+        server._server.load_skill = MagicMock(return_value=["my_skill__action"])
 
         result = server.load_skill("my-skill")
-        assert result is True  # DccServerBase returns bool
-        server._server.register_handler.assert_called_once()
+        assert result is True
+        server._server.register_handler.assert_not_called()
 
     def test_load_skill_empty_result_no_handlers(self):
         """load_skill() with no actions returned must not call register_handler."""

@@ -178,49 +178,32 @@ class TestMayaMcpServerApi:
 
     # ── Issue #136: attach_dispatcher wires the in-process executor ───────
 
-    def test_attach_dispatcher_registers_inprocess_executor(self):
-        """``attach_dispatcher`` must call ``register_inprocess_executor``.
-
-        Regression for issue #136: without this, ``affinity: main`` tools
-        fall back to a ``mayapy`` subprocess instead of running on the UI
-        thread via the dispatcher.
-        """
+    def test_attach_dispatcher_registers_core_host_dispatcher(self):
+        """``attach_dispatcher`` must install the core 0.14.23 host path."""
         srv_mod = _import_server()
-        server = srv_mod.MayaMcpServer(port=0)
+        server = object.__new__(srv_mod.MayaMcpServer)
+        server._dcc_name = "maya"
+        server._server = MagicMock()
 
-        dispatcher = MagicMock(name="MayaUiDispatcher")
-        # Spy on the upstream API the fix is supposed to call.
+        dispatcher = MagicMock(name="QueueDispatcher")
         with patch.object(server, "register_inprocess_executor", autospec=True) as mock_register:
             server.attach_dispatcher(dispatcher)
 
-        mock_register.assert_called_once_with(dispatcher)
+        server._server.attach_dispatcher.assert_called_once_with(dispatcher)
+        assert mock_register.call_count == 1
         assert server._maya_dispatcher is dispatcher
 
-    def test_detach_dispatcher_clears_inprocess_executor(self):
-        """``attach_dispatcher(None)`` must clear the in-process executor.
-
-        The inner :class:`McpHttpServer` is a native Rust object whose
-        attributes are read-only, so we replace it with a stub that
-        records calls to :meth:`set_in_process_executor`.
-        """
+    def test_detach_dispatcher_restores_inline_executor(self):
+        """``attach_dispatcher(None)`` keeps the inline in-process executor active."""
         srv_mod = _import_server()
-        server = srv_mod.MayaMcpServer(port=0)
+        server = object.__new__(srv_mod.MayaMcpServer)
+        server._dcc_name = "maya"
+        server._server = MagicMock()
 
-        dispatcher = MagicMock(name="MayaUiDispatcher")
-        with patch.object(server, "register_inprocess_executor", autospec=True):
-            server.attach_dispatcher(dispatcher)
-
-        # Swap the inner server with a stub so we can observe the
-        # set_in_process_executor(None) clear-call.
-        clear_stub = MagicMock(name="set_in_process_executor")
-        original_inner = server._server
-        try:
-            server._server = MagicMock(set_in_process_executor=clear_stub)
+        with patch.object(server, "register_inprocess_executor", autospec=True) as mock_register:
             server.attach_dispatcher(None)
-        finally:
-            server._server = original_inner
 
-        clear_stub.assert_called_once_with(None)
+        mock_register.assert_called_once_with(None)
         assert server._maya_dispatcher is None
 
 
@@ -618,7 +601,7 @@ class TestMinimalMode:
                 minimal=True,
             )
 
-            assert server._server.has_handler("maya_scripting__execute_python")
+            assert getattr(server, "_inprocess_executor_registered", False)
         finally:
             server.stop()
 
