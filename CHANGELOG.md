@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.2.26](https://github.com/loonghao/dcc-mcp-maya/compare/v0.2.25...v0.2.26) (2026-05-03)
+
+
+### Features
+
+* adopt core host dispatcher for Maya skills ([#177](https://github.com/loonghao/dcc-mcp-maya/issues/177)) ([45ff231](https://github.com/loonghao/dcc-mcp-maya/commit/45ff2310c96d0c7b8a4073610e6fd2de6bbdb851)), closes [#136](https://github.com/loonghao/dcc-mcp-maya/issues/136) [#173](https://github.com/loonghao/dcc-mcp-maya/issues/173) [#176](https://github.com/loonghao/dcc-mcp-maya/issues/176)
+* **capability:** publish unloaded skills in capability manifest ([#178](https://github.com/loonghao/dcc-mcp-maya/issues/178)) ([5c82e5e](https://github.com/loonghao/dcc-mcp-maya/commit/5c82e5e6abea891d0bc2192d2875bf4fac3db368)), closes [#174](https://github.com/loonghao/dcc-mcp-maya/issues/174)
+* **core-0.14.22:** wire tool_exposure + cursor-safe names, typed output helper ([#172](https://github.com/loonghao/dcc-mcp-maya/issues/172)) ([fb7b60f](https://github.com/loonghao/dcc-mcp-maya/commit/fb7b60f0339165f57ea614086e84f305da1b3990))
+
 ## [0.2.25](https://github.com/loonghao/dcc-mcp-maya/compare/v0.2.24...v0.2.25) (2026-05-02)
 
 
