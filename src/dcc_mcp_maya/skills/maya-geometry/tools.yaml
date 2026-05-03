@@ -1,0 +1,78 @@
+tools:
+- name: create_sphere
+  description: Create a polygon sphere in the current Maya scene.
+  execution: sync
+  affinity: main
+  group: geometry
+  inputSchema:
+    type: object
+    properties:
+      radius:
+        type: number
+        default: 1.0
+        minimum: 0.001
+      name:
+        type: string
+- name: save_scene
+  description: Save the current Maya scene to a .ma or .mb file.
+  execution: async
+  affinity: main
+  timeout_hint_secs: 120
+  group: geometry
+  inputSchema:
+    type: object
+    required:
+    - path
+    properties:
+      path:
+        type: string
+      file_type:
+        type: string
+        enum:
+        - mayaAscii
+        - mayaBinary
+        default: mayaAscii
+- name: file_exists
+  description: Check whether a file exists on disk.
+  execution: sync
+  affinity: any
+  annotations:
+    read_only_hint: true
+    idempotent_hint: true
+  group: core
+  inputSchema:
+    type: object
+    required:
+    - path
+    properties:
+      path:
+        type: string
+- name: export_fbx
+  description: Export the current Maya scene or selected objects to FBX.
+  execution: async
+  affinity: main
+  timeout_hint_secs: 300
+  group: geometry
+  inputSchema:
+    type: object
+    required:
+    - path
+    properties:
+      path:
+        type: string
+      selected_only:
+        type: boolean
+        default: false
+- name: export_obj
+  description: Export the current Maya scene to OBJ.
+  execution: async
+  affinity: main
+  timeout_hint_secs: 300
+  group: geometry
+  inputSchema:
+    type: object
+    required:
+    - path
+    properties:
+      path:
+        type: string

@@ -4,7 +4,7 @@
 
 - **Maya**：2020、2022、2023、2024 或 2025
 - **Python**：3.7 – 3.12（Maya 内嵌）
-- **dcc-mcp-core**：≥ 0.12.29（作为依赖自动安装）
+- **dcc-mcp-core**：≥ 0.14.23（作为依赖自动安装）
 
 ## 方式一 — pip 安装到 mayapy
 
@@ -41,7 +41,19 @@ mayapy -c "import dcc_mcp_maya; print(dcc_mcp_maya.__version__)"
 
 插件加载后会自动启动服务器。默认情况下实例端口由操作系统分配，并接入 `9765` 端口上的网关。
 
-## 方式三 — userSetup.py（自动启动）
+## 方式三 — mayapy bootstrap
+
+对于 headless E2E 或服务化运行，可以用自带的 bootstrap 启动 Maya：
+
+```bash
+mayapy maya_bootstrap.py
+```
+
+该 bootstrap 在 batch 模式下创建核心 `BlockingDispatcher`，对外暴露 `/mcp`，并在 `dcc-mcp-core>=0.14.23` 时暴露 per-DCC REST skill API `/v1/*`。
+
+Maya 许可证是 CI 中的前置条件。将此命令放到自托管 runner 或有 Maya 许可证的环境中执行。
+
+## 方式四 — userSetup.py（自动启动）
 
 如需每次 Maya 启动时自动开启服务器，在 `userSetup.py` 中添加：
 

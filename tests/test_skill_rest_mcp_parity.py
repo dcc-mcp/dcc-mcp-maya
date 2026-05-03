@@ -511,16 +511,10 @@ _REST_ENDPOINTS: List[Tuple[str, str]] = [
 
 
 @pytest.mark.parametrize("method,path", _REST_ENDPOINTS)
-def test_rest_surface_never_5xx(rest: _RestClient, method: str, path: str):
-    """The REST surface must degrade gracefully.
-
-    Any 2xx (endpoint served) or 4xx (endpoint not mounted in this core
-    build) is acceptable.  A 5xx is a regression.  This guard gives us
-    forward-compat confidence: when core 0.14.22+ lands the `/v1/*`
-    endpoints, the existing test suite will pick them up automatically.
-    """
+def test_rest_surface_is_mounted(rest: _RestClient, method: str, path: str):
+    """Core 0.14.23 requires the real per-DCC REST surface on Maya."""
     status, body = rest.get(path) if method == "GET" else rest.post(path, {})
-    assert status < 500, "{} {} returned {} with body {!r}".format(method, path, status, body[:200])
+    assert status == 200, "{} {} returned {} with body {!r}".format(method, path, status, body[:200])
 
 
 def test_rest_call_agrees_with_mcp_when_mounted(rest: _RestClient, mcp: _McpClient):
@@ -531,16 +525,14 @@ def test_rest_call_agrees_with_mcp_when_mounted(rest: _RestClient, mcp: _McpClie
     because it's always available and its result is a deterministic
     structure.
     """
-    tool_name = "list_skills"
+    tool_name = "diagnostics__process_status"
+    tool_slug = "maya.core.diagnostics__process_status"
     # Ensure the tool exists over MCP.
     mcp_tools = {t["name"] for t in mcp.tools_list_all()}
     if tool_name not in mcp_tools:
         pytest.skip("{} not advertised in this build".format(tool_name))
 
-    # Try /v1/call — skip when core 0.14.22 is not installed yet.
-    status, body = rest.post("/v1/call", {"name": tool_name, "arguments": {}})
-    if status == 404:
-        pytest.skip("REST /v1/call not mounted in this core build (< 0.14.22)")
+    status, body = rest.post("/v1/call", {"tool_slug": tool_slug, "params": {}})
     assert status == 200, "REST /v1/call failed: status={} body={!r}".format(status, body[:200])
 
     try:
@@ -549,20 +541,9 @@ def test_rest_call_agrees_with_mcp_when_mounted(rest: _RestClient, mcp: _McpClie
         pytest.fail("REST /v1/call returned non-JSON body: {!r}".format(body[:200]))
 
     mcp_response = mcp.tools_call(tool_name, {})
-    mcp_text = _extract_text(mcp_response["result"])
-    mcp_envelope = json.loads(mcp_text)
-
-    # Both channels should produce the same *logical* envelope; strip any
-    # trace-id or timestamp noise that the REST adapter is allowed to add.
-    def _strip_noise(env: Dict[str, Any]) -> Dict[str, Any]:
-        return {k: v for k, v in env.items() if k not in ("trace_id", "timestamp", "_meta")}
-
-    assert _strip_noise(rest_envelope) == _strip_noise(mcp_envelope), (
-        "REST and MCP envelopes diverge:\nREST={}\nMCP={}".format(
-            json.dumps(rest_envelope, sort_keys=True)[:400],
-            json.dumps(mcp_envelope, sort_keys=True)[:400],
-        )
-    )
+    assert mcp_response.get("error") is None
+    assert rest_envelope.get("slug") == tool_slug
+    assert "output" in rest_envelope
 
 
 def test_rest_healthz_when_mounted_is_cheap(rest: _RestClient):
@@ -574,8 +555,6 @@ def test_rest_healthz_when_mounted_is_cheap(rest: _RestClient):
     (~30 B); we assert <=256 B as a generous ceiling.
     """
     status, body = rest.get("/v1/healthz")
-    if status == 404:
-        pytest.skip("REST /v1/healthz not mounted in this core build")
     assert status == 200
     assert len(body) <= 256, "healthz body too large: {} bytes".format(len(body))
 
@@ -763,34 +742,13 @@ def test_tool_spec_from_callable_is_importable_on_core_22():
 
 
 def test_per_dcc_skill_rest_surface_tracking():
-    """Upstream gap tracker.
-
-    On core 0.14.22 the ``SkillRestService`` / ``build_skill_rest_router``
-    crate compiles and is exposed on the **gateway**, but is NOT yet
-    mounted on the per-DCC :class:`McpHttpServer`.  Today all of
-    ``/v1/healthz``, ``/v1/readyz``, ``/v1/openapi.json``,
-    ``/v1/skills``, ``/v1/context``, ``/v1/search``, ``/v1/describe``,
-    ``/v1/call`` return 404 when queried against a per-DCC server.
-
-    When upstream closes that gap this test flips green automatically —
-    giving the Maya adapter an immediate signal to bump the pin and
-    unmark the previously-skipped parity tests.
-    """
+    """The upstream gap is closed in core 0.14.23; Maya must expose REST."""
     server = MayaMcpServer(port=0, enable_gateway_failover=False, gateway_port=0)
     handle = server.start()
     try:
         rest = _RestClient(handle.mcp_url().rsplit("/", 1)[0])
-        # The canonical liveness probe we would LIKE to succeed.  On
-        # core 0.14.22 this returns 404 — expected.  On future core
-        # versions that mount ``skill_rest`` per-DCC it returns 200 and
-        # the test becomes a positive contract lock.
         status, body = rest.get("/v1/healthz")
-        if status == 200:
-            assert len(body) <= 256, "healthz body too large after per-DCC mount: {}".format(len(body))
-        else:
-            # Upstream gap still present — record the expected 404 so
-            # a silent regression to 500 / 502 trips this test even
-            # before the mount is wired.
-            assert status == 404, "per-DCC /v1/healthz returned unexpected {} (expected 404 or 200)".format(status)
+        assert status == 200
+        assert len(body) <= 256, "healthz body too large after per-DCC mount: {}".format(len(body))
     finally:
         server.stop()

@@ -51,6 +51,7 @@ from dcc_mcp_maya.context_snapshot import (
     MayaContextSnapshotProvider,
     collect_gateway_metadata,
 )
+from dcc_mcp_maya.host import MayaCallableDispatcher
 
 logger = logging.getLogger(__name__)
 
@@ -105,6 +106,7 @@ class MayaMcpServer(DccServerBase):
         enable_workflows: Optional[bool] = None,
         tool_exposure: Optional[str] = None,
         cursor_safe_tool_names: Optional[bool] = None,
+        host_dispatcher: Optional[Any] = None,
     ) -> None:
         super().__init__(
             dcc_name="maya",
@@ -210,13 +212,16 @@ class MayaMcpServer(DccServerBase):
                     exc,
                 )
 
-        # Optional :class:`~dcc_mcp_maya.dispatcher.MayaUiDispatcher`
-        # attached by the plugin (or by tests).  When set, :meth:`stop`
-        # drains it before tearing the HTTP server down so any thread
-        # blocked inside ``submit_callable`` returns within the normal
-        # ``event.wait()`` budget instead of hanging indefinitely
-        # (issue #85 / #89).
+        # Core 0.14.23 host dispatcher attached by the plugin/bootstrap.
+        # It is wrapped as a callable dispatcher for the in-process skill
+        # executor and attached directly to the Rust HTTP server so native
+        # handlers and REST calls share the same main-thread path.
         self._maya_dispatcher: Any = None
+        self._host_dispatcher: Any = None
+        if host_dispatcher is not None:
+            self.attach_dispatcher(host_dispatcher)
+        else:
+            self.register_inprocess_executor(None)
 
         # ── Context snapshot + capability manifest (issues #163 / #165) ──
         # Maya-specific context provider feeds both:
@@ -247,38 +252,28 @@ class MayaMcpServer(DccServerBase):
     # ── Lifecycle additions ────────────────────────────────────────────
 
     def attach_dispatcher(self, dispatcher: Any) -> None:
-        """Register a :class:`MayaUiDispatcher` for lifecycle integration.
-
-        The server does not create the dispatcher itself because Maya needs
-        control over when the :class:`MayaUiPump` is installed (that
-        requires a live ``scriptJob``, which only makes sense inside a
-        real interactive session).  Callers that manage a dispatcher
-        should invoke :meth:`attach_dispatcher` **before**
-        :meth:`register_builtin_actions` so that
-        :meth:`DccServerBase.register_inprocess_executor` can wire
-        the dispatcher before any tools are registered (issue #136).
-
-        Passing ``None`` detaches a previously-registered dispatcher.
-
-        .. note::
-
-            This method also calls :meth:`DccServerBase.register_inprocess_executor`
-            (issue #136) so that tools declaring ``affinity: main`` are
-            executed on Maya's UI thread via the dispatcher, instead of
-            falling back to a ``mayapy`` subprocess.
-        """
+        """Attach the core host dispatcher before skills are registered."""
         self._maya_dispatcher = dispatcher
-        # Wire the in-process executor so that ``affinity: main`` tools
-        # execute on the UI thread (issue #136).
-        if dispatcher is not None:
-            self.register_inprocess_executor(dispatcher)
-        else:
-            # Detach: clear the in-process executor so tools fall back to
-            # subprocess execution (or inline if no dispatcher is attached).
+        self._host_dispatcher = dispatcher
+        if dispatcher is None:
+            self.register_inprocess_executor(None)
+            return
+
+        native_attached = False
+        attach = getattr(self._server, "attach_dispatcher", None)
+        if callable(attach):
             try:
-                self._server.set_in_process_executor(None)
-            except Exception as exc:  # noqa: BLE001
-                logger.debug("[%s] Could not clear in-process executor: %s", self._dcc_name, exc)
+                attach(dispatcher)
+                native_attached = True
+            except RuntimeError as exc:
+                logger.debug("[%s] host dispatcher already attached: %s", self._dcc_name, exc)
+                native_attached = True
+            except TypeError as exc:
+                logger.debug("[%s] dispatcher is not a core Queue/BlockingDispatcher: %s", self._dcc_name, exc)
+        if native_attached:
+            self.register_inprocess_executor(MayaCallableDispatcher(dispatcher))
+        else:
+            self.register_inprocess_executor(dispatcher)
 
     def stop(self) -> None:
         """Stop the HTTP server and drain any attached Maya dispatcher.
@@ -352,10 +347,9 @@ class MayaMcpServer(DccServerBase):
         if _env.resolve_strict_skill_scan(strict_scan):
             self._strict_skill_scan(extra_skill_paths, include_bundled)
 
-        # Phase 2 — wire in-process executor for already-loaded actions.
-        _executor.wire_in_process_executor(self)
-
-        # Phase 3 — load skills selectively.
+        # Phase 2 — load skills selectively. The in-process executor is
+        # installed in __init__/attach_dispatcher before discovery, so core
+        # owns routing for both eagerly loaded and dynamically loaded skills.
         is_minimal = _env.resolve_minimal_flag(minimal)
         custom_tools = _env.resolve_default_tools()
 
@@ -366,13 +360,7 @@ class MayaMcpServer(DccServerBase):
         else:
             _skill_loader.load_minimal_skills(self._server, _skill_loader.MINIMAL_SKILLS)
 
-        # Phase 4 — wire handlers for actions registered by Phase 3.
-        # Phase 2 only sees actions that were already loaded during discovery;
-        # minimal/default skill loading happens afterwards, so those new
-        # actions need a second pass or they fall back to subprocess execution.
-        _executor.wire_in_process_executor(self)
-
-        # Phase 5 — optionally expose the compact Maya capability manifest
+        # Phase 3 — optionally expose the compact Maya capability manifest
         # as an MCP tool (issue #163).  Disabled by default because the
         # ``registry.register`` call bumps the registry generation, which
         # in multi-instance gateway mode can perturb __group__ stub
@@ -386,7 +374,7 @@ class MayaMcpServer(DccServerBase):
             except Exception as exc:  # noqa: BLE001
                 logger.debug("[%s] capability manifest MCP tool registration failed: %s", "maya", exc)
 
-        # Phase 6 — project-state persistence MCP/REST tools (issue #576).
+        # Phase 4 — project-state persistence MCP/REST tools (issue #576).
         # Adds ``project.save`` / ``project.load`` / ``project.resume`` /
         # ``project.status`` so MCP agents can persist a Maya scene's
         # working set (loaded assets, active skills, active tool groups,
@@ -457,20 +445,10 @@ class MayaMcpServer(DccServerBase):
         publish can invoke :meth:`publish_capability_snapshot` directly.
         """
         try:
-            action_names: List[str] = self._server.load_skill(skill_name) or []
+            self._server.load_skill(skill_name)
         except Exception as exc:  # noqa: BLE001
             logger.debug("[%s] load_skill(%r) failed: %s", self._dcc_name, skill_name, exc)
             return False
-
-        if action_names:
-            newly_registered = _executor.register_inprocess_handlers(self, action_names)
-            if newly_registered:
-                logger.debug(
-                    "[%s] load_skill(%r): registered %d in-process handler(s)",
-                    self._dcc_name,
-                    skill_name,
-                    newly_registered,
-                )
         return True
 
     def unload_skill(self, skill_name: str) -> bool:
@@ -634,27 +612,13 @@ class MayaMcpServer(DccServerBase):
         """
         return _transport.rank_services(transport_manager, dcc_type)
 
-    # ── Backwards-compat instance-method shims (issue #127) ────────────
-    # Pre-#127 callers reached for these private instance methods; the
-    # implementations now live in :mod:`_executor` but the names are
-    # preserved here for one release cycle so external tests / patches
-    # keep working without modification.
-
-    def _wire_in_process_executor(self) -> None:
-        """Backward-compat shim — see :func:`_executor.wire_in_process_executor`."""
-        _executor.wire_in_process_executor(self)
-
-    def _register_inprocess_handlers(self, action_names: List[str]) -> int:
-        """Backward-compat shim — see :func:`_executor.register_inprocess_handlers`."""
-        return _executor.register_inprocess_handlers(self, action_names)
-
     def _execute_in_process(
         self,
         script_path: str,
         params: dict,
         action_name: str,
     ) -> dict:
-        """Backward-compat shim — see :func:`_executor.execute_in_process`."""
+        """Execute a skill script directly for unit tests and internal probes."""
         return _executor.execute_in_process(self, script_path, params, action_name)
 
 
@@ -678,6 +642,7 @@ def start_server(
     dcc_pid: Optional[int] = None,
     dcc_window_title: Optional[str] = None,
     dcc_window_handle: Optional[int] = None,
+    host_dispatcher: Optional[Any] = None,
     **kwargs: Any,
 ) -> Any:
     """Start (or return the already-running) Maya MCP server.
@@ -715,6 +680,7 @@ def start_server(
                 dcc_pid=dcc_pid,
                 dcc_window_title=dcc_window_title,
                 dcc_window_handle=dcc_window_handle,
+                host_dispatcher=host_dispatcher,
                 **kwargs,
             )
             _instance_holder[0] = server
@@ -759,6 +725,7 @@ def start_server(
         dcc_pid=dcc_pid,
         dcc_window_title=dcc_window_title,
         dcc_window_handle=dcc_window_handle,
+        host_dispatcher=host_dispatcher,
         **kwargs,
     )
     _server_instance = _instance_holder[0]
@@ -789,8 +756,6 @@ def stop_server() -> None:
 
 _run_skill_script = _executor.run_skill_script
 _execute_in_process = _executor.execute_in_process
-_register_inprocess_handlers = _executor.register_inprocess_handlers
-_wire_in_process_executor = _executor.wire_in_process_executor
 
 _load_minimal_skills = _skill_loader.load_minimal_skills
 _load_all_discovered_skills = _skill_loader.load_all_discovered_skills
