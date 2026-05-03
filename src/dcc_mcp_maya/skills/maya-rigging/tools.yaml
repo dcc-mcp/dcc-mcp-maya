@@ -1,0 +1,59 @@
+tools:
+- name: assign_deformer
+  execution: sync
+  affinity: main
+  annotations:
+    idempotent_hint: true
+  group: rigging
+- name: blend_shape_add_target
+  execution: sync
+  affinity: main
+  group: rigging
+- name: create_blend_shape
+  execution: sync
+  affinity: main
+  group: rigging
+- name: create_curve
+  execution: sync
+  affinity: main
+  group: rigging
+- name: create_ik_handle
+  execution: sync
+  affinity: main
+  group: rigging
+- name: create_joint
+  execution: sync
+  affinity: main
+  group: rigging
+- name: mirror_joints
+  execution: sync
+  affinity: main
+  group: rigging
+- name: set_driven_key
+  execution: sync
+  affinity: main
+  annotations:
+    idempotent_hint: true
+  group: rigging
+- name: set_ik_fk_blend
+  execution: sync
+  affinity: main
+  annotations:
+    idempotent_hint: true
+  group: rigging
+- name: set_joint_limit
+  execution: sync
+  affinity: main
+  annotations:
+    idempotent_hint: true
+  group: rigging
+- name: set_joint_orient
+  execution: sync
+  affinity: main
+  annotations:
+    idempotent_hint: true
+  group: rigging
+- name: skin_cluster_bind
+  execution: sync
+  affinity: main
+  group: rigging

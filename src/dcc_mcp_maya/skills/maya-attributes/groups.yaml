@@ -1,0 +1,10 @@
+groups:
+- name: attributes
+  description: Node attribute add/get/set/list/delete operations
+  default_active: false
+  tools:
+  - add_attribute
+  - delete_attribute
+  - get_attribute
+  - list_attributes
+  - set_attribute
