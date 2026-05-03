@@ -21,6 +21,7 @@ env/
 .coverage
 .coverage.*
 coverage.xml
+coverage.json
 htmlcov/
 .pytest_cache/
 *.pytest_cache
@@ -65,6 +66,11 @@ target/
 /.zip/
 /coverage.xml
 /run_pycharm.bat
+
+# Scratch files occasionally left by `pip download` / editors
+uv.lock
+/0.14.*
+/0.15.*
 
 # Local documentation (development reference only)
 DOCKER_CHANGES.md
