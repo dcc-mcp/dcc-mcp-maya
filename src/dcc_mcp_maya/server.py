@@ -240,6 +240,7 @@ class MayaMcpServer(DccServerBase):
             skill_lister=self.list_skills,
             action_lister=self.list_actions,
             is_loaded=self.is_skill_loaded,
+            skill_info_lister=self.get_skill_info,
         )
 
         # ── Project-state persistence (issue #576 / core 0.14.21) ──────
