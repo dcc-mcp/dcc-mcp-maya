@@ -50,9 +50,7 @@ from dcc_mcp_maya._project_tools import (
 )
 from dcc_mcp_maya._readiness import (
     ENV_READINESS_TIMEOUT_SECS,
-    ReadinessProbe,
-    ReadinessReport,
-    StaticReadiness,
+    ReadinessBinder,
     install_readiness,
     resolve_readiness_timeout_secs,
 )
@@ -175,11 +173,12 @@ __all__ = [
     "VALID_TOOL_EXPOSURE_MODES",
     "resolve_tool_exposure",
     "resolve_cursor_safe_tool_names",
-    # Runtime readiness probe (issue #184)
+    # Runtime readiness (issue #184) — Maya-side binder wrapping
+    # ``dcc_mcp_core.ReadinessProbe`` (core 0.14.28+).  The three-state
+    # probe itself comes from core; import directly when you need it:
+    #   from dcc_mcp_core import ReadinessProbe
     "ENV_READINESS_TIMEOUT_SECS",
-    "ReadinessProbe",
-    "ReadinessReport",
-    "StaticReadiness",
+    "ReadinessBinder",
     "install_readiness",
     "resolve_readiness_timeout_secs",
 ]

@@ -151,39 +151,38 @@ from dcc_mcp_maya import (
 
 Maya's embedded MCP HTTP server publishes itself to the `FileRegistry` long before Maya's main thread has finished booting. Without a readiness signal the gateway happily routes traffic to a Maya whose UI dispatcher has not yet drained its first job — `tools/call` with `affinity: main` accepts the request, queues it, and blocks until the scene finishes loading. Operators see "the service is up, but Maya is frozen".
 
-The adapter publishes a **three-state probe** that `GET /v1/readyz` serves honestly:
+The three-state probe itself (`process` / `dispatcher` / `dcc`) lives in `dcc-mcp-core` as `dcc_mcp_core.ReadinessProbe` (core 0.14.28+). `GET /v1/readyz` returns `200` only when all three bits are green; otherwise `503` with a `not-ready` envelope. The Maya adapter owns just the **wiring**:
 
-| Bit           | Flips to `true` when…                                                                                       |
-|---------------|-------------------------------------------------------------------------------------------------------------|
-| `process`     | Python interpreter is alive (always `true` while the server object exists).                                 |
-| `dispatcher`  | `register_inprocess_executor(...)` has wired the in-process executor.                                       |
-| `dcc`         | Maya's main thread has executed **one** cheap no-op probe scheduled via the UI dispatcher.                  |
-
-Only when all three are `true` does `/v1/readyz` return `200`; otherwise it returns `503`.
+| Bit           | Flips to `true` when…                                                                                                               |
+|---------------|-------------------------------------------------------------------------------------------------------------------------------------|
+| `process`     | Python interpreter is alive (always `true` while the server object exists — core's default).                                        |
+| `dispatcher`  | `register_inprocess_executor(...)` has wired the in-process executor (unconditional — the binder flips it the moment `__init__` returns). |
+| `dcc`         | A host dispatcher is attached **and** Maya's main thread has pumped one deferred no-op, **or** — in inline executor mode (no host dispatcher, `mayapy` / tests) — immediately, since the HTTP worker thread *is* the pump. |
 
 Entry points:
 
-| Surface                    | Where                                                                                          |
-|----------------------------|------------------------------------------------------------------------------------------------|
-| Programmatic snapshot      | `MayaMcpServer.readiness_report()` → `{"process": bool, "dispatcher": bool, "dcc": bool}`      |
-| Integration object         | `MayaMcpServer.readiness` → :class:`ReadinessProbe` (tests, diagnostic endpoints)              |
-| Wiring point               | `MayaMcpServer.__init__` / `attach_dispatcher` via `._readiness.install_readiness(server)`     |
-| Forward-compat core publish| `server._config.readiness` — populated automatically when core 0.14.27 exposes the attribute   |
+| Surface                    | Where                                                                                              |
+|----------------------------|----------------------------------------------------------------------------------------------------|
+| Programmatic snapshot      | `MayaMcpServer.readiness_report()` → `{"process": bool, "dispatcher": bool, "dcc": bool}`          |
+| Binder object              | `MayaMcpServer.readiness` → `ReadinessBinder` (tests, diagnostic endpoints)                        |
+| Raw core probe             | `MayaMcpServer.readiness.probe` → `dcc_mcp_core.ReadinessProbe`                                    |
+| Wiring point               | `MayaMcpServer.__init__` / `attach_dispatcher` via `._readiness.install_readiness(server)`          |
+| Core publish               | `server._server.set_readiness_probe(probe)` — called automatically by `ReadinessBinder.bind`       |
 
 Key Python symbols:
 
 ```python
 from dcc_mcp_maya import (
     ENV_READINESS_TIMEOUT_SECS,      # "DCC_MCP_MAYA_READINESS_TIMEOUT_SECS"
-    ReadinessReport,                 # immutable three-state snapshot
-    StaticReadiness,                 # thread-safe mutable container
-    ReadinessProbe,                  # SOLID binder used by the server
+    ReadinessBinder,                 # Maya-side lifecycle binder (wraps core ReadinessProbe)
     install_readiness,               # one-shot helper (mirrors attach_project_tools)
     resolve_readiness_timeout_secs,  # env-var → Optional[int]
 )
+# The three-state probe itself comes from core:
+from dcc_mcp_core import ReadinessProbe
 ```
 
-In batch / `mayapy` mode (`MayaStandaloneDispatcher`) the probe flips all-green synchronously on attach — there is no UI event loop to wait on. In interactive Maya the flip happens after the first idle pump tick, so `dcc=true` is an honest "main thread is alive and pumping" signal.
+In batch / `mayapy` mode (`MayaStandaloneDispatcher` attached, or no host dispatcher at all — i.e. inline executor mode) the probe lands all-green synchronously — there is no UI event loop to wait on. In interactive Maya with a real UI dispatcher, the `dcc` bit flips after the first idle pump tick, so `dcc=true` is an honest "main thread is alive and pumping" signal.
 
 Operator opt-in for a hard timeout: `DCC_MCP_MAYA_READINESS_TIMEOUT_SECS=60` — advisory only; the adapter does not auto-fail the probe when the timeout elapses (a hung Maya is better reported as "still booting" than as a synthetic error).
 

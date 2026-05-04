@@ -261,7 +261,7 @@ class MayaMcpServer(DccServerBase):
         # that want an honest startup signal instead of the
         # always-green default the core currently ships.
         self._readiness_timeout_secs: Optional[int] = _readiness.resolve_readiness_timeout_secs(readiness_timeout_secs)
-        self._readiness: _readiness.ReadinessProbe = _readiness.install_readiness(
+        self._readiness: _readiness.ReadinessBinder = _readiness.install_readiness(
             self,
             timeout_secs=self._readiness_timeout_secs,
         )
@@ -600,11 +600,15 @@ class MayaMcpServer(DccServerBase):
 
         See :mod:`dcc_mcp_maya._readiness` for the full contract.
         """
-        return self._readiness.report().to_dict()
+        return self._readiness.report()
 
     @property
-    def readiness(self) -> _readiness.ReadinessProbe:
-        """Expose the :class:`ReadinessProbe` for tests and orchestrators."""
+    def readiness(self) -> _readiness.ReadinessBinder:
+        """Expose the :class:`ReadinessBinder` for tests and orchestrators.
+
+        The underlying three-state probe is available as
+        ``server.readiness.probe`` (a :class:`dcc_mcp_core.ReadinessProbe`).
+        """
         return self._readiness
 
     # ── Gateway capability manifest + metadata (issues #163 / #165) ────
