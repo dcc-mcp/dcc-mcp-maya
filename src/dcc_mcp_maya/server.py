@@ -220,6 +220,17 @@ class MayaMcpServer(DccServerBase):
         # handlers and REST calls share the same main-thread path.
         self._maya_dispatcher: Any = None
         self._host_dispatcher: Any = None
+
+        # ── Runtime readiness binder (issue #184) ──────────────────────
+        # Constructed *before* dispatcher attachment so ``attach_dispatcher``
+        # can re-bind through ``self._readiness`` unconditionally — no
+        # ``getattr`` guard, no ``try/except``.  Bound for real at the end
+        # of ``__init__`` once the executor wiring is settled.
+        self._readiness_timeout_secs: Optional[int] = _readiness.resolve_readiness_timeout_secs(readiness_timeout_secs)
+        self._readiness: _readiness.ReadinessBinder = _readiness.ReadinessBinder(
+            timeout_secs=self._readiness_timeout_secs,
+        )
+
         if host_dispatcher is not None:
             self.attach_dispatcher(host_dispatcher)
         else:
@@ -252,19 +263,11 @@ class MayaMcpServer(DccServerBase):
         # or the underlying core call failed at registration time.
         self._project_tools: Optional[_project_tools.ProjectToolsIntegration] = None
 
-        # ── Runtime readiness probe (issue #184) ───────────────────────
-        # Three-state (process / dispatcher / dcc) probe.  Starts with
-        # ``dispatcher=False, dcc=False``; flips to all-green only after
-        # the in-process executor is wired **and** Maya's main thread
-        # has pumped at least one job.  Exposed via
-        # ``MayaMcpServer.readiness_report`` for tests and orchestrators
-        # that want an honest startup signal instead of the
-        # always-green default the core currently ships.
-        self._readiness_timeout_secs: Optional[int] = _readiness.resolve_readiness_timeout_secs(readiness_timeout_secs)
-        self._readiness: _readiness.ReadinessBinder = _readiness.install_readiness(
-            self,
-            timeout_secs=self._readiness_timeout_secs,
-        )
+        # Bind the readiness binder now that the executor and dispatcher
+        # state are settled.  ``attach_dispatcher`` above may have already
+        # bound it (``bound_server is self``); :meth:`bind` is idempotent
+        # so calling again is a no-op when the server is unchanged.
+        self._readiness.bind(self)
 
     # ── Lifecycle additions ────────────────────────────────────────────
 
@@ -293,24 +296,14 @@ class MayaMcpServer(DccServerBase):
             self.register_inprocess_executor(dispatcher)
 
         # ── Readiness (issue #184) ─────────────────────────────────────
-        # A late ``attach_dispatcher`` (e.g. plugin bootstrap wires the
-        # dispatcher after ``MayaMcpServer.__init__`` ran) must still
-        # flip ``dispatcher=true`` and schedule the dcc probe.  The
-        # initial ``install_readiness`` call in ``__init__`` is a
-        # no-op in that case because the dispatcher was ``None`` then.
-        #
-        # Guarded with ``getattr`` because ``__init__`` calls
-        # ``attach_dispatcher`` *before* ``self._readiness`` is
-        # constructed — the first call is a no-op here and the final
-        # ``install_readiness`` at the end of ``__init__`` performs
-        # the real wiring.
-        probe = getattr(self, "_readiness", None)
-        if probe is not None:
-            try:
-                probe.bound_server = None  # force re-bind
-                probe.bind(self)
-            except Exception as exc:  # noqa: BLE001
-                logger.debug("[%s] readiness re-bind failed: %s", self._dcc_name, exc)
+        # Re-bind through the readiness binder so a late
+        # ``attach_dispatcher`` (e.g. plugin bootstrap wires the
+        # dispatcher after ``MayaMcpServer.__init__`` ran) flips
+        # ``dispatcher=true`` and schedules the dcc probe on the new
+        # dispatcher.  The binder is always constructed before the
+        # first dispatcher attachment inside ``__init__``.
+        self._readiness.bound_server = None  # force re-bind
+        self._readiness.bind(self)
 
     def stop(self) -> None:
         """Stop the HTTP server and drain any attached Maya dispatcher.

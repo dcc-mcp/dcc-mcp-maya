@@ -162,8 +162,48 @@ class _RecordingDispatcher:
             return {"success": False, "error": str(exc)}
         return result
 
-    def submit_async_callable(self, *args, **kwargs):
-        raise NotImplementedError
+    def submit_async_callable(
+        self,
+        request_id,
+        task,
+        *,
+        job_id=None,
+        progress_token=None,
+        on_complete=None,
+        affinity="any",
+        timeout_ms=None,
+    ):
+        """Execute *task* synchronously and invoke ``on_complete``.
+
+        Mirrors :class:`MayaStandaloneDispatcher.submit_async_callable`
+        so the readiness binder's probe job fires its callback
+        immediately during test setup — tests that rely on
+        ``_RecordingDispatcher`` run without a live Maya event loop.
+        """
+        try:
+            output = task()
+            result = {
+                "request_id": request_id,
+                "job_id": job_id,
+                "affinity": affinity,
+                "success": True,
+                "output": output,
+                "error": None,
+                "status": "completed",
+            }
+        except Exception as exc:  # noqa: BLE001
+            result = {
+                "request_id": request_id,
+                "job_id": job_id,
+                "affinity": affinity,
+                "success": False,
+                "output": None,
+                "error": str(exc),
+                "status": "failed",
+            }
+        if on_complete is not None:
+            on_complete(result)
+        return result
 
     def cancel(self, request_id):
         return True

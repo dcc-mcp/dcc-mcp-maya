@@ -119,30 +119,19 @@ class _NeverPumpingDispatcher:
 class _FakeInnerServer:
     """Stand-in for the Rust ``McpHttpServer`` — records the published probe."""
 
-    def __init__(self, *, supports_readiness: bool = True) -> None:
+    def __init__(self) -> None:
         self.published_probe: Any = None
-        if supports_readiness:
-            # Only expose ``set_readiness_probe`` when the fake claims to
-            # represent a core 0.14.28+ binding.  Older shapes degrade
-            # silently (the binder logs and keeps the in-process probe).
-            self.set_readiness_probe = self._record_publish  # type: ignore[method-assign]
 
-    def _record_publish(self, probe: Any) -> None:
+    def set_readiness_probe(self, probe: Any) -> None:
         self.published_probe = probe
 
 
 class _FakeServer:
     """Minimal ``MayaMcpServer`` stand-in with just the attributes ReadinessBinder touches."""
 
-    def __init__(
-        self,
-        dispatcher: Any = None,
-        *,
-        supports_readiness: bool = True,
-    ) -> None:
+    def __init__(self, dispatcher: Any = None) -> None:
         self._maya_dispatcher = dispatcher
-        self._host_dispatcher = dispatcher
-        self._server = _FakeInnerServer(supports_readiness=supports_readiness)
+        self._server = _FakeInnerServer()
 
 
 # ---------------------------------------------------------------------------
@@ -236,25 +225,6 @@ class TestReadinessBinderBind:
         assert server._server.published_probe is binder.probe
         assert binder.published_to_server is True
 
-    def test_bind_degrades_silently_when_inner_server_lacks_readiness(self) -> None:
-        """Older core that doesn't expose ``set_readiness_probe`` must not crash."""
-        server = _FakeServer(
-            dispatcher=MayaStandaloneDispatcher(),
-            supports_readiness=False,
-        )
-        binder = ReadinessBinder()
-        # Binding should still succeed — Maya-side probe transitions
-        # still drive the in-process report.
-        assert binder.bind(server) is True
-        assert binder.published_to_server is False
-
-    def test_injected_probe_is_used(self) -> None:
-        """Tests can pass in a pre-built probe (e.g. to assert on it directly)."""
-        probe = ReadinessProbe.fully_ready()
-        binder = ReadinessBinder(probe=probe)
-        assert binder.probe is probe
-        assert binder.is_ready() is True  # fully_ready() starts all-green
-
     def test_mark_dispatcher_ready_is_idempotent(self) -> None:
         binder = ReadinessBinder()
         binder.mark_dispatcher_ready()
@@ -289,18 +259,6 @@ class TestInstallReadiness:
         server = _FakeServer(dispatcher=MayaStandaloneDispatcher())
         binder = install_readiness(server, timeout_secs=45)
         assert binder.timeout_secs == 45
-
-    def test_threads_probe_through(self) -> None:
-        server = _FakeServer(dispatcher=MayaStandaloneDispatcher())
-        probe = ReadinessProbe()
-        binder = install_readiness(server, probe=probe)
-        assert binder.probe is probe
-        # After install the probe was transitioned by the standalone path.
-        assert probe.report() == {
-            "process": True,
-            "dispatcher": True,
-            "dcc": True,
-        }
 
 
 # ---------------------------------------------------------------------------

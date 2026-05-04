@@ -29,9 +29,6 @@ SOLID notes
 * **Open/Closed** — the dispatcher-probe strategy is injectable
   (:attr:`ReadinessBinder.probe_scheduler`), so tests can verify the
   flip without running a live Maya event loop.
-* **Dependency Inversion** — the dispatcher's ``submit_async_callable``
-  is looked up *on the passed object*, not imported at module scope,
-  so fake dispatchers in unit tests are fully supported.
 """
 
 from __future__ import annotations
@@ -112,68 +109,37 @@ ProbeScheduler = Callable[[Any, Callable[[], None]], bool]
 """Dispatcher-agnostic scheduler: ``(dispatcher, on_done) -> scheduled?``.
 
 Returns ``True`` when ``on_done`` is guaranteed to eventually be called
-(either synchronously on standalone dispatchers, or after the next pump
-cycle on UI dispatchers).  Returns ``False`` when the dispatcher is a
-shape we do not recognise and the caller should leave ``dcc`` red.
+(synchronously on standalone dispatchers; after the next pump cycle on
+UI dispatchers).
 """
 
 
 def _default_probe_scheduler(dispatcher: Any, on_done: Callable[[], None]) -> bool:
     """Submit a no-op job on *dispatcher* and flip ``dcc`` in its callback.
 
-    We prefer :meth:`submit_async_callable` because it's non-blocking —
-    the caller returns immediately and the callback fires on the UI
-    thread once Maya finishes booting.  On :class:`MayaStandaloneDispatcher`
-    the callback fires synchronously on the calling thread, which
-    mirrors the "dcc is ready the moment we're in mayapy" contract.
+    We use :meth:`submit_async_callable` because it's non-blocking — the
+    caller returns immediately and the callback fires on the UI thread
+    once Maya pumps.  On :class:`MayaStandaloneDispatcher` the callback
+    fires synchronously on the calling thread, which mirrors the "dcc is
+    ready the moment we're in mayapy" contract.
 
-    The ``on_complete`` callback signature accepts a result dict per the
-    upstream contract; we ignore the payload because we only care about
-    the fact that the main thread executed *something*.
+    Every dispatcher shipped by this package
+    (:class:`MayaUiDispatcher` / :class:`MayaStandaloneDispatcher` /
+    :class:`MayaCallableDispatcher`) implements the full core 0.14.28
+    :class:`BaseDccCallableDispatcherFull` protocol, so no fallback
+    branches are needed.
     """
-    submit_async = getattr(dispatcher, "submit_async_callable", None)
-    if submit_async is None:
-        # Older dispatchers that only expose ``submit_callable`` block
-        # the caller — that would stall server startup, so we refuse to
-        # downgrade and let the probe stay red.
-        logger.debug(
-            "readiness: dispatcher %r has no submit_async_callable; leaving dcc=false",
-            type(dispatcher).__name__,
-        )
-        return False
 
     def _on_complete(_result: Any) -> None:  # noqa: ARG001 — signature contract
-        try:
-            on_done()
-        except Exception as exc:  # noqa: BLE001
-            logger.debug("readiness: dcc-ready callback raised: %s", exc)
+        on_done()
 
-    try:
-        submit_async(
-            request_id=READINESS_PROBE_REQUEST_ID,
-            task=lambda: None,
-            affinity="main",
-            timeout_ms=5_000,
-            on_complete=_on_complete,
-        )
-    except TypeError:
-        # Older dispatchers that don't accept ``on_complete`` as a
-        # kwarg — retry without it and leave dcc red, since we can't
-        # confirm the main thread actually pumped the probe.
-        try:
-            submit_async(
-                request_id=READINESS_PROBE_REQUEST_ID,
-                task=lambda: None,
-                affinity="main",
-                timeout_ms=5_000,
-            )
-        except Exception as exc:  # noqa: BLE001
-            logger.debug("readiness: submit_async_callable fallback failed: %s", exc)
-            return False
-        return False
-    except Exception as exc:  # noqa: BLE001
-        logger.debug("readiness: submit_async_callable raised: %s", exc)
-        return False
+    dispatcher.submit_async_callable(
+        request_id=READINESS_PROBE_REQUEST_ID,
+        task=lambda: None,
+        affinity="main",
+        timeout_ms=5_000,
+        on_complete=_on_complete,
+    )
     return True
 
 
@@ -185,20 +151,18 @@ def _default_probe_scheduler(dispatcher: Any, on_done: Callable[[], None]) -> bo
 class ReadinessBinder:
     """Drive a :class:`dcc_mcp_core.ReadinessProbe` across a Maya lifecycle.
 
-    Usage (called once from ``MayaMcpServer.__init__`` and again from
-    ``attach_dispatcher`` if the dispatcher arrived late)::
+    Usage (called once from ``MayaMcpServer.__init__``)::
 
         binder = ReadinessBinder()
         binder.bind(server)
-        # ``binder.report()`` now transitions through:
-        #   dispatcher=False, dcc=False   (construction)
-        # → dispatcher=True,  dcc=False   (after executor is attached)
-        # → dispatcher=True,  dcc=True    (after first main-thread pump)
+        # ``binder.report()`` lands green synchronously when no host
+        # dispatcher is attached (inline executor path); otherwise it
+        # transitions to all-green after the first main-thread pump.
 
-    All transitions are idempotent — calling :meth:`bind` twice on the
-    same server is a no-op.  The core :class:`ReadinessProbe` is
-    published to the inner Rust ``McpHttpServer`` via
-    ``set_readiness_probe`` so that ``/v1/readyz`` serves honest values.
+    Calling :meth:`bind` twice on the same server is a no-op.  The core
+    :class:`ReadinessProbe` is published to the inner Rust
+    ``McpHttpServer`` via ``set_readiness_probe`` so that
+    ``/v1/readyz`` serves honest values.
 
     Parameters
     ----------
@@ -212,12 +176,6 @@ class ReadinessBinder:
         Strategy for scheduling the dcc-ready probe on the attached
         dispatcher.  Override in tests to avoid depending on a real
         :class:`MayaUiDispatcher` pump.
-    probe:
-        Optional pre-built :class:`dcc_mcp_core.ReadinessProbe`.  When
-        omitted a fresh one is constructed (``process=True,
-        dispatcher=False, dcc=False``).  Tests inject a probe so they
-        can assert against the exact instance published to the inner
-        Rust server.
     """
 
     def __init__(
@@ -225,12 +183,11 @@ class ReadinessBinder:
         *,
         timeout_secs: Optional[int] = None,
         probe_scheduler: Optional[ProbeScheduler] = None,
-        probe: Optional[ReadinessProbe] = None,
     ) -> None:
         self.timeout_secs: Optional[int] = resolve_readiness_timeout_secs(
             timeout_secs,
         )
-        self.probe: ReadinessProbe = probe or ReadinessProbe()
+        self.probe: ReadinessProbe = ReadinessProbe()
         self.probe_scheduler: ProbeScheduler = probe_scheduler or _default_probe_scheduler
         # Populated by :meth:`bind` so tests can assert what we wired.
         self.bound_server: Any = None
@@ -258,42 +215,35 @@ class ReadinessBinder:
         Steps:
 
         1. Publish :attr:`probe` to the inner Rust ``McpHttpServer`` via
-           :meth:`McpHttpServer.set_readiness_probe`, if the server
-           object exposes that surface (core 0.14.28+).  This is what
+           :meth:`McpHttpServer.set_readiness_probe`.  This is what
            causes ``/v1/readyz`` to serve honest values.
         2. Flip ``dispatcher = true`` unconditionally — by the time
            :meth:`bind` is called, :meth:`MayaMcpServer.__init__` has
-           already invoked ``register_inprocess_executor`` (either with
-           a real host dispatcher or with ``None`` to get the inline
-           executor), so the Rust handler routing is live.
+           already invoked ``register_inprocess_executor``, so the Rust
+           handler routing is live.
         3. If no host dispatcher is attached
            (``server._maya_dispatcher is None``), the inline executor
            runs jobs on the HTTP worker thread — there is **no** Maya
-           main thread to wait on — so flip ``dcc = true``
-           immediately.  In that mode the three-state probe collapses
-           to "ready as soon as the executor is wired".
-        4. If a host dispatcher *is* attached, schedule a no-op probe
-           on it so the first main-thread pump flips ``dcc = true``.
-           On :class:`MayaStandaloneDispatcher` that callback fires
-           synchronously on the calling thread; on a live Maya UI
-           dispatcher it fires on the first idle tick once the scene
-           is up.
+           main thread to wait on — so flip ``dcc = true`` immediately.
+        4. Otherwise, schedule a no-op probe on the host dispatcher so
+           the first main-thread pump flips ``dcc = true``.  On
+           :class:`MayaStandaloneDispatcher` that callback fires
+           synchronously; on a live Maya UI dispatcher it fires on the
+           first idle tick once the scene is up.
 
         Returns
         -------
         bool
             ``True`` when binding left the probe fully ready or
-            successfully scheduled the final dcc flip.  ``False`` when
-            the dispatcher rejected the probe job — the adapter still
-            drives the other two bits and callers can advance ``dcc``
-            later via :meth:`mark_dcc_ready`.
+            successfully scheduled the final dcc flip.
         """
         if self.bound_server is server:
             return self.dcc_scheduled
         self.bound_server = server
 
         # Step 1 — publish to the inner Rust server.
-        self._publish_to_server(server)
+        server._server.set_readiness_probe(self.probe)
+        self.published_to_server = True
 
         # Step 2 — dispatcher bit: the executor is always wired by the
         # time we arrive here, so handler routing is live regardless of
@@ -301,10 +251,7 @@ class ReadinessBinder:
         self.mark_dispatcher_ready()
 
         # Step 3 / 4 — dcc bit.
-        dispatcher = getattr(server, "_maya_dispatcher", None)
-        if dispatcher is None:
-            dispatcher = getattr(server, "_host_dispatcher", None)
-
+        dispatcher = server._maya_dispatcher
         if dispatcher is None:
             # Inline executor path (``register_inprocess_executor(None)``):
             # every ``tools/call`` runs on the HTTP worker thread — there
@@ -314,19 +261,10 @@ class ReadinessBinder:
             self.bound_dispatcher = None
             self.mark_dcc_ready()
             self.dcc_scheduled = True
-            logger.debug(
-                "readiness.bind: inline executor mode — dcc flipped green synchronously (no host dispatcher attached)",
-            )
             return True
 
         self.bound_dispatcher = dispatcher
-        scheduled = self.probe_scheduler(dispatcher, self.mark_dcc_ready)
-        self.dcc_scheduled = bool(scheduled)
-        if not scheduled:
-            logger.debug(
-                "readiness.bind: dispatcher %r did not accept the probe; dcc stays red until another trigger flips it",
-                type(dispatcher).__name__,
-            )
+        self.dcc_scheduled = bool(self.probe_scheduler(dispatcher, self.mark_dcc_ready))
         return self.dcc_scheduled
 
     def mark_dispatcher_ready(self, value: bool = True) -> None:
@@ -341,45 +279,6 @@ class ReadinessBinder:
         if value:
             logger.info("[maya] readiness: dcc-ready — main thread is pumping")
 
-    # ── Internals ───────────────────────────────────────────────────────
-
-    def _publish_to_server(self, server: Any) -> bool:
-        """Publish :attr:`probe` to the inner Rust ``McpHttpServer``.
-
-        Targets ``server._server.set_readiness_probe(self.probe)``.  The
-        inner attribute is how every existing :class:`MayaMcpServer`
-        integration reaches the Rust object, so we don't invent a new
-        accessor.  Failures are logged at debug level and the binder
-        continues to drive the in-process :class:`ReadinessProbe` — any
-        REST surface that core itself owns will still see the
-        transitions, just not on *this* server instance.
-
-        Returns ``True`` when the call succeeded, ``False`` otherwise.
-        """
-        inner = getattr(server, "_server", None)
-        if inner is None:
-            logger.debug(
-                "readiness: server %r has no ``_server`` attribute; probe not published to Rust layer",
-                type(server).__name__,
-            )
-            return False
-        publish = getattr(inner, "set_readiness_probe", None)
-        if publish is None:
-            # Should not happen on core 0.14.28+ which is the pinned
-            # floor, but stay defensive for downstream forks.
-            logger.debug(
-                "readiness: inner server has no set_readiness_probe (core < 0.14.28?); skipping publish",
-            )
-            return False
-        try:
-            publish(self.probe)
-        except Exception as exc:  # noqa: BLE001
-            logger.debug("readiness: set_readiness_probe raised: %s", exc)
-            return False
-        self.published_to_server = True
-        logger.debug("readiness: probe published via set_readiness_probe")
-        return True
-
 
 # ---------------------------------------------------------------------------
 # Module-level convenience
@@ -391,19 +290,11 @@ def install_readiness(
     *,
     timeout_secs: Optional[int] = None,
     probe_scheduler: Optional[ProbeScheduler] = None,
-    probe: Optional[ReadinessProbe] = None,
 ) -> ReadinessBinder:
-    """One-shot helper used by :class:`MayaMcpServer.__init__`.
-
-    Always returns a :class:`ReadinessBinder` — even when binding fails
-    (no dispatcher yet, older core, etc.) — so callers can stash the
-    binder on the server and consult :meth:`ReadinessBinder.report`
-    from tests or diagnostic endpoints.
-    """
+    """One-shot helper used by :class:`MayaMcpServer.__init__`."""
     binder = ReadinessBinder(
         timeout_secs=timeout_secs,
         probe_scheduler=probe_scheduler,
-        probe=probe,
     )
     binder.bind(server)
     return binder
