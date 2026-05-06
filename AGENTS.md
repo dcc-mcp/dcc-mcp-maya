@@ -300,7 +300,9 @@ lookup failure).
 
 ### Minimal Mode (Default)
 At startup only 2 skills are fully loaded: `maya-scripting` and `maya-scene` (core groups only).
-All other skills appear as `__skill__<name>` stubs. Call `load_skill(name)` to activate on demand.
+All other skills appear as `__skill__<name>` stubs (default behavior). Call `load_skill(name)` to activate on demand.
+
+**Note:** Set ``DCC_MCP_MAYA_EXCLUDE_STUBS_FROM_TOOLS_LIST=1`` to exclude ``__skill__*`` / ``__group__*`` stubs from ``tools/list`` (issue #174). Discovery is still possible via ``build_capability_manifest()`` and ``/v1/search``.
 
 ### Environment Variables (Maya-Specific)
 | Variable | Default | Purpose |
@@ -323,6 +325,7 @@ All other skills appear as `__skill__<name>` stubs. Call `load_skill(name)` to a
 | `DCC_MCP_MAYA_RESOURCES` | `1` | `0` = disable Maya MCP resource publishing entirely (issue #187 / core 0.15.0). |
 | `DCC_MCP_GATEWAY_PORT` | `9765` | Multi-instance gateway election port. `0` = disable. |
 | `DCC_MCP_REGISTRY_DIR` | OS temp dir | Shared service-discovery registry directory. |
+| `DCC_MCP_MAYA_EXCLUDE_STUBS_FROM_TOOLS_LIST` | `0` | `1` = exclude ``__skill__*`` / ``__group__*`` stubs from ``tools/list`` (issue #174). Discovery still possible via capability manifest / ``/v1/search``. |
 
 ---
 
