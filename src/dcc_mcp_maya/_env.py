@@ -51,6 +51,15 @@ ENV_TOOL_EXPOSURE = "DCC_MCP_MAYA_TOOL_EXPOSURE"
 #: to restore the legacy dotted ``<id8>.<tool>`` form during a migration
 #: window.  Only consulted when a gateway port is configured.
 ENV_CURSOR_SAFE_TOOL_NAMES = "DCC_MCP_MAYA_CURSOR_SAFE_TOOL_NAMES"
+#: Issue #174 — when set to ``"1"``, ``__skill__*`` and ``__group__*``
+#: stubs are removed from the registry after skill discovery, so that
+#: the backend ``tools/list`` no longer exposes Progressive-loading
+#: placeholders.  This is the *backend half* of the REST-backed redesign:
+#: skill discovery moves to the capability catalog and ``/v1/search``,
+#: keeping the MCP ``tools/list`` compact for token-constrained clients.
+#:
+#: Default: ``"0"`` (stubs are registered — backwards-compatible).
+ENV_EXCLUDE_STUBS_FROM_TOOLS_LIST = "DCC_MCP_MAYA_EXCLUDE_STUBS_FROM_TOOLS_LIST"
 
 #: Accepted values for :data:`ENV_TOOL_EXPOSURE`.  Kept as a module-level
 #: tuple so the resolver and its unit tests share a single source of
@@ -284,6 +293,49 @@ _ENV_METRICS = ENV_METRICS
 _ENV_JOB_STORAGE = ENV_JOB_STORAGE
 _ENV_JOB_RECOVERY = ENV_JOB_RECOVERY
 _DEFAULT_JOB_DB_FILENAME = DEFAULT_JOB_DB_FILENAME
+
+
+def resolve_exclude_stubs_from_tools_list(exclude: Optional[bool] = None) -> bool:
+    """Resolve whether to exclude ``__skill__*`` / ``__group__*`` stubs from ``tools/list``.
+
+    When ``True``, :meth:`MayaMcpServer.register_builtin_actions`
+    unregisters all ``__skill__<name>`` and ``__group__<name>`` entries
+    from the registry after :meth:`discover` so that the backend MCP
+    ``tools/list`` stays compact.  Discovery is still possible via the
+    capability catalog (``build_capability_manifest``) and the REST
+    ``/v1/search`` endpoint.
+
+    This is the *backend half* of the REST-backed redesign (issue #174):
+    the gateway already filters stubs on its side (core#677); this flag
+    removes them at the source so that every connected MCP client benefits,
+    not just the gateway.
+
+    **Default:** ``False`` — stubs are registered (backwards-compatible).
+
+    Priority order:
+
+    1. Explicit ``exclude`` argument (when not ``None``).
+    2. ``DCC_MCP_MAYA_EXCLUDE_STUBS_FROM_TOOLS_LIST`` env var:
+       ``"0"`` / ``"false"`` / ``"no"`` / ``"off"`` → ``False``
+       ``"1"`` / ``"true"`` / ``"yes"`` / ``"on"`` → ``True``
+    3. Unset → ``False``.
+    """
+    if exclude is not None:
+        return bool(exclude)
+    raw = os.environ.get(ENV_EXCLUDE_STUBS_FROM_TOOLS_LIST)
+    if raw is None:
+        return False
+    normalised = raw.strip().lower()
+    if normalised in ("0", "false", "no", "off"):
+        return False
+    if normalised in ("1", "true", "yes", "on"):
+        return True
+    logger.debug(
+        "Ignoring invalid %s=%r (expected 0/1/true/false); defaulting to False",
+        ENV_EXCLUDE_STUBS_FROM_TOOLS_LIST,
+        raw,
+    )
+    return False
 
 
 def _unused_marker(_value: Any) -> None:  # pragma: no cover
