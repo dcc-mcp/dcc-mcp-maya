@@ -38,6 +38,7 @@ from dcc_mcp_maya import (
     _executor,
     _project_tools,
     _readiness,
+    _resources,
     _skill_loader,
     _transport,
     _version_probe,
@@ -269,6 +270,14 @@ class MayaMcpServer(DccServerBase):
         # so calling again is a no-op when the server is unchanged.
         self._readiness.bind(self)
 
+        # ── Resource publishing (issue #187 / core 0.15.0) ─────────────
+        # Populated by :meth:`register_builtin_actions` once the inner
+        # ``McpHttpServer`` is fully constructed.  Hosts every Maya
+        # call into ``server._server.resources()`` (per the resources-
+        # API memory rule) so skill scripts and plugin code never
+        # touch the raw ``ResourceHandle`` directly.
+        self._resources: Optional[_resources.MayaResourceBinder] = None
+
     # ── Lifecycle additions ────────────────────────────────────────────
 
     def attach_dispatcher(self, dispatcher: Any) -> None:
@@ -331,6 +340,15 @@ class MayaMcpServer(DccServerBase):
                     self._dcc_name,
                     exc,
                 )
+
+        # Detach scriptJobs and pending throttle timers before the inner
+        # Rust server tears down (issue #187).
+        if self._resources is not None:
+            try:
+                self._resources.unbind()
+            except Exception as exc:  # noqa: BLE001
+                logger.debug("[%s] resources.unbind failed: %s", self._dcc_name, exc)
+
         super().stop()
 
     # ── Skill loading + executor wiring ────────────────────────────────
@@ -419,6 +437,25 @@ class MayaMcpServer(DccServerBase):
             self._project_tools = _project_tools.attach_to_server(self)
         except Exception as exc:  # noqa: BLE001
             logger.debug("[%s] project tools registration failed: %s", "maya", exc)
+
+        # Phase 5 — Maya resource publishing (issue #187 / core 0.15.0).
+        # Wires ``scene://current`` updates via the
+        # :class:`MayaContextSnapshotProvider` already created in
+        # ``__init__`` and registers a small fleet of dynamic
+        # producers (``maya-cmds://help/<cmd>`` / ``maya-cmds://flags/<cmd>``,
+        # ``maya-api://signatures/<class>``, ``maya-project://current``).
+        # ScriptJob hooks (``SceneSaved`` / ``SceneOpened`` / ...) are
+        # installed when running inside a real Maya — outside (mayapy
+        # without ``maya.cmds``, plain Python tests) this is a no-op.
+        # Opt out with ``DCC_MCP_MAYA_RESOURCES=0`` when a host wants
+        # to publish its own ``scene://current`` payload.
+        try:
+            self._resources = _resources.install_resources(
+                self,
+                snapshot_provider=self._snapshot_provider_impl.collect,
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("[%s] resources registration failed: %s", "maya", exc)
 
         return self
 
