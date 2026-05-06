@@ -54,6 +54,16 @@ from dcc_mcp_maya._readiness import (
     install_readiness,
     resolve_readiness_timeout_secs,
 )
+from dcc_mcp_maya._resources import (
+    DEFAULT_SCENE_EVENTS,
+    DEFAULT_SCENE_THROTTLE_SECS,
+    ENV_RESOURCES,
+    SCHEME_MAYA_API,
+    SCHEME_MAYA_CMDS,
+    SCHEME_MAYA_PROJECT,
+    MayaResourceBinder,
+    install_resources,
+)
 from dcc_mcp_maya._shutdown_safety import (
     ENV_ATEXIT_HOOK,
     ENV_DEFENSIVE_DEL,
@@ -183,6 +193,15 @@ __all__ = [
     "MayaSceneResolver",
     "ProjectToolsIntegration",
     "attach_project_tools",
+    # Resource publishing (issue #187 / core 0.15.0)
+    "ENV_RESOURCES",
+    "DEFAULT_SCENE_EVENTS",
+    "DEFAULT_SCENE_THROTTLE_SECS",
+    "SCHEME_MAYA_CMDS",
+    "SCHEME_MAYA_API",
+    "SCHEME_MAYA_PROJECT",
+    "MayaResourceBinder",
+    "install_resources",
     # Gateway tool-exposure + cursor-safe naming (core 0.14.22)
     "ENV_TOOL_EXPOSURE",
     "ENV_CURSOR_SAFE_TOOL_NAMES",

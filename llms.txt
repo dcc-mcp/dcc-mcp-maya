@@ -112,6 +112,13 @@ Project-state persistence (issue #576 / core 0.14.21):
 * `dcc_mcp_maya._project_tools.attach_to_server(server)` — registers `project.save / project.load / project.resume / project.status` MCP tools that persist scene state to `<scene_dir>/.dcc-mcp/project.json`.  Auto-invoked by `register_builtin_actions()`; opt out with `DCC_MCP_MAYA_PROJECT_TOOLS=0`.
 * Public symbols: `ProjectToolsIntegration`, `MayaSceneResolver`, `attach_project_tools`, `ENV_PROJECT_TOOLS`.
 
+MCP resource publishing (issue #187, requires `dcc-mcp-core>=0.15.0`):
+
+* `dcc_mcp_maya._resources.install_resources(server, snapshot_provider=...)` — wraps `server._server.resources()` (core's `ResourceHandle`).  Publishes the live Maya scene to `scene://current` via the existing `MayaContextSnapshotProvider`, registers producers for `maya-cmds://help/<command>`, `maya-cmds://flags/<command>`, `maya-api://signatures/<class>`, `maya-project://current`, and hooks Maya `scriptJob` events (`SceneSaved`, `SceneOpened`, `NewSceneOpened`, `SceneImported`, `DagObjectCreated`, `NameChanged`, `SelectionChanged`) so updates fire `notifications/resources/updated` for SSE subscribers.  Throttled to one publish per 500 ms (lead-edge + trail-edge timer) so a 1000-node bulk import collapses to ~5 SSE frames.
+* Auto-invoked by `register_builtin_actions()`; opt out with `DCC_MCP_MAYA_RESOURCES=0`.
+* Memory rule: every Maya call into `server._server.resources()` lives in `_resources.py::MayaResourceBinder` — skill scripts and plugin code go through the binder, never the raw Rust handle.
+* Public symbols: `MayaResourceBinder`, `install_resources`, `SCHEME_MAYA_CMDS`, `SCHEME_MAYA_API`, `SCHEME_MAYA_PROJECT`, `DEFAULT_SCENE_EVENTS`, `DEFAULT_SCENE_THROTTLE_SECS`, `ENV_RESOURCES`.
+
 Runtime readiness wiring (issue #184, requires `dcc-mcp-core>=0.15.0`; API landed in 0.14.28):
 
 * Maya adapter owns the *wiring*; the three-state probe itself lives in core as `dcc_mcp_core.ReadinessProbe`.  Published to the inner Rust server via `McpHttpServer.set_readiness_probe(probe)` so `GET /v1/readyz` serves honest values (`200` only when all three bits green, `503` + `not-ready` envelope otherwise — core also rejects `tools/call` with `BACKEND_NOT_READY (-32002)` when not ready).
