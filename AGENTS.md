@@ -115,6 +115,43 @@ Operator opt-out: `DCC_MCP_MAYA_PROJECT_TOOLS=0`.  Each `project.*` entry adds <
 
 ---
 
+## Shutdown Hardening (issue #186)
+
+The stock plugin path (`uninitializePlugin` → `_stop_blocking`) only fires when Maya politely tears the plugin down. Non-cooperative exits (Maya crash, `kill -9`, Task Manager End Task, `mayapy` script that `os._exit(...)`s) previously leaked the `FileRegistry` row for up to 30 s.
+
+The Maya adapter now installs **four independent safety nets** composed by `ShutdownCoordinator`:
+
+| Net                                 | Default | Env opt-out                           | Covers                                                                   |
+|-------------------------------------|---------|---------------------------------------|--------------------------------------------------------------------------|
+| `MSceneMessage.kMayaExiting` hook   | on      | `DCC_MCP_MAYA_KMAYA_EXITING_HOOK=0`   | `File → Exit Maya`, `⌘Q` / Alt+F4 — fires before `uninitializePlugin`.   |
+| `atexit` fallback                   | on      | `DCC_MCP_MAYA_ATEXIT_HOOK=0`          | Plain interpreter teardown, `mayapy` scripts.                             |
+| Crash-resilient process sentinel    | on      | `DCC_MCP_MAYA_PROCESS_SENTINEL=0`     | `kill -9` / Task Manager / crash — OS drops the marker when process dies. |
+| Defensive `__del__` guard (opt-in)  | off     | `DCC_MCP_MAYA_DEFENSIVE_DEL=1` enable | `mayapy` / test-fixture paths that never call `stop_server()`.           |
+
+The coordinator's guarded-stop wrapper ensures the callback runs **at most once** even when two nets race. All four are wired in `initializePlugin` and torn down in `uninitializePlugin`; each one is a silent no-op when its preconditions are missing (e.g. no `maya.api.OpenMaya` → no hook).
+
+Python symbols (exported from the top-level package):
+
+```python
+from dcc_mcp_maya import (
+    ShutdownCoordinator,           # composes all four nets
+    ProcessSentinel,               # low-level OS marker wrapper
+    DefensiveShutdownGuard,        # opt-in __del__ belt
+    register_kmaya_exiting_hook,   # helper — registers just the kMayaExiting net
+    register_atexit_hook,          # helper — registers just the atexit net
+    write_process_sentinel,        # helper — creates just the sentinel
+    orphan_sentinels,              # sweeper helper — list dead-PID sentinels
+    ENV_KMAYA_EXITING_HOOK,
+    ENV_ATEXIT_HOOK,
+    ENV_PROCESS_SENTINEL,
+    ENV_DEFENSIVE_DEL,
+)
+```
+
+Support matrix + detailed breakdown in `docs/guide/shutdown-matrix.md` (EN) / `docs/zh/guide/shutdown-matrix.md` (ZH).
+
+---
+
 ## Gateway Capability Surface (issues #163 / #164 / #165)
 
 The Maya adapter publishes a **compact capability manifest** so the gateway — and agents that query Maya directly — can enumerate every action (loaded *and* unloaded) without paying the cost of full per-tool JSON Schemas.
@@ -242,6 +279,10 @@ All other skills appear as `__skill__<name>` stubs. Call `load_skill(name)` to a
 | `DCC_MCP_MAYA_TOOL_EXPOSURE` | — (core default `full`) | Gateway `tools/list` shaping (core 0.14.22 / #652): `full` \| `slim` \| `both` \| `rest`. Invalid values fall back to the inner default. |
 | `DCC_MCP_MAYA_CURSOR_SAFE_TOOL_NAMES` | — (core default `1`) | Toggle Cursor-safe gateway tool names (core 0.14.22 / #656). Set `0` during SEP-986 migration. |
 | `DCC_MCP_MAYA_READINESS_TIMEOUT_SECS` | — | Advisory Maya-side timeout (positive integer seconds) for the runtime readiness probe (issue #184). Consumed by orchestrators that want to bound how long a cold Maya can stall before `/v1/readyz` is considered permanently red. |
+| `DCC_MCP_MAYA_KMAYA_EXITING_HOOK` | `1` | `0` = disable the `MSceneMessage.kMayaExiting` hook that catches clean `File → Exit Maya` / `⌘Q` exits (issue #186). |
+| `DCC_MCP_MAYA_ATEXIT_HOOK` | `1` | `0` = disable the `atexit` fallback that catches interpreter teardown (issue #186). |
+| `DCC_MCP_MAYA_PROCESS_SENTINEL` | `1` | `0` = disable the crash-resilient sentinel file that lets sweepers detect `kill -9` / Task Manager exits (issue #186). |
+| `DCC_MCP_MAYA_DEFENSIVE_DEL` | `0` | `1` = enable the defensive `__del__` guard. Recommended only for `mayapy` / test fixtures — interactive Maya disables by default to avoid Tokio deadlocks (issue #186). |
 | `DCC_MCP_GATEWAY_PORT` | `9765` | Multi-instance gateway election port. `0` = disable. |
 | `DCC_MCP_REGISTRY_DIR` | OS temp dir | Shared service-discovery registry directory. |
 
@@ -285,6 +326,7 @@ A: `src/dcc_mcp_maya/skills/` (12 packages, 73 scripts). Each package contains `
 | `src/dcc_mcp_maya/_stale_cleanup.py` | Stale FileRegistry detection + warning (issue #126) |
 | `src/dcc_mcp_maya/_project_tools.py` | `register_project_tools` integration — `project.save/load/resume/status` MCP tools (issue #576 / core 0.14.21) |
 | `src/dcc_mcp_maya/_readiness.py` | Three-state readiness probe (`process` / `dispatcher` / `dcc`) — honest `/v1/readyz` signal during Maya boot (issue #184) |
+| `src/dcc_mcp_maya/_shutdown_safety.py` | Non-cooperative shutdown safety nets — `kMayaExiting` hook, `atexit` fallback, crash-resilient process sentinel, defensive `__del__` (issue #186) |
 | `src/dcc_mcp_maya/dispatcher/` | Thread-affinity dispatchers + cancellation (directory module) |
 | `src/dcc_mcp_maya/api.py` | Skill authoring helpers |
 | `src/dcc_mcp_maya/plugin.py` | Maya plugin (`initializePlugin` / menu) |
