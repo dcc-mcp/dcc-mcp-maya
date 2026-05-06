@@ -184,6 +184,10 @@ class TestMayaMcpServerApi:
         server = object.__new__(srv_mod.MayaMcpServer)
         server._dcc_name = "maya"
         server._server = MagicMock()
+        # Readiness binder is created in ``__init__``; bypassing it
+        # means we must supply a stand-in so ``attach_dispatcher`` can
+        # re-bind without crashing.
+        server._readiness = MagicMock()
 
         dispatcher = MagicMock(name="QueueDispatcher")
         with patch.object(server, "register_inprocess_executor", autospec=True) as mock_register:
@@ -199,6 +203,7 @@ class TestMayaMcpServerApi:
         server = object.__new__(srv_mod.MayaMcpServer)
         server._dcc_name = "maya"
         server._server = MagicMock()
+        server._readiness = MagicMock()
 
         with patch.object(server, "register_inprocess_executor", autospec=True) as mock_register:
             server.attach_dispatcher(None)

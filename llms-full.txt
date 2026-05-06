@@ -451,6 +451,7 @@ tools:
 | `DCC_MCP_MAYA_HOT_RELOAD` | `0` | per-process | `1`=watch bundled skills for edit-on-disk reload. |
 | `DCC_MCP_MAYA_ENABLE_GATEWAY_FAILOVER` | `1` | per-process | Auto-promote on gateway loss. |
 | `DCC_MCP_MAYA_DCC_PID` | `os.getpid()` | per-process | PID advertised to gateway for diagnostics routing. |
+| `DCC_MCP_MAYA_READINESS_TIMEOUT_SECS` | — | per-process | Advisory timeout (positive integer seconds) for the three-state readiness probe (issue #184). Consumed by orchestrators; never auto-fails the probe on its own. |
 | `DCC_MCP_GATEWAY_PORT` | `9765` | per-host | Gateway election port. `0`=disable gateway mode. |
 | `DCC_MCP_REGISTRY_DIR` | OS temp dir | per-user | Shared FileRegistry directory. |
 | `DCC_MCP_PYTHON_EXECUTABLE` | `sys.executable` | per-process | Python interpreter for skill worker subprocesses. |

@@ -31,6 +31,9 @@ def _make_server(with_dispatcher=False):
     server._config = MagicMock()
     server._handle = None
     server._maya_dispatcher = None
+    # Readiness binder is created in ``__init__``; bypassing it means
+    # we must supply a stand-in so ``attach_dispatcher`` can re-bind.
+    server._readiness = MagicMock()
 
     # Mock the inner McpHttpServer with a registry and handler tracking
     mock_inner = MagicMock()
@@ -98,6 +101,9 @@ class TestExecutorRegistration:
         server = object.__new__(MayaMcpServer)
         server._dcc_name = "maya"
         server._server = MagicMock()
+        # Readiness binder created in ``__init__``; supply a stand-in
+        # so ``attach_dispatcher`` can re-bind without crashing.
+        server._readiness = MagicMock()
         dispatcher = MagicMock()
         server.attach_dispatcher(dispatcher)
         server._server.attach_dispatcher.assert_called_once_with(dispatcher)
