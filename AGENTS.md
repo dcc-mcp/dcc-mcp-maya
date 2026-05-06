@@ -61,7 +61,7 @@ def create_sphere(radius: float = 1.0) -> dict:
 ### Layer 3 — You Are a Core Developer
 *Goal: Modify the server, dispatcher, or plugin behavior.*
 
-- **src/dcc_mcp_maya/server.py** — `MayaMcpServer` composition root (constructor, `register_builtin_actions`, `start`, `stop`, metrics, job persistence, readiness). Heavy lifting lives in private siblings: `_env`, `_executor`, `_skill_loader`, `_version_probe`, `_transport`, `_pyexec`, `_stale_cleanup`, `_readiness`.
+- **src/dcc_mcp_maya/server.py** — `MayaMcpServer` composition root (constructor, `register_builtin_actions`, `start`, `stop`, metrics, job persistence, resources). Heavy lifting lives in private siblings: `_env`, `_executor`, `_skill_loader`, `_version_probe`, `_transport`, `_pyexec`, `_stale_cleanup`, `_readiness`, `_resources`.
 - **src/dcc_mcp_maya/dispatcher/** — `MayaUiDispatcher`, `MayaStandaloneDispatcher`, `MayaUiPump`, `check_maya_cancelled` (split into `job` / `cancel` / `ui` / `standalone` / `pump` submodules — public symbols re-exported from the package).
 - **maya/plugin/dcc_mcp_maya_plugin.py** — Maya plugin entry point (`initializePlugin`, `uninitializePlugin`, menu, gateway auto-config).
 - **tests/** — 50+ unit tests, E2E tests (tahv/mayapy 2022–2025), multi-instance gateway tests.
@@ -149,6 +149,43 @@ from dcc_mcp_maya import (
 ```
 
 Support matrix + detailed breakdown in `docs/guide/shutdown-matrix.md` (EN) / `docs/zh/guide/shutdown-matrix.md` (ZH).
+
+---
+
+## MCP Resources (issue #187 / core 0.15.0)
+
+`MayaMcpServer.register_builtin_actions()` wires the inner Rust [`ResourceHandle`][resource-handle] (`server._server.resources()`) so MCP clients see Maya state under stable URIs:
+
+| URI scheme                              | Purpose                                                                  |
+|-----------------------------------------|--------------------------------------------------------------------------|
+| `scene://current`                       | JSON snapshot of the live Maya scene; refreshed by `scriptJob` events with 500 ms throttling. |
+| `maya-cmds://help/<command>`            | `cmds.help(command, language="python")` text.                            |
+| `maya-cmds://flags/<command>`           | Structured per-flag info from `cmds.help(command, flags=True)`.          |
+| `maya-api://signatures/<class>`         | Public-method index for OpenMaya / OpenMayaAnim / OpenMayaUI classes.    |
+| `maya-project://current`                | Active workspace root + `fileRule` table.                                |
+
+[resource-handle]: https://github.com/loonghao/dcc-mcp-core/blob/main/llms.txt
+
+Key Python symbols:
+
+```python
+from dcc_mcp_maya import (
+    ENV_RESOURCES,                  # "DCC_MCP_MAYA_RESOURCES" — set "0" to disable
+    MayaResourceBinder,             # SOLID composition root
+    install_resources,              # one-shot helper from register_builtin_actions
+    SCHEME_MAYA_CMDS,               # "maya-cmds://"
+    SCHEME_MAYA_API,                # "maya-api://"
+    SCHEME_MAYA_PROJECT,            # "maya-project://"
+    DEFAULT_SCENE_EVENTS,           # tuple of scriptJob events we hook
+    DEFAULT_SCENE_THROTTLE_SECS,    # 0.5 s throttle window
+)
+```
+
+Memory rule (`feedback_resources_api.md`): every Maya call into `server._server.resources()` lives in `_resources.py::MayaResourceBinder`.  Skill scripts and plugin code go through the binder, never the raw handle — that lets future schema migrations be a single-file edit.
+
+Throttling: a 1000-node bulk import (which fires 1000 `DagObjectCreated` scriptJob events) collapses to ~5 `notifications/resources/updated` SSE frames thanks to the lead-edge + trail-edge timer in `_on_scene_event`.
+
+Prompts: core advertises `prompts: {listChanged: true}` and PR #373 implements derivation from SKILL.md `examples` / `workflows`, but the 0.15.0 wheel returns `[]`.  Once the consumption path lights up upstream (0.15.1+), Maya's bundled skills surface their `examples` automatically — no Maya-side code change required.
 
 ---
 
@@ -283,6 +320,7 @@ All other skills appear as `__skill__<name>` stubs. Call `load_skill(name)` to a
 | `DCC_MCP_MAYA_ATEXIT_HOOK` | `1` | `0` = disable the `atexit` fallback that catches interpreter teardown (issue #186). |
 | `DCC_MCP_MAYA_PROCESS_SENTINEL` | `1` | `0` = disable the crash-resilient sentinel file that lets sweepers detect `kill -9` / Task Manager exits (issue #186). |
 | `DCC_MCP_MAYA_DEFENSIVE_DEL` | `0` | `1` = enable the defensive `__del__` guard. Recommended only for `mayapy` / test fixtures — interactive Maya disables by default to avoid Tokio deadlocks (issue #186). |
+| `DCC_MCP_MAYA_RESOURCES` | `1` | `0` = disable Maya MCP resource publishing entirely (issue #187 / core 0.15.0). |
 | `DCC_MCP_GATEWAY_PORT` | `9765` | Multi-instance gateway election port. `0` = disable. |
 | `DCC_MCP_REGISTRY_DIR` | OS temp dir | Shared service-discovery registry directory. |
 
@@ -326,6 +364,7 @@ A: `src/dcc_mcp_maya/skills/` (12 packages, 73 scripts). Each package contains `
 | `src/dcc_mcp_maya/_stale_cleanup.py` | Stale FileRegistry detection + warning (issue #126) |
 | `src/dcc_mcp_maya/_project_tools.py` | `register_project_tools` integration — `project.save/load/resume/status` MCP tools (issue #576 / core 0.14.21) |
 | `src/dcc_mcp_maya/_readiness.py` | Three-state readiness probe (`process` / `dispatcher` / `dcc`) — honest `/v1/readyz` signal during Maya boot (issue #184) |
+| `src/dcc_mcp_maya/_resources.py` | `MayaResourceBinder` — `scene://current` snapshot + `maya-cmds://` / `maya-api://` / `maya-project://` producers (issue #187 / core 0.15.0) |
 | `src/dcc_mcp_maya/_shutdown_safety.py` | Non-cooperative shutdown safety nets — `kMayaExiting` hook, `atexit` fallback, crash-resilient process sentinel, defensive `__del__` (issue #186) |
 | `src/dcc_mcp_maya/dispatcher/` | Thread-affinity dispatchers + cancellation (directory module) |
 | `src/dcc_mcp_maya/api.py` | Skill authoring helpers |

@@ -27,13 +27,14 @@ classifiers = [
 ]
 
 dependencies = [
-    # 0.15.0 is the SOLID crate split release (``dcc-mcp-jsonrpc`` /
+    # 0.15.0 is the SOLID crate-split release (``dcc-mcp-jsonrpc`` /
     # ``dcc-mcp-job`` / ``dcc-mcp-skill-rest`` / ``dcc-mcp-gateway``) — behaviour-
     # preserving via ``pub use`` aliases so existing imports keep working.
-    # 0.14.28 shipped the three-state ``ReadinessProbe`` +
-    # ``McpHttpServer.set_readiness_probe`` surface required by the runtime-
-    # readiness wiring (issue #184); 0.14.23 added the cross-DCC HostAdapter /
-    # QueueDispatcher surface and real per-DCC REST skill endpoints used by
+    # 0.15.0 also ships ``ResourceHandle`` (``set_scene`` / ``register_producer`` /
+    # ``notify_updated``) on the Python ``McpHttpServer.resources()`` surface —
+    # the foundation issue #187 builds on.  Earlier 0.14.28 added ``ReadinessProbe``
+    # + ``McpHttpServer.set_readiness_probe`` (issue #184); 0.14.23 added the
+    # cross-DCC HostAdapter/QueueDispatcher and per-DCC REST skill endpoints used by
     # MayaHost, maya_bootstrap, and the /v1/search /v1/describe /v1/call
     # regression tests.  All rolled into the 0.15.0 floor below.
     "dcc-mcp-core>=0.15.0,<1.0.0",
