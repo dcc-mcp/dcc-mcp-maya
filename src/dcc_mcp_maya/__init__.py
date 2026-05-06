@@ -54,6 +54,22 @@ from dcc_mcp_maya._readiness import (
     install_readiness,
     resolve_readiness_timeout_secs,
 )
+from dcc_mcp_maya._shutdown_safety import (
+    ENV_ATEXIT_HOOK,
+    ENV_DEFENSIVE_DEL,
+    ENV_KMAYA_EXITING_HOOK,
+    ENV_PROCESS_SENTINEL,
+    DefensiveShutdownGuard,
+    ProcessSentinel,
+    ShutdownCoordinator,
+    orphan_sentinels,
+    register_atexit_hook,
+    register_kmaya_exiting_hook,
+    sentinel_path,
+    unregister_atexit_hook,
+    unregister_kmaya_exiting_hook,
+    write_process_sentinel,
+)
 from dcc_mcp_maya.api import (
     MissingParamError,
     batch_validate_nodes,
@@ -181,4 +197,19 @@ __all__ = [
     "ReadinessBinder",
     "install_readiness",
     "resolve_readiness_timeout_secs",
+    # Shutdown safety nets (issue #186)
+    "ENV_KMAYA_EXITING_HOOK",
+    "ENV_ATEXIT_HOOK",
+    "ENV_PROCESS_SENTINEL",
+    "ENV_DEFENSIVE_DEL",
+    "ShutdownCoordinator",
+    "ProcessSentinel",
+    "DefensiveShutdownGuard",
+    "register_kmaya_exiting_hook",
+    "unregister_kmaya_exiting_hook",
+    "register_atexit_hook",
+    "unregister_atexit_hook",
+    "write_process_sentinel",
+    "sentinel_path",
+    "orphan_sentinels",
 ]

@@ -452,6 +452,10 @@ tools:
 | `DCC_MCP_MAYA_ENABLE_GATEWAY_FAILOVER` | `1` | per-process | Auto-promote on gateway loss. |
 | `DCC_MCP_MAYA_DCC_PID` | `os.getpid()` | per-process | PID advertised to gateway for diagnostics routing. |
 | `DCC_MCP_MAYA_READINESS_TIMEOUT_SECS` | — | per-process | Advisory timeout (positive integer seconds) for the three-state readiness probe (issue #184). Consumed by orchestrators; never auto-fails the probe on its own. |
+| `DCC_MCP_MAYA_KMAYA_EXITING_HOOK` | `1` | per-process | `0`=disable the `MSceneMessage.kMayaExiting` shutdown hook (issue #186). |
+| `DCC_MCP_MAYA_ATEXIT_HOOK` | `1` | per-process | `0`=disable the `atexit` shutdown fallback (issue #186). |
+| `DCC_MCP_MAYA_PROCESS_SENTINEL` | `1` | per-process | `0`=disable the crash-resilient sentinel file used by sweepers (issue #186). |
+| `DCC_MCP_MAYA_DEFENSIVE_DEL` | `0` | per-process | `1`=enable defensive `__del__` guard. Off in interactive Maya (Tokio deadlock risk); recommended for `mayapy` / test fixtures (issue #186). |
 | `DCC_MCP_GATEWAY_PORT` | `9765` | per-host | Gateway election port. `0`=disable gateway mode. |
 | `DCC_MCP_REGISTRY_DIR` | OS temp dir | per-user | Shared FileRegistry directory. |
 | `DCC_MCP_PYTHON_EXECUTABLE` | `sys.executable` | per-process | Python interpreter for skill worker subprocesses. |

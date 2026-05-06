@@ -143,6 +143,7 @@ _host = None
 _host_dispatcher = None
 _menu_name = "DccMcpMenu"
 _restart_lock = threading.Lock()  # prevent overlapping restart calls
+_shutdown_coordinator = None  # Issue #186 — safety-net composition root
 
 
 # ── standalone detection ──────────────────────────────────────────────────────
@@ -173,6 +174,12 @@ def initializePlugin(plugin):
         if _is_interactive():
             _add_menu()
         _start()
+        # Issue #186 — install shutdown safety nets (kMayaExiting hook,
+        # atexit fallback, crash-resilient process sentinel, optional
+        # defensive __del__ guard) so non-cooperative Maya exits stop
+        # leaking FileRegistry rows.  Each net is individually opt-out
+        # via DCC_MCP_MAYA_* env vars; see ``_shutdown_safety`` docstring.
+        _install_shutdown_safety()
         # Issue #126 — surface a single warning when the FileRegistry has
         # accumulated stale entries from previous Maya crashes.  Best-effort,
         # never blocks startup.
@@ -196,6 +203,11 @@ def uninitializePlugin(plugin):
     the FileRegistry entry is always released.  ``_stop_blocking()`` is
     invoked from a ``finally`` block so a menu-removal failure (e.g. partial
     UI shutdown) cannot leak the running server.
+
+    Issue #186 — the shutdown safety nets installed at plugin load are
+    uninstalled in the same ``finally`` path (before ``_stop_blocking``)
+    so they do not fire a second time while plugin cleanup is already in
+    flight.
     """
     om.MFnPlugin(plugin)
     try:
@@ -205,6 +217,10 @@ def uninitializePlugin(plugin):
             except Exception as exc:  # noqa: BLE001
                 logger.warning("dcc-mcp-maya menu removal error: %s", exc)
     finally:
+        try:
+            _uninstall_shutdown_safety()
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("dcc-mcp-maya shutdown safety teardown error: %s", exc)
         try:
             _stop_blocking()
         except Exception as exc:  # noqa: BLE001
@@ -397,6 +413,76 @@ def _stop_blocking() -> None:
         _handle = None
     except Exception as exc:
         logger.warning("Failed to stop MCP server: %s", exc)
+
+
+# ── shutdown safety nets (issue #186) ─────────────────────────────────────────
+
+
+def _resolve_instance_id() -> str:
+    """Return the Maya MCP instance id for the active server, or ``"unknown"``.
+
+    Used to tag the crash-resilient process sentinel (issue #186) so
+    sweepers can cross-reference a FileRegistry row against its
+    sentinel.  Robust to every degraded state — missing server,
+    Python-3.7 fallback path, server not yet registered — because the
+    tag is cosmetic; the sentinel's filesystem presence is what
+    actually matters.
+    """
+    try:
+        import dcc_mcp_maya  # noqa: PLC0415
+
+        server = getattr(dcc_mcp_maya.server, "_server_instance", None)
+        if server is not None:
+            instance_id = getattr(server, "instance_id", None)
+            if instance_id:
+                return str(instance_id)
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("instance id lookup failed: %s", exc)
+    return "unknown"
+
+
+def _install_shutdown_safety() -> None:
+    """Wire the ``kMayaExiting`` / ``atexit`` / sentinel / __del__ safety nets.
+
+    Called from :func:`initializePlugin` immediately after ``_start()``
+    so the coordinator can tag the process sentinel with the freshly
+    allocated instance id.  Never raises — a failure here degrades to
+    "only ``uninitializePlugin`` can clean up", which is the pre-#186
+    behaviour.
+    """
+    global _shutdown_coordinator
+    try:
+        from dcc_mcp_maya._shutdown_safety import ShutdownCoordinator  # noqa: PLC0415
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("shutdown safety module unavailable: %s", exc)
+        return
+    try:
+        coordinator = ShutdownCoordinator()
+        coordinator.install(
+            stop_callback=_stop_blocking,
+            instance_id=_resolve_instance_id(),
+            registry_dir=os.environ.get("DCC_MCP_REGISTRY_DIR") or None,
+        )
+        _shutdown_coordinator = coordinator
+        logger.debug("shutdown safety nets installed (issue #186)")
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("shutdown safety install failed: %s", exc)
+
+
+def _uninstall_shutdown_safety() -> None:
+    """Tear down the shutdown safety nets installed by :func:`_install_shutdown_safety`.
+
+    Idempotent — safe when install failed or was never called.
+    """
+    global _shutdown_coordinator
+    coord = _shutdown_coordinator
+    _shutdown_coordinator = None
+    if coord is None:
+        return
+    try:
+        coord.uninstall()
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("shutdown safety uninstall failed: %s", exc)
 
 
 def _stop_async() -> None:
