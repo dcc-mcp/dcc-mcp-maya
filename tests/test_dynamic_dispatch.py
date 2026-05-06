@@ -162,9 +162,6 @@ class _RecordingDispatcher:
             return {"success": False, "error": str(exc)}
         return result
 
-    def submit_async_callable(self, *args, **kwargs):
-        raise NotImplementedError
-
     def cancel(self, request_id):
         return True
 

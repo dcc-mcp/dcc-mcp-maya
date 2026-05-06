@@ -112,6 +112,15 @@ Project-state persistence (issue #576 / core 0.14.21):
 * `dcc_mcp_maya._project_tools.attach_to_server(server)` — registers `project.save / project.load / project.resume / project.status` MCP tools that persist scene state to `<scene_dir>/.dcc-mcp/project.json`.  Auto-invoked by `register_builtin_actions()`; opt out with `DCC_MCP_MAYA_PROJECT_TOOLS=0`.
 * Public symbols: `ProjectToolsIntegration`, `MayaSceneResolver`, `attach_project_tools`, `ENV_PROJECT_TOOLS`.
 
+Runtime readiness wiring (issue #184, requires `dcc-mcp-core>=0.15.0`; API landed in 0.14.28):
+
+* Maya adapter owns the *wiring*; the three-state probe itself lives in core as `dcc_mcp_core.ReadinessProbe`.  Published to the inner Rust server via `McpHttpServer.set_readiness_probe(probe)` so `GET /v1/readyz` serves honest values (`200` only when all three bits green, `503` + `not-ready` envelope otherwise — core also rejects `tools/call` with `BACKEND_NOT_READY (-32002)` when not ready).
+* `server.readiness_report()` → `{"process": bool, "dispatcher": bool, "dcc": bool}` shorthand.  `server.readiness` → `ReadinessBinder`; `server.readiness.probe` → the underlying `dcc_mcp_core.ReadinessProbe`.
+* Transitions: `process` starts `True` (core default); `dispatcher` flips `True` the moment `MayaMcpServer.__init__` returns (executor always wired by then, whether inline or through a host dispatcher); `dcc` flips `True` synchronously in inline-executor mode (no host dispatcher — `mayapy` / tests) or after the first main-thread pump when a real host dispatcher is attached.
+* Opt-in advisory timeout: `DCC_MCP_MAYA_READINESS_TIMEOUT_SECS=<positive int>` — consumed by orchestrators, never auto-fails the probe.
+* Maya public symbols: `ReadinessBinder`, `install_readiness`, `resolve_readiness_timeout_secs`, `ENV_READINESS_TIMEOUT_SECS`.  Core public symbols used here: `dcc_mcp_core.ReadinessProbe` (with `set_dispatcher_ready` / `set_dcc_ready` / `report` / `is_ready` / `fully_ready`).
+
+
 ---
 
 ## Skill Authoring Helpers (api.py)
