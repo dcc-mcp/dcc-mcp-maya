@@ -120,6 +120,13 @@ Runtime readiness wiring (issue #184, requires `dcc-mcp-core>=0.15.0`; API lande
 * Opt-in advisory timeout: `DCC_MCP_MAYA_READINESS_TIMEOUT_SECS=<positive int>` — consumed by orchestrators, never auto-fails the probe.
 * Maya public symbols: `ReadinessBinder`, `install_readiness`, `resolve_readiness_timeout_secs`, `ENV_READINESS_TIMEOUT_SECS`.  Core public symbols used here: `dcc_mcp_core.ReadinessProbe` (with `set_dispatcher_ready` / `set_dcc_ready` / `report` / `is_ready` / `fully_ready`).
 
+Shutdown safety nets (issue #186):
+
+* `dcc_mcp_maya._shutdown_safety.ShutdownCoordinator` — composes four independent safety nets so non-cooperative Maya exits stop leaking `FileRegistry` rows: `MSceneMessage.kMayaExiting` hook, `atexit` fallback, crash-resilient process sentinel (OS drops on `kill -9`), opt-in defensive `__del__` guard.  Auto-installed from the Maya plugin's `initializePlugin` after `_start()`; torn down in `uninitializePlugin`.
+* Each net opts out via env var: `DCC_MCP_MAYA_KMAYA_EXITING_HOOK=0`, `DCC_MCP_MAYA_ATEXIT_HOOK=0`, `DCC_MCP_MAYA_PROCESS_SENTINEL=0`.  Defensive `__del__` is off by default — enable with `DCC_MCP_MAYA_DEFENSIVE_DEL=1` in `mayapy` / test fixtures only.
+* Public symbols: `ShutdownCoordinator`, `ProcessSentinel`, `DefensiveShutdownGuard`, `register_kmaya_exiting_hook`, `register_atexit_hook`, `write_process_sentinel`, `orphan_sentinels`, `ENV_KMAYA_EXITING_HOOK`, `ENV_ATEXIT_HOOK`, `ENV_PROCESS_SENTINEL`, `ENV_DEFENSIVE_DEL`.
+* Support matrix: `docs/guide/shutdown-matrix.md` (EN) / `docs/zh/guide/shutdown-matrix.md` (ZH).
+
 
 ---
 
