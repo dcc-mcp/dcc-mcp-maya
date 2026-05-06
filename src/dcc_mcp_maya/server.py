@@ -44,6 +44,7 @@ from dcc_mcp_maya import (
     _version_probe,
 )
 from dcc_mcp_maya.__version__ import __version__
+from dcc_mcp_maya._env import resolve_exclude_stubs_from_tools_list
 from dcc_mcp_maya.capability_manifest import (
     MayaCapabilityManifestBuilder,
     build_manifest_payload,
@@ -457,6 +458,13 @@ class MayaMcpServer(DccServerBase):
         except Exception as exc:  # noqa: BLE001
             logger.debug("[%s] resources registration failed: %s", "maya", exc)
 
+        # ── Issue #174: optionally exclude ``__skill__*`` / ``__group__*``
+        #    stubs from the backend ``tools/list`` so that token-constrained
+        #    MCP clients don't pay the stub tax.  Discovery is still
+        #    possible via ``build_capability_manifest()`` and ``/v1/search``.
+        if resolve_exclude_stubs_from_tools_list():
+            _exclude_stub_tools(self._server)
+
         return self
 
     def _strict_skill_scan(
@@ -838,6 +846,86 @@ def stop_server() -> None:
             _instance_holder[0].stop()
             _instance_holder[0] = None
     _server_instance = None
+
+
+def _exclude_stub_tools(server: Any) -> None:
+    """Unregister ``__skill__*`` / ``__group__*`` stubs from the registry.
+
+    Issue #174: when ``DCC_MCP_MAYA_EXCLUDE_STUBS_FROM_TOOLS_LIST=1``,
+    the backend ``tools/list`` must not expose Progressive-loading
+    placeholders.  This function collects stub names from the skill catalog
+    and group list, then removes each entry via ``registry.unregister``.
+
+    Note: in core 0.15.0+ these stubs are managed by the Rust layer and do
+    not appear in ``registry.list_actions()``, so we derive the names from
+    ``server.list_skills()`` (for ``__skill__*``) and
+    ``server.registry.list_groups()`` (for ``__group__*``).
+
+    Discovery is still possible via:
+
+    * :meth:`MayaMcpServer.build_capability_manifest`
+    * ``GET /v1/skills``
+    * ``GET /v1/search?q=<query>``
+
+    Args:
+        server: An :class:`McpHttpServer` instance (``self._server``).
+    """
+    registry = server.registry
+    stub_names: list = []
+
+    # ── Collect __skill__* stub names from the skill catalog ─────────────────
+    try:
+        skills = server.list_skills()
+        for skill in skills:
+            if isinstance(skill, dict):
+                name = skill.get("name", "")
+                loaded = skill.get("loaded", False)
+            else:
+                name = str(skill)
+                loaded = False
+            # Only unloaded skills are exposed as __skill__* stubs
+            if name and not loaded:
+                stub_names.append("__skill__" + name)
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("[%s] Could not list skills for stub removal: %s", "maya", exc)
+
+    # ── Collect __group__* stub names from the group list ────────────────────
+    try:
+        groups = registry.list_groups()
+        for group_name in groups:
+            if group_name:
+                stub_names.append("__group__" + group_name)
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("[%s] Could not list groups for stub removal: %s", "maya", exc)
+
+    # ── Also scan list_actions() for any remaining stubs (older core) ─────────
+    try:
+        all_tools = registry.list_actions()
+        for action in all_tools:
+            if isinstance(action, dict):
+                tool_name = action.get("name", "")
+            else:
+                tool_name = str(action)
+            if tool_name.startswith("__skill__") or tool_name.startswith("__group__"):
+                if tool_name not in stub_names:
+                    stub_names.append(tool_name)
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("[%s] Could not list actions for stub removal: %s", "maya", exc)
+
+    removed = 0
+    for tool_name in stub_names:
+        try:
+            registry.unregister(tool_name)
+            removed += 1
+            logger.debug("[%s] Removed stub tool: %s", "maya", tool_name)
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("[%s] Failed to unregister %r: %s", "maya", tool_name, exc)
+    if removed:
+        logger.info(
+            "[%s] Excluded %d stub tool(s) from tools/list (DCC_MCP_MAYA_EXCLUDE_STUBS_FROM_TOOLS_LIST=1)",
+            "maya",
+            removed,
+        )
 
 
 # ── Backwards-compatibility shims ──────────────────────────────────────────
