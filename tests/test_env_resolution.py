@@ -152,7 +152,6 @@ class TestResolveWindowTitle:
             assert _env.resolve_window_title(None) is None
 
 
-
 class TestResolveCursorSafeToolNames:
     """``DCC_MCP_MAYA_CURSOR_SAFE_TOOL_NAMES`` is a tri-state resolver:
 

@@ -21,6 +21,17 @@ import json
 import shutil
 import tempfile
 from pathlib import Path
+from typing import List, Optional, Tuple
+
+SUPPORTED_MAYA_VERSIONS = ("2022", "2023", "2024", "2025", "2026")
+MAYA_PYTHONPATH_BY_VERSION = {
+    "2022": "python37",
+    "2023": "python",
+    "2024": "python",
+    "2025": "python",
+    "2026": "python",
+}
+PLATFORMS_WITH_CP37_WHEELS = {"win64", "linux"}
 
 
 def resolve_core_version(project_root: Path) -> str:
@@ -66,31 +77,19 @@ def _version_gte(ver: str, minimum: str) -> bool:
     return v_parts >= m_parts
 
 
-def download_core_wheels(version: str, platform: str, dest: Path) -> list[Path]:
+def download_core_wheels(version: str, platform: str, dest: Path) -> List[Path]:
     """Download dcc-mcp-core wheels for the target platform.
 
-    Uses the PyPI JSON API to find the exact wheel URLs, then downloads
-    them directly with urllib.  This avoids ``pip download`` cross-platform
-    tag-filtering issues (e.g. ``--python-tag`` is not a valid pip option,
-    and ``--platform`` filtering is unreliable when the runner OS differs
-    from the target platform).
-
-    Downloads abi3 wheels (cp38+, covers Maya 2023+).
+    Maya 2022 embeds Python 3.7, which cannot import ``cp38-abi3``
+    extension wheels.  For platforms where core publishes cp37 wheels,
+    download both the cp37 wheel and the cp38-abi3 wheel so the module
+    package can route Maya 2022 to ``python37/`` and newer Maya versions
+    to ``python/``.
     """
     import urllib.request
 
-    # Wheel filename patterns per platform.
-    # Each entry: (substring that must appear in filename, description)
-    wheel_patterns: list[tuple[str, str]] = []
+    wheel_patterns = _core_wheel_patterns(platform)
 
-    if platform == "win64":
-        wheel_patterns = [("cp38-abi3-win_amd64", "cp38-abi3, win_amd64")]
-    elif platform == "linux":
-        wheel_patterns = [("cp38-abi3-manylinux", "cp38-abi3, manylinux x86_64")]
-    elif platform == "macos":
-        wheel_patterns = [("cp38-abi3-macosx", "cp38-abi3, macosx universal2")]
-
-    # Query PyPI JSON API for available wheels
     pypi_url = f"https://pypi.org/pypi/dcc-mcp-core/{version}/json"
     print(f"  Querying PyPI: {pypi_url}")
     with urllib.request.urlopen(pypi_url, timeout=30) as resp:
@@ -99,18 +98,15 @@ def download_core_wheels(version: str, platform: str, dest: Path) -> list[Path]:
     releases = pypi_data.get("releases", {})
     version_files = releases.get(version, [])
     if not version_files:
-        # Fallback: use urls from the top-level data
         version_files = pypi_data.get("urls", [])
 
-    # Build a map from filename → download URL
-    file_map: dict[str, str] = {f["filename"]: f["url"] for f in version_files if f.get("packagetype") == "bdist_wheel"}
+    file_map = {f["filename"]: f["url"] for f in version_files if f.get("packagetype") == "bdist_wheel"}
 
     for pattern, desc in wheel_patterns:
         matching = [fn for fn in file_map if pattern in fn]
         if not matching:
             print(f"  Warning: no wheel matching '{pattern}' found on PyPI for v{version}")
             continue
-        # Pick the first (should be exactly one)
         filename = matching[0]
         url = file_map[filename]
         dest_file = dest / filename
@@ -127,7 +123,22 @@ def download_core_wheels(version: str, platform: str, dest: Path) -> list[Path]:
     return wheels
 
 
-def extract_wheel(wheel_path: Path, dest: Path, *, extensions_only: bool = False, alt_dest: Path | None = None) -> None:
+def _core_wheel_patterns(platform: str) -> List[Tuple[str, str]]:
+    if platform == "win64":
+        return [("cp37-cp37m-win_amd64", "cp37, win_amd64"), ("cp38-abi3-win_amd64", "cp38-abi3, win_amd64")]
+    if platform == "linux":
+        return [
+            ("cp37-cp37m-manylinux", "cp37, manylinux x86_64"),
+            ("cp38-abi3-manylinux", "cp38-abi3, manylinux x86_64"),
+        ]
+    if platform == "macos":
+        return [("cp38-abi3-macosx", "cp38-abi3, macosx universal2")]
+    return []
+
+
+def extract_wheel(
+    wheel_path: Path, dest: Path, *, extensions_only: bool = False, alt_dest: Optional[Path] = None
+) -> None:
     """Extract a wheel into dest.
 
     Uses zipfile directly instead of ``pip install --target`` so target
@@ -163,36 +174,30 @@ def extract_wheel(wheel_path: Path, dest: Path, *, extensions_only: bool = False
 
 
 def generate_mod_file(version: str, platform: str, path: str = ".") -> str:
-    """Generate .mod file content for given platform and Maya versions.
-
-    Args:
-        version: Package version string.
-        platform: Platform string (win64, linux, macos).
-        path: Module root path. Use ``"."`` for relative paths (pipeline),
-              or an absolute path for deployed installations.
-    """
+    """Generate .mod file content for the supported Maya versions."""
     lines = []
-    maya_versions = ["2023", "2024", "2025", "2026"]
-
-    for mv in maya_versions:
-        lines.append(f"+ MAYAVERSION:{mv} PLATFORM:{platform} dcc_mcp_maya {version} {path}")
-        lines.append("PYTHONPATH+:=python")
+    for maya_version in supported_maya_versions(platform):
+        lines.append(f"+ MAYAVERSION:{maya_version} PLATFORM:{platform} dcc_mcp_maya {version} {path}")
+        lines.append(f"PYTHONPATH+:={MAYA_PYTHONPATH_BY_VERSION[maya_version]}")
         lines.append("PLUG_IN_PATH+:=plug-ins")
 
     return "\n".join(lines) + "\n"
 
 
-def generate_module_info(version: str) -> str:
-    """Generate module-info.json content with build metadata.
+def supported_maya_versions(platform: str) -> List[str]:
+    """Return Maya versions supported by the offline module for *platform*."""
+    if platform in PLATFORMS_WITH_CP37_WHEELS:
+        return list(SUPPORTED_MAYA_VERSIONS)
+    return [version for version in SUPPORTED_MAYA_VERSIONS if version != "2022"]
 
-    Included only in the pipeline ZIP for programmatic version queries.
-    """
-    supported = ["2023", "2024", "2025", "2026"]
 
+def generate_module_info(version: str, platform: str = "win64") -> str:
+    """Generate module-info.json content with build metadata."""
     info = {
         "name": "dcc_mcp_maya",
         "version": version,
-        "supported_maya_versions": supported,
+        "supported_maya_versions": supported_maya_versions(platform),
+        "has_python37": platform in PLATFORMS_WITH_CP37_WHEELS,
     }
     return json.dumps(info, indent=2) + "\n"
 
@@ -214,7 +219,9 @@ def assemble(project_root: Path, version: str, platform: str, output: Path) -> P
     # Create directories
     (module_dir / "plug-ins").mkdir(parents=True)
     (module_dir / "scripts").mkdir(parents=True)
-    (module_dir / "python").mkdir(parents=True)
+    python_dir = module_dir / "python"
+    python_dir.mkdir(parents=True)
+    python37_dir = module_dir / "python37"
 
     # 1. Download and extract dcc_mcp_core
     core_version = resolve_core_version(project_root)
@@ -222,10 +229,19 @@ def assemble(project_root: Path, version: str, platform: str, output: Path) -> P
 
     with tempfile.TemporaryDirectory() as wheel_cache:
         wheels = download_core_wheels(core_version, platform, Path(wheel_cache))
-        for wheel in wheels:
-            print(f"  Extracting {wheel.name} (full)...")
-            extract_wheel(wheel, module_dir / "python")
-    print("  Extracted dcc_mcp_core to python/")
+        abi3_wheels = [wheel for wheel in wheels if "abi3" in wheel.name]
+        cp37_wheels = [wheel for wheel in wheels if "cp37-cp37m" in wheel.name]
+
+        for wheel in abi3_wheels or wheels:
+            print(f"  Extracting {wheel.name} to python/...")
+            extract_wheel(wheel, python_dir)
+
+        if cp37_wheels:
+            shutil.copytree(str(python_dir), str(python37_dir))
+            for wheel in cp37_wheels:
+                print(f"  Extracting {wheel.name} extensions to python37/...")
+                extract_wheel(wheel, python37_dir, extensions_only=True)
+    print("  Extracted dcc_mcp_core")
 
     # 2. Copy Maya plugin
     plugin_src = project_root / "maya" / "plugin" / "dcc_mcp_maya_plugin.py"
@@ -239,11 +255,14 @@ def assemble(project_root: Path, version: str, platform: str, output: Path) -> P
 
     # 4. Copy dcc_mcp_maya Python package
     pkg_src = project_root / "src" / "dcc_mcp_maya"
-    pkg_dest = module_dir / "python" / "dcc_mcp_maya"
-    if pkg_dest.exists():
-        shutil.rmtree(pkg_dest)
-    shutil.copytree(pkg_src, pkg_dest)
-    print("  Copied dcc_mcp_maya package to python/")
+    for package_root in (python_dir, python37_dir):
+        if not package_root.is_dir():
+            continue
+        pkg_dest = package_root / "dcc_mcp_maya"
+        if pkg_dest.exists():
+            shutil.rmtree(pkg_dest)
+        shutil.copytree(str(pkg_src), str(pkg_dest))
+    print("  Copied dcc_mcp_maya package")
 
     # 5. Generate .mod file with relative paths
     mod_content = generate_mod_file(version, platform, path=".")
@@ -278,7 +297,7 @@ def assemble_pipeline(project_root: Path, version: str, platform: str, output: P
     module_dir = assemble(project_root, version, platform, output)
 
     # Add module-info.json
-    info_content = generate_module_info(version)
+    info_content = generate_module_info(version, platform)
     (module_dir / "module-info.json").write_text(info_content, encoding="utf-8")
     print(f"  Generated module-info.json (version={version})")
 

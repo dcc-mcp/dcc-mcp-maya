@@ -221,7 +221,6 @@ def resolve_cursor_safe_tool_names(cursor_safe: Optional[bool] = None) -> Option
     return None
 
 
-
 def _unused_marker(_value: Any) -> None:  # pragma: no cover
     """Sentinel referencing :data:`Any` so the type-only import is retained."""
     return None

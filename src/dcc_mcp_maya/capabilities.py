@@ -31,7 +31,7 @@ __all__ = ["maya_capabilities", "MAYA_CAPABILITIES_DICT"]
 def maya_capabilities():
     """Return a ``DccCapabilities`` instance for the Maya integration.
 
-    All flags reflect capabilities available in Maya 2023+ (Python 3.9+).
+    All flags reflect capabilities available in Maya 2020+ (Python 3.7+).
     Renderer-specific flags (``render_capture``, ``snapshot``) require a
     running Maya session; the flags are still declared ``True`` because the
     code paths exist — callers may receive a skill_error at runtime if Maya

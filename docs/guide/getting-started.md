@@ -4,7 +4,7 @@ Get Maya talking to an MCP host in under 5 minutes.
 
 ## Prerequisites
 
-- Maya 2023 or later (Python 3.9+)
+- Maya 2020 or later (Python 3.7+)
 - An MCP-compatible host: [Claude Desktop](https://claude.ai/download), [Cursor](https://cursor.sh/), or [OpenClaw](https://github.com/loonghao/openclaw)
 
 ## Step 1 — Install

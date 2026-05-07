@@ -78,8 +78,8 @@ maya.utils.executeDeferred(_start_mcp)
 Each Maya version has its own Python interpreter. Install separately per version:
 
 ```bash
-# Maya 2023
-"C:\Program Files\Autodesk\Maya2023\bin\mayapy.exe" -m pip install dcc-mcp-maya
+# Maya 2022 (Python 3.7)
+"C:\Program Files\Autodesk\Maya2022\bin\mayapy.exe" -m pip install dcc-mcp-maya
 
 # Maya 2024
 "C:\Program Files\Autodesk\Maya2024\bin\mayapy.exe" -m pip install dcc-mcp-maya
@@ -91,8 +91,8 @@ Each Maya version has its own Python interpreter. Install separately per version
 If running multiple Maya instances simultaneously, use different ports:
 
 ```python
-# Maya 2023 instance
-handle = dcc_mcp_maya.start_server(port=8763)
+# Maya 2022 instance
+handle = dcc_mcp_maya.start_server(port=8762)
 
 # Maya 2024 instance
 handle = dcc_mcp_maya.start_server(port=8764)

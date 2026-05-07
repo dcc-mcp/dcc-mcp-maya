@@ -9,13 +9,15 @@ description = "Maya plugin for the DCC Model Context Protocol (MCP) ecosystem �
 authors = [{ name = "Long Hao", email = "hal.long@outlook.com" }]
 readme = "README.md"
 license = { text = "MIT" }
-requires-python = ">=3.9"
+requires-python = ">=3.7"
 keywords = ["maya", "mcp", "dcc", "ai", "llm", "model-context-protocol"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
@@ -25,17 +27,10 @@ classifiers = [
 ]
 
 dependencies = [
-    # 0.15.0 is the SOLID crate-split release (``dcc-mcp-jsonrpc`` /
-    # ``dcc-mcp-job`` / ``dcc-mcp-skill-rest`` / ``dcc-mcp-gateway``) — behaviour-
-    # preserving via ``pub use`` aliases so existing imports keep working.
-    # 0.15.0 also ships ``ResourceHandle`` (``set_scene`` / ``register_producer`` /
-    # ``notify_updated``) on the Python ``McpHttpServer.resources()`` surface —
-    # the foundation issue #187 builds on.  Earlier 0.14.28 added ``ReadinessProbe``
-    # + ``McpHttpServer.set_readiness_probe`` (issue #184); 0.14.23 added the
-    # cross-DCC HostAdapter/QueueDispatcher and per-DCC REST skill endpoints used by
-    # MayaHost, maya_bootstrap, and the /v1/search /v1/describe /v1/call
-    # regression tests.  All rolled into the 0.15.0 floor below.
-    "dcc-mcp-core>=0.15.0,<1.0.0",
+    # 0.15.3 is the Python 3.7-capable core floor used by Maya 2020+/2022.
+    # It includes the 0.15 resource surface, readiness probe, HostAdapter,
+    # QueueDispatcher, and per-DCC REST skill endpoints used by this adapter.
+    "dcc-mcp-core>=0.15.3,<1.0.0",
 ]
 
 [project.optional-dependencies]
@@ -95,7 +90,7 @@ exclude_lines = [
 
 [tool.ruff]
 line-length = 120
-target-version = "py39"
+target-version = "py37"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "W"]

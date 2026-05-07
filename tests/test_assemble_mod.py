@@ -30,7 +30,7 @@ def _make_fake_wheel(dest: Path, name: str, files: dict[str, bytes]) -> Path:
     return wheel_path
 
 
-def _make_fake_pyproject(dest: Path, core_version: str = "0.15.0") -> Path:
+def _make_fake_pyproject(dest: Path, core_version: str = "0.15.3") -> Path:
     toml_path = dest / "pyproject.toml"
     toml_path.write_text(
         f'[project]\ndependencies = [\n    "dcc-mcp-core>={core_version},<1.0.0",\n]\n',
@@ -84,8 +84,10 @@ class TestResolveCoreVersion:
 
 
 class TestDownloadCoreWheels:
-    def _mock_pypi_response(self, version: str = "0.15.0") -> dict:
+    def _mock_pypi_response(self, version: str = "0.15.3") -> dict:
         files = [
+            f"dcc_mcp_core-{version}-cp37-cp37m-win_amd64.whl",
+            f"dcc_mcp_core-{version}-cp37-cp37m-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
             f"dcc_mcp_core-{version}-cp38-abi3-win_amd64.whl",
             f"dcc_mcp_core-{version}-cp38-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
             f"dcc_mcp_core-{version}-cp38-abi3-macosx_10_12_x86_64.macosx_11_0_arm64.macosx_10_12_universal2.whl",
@@ -93,7 +95,7 @@ class TestDownloadCoreWheels:
         urls = [{"filename": fn, "url": f"https://example.com/{fn}", "packagetype": "bdist_wheel"} for fn in files]
         return {"info": {"version": version}, "urls": urls, "releases": {version: urls}}
 
-    def test_win64_downloads_abi3_wheel(self, tmp_path):
+    def test_win64_downloads_cp37_and_abi3_wheels(self, tmp_path):
         mock_resp = MagicMock()
         mock_resp.read.return_value = json.dumps(self._mock_pypi_response()).encode()
         mock_resp.__enter__ = lambda s: s
@@ -105,11 +107,13 @@ class TestDownloadCoreWheels:
         with patch("urllib.request.urlopen", return_value=mock_resp), patch(
             "urllib.request.urlretrieve", side_effect=fake_urlretrieve
         ):
-            wheels = assemble_mod.download_core_wheels("0.15.0", "win64", tmp_path)
-        assert len(wheels) == 1
-        assert "abi3" in wheels[0].name
+            wheels = assemble_mod.download_core_wheels("0.15.3", "win64", tmp_path)
+        names = {wheel.name for wheel in wheels}
+        assert len(wheels) == 2
+        assert any("cp37-cp37m" in name for name in names)
+        assert any("abi3" in name for name in names)
 
-    def test_linux_downloads_abi3_wheel(self, tmp_path):
+    def test_linux_downloads_cp37_and_abi3_wheels(self, tmp_path):
         mock_resp = MagicMock()
         mock_resp.read.return_value = json.dumps(self._mock_pypi_response()).encode()
         mock_resp.__enter__ = lambda s: s
@@ -121,9 +125,11 @@ class TestDownloadCoreWheels:
         with patch("urllib.request.urlopen", return_value=mock_resp), patch(
             "urllib.request.urlretrieve", side_effect=fake_urlretrieve
         ):
-            wheels = assemble_mod.download_core_wheels("0.15.0", "linux", tmp_path)
-        assert len(wheels) == 1
-        assert "abi3" in wheels[0].name
+            wheels = assemble_mod.download_core_wheels("0.15.3", "linux", tmp_path)
+        names = {wheel.name for wheel in wheels}
+        assert len(wheels) == 2
+        assert any("cp37-cp37m" in name for name in names)
+        assert any("abi3" in name for name in names)
 
     def test_macos_downloads_abi3_wheel(self, tmp_path):
         mock_resp = MagicMock()
@@ -137,7 +143,7 @@ class TestDownloadCoreWheels:
         with patch("urllib.request.urlopen", return_value=mock_resp), patch(
             "urllib.request.urlretrieve", side_effect=fake_urlretrieve
         ):
-            wheels = assemble_mod.download_core_wheels("0.15.0", "macos", tmp_path)
+            wheels = assemble_mod.download_core_wheels("0.15.3", "macos", tmp_path)
         assert len(wheels) == 1
         assert "abi3" in wheels[0].name
 
@@ -185,11 +191,11 @@ class TestGenerateModFile:
     def test_win64_relative_path(self):
         content = assemble_mod.generate_mod_file("0.2.2", "win64", path=".")
         lines = content.strip().split("\n")
-        assert len(lines) == 12
-        assert "MAYAVERSION:2022" not in content
-        assert "MAYAVERSION:2023" in lines[0]
-        assert "PYTHONPATH+:=python" in lines[1]
-        assert "python37" not in content
+        assert len(lines) == 15
+        assert "MAYAVERSION:2022" in lines[0]
+        assert "PYTHONPATH+:=python37" in lines[1]
+        assert "MAYAVERSION:2023" in lines[3]
+        assert "PYTHONPATH+:=python" in lines[4]
         assert "PLUG_IN_PATH+:=plug-ins" in lines[2]
 
     def test_absolute_path(self):
@@ -209,8 +215,8 @@ class TestGenerateModuleInfo:
         info = json.loads(content)
         assert info["name"] == "dcc_mcp_maya"
         assert info["version"] == "0.2.2"
-        assert "has_cp37" not in info
-        assert info["supported_maya_versions"] == ["2023", "2024", "2025", "2026"]
+        assert info["has_python37"] is True
+        assert info["supported_maya_versions"] == ["2022", "2023", "2024", "2025", "2026"]
 
 
 def _setup_project(tmp_path: Path) -> Path:
@@ -249,6 +255,9 @@ def _mock_download_and_resolve(_project: Path, _tmp_path: Path):
     }
 
     def fake_download(version, _platform, dest):
+        cp37_files = dict(abi3_files)
+        cp37_files["dcc_mcp_core/_core.pyd"] = b"\x00cp37_core"
+        _make_fake_wheel(dest, f"dcc_mcp_core-{version}-cp37-cp37m-win_amd64.whl", cp37_files)
         _make_fake_wheel(dest, f"dcc_mcp_core-{version}-cp38-abi3-win_amd64.whl", abi3_files)
         return list(dest.glob("dcc_mcp_core-*.whl"))
 
@@ -256,7 +265,7 @@ def _mock_download_and_resolve(_project: Path, _tmp_path: Path):
 
 
 class TestAssemble:
-    def test_win64_creates_python_only(self, tmp_path):
+    def test_win64_creates_python_and_python37(self, tmp_path):
         project = _setup_project(tmp_path)
         output = tmp_path / "output"
         output.mkdir()
@@ -270,11 +279,14 @@ class TestAssemble:
         assert (result / "python" / "dcc_mcp_core" / "__init__.py").exists()
         assert (result / "python" / "dcc_mcp_core" / "_core.pyd").exists()
         assert (result / "python" / "dcc_mcp_maya" / "__init__.py").exists()
-        assert not (result / "python37").exists()
+        assert (result / "python37" / "dcc_mcp_core" / "__init__.py").exists()
+        assert (result / "python37" / "dcc_mcp_core" / "_core.pyd").read_bytes() == b"\x00cp37_core"
+        assert (result / "python37" / "dcc_mcp_maya" / "__init__.py").exists()
 
         mod_content = (result / "dcc_mcp_maya.mod").read_text(encoding="utf-8")
-        assert "MAYAVERSION:2022" not in mod_content
-        assert "python37" not in mod_content
+        assert "MAYAVERSION:2022" in mod_content
+        assert "PYTHONPATH+:=python37" in mod_content
+        assert "PYTHONPATH+:=python" in mod_content
         assert " ." in mod_content
 
     def test_plugin_and_usersetup_copied(self, tmp_path):
@@ -340,8 +352,8 @@ class TestAssemblePipeline:
 
         info = json.loads((result / "module-info.json").read_text(encoding="utf-8"))
         assert info["version"] == "0.2.2"
-        assert info["supported_maya_versions"] == ["2023", "2024", "2025", "2026"]
-        assert "has_cp37" not in info
+        assert info["supported_maya_versions"] == ["2022", "2023", "2024", "2025", "2026"]
+        assert info["has_python37"] is True
         assert (result / "README-pipeline.txt").exists()
         assert not (result / "install.bat").exists()
         assert not (result / "install.sh").exists()
@@ -383,13 +395,14 @@ class TestMain:
 class TestAssembleLive:
     def test_resolve_core_version_from_real_pypi(self):
         version = assemble_mod.resolve_core_version(PROJECT_ROOT)
-        assert assemble_mod._version_gte(version, "0.15.0")
+        assert assemble_mod._version_gte(version, "0.15.3")
 
     def test_download_win64_wheels_from_pypi(self, tmp_path):
         version = assemble_mod.resolve_core_version(PROJECT_ROOT)
         wheels = assemble_mod.download_core_wheels(version, "win64", tmp_path)
-        assert len(wheels) == 1
-        assert "abi3" in wheels[0].name
+        assert len(wheels) == 2
+        assert any("cp37-cp37m" in wheel.name for wheel in wheels)
+        assert any("abi3" in wheel.name for wheel in wheels)
 
     def test_full_win64_assemble_from_pypi(self, tmp_path):
         output = tmp_path / "output"
@@ -402,4 +415,4 @@ class TestAssembleLive:
         assert (result / "python" / "dcc_mcp_maya" / "__init__.py").exists()
         assert (result / "plug-ins" / "dcc_mcp_maya_plugin.py").exists()
         assert (result / "scripts" / "userSetup.py").exists()
-        assert not (result / "python37").exists()
+        assert (result / "python37" / "dcc_mcp_core" / "_core.pyd").exists()

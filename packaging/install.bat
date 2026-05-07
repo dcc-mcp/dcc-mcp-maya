@@ -24,9 +24,13 @@ set "MOD_DEST=%USERPROFILE%\Documents\maya\modules"
 if not exist "%MOD_DEST%" mkdir "%MOD_DEST%"
 
 (
-for %%Y in (2023 2024 2025 2026) do (
+for %%Y in (2022 2023 2024 2025 2026) do (
     echo + MAYAVERSION:%%Y PLATFORM:win64 dcc_mcp_maya %VERSION% %MODULE_DIR%
-    echo PYTHONPATH+:=python
+    if "%%Y"=="2022" (
+        echo PYTHONPATH+:=python37
+    ) else (
+        echo PYTHONPATH+:=python
+    )
     echo PLUG_IN_PATH+:=plug-ins
 )
 ) > "%MOD_DEST%\dcc_mcp_maya.mod"

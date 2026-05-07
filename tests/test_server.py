@@ -107,6 +107,7 @@ _skip_without_nested_meta = pytest.mark.skipif(
     ),
 )
 
+
 def _builtin_skills_dir():
     """Return the built-in skills directory, resolving it from the package."""
     from pathlib import Path

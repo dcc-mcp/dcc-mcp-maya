@@ -81,7 +81,7 @@ import sys
 import threading
 from pathlib import Path
 
-import maya.api.OpenMaya as om  # Python API 2.0 — required for MFnPlugin on Maya 2023+
+import maya.api.OpenMaya as om  # Python API 2.0 — required for MFnPlugin on Maya 2020+
 import maya.cmds as cmds
 
 logger = logging.getLogger(__name__)
@@ -107,9 +107,11 @@ def _ensure_package_importable() -> None:
     plugin_dir = Path(__file__).resolve().parent
     module_root = plugin_dir.parent
 
-    python_dir = module_root / "python"
+    python_dir = module_root / ("python37" if sys.version_info[:2] == (3, 7) else "python")
+    if not python_dir.is_dir():
+        python_dir = module_root / "python"
     python_str = str(python_dir)
-    if python_str not in sys.path:
+    if python_dir.is_dir() and python_str not in sys.path:
         sys.path.insert(0, python_str)
         logger.debug("Added %s to sys.path for dcc_mcp_maya package discovery", python_str)
 

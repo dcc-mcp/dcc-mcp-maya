@@ -24,7 +24,7 @@ the "never pumps" case and :class:`MayaStandaloneDispatcher` for the
 
 from __future__ import annotations
 
-from typing import Any, Callable, List
+from typing import Any, Callable, List, Optional
 from unittest.mock import MagicMock
 
 import pytest
@@ -102,7 +102,7 @@ class _NeverPumpingDispatcher:
         task: Callable[[], Any],
         affinity: str = "main",
         timeout_ms: int = 5_000,
-        on_complete: Callable[[Any], None] | None = None,
+        on_complete: Optional[Callable[[Any], None]] = None,
         **_: Any,
     ) -> dict:
         # Record the call but never invoke the callback.

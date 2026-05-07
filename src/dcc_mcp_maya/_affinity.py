@@ -101,10 +101,6 @@ def _derive_skill_root(source_file: str) -> Optional[str]:
     """
     scripts_dir = os.path.dirname(source_file)
     if os.path.basename(scripts_dir).lower() != "scripts":
-        # Some historical skills keep scripts at the skill root; that
-        # pattern is deprecated and we return ``None`` to signal the
-        # caller to use the default.  Do NOT guess — incorrect
-        # resolution is worse than a conservative default.
         return None
     return os.path.dirname(scripts_dir)
 

@@ -10,8 +10,8 @@ listener has not answered its first request yet.
 
 Core 0.14.28 first exposed the three-state probe in Rust and its Python
 binding (``dcc_mcp_core.ReadinessProbe`` + ``McpHttpServer.set_readiness_probe``);
-``pyproject.toml`` now pins the floor at 0.15.0, the SOLID crate-split
-release.  This module owns the **Maya-specific** half of the contract:
+``pyproject.toml`` now pins the floor at 0.15.3, the Python 3.7-capable
+core release.  This module owns the **Maya-specific** half of the contract:
 
 * flip ``dispatcher = true`` the moment the in-process executor is wired;
 * schedule a cheap no-op job on the UI dispatcher and flip ``dcc = true``

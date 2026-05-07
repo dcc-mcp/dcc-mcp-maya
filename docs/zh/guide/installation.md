@@ -78,8 +78,8 @@ maya.utils.executeDeferred(_start_mcp)
 每个 Maya 版本有独立的 Python 解释器，需分别安装：
 
 ```bash
-# Maya 2023
-"C:\Program Files\Autodesk\Maya2023\bin\mayapy.exe" -m pip install dcc-mcp-maya
+# Maya 2022（Python 3.7）
+"C:\Program Files\Autodesk\Maya2022\bin\mayapy.exe" -m pip install dcc-mcp-maya
 
 # Maya 2024
 "C:\Program Files\Autodesk\Maya2024\bin\mayapy.exe" -m pip install dcc-mcp-maya
@@ -91,8 +91,8 @@ maya.utils.executeDeferred(_start_mcp)
 同时运行多个 Maya 实例时，使用不同的端口：
 
 ```python
-# Maya 2023 实例
-handle = dcc_mcp_maya.start_server(port=8763)
+# Maya 2022 实例
+handle = dcc_mcp_maya.start_server(port=8762)
 
 # Maya 2024 实例
 handle = dcc_mcp_maya.start_server(port=8764)

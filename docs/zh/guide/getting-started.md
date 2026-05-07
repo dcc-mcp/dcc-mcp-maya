@@ -4,7 +4,7 @@
 
 ## 前置条件
 
-- Maya 2023 或更高版本（Python 3.9+）
+- Maya 2020 或更高版本（Python 3.7+）
 - 一个兼容 MCP 的宿主：[Claude Desktop](https://claude.ai/download)、[Cursor](https://cursor.sh/) 或 [OpenClaw](https://github.com/loonghao/openclaw)
 
 ## 第一步 — 安装
