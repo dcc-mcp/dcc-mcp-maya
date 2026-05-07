@@ -366,8 +366,8 @@ Add to `claude_desktop_config.json`:
 
 ## Requirements
 
-- Maya 2020+ (Python 3.7+)
-- [`dcc-mcp-core`](https://github.com/loonghao/dcc-mcp-core) ≥ 0.12.29
+- Maya 2023+ (Python 3.9+)
+- [`dcc-mcp-core`](https://github.com/loonghao/dcc-mcp-core) ≥ 0.15.0
 
 ## Cooperative Cancellation in Skill Scripts
 

@@ -347,19 +347,9 @@ class TestMayaUiDispatcher:
         assert hasattr(d, "dispatch_callable")
         assert callable(d.dispatch_callable)
 
-        if sys.version_info < (3, 8):
-            # typing.Protocol predates 3.8; on 3.7 the upstream class is a
-            # regular ABC and isinstance() returns False because we duck-type
-            # the contract rather than inherit. The structural assertions
-            # above are the binding contract on 3.7.
-            pytest.skip("Protocol isinstance check requires Python >= 3.8")
-
-        try:
-            from dcc_mcp_core._server.inprocess_executor import (
-                BaseDccCallableDispatcher,
-            )
-        except ImportError:
-            pytest.skip("dcc-mcp-core inprocess_executor not available")
+        from dcc_mcp_core._server.inprocess_executor import (
+            BaseDccCallableDispatcher,
+        )
 
         try:
             assert isinstance(d, BaseDccCallableDispatcher)

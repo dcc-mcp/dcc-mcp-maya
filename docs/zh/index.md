@@ -33,6 +33,6 @@ features:
     title: Skill 架构
     details: 热重载 Skill 包。通过 DCC_MCP_MAYA_SKILL_PATHS 发布自定义 Skill，无需修改核心代码。
   - icon: 🐍
-    title: Maya 2020+ / Python 3.7+
-    details: 已在 Maya 2020、2022、2023、2024、2025 上测试，支持 Python 3.7 至 3.12。
+    title: Maya 2023+ / Python 3.9+
+    details: 已在 Maya 2023、2024、2025 上测试，支持 Python 3.9 至 3.12。
 ---

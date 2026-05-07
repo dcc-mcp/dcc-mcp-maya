@@ -107,23 +107,6 @@ _skip_without_nested_meta = pytest.mark.skipif(
     ),
 )
 
-# The following Minimal-mode tests assert specific tool names and group
-# structures that depend on a matching dcc-mcp-core release (>= 0.15).
-# Pinning them to a version is brittle under CI matrices that resolve
-# dcc-mcp-core from PyPI, so mark them xfail (strict=False) until a
-# core release that ships the #385 fix and corresponding skill loader
-# behaviour is cut. Once that's in requirements.txt as a floor, flip
-# these back to strict assertions.
-_xfail_minimal_loader_pending_core_release = pytest.mark.xfail(
-    reason=(
-        "Minimal-mode skill dispatch shape depends on dcc-mcp-core >= 0.15 "
-        "(includes dcc-mcp-core#385). CI currently resolves an older core "
-        "from PyPI."
-    ),
-    strict=False,
-)
-
-
 def _builtin_skills_dir():
     """Return the built-in skills directory, resolving it from the package."""
     from pathlib import Path
@@ -610,34 +593,31 @@ class TestMinimalMode:
         finally:
             server.stop()
 
-    def test_minimal_false_loads_all_skills(self):
-        """With minimal=False, all discovered skills are loaded (legacy behaviour)."""
+    def test_minimal_false_discovers_without_eager_loading(self):
+        """With minimal=False, core discovers skills without applying minimal eager loading."""
         srv_mod = _import_server()
         server = srv_mod.MayaMcpServer(port=0)
         server.register_builtin_actions(
             extra_skill_paths=[_builtin_skills_dir()],
             minimal=False,
         )
-        # All 12 bundled skills should be loaded in legacy mode
-        assert server._server.loaded_count() >= 10
-        assert server._server.is_loaded("maya-scripting")
-        assert server._server.is_loaded("maya-scene")
-        assert server._server.is_loaded("maya-render")
+        assert server._server.loaded_count() == 0
+        assert not server._server.is_loaded("maya-scripting")
+        assert not server._server.is_loaded("maya-scene")
         server.stop()
 
-    def test_minimal_env_override(self):
-        """DCC_MCP_MAYA_MINIMAL=0 forces legacy full-load behaviour."""
+    def test_minimal_env_override_disables_eager_loading(self):
+        """DCC_MCP_MAYA_MINIMAL=0 disables Maya's declarative minimal-mode config."""
         srv_mod = _import_server()
         with patch.dict("os.environ", {"DCC_MCP_MAYA_MINIMAL": "0"}):
             server = srv_mod.MayaMcpServer(port=0)
             server.register_builtin_actions(
                 extra_skill_paths=[_builtin_skills_dir()],
-                minimal=None,  # let env var decide
+                minimal=None,
             )
-            assert server._server.loaded_count() >= 10
+            assert server._server.loaded_count() == 0
             server.stop()
 
-    @_xfail_minimal_loader_pending_core_release
     def test_minimal_tools_list_has_core_tools(self):
         """In minimal mode, tools/list contains execute_python and get_scene_info."""
         srv_mod = _import_server()
@@ -666,9 +646,9 @@ class TestMinimalMode:
         has_get_scene_info = any("get_scene_info" in n for n in names)
         assert has_execute_python, f"execute_python not found in tools: {names}"
         assert has_get_scene_info, f"get_scene_info not found in tools: {names}"
-        # Non-core skills should be stubs
-        skill_stubs = [n for n in names if n.startswith("__skill__")]
-        assert len(skill_stubs) > 0, "Expected __skill__ stubs for unloaded skills"
+        # Unloaded non-core skills remain discoverable through list_skills,
+        # not as expanded tools in the minimal tools/list page.
+        assert not any(n.startswith("__skill__") for n in names)
         # Extended/scene-management groups should be deactivated
         # (their tools should NOT appear as full tools)
         has_mesh_ops = any("mesh_ops" in n for n in names)
@@ -677,7 +657,6 @@ class TestMinimalMode:
         assert not has_new_scene, f"new_scene (scene-management group) should be deactivated: {names}"
         server.stop()
 
-    @_xfail_minimal_loader_pending_core_release
     def test_minimal_deactivates_extended_groups(self):
         """In minimal mode, extended groups are deactivated within loaded skills."""
         srv_mod = _import_server()
@@ -686,12 +665,11 @@ class TestMinimalMode:
             extra_skill_paths=[_builtin_skills_dir()],
             minimal=True,
         )
-        # Check that the registry has the groups but they're disabled
         registry = server._server.registry
         groups = registry.list_groups()
-        assert "extended" in groups
-        assert "scene-management" in groups
         assert "core" in groups
+        assert "scene-management" in groups
+        assert "extended" not in groups
         server.stop()
 
     def test_custom_default_tools_env(self):

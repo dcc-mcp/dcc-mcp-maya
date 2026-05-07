@@ -26,14 +26,11 @@ agent workflow must not waste tokens*.  Concretely we validate:
    * `search_tools` results strip bulky fields (`input_schema`, long
      `description`) that agents only need *after* selecting a hit.
 
-4. **RESTful surface graceful degradation** — for every documented
-   endpoint in the PR #667 contract (``/v1/healthz``, ``/v1/readyz``,
-   ``/v1/skills``, ``/v1/search``, ``/v1/describe``, ``/v1/call``,
-   ``/v1/context``, ``/v1/openapi.json``), we assert the server either
-   serves it with a well-formed body (when core is 0.14.22+) or returns
-   a proper 404 (older core).  No 5xx, ever.  The test is written so that
-   it will automatically start validating parity the moment the core
-   dependency ships the endpoints.
+4. **RESTful surface** — for every documented endpoint in the PR #667
+   contract (``/v1/healthz``, ``/v1/readyz``, ``/v1/skills``,
+   ``/v1/search``, ``/v1/describe``, ``/v1/call``, ``/v1/context``,
+   ``/v1/openapi.json``), we assert the server responds with a well-formed
+   body or a proper 404. No 5xx, ever.
 
 Test design follows SOLID:
     * ``_McpClient`` encapsulates the MCP streamable-HTTP handshake and
@@ -63,7 +60,6 @@ import pytest
 
 # Disable file-logging side-effects before the core is imported.
 os.environ.setdefault("DCC_MCP_DISABLE_FILE_LOGGING", "1")
-os.environ.setdefault("DCC_MCP_MAYA_CAPABILITY_MCP_TOOL", "1")
 
 # Prefer the in-tree source over any installed wheel so coverage counts.
 _SRC = os.path.join(os.path.dirname(os.path.dirname(__file__)), "src")
@@ -180,8 +176,8 @@ class _RestClient:
     """Thin wrapper for the per-DCC RESTful surface (PR loonghao/dcc-mcp-core#667).
 
     Every call returns a ``(status, body)`` tuple; we never raise on
-    non-2xx because the test suite needs to distinguish "endpoint absent
-    (older core)" from "endpoint failed (regression)".
+    non-2xx because endpoint absence and endpoint failure are distinct
+    assertions.
     """
 
     def __init__(self, base: str) -> None:
@@ -311,7 +307,8 @@ def test_manifest_actions_discoverable_via_search_tools(mcp):
     )
     assert target is not None, "maya_scripting__execute_python must be in the manifest"
 
-    # search_tools lives as an MCP tool on DccServerBase.
+    # search_tools indexes loaded tools; load the owning skill before searching.
+    mcp.tools_call("load_skill", {"skill_name": "maya-scripting"})
     resp = mcp.tools_call("search_tools", {"query": "python", "limit": 10})
     result = resp.get("result")
     assert result is not None, "search_tools required on core 0.14.23+: {}".format(resp)
@@ -323,8 +320,13 @@ def test_manifest_actions_discoverable_via_search_tools(mcp):
     hits_payload = json.loads(hits_text)
     hits = hits_payload.get("tools") or hits_payload.get("hits") or []
     names = [h.get("name") for h in hits if isinstance(h, dict)]
-    assert target["backend_tool"] in names, "search_tools lost manifest action {!r}; got {}".format(
-        target["backend_tool"], names
+    candidate_tools = []
+    for candidate in hits_payload.get("skill_candidates", []):
+        candidate_tools.extend(candidate.get("matching_tools", []))
+    assert target["backend_tool"] in names or "execute_python" in candidate_tools, (
+        "search_tools lost manifest action {!r}; got names={} candidates={}".format(
+            target["backend_tool"], names, candidate_tools
+        )
     )
 
 
@@ -717,19 +719,9 @@ class _ToolSpecFromCallableFixture:
     x: int
 
 
-def test_tool_spec_from_callable_is_importable_on_core_22():
-    """dcc-mcp-core#242 shipped :func:`tool_spec_from_callable` in 0.14.22.
-
-    ``dcc_mcp_maya.api.maya_typed_success`` relies on
-    :func:`derive_schema` from the same ``dcc_mcp_core.schema`` module.
-    If core ever drops either, our typed-output helper silently stops
-    producing ``output_schema`` — this test surfaces the regression
-    immediately.
-    """
-    try:
-        from dcc_mcp_core.schema import derive_schema, tool_spec_from_callable  # noqa: F401
-    except ImportError:
-        pytest.skip("core build lacks .schema module (pre-0.14.22)")
+def test_tool_spec_from_callable_is_importable():
+    """Typed-output helpers depend on core's schema module being present."""
+    from dcc_mcp_core.schema import derive_schema, tool_spec_from_callable  # noqa: F401
 
     def handler(n: int = 1) -> _ToolSpecFromCallableFixture:
         """Fixture handler — int in, dataclass out."""

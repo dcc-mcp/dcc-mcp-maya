@@ -30,17 +30,7 @@ fi
 # -- Generate .mod with absolute path to Maya modules dir --
 mkdir -p "$MOD_DEST"
 
-HAS_CP37=0
-if [ -d "$MODULE_DIR/python37" ]; then
-    HAS_CP37=1
-fi
-
 {
-    if [ "$HAS_CP37" -eq 1 ]; then
-        echo "+ MAYAVERSION:2022 PLATFORM:$PLATFORM dcc_mcp_maya $VERSION $MODULE_DIR"
-        echo "PYTHONPATH+:=python37"
-        echo "PLUG_IN_PATH+:=plug-ins"
-    fi
     for year in 2023 2024 2025 2026; do
         echo "+ MAYAVERSION:$year PLATFORM:$PLATFORM dcc_mcp_maya $VERSION $MODULE_DIR"
         echo "PYTHONPATH+:=python"

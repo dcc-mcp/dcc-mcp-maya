@@ -75,8 +75,7 @@ def download_core_wheels(version: str, platform: str, dest: Path) -> list[Path]:
     and ``--platform`` filtering is unreliable when the runner OS differs
     from the target platform).
 
-    Downloads both abi3 (cp38+, covers Maya 2023+) and cp37 (Maya 2022)
-    wheels where available.
+    Downloads abi3 wheels (cp38+, covers Maya 2023+).
     """
     import urllib.request
 
@@ -85,20 +84,11 @@ def download_core_wheels(version: str, platform: str, dest: Path) -> list[Path]:
     wheel_patterns: list[tuple[str, str]] = []
 
     if platform == "win64":
-        wheel_patterns = [
-            ("cp38-abi3-win_amd64", "cp38-abi3, win_amd64"),
-            ("cp37-cp37m-win_amd64", "cp37-cp37m, win_amd64"),
-        ]
+        wheel_patterns = [("cp38-abi3-win_amd64", "cp38-abi3, win_amd64")]
     elif platform == "linux":
-        wheel_patterns = [
-            ("cp38-abi3-manylinux", "cp38-abi3, manylinux x86_64"),
-            ("cp37-cp37m-manylinux", "cp37-cp37m, manylinux x86_64"),
-        ]
+        wheel_patterns = [("cp38-abi3-manylinux", "cp38-abi3, manylinux x86_64")]
     elif platform == "macos":
-        # No cp37 wheel on macOS — Maya 2022 not supported
-        wheel_patterns = [
-            ("cp38-abi3-macosx", "cp38-abi3, macosx universal2"),
-        ]
+        wheel_patterns = [("cp38-abi3-macosx", "cp38-abi3, macosx universal2")]
 
     # Query PyPI JSON API for available wheels
     pypi_url = f"https://pypi.org/pypi/dcc-mcp-core/{version}/json"
@@ -140,15 +130,13 @@ def download_core_wheels(version: str, platform: str, dest: Path) -> list[Path]:
 def extract_wheel(wheel_path: Path, dest: Path, *, extensions_only: bool = False, alt_dest: Path | None = None) -> None:
     """Extract a wheel into dest.
 
-    Uses zipfile directly instead of ``pip install --target`` so that
-    cross-Python-version wheels (e.g. cp37 on a py312 runner) can be
-    extracted without compatibility errors.
+    Uses zipfile directly instead of ``pip install --target`` so target
+    platform wheels can be extracted on any build runner.
 
     If extensions_only is True, only copy compiled extension files (.pyd/.so)
     to avoid overwriting Python source files from the abi3 wheel.  When
     *alt_dest* is provided and a file would overwrite an existing one in
-    *dest*, the file is placed in *alt_dest* instead (used for cp37 wheels
-    whose extensions share the same filename as abi3 but target Maya 2022).
+    *dest*, the file is placed in *alt_dest* instead.
     """
     import zipfile
 
@@ -166,7 +154,7 @@ def extract_wheel(wheel_path: Path, dest: Path, *, extensions_only: bool = False
                 if dest_file.suffix not in (".pyd", ".so", ".dylib"):
                     continue
                 # If the file already exists (e.g. from the abi3 wheel),
-                # put the cp37 extension in an alternate directory instead
+                # put the extension in an alternate directory instead
                 if dest_file.exists() and alt_dest is not None:
                     dest_file = alt_dest / info.filename
             dest_file.parent.mkdir(parents=True, exist_ok=True)
@@ -174,47 +162,36 @@ def extract_wheel(wheel_path: Path, dest: Path, *, extensions_only: bool = False
                 dst.write(src.read())
 
 
-def generate_mod_file(version: str, platform: str, has_cp37: bool = False, path: str = ".") -> str:
+def generate_mod_file(version: str, platform: str, path: str = ".") -> str:
     """Generate .mod file content for given platform and Maya versions.
 
     Args:
         version: Package version string.
         platform: Platform string (win64, linux, macos).
-        has_cp37: Whether cp37 (Maya 2022) extensions are available.
         path: Module root path. Use ``"."`` for relative paths (pipeline),
               or an absolute path for deployed installations.
     """
     lines = []
-    maya_versions = []
-    if has_cp37:
-        maya_versions.append("2022")
-    maya_versions.extend(["2023", "2024", "2025", "2026"])
+    maya_versions = ["2023", "2024", "2025", "2026"]
 
     for mv in maya_versions:
         lines.append(f"+ MAYAVERSION:{mv} PLATFORM:{platform} dcc_mcp_maya {version} {path}")
-        # Maya 2022 uses python37/ if cp37 extensions are available
-        if mv == "2022" and has_cp37:
-            lines.append("PYTHONPATH+:=python37")
-        else:
-            lines.append("PYTHONPATH+:=python")
+        lines.append("PYTHONPATH+:=python")
         lines.append("PLUG_IN_PATH+:=plug-ins")
 
     return "\n".join(lines) + "\n"
 
 
-def generate_module_info(version: str, has_cp37: bool = False) -> str:
+def generate_module_info(version: str) -> str:
     """Generate module-info.json content with build metadata.
 
     Included only in the pipeline ZIP for programmatic version queries.
     """
     supported = ["2023", "2024", "2025", "2026"]
-    if has_cp37:
-        supported.insert(0, "2022")
 
     info = {
         "name": "dcc_mcp_maya",
         "version": version,
-        "has_cp37": has_cp37,
         "supported_maya_versions": supported,
     }
     return json.dumps(info, indent=2) + "\n"
@@ -243,30 +220,12 @@ def assemble(project_root: Path, version: str, platform: str, output: Path) -> P
     core_version = resolve_core_version(project_root)
     print(f"  Resolved dcc-mcp-core version: >={core_version}")
 
-    has_cp37 = False
     with tempfile.TemporaryDirectory() as wheel_cache:
         wheels = download_core_wheels(core_version, platform, Path(wheel_cache))
-        # Sort: abi3 first (full extract), then cp37 (extensions only)
-        abi3_wheels = [w for w in wheels if "abi3" in w.name]
-        cp37_wheels = [w for w in wheels if "abi3" not in w.name]
-        for wheel in abi3_wheels:
+        for wheel in wheels:
             print(f"  Extracting {wheel.name} (full)...")
             extract_wheel(wheel, module_dir / "python")
-        if cp37_wheels:
-            python37_dir = module_dir / "python37"
-            python37_dir.mkdir(parents=True)
-            python_dir = module_dir / "python"
-            for item in python_dir.iterdir():
-                dest_item = python37_dir / item.name
-                if item.is_dir():
-                    shutil.copytree(item, dest_item)
-                else:
-                    shutil.copy2(item, dest_item)
-            for wheel in cp37_wheels:
-                print(f"  Extracting {wheel.name} (cp37 overlay to python37/)...")
-                extract_wheel(wheel, python37_dir, extensions_only=True)
-                has_cp37 = True
-    print("  Extracted dcc_mcp_core to python/" + (" and python37/" if has_cp37 else ""))
+    print("  Extracted dcc_mcp_core to python/")
 
     # 2. Copy Maya plugin
     plugin_src = project_root / "maya" / "plugin" / "dcc_mcp_maya_plugin.py"
@@ -278,24 +237,18 @@ def assemble(project_root: Path, version: str, platform: str, output: Path) -> P
     shutil.copy2(usersetup_src, module_dir / "scripts" / "userSetup.py")
     print("  Copied userSetup.py to scripts/")
 
-    # 4. Copy dcc_mcp_maya Python package (to both python/ and python37/ if present)
+    # 4. Copy dcc_mcp_maya Python package
     pkg_src = project_root / "src" / "dcc_mcp_maya"
     pkg_dest = module_dir / "python" / "dcc_mcp_maya"
     if pkg_dest.exists():
         shutil.rmtree(pkg_dest)
     shutil.copytree(pkg_src, pkg_dest)
     print("  Copied dcc_mcp_maya package to python/")
-    if has_cp37:
-        pkg_dest_37 = module_dir / "python37" / "dcc_mcp_maya"
-        if pkg_dest_37.exists():
-            shutil.rmtree(pkg_dest_37)
-        shutil.copytree(pkg_src, pkg_dest_37)
-        print("  Copied dcc_mcp_maya package to python37/")
 
     # 5. Generate .mod file with relative paths
-    mod_content = generate_mod_file(version, platform, has_cp37=has_cp37, path=".")
+    mod_content = generate_mod_file(version, platform, path=".")
     (module_dir / "dcc_mcp_maya.mod").write_text(mod_content, encoding="utf-8")
-    print(f"  Generated dcc_mcp_maya.mod (version={version}, platform={platform}, has_cp37={has_cp37})")
+    print(f"  Generated dcc_mcp_maya.mod (version={version}, platform={platform})")
 
     return module_dir
 
@@ -324,13 +277,10 @@ def assemble_pipeline(project_root: Path, version: str, platform: str, output: P
     """Assemble the pipeline ZIP with module-info.json, no install scripts."""
     module_dir = assemble(project_root, version, platform, output)
 
-    # Determine has_cp37 from python37/ existence
-    has_cp37 = (module_dir / "python37").is_dir()
-
     # Add module-info.json
-    info_content = generate_module_info(version, has_cp37=has_cp37)
+    info_content = generate_module_info(version)
     (module_dir / "module-info.json").write_text(info_content, encoding="utf-8")
-    print(f"  Generated module-info.json (version={version}, has_cp37={has_cp37})")
+    print(f"  Generated module-info.json (version={version})")
 
     # Add README-pipeline.txt
     readme_src = project_root / "packaging" / "README-pipeline.txt"

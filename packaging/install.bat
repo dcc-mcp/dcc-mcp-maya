@@ -23,15 +23,7 @@ REM -- Generate .mod with absolute path to Maya modules dir --
 set "MOD_DEST=%USERPROFILE%\Documents\maya\modules"
 if not exist "%MOD_DEST%" mkdir "%MOD_DEST%"
 
-set "HAS_CP37=0"
-if exist "%MODULE_DIR%\python37" set "HAS_CP37=1"
-
 (
-if "%HAS_CP37%"=="1" (
-    echo + MAYAVERSION:2022 PLATFORM:win64 dcc_mcp_maya %VERSION% %MODULE_DIR%
-    echo PYTHONPATH+:=python37
-    echo PLUG_IN_PATH+:=plug-ins
-)
 for %%Y in (2023 2024 2025 2026) do (
     echo + MAYAVERSION:%%Y PLATFORM:win64 dcc_mcp_maya %VERSION% %MODULE_DIR%
     echo PYTHONPATH+:=python
