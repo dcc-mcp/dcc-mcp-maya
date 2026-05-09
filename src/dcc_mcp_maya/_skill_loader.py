@@ -24,6 +24,4 @@ def build_minimal_mode_config(skill_names: Optional[Iterable[str]] = None) -> Mi
     return MinimalModeConfig(
         skills=skills,
         deactivate_groups=MINIMAL_DEACTIVATE_GROUPS,
-        env_var_minimal="DCC_MCP_MAYA_MINIMAL",
-        env_var_default_tools="DCC_MCP_MAYA_DEFAULT_TOOLS",
     )

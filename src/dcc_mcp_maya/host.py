@@ -1,4 +1,4 @@
-"""Maya host adapter for dcc-mcp-core 0.14.23 dispatchers."""
+"""Maya host adapter for dcc-mcp-core host dispatchers."""
 
 # Import future modules
 from __future__ import annotations
@@ -13,10 +13,10 @@ from dcc_mcp_core.host import HostAdapter
 class MayaCallableDispatcher:
     """Callable bridge used after native core dispatcher attachment.
 
-    ``McpHttpServer.attach_dispatcher`` owns the actual Queue/BlockingDispatcher
-    hop in core 0.14.23.  This bridge only prevents the Python in-process
-    executor from falling back to subprocess execution; the callable is already
-    running on the host-dispatched thread when it reaches this point.
+    ``McpHttpServer.attach_dispatcher`` owns the native dispatcher hop.
+    This bridge lets ``HostExecutionBridge`` share that same route for
+    in-process skill execution; the callable is already running on the
+    host-dispatched thread when it reaches this point.
     """
 
     def __init__(self, dispatcher: Any) -> None:

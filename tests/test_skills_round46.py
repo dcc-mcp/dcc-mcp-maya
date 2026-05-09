@@ -83,7 +83,7 @@ def tmp_skill(tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# 1. core 0.14.23 host dispatcher replaces per-action register_handler wiring
+# 1. core host execution bridge replaces per-action register_handler wiring
 # ---------------------------------------------------------------------------
 
 

@@ -29,6 +29,7 @@ from pathlib import Path
 from typing import Any, List, Optional
 
 # Import third-party modules
+from dcc_mcp_core import HostExecutionBridge
 from dcc_mcp_core.factory import create_dcc_server
 from dcc_mcp_core.server_base import DccServerBase
 
@@ -179,12 +180,15 @@ class MayaMcpServer(DccServerBase):
                 effective_cursor_safe,
             )
 
-        # Core 0.14.23 host dispatcher attached by the plugin/bootstrap.
-        # It is wrapped as a callable dispatcher for the in-process skill
-        # executor and attached directly to the Rust HTTP server so native
-        # handlers and REST calls share the same main-thread path.
+        if gateway_port == 0 or (gateway_port is None and not enable_gateway_failover):
+            self._config.gateway_port = 0
+
+        # Host dispatcher attached by the plugin/bootstrap.  The core
+        # HostExecutionBridge is the single adapter-facing execution path
+        # for direct host callables and in-process skill scripts.
         self._maya_dispatcher: Any = None
         self._host_dispatcher: Any = None
+        self._execution_bridge: HostExecutionBridge
 
         # ── Runtime readiness binder (issue #184) ──────────────────────
         # Constructed *before* dispatcher attachment so ``attach_dispatcher``
@@ -199,7 +203,7 @@ class MayaMcpServer(DccServerBase):
         if host_dispatcher is not None:
             self.attach_dispatcher(host_dispatcher)
         else:
-            self.register_inprocess_executor(None)
+            self._register_execution_bridge(None)
 
         # ── Context snapshot + capability manifest (issues #163 / #165) ──
         # Maya-specific context provider feeds both:
@@ -245,11 +249,11 @@ class MayaMcpServer(DccServerBase):
     # ── Lifecycle additions ────────────────────────────────────────────
 
     def attach_dispatcher(self, dispatcher: Any) -> None:
-        """Attach the core host dispatcher before skills are registered."""
+        """Attach the Maya host dispatcher before skills are registered."""
         self._maya_dispatcher = dispatcher
         self._host_dispatcher = dispatcher
         if dispatcher is None:
-            self.register_inprocess_executor(None)
+            self._register_execution_bridge(None)
             return
 
         native_attached = False
@@ -262,11 +266,9 @@ class MayaMcpServer(DccServerBase):
                 logger.debug("[%s] host dispatcher already attached: %s", self._dcc_name, exc)
                 native_attached = True
             except TypeError as exc:
-                logger.debug("[%s] dispatcher is not a core Queue/BlockingDispatcher: %s", self._dcc_name, exc)
-        if native_attached:
-            self.register_inprocess_executor(MayaCallableDispatcher(dispatcher))
-        else:
-            self.register_inprocess_executor(dispatcher)
+                logger.debug("[%s] dispatcher is not a native core dispatcher: %s", self._dcc_name, exc)
+        bridge_dispatcher = MayaCallableDispatcher(dispatcher) if native_attached else dispatcher
+        self._register_execution_bridge(bridge_dispatcher)
 
         # ── Readiness (issue #184) ─────────────────────────────────────
         # Re-bind through the readiness binder so a late
@@ -277,6 +279,14 @@ class MayaMcpServer(DccServerBase):
         # first dispatcher attachment inside ``__init__``.
         self._readiness.bound_server = None  # force re-bind
         self._readiness.bind(self)
+
+    def _register_execution_bridge(self, dispatcher: Any) -> None:
+        self._execution_bridge = HostExecutionBridge(
+            dispatcher=dispatcher,
+            runner=_executor.run_skill_script,
+            default_thread_affinity="main",
+        )
+        self.register_host_execution_bridge(self._execution_bridge)
 
     def stop(self) -> None:
         """Stop the HTTP server and drain any attached Maya dispatcher.
@@ -337,12 +347,9 @@ class MayaMcpServer(DccServerBase):
         return self
 
     def _build_minimal_mode_config(self, minimal: Optional[bool]) -> Any:
-        """Return Maya's core MinimalModeConfig or ``None`` for discovery-only mode."""
-        if not _env.resolve_minimal_flag(minimal):
+        """Return Maya's core MinimalModeConfig or ``None`` for full mode."""
+        if minimal is False:
             return None
-        custom_tools = _env.resolve_default_tools()
-        if custom_tools is not None:
-            return _skill_loader.build_minimal_mode_config(custom_tools.keys())
         return _skill_loader.build_minimal_mode_config()
 
     def _run_strict_skill_scan_if_enabled(

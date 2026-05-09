@@ -337,9 +337,8 @@ class TestMayaUiDispatcher:
     def test_dispatch_callable_satisfies_protocol(self):
         """:class:`MayaUiDispatcher` must satisfy ``BaseDccCallableDispatcher``.
 
-        Regression for issue #136: without this, ``register_inprocess_executor``
-        cannot route ``affinity: main`` tools through the UI thread and they
-        fall back to a ``mayapy`` subprocess.
+        Regression for issue #136: without this, ``HostExecutionBridge``
+        cannot route ``affinity: main`` tools through the UI thread.
         """
         from dcc_mcp_maya.dispatcher import MayaUiDispatcher
 

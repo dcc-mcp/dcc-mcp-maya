@@ -480,7 +480,7 @@ class TestScriptingHttpE2E:
         handle = server.start()
         request.cls._mcp_url = handle.mcp_url()
 
-        # maya-scripting lives in the minimal preload set, but be explicit
+        # maya-scripting lives in the minimal mode default set, but be explicit
         # so tests do not depend on the default-skill configuration.
         _mcp_post(
             request.cls._mcp_url,

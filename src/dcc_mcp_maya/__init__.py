@@ -133,7 +133,7 @@ __all__ = [
     "MayaMcpServer",
     "start_server",
     "stop_server",
-    # Host adapter (core 0.14.23 main-thread dispatcher)
+    # Host adapter (main-thread dispatcher)
     "MayaHost",
     "MayaCallableDispatcher",
     # Dispatchers — Python-side (callable dispatch, main-thread affinity)

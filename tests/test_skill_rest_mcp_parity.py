@@ -311,9 +311,9 @@ def test_manifest_actions_discoverable_via_search_tools(mcp):
     mcp.tools_call("load_skill", {"skill_name": "maya-scripting"})
     resp = mcp.tools_call("search_tools", {"query": "python", "limit": 10})
     result = resp.get("result")
-    assert result is not None, "search_tools required on core 0.14.23+: {}".format(resp)
+    assert result is not None, "search_tools required on core: {}".format(resp)
     assert not (isinstance(resp.get("error"), dict) and resp["error"].get("code") == -32601), (
-        "search_tools returned method-not-found on core 0.14.23+ build: {}".format(resp)
+        "search_tools returned method-not-found on core build: {}".format(resp)
     )
 
     hits_text = _extract_text(result)
@@ -458,7 +458,7 @@ def test_search_tools_strips_heavy_fields(mcp):
     """
     resp = mcp.tools_call("search_tools", {"query": "maya", "limit": 10})
     result = resp.get("result")
-    assert result is not None, "search_tools required on core 0.14.23+: {}".format(resp)
+    assert result is not None, "search_tools required on core: {}".format(resp)
     payload = json.loads(_extract_text(result))
     hits = payload.get("tools") or payload.get("hits") or []
     assert hits, "search_tools('maya') must return matching hits on the bundled catalogue"
@@ -514,7 +514,7 @@ _REST_ENDPOINTS: List[Tuple[str, str]] = [
 
 @pytest.mark.parametrize("method,path", _REST_ENDPOINTS)
 def test_rest_surface_is_mounted(rest: _RestClient, method: str, path: str):
-    """Core 0.14.23 requires the real per-DCC REST surface on Maya."""
+    """Core requires the real per-DCC REST surface on Maya."""
     status, body = rest.get(path) if method == "GET" else rest.post(path, {})
     assert status == 200, "{} {} returned {} with body {!r}".format(method, path, status, body[:200])
 
@@ -734,7 +734,7 @@ def test_tool_spec_from_callable_is_importable():
 
 
 def test_per_dcc_skill_rest_surface_tracking():
-    """The upstream gap is closed in core 0.14.23; Maya must expose REST."""
+    """The upstream REST surface is available; Maya must expose REST."""
     server = MayaMcpServer(port=0, enable_gateway_failover=False, gateway_port=0)
     handle = server.start()
     try:

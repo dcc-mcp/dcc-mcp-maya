@@ -370,7 +370,7 @@ def test_search_tools_then_call_roundtrip(running_server):
         },
         session_id=session,
     )
-    # ``search_tools`` is a required meta-tool on core 0.14.23+ (the
+    # ``search_tools`` is a required core meta-tool (the
     # lower bound declared in pyproject.toml). If it is missing the build
     # is broken; fail loudly instead of skipping.
     assert "error" not in search, "search_tools returned error envelope: {}".format(search.get("error"))
@@ -463,7 +463,7 @@ def _rest_post_json(base_url: str, endpoint: str, payload: dict) -> dict:
 
 @pytest.mark.parametrize("endpoint", ["/v1/healthz", "/v1/readyz", "/v1/openapi.json", "/v1/skills", "/v1/context"])
 def test_rest_endpoints_are_mounted(rest_base, endpoint):
-    """Core 0.14.23 exposes the real per-DCC REST skill API on Maya."""
+    """Core exposes the real per-DCC REST skill API on Maya."""
     body = _rest_get_json(rest_base, endpoint)
     assert isinstance(body, dict)
 

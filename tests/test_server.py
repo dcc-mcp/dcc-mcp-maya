@@ -121,6 +121,18 @@ def _builtin_skills_dir():
 
 
 class TestMayaMcpServerApi:
+    def test_explicit_gateway_port_zero_disables_gateway(self):
+        srv_mod = _import_server()
+        server = srv_mod.MayaMcpServer(port=0, gateway_port=0)
+        assert server._config.gateway_port == 0
+        server.stop()
+
+    def test_gateway_failover_false_disables_default_gateway(self):
+        srv_mod = _import_server()
+        server = srv_mod.MayaMcpServer(port=0, enable_gateway_failover=False)
+        assert server._config.gateway_port == 0
+        server.stop()
+
     def test_start_stop(self):
         """Server starts, returns a handle with mcp_url, then stops."""
         srv_mod = _import_server()
@@ -160,10 +172,10 @@ class TestMayaMcpServerApi:
         server = srv_mod.MayaMcpServer(port=0)
         assert server.mcp_url is None
 
-    # ── Issue #136: attach_dispatcher wires the in-process executor ───────
+    # ── Issue #136: attach_dispatcher wires the host execution bridge ─────
 
     def test_attach_dispatcher_registers_core_host_dispatcher(self):
-        """``attach_dispatcher`` must install the core 0.14.23 host path."""
+        """``attach_dispatcher`` must install the core HostExecutionBridge path."""
         srv_mod = _import_server()
         server = object.__new__(srv_mod.MayaMcpServer)
         server._dcc_name = "maya"
@@ -174,25 +186,27 @@ class TestMayaMcpServerApi:
         server._readiness = MagicMock()
 
         dispatcher = MagicMock(name="QueueDispatcher")
-        with patch.object(server, "register_inprocess_executor", autospec=True) as mock_register:
+        with patch.object(server, "register_host_execution_bridge", autospec=True) as mock_register:
             server.attach_dispatcher(dispatcher)
 
         server._server.attach_dispatcher.assert_called_once_with(dispatcher)
         assert mock_register.call_count == 1
+        assert server._execution_bridge.runner is srv_mod._executor.run_skill_script
         assert server._maya_dispatcher is dispatcher
 
     def test_detach_dispatcher_restores_inline_executor(self):
-        """``attach_dispatcher(None)`` keeps the inline in-process executor active."""
+        """``attach_dispatcher(None)`` keeps the inline host execution bridge active."""
         srv_mod = _import_server()
         server = object.__new__(srv_mod.MayaMcpServer)
         server._dcc_name = "maya"
         server._server = MagicMock()
         server._readiness = MagicMock()
 
-        with patch.object(server, "register_inprocess_executor", autospec=True) as mock_register:
+        with patch.object(server, "register_host_execution_bridge", autospec=True) as mock_register:
             server.attach_dispatcher(None)
 
-        mock_register.assert_called_once_with(None)
+        assert mock_register.call_count == 1
+        assert server._execution_bridge.dispatcher is None
         assert server._maya_dispatcher is None
 
 
@@ -608,9 +622,9 @@ class TestMinimalMode:
         server.stop()
 
     def test_minimal_env_override_disables_eager_loading(self):
-        """DCC_MCP_MAYA_MINIMAL=0 disables Maya's declarative minimal-mode config."""
+        """DCC_MCP_MINIMAL=0 disables core's declarative minimal-mode config."""
         srv_mod = _import_server()
-        with patch.dict("os.environ", {"DCC_MCP_MAYA_MINIMAL": "0"}):
+        with patch.dict("os.environ", {"DCC_MCP_MINIMAL": "0"}):
             server = srv_mod.MayaMcpServer(port=0)
             server.register_builtin_actions(
                 extra_skill_paths=[_builtin_skills_dir()],
@@ -674,9 +688,9 @@ class TestMinimalMode:
         server.stop()
 
     def test_custom_default_tools_env(self):
-        """DCC_MCP_MAYA_DEFAULT_TOOLS customises which skills are loaded."""
+        """DCC_MCP_DEFAULT_TOOLS customises which skills are loaded."""
         srv_mod = _import_server()
-        with patch.dict("os.environ", {"DCC_MCP_MAYA_DEFAULT_TOOLS": "maya-scripting,maya-render"}):
+        with patch.dict("os.environ", {"DCC_MCP_DEFAULT_TOOLS": "maya-scripting,maya-render"}):
             server = srv_mod.MayaMcpServer(port=0)
             server.register_builtin_actions(
                 extra_skill_paths=[_builtin_skills_dir()],

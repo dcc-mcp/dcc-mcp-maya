@@ -4,8 +4,8 @@ Covers the three transitions that ``/v1/readyz`` needs to stop lying
 during Maya's boot window:
 
 * ``process = True``    — always, once the Python interpreter is up.
-* ``dispatcher = True`` — after ``register_inprocess_executor`` wires
-  the in-process executor.
+* ``dispatcher = True`` — after ``HostExecutionBridge`` wires the
+  in-process executor.
 * ``dcc = True``        — after Maya's main thread pumps the first
   deferred no-op job (or synchronously on
   :class:`MayaStandaloneDispatcher`).
@@ -87,7 +87,7 @@ class _NeverPumpingDispatcher:
     """Fake UI dispatcher that *accepts* jobs but never runs them.
 
     Mimics a Maya that has its HTTP listener up (process green) and the
-    in-process executor attached (dispatcher green) but whose main thread
+    host execution bridge attached (dispatcher green) but whose main thread
     is still booting — the deferred callback never fires, so ``dcc``
     must stay red.
     """
@@ -145,8 +145,8 @@ class TestReadinessBinderBind:
     def test_bind_with_no_dispatcher_flips_all_green_inline_mode(self) -> None:
         """Inline executor mode (no host dispatcher) collapses the probe to green.
 
-        When ``register_inprocess_executor(None)`` is used, every
-        ``tools/call`` runs on the HTTP worker thread — there is no
+        When no host dispatcher is attached, every ``tools/call`` runs
+        on the HTTP worker thread — there is no
         separate Maya main thread to wait on, so the three-state probe
         reduces to "handler routing is live", which is already true the
         moment :meth:`bind` is called.

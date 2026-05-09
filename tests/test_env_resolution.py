@@ -14,60 +14,6 @@ import pytest
 from dcc_mcp_maya import _env
 
 
-class TestResolveMinimalFlag:
-    def test_explicit_true_wins(self):
-        with patch.dict(os.environ, {_env.ENV_MINIMAL: "0"}):
-            assert _env.resolve_minimal_flag(True) is True
-
-    def test_explicit_false_wins(self):
-        with patch.dict(os.environ, {_env.ENV_MINIMAL: "1"}):
-            assert _env.resolve_minimal_flag(False) is False
-
-    def test_env_zero_disables(self):
-        env = os.environ.copy()
-        env[_env.ENV_MINIMAL] = "0"
-        with patch.dict(os.environ, env, clear=True):
-            assert _env.resolve_minimal_flag(None) is False
-
-    def test_env_one_enables(self):
-        with patch.dict(os.environ, {_env.ENV_MINIMAL: "1"}):
-            assert _env.resolve_minimal_flag(None) is True
-
-    def test_default_when_unset(self):
-        env = os.environ.copy()
-        env.pop(_env.ENV_MINIMAL, None)
-        with patch.dict(os.environ, env, clear=True):
-            assert _env.resolve_minimal_flag(None) is True
-
-
-class TestResolveDefaultTools:
-    def test_unset_returns_none(self):
-        env = os.environ.copy()
-        env.pop(_env.ENV_DEFAULT_TOOLS, None)
-        with patch.dict(os.environ, env, clear=True):
-            assert _env.resolve_default_tools() is None
-
-    def test_blank_returns_none(self):
-        with patch.dict(os.environ, {_env.ENV_DEFAULT_TOOLS: ""}):
-            assert _env.resolve_default_tools() is None
-
-    def test_single_skill(self):
-        with patch.dict(os.environ, {_env.ENV_DEFAULT_TOOLS: "maya-scene"}):
-            assert _env.resolve_default_tools() == {"maya-scene": []}
-
-    def test_csv_skills_with_whitespace(self):
-        with patch.dict(os.environ, {_env.ENV_DEFAULT_TOOLS: "  maya-scene , maya-mesh-ops "}):
-            result = _env.resolve_default_tools()
-            assert result is not None
-            assert set(result.keys()) == {"maya-scene", "maya-mesh-ops"}
-
-    def test_skips_empty_tokens(self):
-        with patch.dict(os.environ, {_env.ENV_DEFAULT_TOOLS: ",a,,b,"}):
-            result = _env.resolve_default_tools()
-            assert result is not None
-            assert set(result.keys()) == {"a", "b"}
-
-
 class TestResolveMetricsEnabled:
     def test_explicit_true(self):
         with patch.dict(os.environ, {_env.ENV_METRICS: "0"}):

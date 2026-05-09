@@ -16,13 +16,11 @@ from __future__ import annotations
 import logging
 import os
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
 # ── Public env-var names ─────────────────────────────────────────────────────
-ENV_MINIMAL = "DCC_MCP_MAYA_MINIMAL"
-ENV_DEFAULT_TOOLS = "DCC_MCP_MAYA_DEFAULT_TOOLS"
 ENV_METRICS = "DCC_MCP_MAYA_METRICS"
 ENV_JOB_STORAGE = "DCC_MCP_MAYA_JOB_STORAGE"
 ENV_JOB_RECOVERY = "DCC_MCP_MAYA_JOB_RECOVERY"
@@ -44,43 +42,6 @@ ENV_ENABLE_WORKFLOWS = "DCC_MCP_MAYA_ENABLE_WORKFLOWS"
 ENV_CURSOR_SAFE_TOOL_NAMES = "DCC_MCP_MAYA_CURSOR_SAFE_TOOL_NAMES"
 #: Default SQLite filename inside the platform data directory.
 DEFAULT_JOB_DB_FILENAME = "jobs.db"
-
-
-def resolve_minimal_flag(minimal: Optional[bool]) -> bool:
-    """Resolve the minimal-mode flag from argument and env var.
-
-    Priority order:
-
-    1. Explicit ``minimal`` argument (when not ``None``).
-    2. ``DCC_MCP_MAYA_MINIMAL`` env var: ``"0"`` → ``False``, anything
-       else (including ``"1"``) → ``True``.
-    3. Default: ``True``.
-    """
-    if minimal is not None:
-        return minimal
-    env_val = os.environ.get(ENV_MINIMAL)
-    if env_val is not None:
-        return env_val.strip() != "0"
-    return True
-
-
-def resolve_default_tools() -> Optional[Dict[str, List[str]]]:
-    """Parse ``DCC_MCP_MAYA_DEFAULT_TOOLS`` into a ``{skill: [groups]}`` map.
-
-    Format: comma-separated list of skill names.  When set, only the
-    listed skills are loaded at startup.  Returns ``None`` when the env
-    var is unset or empty.
-    """
-    raw = os.environ.get(ENV_DEFAULT_TOOLS)
-    if not raw:
-        return None
-    result: Dict[str, List[str]] = {}
-    for token in raw.split(","):
-        token = token.strip()
-        if not token:
-            continue
-        result.setdefault(token, [])
-    return result
 
 
 def resolve_metrics_enabled(metrics_enabled: Optional[bool]) -> bool:

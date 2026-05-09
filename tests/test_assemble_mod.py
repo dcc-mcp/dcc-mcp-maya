@@ -30,7 +30,7 @@ def _make_fake_wheel(dest: Path, name: str, files: dict[str, bytes]) -> Path:
     return wheel_path
 
 
-def _make_fake_pyproject(dest: Path, core_version: str = "0.15.3") -> Path:
+def _make_fake_pyproject(dest: Path, core_version: str = "0.15.7") -> Path:
     toml_path = dest / "pyproject.toml"
     toml_path.write_text(
         f'[project]\ndependencies = [\n    "dcc-mcp-core>={core_version},<1.0.0",\n]\n',
@@ -84,7 +84,7 @@ class TestResolveCoreVersion:
 
 
 class TestDownloadCoreWheels:
-    def _mock_pypi_response(self, version: str = "0.15.3") -> dict:
+    def _mock_pypi_response(self, version: str = "0.15.7") -> dict:
         files = [
             f"dcc_mcp_core-{version}-cp37-cp37m-win_amd64.whl",
             f"dcc_mcp_core-{version}-cp37-cp37m-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
@@ -107,7 +107,7 @@ class TestDownloadCoreWheels:
         with patch("urllib.request.urlopen", return_value=mock_resp), patch(
             "urllib.request.urlretrieve", side_effect=fake_urlretrieve
         ):
-            wheels = assemble_mod.download_core_wheels("0.15.3", "win64", tmp_path)
+            wheels = assemble_mod.download_core_wheels("0.15.7", "win64", tmp_path)
         names = {wheel.name for wheel in wheels}
         assert len(wheels) == 2
         assert any("cp37-cp37m" in name for name in names)
@@ -125,7 +125,7 @@ class TestDownloadCoreWheels:
         with patch("urllib.request.urlopen", return_value=mock_resp), patch(
             "urllib.request.urlretrieve", side_effect=fake_urlretrieve
         ):
-            wheels = assemble_mod.download_core_wheels("0.15.3", "linux", tmp_path)
+            wheels = assemble_mod.download_core_wheels("0.15.7", "linux", tmp_path)
         names = {wheel.name for wheel in wheels}
         assert len(wheels) == 2
         assert any("cp37-cp37m" in name for name in names)
@@ -143,7 +143,7 @@ class TestDownloadCoreWheels:
         with patch("urllib.request.urlopen", return_value=mock_resp), patch(
             "urllib.request.urlretrieve", side_effect=fake_urlretrieve
         ):
-            wheels = assemble_mod.download_core_wheels("0.15.3", "macos", tmp_path)
+            wheels = assemble_mod.download_core_wheels("0.15.7", "macos", tmp_path)
         assert len(wheels) == 1
         assert "abi3" in wheels[0].name
 
@@ -395,7 +395,7 @@ class TestMain:
 class TestAssembleLive:
     def test_resolve_core_version_from_real_pypi(self):
         version = assemble_mod.resolve_core_version(PROJECT_ROOT)
-        assert assemble_mod._version_gte(version, "0.15.3")
+        assert assemble_mod._version_gte(version, "0.15.7")
 
     def test_download_win64_wheels_from_pypi(self, tmp_path):
         version = assemble_mod.resolve_core_version(PROJECT_ROOT)

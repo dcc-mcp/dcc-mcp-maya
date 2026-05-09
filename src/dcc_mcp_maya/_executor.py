@@ -1,10 +1,10 @@
 """In-process skill executor (issue #127).
 
-Extracted from the previous monolithic ``server.py``.  The old per-action
-``register_handler`` wiring has been removed; core 0.14.23 owns skill routing
-through its host dispatcher and global in-process executor.
+Extracted from the previous monolithic ``server.py``.  Core owns skill routing
+through ``HostExecutionBridge`` and the global in-process executor.
 
-This module keeps the direct script runner used by tests and internal helpers.
+This module keeps the direct script runner used by the bridge, tests, and
+internal helpers.
 
 See: https://github.com/loonghao/dcc-mcp-maya/issues/127
 """
