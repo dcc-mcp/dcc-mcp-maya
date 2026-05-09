@@ -1,5 +1,30 @@
 # Changelog
 
+## [0.2.27](https://github.com/loonghao/dcc-mcp-maya/compare/v0.2.26...v0.2.27) (2026-05-09)
+
+
+### Features
+
+* **readiness:** wire three-state ReadinessProbe into MayaMcpServer ([#184](https://github.com/loonghao/dcc-mcp-maya/issues/184)) ([#188](https://github.com/loonghao/dcc-mcp-maya/issues/188)) ([e96541a](https://github.com/loonghao/dcc-mcp-maya/commit/e96541a5626358130fc65b4fd4c4d621fd1c1b66))
+* **resources:** wire Maya scene + producers into core 0.15.0 ResourceRegistry ([#187](https://github.com/loonghao/dcc-mcp-maya/issues/187)) ([#190](https://github.com/loonghao/dcc-mcp-maya/issues/190)) ([cf4b4a1](https://github.com/loonghao/dcc-mcp-maya/commit/cf4b4a17c6d5e81ee5feab4535c83e27f2469978))
+* **shutdown:** harden plugin for non-cooperative Maya exits ([#186](https://github.com/loonghao/dcc-mcp-maya/issues/186)) ([#189](https://github.com/loonghao/dcc-mcp-maya/issues/189)) ([8c8f94e](https://github.com/loonghao/dcc-mcp-maya/commit/8c8f94e755f811b19feecf777d92cc4b662bfd96))
+* **skills:** restore 10 bundled skills for mayapy E2E coverage ([#180](https://github.com/loonghao/dcc-mcp-maya/issues/180)) ([5a70f6e](https://github.com/loonghao/dcc-mcp-maya/commit/5a70f6eed04491f554c53ea7b93e769bd9ffdb7e))
+
+
+### Bug Fixes
+
+* exclude __skill__*/__group__* stubs from tools/list (issue [#174](https://github.com/loonghao/dcc-mcp-maya/issues/174)) ([#185](https://github.com/loonghao/dcc-mcp-maya/issues/185)) ([8a4bff2](https://github.com/loonghao/dcc-mcp-maya/commit/8a4bff295d2be201316f007d6dc2ab45e43f7418))
+
+
+### Code Refactoring
+
+* align Maya adapter with core contracts ([8d36e5d](https://github.com/loonghao/dcc-mcp-maya/commit/8d36e5d063b43865e0eb27fecb5c0a6756a097b0))
+
+
+### Documentation
+
+* fix VitePress AGENTS links ([36198fb](https://github.com/loonghao/dcc-mcp-maya/commit/36198fba91391425915e6248d60e52b8ee01a635))
+
 ## [0.2.26](https://github.com/loonghao/dcc-mcp-maya/compare/v0.2.25...v0.2.26) (2026-05-03)
 
 
