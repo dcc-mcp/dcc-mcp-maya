@@ -386,7 +386,7 @@ def test_tool_call_response_respects_token_budget(running_server):
 
 
 # ---------------------------------------------------------------------------
-# Test 4 — REST /v1/* parity (best-effort, skipped on older cores)
+# Test 4 — REST /v1/* parity
 # ---------------------------------------------------------------------------
 
 

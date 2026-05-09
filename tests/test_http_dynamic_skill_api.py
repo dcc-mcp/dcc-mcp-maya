@@ -251,6 +251,7 @@ def test_http_post_initialize_and_list_tools(running_server, tmp_path):
         include_bundled=False,
         minimal=False,
     )
+    assert running_server.load_skill("maya-http-e2e-ping")
     handle = running_server.start()
     time.sleep(0.05)  # Rust listener warm-up
     mcp_url = handle.mcp_url()
@@ -316,6 +317,7 @@ def test_custom_skill_registered_and_callable_over_http(running_server, tmp_path
         include_bundled=False,
         minimal=False,
     )
+    assert running_server.load_skill("maya-http-e2e-write")
     handle = running_server.start()
     time.sleep(0.05)
     mcp_url = handle.mcp_url()
@@ -445,6 +447,7 @@ def test_malformed_skill_is_logged_and_does_not_poison_valid_skills(running_serv
         include_bundled=False,
         minimal=False,
     )
+    assert running_server.load_skill("maya-http-e2e-good")
     handle = running_server.start()
     time.sleep(0.05)
     mcp_url = handle.mcp_url()

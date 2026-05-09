@@ -1,4 +1,4 @@
-"""Tests for :func:`dcc_mcp_maya.api.maya_typed_success` (core 0.14.22).
+"""Tests for :func:`dcc_mcp_maya.api.maya_typed_success`.
 
 Context
 -------
@@ -230,38 +230,20 @@ def test_real_default_deriver_returns_none_when_core_schema_breaks(monkeypatch):
     # Simulate the ``from dcc_mcp_core.schema import derive_schema`` call
     # raising inside ``_default_schema_deriver``.  The helper must NOT
     # propagate the exception.
-    import dcc_mcp_core.schema as schema_mod
-
     import dcc_mcp_maya.api as api_mod
 
     def _broken(tp):
         raise ValueError("schema derivation broken")
 
-    monkeypatch.setattr(schema_mod, "derive_schema", _broken, raising=True)
+    monkeypatch.setattr(api_mod, "derive_schema", _broken, raising=True)
     assert api_mod._default_schema_deriver(SphereResult) is None
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Real-core parity (requires 0.14.22's ``derive_schema``)
+# Real-core parity
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def _has_derive_schema() -> bool:
-    try:
-        from dcc_mcp_core.schema import derive_schema  # noqa: F401
-
-        return True
-    except Exception:
-        return False
-
-
-requires_derive_schema = pytest.mark.skipif(
-    not _has_derive_schema(),
-    reason="installed dcc-mcp-core lacks .schema.derive_schema (pre-0.14.22)",
-)
-
-
-@requires_derive_schema
 def test_helper_schema_equals_derive_schema_standalone():
     """Regression lock: what the helper embeds MUST equal what a user
     would get from calling ``derive_schema`` themselves.
@@ -273,7 +255,6 @@ def test_helper_schema_equals_derive_schema_standalone():
     assert envelope["context"]["output_schema"] == standalone
 
 
-@requires_derive_schema
 def test_helper_respects_mcp_outputschema_contract():
     """The MCP spec (draft 2024-11-05) expects ``outputSchema`` to carry
     a JSON Schema with ``type``, ``properties``, and ``required`` (for

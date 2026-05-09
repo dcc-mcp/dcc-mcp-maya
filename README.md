@@ -74,8 +74,8 @@ The server starts automatically when the plugin loads.
 | `DCC_MCP_MAYA_SERVER_NAME` | `maya-mcp` | Name shown in MCP initialize |
 | `DCC_MCP_MAYA_SKILL_PATHS` | _(none)_ | Extra skill directories (semicolon-separated on Windows, colon on Unix) |
 | `DCC_MCP_SKILL_PATHS` | _(none)_ | Global fallback skill directories for all DCC adapters |
-| `DCC_MCP_MAYA_MINIMAL` | `1` | `0` = load all skills at startup (legacy); `1` = minimal core surface |
-| `DCC_MCP_MAYA_DEFAULT_TOOLS` | _(none)_ | Comma-separated skill names to load at startup (overrides minimal default) |
+| `DCC_MCP_MINIMAL` | `1` | `0` = full mode; `1` = minimal mode |
+| `DCC_MCP_DEFAULT_TOOLS` | _(none)_ | Comma-separated skill names to load at startup (overrides minimal default) |
 
 ### Progressive Loading (Minimal Mode)
 
@@ -99,11 +99,11 @@ All other skills appear as `__skill__<name>` stubs. The agent calls
 `activate_group("extended")` to expose additional tool groups within a
 loaded skill.
 
-**Opt out** (restore legacy full-load):
+**Opt out** (full mode):
 
 ```bash
 # Environment variable
-export DCC_MCP_MAYA_MINIMAL=0
+export DCC_MCP_MINIMAL=0
 ```
 
 ```python
@@ -117,7 +117,7 @@ handle = server.start()
 
 ```bash
 # Load only specific skills at startup
-export DCC_MCP_MAYA_DEFAULT_TOOLS="maya-scripting,maya-scene,maya-primitives"
+export DCC_MCP_DEFAULT_TOOLS="maya-scripting,maya-scene,maya-primitives"
 ```
 
 ### Bundled Skills (Zero Configuration)
@@ -367,7 +367,7 @@ Add to `claude_desktop_config.json`:
 ## Requirements
 
 - Maya 2020+ (Python 3.7+)
-- [`dcc-mcp-core`](https://github.com/loonghao/dcc-mcp-core) ≥ 0.12.29
+- [`dcc-mcp-core`](https://github.com/loonghao/dcc-mcp-core) ≥ 0.15.7
 
 ## Cooperative Cancellation in Skill Scripts
 

@@ -5,6 +5,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 from textwrap import dedent
+from typing import List, Optional
 
 # Make tools/ importable
 sys.path.insert(0, str(Path(__file__).parent.parent / "tools"))
@@ -15,7 +16,7 @@ import lint_skills  # noqa: E402
 # ---------------------------------------------------------------------------
 
 
-def make_skill_dir(tmp_path: Path, skill_name: str, skill_md: str, scripts: list[str] | None = None) -> Path:
+def make_skill_dir(tmp_path: Path, skill_name: str, skill_md: str, scripts: Optional[List[str]] = None) -> Path:
     """Create a minimal skill directory for testing."""
     skill_dir = tmp_path / skill_name
     skill_dir.mkdir()

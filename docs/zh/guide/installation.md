@@ -4,7 +4,7 @@
 
 - **Maya**：2020、2022、2023、2024 或 2025
 - **Python**：3.7 – 3.12（Maya 内嵌）
-- **dcc-mcp-core**：≥ 0.14.23（作为依赖自动安装）
+- **dcc-mcp-core**：≥ 0.15.7（作为依赖自动安装）
 
 ## 方式一 — pip 安装到 mayapy
 
@@ -49,7 +49,7 @@ mayapy -c "import dcc_mcp_maya; print(dcc_mcp_maya.__version__)"
 mayapy maya_bootstrap.py
 ```
 
-该 bootstrap 在 batch 模式下创建核心 `BlockingDispatcher`，对外暴露 `/mcp`，并在 `dcc-mcp-core>=0.14.23` 时暴露 per-DCC REST skill API `/v1/*`。
+该 bootstrap 在 batch 模式下创建核心 `BlockingDispatcher`，通过 core host bridge 对外暴露 `/mcp` 和 per-DCC REST skill API `/v1/*`。
 
 Maya 许可证是 CI 中的前置条件。将此命令放到自托管 runner 或有 Maya 许可证的环境中执行。
 
@@ -78,7 +78,7 @@ maya.utils.executeDeferred(_start_mcp)
 每个 Maya 版本有独立的 Python 解释器，需分别安装：
 
 ```bash
-# Maya 2022
+# Maya 2022（Python 3.7）
 "C:\Program Files\Autodesk\Maya2022\bin\mayapy.exe" -m pip install dcc-mcp-maya
 
 # Maya 2024

@@ -35,10 +35,7 @@ from __future__ import annotations
 from dcc_mcp_maya.__version__ import __version__
 from dcc_mcp_maya._env import (
     ENV_CURSOR_SAFE_TOOL_NAMES,
-    ENV_TOOL_EXPOSURE,
-    VALID_TOOL_EXPOSURE_MODES,
     resolve_cursor_safe_tool_names,
-    resolve_tool_exposure,
 )
 from dcc_mcp_maya._project_tools import (
     ENV_PROJECT_TOOLS,
@@ -136,7 +133,7 @@ __all__ = [
     "MayaMcpServer",
     "start_server",
     "stop_server",
-    # Host adapter (core 0.14.23 main-thread dispatcher)
+    # Host adapter (main-thread dispatcher)
     "MayaHost",
     "MayaCallableDispatcher",
     # Dispatchers — Python-side (callable dispatch, main-thread affinity)
@@ -202,11 +199,8 @@ __all__ = [
     "SCHEME_MAYA_PROJECT",
     "MayaResourceBinder",
     "install_resources",
-    # Gateway tool-exposure + cursor-safe naming (core 0.14.22)
-    "ENV_TOOL_EXPOSURE",
+    # Gateway cursor-safe naming
     "ENV_CURSOR_SAFE_TOOL_NAMES",
-    "VALID_TOOL_EXPOSURE_MODES",
-    "resolve_tool_exposure",
     "resolve_cursor_safe_tool_names",
     # Runtime readiness (issue #184) — Maya-side binder wrapping
     # ``dcc_mcp_core.ReadinessProbe`` (core 0.14.28+).  The three-state

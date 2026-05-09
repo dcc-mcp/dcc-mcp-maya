@@ -8,9 +8,7 @@ fix.  ``dcc-mcp-core`` 0.14.17 added :func:`correct_python_executable` and
 auto-correction.
 
 This module wraps both helpers behind a single ``auto_correct()`` entry point
-that is safe to call repeatedly (idempotent) and on any platform — when the
-helpers are unavailable (older core), it falls back to the previous behaviour
-of leaving the env var untouched.
+that is safe to call repeatedly (idempotent) and on any platform.
 """
 
 # Import future modules
@@ -21,23 +19,12 @@ import logging
 import os
 from typing import Optional
 
+# Import third-party modules
+from dcc_mcp_core import correct_python_executable, is_gui_executable
+
 logger = logging.getLogger(__name__)
 
 ENV_VAR = "DCC_MCP_PYTHON_EXECUTABLE"
-
-
-def _try_import_helpers():
-    """Lazy-import the core helpers; return ``(is_gui, correct)`` or ``(None, None)``.
-
-    Both helpers were added in ``dcc-mcp-core`` 0.14.17.  Older versions raise
-    :class:`ImportError`; we degrade silently in that case so the plugin keeps
-    working with the previous (manual) behaviour.
-    """
-    try:
-        from dcc_mcp_core import correct_python_executable, is_gui_executable  # noqa: PLC0415
-    except ImportError:
-        return None, None
-    return is_gui_executable, correct_python_executable
 
 
 def auto_correct(env_var: str = ENV_VAR) -> Optional[str]:
@@ -52,27 +39,20 @@ def auto_correct(env_var: str = ENV_VAR) -> Optional[str]:
       returned.
     * If the value already points to a Python interpreter (``mayapy``, ``python``,
       ``hython`` …) → returns the unchanged value.
-    * If the core helpers are unavailable (older core) → returns the unchanged
-      value untouched.
-
     Always idempotent: a second call after a successful correction is a no-op.
     """
     raw = os.environ.get(env_var, "").strip()
     if not raw:
         return None
 
-    is_gui, correct = _try_import_helpers()
-    if correct is None or is_gui is None:
-        return raw
-
     # Only rewrite when the value is **actually** a known DCC GUI binary; that
     # way arbitrary user-supplied Python paths (with non-canonical slashes,
     # spaces, etc.) are preserved verbatim.
-    if not is_gui(raw):
+    if not is_gui_executable(raw):
         return raw
 
     # Core may return a ``pathlib.Path``; coerce to plain ``str`` for the env.
-    fixed_raw = correct(raw)
+    fixed_raw = correct_python_executable(raw)
     fixed = str(fixed_raw) if fixed_raw is not None else ""
     if fixed and fixed != raw:
         os.environ[env_var] = fixed

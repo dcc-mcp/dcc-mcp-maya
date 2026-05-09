@@ -29,6 +29,7 @@ from pathlib import Path
 from typing import Any, List, Optional
 
 # Import third-party modules
+from dcc_mcp_core import HostExecutionBridge
 from dcc_mcp_core.factory import create_dcc_server
 from dcc_mcp_core.server_base import DccServerBase
 
@@ -44,7 +45,6 @@ from dcc_mcp_maya import (
     _version_probe,
 )
 from dcc_mcp_maya.__version__ import __version__
-from dcc_mcp_maya._env import resolve_exclude_stubs_from_tools_list
 from dcc_mcp_maya.capability_manifest import (
     MayaCapabilityManifestBuilder,
     build_manifest_payload,
@@ -107,7 +107,6 @@ class MayaMcpServer(DccServerBase):
         dcc_window_title: Optional[str] = None,
         dcc_window_handle: Optional[int] = None,
         enable_workflows: Optional[bool] = None,
-        tool_exposure: Optional[str] = None,
         cursor_safe_tool_names: Optional[bool] = None,
         host_dispatcher: Optional[Any] = None,
         readiness_timeout_secs: Optional[int] = None,
@@ -148,10 +147,7 @@ class MayaMcpServer(DccServerBase):
         # the upstream JobRecoveryPolicy contract (dcc-mcp-core#567) actually
         # honours ``DCC_MCP_MAYA_JOB_RECOVERY=requeue`` instead of always
         # dropping interrupted jobs (issue #139).
-        try:
-            self._config.job_recovery = self._job_recovery
-        except Exception as exc:  # noqa: BLE001
-            logger.debug("[%s] Could not propagate job_recovery to inner config: %s", "maya", exc)
+        self._config.job_recovery = self._job_recovery
         if self._job_recovery == "requeue":
             logger.info("[%s] Job recovery policy: requeue idempotent interrupted jobs", "maya")
 
@@ -170,58 +166,29 @@ class MayaMcpServer(DccServerBase):
                     exc,
                 )
 
-        # ── Gateway tool-exposure mode (dcc-mcp-core#652, 0.14.22) ──────
-        # ``DCC_MCP_MAYA_TOOL_EXPOSURE=slim|rest`` lets operators shrink
-        # the gateway ``tools/list`` page to just the meta-tools.  When
-        # unset we leave ``gateway_tool_exposure`` at whatever default
-        # the installed core wheel ships (today ``"full"``) so behaviour
-        # stays backward-compatible.
-        effective_exposure = _env.resolve_tool_exposure(tool_exposure)
-        if effective_exposure is not None:
-            try:
-                self._config.gateway_tool_exposure = effective_exposure
-                logger.info(
-                    "[%s] gateway_tool_exposure=%s",
-                    "maya",
-                    effective_exposure,
-                )
-            except Exception as exc:  # noqa: BLE001
-                # Older core wheels that predate #652 won't expose this
-                # attribute — that's fine; log at debug so a future
-                # Maya-compatible downgrade stays quiet.
-                logger.debug(
-                    "[%s] gateway_tool_exposure unavailable on inner config: %s",
-                    "maya",
-                    exc,
-                )
-
-        # ── Cursor-safe tool names (dcc-mcp-core#656, 0.14.22) ──────────
+        # ── Cursor-safe tool names ─────────────────────────────────────
         # Agents pointing Cursor/VS Code at a gateway want tool names
         # matching ``^[A-Za-z0-9_]+$``; set
         # ``DCC_MCP_MAYA_CURSOR_SAFE_TOOL_NAMES=0`` to opt out during a
         # migration window where SEP-986 dotted names are still needed.
         effective_cursor_safe = _env.resolve_cursor_safe_tool_names(cursor_safe_tool_names)
         if effective_cursor_safe is not None:
-            try:
-                self._config.gateway_cursor_safe_tool_names = bool(effective_cursor_safe)
-                logger.info(
-                    "[%s] gateway_cursor_safe_tool_names=%s",
-                    "maya",
-                    effective_cursor_safe,
-                )
-            except Exception as exc:  # noqa: BLE001
-                logger.debug(
-                    "[%s] gateway_cursor_safe_tool_names unavailable on inner config: %s",
-                    "maya",
-                    exc,
-                )
+            self._config.gateway_cursor_safe_tool_names = bool(effective_cursor_safe)
+            logger.info(
+                "[%s] gateway_cursor_safe_tool_names=%s",
+                "maya",
+                effective_cursor_safe,
+            )
 
-        # Core 0.14.23 host dispatcher attached by the plugin/bootstrap.
-        # It is wrapped as a callable dispatcher for the in-process skill
-        # executor and attached directly to the Rust HTTP server so native
-        # handlers and REST calls share the same main-thread path.
+        if gateway_port == 0 or (gateway_port is None and not enable_gateway_failover):
+            self._config.gateway_port = 0
+
+        # Host dispatcher attached by the plugin/bootstrap.  The core
+        # HostExecutionBridge is the single adapter-facing execution path
+        # for direct host callables and in-process skill scripts.
         self._maya_dispatcher: Any = None
         self._host_dispatcher: Any = None
+        self._execution_bridge: HostExecutionBridge
 
         # ── Runtime readiness binder (issue #184) ──────────────────────
         # Constructed *before* dispatcher attachment so ``attach_dispatcher``
@@ -236,7 +203,7 @@ class MayaMcpServer(DccServerBase):
         if host_dispatcher is not None:
             self.attach_dispatcher(host_dispatcher)
         else:
-            self.register_inprocess_executor(None)
+            self._register_execution_bridge(None)
 
         # ── Context snapshot + capability manifest (issues #163 / #165) ──
         # Maya-specific context provider feeds both:
@@ -282,11 +249,11 @@ class MayaMcpServer(DccServerBase):
     # ── Lifecycle additions ────────────────────────────────────────────
 
     def attach_dispatcher(self, dispatcher: Any) -> None:
-        """Attach the core host dispatcher before skills are registered."""
+        """Attach the Maya host dispatcher before skills are registered."""
         self._maya_dispatcher = dispatcher
         self._host_dispatcher = dispatcher
         if dispatcher is None:
-            self.register_inprocess_executor(None)
+            self._register_execution_bridge(None)
             return
 
         native_attached = False
@@ -299,11 +266,9 @@ class MayaMcpServer(DccServerBase):
                 logger.debug("[%s] host dispatcher already attached: %s", self._dcc_name, exc)
                 native_attached = True
             except TypeError as exc:
-                logger.debug("[%s] dispatcher is not a core Queue/BlockingDispatcher: %s", self._dcc_name, exc)
-        if native_attached:
-            self.register_inprocess_executor(MayaCallableDispatcher(dispatcher))
-        else:
-            self.register_inprocess_executor(dispatcher)
+                logger.debug("[%s] dispatcher is not a native core dispatcher: %s", self._dcc_name, exc)
+        bridge_dispatcher = MayaCallableDispatcher(dispatcher) if native_attached else dispatcher
+        self._register_execution_bridge(bridge_dispatcher)
 
         # ── Readiness (issue #184) ─────────────────────────────────────
         # Re-bind through the readiness binder so a late
@@ -314,6 +279,14 @@ class MayaMcpServer(DccServerBase):
         # first dispatcher attachment inside ``__init__``.
         self._readiness.bound_server = None  # force re-bind
         self._readiness.bind(self)
+
+    def _register_execution_bridge(self, dispatcher: Any) -> None:
+        self._execution_bridge = HostExecutionBridge(
+            dispatcher=dispatcher,
+            runner=_executor.run_skill_script,
+            default_thread_affinity="main",
+        )
+        self.register_host_execution_bridge(self._execution_bridge)
 
     def stop(self) -> None:
         """Stop the HTTP server and drain any attached Maya dispatcher.
@@ -361,95 +334,46 @@ class MayaMcpServer(DccServerBase):
         minimal: Optional[bool] = None,
         strict_scan: Optional[bool] = None,
     ) -> "MayaMcpServer":
-        """Discover skills, then optionally load only core skills.
-
-        Phase 1 calls the base-class implementation to populate the
-        :class:`SkillCatalog` (required for ``list_skills`` /
-        ``search_skills`` / ``load_skill`` to work).  Phase 2 wires the
-        in-process Python executor so loaded actions run inside the
-        live Maya interpreter (issue #108).  Phase 3 selects which
-        skills to fully load:
-
-        * ``minimal=True`` (the default) → load only
-          :data:`_skill_loader.MINIMAL_SKILLS` and deactivate the
-          per-skill ``__group__`` stubs in
-          :data:`_skill_loader.MINIMAL_DEACTIVATE_GROUPS`.
-        * ``minimal=False`` → load every discovered skill (legacy).
-        * ``DCC_MCP_MAYA_DEFAULT_TOOLS=skill1,skill2`` → load those
-          skills only (overrides ``minimal``).
-
-        When ``strict_scan=True`` (or ``DCC_MCP_MAYA_STRICT_SKILL_SCAN=1``),
-        the discovery is followed by :func:`dcc_mcp_core.scan_and_load_strict`
-        which raises :class:`ValueError` if any skill directory was
-        silently skipped (issue #138).
-
-        Returns ``self`` for chaining.
-        """
-        # Phase 1 — discover all skills.
+        """Discover Maya skills and attach Maya-specific core integrations."""
         super().register_builtin_actions(
             extra_skill_paths=extra_skill_paths,
             include_bundled=include_bundled,
+            minimal_mode=self._build_minimal_mode_config(minimal),
         )
+        self._run_strict_skill_scan_if_enabled(strict_scan, extra_skill_paths, include_bundled)
+        self._register_capability_manifest_tool()
+        self._attach_project_tools()
+        self._attach_resources()
+        return self
 
-        # Phase 1a — strict validation pass (issue #138). Raises
-        # ``ValueError`` when any skill directory was silently skipped.
+    def _build_minimal_mode_config(self, minimal: Optional[bool]) -> Any:
+        """Return Maya's core MinimalModeConfig or ``None`` for full mode."""
+        if minimal is False:
+            return None
+        return _skill_loader.build_minimal_mode_config()
+
+    def _run_strict_skill_scan_if_enabled(
+        self,
+        strict_scan: Optional[bool],
+        extra_skill_paths: Optional[List[str]],
+        include_bundled: bool,
+    ) -> None:
         if _env.resolve_strict_skill_scan(strict_scan):
             self._strict_skill_scan(extra_skill_paths, include_bundled)
 
-        # Phase 2 — load skills selectively. The in-process executor is
-        # installed in __init__/attach_dispatcher before discovery, so core
-        # owns routing for both eagerly loaded and dynamically loaded skills.
-        is_minimal = _env.resolve_minimal_flag(minimal)
-        custom_tools = _env.resolve_default_tools()
+    def _register_capability_manifest_tool(self) -> None:
+        try:
+            register_capability_mcp_tool(self, builder=self._capability_builder)
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("[%s] capability manifest MCP tool registration failed: %s", "maya", exc)
 
-        if not is_minimal:
-            _skill_loader.load_all_discovered_skills(self._server)
-        elif custom_tools is not None:
-            _skill_loader.load_minimal_skills(self._server, list(custom_tools.keys()))
-        else:
-            _skill_loader.load_minimal_skills(self._server, _skill_loader.MINIMAL_SKILLS)
-
-        # Phase 3 — optionally expose the compact Maya capability manifest
-        # as an MCP tool (issue #163).  Disabled by default because the
-        # ``registry.register`` call bumps the registry generation, which
-        # in multi-instance gateway mode can perturb __group__ stub
-        # aggregation.  Opt in via env var ``DCC_MCP_MAYA_CAPABILITY_MCP_TOOL=1``
-        # when you need it as a discoverable MCP tool.  The Python API
-        # (``MayaMcpServer.build_capability_manifest`` and
-        # ``publish_capability_snapshot``) remains available regardless.
-        if os.environ.get("DCC_MCP_MAYA_CAPABILITY_MCP_TOOL", "0").strip() == "1":
-            try:
-                register_capability_mcp_tool(self, builder=self._capability_builder)
-            except Exception as exc:  # noqa: BLE001
-                logger.debug("[%s] capability manifest MCP tool registration failed: %s", "maya", exc)
-
-        # Phase 4 — project-state persistence MCP/REST tools (issue #576).
-        # Adds ``project.save`` / ``project.load`` / ``project.resume`` /
-        # ``project.status`` so MCP agents can persist a Maya scene's
-        # working set (loaded assets, active skills, active tool groups,
-        # checkpoint IDs, free-form metadata) under
-        # ``<scene_dir>/.dcc-mcp/project.json`` and rehydrate it across
-        # Maya restarts.  The four handlers are pure filesystem
-        # operations — no Maya state is touched — so they are safe to
-        # register before any dispatcher is attached.  Opt out via
-        # ``DCC_MCP_MAYA_PROJECT_TOOLS=0`` when an embedding host wants
-        # to expose its own project surface.
+    def _attach_project_tools(self) -> None:
         try:
             self._project_tools = _project_tools.attach_to_server(self)
         except Exception as exc:  # noqa: BLE001
             logger.debug("[%s] project tools registration failed: %s", "maya", exc)
 
-        # Phase 5 — Maya resource publishing (issue #187 / core 0.15.0).
-        # Wires ``scene://current`` updates via the
-        # :class:`MayaContextSnapshotProvider` already created in
-        # ``__init__`` and registers a small fleet of dynamic
-        # producers (``maya-cmds://help/<cmd>`` / ``maya-cmds://flags/<cmd>``,
-        # ``maya-api://signatures/<class>``, ``maya-project://current``).
-        # ScriptJob hooks (``SceneSaved`` / ``SceneOpened`` / ...) are
-        # installed when running inside a real Maya — outside (mayapy
-        # without ``maya.cmds``, plain Python tests) this is a no-op.
-        # Opt out with ``DCC_MCP_MAYA_RESOURCES=0`` when a host wants
-        # to publish its own ``scene://current`` payload.
+    def _attach_resources(self) -> None:
         try:
             self._resources = _resources.install_resources(
                 self,
@@ -457,15 +381,6 @@ class MayaMcpServer(DccServerBase):
             )
         except Exception as exc:  # noqa: BLE001
             logger.debug("[%s] resources registration failed: %s", "maya", exc)
-
-        # ── Issue #174: optionally exclude ``__skill__*`` / ``__group__*``
-        #    stubs from the backend ``tools/list`` so that token-constrained
-        #    MCP clients don't pay the stub tax.  Discovery is still
-        #    possible via ``build_capability_manifest()`` and ``/v1/search``.
-        if resolve_exclude_stubs_from_tools_list():
-            _exclude_stub_tools(self._server)
-
-        return self
 
     def _strict_skill_scan(
         self,
@@ -846,115 +761,3 @@ def stop_server() -> None:
             _instance_holder[0].stop()
             _instance_holder[0] = None
     _server_instance = None
-
-
-def _exclude_stub_tools(server: Any) -> None:
-    """Unregister ``__skill__*`` / ``__group__*`` stubs from the registry.
-
-    Issue #174: when ``DCC_MCP_MAYA_EXCLUDE_STUBS_FROM_TOOLS_LIST=1``,
-    the backend ``tools/list`` must not expose Progressive-loading
-    placeholders.  This function collects stub names from the skill catalog
-    and group list, then removes each entry via ``registry.unregister``.
-
-    Note: in core 0.15.0+ these stubs are managed by the Rust layer and do
-    not appear in ``registry.list_actions()``, so we derive the names from
-    ``server.list_skills()`` (for ``__skill__*``) and
-    ``server.registry.list_groups()`` (for ``__group__*``).
-
-    Discovery is still possible via:
-
-    * :meth:`MayaMcpServer.build_capability_manifest`
-    * ``GET /v1/skills``
-    * ``GET /v1/search?q=<query>``
-
-    Args:
-        server: An :class:`McpHttpServer` instance (``self._server``).
-    """
-    registry = server.registry
-    stub_names: list = []
-
-    # ── Collect __skill__* stub names from the skill catalog ─────────────────
-    try:
-        skills = server.list_skills()
-        for skill in skills:
-            if isinstance(skill, dict):
-                name = skill.get("name", "")
-                loaded = skill.get("loaded", False)
-            else:
-                name = str(skill)
-                loaded = False
-            # Only unloaded skills are exposed as __skill__* stubs
-            if name and not loaded:
-                stub_names.append("__skill__" + name)
-    except Exception as exc:  # noqa: BLE001
-        logger.debug("[%s] Could not list skills for stub removal: %s", "maya", exc)
-
-    # ── Collect __group__* stub names from the group list ────────────────────
-    try:
-        groups = registry.list_groups()
-        for group_name in groups:
-            if group_name:
-                stub_names.append("__group__" + group_name)
-    except Exception as exc:  # noqa: BLE001
-        logger.debug("[%s] Could not list groups for stub removal: %s", "maya", exc)
-
-    # ── Also scan list_actions() for any remaining stubs (older core) ─────────
-    try:
-        all_tools = registry.list_actions()
-        for action in all_tools:
-            if isinstance(action, dict):
-                tool_name = action.get("name", "")
-            else:
-                tool_name = str(action)
-            if tool_name.startswith("__skill__") or tool_name.startswith("__group__"):
-                if tool_name not in stub_names:
-                    stub_names.append(tool_name)
-    except Exception as exc:  # noqa: BLE001
-        logger.debug("[%s] Could not list actions for stub removal: %s", "maya", exc)
-
-    removed = 0
-    for tool_name in stub_names:
-        try:
-            registry.unregister(tool_name)
-            removed += 1
-            logger.debug("[%s] Removed stub tool: %s", "maya", tool_name)
-        except Exception as exc:  # noqa: BLE001
-            logger.debug("[%s] Failed to unregister %r: %s", "maya", tool_name, exc)
-    if removed:
-        logger.info(
-            "[%s] Excluded %d stub tool(s) from tools/list (DCC_MCP_MAYA_EXCLUDE_STUBS_FROM_TOOLS_LIST=1)",
-            "maya",
-            removed,
-        )
-
-
-# ── Backwards-compatibility shims ──────────────────────────────────────────
-#
-# Issue #127 split this module into ``_env`` / ``_executor`` /
-# ``_skill_loader`` / ``_version_probe`` / ``_transport``.  The names below
-# are re-exported here so any existing test, downstream patcher, or skill
-# script that imports from ``dcc_mcp_maya.server`` keeps working without a
-# code change.  Each shim is a *zero-overhead* alias — same callable, same
-# behaviour.
-#
-# These names are NOT part of the public API documented in ``llms.txt``;
-# new code should import from the dedicated submodules.
-
-_run_skill_script = _executor.run_skill_script
-_execute_in_process = _executor.execute_in_process
-
-_load_minimal_skills = _skill_loader.load_minimal_skills
-_load_all_discovered_skills = _skill_loader.load_all_discovered_skills
-_MINIMAL_SKILLS = _skill_loader.MINIMAL_SKILLS
-_MINIMAL_DEACTIVATE_GROUPS = _skill_loader.MINIMAL_DEACTIVATE_GROUPS
-
-_resolve_minimal_flag = _env.resolve_minimal_flag
-_resolve_default_tools = _env.resolve_default_tools
-_ENV_MINIMAL = _env.ENV_MINIMAL
-_ENV_DEFAULT_TOOLS = _env.ENV_DEFAULT_TOOLS
-_ENV_METRICS = _env.ENV_METRICS
-_ENV_JOB_STORAGE = _env.ENV_JOB_STORAGE
-_ENV_JOB_RECOVERY = _env.ENV_JOB_RECOVERY
-_DEFAULT_JOB_DB_FILENAME = _env.DEFAULT_JOB_DB_FILENAME
-
-_maya_available = _version_probe.maya_available

@@ -81,7 +81,7 @@ import sys
 import threading
 from pathlib import Path
 
-import maya.api.OpenMaya as om  # Python API 2.0 — required for MFnPlugin on Maya 2022-2025
+import maya.api.OpenMaya as om  # Python API 2.0 — required for MFnPlugin on Maya 2020+
 import maya.cmds as cmds
 
 logger = logging.getLogger(__name__)
@@ -107,18 +107,11 @@ def _ensure_package_importable() -> None:
     plugin_dir = Path(__file__).resolve().parent
     module_root = plugin_dir.parent
 
-    maya_version = cmds.about(version=True)
-    try:
-        major = int(str(maya_version).split(".")[0])
-    except (ValueError, IndexError):
-        major = 2025
-
-    python_dir = module_root / "python37" if major == 2022 else module_root / "python"
+    python_dir = module_root / ("python37" if sys.version_info[:2] == (3, 7) else "python")
     if not python_dir.is_dir():
         python_dir = module_root / "python"
-
     python_str = str(python_dir)
-    if python_str not in sys.path:
+    if python_dir.is_dir() and python_str not in sys.path:
         sys.path.insert(0, python_str)
         logger.debug("Added %s to sys.path for dcc_mcp_maya package discovery", python_str)
 
@@ -302,11 +295,7 @@ def _start() -> None:
     """Start the MCP server (called from Maya main thread)."""
     global _handle, _host, _host_dispatcher
     try:
-        try:
-            from dcc_mcp_core.host import BlockingDispatcher, QueueDispatcher  # noqa: PLC0415
-        except (ImportError, SyntaxError):
-            BlockingDispatcher = None
-            QueueDispatcher = None
+        from dcc_mcp_core.host import BlockingDispatcher, QueueDispatcher  # noqa: PLC0415
 
         import dcc_mcp_maya  # noqa: PLC0415
 
@@ -321,19 +310,10 @@ def _start() -> None:
         except Exception as exc:  # noqa: BLE001 — never block plugin load
             logger.debug("commandPort warning suppression skipped: %s", exc)
         cfg = _resolve_config()
-        if BlockingDispatcher is not None and QueueDispatcher is not None:
-            _host_dispatcher = BlockingDispatcher() if cmds.about(batch=True) else QueueDispatcher()
-            _host = dcc_mcp_maya.MayaHost(_host_dispatcher)
-            _handle = dcc_mcp_maya.start_server(host_dispatcher=_host_dispatcher, **cfg)
-            _host.start()
-        else:
-            # Python 3.7 / Maya 2022 fallback: core's host module cannot load.
-            # Start the server with the inline in-process executor and let
-            # skills run synchronously on Maya's main thread.
-            logger.warning(
-                "dcc-mcp-core host dispatchers unavailable; starting MCP server without host adapter",
-            )
-            _handle = dcc_mcp_maya.start_server(**cfg)
+        _host_dispatcher = BlockingDispatcher() if cmds.about(batch=True) else QueueDispatcher()
+        _host = dcc_mcp_maya.MayaHost(_host_dispatcher)
+        _handle = dcc_mcp_maya.start_server(host_dispatcher=_host_dispatcher, **cfg)
+        _host.start()
         _print_startup_info(cfg)
     except Exception as exc:
         logger.error("Failed to start MCP server: %s", exc)

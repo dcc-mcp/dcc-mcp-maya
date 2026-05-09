@@ -1,7 +1,6 @@
 """Maya integration for ``dcc_mcp_core.register_project_tools`` (issue #576).
 
-Wires the four project-persistence MCP/REST tools added in
-``dcc-mcp-core >= 0.14.21``:
+Wires the four project-persistence MCP/REST tools from ``dcc-mcp-core``:
 
 * ``project.save``   — persist current Maya project state to ``.dcc-mcp/project.json``
 * ``project.load``   — read an existing ``project.json`` back
@@ -22,11 +21,9 @@ Design notes (SOLID)
 * **Interface Segregation** — :class:`ProjectToolsIntegration.bind`
   takes only the symbols it needs (``server`` for the registry, the
   resolver, an optional explicit ``DccProject``).
-* **Dependency Inversion** — ``register_project_tools`` is imported
-  lazily inside :meth:`bind` so importing this module never forces a
-  hard dependency on the project-tools surface (e.g. when an older
-  ``dcc-mcp-core`` is installed for some reason — although our
-  ``pyproject.toml`` pin makes that unlikely).
+* **Dependency Inversion** — scene resolution is isolated behind
+  :class:`MayaSceneResolver`, while core project persistence is used via
+  its public ``register_project_tools`` contract.
 
 Opt-out
 -------
@@ -43,6 +40,8 @@ import logging
 import os
 from pathlib import Path
 from typing import Any, Callable, Optional
+
+from dcc_mcp_core import DccProject, register_project_tools
 
 logger = logging.getLogger(__name__)
 
@@ -165,21 +164,8 @@ class ProjectToolsIntegration:
         -------
         bool
             ``True`` when the four tools were registered, ``False``
-            when the underlying core call could not run (older core
-            without ``register_project_tools``, missing inner server,
-            etc.).
+            when the inner server is unavailable or registration fails.
         """
-        try:
-            # Local import: keep the module importable on systems where
-            # the user pinned an older core for some reason.
-            from dcc_mcp_core import DccProject, register_project_tools  # noqa: PLC0415
-        except Exception as exc:  # noqa: BLE001
-            logger.debug(
-                "ProjectToolsIntegration.bind: register_project_tools unavailable: %s",
-                exc,
-            )
-            return False
-
         inner = self._inner_server(server)
         if inner is None:
             return False

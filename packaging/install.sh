@@ -21,29 +21,25 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
     MOD_DEST="$HOME/Library/Preferences/Autodesk/maya/modules"
     SCRIPTS_DEST="$HOME/Library/Preferences/Autodesk/maya/scripts"
     PLATFORM="macos"
+    MAYA_VERSIONS="2023 2024 2025 2026"
 else
     MOD_DEST="$HOME/maya/modules"
     SCRIPTS_DEST="$HOME/maya/scripts"
     PLATFORM="linux"
+    MAYA_VERSIONS="2022 2023 2024 2025 2026"
 fi
 
 # -- Generate .mod with absolute path to Maya modules dir --
 mkdir -p "$MOD_DEST"
 
-HAS_CP37=0
-if [ -d "$MODULE_DIR/python37" ]; then
-    HAS_CP37=1
-fi
-
 {
-    if [ "$HAS_CP37" -eq 1 ]; then
-        echo "+ MAYAVERSION:2022 PLATFORM:$PLATFORM dcc_mcp_maya $VERSION $MODULE_DIR"
-        echo "PYTHONPATH+:=python37"
-        echo "PLUG_IN_PATH+:=plug-ins"
-    fi
-    for year in 2023 2024 2025 2026; do
+    for year in $MAYA_VERSIONS; do
         echo "+ MAYAVERSION:$year PLATFORM:$PLATFORM dcc_mcp_maya $VERSION $MODULE_DIR"
-        echo "PYTHONPATH+:=python"
+        if [ "$year" = "2022" ]; then
+            echo "PYTHONPATH+:=python37"
+        else
+            echo "PYTHONPATH+:=python"
+        fi
         echo "PLUG_IN_PATH+:=plug-ins"
     done
 } > "$MOD_DEST/dcc_mcp_maya.mod"
