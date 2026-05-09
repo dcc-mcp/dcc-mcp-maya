@@ -336,7 +336,7 @@ class ProcessSentinel:
                 # ``O_NOINHERIT`` prevents child processes inheriting
                 # the handle, which would otherwise delay deletion
                 # until every child closes it too.  Both flags are
-                # Windows-only and always present on CPython 3.7+ there.
+                # Windows-only and always present on supported CPython builds.
                 flags |= os.O_TEMPORARY | os.O_NOINHERIT
             try:
                 self._fd = os.open(str(self.path), flags, mode)
@@ -375,10 +375,6 @@ class ProcessSentinel:
                     logger.debug("ProcessSentinel: close(%s) failed: %s", fd, exc)
             # On Windows with O_TEMPORARY the kernel already dropped the
             # file.  On POSIX we must unlink manually.
-            #
-            # ``Path.unlink(missing_ok=...)`` is Python 3.8+; we still
-            # support Python 3.7 / Maya 2022, so we catch
-            # ``FileNotFoundError`` ourselves instead.
             try:
                 self.path.unlink()
             except FileNotFoundError:

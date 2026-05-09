@@ -49,7 +49,7 @@ _LOG = logging.getLogger(__name__)
 
 # MCommandMessage output-type constants (mirror the OpenMaya enum values
 # so we can classify messages without keeping a live import around).
-# Values are stable across Maya 2020+.
+# Values are stable across supported Maya versions.
 _MSG_TYPE_INFO = 1  # kInfo
 _MSG_TYPE_WARNING = 2  # kWarning
 _MSG_TYPE_ERROR = 3  # kError

@@ -14,7 +14,7 @@ Embeds a standards-compliant MCP Streamable HTTP server (2025-03-26 spec) direct
 - **Repository:** https://github.com/loonghao/dcc-mcp-maya
 - **Python:** >=3.7
 - **Maya:** 2020+
-- **Core dependency:** `dcc-mcp-core>=0.14.21,<1.0.0`
+- **Core dependency:** `dcc-mcp-core>=0.15.7,<1.0.0`
 - **Entry point:** `dcc_mcp.adapters` → `maya = "dcc_mcp_maya:MayaMcpServer"`
 
 ---
@@ -443,8 +443,8 @@ tools:
 | `DCC_MCP_MAYA_SERVER_NAME` | `maya-mcp` | per-process | Name in MCP `initialize`. |
 | `DCC_MCP_MAYA_SKILL_PATHS` | — | per-process | Extra skill dirs (`;` Win, `:` Unix). |
 | `DCC_MCP_SKILL_PATHS` | — | global fallback | Global skill dirs for all DCC adapters. |
-| `DCC_MCP_MAYA_MINIMAL` | `1` | per-process | `0`=preload all; `1`=core skills only. |
-| `DCC_MCP_MAYA_DEFAULT_TOOLS` | — | per-process | Comma-separated skill names overriding minimal mode. |
+| `DCC_MCP_MINIMAL` | `1` | per-process | `0`=full mode; `1`=minimal mode. |
+| `DCC_MCP_DEFAULT_TOOLS` | — | per-process | Comma-separated skill names overriding minimal mode. |
 | `DCC_MCP_MAYA_METRICS` | `0` | per-process | `1`=enable Prometheus `/metrics`. |
 | `DCC_MCP_MAYA_JOB_STORAGE` | `<data_dir>/jobs.db` | per-process | SQLite job persistence path. `""`=disable. |
 | `DCC_MCP_MAYA_JOB_RECOVERY` | `drop` | per-process | `requeue`=resume idempotent interrupted jobs on startup. |

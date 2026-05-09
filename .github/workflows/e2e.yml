@@ -174,7 +174,7 @@ jobs:
           if mod_python not in sys.path:
               sys.path.insert(0, mod_python)
           import dcc_mcp_maya
-          handle = dcc_mcp_maya.start_server(port=7891)
+          handle = dcc_mcp_maya.start_server(port=7891, gateway_port=0, enable_gateway_failover=False)
           print('MCP server running at:', handle.mcp_url())
           # Wait for sentinel file (touched by the outer shell after the
           # mcporter calls complete) so we can tear down cleanly.

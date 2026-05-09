@@ -10,11 +10,7 @@ import threading
 from typing import Any, Dict, Optional
 
 # Import third-party modules
-try:
-    from dcc_mcp_core.host import BlockingDispatcher, QueueDispatcher  # noqa: E402
-except (ImportError, SyntaxError):  # pragma: no cover - Python 3.7 fallback
-    BlockingDispatcher = None  # type: ignore[assignment,misc]
-    QueueDispatcher = None  # type: ignore[assignment,misc]
+from dcc_mcp_core.host import BlockingDispatcher, QueueDispatcher
 
 # Import local modules
 from dcc_mcp_maya.host import MayaHost
@@ -59,11 +55,6 @@ def _install_signal_handlers() -> None:
 
 def main() -> Any:
     """Start the Maya MCP server and drive its host dispatcher."""
-    if BlockingDispatcher is None or QueueDispatcher is None:
-        raise RuntimeError(
-            "dcc-mcp-core host dispatchers unavailable on this interpreter; "
-            "install dcc-mcp-core>=0.14.23 on Python 3.8+",
-        )
     is_background = _maya_is_background()
     dispatcher = BlockingDispatcher() if is_background else QueueDispatcher()
     host = MayaHost(dispatcher)

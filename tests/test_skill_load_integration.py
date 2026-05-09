@@ -6,7 +6,7 @@ tool registered against the Maya MCP server, without going over HTTP:
 1. A custom skill (``SKILL.md`` + ``tools.yaml`` + ``scripts/*.py``) is written
    to a temporary directory.
 2. ``MayaMcpServer.register_builtin_actions(extra_skill_paths=[tmp])`` discovers
-   the skill, loads it, and wires the in-process Python executor.
+   the skill, then ``load_skill`` activates it and wires the in-process Python executor.
 3. The registered handler is invoked via :meth:`_execute_in_process` (the same
    call path used by ``tools/call``) and the on-disk side effects produced by
    the script are asserted directly.
@@ -97,6 +97,11 @@ def _action_name(skill_name: str, script_stem: str) -> str:
     return f"{skill_name.replace('-', '_')}__{script_stem}"
 
 
+def _discover_and_load(server, skill: Path) -> None:
+    server.register_builtin_actions(extra_skill_paths=[str(skill.parent)], include_bundled=False, minimal=False)
+    assert server.load_skill(skill.name)
+
+
 # ---------------------------------------------------------------------------
 # 1. Custom skill end-to-end (discovery + handler wiring + file side effect)
 # ---------------------------------------------------------------------------
@@ -113,7 +118,7 @@ class TestCustomSkillEndToEnd:
         )
         server = _make_server()
         try:
-            server.register_builtin_actions(extra_skill_paths=[str(skill.parent)], include_bundled=False, minimal=False)
+            _discover_and_load(server, skill)
 
             actions = server._server.registry.list_actions_enabled()
             names = {a["name"] for a in actions if isinstance(a, dict) and a.get("name")}
@@ -129,7 +134,7 @@ class TestCustomSkillEndToEnd:
         )
         server = _make_server()
         try:
-            server.register_builtin_actions(extra_skill_paths=[str(skill.parent)], include_bundled=False, minimal=False)
+            _discover_and_load(server, skill)
 
             assert server._server.has_handler(_action_name("maya-itest-handler", "noop"))
         finally:
@@ -154,7 +159,7 @@ class TestCustomSkillEndToEnd:
         )
         server = _make_server()
         try:
-            server.register_builtin_actions(extra_skill_paths=[str(skill.parent)], include_bundled=False, minimal=False)
+            _discover_and_load(server, skill)
             action_name = _action_name("maya-itest-write", "write")
             script_path = server._server.registry.get_action(action_name)["source_file"]
 
@@ -191,7 +196,7 @@ class TestCustomSkillEndToEnd:
         )
         server = _make_server()
         try:
-            server.register_builtin_actions(extra_skill_paths=[str(skill.parent)], include_bundled=False, minimal=False)
+            _discover_and_load(server, skill)
             action_name = _action_name("maya-itest-modify", "append")
             script_path = server._server.registry.get_action(action_name)["source_file"]
 
@@ -218,7 +223,7 @@ class TestCustomSkillEndToEnd:
         )
         server = _make_server()
         try:
-            server.register_builtin_actions(extra_skill_paths=[str(skill.parent)], include_bundled=False, minimal=False)
+            _discover_and_load(server, skill)
             action_name = _action_name("maya-itest-args", "echo")
             script_path = server._server.registry.get_action(action_name)["source_file"]
 
@@ -243,7 +248,7 @@ class TestCustomSkillEndToEnd:
         )
         server = _make_server()
         try:
-            server.register_builtin_actions(extra_skill_paths=[str(skill.parent)], include_bundled=False, minimal=False)
+            _discover_and_load(server, skill)
             action_name = _action_name("maya-itest-raise", "boom")
             script_path = server._server.registry.get_action(action_name)["source_file"]
 

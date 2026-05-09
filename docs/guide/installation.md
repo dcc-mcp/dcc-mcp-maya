@@ -4,7 +4,7 @@
 
 - **Maya**: 2020, 2022, 2023, 2024, or 2025
 - **Python**: 3.7 – 3.12 (embedded in Maya)
-- **dcc-mcp-core**: ≥ 0.14.23 (auto-installed as dependency)
+- **dcc-mcp-core**: ≥ 0.15.7 (auto-installed as dependency)
 
 ## Method 1 — pip into mayapy
 
@@ -49,7 +49,7 @@ For headless E2E or service-style runs, start Maya through the bundled bootstrap
 mayapy maya_bootstrap.py
 ```
 
-The bootstrap creates a core `BlockingDispatcher` in batch mode, exposes MCP at `/mcp`, and exposes the per-DCC REST skill API at `/v1/*` when using `dcc-mcp-core>=0.14.23`.
+The bootstrap creates a core `BlockingDispatcher` in batch mode, exposes MCP at `/mcp`, and exposes the per-DCC REST skill API at `/v1/*` through the core host bridge.
 
 Maya licensing is required for CI. Gate this command behind a self-hosted runner or a licensed Maya environment.
 
@@ -78,7 +78,7 @@ maya.utils.executeDeferred(_start_mcp)
 Each Maya version has its own Python interpreter. Install separately per version:
 
 ```bash
-# Maya 2022
+# Maya 2022 (Python 3.7)
 "C:\Program Files\Autodesk\Maya2022\bin\mayapy.exe" -m pip install dcc-mcp-maya
 
 # Maya 2024

@@ -24,7 +24,7 @@ For cross-machine HA deployments, see
    instances under *different* `DCC_MCP_REGISTRY_DIR` values makes them
    invisible to each other — only do this intentionally (e.g. per-user
    isolation).
-3. **`DCC_MCP_MAYA_MINIMAL` is per-process.** One instance can run in
+3. **`DCC_MCP_MINIMAL` is per-process.** One instance can run in
    minimal mode (just `maya-scripting` + `maya-scene`) while another
    runs full mode — the gateway reports each backend's active skill
    set independently.
@@ -74,8 +74,8 @@ The full, commented source is in
 | `DCC_MCP_MAYA_PORT` | per-process | `0` (OS-assigned) | HTTP port for this Maya's MCP server |
 | `DCC_MCP_GATEWAY_PORT` | per-host | unset (no gateway) | Port the elected gateway listens on |
 | `DCC_MCP_REGISTRY_DIR` | per-user | platform default | Shared registry every backend writes to |
-| `DCC_MCP_MAYA_MINIMAL` | per-process | `1` | Load only `maya-scripting` + `maya-scene` |
-| `DCC_MCP_MAYA_DEFAULT_TOOLS` | per-process | unset | Comma-separated list overriding minimal skill set |
+| `DCC_MCP_MINIMAL` | per-process | `1` | Minimal mode loads only `maya-scripting` + `maya-scene` |
+| `DCC_MCP_DEFAULT_TOOLS` | per-process | unset | Comma-separated list overriding minimal skill set |
 | `DCC_MCP_MAYA_HOT_RELOAD` | per-process | `0` | Watch bundled skills for edit-on-disk reload |
 | `DCC_MCP_MAYA_DCC_PID` | per-process | `os.getpid()` | Value advertised to gateway for `diagnostics__*` routing |
 
@@ -135,11 +135,11 @@ python -c "from dcc_mcp_core import get_config_dir; import shutil, os; \
 
 ### "One instance should run full mode, another minimal"
 
-Set `DCC_MCP_MAYA_MINIMAL` per-launcher, not globally.  A Windows
+Set `DCC_MCP_MINIMAL` per-launcher, not globally.  A Windows
 shortcut for the lookdev session might read:
 
 ```
-set DCC_MCP_MAYA_MINIMAL=0
+set DCC_MCP_MINIMAL=0
 "C:\Program Files\Autodesk\Maya2025\bin\maya.exe"
 ```
 

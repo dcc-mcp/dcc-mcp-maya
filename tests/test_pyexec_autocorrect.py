@@ -15,9 +15,6 @@ import os
 import sys
 from unittest.mock import patch
 
-# Import third-party modules
-import pytest
-
 # Import local modules
 from dcc_mcp_maya import _pyexec
 
@@ -55,7 +52,9 @@ class TestAutoCorrect:
         def fake_is_gui(p):
             return p == original
 
-        with patch.object(_pyexec, "_try_import_helpers", return_value=(fake_is_gui, fake_correct)):
+        with patch.object(_pyexec, "is_gui_executable", fake_is_gui), patch.object(
+            _pyexec, "correct_python_executable", fake_correct
+        ):
             with patch.dict(os.environ, {_pyexec.ENV_VAR: original}, clear=False):
                 assert _pyexec.auto_correct() == sibling
                 assert os.environ[_pyexec.ENV_VAR] == sibling
@@ -70,7 +69,9 @@ class TestAutoCorrect:
         def fake_is_gui(p):
             return False
 
-        with patch.object(_pyexec, "_try_import_helpers", return_value=(fake_is_gui, fake_correct)):
+        with patch.object(_pyexec, "is_gui_executable", fake_is_gui), patch.object(
+            _pyexec, "correct_python_executable", fake_correct
+        ):
             with patch.dict(os.environ, {_pyexec.ENV_VAR: sibling}, clear=False):
                 first = _pyexec.auto_correct()
                 second = _pyexec.auto_correct()
@@ -89,20 +90,14 @@ class TestAutoCorrect:
         def fake_is_gui(p):
             return True
 
-        with patch.object(_pyexec, "_try_import_helpers", return_value=(fake_is_gui, fake_correct)):
+        with patch.object(_pyexec, "is_gui_executable", fake_is_gui), patch.object(
+            _pyexec, "correct_python_executable", fake_correct
+        ):
             with patch.dict(os.environ, {_pyexec.ENV_VAR: gui}, clear=False):
                 with caplog.at_level(logging.WARNING, logger=_pyexec.__name__):
                     assert _pyexec.auto_correct() == gui
                 # Match either a true correction warning or the no-sibling warning.
                 assert any("GUI executable" in m or "headless" in m for m in caplog.messages)
-
-    def test_no_op_when_helpers_unavailable(self):
-        """Older core (no helpers) → leave env var untouched, return as-is."""
-        original = "anything-at-all"
-        with patch.object(_pyexec, "_try_import_helpers", return_value=(None, None)):
-            with patch.dict(os.environ, {_pyexec.ENV_VAR: original}, clear=False):
-                assert _pyexec.auto_correct() == original
-                assert os.environ[_pyexec.ENV_VAR] == original
 
     def test_non_gui_path_preserved_verbatim(self):
         """Arbitrary user-supplied paths must not be normalised or rewritten."""
@@ -114,21 +109,19 @@ class TestAutoCorrect:
         def fake_is_gui(p):
             return False
 
-        with patch.object(_pyexec, "_try_import_helpers", return_value=(fake_is_gui, fake_correct)):
+        with patch.object(_pyexec, "is_gui_executable", fake_is_gui), patch.object(
+            _pyexec, "correct_python_executable", fake_correct
+        ):
             with patch.dict(os.environ, {_pyexec.ENV_VAR: original}, clear=False):
                 assert _pyexec.auto_correct() == original
                 assert os.environ[_pyexec.ENV_VAR] == original
 
     def test_real_helpers_importable(self):
-        """Smoke test against the actual core helpers (requires core>=0.14.17)."""
-        is_gui, correct = _pyexec._try_import_helpers()
-        # If core is too old, both are None — that's still acceptable.
-        if correct is None:
-            pytest.skip("dcc-mcp-core < 0.14.17 — helpers unavailable")
-        assert callable(is_gui)
-        assert callable(correct)
+        """Smoke test against the actual core helpers."""
+        assert callable(_pyexec.is_gui_executable)
+        assert callable(_pyexec.correct_python_executable)
         # A python interpreter must round-trip unchanged (allow Path return).
-        assert os.fspath(correct(sys.executable)) == sys.executable
+        assert os.fspath(_pyexec.correct_python_executable(sys.executable)) == sys.executable
 
     def test_custom_env_var_name(self):
         """The helper accepts a custom env-var name for forward compatibility."""

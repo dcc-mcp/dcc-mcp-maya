@@ -76,6 +76,10 @@ import functools
 import logging
 from typing import Any, Callable, Dict, Generator, List, Optional, TypeVar
 
+# Import third-party modules
+from dcc_mcp_core.schema import derive_schema
+from dcc_mcp_core.skill import skill_error, skill_exception, skill_success, skill_warning
+
 logger = logging.getLogger(__name__)
 
 F = TypeVar("F", bound=Callable[..., Any])
@@ -106,8 +110,6 @@ def maya_success(message: str, prompt: Optional[str] = None, **context: Any) -> 
 
         return maya_success("Created sphere", object_name="pSphere1", radius=1.0)
     """
-    from dcc_mcp_core.skill import skill_success  # noqa: PLC0415
-
     return skill_success(message, prompt=prompt, **context)
 
 
@@ -138,8 +140,6 @@ def maya_error(
             possible_solutions=["Check the object name", "Use list_objects to see available nodes"],
         )
     """
-    from dcc_mcp_core.skill import skill_error  # noqa: PLC0415
-
     return skill_error(
         message,
         error,
@@ -176,8 +176,6 @@ def maya_warning(message: str, warning: str = "", prompt: Optional[str] = None, 
             object_name="pSphere1",
         )
     """
-    from dcc_mcp_core.skill import skill_warning  # noqa: PLC0415
-
     return skill_warning(message, warning=warning, prompt=prompt, **context)
 
 
@@ -212,8 +210,6 @@ def maya_from_exception(
             logger.exception("create_sphere failed")
             return maya_from_exception(exc, "Failed to create sphere")
     """
-    from dcc_mcp_core.skill import skill_exception  # noqa: PLC0415
-
     return skill_exception(
         exc,
         message=message,
@@ -741,8 +737,7 @@ def bounding_box_from_node(cmds: Any, node_name: str) -> Dict[str, Any]:
 # Design (SOLID)
 #   * Single responsibility — builds a forward-compat dict, nothing else.
 #     No IO, no Maya imports, no registry mutation.
-#   * Dependency injection — ``_schema_deriver`` can be swapped for
-#     testing / older core wheels without the upstream import in sight.
+#   * Dependency injection — ``_schema_deriver`` can be swapped in tests.
 #   * Open/closed — if/when core propagates tools.yaml ``outputSchema``
 #     we can layer the registry-side hook on top without touching skill
 #     scripts that already use :func:`maya_typed_success`.
@@ -750,11 +745,7 @@ def bounding_box_from_node(cmds: Any, node_name: str) -> Dict[str, Any]:
 
 
 def _default_schema_deriver(tp: Any) -> Optional[Dict[str, Any]]:
-    """Default schema deriver: prefer core's ``derive_schema`` when present."""
-    try:
-        from dcc_mcp_core.schema import derive_schema  # noqa: PLC0415
-    except ImportError:  # pragma: no cover — core always ships .schema on 0.14.22+
-        return None
+    """Default schema deriver using core's ``derive_schema``."""
     try:
         schema = derive_schema(tp)
     except Exception:  # noqa: BLE001 — never fail a skill over schema derivation

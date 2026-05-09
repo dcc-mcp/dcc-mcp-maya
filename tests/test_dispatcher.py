@@ -337,9 +337,8 @@ class TestMayaUiDispatcher:
     def test_dispatch_callable_satisfies_protocol(self):
         """:class:`MayaUiDispatcher` must satisfy ``BaseDccCallableDispatcher``.
 
-        Regression for issue #136: without this, ``register_inprocess_executor``
-        cannot route ``affinity: main`` tools through the UI thread and they
-        fall back to a ``mayapy`` subprocess.
+        Regression for issue #136: without this, ``HostExecutionBridge``
+        cannot route ``affinity: main`` tools through the UI thread.
         """
         from dcc_mcp_maya.dispatcher import MayaUiDispatcher
 
@@ -347,24 +346,13 @@ class TestMayaUiDispatcher:
         assert hasattr(d, "dispatch_callable")
         assert callable(d.dispatch_callable)
 
+        from dcc_mcp_core._server.inprocess_executor import (
+            BaseDccCallableDispatcher,
+        )
+
         if sys.version_info < (3, 8):
-            # typing.Protocol predates 3.8; on 3.7 the upstream class is a
-            # regular ABC and isinstance() returns False because we duck-type
-            # the contract rather than inherit. The structural assertions
-            # above are the binding contract on 3.7.
-            pytest.skip("Protocol isinstance check requires Python >= 3.8")
-
-        try:
-            from dcc_mcp_core._server.inprocess_executor import (
-                BaseDccCallableDispatcher,
-            )
-        except ImportError:
-            pytest.skip("dcc-mcp-core inprocess_executor not available")
-
-        try:
-            assert isinstance(d, BaseDccCallableDispatcher)
-        except TypeError:
-            pytest.skip("isinstance(Protocol) requires @runtime_checkable on this Python")
+            pytest.skip("Python 3.7 Protocol runtime checks differ from typing_extensions")
+        assert isinstance(d, BaseDccCallableDispatcher)
 
 
 # ── MayaStandaloneDispatcher tests ───────────────────────────────────────────
