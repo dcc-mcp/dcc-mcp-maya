@@ -7,7 +7,7 @@
 ## Project
 
 **dcc-mcp-maya** — Embed a standards-compliant MCP Streamable HTTP server directly inside Autodesk Maya.
-**Version:** 0.2.26 <!-- x-release-please-version -->
+**Version:** 0.2.27 <!-- x-release-please-version -->
 **License:** MIT
 **Repo:** https://github.com/loonghao/dcc-mcp-maya
 **Python:** >=3.7
@@ -57,7 +57,7 @@ stop_server() -> None
 MayaMcpServer(
     port: int = 8765,
     server_name: str = "maya-mcp",
-    server_version: str = "0.2.26",  # x-release-please-version
+    server_version: str = "0.2.27",  # x-release-please-version
     gateway_port: Optional[int] = None,
     registry_dir: Optional[str] = None,
     dcc_version: Optional[str] = None,
