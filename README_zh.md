@@ -75,8 +75,8 @@ print(handle.mcp_url())   # http://127.0.0.1:8765/mcp
 | `DCC_MCP_MAYA_SERVER_NAME` | `maya-mcp` | MCP initialize 中显示的名称 |
 | `DCC_MCP_MAYA_SKILL_PATHS` | _(无)_ | 额外的技能目录（Windows 用分号分隔，Unix 用冒号） |
 | `DCC_MCP_SKILL_PATHS` | _(无)_ | 所有 DCC 适配器的全局回退技能目录 |
-| `DCC_MCP_MAYA_MINIMAL` | `1` | `0` = 启动时加载所有技能（旧行为）；`1` = 最小核心工具面 |
-| `DCC_MCP_MAYA_DEFAULT_TOOLS` | _(无)_ | 启动时加载的逗号分隔技能名称（覆盖最小默认） |
+| `DCC_MCP_MINIMAL` | `1` | `0` = full mode；`1` = minimal mode |
+| `DCC_MCP_DEFAULT_TOOLS` | _(无)_ | 启动时加载的逗号分隔技能名称（覆盖最小默认） |
 
 ### 渐进式加载（最小模式）
 
@@ -99,7 +99,7 @@ print(handle.mcp_url())   # http://127.0.0.1:8765/mcp
 
 ```bash
 # 环境变量
-export DCC_MCP_MAYA_MINIMAL=0
+export DCC_MCP_MINIMAL=0
 ```
 
 ```python
@@ -113,7 +113,7 @@ handle = server.start()
 
 ```bash
 # 仅在启动时加载特定技能
-export DCC_MCP_MAYA_DEFAULT_TOOLS="maya-scripting,maya-scene,maya-primitives"
+export DCC_MCP_DEFAULT_TOOLS="maya-scripting,maya-scene,maya-primitives"
 ```
 
 ### 内置技能（零配置）
@@ -278,7 +278,7 @@ lint 在 `Lint Skills` CI 作业中运行，因此添加新工具而没有这些
 ## 要求
 
 - Maya 2020+（Python 3.7+）
-- [`dcc-mcp-core`](https://github.com/loonghao/dcc-mcp-core) ≥ 0.12.29
+- [`dcc-mcp-core`](https://github.com/loonghao/dcc-mcp-core) ≥ 0.15.7
 
 ## 技能脚本中的协作取消
 

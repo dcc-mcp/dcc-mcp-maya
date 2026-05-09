@@ -6,7 +6,7 @@ server plugin and all Python dependencies (including dcc-mcp-core).
 
 Requirements
 ------------
-- Autodesk Maya 2022, 2023, 2024, 2025, or 2026 (matching platform ZIP)
+- Autodesk Maya 2022, 2023, 2024, 2025, or 2026 (matching platform ZIP; Maya 2022 requires python37/, available in Windows/Linux packages)
 
 Installation
 ------------

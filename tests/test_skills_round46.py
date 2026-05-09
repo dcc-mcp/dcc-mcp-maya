@@ -83,7 +83,7 @@ def tmp_skill(tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# 1. core 0.14.23 host dispatcher replaces per-action register_handler wiring
+# 1. core host execution bridge replaces per-action register_handler wiring
 # ---------------------------------------------------------------------------
 
 
@@ -111,18 +111,17 @@ class TestExecutorRegistration:
 
 
 # ---------------------------------------------------------------------------
-# 2. _run_skill_script — the core script-execution helper
+# 2. run_skill_script — the core script-execution helper
 # ---------------------------------------------------------------------------
 
 
 class TestRunSkillScript:
-    """Tests for the module-level _run_skill_script helper (replaces the old
-    inline _maya_in_process_executor closure)."""
+    """Tests for the module-level run_skill_script helper."""
 
     def _run(self, script_path, params):
-        from dcc_mcp_maya.server import _run_skill_script
+        from dcc_mcp_maya._executor import run_skill_script
 
-        return _run_skill_script(str(script_path), params)
+        return run_skill_script(str(script_path), params)
 
     def test_params_forwarded_to_main(self, tmp_skill):
         """main() must receive the params dict as kwargs."""

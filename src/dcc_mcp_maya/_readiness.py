@@ -10,8 +10,8 @@ listener has not answered its first request yet.
 
 Core 0.14.28 first exposed the three-state probe in Rust and its Python
 binding (``dcc_mcp_core.ReadinessProbe`` + ``McpHttpServer.set_readiness_probe``);
-``pyproject.toml`` now pins the floor at 0.15.0, the SOLID crate-split
-release.  This module owns the **Maya-specific** half of the contract:
+``pyproject.toml`` now pins the floor at 0.15.7, the Python 3.7-capable
+core release.  This module owns the **Maya-specific** half of the contract:
 
 * flip ``dispatcher = true`` the moment the in-process executor is wired;
 * schedule a cheap no-op job on the UI dispatcher and flip ``dcc = true``
@@ -229,7 +229,7 @@ class ReadinessBinder:
            causes ``/v1/readyz`` to serve honest values.
         2. Flip ``dispatcher = true`` unconditionally — by the time
            :meth:`bind` is called, :meth:`MayaMcpServer.__init__` has
-           already invoked ``register_inprocess_executor``, so the Rust
+           already registered ``HostExecutionBridge``, so the Rust
            handler routing is live.
         3. If no host dispatcher is attached
            (``server._maya_dispatcher is None``), the inline executor
@@ -263,7 +263,7 @@ class ReadinessBinder:
         # Step 3 / 4 — dcc bit.
         dispatcher = server._maya_dispatcher
         if dispatcher is None:
-            # Inline executor path (``register_inprocess_executor(None)``):
+            # Inline execution bridge path:
             # every ``tools/call`` runs on the HTTP worker thread — there
             # is no separate Maya main thread to wait on, so the "dcc"
             # bit is meaningful only as "handler routing is live", which

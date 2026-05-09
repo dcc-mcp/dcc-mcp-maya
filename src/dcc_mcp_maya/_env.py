@@ -16,13 +16,11 @@ from __future__ import annotations
 import logging
 import os
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
 # ── Public env-var names ─────────────────────────────────────────────────────
-ENV_MINIMAL = "DCC_MCP_MAYA_MINIMAL"
-ENV_DEFAULT_TOOLS = "DCC_MCP_MAYA_DEFAULT_TOOLS"
 ENV_METRICS = "DCC_MCP_MAYA_METRICS"
 ENV_JOB_STORAGE = "DCC_MCP_MAYA_JOB_STORAGE"
 ENV_JOB_RECOVERY = "DCC_MCP_MAYA_JOB_RECOVERY"
@@ -36,75 +34,14 @@ ENV_STRICT_SKILL_SCAN = "DCC_MCP_MAYA_STRICT_SKILL_SCAN"
 #: (``workflows.run``, ``workflows.resume``, ``workflows.list_runs`` MCP
 #: tools).  Off by default so the minimal-mode tools/list stays small.
 ENV_ENABLE_WORKFLOWS = "DCC_MCP_MAYA_ENABLE_WORKFLOWS"
-#: dcc-mcp-core#652 (0.14.22) — opt-in gateway ``tools/list`` shaping.
-#: Accepted values: ``"full"`` (default — every backend tool fanned out),
-#: ``"slim"`` (gateway meta-tools only, backend reached via
-#: ``search_tools``/``call_tool``), ``"rest"`` (same as slim in
-#: ``tools/list``; backend lives on the per-DCC ``/v1/*`` surface), or
-#: ``"both"`` (transitional alias of ``"full"`` that keeps
-#: compatibility-layer semantics explicit).  Anything else falls back to
-#: ``"full"`` and logs a warning so a typo never kills startup.
-ENV_TOOL_EXPOSURE = "DCC_MCP_MAYA_TOOL_EXPOSURE"
 #: dcc-mcp-core#656 (0.14.22) — toggle the Cursor-safe tool-name format
 #: (``i_<id8>__<escaped_tool>``) emitted by the upstream gateway.  The
 #: default is ``True`` on the core side; set ``DCC_MCP_MAYA_CURSOR_SAFE_TOOL_NAMES=0``
 #: to restore the legacy dotted ``<id8>.<tool>`` form during a migration
 #: window.  Only consulted when a gateway port is configured.
 ENV_CURSOR_SAFE_TOOL_NAMES = "DCC_MCP_MAYA_CURSOR_SAFE_TOOL_NAMES"
-#: Issue #174 — when set to ``"1"``, ``__skill__*`` and ``__group__*``
-#: stubs are removed from the registry after skill discovery, so that
-#: the backend ``tools/list`` no longer exposes Progressive-loading
-#: placeholders.  This is the *backend half* of the REST-backed redesign:
-#: skill discovery moves to the capability catalog and ``/v1/search``,
-#: keeping the MCP ``tools/list`` compact for token-constrained clients.
-#:
-#: Default: ``"0"`` (stubs are registered — backwards-compatible).
-ENV_EXCLUDE_STUBS_FROM_TOOLS_LIST = "DCC_MCP_MAYA_EXCLUDE_STUBS_FROM_TOOLS_LIST"
-
-#: Accepted values for :data:`ENV_TOOL_EXPOSURE`.  Kept as a module-level
-#: tuple so the resolver and its unit tests share a single source of
-#: truth.
-VALID_TOOL_EXPOSURE_MODES = ("full", "slim", "both", "rest")
-
 #: Default SQLite filename inside the platform data directory.
 DEFAULT_JOB_DB_FILENAME = "jobs.db"
-
-
-def resolve_minimal_flag(minimal: Optional[bool]) -> bool:
-    """Resolve the minimal-mode flag from argument and env var.
-
-    Priority order:
-
-    1. Explicit ``minimal`` argument (when not ``None``).
-    2. ``DCC_MCP_MAYA_MINIMAL`` env var: ``"0"`` → ``False``, anything
-       else (including ``"1"``) → ``True``.
-    3. Default: ``True``.
-    """
-    if minimal is not None:
-        return minimal
-    env_val = os.environ.get(ENV_MINIMAL)
-    if env_val is not None:
-        return env_val.strip() != "0"
-    return True
-
-
-def resolve_default_tools() -> Optional[Dict[str, List[str]]]:
-    """Parse ``DCC_MCP_MAYA_DEFAULT_TOOLS`` into a ``{skill: [groups]}`` map.
-
-    Format: comma-separated list of skill names.  When set, only the
-    listed skills are loaded at startup.  Returns ``None`` when the env
-    var is unset or empty.
-    """
-    raw = os.environ.get(ENV_DEFAULT_TOOLS)
-    if not raw:
-        return None
-    result: Dict[str, List[str]] = {}
-    for token in raw.split(","):
-        token = token.strip()
-        if not token:
-            continue
-        result.setdefault(token, [])
-    return result
 
 
 def resolve_metrics_enabled(metrics_enabled: Optional[bool]) -> bool:
@@ -210,45 +147,6 @@ def resolve_enable_workflows(enable_workflows: Optional[bool] = None) -> bool:
     return os.environ.get(ENV_ENABLE_WORKFLOWS, "").strip() == "1"
 
 
-def resolve_tool_exposure(tool_exposure: Optional[str] = None) -> Optional[str]:
-    """Resolve the gateway ``tools/list`` shaping mode (core 0.14.22).
-
-    Returns one of the strings in :data:`VALID_TOOL_EXPOSURE_MODES`, or
-    ``None`` when neither caller nor environment supplied a value (in
-    which case callers should leave :attr:`McpHttpConfig.gateway_tool_exposure`
-    at whatever default the current core exposes — today ``"full"``).
-
-    Priority order:
-
-    1. Explicit ``tool_exposure`` argument (when not ``None``).
-    2. ``DCC_MCP_MAYA_TOOL_EXPOSURE`` env var.
-    3. Unset → return ``None`` so the inner config's default is kept.
-
-    Invalid values (typos, mixed-case beyond the canonical lowercase,
-    empty strings) collapse to ``None`` and emit a debug log line so a
-    Maya session never fails to start over a misconfigured env var.
-    """
-    raw: Optional[str]
-    if tool_exposure is not None:
-        raw = tool_exposure
-    else:
-        raw = os.environ.get(ENV_TOOL_EXPOSURE)
-    if raw is None:
-        return None
-    normalised = str(raw).strip().lower()
-    if not normalised:
-        return None
-    if normalised not in VALID_TOOL_EXPOSURE_MODES:
-        logger.warning(
-            "Ignoring invalid %s=%r (expected one of %s); falling back to inner default",
-            ENV_TOOL_EXPOSURE,
-            raw,
-            VALID_TOOL_EXPOSURE_MODES,
-        )
-        return None
-    return normalised
-
-
 def resolve_cursor_safe_tool_names(cursor_safe: Optional[bool] = None) -> Optional[bool]:
     """Resolve the Cursor-safe tool-name toggle (core 0.14.22).
 
@@ -282,60 +180,6 @@ def resolve_cursor_safe_tool_names(cursor_safe: Optional[bool] = None) -> Option
         raw,
     )
     return None
-
-
-# Backwards-compatibility aliases — the leading-underscore names mirror the
-# previous module-private constants in ``server.py`` so any unit test or
-# downstream patcher that reaches in still works.
-_ENV_MINIMAL = ENV_MINIMAL
-_ENV_DEFAULT_TOOLS = ENV_DEFAULT_TOOLS
-_ENV_METRICS = ENV_METRICS
-_ENV_JOB_STORAGE = ENV_JOB_STORAGE
-_ENV_JOB_RECOVERY = ENV_JOB_RECOVERY
-_DEFAULT_JOB_DB_FILENAME = DEFAULT_JOB_DB_FILENAME
-
-
-def resolve_exclude_stubs_from_tools_list(exclude: Optional[bool] = None) -> bool:
-    """Resolve whether to exclude ``__skill__*`` / ``__group__*`` stubs from ``tools/list``.
-
-    When ``True``, :meth:`MayaMcpServer.register_builtin_actions`
-    unregisters all ``__skill__<name>`` and ``__group__<name>`` entries
-    from the registry after :meth:`discover` so that the backend MCP
-    ``tools/list`` stays compact.  Discovery is still possible via the
-    capability catalog (``build_capability_manifest``) and the REST
-    ``/v1/search`` endpoint.
-
-    This is the *backend half* of the REST-backed redesign (issue #174):
-    the gateway already filters stubs on its side (core#677); this flag
-    removes them at the source so that every connected MCP client benefits,
-    not just the gateway.
-
-    **Default:** ``False`` — stubs are registered (backwards-compatible).
-
-    Priority order:
-
-    1. Explicit ``exclude`` argument (when not ``None``).
-    2. ``DCC_MCP_MAYA_EXCLUDE_STUBS_FROM_TOOLS_LIST`` env var:
-       ``"0"`` / ``"false"`` / ``"no"`` / ``"off"`` → ``False``
-       ``"1"`` / ``"true"`` / ``"yes"`` / ``"on"`` → ``True``
-    3. Unset → ``False``.
-    """
-    if exclude is not None:
-        return bool(exclude)
-    raw = os.environ.get(ENV_EXCLUDE_STUBS_FROM_TOOLS_LIST)
-    if raw is None:
-        return False
-    normalised = raw.strip().lower()
-    if normalised in ("0", "false", "no", "off"):
-        return False
-    if normalised in ("1", "true", "yes", "on"):
-        return True
-    logger.debug(
-        "Ignoring invalid %s=%r (expected 0/1/true/false); defaulting to False",
-        ENV_EXCLUDE_STUBS_FROM_TOOLS_LIST,
-        raw,
-    )
-    return False
 
 
 def _unused_marker(_value: Any) -> None:  # pragma: no cover

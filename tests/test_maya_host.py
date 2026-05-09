@@ -80,15 +80,16 @@ def test_detach_tick_kills_existing_script_job_and_is_idempotent():
     assert host._script_job is None
 
 
-def test_callable_dispatcher_strips_core_metadata():
+def test_callable_dispatcher_forwards_core_metadata():
     from dcc_mcp_maya.host import MayaCallableDispatcher
 
     dispatcher = MagicMock()
     bridge = MayaCallableDispatcher(dispatcher)
     fn = MagicMock(return_value={"ok": True})
 
-    result = bridge.dispatch_callable(fn, affinity="main", action_name="maya__tool", context=object())
+    context = object()
+    result = bridge.dispatch_callable(fn, affinity="main", action_name="maya__tool", context=context)
 
     assert result == {"ok": True}
-    fn.assert_called_once_with()
+    fn.assert_called_once_with(affinity="main", action_name="maya__tool", context=context)
     dispatcher.post.assert_not_called()

@@ -23,22 +23,14 @@ import logging
 import time
 from typing import Any, Dict, Optional, Tuple
 
+# Import third-party modules
+from dcc_mcp_core import PyPumpedDispatcher, PyStandaloneDispatcher  # noqa: F401
+
 # Import local modules
 from dcc_mcp_maya.dispatcher.standalone import MayaStandaloneDispatcher
 from dcc_mcp_maya.dispatcher.ui import MayaUiDispatcher
 
 logger = logging.getLogger(__name__)
-
-# ── Core dispatcher re-exports ────────────────────────────────────────────────
-# dcc-mcp-core 0.14.14+ ships ``PyPumpedDispatcher`` (Rust-backed, main-thread
-# pump) and ``PyStandaloneDispatcher`` (immediate synchronous dispatch).  We
-# re-export them here so callers can import from a single module without caring
-# whether the Rust extension is present.
-try:
-    from dcc_mcp_core import PyPumpedDispatcher, PyStandaloneDispatcher  # noqa: F401
-except ImportError:  # pragma: no cover — core is a hard dep at runtime
-    PyPumpedDispatcher = None  # type: ignore[assignment,misc]
-    PyStandaloneDispatcher = None  # type: ignore[assignment,misc]
 
 # ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -274,10 +266,6 @@ def create_pumped_dispatcher(
         ``(MayaStandaloneDispatcher(), None)`` when not inside an interactive
         Maya session or when ``PyPumpedDispatcher`` is not available.
     """
-    if PyPumpedDispatcher is None:
-        logger.warning("PyPumpedDispatcher not available — falling back to MayaStandaloneDispatcher")
-        return MayaStandaloneDispatcher(), None
-
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 

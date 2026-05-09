@@ -10,7 +10,7 @@
 `dcc-mcp-maya` embeds a standards-compliant MCP Streamable HTTP server directly inside Autodesk Maya. It exposes 73+ Maya operations as MCP tools that any AI agent (Claude, Cursor, Gemini, etc.) can call over HTTP — no external gateway, no subprocess bridge.
 
 **Current version:** 0.2.26 <!-- x-release-please-version -->
-**Core dependency:** `dcc-mcp-core>=0.14.21,<1.0.0`
+**Core dependency:** `dcc-mcp-core>=0.15.7,<1.0.0`
 **Python:** 3.7+
 **Maya:** 2020+
 
@@ -65,7 +65,7 @@ def create_sphere(radius: float = 1.0) -> dict:
 - **src/dcc_mcp_maya/dispatcher/** — `MayaUiDispatcher`, `MayaStandaloneDispatcher`, `MayaUiPump`, `check_maya_cancelled` (split into `job` / `cancel` / `ui` / `standalone` / `pump` submodules — public symbols re-exported from the package).
 - **maya/plugin/dcc_mcp_maya_plugin.py** — Maya plugin entry point (`initializePlugin`, `uninitializePlugin`, menu, gateway auto-config).
 - **tests/** — 50+ unit tests, E2E tests (tahv/mayapy 2022–2025), multi-instance gateway tests.
-- **Upstream `dcc-mcp-core` API reference** — https://github.com/loonghao/dcc-mcp-core/blob/main/llms.txt — authoritative one-page index of every public symbol re-used by this repo (`DccServerBase`, `MinimalModeConfig`, `BaseDccCallableDispatcher`, `register_inprocess_executor`, `is_gui_executable` / `correct_python_executable`, `FileRegistry`, `check_dcc_cancelled`, `JobHandle`, result-envelope factories, etc.). Always consult this first before adding a new helper locally — most "missing" utilities already exist upstream and are simply waiting to be wired in.
+- **Upstream `dcc-mcp-core` API reference** — https://github.com/loonghao/dcc-mcp-core/blob/main/llms.txt — authoritative one-page index of every public symbol re-used by this repo (`DccServerBase`, `MinimalModeConfig`, `HostExecutionBridge`, `BaseDccCallableDispatcher`, `is_gui_executable` / `correct_python_executable`, `FileRegistry`, `check_dcc_cancelled`, `JobHandle`, result-envelope factories, etc.). Always consult this first before adding a new helper locally — most "missing" utilities already exist upstream and are simply waiting to be wired in.
 
 ### Layer 4 — You Are an AI Agent Reading This
 *Goal: Discover and use tools effectively inside a live Maya session.*
@@ -230,7 +230,7 @@ The three-state probe itself (`process` / `dispatcher` / `dcc`) lives in `dcc-mc
 | Bit           | Flips to `true` when…                                                                                                               |
 |---------------|-------------------------------------------------------------------------------------------------------------------------------------|
 | `process`     | Python interpreter is alive (always `true` while the server object exists — core's default).                                        |
-| `dispatcher`  | `register_inprocess_executor(...)` has wired the in-process executor (unconditional — the binder flips it the moment `__init__` returns). |
+| `dispatcher`  | `HostExecutionBridge` has wired the in-process executor (unconditional — the binder flips it the moment `__init__` returns). |
 | `dcc`         | A host dispatcher is attached **and** Maya's main thread has pumped one deferred no-op, **or** — in inline executor mode (no host dispatcher, `mayapy` / tests) — immediately, since the HTTP worker thread *is* the pump. |
 
 Entry points:
@@ -304,18 +304,17 @@ All other skills appear as `__skill__<name>` stubs (default behavior). Call `loa
 
 **Note:** Set ``DCC_MCP_MAYA_EXCLUDE_STUBS_FROM_TOOLS_LIST=1`` to exclude ``__skill__*`` / ``__group__*`` stubs from ``tools/list`` (issue #174). Discovery is still possible via ``build_capability_manifest()`` and ``/v1/search``.
 
-### Environment Variables (Maya-Specific)
+### Environment Variables
 | Variable | Default | Purpose |
 |----------|---------|---------|
 | `DCC_MCP_MAYA_PORT` | `8765` | TCP port for MCP HTTP server. |
 | `DCC_MCP_MAYA_SERVER_NAME` | `maya-mcp` | Name in MCP `initialize` response. |
 | `DCC_MCP_MAYA_SKILL_PATHS` | — | Extra skill directories (`;` on Windows, `:` on Unix). |
-| `DCC_MCP_MAYA_MINIMAL` | `1` | `0` = preload all skills; `1` = minimal startup. |
-| `DCC_MCP_MAYA_DEFAULT_TOOLS` | — | Comma-separated skill names to preload (overrides minimal). |
+| `DCC_MCP_MINIMAL` | `1` | `0` = full mode; `1` = minimal mode. |
+| `DCC_MCP_DEFAULT_TOOLS` | — | Comma-separated skill names to load at startup (overrides minimal). |
 | `DCC_MCP_MAYA_METRICS` | `0` | `1` = enable Prometheus `/metrics` endpoint. |
 | `DCC_MCP_MAYA_JOB_STORAGE` | `<data_dir>/jobs.db` | SQLite job persistence path. |
 | `DCC_MCP_MAYA_JOB_RECOVERY` | `drop` | `requeue` = resume idempotent jobs on startup. |
-| `DCC_MCP_MAYA_TOOL_EXPOSURE` | — (core default `full`) | Gateway `tools/list` shaping (core 0.14.22 / #652): `full` \| `slim` \| `both` \| `rest`. Invalid values fall back to the inner default. |
 | `DCC_MCP_MAYA_CURSOR_SAFE_TOOL_NAMES` | — (core default `1`) | Toggle Cursor-safe gateway tool names (core 0.14.22 / #656). Set `0` during SEP-986 migration. |
 | `DCC_MCP_MAYA_READINESS_TIMEOUT_SECS` | — | Advisory Maya-side timeout (positive integer seconds) for the runtime readiness probe (issue #184). Consumed by orchestrators that want to bound how long a cold Maya can stall before `/v1/readyz` is considered permanently red. |
 | `DCC_MCP_MAYA_KMAYA_EXITING_HOOK` | `1` | `0` = disable the `MSceneMessage.kMayaExiting` hook that catches clean `File → Exit Maya` / `⌘Q` exits (issue #186). |

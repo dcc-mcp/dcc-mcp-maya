@@ -39,13 +39,17 @@ def _import_server():
 
 class TestMayaAvailable:
     def test_maya_available_true(self):
-        srv_mod = _import_server()
-        assert srv_mod._maya_available() is True
+        _import_server()
+        from dcc_mcp_maya._version_probe import maya_available
+
+        assert maya_available() is True
 
     def test_maya_available_false(self):
-        srv_mod = _import_server()
+        _import_server()
+        from dcc_mcp_maya._version_probe import maya_available
+
         with patch.dict(sys.modules, {"maya.cmds": None}):
-            assert srv_mod._maya_available() is False
+            assert maya_available() is False
 
 
 class TestServerStopEdgeCases:

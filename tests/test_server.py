@@ -107,22 +107,6 @@ _skip_without_nested_meta = pytest.mark.skipif(
     ),
 )
 
-# The following Minimal-mode tests assert specific tool names and group
-# structures that depend on a matching dcc-mcp-core release (>= 0.15).
-# Pinning them to a version is brittle under CI matrices that resolve
-# dcc-mcp-core from PyPI, so mark them xfail (strict=False) until a
-# core release that ships the #385 fix and corresponding skill loader
-# behaviour is cut. Once that's in requirements.txt as a floor, flip
-# these back to strict assertions.
-_xfail_minimal_loader_pending_core_release = pytest.mark.xfail(
-    reason=(
-        "Minimal-mode skill dispatch shape depends on dcc-mcp-core >= 0.15 "
-        "(includes dcc-mcp-core#385). CI currently resolves an older core "
-        "from PyPI."
-    ),
-    strict=False,
-)
-
 
 def _builtin_skills_dir():
     """Return the built-in skills directory, resolving it from the package."""
@@ -137,6 +121,18 @@ def _builtin_skills_dir():
 
 
 class TestMayaMcpServerApi:
+    def test_explicit_gateway_port_zero_disables_gateway(self):
+        srv_mod = _import_server()
+        server = srv_mod.MayaMcpServer(port=0, gateway_port=0)
+        assert server._config.gateway_port == 0
+        server.stop()
+
+    def test_gateway_failover_false_disables_default_gateway(self):
+        srv_mod = _import_server()
+        server = srv_mod.MayaMcpServer(port=0, enable_gateway_failover=False)
+        assert server._config.gateway_port == 0
+        server.stop()
+
     def test_start_stop(self):
         """Server starts, returns a handle with mcp_url, then stops."""
         srv_mod = _import_server()
@@ -176,10 +172,10 @@ class TestMayaMcpServerApi:
         server = srv_mod.MayaMcpServer(port=0)
         assert server.mcp_url is None
 
-    # ── Issue #136: attach_dispatcher wires the in-process executor ───────
+    # ── Issue #136: attach_dispatcher wires the host execution bridge ─────
 
     def test_attach_dispatcher_registers_core_host_dispatcher(self):
-        """``attach_dispatcher`` must install the core 0.14.23 host path."""
+        """``attach_dispatcher`` must install the core HostExecutionBridge path."""
         srv_mod = _import_server()
         server = object.__new__(srv_mod.MayaMcpServer)
         server._dcc_name = "maya"
@@ -190,25 +186,27 @@ class TestMayaMcpServerApi:
         server._readiness = MagicMock()
 
         dispatcher = MagicMock(name="QueueDispatcher")
-        with patch.object(server, "register_inprocess_executor", autospec=True) as mock_register:
+        with patch.object(server, "register_host_execution_bridge", autospec=True) as mock_register:
             server.attach_dispatcher(dispatcher)
 
         server._server.attach_dispatcher.assert_called_once_with(dispatcher)
         assert mock_register.call_count == 1
+        assert server._execution_bridge.runner is srv_mod._executor.run_skill_script
         assert server._maya_dispatcher is dispatcher
 
     def test_detach_dispatcher_restores_inline_executor(self):
-        """``attach_dispatcher(None)`` keeps the inline in-process executor active."""
+        """``attach_dispatcher(None)`` keeps the inline host execution bridge active."""
         srv_mod = _import_server()
         server = object.__new__(srv_mod.MayaMcpServer)
         server._dcc_name = "maya"
         server._server = MagicMock()
         server._readiness = MagicMock()
 
-        with patch.object(server, "register_inprocess_executor", autospec=True) as mock_register:
+        with patch.object(server, "register_host_execution_bridge", autospec=True) as mock_register:
             server.attach_dispatcher(None)
 
-        mock_register.assert_called_once_with(None)
+        assert mock_register.call_count == 1
+        assert server._execution_bridge.dispatcher is None
         assert server._maya_dispatcher is None
 
 
@@ -610,34 +608,31 @@ class TestMinimalMode:
         finally:
             server.stop()
 
-    def test_minimal_false_loads_all_skills(self):
-        """With minimal=False, all discovered skills are loaded (legacy behaviour)."""
+    def test_minimal_false_discovers_without_eager_loading(self):
+        """With minimal=False, core discovers skills without applying minimal eager loading."""
         srv_mod = _import_server()
         server = srv_mod.MayaMcpServer(port=0)
         server.register_builtin_actions(
             extra_skill_paths=[_builtin_skills_dir()],
             minimal=False,
         )
-        # All 12 bundled skills should be loaded in legacy mode
-        assert server._server.loaded_count() >= 10
-        assert server._server.is_loaded("maya-scripting")
-        assert server._server.is_loaded("maya-scene")
-        assert server._server.is_loaded("maya-render")
+        assert server._server.loaded_count() == 0
+        assert not server._server.is_loaded("maya-scripting")
+        assert not server._server.is_loaded("maya-scene")
         server.stop()
 
-    def test_minimal_env_override(self):
-        """DCC_MCP_MAYA_MINIMAL=0 forces legacy full-load behaviour."""
+    def test_minimal_env_override_disables_eager_loading(self):
+        """DCC_MCP_MINIMAL=0 disables core's declarative minimal-mode config."""
         srv_mod = _import_server()
-        with patch.dict("os.environ", {"DCC_MCP_MAYA_MINIMAL": "0"}):
+        with patch.dict("os.environ", {"DCC_MCP_MINIMAL": "0"}):
             server = srv_mod.MayaMcpServer(port=0)
             server.register_builtin_actions(
                 extra_skill_paths=[_builtin_skills_dir()],
-                minimal=None,  # let env var decide
+                minimal=None,
             )
-            assert server._server.loaded_count() >= 10
+            assert server._server.loaded_count() == 0
             server.stop()
 
-    @_xfail_minimal_loader_pending_core_release
     def test_minimal_tools_list_has_core_tools(self):
         """In minimal mode, tools/list contains execute_python and get_scene_info."""
         srv_mod = _import_server()
@@ -666,9 +661,9 @@ class TestMinimalMode:
         has_get_scene_info = any("get_scene_info" in n for n in names)
         assert has_execute_python, f"execute_python not found in tools: {names}"
         assert has_get_scene_info, f"get_scene_info not found in tools: {names}"
-        # Non-core skills should be stubs
-        skill_stubs = [n for n in names if n.startswith("__skill__")]
-        assert len(skill_stubs) > 0, "Expected __skill__ stubs for unloaded skills"
+        # Unloaded non-core skills remain discoverable through list_skills,
+        # not as expanded tools in the minimal tools/list page.
+        assert not any(n.startswith("__skill__") for n in names)
         # Extended/scene-management groups should be deactivated
         # (their tools should NOT appear as full tools)
         has_mesh_ops = any("mesh_ops" in n for n in names)
@@ -677,7 +672,6 @@ class TestMinimalMode:
         assert not has_new_scene, f"new_scene (scene-management group) should be deactivated: {names}"
         server.stop()
 
-    @_xfail_minimal_loader_pending_core_release
     def test_minimal_deactivates_extended_groups(self):
         """In minimal mode, extended groups are deactivated within loaded skills."""
         srv_mod = _import_server()
@@ -686,18 +680,17 @@ class TestMinimalMode:
             extra_skill_paths=[_builtin_skills_dir()],
             minimal=True,
         )
-        # Check that the registry has the groups but they're disabled
         registry = server._server.registry
         groups = registry.list_groups()
-        assert "extended" in groups
-        assert "scene-management" in groups
         assert "core" in groups
+        assert "scene-management" in groups
+        assert "extended" not in groups
         server.stop()
 
     def test_custom_default_tools_env(self):
-        """DCC_MCP_MAYA_DEFAULT_TOOLS customises which skills are loaded."""
+        """DCC_MCP_DEFAULT_TOOLS customises which skills are loaded."""
         srv_mod = _import_server()
-        with patch.dict("os.environ", {"DCC_MCP_MAYA_DEFAULT_TOOLS": "maya-scripting,maya-render"}):
+        with patch.dict("os.environ", {"DCC_MCP_DEFAULT_TOOLS": "maya-scripting,maya-render"}):
             server = srv_mod.MayaMcpServer(port=0)
             server.register_builtin_actions(
                 extra_skill_paths=[_builtin_skills_dir()],

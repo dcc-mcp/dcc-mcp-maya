@@ -504,7 +504,7 @@ class MayaUiDispatcher:
         """Run *func* on Maya's UI thread and return the result.
 
         This method satisfies the :class:`~dcc_mcp_core._server.inprocess_executor.BaseDccCallableDispatcher`
-        protocol required by :meth:`DccServerBase.register_inprocess_executor`.
+        protocol consumed by :class:`dcc_mcp_core.HostExecutionBridge`.
 
         The callable is submitted to the main-thread queue (affinity="main")
         and the calling thread blocks until the UI thread finishes execution.

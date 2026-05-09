@@ -1,10 +1,10 @@
 """In-process skill executor (issue #127).
 
-Extracted from the previous monolithic ``server.py``.  The old per-action
-``register_handler`` wiring has been removed; core 0.14.23 owns skill routing
-through its host dispatcher and global in-process executor.
+Extracted from the previous monolithic ``server.py``.  Core owns skill routing
+through ``HostExecutionBridge`` and the global in-process executor.
 
-This module keeps the direct script runner used by tests and internal helpers.
+This module keeps the direct script runner used by the bridge, tests, and
+internal helpers.
 
 See: https://github.com/loonghao/dcc-mcp-maya/issues/127
 """
@@ -15,6 +15,9 @@ from __future__ import annotations
 # Import built-in modules
 import logging
 from typing import Any, Dict
+
+# Import third-party modules
+from dcc_mcp_core.skill import skill_exception
 
 # Import local modules
 from dcc_mcp_maya import _affinity
@@ -56,12 +59,7 @@ def run_skill_script(script_path: str, params: Dict[str, Any]) -> Dict[str, Any]
     except SystemExit:
         pass
     except Exception as exc:  # noqa: BLE001
-        try:
-            from dcc_mcp_core.skill import skill_exception  # noqa: PLC0415
-
-            return skill_exception(exc, message="Error loading skill script: {}".format(script_path))
-        except ImportError:
-            return {"success": False, "message": "Error loading {}: {}".format(script_path, exc)}
+        return skill_exception(exc, message="Error loading skill script: {}".format(script_path))
 
     if hasattr(mod, "__mcp_result__"):
         return mod.__mcp_result__  # type: ignore[return-value]
@@ -79,12 +77,7 @@ def run_skill_script(script_path: str, params: Dict[str, Any]) -> Dict[str, Any]
     except SystemExit:
         return getattr(mod, "__mcp_result__", {"success": True, "message": "Script executed"})
     except Exception as exc:  # noqa: BLE001
-        try:
-            from dcc_mcp_core.skill import skill_exception  # noqa: PLC0415
-
-            return skill_exception(exc)
-        except ImportError:
-            return {"success": False, "message": str(exc)}
+        return skill_exception(exc)
 
 
 def execute_in_process(
@@ -122,26 +115,13 @@ def execute_in_process(
                 affinity="main",
             )
         except BaseException as exc:  # noqa: BLE001 — relay everything
-            try:
-                from dcc_mcp_core.skill import skill_exception  # noqa: PLC0415
-
-                return skill_exception(
-                    exc,
-                    message="Dispatcher failed to execute {}".format(action_name),
-                )
-            except ImportError:
-                return {"success": False, "message": "{}: {}".format(action_name, exc)}
-
-        # Issue #153 — pass a DeferredToolResult straight through so the
-        # core poll loop owns the lifecycle.  Detection is duck-typed on
-        # ``check_is_finished`` to avoid hard-importing core internals.
-        if hasattr(result, "check_is_finished"):
-            return result  # type: ignore[return-value]
+            return skill_exception(
+                exc,
+                message="Dispatcher failed to execute {}".format(action_name),
+            )
 
         if isinstance(result, dict):
             output = result.get("output")
-            if hasattr(output, "check_is_finished"):
-                return output  # type: ignore[return-value]
             if isinstance(output, dict):
                 return output
             if not result.get("success", True):

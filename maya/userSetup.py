@@ -68,19 +68,9 @@ def _setup_module_paths() -> None:
                 sep = ";" if sys.platform == "win32" else ":"
                 os.environ["MAYA_PLUG_IN_PATH"] = f"{plugins_str}{sep}{current}" if current else plugins_str
 
-        # Determine which python/ subdir to use based on Maya version
-        try:
-            import maya.cmds as _cmds  # noqa: PLC0415
-
-            maya_version = _cmds.about(version=True)
-            major = int(str(maya_version).split(".")[0])
-        except Exception:
-            major = 2025
-
-        python_dir = module_root / "python37" if major == 2022 else module_root / "python"
+        python_dir = module_root / ("python37" if sys.version_info[:2] == (3, 7) else "python")
         if not python_dir.is_dir():
             python_dir = module_root / "python"
-
         python_str = str(python_dir)
         if python_dir.is_dir() and python_str not in sys.path:
             sys.path.insert(0, python_str)

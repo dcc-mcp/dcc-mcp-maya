@@ -29,6 +29,7 @@ See:
 from __future__ import annotations
 
 # Import built-in modules
+import json
 import logging
 import re
 from dataclasses import asdict, dataclass, field
@@ -516,7 +517,7 @@ def register_capability_mcp_tool(server: Any, *, builder: MayaCapabilityManifest
                 category="dcc",
                 tags=["capability", "manifest", "dcc", "maya"],
                 dcc="maya",
-                input_schema=input_schema,
+                input_schema=json.dumps(input_schema),
                 # Use a stable synthetic skill name so core's registry
                 # keeps the record in its own bucket instead of leaking
                 # into real-skill group bookkeeping (issue #163 regression
@@ -529,39 +530,10 @@ def register_capability_mcp_tool(server: Any, *, builder: MayaCapabilityManifest
                 enabled=True,
             )
             declared = True
-        except TypeError:
-            # Older signature — retry without the keyword-only shape.
-            try:
-                registry.register(
-                    tool_name,
-                    description,
-                    "dcc",
-                    ["capability", "manifest", "dcc", "maya"],
-                    "maya",
-                )
-                declared = True
-            except Exception as exc2:  # noqa: BLE001
-                logger.debug("capability manifest: registry.register (fallback) failed: %s", exc2)
         except Exception as exc:  # noqa: BLE001
             logger.debug("capability manifest: registry.register failed: %s", exc)
 
     if not declared:
-        # Duck-typed fallback — some test doubles expose ``register_tool``.
-        for attr in ("register_tool", "register_action"):
-            fn = getattr(inner, attr, None)
-            if fn is None:
-                continue
-            try:
-                fn(tool_name, description=description, input_schema=input_schema, handler=handler)
-                return True
-            except TypeError:
-                try:
-                    fn(tool_name, handler, description=description, input_schema=input_schema)
-                    return True
-                except Exception:
-                    continue
-            except Exception as exc:  # noqa: BLE001
-                logger.debug("capability manifest: %s failed: %s", attr, exc)
         logger.debug("capability manifest: could not declare tool — skipping")
         return False
 

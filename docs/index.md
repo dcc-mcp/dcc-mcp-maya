@@ -34,5 +34,5 @@ features:
     details: Hot-reloadable skill packages. Ship your own skills via DCC_MCP_MAYA_SKILL_PATHS — no patch to the core required.
   - icon: 🐍
     title: Maya 2020+ / Python 3.7+
-    details: Tested on Maya 2020, 2022, 2023, 2024, 2025. Works with Python 3.7 through 3.12.
+    details: Tested across Maya's embedded Python 3.7+ runtimes, including Maya 2022 through 2026 module packages.
 ---

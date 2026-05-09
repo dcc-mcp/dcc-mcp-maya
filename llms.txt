@@ -12,7 +12,7 @@
 **Repo:** https://github.com/loonghao/dcc-mcp-maya
 **Python:** >=3.7
 **Maya:** 2020+
-**Core dep:** `dcc-mcp-core>=0.14.21,<1.0.0`
+**Core dep:** `dcc-mcp-core>=0.15.7,<1.0.0`
 
 ---
 
@@ -66,7 +66,6 @@ MayaMcpServer(
     metrics_enabled: Optional[bool] = None,      # env: DCC_MCP_MAYA_METRICS=1
     job_storage_path: Optional[str] = None,      # env: DCC_MCP_MAYA_JOB_STORAGE
     job_recovery: Optional[str] = None,          # env: DCC_MCP_MAYA_JOB_RECOVERY
-    tool_exposure: Optional[str] = None,         # env: DCC_MCP_MAYA_TOOL_EXPOSURE (full|slim|both|rest)
     cursor_safe_tool_names: Optional[bool] = None,  # env: DCC_MCP_MAYA_CURSOR_SAFE_TOOL_NAMES
 )
 ```
@@ -181,12 +180,11 @@ Tool naming: `{skill_name.replace("-","_")}__{script_stem}` (e.g. `maya_scene__n
 | `DCC_MCP_MAYA_SERVER_NAME` | `maya-mcp` | MCP init name |
 | `DCC_MCP_MAYA_SKILL_PATHS` | — | Extra skill dirs (`;` Win / `:` Unix) |
 | `DCC_MCP_SKILL_PATHS` | — | Global fallback skill dirs |
-| `DCC_MCP_MAYA_MINIMAL` | `1` | `0`=preload all, `1`=minimal startup |
-| `DCC_MCP_MAYA_DEFAULT_TOOLS` | — | Comma-separated preload skill list |
+| `DCC_MCP_MINIMAL` | `1` | `0`=full mode, `1`=minimal mode |
+| `DCC_MCP_DEFAULT_TOOLS` | — | Comma-separated startup skill list |
 | `DCC_MCP_MAYA_METRICS` | `0` | `1`=Prometheus `/metrics` |
 | `DCC_MCP_MAYA_JOB_STORAGE` | `<data_dir>/jobs.db` | SQLite persistence path |
 | `DCC_MCP_MAYA_JOB_RECOVERY` | `drop` | `requeue`=resume idempotent jobs |
-| `DCC_MCP_MAYA_TOOL_EXPOSURE` | — | core 0.14.22: `full` \| `slim` \| `both` \| `rest` gateway shaping |
 | `DCC_MCP_MAYA_CURSOR_SAFE_TOOL_NAMES` | — | core 0.14.22: `0`=legacy dotted names, `1`=`i_<id8>__<tool>` |
 | `DCC_MCP_GATEWAY_PORT` | `9765` | Multi-instance gateway port (`0`=off) |
 | `DCC_MCP_REGISTRY_DIR` | OS temp | Shared discovery registry |
