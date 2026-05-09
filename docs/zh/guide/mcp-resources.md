@@ -156,7 +156,7 @@ core 0.15.0 已声明 `prompts: {listChanged: true}` 能力，
 
 ## 参考
 
-* [`AGENTS.md`](../../../AGENTS.md) —— SOLID binder 范式总览
+* [`AGENTS.md`](https://github.com/loonghao/dcc-mcp-maya/blob/main/AGENTS.md) —— SOLID binder 范式总览
   （`ReadinessBinder` / `ProjectToolsIntegration` / `MayaResourceBinder`）。
 * [`docs/zh/guide/scene.md`](./scene.md) —— 现有的场景信息工具表面，
   与 `scene://current` 同源。

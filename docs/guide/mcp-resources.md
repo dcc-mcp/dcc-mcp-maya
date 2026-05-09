@@ -169,7 +169,7 @@ code change required.
 
 ## See also
 
-* [`AGENTS.md`](../../AGENTS.md) — overview of the SOLID binder
+* [`AGENTS.md`](https://github.com/loonghao/dcc-mcp-maya/blob/main/AGENTS.md) — overview of the SOLID binder
   pattern (`ReadinessBinder`, `ProjectToolsIntegration`,
   `MayaResourceBinder`).
 * [`docs/guide/scene.md`](./scene.md) — the existing scene-info tool
