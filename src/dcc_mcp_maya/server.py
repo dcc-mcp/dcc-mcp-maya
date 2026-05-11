@@ -25,11 +25,12 @@ from __future__ import annotations
 import logging
 import os
 import threading
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, List, Optional
 
 # Import third-party modules
-from dcc_mcp_core import HostExecutionBridge
+from dcc_mcp_core import DccServerOptions, HostExecutionBridge
 from dcc_mcp_core.factory import create_dcc_server
 from dcc_mcp_core.server_base import DccServerBase
 
@@ -62,6 +63,47 @@ DEFAULT_SERVER_VERSION = __version__
 
 #: Built-in skills directory shipped with this package.
 _BUILTIN_SKILLS_DIR = Path(__file__).resolve().parent / "skills"
+
+
+@dataclass
+class MayaServerOptions:
+    """Maya adapter options collapsed for the core 0.15.8 server contract."""
+
+    port: int = 8765
+    server_name: str = "maya-mcp"
+    server_version: str = DEFAULT_SERVER_VERSION
+    gateway_port: Optional[int] = None
+    registry_dir: Optional[str] = None
+    dcc_version: Optional[str] = None
+    scene: Optional[str] = None
+    enable_gateway_failover: bool = True
+    metrics_enabled: Optional[bool] = None
+    job_storage_path: Optional[str] = None
+    job_recovery: Optional[str] = None
+    dcc_pid: Optional[int] = None
+    dcc_window_title: Optional[str] = None
+    dcc_window_handle: Optional[int] = None
+    enable_workflows: Optional[bool] = None
+    cursor_safe_tool_names: Optional[bool] = None
+    host_dispatcher: Optional[Any] = None
+    readiness_timeout_secs: Optional[int] = None
+
+    def to_core_options(self) -> DccServerOptions:
+        return DccServerOptions.from_env(
+            dcc_name="maya",
+            builtin_skills_dir=_BUILTIN_SKILLS_DIR,
+            port=self.port,
+            server_name=self.server_name,
+            server_version=self.server_version,
+            gateway_port=self.gateway_port,
+            registry_dir=self.registry_dir,
+            dcc_version=self.dcc_version,
+            scene=self.scene,
+            enable_gateway_failover=self.enable_gateway_failover,
+            dcc_pid=self.dcc_pid,
+            dcc_window_title=self.dcc_window_title,
+            dcc_window_handle=self.dcc_window_handle,
+        )
 
 
 class MayaMcpServer(DccServerBase):
@@ -110,22 +152,41 @@ class MayaMcpServer(DccServerBase):
         cursor_safe_tool_names: Optional[bool] = None,
         host_dispatcher: Optional[Any] = None,
         readiness_timeout_secs: Optional[int] = None,
+        options: Optional[MayaServerOptions] = None,
     ) -> None:
-        super().__init__(
-            dcc_name="maya",
-            builtin_skills_dir=_BUILTIN_SKILLS_DIR,
-            port=port,
-            server_name=server_name,
-            server_version=server_version,
-            gateway_port=gateway_port,
-            registry_dir=registry_dir,
-            dcc_version=dcc_version,
-            scene=scene,
-            enable_gateway_failover=enable_gateway_failover,
-            dcc_pid=dcc_pid,
-            dcc_window_title=dcc_window_title,
-            dcc_window_handle=dcc_window_handle,
-        )
+        if options is None:
+            options = MayaServerOptions(
+                port=port,
+                server_name=server_name,
+                server_version=server_version,
+                gateway_port=gateway_port,
+                registry_dir=registry_dir,
+                dcc_version=dcc_version,
+                scene=scene,
+                enable_gateway_failover=enable_gateway_failover,
+                metrics_enabled=metrics_enabled,
+                job_storage_path=job_storage_path,
+                job_recovery=job_recovery,
+                dcc_pid=dcc_pid,
+                dcc_window_title=dcc_window_title,
+                dcc_window_handle=dcc_window_handle,
+                enable_workflows=enable_workflows,
+                cursor_safe_tool_names=cursor_safe_tool_names,
+                host_dispatcher=host_dispatcher,
+                readiness_timeout_secs=readiness_timeout_secs,
+            )
+
+        super().__init__(options=options.to_core_options())
+
+        metrics_enabled = options.metrics_enabled
+        job_storage_path = options.job_storage_path
+        job_recovery = options.job_recovery
+        enable_workflows = options.enable_workflows
+        cursor_safe_tool_names = options.cursor_safe_tool_names
+        gateway_port = options.gateway_port
+        enable_gateway_failover = options.enable_gateway_failover
+        host_dispatcher = options.host_dispatcher
+        readiness_timeout_secs = options.readiness_timeout_secs
 
         # ── Prometheus metrics (issue #87) ──────────────────────────────
         if _env.resolve_metrics_enabled(metrics_enabled):
@@ -378,6 +439,7 @@ class MayaMcpServer(DccServerBase):
             self._resources = _resources.install_resources(
                 self,
                 snapshot_provider=self._snapshot_provider_impl.collect,
+                busy_checker=_executor.is_busy,
             )
         except Exception as exc:  # noqa: BLE001
             logger.debug("[%s] resources registration failed: %s", "maya", exc)
@@ -453,6 +515,113 @@ class MayaMcpServer(DccServerBase):
         except Exception as exc:  # noqa: BLE001
             logger.debug("[%s] unload_skill(%r) failed: %s", self._dcc_name, skill_name, exc)
             return False
+
+    def _legacy_registry(self) -> Any:
+        inner = getattr(self, "_server", None)
+        return getattr(inner, "registry", None)
+
+    def search_actions(self, *args: Any, **kwargs: Any) -> list:
+        if hasattr(self, "_skill_client"):
+            try:
+                return list(super().search_actions(*args, **kwargs))
+            except Exception as exc:  # noqa: BLE001
+                logger.debug("[%s] search_actions failed: %s", self._dcc_name, exc)
+                return []
+        registry = self._legacy_registry()
+        if registry is None:
+            return []
+        kwargs.setdefault("dcc_name", self._dcc_name)
+        try:
+            return list(registry.search_actions(*args, **kwargs))
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("[%s] legacy search_actions failed: %s", self._dcc_name, exc)
+            return []
+
+    def unregister_skill(self, name: str, dcc_name: Optional[str] = None) -> None:
+        if hasattr(self, "_skill_client"):
+            try:
+                super().unregister_skill(name, dcc_name=dcc_name)
+            except Exception as exc:  # noqa: BLE001
+                logger.debug("[%s] unregister_skill(%r) failed: %s", self._dcc_name, name, exc)
+            return
+        registry = self._legacy_registry()
+        if registry is None:
+            return
+        try:
+            registry.unregister(name, dcc_name=dcc_name)
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("[%s] legacy unregister_skill(%r) failed: %s", self._dcc_name, name, exc)
+
+    def search_skills(
+        self, query: Optional[str] = None, tags: Optional[list] = None, dcc: Optional[str] = None
+    ) -> list:
+        if hasattr(self, "_skill_client"):
+            try:
+                return list(super().search_skills(query=query, tags=tags, dcc=dcc))
+            except Exception as exc:  # noqa: BLE001
+                logger.debug("[%s] search_skills failed: %s", self._dcc_name, exc)
+                return []
+        try:
+            return list(self._server.search_skills(query=query, tags=tags, dcc=dcc))
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("[%s] legacy search_skills failed: %s", self._dcc_name, exc)
+            return []
+
+    def get_skill_categories(self) -> list:
+        registry = self._legacy_registry()
+        if registry is not None:
+            try:
+                return list(registry.get_categories())
+            except Exception as exc:  # noqa: BLE001
+                logger.debug("[%s] legacy get_skill_categories failed: %s", self._dcc_name, exc)
+                return []
+        if hasattr(self, "_skill_client"):
+            try:
+                return list(super().get_skill_categories())
+            except Exception as exc:  # noqa: BLE001
+                logger.debug("[%s] get_skill_categories failed: %s", self._dcc_name, exc)
+        return []
+
+    def get_skill_tags(self, dcc_name: str = "maya") -> list:
+        registry = self._legacy_registry()
+        if registry is not None:
+            try:
+                return list(registry.get_tags(dcc_name=dcc_name))
+            except Exception as exc:  # noqa: BLE001
+                logger.debug("[%s] legacy get_skill_tags failed: %s", self._dcc_name, exc)
+                return []
+        if hasattr(self, "_skill_client"):
+            try:
+                return list(super().get_skill_tags(dcc_name=dcc_name))
+            except Exception as exc:  # noqa: BLE001
+                logger.debug("[%s] get_skill_tags failed: %s", self._dcc_name, exc)
+        return []
+
+    def is_skill_loaded(self, name: str) -> bool:
+        if not hasattr(self, "_skill_client"):
+            try:
+                return bool(self._server.is_loaded(name))
+            except Exception as exc:  # noqa: BLE001
+                logger.debug("[%s] legacy is_skill_loaded(%r) failed: %s", self._dcc_name, name, exc)
+                return False
+        try:
+            return bool(super().is_skill_loaded(name))
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("[%s] is_skill_loaded(%r) failed: %s", self._dcc_name, name, exc)
+            return False
+
+    def get_skill_info(self, name: str) -> Any:
+        if not hasattr(self, "_skill_client"):
+            try:
+                return self._server.get_skill_info(name)
+            except Exception as exc:  # noqa: BLE001
+                logger.debug("[%s] legacy get_skill_info(%r) failed: %s", self._dcc_name, name, exc)
+                return None
+        try:
+            return super().get_skill_info(name)
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("[%s] get_skill_info(%r) failed: %s", self._dcc_name, name, exc)
+            return None
 
     # ── Lifecycle: start() + gateway capability metadata ───────────────
 

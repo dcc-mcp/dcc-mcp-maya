@@ -1,7 +1,7 @@
 tools:
 - name: execute_mel
-  description: Execute MEL code inside Maya. Accepts `code` (preferred), `script`, or
-    `source` aliases.
+  description: Execute MEL code inside Maya. Accepts `code` (preferred), `script`,
+    or `source` aliases.
   execution: sync
   affinity: main
   group: core
@@ -21,9 +21,9 @@ tools:
 - name: execute_python
   description: Execute Python code inside Maya.  Accepts `code` (preferred), `script`,
     or `source` aliases.  Captures stdout/stderr from both Python (`print`) and Maya's
-    Script Editor (`cmds.warning`, `cmds.error`, MEL `print`).  When `defer=true` the
-    snippet is scheduled via Maya's deferred queue so long-running scripts do not block
-    the MCP request thread (cooperatively cancellable via `notifications/cancelled`).
+    Script Editor (`cmds.warning`, `cmds.error`, MEL `print`).  When `defer=true`
+    the snippet is scheduled via Maya's deferred queue so long-running scripts do
+    not block the MCP request thread (cooperatively cancellable via `notifications/cancelled`).
   execution: sync
   affinity: main
   group: core
@@ -55,9 +55,9 @@ tools:
         minimum: 1
       defer:
         type: boolean
-        description: When true, schedule code via Maya's deferred queue and return a
-          DeferredToolResult that the client polls. Use for long-running scripts that
-          would otherwise block the MCP request.
+        description: When true, schedule code via Maya's deferred queue and return
+          a DeferredToolResult that the client polls. Use for long-running scripts
+          that would otherwise block the MCP request.
         default: false
 - name: get_script_node
   description: Get, create, or delete a Maya scriptNode.
@@ -102,6 +102,7 @@ tools:
     read_only_hint: true
     idempotent_hint: true
   group: core
+  description: List MEL procedures without modifying the Maya scene.
 - name: introspect_list_module
   execution: sync
   affinity: any
@@ -109,6 +110,7 @@ tools:
     read_only_hint: true
     idempotent_hint: true
   group: introspect
+  description: Introspect list module for agent-facing Maya scripting introspection.
 - name: introspect_signature
   execution: sync
   affinity: any
@@ -116,6 +118,8 @@ tools:
     read_only_hint: true
     idempotent_hint: true
   group: introspect
+  description: Introspect a Python callable signature for agent-facing Maya scripting
+    introspection.
 - name: introspect_search
   execution: sync
   affinity: any
@@ -123,9 +127,13 @@ tools:
     read_only_hint: true
     idempotent_hint: true
   group: introspect
+  description: Introspect Python introspection search results for agent-facing Maya
+    scripting introspection.
 - name: introspect_eval
   execution: sync
   affinity: main
   annotations:
     read_only_hint: true
   group: introspect
+  description: Introspect a Python introspection expression for agent-facing Maya
+    scripting introspection.

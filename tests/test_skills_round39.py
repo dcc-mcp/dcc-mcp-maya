@@ -96,6 +96,32 @@ def _load_skill(rel_path, mock_cmds, func_name="main", **kwargs):
 
 
 # ---------------------------------------------------------------------------
+# TestFindByPattern
+# ---------------------------------------------------------------------------
+
+
+class TestFindByPattern:
+    def test_defaults_to_transform_filter(self):
+        cmds = MagicMock()
+        cmds.ls.return_value = ["mcp_ball_00", "mcp_ball_01"]
+
+        result = _load_skill("maya-scene/scripts/find_by_pattern.py", cmds, pattern="mcp_ball_*")
+
+        assert result["success"] is True
+        assert result["context"]["names"] == ["mcp_ball_00", "mcp_ball_01"]
+        cmds.ls.assert_called_once_with("mcp_ball_*", type="transform", long=False)
+
+    def test_can_disable_type_filter(self):
+        cmds = MagicMock()
+        cmds.ls.return_value = ["mcp_ball_00", "mcp_ball_00Shape"]
+
+        result = _load_skill("maya-scene/scripts/find_by_pattern.py", cmds, pattern="mcp_ball_*", type=None)
+
+        assert result["success"] is True
+        cmds.ls.assert_called_once_with("mcp_ball_*", long=False)
+
+
+# ---------------------------------------------------------------------------
 # TestSceneObjectFromNode
 # ---------------------------------------------------------------------------
 

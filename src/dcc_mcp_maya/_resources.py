@@ -324,6 +324,7 @@ def _parse_path_uri(uri: str, *, scheme: str) -> Optional[List[str]]:
 
 SnapshotProvider = Callable[[], Dict[str, Any]]
 EventInstaller = Callable[[Callable[[], None], tuple], List[int]]
+BusyChecker = Callable[[], bool]
 
 
 def _default_event_installer(callback: Callable[[], None], events: tuple) -> List[int]:
@@ -388,11 +389,13 @@ class MayaResourceBinder:
         *,
         snapshot_provider: Optional[SnapshotProvider] = None,
         event_installer: Optional[EventInstaller] = None,
+        busy_checker: Optional[BusyChecker] = None,
         throttle_secs: float = DEFAULT_SCENE_THROTTLE_SECS,
         events: tuple = DEFAULT_SCENE_EVENTS,
     ) -> None:
         self.snapshot_provider: Optional[SnapshotProvider] = snapshot_provider
         self.event_installer: EventInstaller = event_installer or _default_event_installer
+        self.busy_checker: Optional[BusyChecker] = busy_checker
         self.throttle_secs: float = max(0.0, float(throttle_secs))
         self.events: tuple = events
 
@@ -525,6 +528,15 @@ class MayaResourceBinder:
             return
         self.registered_producers.append(scheme)
 
+    def _is_executor_busy(self) -> bool:
+        if self.busy_checker is None:
+            return False
+        try:
+            return bool(self.busy_checker())
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("resources: busy checker raised: %s", exc)
+            return False
+
     def _on_scene_event(self) -> None:
         """ScriptJob callback: schedule a throttled scene republish.
 
@@ -533,7 +545,7 @@ class MayaResourceBinder:
         storm into one publish per :attr:`throttle_secs` window using
         a trailing-edge timer.
         """
-        if self._unbound:
+        if self._unbound or self._is_executor_busy():
             return
         with self._lock:
             now = time.monotonic()
@@ -556,7 +568,7 @@ class MayaResourceBinder:
 
     def _on_throttle_fire(self) -> None:
         """Trailing-edge throttle handler — runs on a Timer thread."""
-        if self._unbound:
+        if self._unbound or self._is_executor_busy():
             return
         with self._lock:
             self._pending_publish = False
@@ -579,6 +591,7 @@ def install_resources(
     enabled: Optional[bool] = None,
     snapshot_provider: Optional[SnapshotProvider] = None,
     install_scene_events: bool = True,
+    busy_checker: Optional[BusyChecker] = None,
     throttle_secs: float = DEFAULT_SCENE_THROTTLE_SECS,
 ) -> Optional[MayaResourceBinder]:
     """One-shot helper called from :meth:`MayaMcpServer.register_builtin_actions`.
@@ -597,6 +610,7 @@ def install_resources(
         return None
     binder = MayaResourceBinder(
         snapshot_provider=snapshot_provider,
+        busy_checker=busy_checker,
         throttle_secs=throttle_secs,
     )
     if not binder.bind(server):

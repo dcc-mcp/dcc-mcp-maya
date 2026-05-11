@@ -137,6 +137,7 @@ _host_dispatcher = None
 _menu_name = "DccMcpMenu"
 _restart_lock = threading.Lock()  # prevent overlapping restart calls
 _shutdown_coordinator = None  # Issue #186 — safety-net composition root
+_startup_thread = None
 
 
 # ── standalone detection ──────────────────────────────────────────────────────
@@ -166,24 +167,10 @@ def initializePlugin(plugin):
     try:
         if _is_interactive():
             _add_menu()
-        _start()
-        # Issue #186 — install shutdown safety nets (kMayaExiting hook,
-        # atexit fallback, crash-resilient process sentinel, optional
-        # defensive __del__ guard) so non-cooperative Maya exits stop
-        # leaking FileRegistry rows.  Each net is individually opt-out
-        # via DCC_MCP_MAYA_* env vars; see ``_shutdown_safety`` docstring.
-        _install_shutdown_safety()
-        # Issue #126 — surface a single warning when the FileRegistry has
-        # accumulated stale entries from previous Maya crashes.  Best-effort,
-        # never blocks startup.
-        try:
-            from dcc_mcp_maya._stale_cleanup import warn_if_too_many_stale  # noqa: PLC0415
-
-            warn_if_too_many_stale(
-                registry_dir=os.environ.get("DCC_MCP_REGISTRY_DIR") or None,
-            )
-        except Exception as exc:  # noqa: BLE001
-            logger.debug("stale-instance scan skipped: %s", exc)
+        if _is_interactive():
+            _start_async()
+        else:
+            _start()
     except Exception as exc:
         logger.error("dcc-mcp-maya plugin failed to initialize: %s", exc)
         raise RuntimeError(f"dcc-mcp-maya init failed: {exc}") from exc
@@ -314,10 +301,65 @@ def _start() -> None:
         _host = dcc_mcp_maya.MayaHost(_host_dispatcher)
         _handle = dcc_mcp_maya.start_server(host_dispatcher=_host_dispatcher, **cfg)
         _host.start()
-        _print_startup_info(cfg)
+        _post_start(cfg)
     except Exception as exc:
         logger.error("Failed to start MCP server: %s", exc)
         raise
+
+
+def _start_async() -> None:
+    """Start the MCP server off Maya's UI thread, then attach the idle pump."""
+    global _handle, _host, _host_dispatcher, _startup_thread
+    try:
+        from dcc_mcp_core.host import QueueDispatcher  # noqa: PLC0415
+
+        import dcc_mcp_maya  # noqa: PLC0415
+
+        _export_worker_env()
+        try:
+            from dcc_mcp_maya._commandport import suppress_security_warnings  # noqa: PLC0415
+
+            suppress_security_warnings()
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("commandPort warning suppression skipped: %s", exc)
+        cfg = _resolve_config()
+        _host_dispatcher = QueueDispatcher()
+        _host = dcc_mcp_maya.MayaHost(_host_dispatcher)
+
+        def _finish_on_main() -> None:
+            try:
+                if _host is not None:
+                    _host.start()
+                _post_start(cfg)
+            except Exception as exc:  # noqa: BLE001
+                logger.error("dcc-mcp-maya async startup finalization failed: %s", exc)
+
+        def _worker() -> None:
+            global _handle
+            try:
+                _handle = dcc_mcp_maya.start_server(host_dispatcher=_host_dispatcher, **cfg)
+                cmds.evalDeferred(_finish_on_main, lowestPriority=True)
+            except Exception as exc:  # noqa: BLE001
+                logger.error("Failed to start MCP server asynchronously: %s", exc)
+
+        _startup_thread = threading.Thread(target=_worker, name="dcc-mcp-maya-startup", daemon=True)
+        _startup_thread.start()
+    except Exception as exc:
+        logger.error("Failed to schedule async MCP server startup: %s", exc)
+        raise
+
+
+def _post_start(cfg: dict) -> None:
+    _print_startup_info(cfg)
+    _install_shutdown_safety()
+    try:
+        from dcc_mcp_maya._stale_cleanup import warn_if_too_many_stale  # noqa: PLC0415
+
+        warn_if_too_many_stale(
+            registry_dir=os.environ.get("DCC_MCP_REGISTRY_DIR") or None,
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("stale-instance scan skipped: %s", exc)
 
 
 def _print_startup_info(cfg: dict) -> None:

@@ -3,10 +3,12 @@ tools:
   execution: sync
   affinity: main
   group: shading-lighting
+  description: Create an HDRI dome light in the current Maya scene.
 - name: create_three_point_rig
   execution: sync
   affinity: main
   group: shading-lighting
+  description: Create a three-point light rig in the current Maya scene.
 - name: list_light_rigs
   execution: sync
   affinity: main
@@ -14,9 +16,11 @@ tools:
     read_only_hint: true
     idempotent_hint: true
   group: shading-lighting
+  description: List light rigs without modifying the Maya scene.
 - name: set_light_rig_intensity
   execution: sync
   affinity: main
   annotations:
     idempotent_hint: true
   group: shading-lighting
+  description: Set light rig intensity in the current Maya scene.

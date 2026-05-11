@@ -10,6 +10,7 @@ from typing import List, Optional
 # Make tools/ importable
 sys.path.insert(0, str(Path(__file__).parent.parent / "tools"))
 import lint_skills  # noqa: E402
+import yaml  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -360,6 +361,32 @@ class TestCheckDuplicateActionNames:
         assert len(issues) == 2  # one per skill
         assert all(i.rule == "DUPLICATE_SCRIPT_STEM" for i in issues)
         assert all(i.severity == "WARNING" for i in issues)
+
+
+# ---------------------------------------------------------------------------
+# Bundled tools.yaml contract
+# ---------------------------------------------------------------------------
+
+
+class TestBundledToolsYamlContract:
+    def _bundled_tools(self):
+        skills_root = Path(__file__).parents[1] / "src" / "dcc_mcp_maya" / "skills"
+        for tools_yaml in sorted(skills_root.glob("*/tools.yaml")):
+            data = yaml.safe_load(tools_yaml.read_text(encoding="utf-8")) or {}
+            for tool in data.get("tools", []):
+                yield tools_yaml.parent.name, tools_yaml, tool
+
+    def test_every_exposed_tool_has_agent_facing_description(self):
+        missing = [
+            "{}:{}".format(skill, tool.get("name"))
+            for skill, _path, tool in self._bundled_tools()
+            if not str(tool.get("description", "")).strip()
+        ]
+        assert missing == []
+
+    def test_create_sphere_has_single_canonical_exposed_tool(self):
+        owners = [skill for skill, _path, tool in self._bundled_tools() if tool.get("name") == "create_sphere"]
+        assert owners == ["maya-primitives"]
 
 
 # ---------------------------------------------------------------------------
