@@ -3,14 +3,17 @@ tools:
   execution: sync
   affinity: main
   group: scene-management
+  description: Center pivot in the current Maya scene.
 - name: create_locator
   execution: sync
   affinity: main
   group: scene-management
+  description: Create a locator in the current Maya scene.
 - name: duplicate_object
   execution: sync
   affinity: main
   group: scene-management
+  description: Duplicate an object in the current Maya scene.
 - name: export_scene
   execution: async
   affinity: main
@@ -19,10 +22,12 @@ tools:
     read_only_hint: true
     idempotent_hint: true
   group: scene-management
+  description: Export the scene in the current Maya scene.
 - name: freeze_transforms
   execution: sync
   affinity: main
   group: scene-management
+  description: Freeze transforms in the current Maya scene.
 - name: get_bounding_box
   execution: sync
   affinity: main
@@ -30,6 +35,7 @@ tools:
     read_only_hint: true
     idempotent_hint: true
   group: scene-management
+  description: Get an object bounding box without modifying the Maya scene.
 - name: get_scene_info
   description: Return a hierarchical DAG description of the current scene
   execution: sync
@@ -38,6 +44,30 @@ tools:
     read_only_hint: true
     idempotent_hint: true
   group: core
+- name: find_by_pattern
+  description: Find nodes by Maya wildcard pattern, defaulting to transform nodes
+    so object searches exclude shapes and animation curves.
+  execution: sync
+  affinity: main
+  group: scene-management
+  annotations:
+    read_only_hint: true
+    idempotent_hint: true
+  inputSchema:
+    type: object
+    required:
+    - pattern
+    properties:
+      pattern:
+        type: string
+        description: Name pattern using Maya wildcard syntax, such as mcp_ball_*.
+      type:
+        type:
+        - string
+        - 'null'
+        default: transform
+        description: Optional Maya node type filter. Pass null or an empty string
+          to disable filtering.
 - name: get_selection
   description: Return the current Maya selection
   execution: sync
@@ -60,7 +90,8 @@ tools:
   affinity: main
   inputSchema:
     type: object
-    required: [objects]
+    required:
+    - objects
     properties:
       objects:
         type: array
@@ -82,8 +113,11 @@ tools:
     read_only_hint: true
     idempotent_hint: true
   group: scene-management
+  description: List cameras without modifying the Maya scene.
 - name: list_objects
-  description: List objects in the current Maya scene
+  description: List objects in the current Maya scene. For wildcard name searches,
+    prefer find_by_pattern with type=transform to avoid matching shape or animation-curve
+    nodes.
   execution: sync
   affinity: main
   annotations:
@@ -94,6 +128,7 @@ tools:
   execution: sync
   affinity: main
   group: scene-management
+  description: Lock an object in the current Maya scene.
 - name: new_scene
   description: Create a new empty Maya scene
   execution: async
@@ -116,6 +151,7 @@ tools:
   execution: sync
   affinity: main
   group: scene-management
+  description: Parent an object in the current Maya scene.
 - name: save_scene
   description: Save the current Maya scene
   execution: async
@@ -126,12 +162,14 @@ tools:
   execution: sync
   affinity: main
   group: scene-management
+  description: Select by type in the current Maya scene.
 - name: set_frame_rate
   execution: sync
   affinity: main
   annotations:
     idempotent_hint: true
   group: scene-management
+  description: Set the frame rate in the current Maya scene.
 - name: set_selection
   description: Set the active Maya selection
   execution: sync
@@ -145,3 +183,4 @@ tools:
   annotations:
     idempotent_hint: true
   group: scene-management
+  description: Set object visibility in the current Maya scene.

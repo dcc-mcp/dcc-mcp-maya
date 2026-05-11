@@ -12,6 +12,7 @@ import pytest
 # Import local modules
 from dcc_mcp_maya.api import (
     MissingParamError,
+    classify_maya_exception,
     is_maya_available,
     maya_error,
     maya_from_exception,
@@ -99,6 +100,19 @@ def test_maya_from_exception_with_solutions():
     exc = Exception("err")
     result = maya_from_exception(exc, possible_solutions=["try X", "try Y"])
     assert result["context"]["possible_solutions"] == ["try X", "try Y"]
+
+
+def test_classify_localised_arg_type_error():
+    exc = TypeError("必须为标志「allObjects」传递一个布尔参数")
+    assert classify_maya_exception(exc) == "ARG_TYPE_MISMATCH"
+
+
+def test_maya_from_exception_includes_stable_error_code():
+    exc = RuntimeError("No object matches name: missingCube")
+    result = maya_from_exception(exc, "failed")
+    assert result["error_code"] == "NODE_NOT_FOUND"
+    assert result["error_type"] == "RuntimeError"
+    assert result["context"]["error_code"] == "NODE_NOT_FOUND"
 
 
 # ---------------------------------------------------------------------------
@@ -200,6 +214,7 @@ def test_public_api_reexport():
         "maya_success",
         "maya_error",
         "maya_from_exception",
+        "classify_maya_exception",
         "is_maya_available",
         "with_maya",
         "get_cmds",

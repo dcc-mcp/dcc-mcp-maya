@@ -3,6 +3,7 @@ tools:
   execution: sync
   affinity: main
   group: attributes
+  description: Add a node attribute in the current Maya scene.
 - name: delete_attribute
   execution: sync
   affinity: main
@@ -10,6 +11,7 @@ tools:
   annotations:
     destructive_hint: true
     idempotent_hint: true
+  description: Delete a node attribute in the current Maya scene.
 - name: get_attribute
   execution: sync
   affinity: main
@@ -17,6 +19,7 @@ tools:
   annotations:
     read_only_hint: true
     idempotent_hint: true
+  description: Get a node attribute without modifying the Maya scene.
 - name: list_attributes
   execution: sync
   affinity: main
@@ -24,9 +27,11 @@ tools:
   annotations:
     read_only_hint: true
     idempotent_hint: true
+  description: List attributes on a node without modifying the Maya scene.
 - name: set_attribute
   execution: sync
   affinity: main
   group: attributes
   annotations:
     idempotent_hint: true
+  description: Set a node attribute in the current Maya scene.

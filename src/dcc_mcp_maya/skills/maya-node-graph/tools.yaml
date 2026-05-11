@@ -5,10 +5,12 @@ tools:
   group: node_graph
   annotations:
     idempotent_hint: true
+  description: Apply symmetry operations in the current Maya scene.
 - name: connect_attr
   execution: sync
   affinity: main
   group: node_graph
+  description: Connect node attributes in the current Maya scene.
 - name: delete_history
   execution: sync
   affinity: main
@@ -16,10 +18,12 @@ tools:
   annotations:
     destructive_hint: true
     idempotent_hint: true
+  description: Delete node construction history in the current Maya scene.
 - name: disconnect_attr
   execution: sync
   affinity: main
   group: node_graph
+  description: Disconnect node attributes in the current Maya scene.
 - name: get_dag_path
   execution: sync
   affinity: main
@@ -27,6 +31,7 @@ tools:
   annotations:
     read_only_hint: true
     idempotent_hint: true
+  description: Get a DAG path without modifying the Maya scene.
 - name: list_connections
   execution: sync
   affinity: main
@@ -34,6 +39,7 @@ tools:
   annotations:
     read_only_hint: true
     idempotent_hint: true
+  description: List node graph connections without modifying the Maya scene.
 - name: list_history
   execution: sync
   affinity: main
@@ -41,11 +47,14 @@ tools:
   annotations:
     read_only_hint: true
     idempotent_hint: true
+  description: List node construction history without modifying the Maya scene.
 - name: smooth_mesh
   execution: sync
   affinity: main
   group: node_graph
+  description: Smooth mesh data in the current Maya scene.
 - name: transfer_attributes
   execution: sync
   affinity: main
   group: node_graph
+  description: Transfer attributes on a node in the current Maya scene.
