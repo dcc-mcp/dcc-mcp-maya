@@ -21,11 +21,14 @@ Once the `dcc-mcp-maya` server is running inside Maya, your AI assistant gains a
 
 ```
 "List all objects in the scene"
+"Find objects named mcp_ball_*"
 "Show me the scene hierarchy"
 "How many objects are in the scene?"
 "Select all mesh objects"
 "What is selected right now?"
 ```
+
+Use `maya_scene__find_by_pattern` for wildcard name searches. It defaults to `type="transform"`, so a pattern like `mcp_ball_*` returns the object transforms only and does not also count shape nodes (`mcp_ball_00Shape`) or animation curves (`mcp_ball_00_translateX`). Pass `type=null` only when you intentionally want every matching Maya node.
 
 ## Creating Objects
 

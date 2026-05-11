@@ -6,15 +6,19 @@ tools:
     read_only_hint: true
     idempotent_hint: true
   group: animation
+  description: List poses without modifying the Maya scene.
 - name: load_pose
   execution: sync
   affinity: main
   group: animation
+  description: Load a pose in the current Maya scene.
 - name: mirror_pose
   execution: sync
   affinity: main
   group: animation
+  description: Mirror a pose in the current Maya scene.
 - name: save_pose
   execution: sync
   affinity: main
   group: animation
+  description: Save a pose in the current Maya scene.

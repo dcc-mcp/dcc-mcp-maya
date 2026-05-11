@@ -472,6 +472,24 @@ class TestThrottling:
         # Timer must have been cancelled, so no extra publish.
         assert binder.scene_publish_count == baseline
 
+    def test_scene_events_drop_while_executor_busy(self) -> None:
+        server = _FakeServer()
+        busy = {"value": True}
+        binder = MayaResourceBinder(
+            snapshot_provider=lambda: {"event": "tick"},
+            busy_checker=lambda: busy["value"],
+            throttle_secs=0.0,
+        )
+        binder.bind(server)
+        baseline = binder.scene_publish_count
+
+        binder._on_scene_event()  # type: ignore[attr-defined]
+        assert binder.scene_publish_count == baseline
+
+        busy["value"] = False
+        binder._on_scene_event()  # type: ignore[attr-defined]
+        assert binder.scene_publish_count == baseline + 1
+
 
 # ---------------------------------------------------------------------------
 # install_resources — module-level convenience

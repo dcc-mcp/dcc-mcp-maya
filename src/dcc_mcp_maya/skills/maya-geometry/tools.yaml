@@ -1,18 +1,4 @@
 tools:
-- name: create_sphere
-  description: Create a polygon sphere in the current Maya scene.
-  execution: sync
-  affinity: main
-  group: geometry
-  inputSchema:
-    type: object
-    properties:
-      radius:
-        type: number
-        default: 1.0
-        minimum: 0.001
-      name:
-        type: string
 - name: save_scene
   description: Save the current Maya scene to a .ma or .mb file.
   execution: async

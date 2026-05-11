@@ -30,10 +30,21 @@ from __future__ import annotations
 # Import built-in modules
 import sys
 import threading
+import time
 from typing import Any, Dict, Optional
 
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
+
+DEFAULT_EXECUTE_TIMEOUT_SECS = 60.0
+
+
+class ToolTimeoutError(TimeoutError):
+    """Raised when execute_python exceeds its cooperative timeout."""
+
+    def __init__(self, elapsed_secs: float) -> None:
+        super().__init__("execute_python timed out after {:.3f}s".format(elapsed_secs))
+        self.elapsed_secs = elapsed_secs
 
 
 def _normalize(params: Dict[str, Any]):
@@ -74,6 +85,7 @@ def _run_inline(
     code: str,
     capture_output: bool,
     cancel_event: Optional[threading.Event] = None,
+    timeout_secs: Optional[float] = None,
 ) -> dict:
     """Run *code* synchronously and return the structured envelope.
 
@@ -107,12 +119,17 @@ def _run_inline(
     # so the sync path does not pay the ``sys.settrace`` cost.
     trace_installed = False
     previous_trace = None
+    started_at = time.monotonic()
+    deadline = started_at + timeout_secs if timeout_secs and timeout_secs > 0 else None
 
     def _cancel_tracer(_frame: Any, event: str, _arg: Any):
-        if event == "line" and cancel_event is not None and cancel_event.is_set():
-            from dcc_mcp_core.cancellation import CancelledError  # noqa: PLC0415
+        if event == "line":
+            if deadline is not None and time.monotonic() >= deadline:
+                raise ToolTimeoutError(time.monotonic() - started_at)
+            if cancel_event is not None and cancel_event.is_set():
+                from dcc_mcp_core.cancellation import CancelledError  # noqa: PLC0415
 
-            raise CancelledError("execute_python cancelled by client")
+                raise CancelledError("execute_python cancelled by client")
         return _cancel_tracer
 
     try:
@@ -121,7 +138,7 @@ def _run_inline(
         if maya_capture is not None:
             maya_capture.__enter__()
 
-        if cancel_event is not None:
+        if cancel_event is not None or deadline is not None:
             previous_trace = sys.gettrace()
             sys.settrace(_cancel_tracer)
             trace_installed = True
@@ -147,12 +164,32 @@ def _run_inline(
     stderr = _merge_capture(py_stderr, maya_stderr)
 
     if exc_info is not None:
-        return skill_exception(
+        if isinstance(exc_info, ToolTimeoutError):
+            return skill_error(
+                "Python execution timed out",
+                str(exc_info),
+                kind="tool-timeout",
+                elapsed_secs=exc_info.elapsed_secs,
+                stdout=stdout,
+                stderr=stderr,
+            )
+        try:
+            from dcc_mcp_maya.api import classify_maya_exception  # noqa: PLC0415
+
+            error_code = classify_maya_exception(exc_info)
+        except Exception:  # noqa: BLE001
+            error_code = "UNKNOWN"
+        result = skill_exception(
             exc_info,
             message="Python execution failed",
             stdout=stdout,
             stderr=stderr,
+            error_code=error_code,
+            error_type=type(exc_info).__name__,
         )
+        result.setdefault("error_code", error_code)
+        result.setdefault("error_type", type(exc_info).__name__)
+        return result
 
     raw = exec_globals.get("result")
     return skill_success(
@@ -197,7 +234,7 @@ def _run_deferred(code: str, capture_output: bool, timeout_secs: float):
     state: Dict[str, Any] = {"done": False, "result": None}
 
     def _runner() -> None:
-        state["result"] = _run_inline(code, capture_output, cancel_event=cancel_event)
+        state["result"] = _run_inline(code, capture_output, cancel_event=cancel_event, timeout_secs=timeout_secs)
         state["done"] = True
 
     try:
@@ -251,9 +288,10 @@ def execute_python(**params: Any):
     defer = bool(params.get("defer", False))
     timeout_secs = normalized.timeout_secs  # type: ignore[union-attr]
 
+    effective_timeout = float(timeout_secs or DEFAULT_EXECUTE_TIMEOUT_SECS)
     if defer:
-        return _run_deferred(code, capture_output, float(timeout_secs or 3600))
-    return _run_inline(code, capture_output)
+        return _run_deferred(code, capture_output, effective_timeout)
+    return _run_inline(code, capture_output, timeout_secs=effective_timeout)
 
 
 @skill_entry

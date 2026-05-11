@@ -97,18 +97,17 @@ class TestInitializePluginStaleScan:
 
     def test_stale_scan_invoked_after_start(self, plugin_module):
         module, _ = plugin_module
-        with patch.object(module, "_is_interactive", return_value=False), patch.object(module, "_start") as start:
+        with patch.object(module, "_print_startup_info"), patch.object(module, "_install_shutdown_safety"):
             with patch("dcc_mcp_maya._stale_cleanup.warn_if_too_many_stale") as warn:
-                module.initializePlugin(plugin=MagicMock())
-        start.assert_called_once()
+                module._post_start({})
         warn.assert_called_once()
 
     def test_stale_scan_failure_does_not_break_init(self, plugin_module):
         module, _ = plugin_module
-        with patch.object(module, "_is_interactive", return_value=False), patch.object(module, "_start"):
+        with patch.object(module, "_print_startup_info"), patch.object(module, "_install_shutdown_safety"):
             with patch(
                 "dcc_mcp_maya._stale_cleanup.warn_if_too_many_stale",
                 side_effect=RuntimeError("scan boom"),
             ):
                 # Must not raise.
-                module.initializePlugin(plugin=MagicMock())
+                module._post_start({})
