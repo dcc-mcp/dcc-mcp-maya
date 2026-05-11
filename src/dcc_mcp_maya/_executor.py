@@ -13,8 +13,10 @@ See: https://github.com/loonghao/dcc-mcp-maya/issues/127
 from __future__ import annotations
 
 # Import built-in modules
+import contextlib
 import logging
-from typing import Any, Dict
+import threading
+from typing import Any, Dict, Iterator
 
 # Import third-party modules
 from dcc_mcp_core.skill import skill_exception
@@ -24,8 +26,35 @@ from dcc_mcp_maya import _affinity
 
 logger = logging.getLogger(__name__)
 
+_busy_lock = threading.Lock()
+_busy_count = 0
+
+
+@contextlib.contextmanager
+def _busy_scope() -> Iterator[None]:
+    global _busy_count
+    with _busy_lock:
+        _busy_count += 1
+    try:
+        yield
+    finally:
+        with _busy_lock:
+            _busy_count = max(0, _busy_count - 1)
+
+
+def is_busy() -> bool:
+    """Return True while an in-process Maya skill script is executing."""
+    with _busy_lock:
+        return _busy_count > 0
+
 
 def run_skill_script(script_path: str, params: Dict[str, Any]) -> Dict[str, Any]:
+    """Run a skill script and mark the in-process executor busy."""
+    with _busy_scope():
+        return _run_skill_script_untracked(script_path, params)
+
+
+def _run_skill_script_untracked(script_path: str, params: Dict[str, Any]) -> Dict[str, Any]:
     """Load and execute a skill script in the current Python process.
 
     Implements the ``main(**params)`` calling convention used by all

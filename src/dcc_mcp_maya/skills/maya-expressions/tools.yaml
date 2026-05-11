@@ -3,6 +3,7 @@ tools:
   execution: sync
   affinity: main
   group: animation
+  description: Create a Maya expression in the current Maya scene.
 - name: delete_expression
   execution: sync
   affinity: main
@@ -10,10 +11,12 @@ tools:
     destructive_hint: true
     idempotent_hint: true
   group: animation
+  description: Delete a Maya expression in the current Maya scene.
 - name: edit_expression
   execution: sync
   affinity: main
   group: animation
+  description: Edit a Maya expression in the current Maya scene.
 - name: list_expressions
   execution: sync
   affinity: main
@@ -21,3 +24,4 @@ tools:
     read_only_hint: true
     idempotent_hint: true
   group: animation
+  description: List Maya expressions without modifying the Maya scene.

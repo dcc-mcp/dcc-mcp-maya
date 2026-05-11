@@ -5,22 +5,27 @@ tools:
   annotations:
     idempotent_hint: true
   group: modeling
+  description: Apply subdivision smoothing in the current Maya scene.
 - name: cleanup_mesh
   execution: sync
   affinity: main
   group: modeling
+  description: Clean up mesh data in the current Maya scene.
 - name: combine_meshes
   execution: sync
   affinity: main
   group: modeling
+  description: Combine meshes in the current Maya scene.
 - name: create_proxy_mesh
   execution: sync
   affinity: main
   group: modeling
+  description: Create a proxy mesh in the current Maya scene.
 - name: extract_faces
   execution: sync
   affinity: main
   group: modeling
+  description: Extract mesh faces in the current Maya scene.
 - name: get_mesh_edge_info
   execution: sync
   affinity: main
@@ -28,6 +33,7 @@ tools:
     read_only_hint: true
     idempotent_hint: true
   group: modeling
+  description: Get mesh edge information without modifying the Maya scene.
 - name: get_poly_count
   execution: sync
   affinity: main
@@ -35,23 +41,29 @@ tools:
     read_only_hint: true
     idempotent_hint: true
   group: modeling
+  description: Get polygon counts without modifying the Maya scene.
 - name: merge_vertices
   execution: sync
   affinity: main
   group: modeling
+  description: Merge mesh vertices in the current Maya scene.
 - name: mirror_mesh
   execution: sync
   affinity: main
   group: modeling
+  description: Mirror mesh data in the current Maya scene.
 - name: select_by_material
   execution: sync
   affinity: main
   group: modeling
+  description: Select objects by material in the current Maya scene.
 - name: separate_mesh
   execution: sync
   affinity: main
   group: modeling
+  description: Separate mesh data in the current Maya scene.
 - name: triangulate
   execution: sync
   affinity: main
   group: modeling
+  description: Triangulate triangulate in the current Maya scene.

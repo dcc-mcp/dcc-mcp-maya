@@ -6,6 +6,7 @@ tools:
   annotations:
     read_only_hint: true
     idempotent_hint: true
+  description: Export a camera in the current Maya scene.
 - name: export_shot_alembic
   execution: async
   affinity: main
@@ -13,6 +14,7 @@ tools:
   annotations:
     read_only_hint: true
     idempotent_hint: true
+  description: Export shot Alembic data in the current Maya scene.
 - name: export_shot_fbx
   execution: async
   affinity: main
@@ -20,9 +22,11 @@ tools:
   annotations:
     read_only_hint: true
     idempotent_hint: true
+  description: Export shot FBX data in the current Maya scene.
 - name: get_shot_info
   execution: sync
   affinity: main
   annotations:
     read_only_hint: true
     idempotent_hint: true
+  description: Get shot information without modifying the Maya scene.

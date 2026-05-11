@@ -58,6 +58,7 @@ class TestAutoCorrect:
             with patch.dict(os.environ, {_pyexec.ENV_VAR: original}, clear=False):
                 assert _pyexec.auto_correct() == sibling
                 assert os.environ[_pyexec.ENV_VAR] == sibling
+                assert os.environ[_pyexec.AUTOCORRECTED_ENV_VAR] == "1"
 
     def test_idempotent(self):
         """A second call after correction is a no-op."""
@@ -77,6 +78,25 @@ class TestAutoCorrect:
                 second = _pyexec.auto_correct()
                 assert first == second == sibling
                 assert os.environ[_pyexec.ENV_VAR] == sibling
+
+    def test_successful_correction_logs_info_not_warning(self, caplog):
+        original = "C:/Program Files/Autodesk/Maya2025/bin/maya.exe"
+        sibling = "C:/Program Files/Autodesk/Maya2025/bin/mayapy.exe"
+
+        def fake_correct(p):
+            return sibling if p == original else p
+
+        def fake_is_gui(p):
+            return p == original
+
+        with patch.object(_pyexec, "is_gui_executable", fake_is_gui), patch.object(
+            _pyexec, "correct_python_executable", fake_correct
+        ):
+            with patch.dict(os.environ, {_pyexec.ENV_VAR: original}, clear=False):
+                with caplog.at_level(logging.INFO, logger=_pyexec.__name__):
+                    assert _pyexec.auto_correct() == sibling
+        assert any("auto-corrected" in m for m in caplog.messages)
+        assert not [r for r in caplog.records if r.levelno >= logging.WARNING]
 
     def test_warns_when_gui_with_no_sibling(self, caplog):
         """If the helper returns the value unchanged but flags it as a GUI binary,

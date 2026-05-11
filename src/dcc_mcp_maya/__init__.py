@@ -82,6 +82,7 @@ from dcc_mcp_maya.api import (
     batch_validate_nodes,
     bounding_box_from_node,
     build_context_dict,
+    classify_maya_exception,
     ensure_valid_name,
     get_cmds,
     get_param_list,
@@ -125,12 +126,13 @@ from dcc_mcp_maya.dispatcher import (
     create_pumped_dispatcher,
 )
 from dcc_mcp_maya.host import MayaCallableDispatcher, MayaHost
-from dcc_mcp_maya.server import MayaMcpServer, start_server, stop_server
+from dcc_mcp_maya.server import MayaMcpServer, MayaServerOptions, start_server, stop_server
 
 __all__ = [
     "__version__",
     # Server
     "MayaMcpServer",
+    "MayaServerOptions",
     "start_server",
     "stop_server",
     # Host adapter (main-thread dispatcher)
@@ -152,6 +154,7 @@ __all__ = [
     "maya_error",
     "maya_warning",
     "maya_from_exception",
+    "classify_maya_exception",
     "maya_typed_success",
     "require_cmds",
     "get_cmds",

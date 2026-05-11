@@ -87,6 +87,30 @@ F = TypeVar("F", bound=Callable[..., Any])
 # Sentinel used by require_param to detect "no default provided"
 _SENTINEL = object()
 
+_MAYA_ERROR_CODE_NEEDLES = (
+    ("must pass a boolean", "ARG_TYPE_MISMATCH"),
+    ("boolean argument must be passed", "ARG_TYPE_MISMATCH"),
+    ("必须为标志", "ARG_TYPE_MISMATCH"),
+    ("オプション", "ARG_TYPE_MISMATCH"),
+    ("does not exist", "NODE_NOT_FOUND"),
+    ("no object matches name", "NODE_NOT_FOUND"),
+    ("找不到", "NODE_NOT_FOUND"),
+    ("attribute not found", "ATTRIBUTE_NOT_FOUND"),
+    ("has no attribute", "ATTRIBUTE_NOT_FOUND"),
+    ("locked or connected", "LOCKED_ATTRIBUTE"),
+    ("is locked", "LOCKED_ATTRIBUTE"),
+    ("not loaded", "PLUGIN_NOT_LOADED"),
+    ("plugin", "PLUGIN_NOT_LOADED"),
+    ("no such file", "FILE_NOT_FOUND"),
+    ("file not found", "FILE_NOT_FOUND"),
+    ("permission denied", "PERMISSION_DENIED"),
+    ("access is denied", "PERMISSION_DENIED"),
+    ("undo", "UNDO_LOCKED"),
+    ("timeout", "EXECUTION_TIMEOUT"),
+    ("timed out", "EXECUTION_TIMEOUT"),
+    ("version", "VERSION_MISMATCH"),
+)
+
 # ---------------------------------------------------------------------------
 # Core result helpers
 # ---------------------------------------------------------------------------
@@ -179,6 +203,15 @@ def maya_warning(message: str, warning: str = "", prompt: Optional[str] = None, 
     return skill_warning(message, warning=warning, prompt=prompt, **context)
 
 
+def classify_maya_exception(exc: BaseException) -> str:
+    """Return a stable locale-independent code for common Maya exceptions."""
+    haystack = "{} {}".format(type(exc).__name__, exc).lower()
+    for needle, code in _MAYA_ERROR_CODE_NEEDLES:
+        if needle.lower() in haystack:
+            return code
+    return "UNKNOWN"
+
+
 def maya_from_exception(
     exc: BaseException,
     message: str = "Maya operation failed",
@@ -210,7 +243,9 @@ def maya_from_exception(
             logger.exception("create_sphere failed")
             return maya_from_exception(exc, "Failed to create sphere")
     """
-    return skill_exception(
+    context.setdefault("error_code", classify_maya_exception(exc))
+    context.setdefault("error_type", type(exc).__name__)
+    result = skill_exception(
         exc,
         message=message,
         prompt=prompt,
@@ -218,6 +253,9 @@ def maya_from_exception(
         possible_solutions=possible_solutions,
         **context,
     )
+    result.setdefault("error_code", context["error_code"])
+    result.setdefault("error_type", context["error_type"])
+    return result
 
 
 # ---------------------------------------------------------------------------

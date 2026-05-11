@@ -57,6 +57,29 @@ def plugin_module(mock_maya_modules):
     return mod
 
 
+class TestPluginStartupMode:
+    def test_interactive_initialize_schedules_async_start(self, plugin_module, mock_maya_modules):
+        mock_maya_modules.cmds.about.side_effect = lambda **kwargs: False if kwargs.get("batch") else "2025"
+        plugin_module._add_menu = MagicMock()
+        plugin_module._start_async = MagicMock()
+        plugin_module._start = MagicMock()
+
+        plugin_module.initializePlugin(MagicMock())
+
+        plugin_module._start_async.assert_called_once_with()
+        plugin_module._start.assert_not_called()
+
+    def test_batch_initialize_starts_synchronously(self, plugin_module, mock_maya_modules):
+        mock_maya_modules.cmds.about.side_effect = lambda **kwargs: True if kwargs.get("batch") else "2025"
+        plugin_module._start_async = MagicMock()
+        plugin_module._start = MagicMock()
+
+        plugin_module.initializePlugin(MagicMock())
+
+        plugin_module._start.assert_called_once_with()
+        plugin_module._start_async.assert_not_called()
+
+
 class TestExportWorkerEnv:
     """Tests for ``_export_worker_env()``."""
 

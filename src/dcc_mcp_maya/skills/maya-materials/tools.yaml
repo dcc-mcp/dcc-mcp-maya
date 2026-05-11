@@ -5,10 +5,12 @@ tools:
   annotations:
     idempotent_hint: true
   group: shading-lighting
+  description: Assign a material in the current Maya scene.
 - name: create_material
   execution: sync
   affinity: main
   group: shading-lighting
+  description: Create a material in the current Maya scene.
 - name: get_material_connections
   execution: sync
   affinity: main
@@ -16,6 +18,7 @@ tools:
     read_only_hint: true
     idempotent_hint: true
   group: shading-lighting
+  description: Get material connections without modifying the Maya scene.
 - name: get_shader_assignment
   execution: sync
   affinity: main
@@ -23,6 +26,7 @@ tools:
     read_only_hint: true
     idempotent_hint: true
   group: shading-lighting
+  description: Get shader assignments without modifying the Maya scene.
 - name: list_materials
   execution: sync
   affinity: main
@@ -30,6 +34,7 @@ tools:
     read_only_hint: true
     idempotent_hint: true
   group: shading-lighting
+  description: List materials without modifying the Maya scene.
 - name: list_shading_groups
   execution: sync
   affinity: main
@@ -37,15 +42,18 @@ tools:
     read_only_hint: true
     idempotent_hint: true
   group: shading-lighting
+  description: List shading groups without modifying the Maya scene.
 - name: reset_to_default_material
   execution: sync
   affinity: main
   annotations:
     idempotent_hint: true
   group: shading-lighting
+  description: Reset to default material in the current Maya scene.
 - name: set_material_attribute
   execution: sync
   affinity: main
   annotations:
     idempotent_hint: true
   group: shading-lighting
+  description: Set a material attribute in the current Maya scene.

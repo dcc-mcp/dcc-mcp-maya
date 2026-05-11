@@ -111,4 +111,5 @@ def test_geometry_tools_yaml_declares_affinity():
 
     assert "name: file_exists" in text
     assert "affinity: any" in text
-    assert text.count("affinity: main") >= 4
+    assert "name: create_sphere" not in text
+    assert text.count("affinity: main") >= 3
