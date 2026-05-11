@@ -25,6 +25,7 @@ from dcc_mcp_core import correct_python_executable, is_gui_executable
 logger = logging.getLogger(__name__)
 
 ENV_VAR = "DCC_MCP_PYTHON_EXECUTABLE"
+AUTOCORRECTED_ENV_VAR = "DCC_MCP_PYTHON_EXECUTABLE_AUTOCORRECTED"
 
 
 def auto_correct(env_var: str = ENV_VAR) -> Optional[str]:
@@ -56,9 +57,9 @@ def auto_correct(env_var: str = ENV_VAR) -> Optional[str]:
     fixed = str(fixed_raw) if fixed_raw is not None else ""
     if fixed and fixed != raw:
         os.environ[env_var] = fixed
-        logger.warning(
-            "%s pointed at a GUI executable (%s); auto-corrected to %s. "
-            "Set the env var to the headless Python interpreter to silence this warning.",
+        os.environ[AUTOCORRECTED_ENV_VAR] = "1"
+        logger.info(
+            "%s pointed at a GUI executable (%s); auto-corrected to %s.",
             env_var,
             raw,
             fixed,

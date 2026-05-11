@@ -210,6 +210,23 @@ class TestInlineCaptureMerging:
         # stdout key must be populated; MayaOutputCapture is a no-op here.
         assert "hello-stdout" in ctx.get("stdout", "")
 
+    def test_inline_timeout_returns_structured_error(self):
+        mod = load_skill_script("maya-scripting", "execute_python")
+        envelope = mod._run_inline("while True:\n    pass", capture_output=False, timeout_secs=0.01)
+        assert envelope["success"] is False
+        assert envelope["context"]["kind"] == "tool-timeout"
+        assert envelope["context"]["elapsed_secs"] >= 0.01
+
+    def test_localised_maya_error_gets_stable_code(self):
+        mod = load_skill_script("maya-scripting", "execute_python")
+        envelope = mod._run_inline(
+            "raise TypeError('必须为标志「allObjects」传递一个布尔参数')",
+            capture_output=False,
+        )
+        assert envelope["success"] is False
+        assert envelope["error_code"] == "ARG_TYPE_MISMATCH"
+        assert envelope["context"]["error_code"] == "ARG_TYPE_MISMATCH"
+
     def test_merge_capture_helper(self):
         mod = load_skill_script("maya-scripting", "execute_python")
         # Both empty → empty
