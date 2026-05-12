@@ -74,6 +74,10 @@ When handing FBX to **another Maya year** or a different DCC, treat these fields
 
 The `export_fbx` script resets the FBX plugin option store (`FBXResetExport`) before export and returns `applied_options` plus `size_bytes` in the success envelope for audit and regression triage.
 
+## Bulk and multi-file export (agents)
+
+For **N separate FBX paths** (e.g. one file per root transform), prefer **one** `execute_python` payload that loops in Maya, applies the **Cross-Maya FBX contract** fields each iteration, and returns e.g. `context.written_files`. Invoking the `export_fbx` tool **N times** over MCP is possible when each call must be individually validated, but it costs **N round-trips** — collapse to a single script when the user only needs throughput and deterministic naming.
+
 ## Groups
 
 - **core** (`default_active: true`) — `file_exists`. Pure filesystem,

@@ -1,21 +1,38 @@
 ---
 name: maya-rigging
-description: Maya character rigging workflow — joints, IK, skin clusters, deformers, blend shapes, and control curves. Use when building character or prop rigs. Not for animation keyframing or final scene assembly — use maya-animation or maya-scene-assembly for that.
+description: |-
+  Authoring stage — character / prop rigging: joints, IK, skin clusters,
+  deformers, blend shapes, and control curves. Use when constructing rigs.
+  Not for keyframe animation (maya-animation), pose libraries
+  (maya-pose-library), or final scene assembly (maya-scene-assembly).
 license: MIT
 allowed-tools: Bash Read
 metadata:
   dcc-mcp:
     dcc: maya
     layer: domain
-    version: 1.0.0
+    stage: authoring
+    version: 1.1.0
     tags:
     - maya
     - rigging
     - skeleton
     - deformer
-    - animation
-    search-hint: build character rig, skeleton setup, skin bind, control curve
+    - skin-cluster
+    - blend-shape
+    search-hint: |-
+      build character rig, skeleton setup, IK chain, skin bind, blendshape,
+      control curve, deformer, joint hierarchy, weight paint
+    aliases:
+    - maya-rig
+    side-effects:
+    - reads-scene
+    - writes-scene
     depends: []
     tools: tools.yaml
     groups: groups.yaml
 ---
+# maya-rigging (Authoring stage)
+
+Joint hierarchies, IK handles, skin clusters, deformers, blend shapes,
+and control curves. Twelve scripts cover the typical rigging loop.

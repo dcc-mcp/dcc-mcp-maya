@@ -57,6 +57,27 @@ from dcc_mcp_maya._resources import (
     MayaResourceBinder,
     install_resources,
 )
+from dcc_mcp_maya._env import (
+    ENV_DISABLE_ARBITRARY_SCRIPT,
+    ENV_DISABLE_EXECUTE_MEL,
+    ENV_DISABLE_EXECUTE_PYTHON,
+    ENV_ENABLE_GATEWAY_FAILOVER,
+    resolve_enable_gateway_failover,
+    resolve_execute_mel_disabled,
+    resolve_execute_python_disabled,
+)
+from dcc_mcp_maya._safe_session import (
+    ENV_SAFE_SESSION,
+    mcp_safe_session,
+    suppressed_dialog_calls,
+)
+from dcc_mcp_maya._skill_loader import (
+    MINIMAL_SKILLS,
+    STAGES,
+    build_minimal_mode_config,
+    build_minimal_mode_for_stages,
+    skills_for_stage,
+)
 from dcc_mcp_maya._shutdown_safety import (
     ENV_ATEXIT_HOOK,
     ENV_DEFENSIVE_DEL,
@@ -196,9 +217,30 @@ __all__ = [
     "SCHEME_MAYA_PROJECT",
     "MayaResourceBinder",
     "install_resources",
+    # Safe-session firewall (modal-dialog deadlock prevention)
+    "ENV_SAFE_SESSION",
+    "mcp_safe_session",
+    "suppressed_dialog_calls",
+    # Skills-first policy — optional refusal of arbitrary script tools
+    "ENV_DISABLE_EXECUTE_PYTHON",
+    "ENV_DISABLE_EXECUTE_MEL",
+    "ENV_DISABLE_ARBITRARY_SCRIPT",
+    "resolve_execute_python_disabled",
+    "resolve_execute_mel_disabled",
+    # 5-stage skill taxonomy + minimal-mode helpers
+    # - stage source-of-truth: each SKILL.md frontmatter
+    #   (parsed into dcc_mcp_core.SkillMetadata.stage)
+    # - default-inactive groups source-of-truth: each skill's groups.yaml
+    #   (groups whose `default_active: false`)
+    # No hand-maintained shadow tables live in this package any more.
+    "MINIMAL_SKILLS",
+    "STAGES",
+    "skills_for_stage",
+    "build_minimal_mode_config",
+    "build_minimal_mode_for_stages",
     # Runtime readiness (issue #184) — Maya-side binder wrapping
-    # ``dcc_mcp_core.ReadinessProbe`` (core 0.14.28+).  The three-state
-    # probe itself comes from core; import directly when you need it:
+    # ``dcc_mcp_core.ReadinessProbe``.  The three-state probe itself comes
+    # from core; import directly when you need it:
     #   from dcc_mcp_core import ReadinessProbe
     "ENV_READINESS_TIMEOUT_SECS",
     "ReadinessBinder",

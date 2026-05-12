@@ -10,6 +10,7 @@ coverage that requires ``mayapy`` lives in ``tests/e2e/test_scripting_e2e.py``.
 from __future__ import annotations
 
 # Import built-in modules
+import os
 import sys
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -186,16 +187,125 @@ class TestToolsYamlContract:
         # the native-channel capture we added.
         assert "cmds.warning" in desc or "script editor" in desc
 
+    def test_execute_python_schema_has_file_path(self):
+        data = self._load_tools()
+        tool = next(t for t in data["tools"] if t["name"] == "execute_python")
+        props = tool.get("inputSchema", {}).get("properties", {})
+        assert "file_path" in props
+        assert "script_path" in props
+
+    def test_execute_mel_schema_has_file_path(self):
+        data = self._load_tools()
+        tool = next(t for t in data["tools"] if t["name"] == "execute_mel")
+        props = tool.get("inputSchema", {}).get("properties", {})
+        assert "file_path" in props
+
+    def test_execute_python_description_mentions_gateway_rest(self):
+        data = self._load_tools()
+        tool = next(t for t in data["tools"] if t["name"] == "execute_python")
+        desc = tool["description"].lower()
+        assert "/v1/" in desc or "v1/call" in desc
+
     def test_execute_python_still_declares_main_affinity(self):
         """Even though `defer=True` is async, the tool still touches Maya."""
         data = self._load_tools()
         tool = next(t for t in data["tools"] if t["name"] == "execute_python")
         assert tool["affinity"] == "main"
 
+    def test_execute_python_advertises_skills_first_escape_hatch(self):
+        data = self._load_tools()
+        tool = next(t for t in data["tools"] if t["name"] == "execute_python")
+        desc = tool["description"].lower()
+        assert "load_skill" in desc
+        assert "last-resort" in desc or "escape" in desc
+
+    def test_execute_python_has_destructive_annotation(self):
+        data = self._load_tools()
+        tool = next(t for t in data["tools"] if t["name"] == "execute_python")
+        ann = tool.get("annotations") or {}
+        assert ann.get("destructive_hint") is True
+
+
+# ---------------------------------------------------------------------------
+# Operator policy — refuse arbitrary script tools when env vars are set
+# ---------------------------------------------------------------------------
+
+
+class TestArbitraryScriptPolicyEnv:
+    """``DCC_MCP_MAYA_DISABLE_*`` gates short-circuit before Maya I/O."""
+
+    def test_disable_execute_python_returns_structured_error(self):
+        mod = load_skill_script("maya-scripting", "execute_python")
+        with patch.dict(os.environ, {"DCC_MCP_MAYA_DISABLE_EXECUTE_PYTHON": "1"}):
+            out = mod.execute_python(code="1+1")
+        assert out.get("success") is False
+        assert "policy" in (out.get("message") or "").lower()
+
+    def test_disable_arbitrary_script_blocks_execute_mel(self):
+        mod = load_skill_script("maya-scripting", "execute_mel")
+        with patch.dict(os.environ, {"DCC_MCP_MAYA_DISABLE_ARBITRARY_SCRIPT": "true"}):
+            out = mod.execute_mel(code="1")
+        assert out.get("success") is False
+        assert "policy" in (out.get("message") or "").lower()
+
+    def test_disable_execute_python_true_token(self):
+        mod = load_skill_script("maya-scripting", "execute_python")
+        with patch.dict(os.environ, {"DCC_MCP_MAYA_DISABLE_EXECUTE_PYTHON": "yes"}):
+            out = mod.execute_python(code="pass")
+        assert out.get("success") is False
+
+    def test_disable_arbitrary_script_blocks_execute_python(self):
+        mod = load_skill_script("maya-scripting", "execute_python")
+        with patch.dict(os.environ, {"DCC_MCP_MAYA_DISABLE_ARBITRARY_SCRIPT": "on"}):
+            out = mod.execute_python(code="pass")
+        assert out.get("success") is False
+
 
 # ---------------------------------------------------------------------------
 # execute_python inline — stdout capture merges Python + Maya channels
 # ---------------------------------------------------------------------------
+
+
+class TestExecutePythonFilePath:
+    """file_path execution path (no live Maya required for I/O errors)."""
+
+    def test_missing_file_returns_error_envelope(self):
+        mod = load_skill_script("maya-scripting", "execute_python")
+        out = mod.execute_python(file_path="/nonexistent/path/__no_such_mcp_script__.py")
+        assert out.get("success") is False
+        assert "not found" in (out.get("message") or "").lower()
+
+    def test_non_py_extension_returns_error(self):
+        mod = load_skill_script("maya-scripting", "execute_python")
+        import tempfile
+
+        with tempfile.NamedTemporaryFile(suffix=".txt", delete=False) as tmp:
+            path = tmp.name
+        try:
+            out = mod.execute_python(file_path=path)
+            assert out.get("success") is False
+            assert ".py" in (out.get("message") or "").lower() or "py" in (out.get("message") or "").lower()
+        finally:
+            os.unlink(path)
+
+    def test_script_path_alias_executes_py_file(self):
+        mod = load_skill_script("maya-scripting", "execute_python")
+        import tempfile
+
+        import __main__
+
+        with tempfile.NamedTemporaryFile("w", suffix=".py", delete=False, encoding="utf-8") as tmp:
+            tmp.write("result = 40 + 2\n")
+            path = tmp.name
+        try:
+            out = mod.execute_python(script_path=path)
+            assert out.get("success") is True
+            ctx = out.get("context") or {}
+            assert "42" in str(ctx.get("output", ""))
+            assert __main__.__dict__.get("result") == 42
+        finally:
+            __main__.__dict__.pop("result", None)
+            os.unlink(path)
 
 
 class TestInlineCaptureMerging:

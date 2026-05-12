@@ -34,12 +34,8 @@ class TestGetMayaVersionString:
         main = MagicMock(name="main")
         with patch.object(_version_probe, "maya_available", return_value=True):
             with patch.dict(sys.modules, modules):
-                with patch(
-                    "dcc_mcp_maya._version_probe.threading.current_thread", return_value=worker
-                ):
-                    with patch(
-                        "dcc_mcp_maya._version_probe.threading.main_thread", return_value=main
-                    ):
+                with patch("dcc_mcp_maya._version_probe.threading.current_thread", return_value=worker):
+                    with patch("dcc_mcp_maya._version_probe.threading.main_thread", return_value=main):
                         assert _version_probe.get_maya_version_string() == _version_probe.UNKNOWN_VERSION
         fake_cmds.about.assert_not_called()
 
