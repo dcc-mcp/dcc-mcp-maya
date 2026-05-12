@@ -63,7 +63,7 @@ def _normalize(params: Dict[str, Any]):
             "No Python code provided",
             str(exc),
             possible_solutions=[
-                "Pass the source via 'code' (preferred), 'script', or 'source'.",
+                "Pass the source via the 'code' parameter.",
             ],
         )
     except TypeError as exc:

@@ -24,10 +24,10 @@ def _merge_capture(primary: str, extra: str) -> str:
 def execute_mel(**params: Any) -> dict:
     """Execute a MEL expression and return its string result.
 
-    Accepts the source via ``code`` (preferred), ``script``, or ``source``
-    aliases via :func:`dcc_mcp_core.normalize_script_execution_params` so
-    ``execute_mel`` and ``execute_python`` share a common parameter
-    contract (issue #150 / dcc-mcp-core #591).
+    Accepts the source via the ``code`` parameter, normalised through
+    :func:`dcc_mcp_core.normalize_script_execution_params` so ``execute_mel``
+    and ``execute_python`` share a common parameter contract (issue #150 /
+    dcc-mcp-core #591).
 
     Captures both Python stdout/stderr **and** Maya's native Script
     Editor channel (``MCommandMessage``) so MEL ``print`` and
@@ -52,7 +52,7 @@ def execute_mel(**params: Any) -> dict:
             "No MEL code provided",
             str(exc),
             possible_solutions=[
-                "Pass the source via 'code' (preferred), 'script', or 'source'.",
+                "Pass the source via the 'code' parameter.",
             ],
         )
     except TypeError as exc:
