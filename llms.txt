@@ -100,6 +100,8 @@ manifest = server.build_capability_manifest()
 
 Each record is <=640 B serialised and omits `inputSchema` — roughly 4× cheaper than a full `tools/list` entry.  Loaded-skill actions are exposed that MCP `tools/list` intentionally skips (core uses `__skill__*` stubs), so the manifest fills a real discovery gap.
 
+**Gateway note:** When the client talks to **dcc-mcp-gateway** instead of Maya directly, use upstream `call_tools` / `POST /v1/call_batch` for ordered multi-invocations (see `dcc-mcp-core` `llms.txt` gateway rows) after the usual `search_tools` → `describe_tool` discovery pass.
+
 Live sync with the gateway FileRegistry:
 
 * `server.publish_capability_snapshot(reason="...")` — push current Maya `scene / version / documents / display_name` via `DccServerBase.update_gateway_metadata`.  Invoked automatically on `start()`, `load_skill(...)`, and `unload_skill(...)`.
