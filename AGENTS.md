@@ -73,13 +73,15 @@ def create_sphere(radius: float = 1.0) -> dict:
 *Goal: Discover and use tools effectively inside a live Maya session.*
 
 - **llms.txt** — Core API surface, environment variables, key files (fits in a small context window).
-- **llms-full.txt** — Complete public API signatures, all environment variables, 12 built-in skill categories.
+- **llms-full.txt** — Complete public API signatures, all environment variables, bundled skill categories.
+- **`src/dcc_mcp_maya/skills/SKILLS_INDEX.md`** — **Cross-skill navigation map**: 5-stage taxonomy and ready-made task → skill chains. Read first before deciding which skill to load.
 - **Upstream core reference** — https://github.com/loonghao/dcc-mcp-core/blob/main/llms.txt (and the deeper [`llms-full.txt`](https://github.com/loonghao/dcc-mcp-core/blob/main/llms-full.txt)) — exhaustive `dcc_mcp_core` API surface; use it whenever a tool/skill needs to leverage core primitives that are not surfaced in this repo's own `llms.txt`.
 - **Skill discovery workflow:**
-  1. Call `search_tools(query="bevel")` or `find_skills("bevel")` to locate relevant skills.
-  2. Call `load_skill("maya-mesh-ops")` to materialize the skill's tools.
-  3. Call `activate_group("extended")` if additional tool groups are available.
-  4. Execute the specific tool (e.g., `maya_mesh_ops__bevel_edge`).
+  1. Prefer MCP `dcc_capability_manifest` with `{loaded_only: false}` for a **compact** index of actions (avoids paying full `inputSchema` cost for every skill up front).
+  2. Alternatively: `search_tools` / `find_skills` → `load_skill` → optional `activate_group("extended")` → invoke the tool (e.g. `maya_mesh_ops__bevel_edge`).
+  3. For **bulk** work (many primitives, simulation, then export), prefer **one** `execute_python` payload or a gateway **`call_tools`** batch — see `examples/workflows/maya_bulk_rbd_fbx.md`.
+  4. **cmds documentation:** `resources/read` on `maya-cmds://help/<command>` or `maya-cmds://flags/<command>` (use the exact URI from `resources/list`).
+- **Token hygiene:** Set `DCC_MCP_MAYA_EXCLUDE_STUBS_FROM_TOOLS_LIST=1` when your MCP host repeatedly syncs a large `tools/list`; discovery remains available via `dcc_capability_manifest` and gateway `/v1/search`.
 - **Always check cancellation in long-running loops:**
   ```python
   from dcc_mcp_maya import check_maya_cancelled
@@ -88,6 +90,63 @@ def create_sphere(radius: float = 1.0) -> dict:
       cmds.currentTime(frame)
       cmds.render()
   ```
+
+---
+
+## Skill Stage Taxonomy (5-stage map)
+
+Every bundled skill is tagged with `metadata.dcc-mcp.stage` in its
+`SKILL.md`. The single source of truth for the mapping is
+[`src/dcc_mcp_maya/_skill_loader.py::SKILL_STAGE`](src/dcc_mcp_maya/_skill_loader.py)
+plus the cross-skill index [`src/dcc_mcp_maya/skills/SKILLS_INDEX.md`](src/dcc_mcp_maya/skills/SKILLS_INDEX.md).
+
+| Stage         | Purpose                                                              | Default loaded?           | Skills |
+|---------------|----------------------------------------------------------------------|---------------------------|--------|
+| `bootstrap`   | Generic fall-through; arbitrary code execution.                      | yes                       | `maya-scripting` |
+| `scene`       | Scene file lifecycle, DAG, attributes, node graph, viewport display. | partial (`maya-scene` only) | `maya-scene`, `maya-scene-assembly`, `maya-display`, `maya-attributes`, `maya-node-graph` |
+| `authoring`   | Create / edit content (mesh, UV, mat, rig, anim, light).             | no                        | `maya-primitives`, `maya-mesh-ops`, `maya-uv-ops`, `maya-materials`, `maya-material-library`, `maya-texture-bake`, `maya-rigging`, `maya-animation`, `maya-pose-library`, `maya-expressions`, `maya-light-rig` |
+| `interchange` | Geometry / scene I/O across DCCs (FBX, OBJ, presets, save).          | no                        | `maya-geometry`, `maya-export-preset` |
+| `pipeline`    | Production: project, publish, shot export, render, render farm.       | no                        | `maya-pipeline`, `maya-shot-export`, `maya-render`, `maya-render-farm` |
+
+Helpers in `_skill_loader.py`:
+
+```python
+from dcc_mcp_maya._skill_loader import (
+    SKILL_STAGE,                  # dict[str, str] — single source of truth
+    STAGES,                       # canonical 5-stage tuple
+    skills_for_stage,             # tuple of skills in a given stage
+    build_minimal_mode_config,    # default minimal-mode config
+    build_minimal_mode_for_stages,  # eager-load whole stages at once
+)
+```
+
+A custom minimal mode that pre-loads `bootstrap + scene + interchange` so the
+"create geometry → export FBX" path does not require a `load_skill` call:
+
+```python
+cfg = build_minimal_mode_for_stages(["scene", "interchange"])  # bootstrap auto-included
+server.register_builtin_actions(minimal_mode=cfg)
+```
+
+## MCP-dispatched Safe Session (modal-dialog firewall)
+
+Every in-process skill job runs inside
+[`dcc_mcp_maya._safe_session.mcp_safe_session`](src/dcc_mcp_maya/_safe_session.py),
+which:
+
+* snoozes Maya AutoSave for the duration of the job;
+* replaces `cmds.confirmDialog` / `promptDialog` / `fileDialog` /
+  `fileDialog2` / `layoutDialog` with non-blocking stubs that emit a
+  `stderr` warning and return a defaulted value (so the calling code keeps
+  running);
+* restores everything on exit, even on exception. The context is
+  reentrant via thread-local refcount so nested invocations do not
+  undo each other's state.
+
+This is the single most important line of defence against the
+"adapter looks alive but every MCP request hangs" failure mode. Set
+`DCC_MCP_MAYA_SAFE_SESSION=0` to disable for an interactive
+authoring session that *actually* needs to spawn dialogs.
 
 ---
 
@@ -381,7 +440,7 @@ Bugs that only reproduce through the **gateway REST** surface (`/v1/search`, `/v
 | `src/dcc_mcp_maya/skills/` | 12 built-in skill packages, 73 scripts |
 | `docs/guide/local-mcp-debug.md` | Cursor / Claude MCP URL + **debugpy** remote attach for Maya |
 | `examples/mcp/` | MCP host JSON snippets (e.g. `cursor-maya-streamable-http.json`) |
-| `tools/maya-dev-build-link-core-win.ps1` | Windows: `maturin develop` core with mayapy + symlink core + maya into `Documents/maya/modules` |
+| `tools/maya-dev-build-link-core-win.ps1` | Windows: `maturin develop` core with mayapy (`abi3-py38` for mayapy 3.8+ to match PyPI wheels; non-abi3 for Maya 2022 / 3.7) + symlink into `Documents/maya/modules` |
 | `docs/` | VitePress documentation site (EN + ZH) |
 | `tests/` | pytest suite (unit + E2E + integration) |
 
