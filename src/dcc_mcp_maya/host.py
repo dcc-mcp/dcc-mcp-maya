@@ -9,6 +9,8 @@ from typing import Any, Callable, Optional
 # Import third-party modules
 from dcc_mcp_core.host import HostAdapter
 
+from dcc_mcp_maya.api import require_main_thread
+
 
 class MayaCallableDispatcher:
     """Callable bridge used after native core dispatcher attachment.
@@ -38,6 +40,7 @@ class MayaHost(HostAdapter):
         super().__init__(dispatcher, **kwargs)
         self._script_job: Optional[int] = None
 
+    @require_main_thread
     def is_background(self) -> bool:
         try:
             import maya.cmds as cmds  # noqa: PLC0415
@@ -46,6 +49,7 @@ class MayaHost(HostAdapter):
         except ImportError:
             return True
 
+    @require_main_thread
     def attach_tick(self, tick_fn: Callable[[], Optional[float]]) -> None:
         import maya.cmds as cmds  # noqa: PLC0415
 
@@ -53,6 +57,7 @@ class MayaHost(HostAdapter):
             return
         self._script_job = cmds.scriptJob(idleEvent=lambda: tick_fn(), protected=True)
 
+    @require_main_thread
     def detach_tick(self) -> None:
         if self._script_job is None:
             return

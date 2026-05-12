@@ -335,7 +335,46 @@ class TestInlineCaptureMerging:
         )
         assert envelope["success"] is False
         assert envelope["error_code"] == "ARG_TYPE_MISMATCH"
+        assert envelope["canonical_message_en"] == "Maya command flag received a value of the wrong type."
         assert envelope["context"]["error_code"] == "ARG_TYPE_MISMATCH"
+        assert envelope["context"]["canonical_message_en"] == "Maya command flag received a value of the wrong type."
+
+    def test_print_stdout_is_deduplicated_against_maya_mirror(self, monkeypatch):
+        class _MirroredMayaCapture:
+            stdout = "hello-once\n"
+            stderr = ""
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc, tb):
+                return None
+
+        monkeypatch.setattr("dcc_mcp_maya._maya_output.MayaOutputCapture", _MirroredMayaCapture)
+        mod = load_skill_script("maya-scripting", "execute_python")
+        envelope = mod._run_inline("print('hello-once')", capture_output=True)
+
+        stdout = envelope["context"]["stdout"]
+        assert stdout.count("hello-once") == 1
+
+    def test_capture_cleanup_failure_does_not_mask_script_exception(self, monkeypatch):
+        class _FailingExitMayaCapture:
+            stdout = ""
+            stderr = ""
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc, tb):
+                raise RuntimeError("cleanup failed")
+
+        monkeypatch.setattr("dcc_mcp_maya._maya_output.MayaOutputCapture", _FailingExitMayaCapture)
+        mod = load_skill_script("maya-scripting", "execute_python")
+        envelope = mod._run_inline("raise NameError('original failure')", capture_output=True)
+
+        assert envelope["success"] is False
+        assert envelope["context"]["error_type"] == "NameError"
+        assert "original failure" in envelope["error"]
 
     def test_merge_capture_helper(self):
         mod = load_skill_script("maya-scripting", "execute_python")
@@ -348,3 +387,5 @@ class TestInlineCaptureMerging:
         assert mod._merge_capture("a\n", "b") == "a\nb"
         # Both populated, primary missing newline
         assert mod._merge_capture("a", "b") == "a\nb"
+        # Maya mirrors Python print through MCommandMessage with different whitespace.
+        assert mod._merge_capture("Maya: 2024\n", "Maya:\n \n2024\n\n") == "Maya: 2024\n"
