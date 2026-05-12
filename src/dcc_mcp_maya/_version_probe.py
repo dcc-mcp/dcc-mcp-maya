@@ -22,8 +22,6 @@ from __future__ import annotations
 import logging
 import threading
 
-from dcc_mcp_maya.api import require_main_thread
-
 logger = logging.getLogger(__name__)
 
 #: Sentinel returned when Maya is not available or its version cannot be probed.
@@ -33,6 +31,15 @@ UNKNOWN_VERSION = "unknown"
 # Only probe once (on the main thread); subsequent calls return the cached value.
 _version_cache: str | None = None
 _version_lock = threading.Lock()
+
+
+def clear_version_cache() -> None:
+    """Clear the cached Maya version string.
+
+    Useful in tests or when Maya's state changes (e.g., switching projects).
+    """
+    global _version_cache
+    _version_cache = None
 
 
 def maya_available() -> bool:
@@ -52,7 +59,6 @@ def maya_available() -> bool:
         return False
 
 
-@require_main_thread
 def get_maya_version_string() -> str:
     """Return Maya's version string via ``cmds.about(version=True)``.
 
@@ -83,8 +89,8 @@ def get_maya_version_string() -> str:
             return _version_cache
 
         if not maya_available():
-            _version_cache = UNKNOWN_VERSION
-            return _version_cache
+            # Don't cache UNKNOWN_VERSION — allow retry if Maya becomes available
+            return UNKNOWN_VERSION
 
         try:
             import maya.cmds as cmds  # noqa: PLC0415
@@ -93,5 +99,5 @@ def get_maya_version_string() -> str:
             return _version_cache
         except Exception as exc:  # noqa: BLE001
             logger.debug("Failed to read Maya version: %s", exc)
-            _version_cache = UNKNOWN_VERSION
-            return _version_cache
+            # Don't cache on error — allow retry
+            return UNKNOWN_VERSION

@@ -23,6 +23,10 @@ class TestMayaAvailable:
 
 
 class TestGetMayaVersionString:
+    def setup_method(self):
+        """Clear version cache before each test."""
+        _version_probe.clear_version_cache()
+
     def test_returns_unknown_when_unavailable(self):
         with patch.object(_version_probe, "maya_available", return_value=False):
             assert _version_probe.get_maya_version_string() == _version_probe.UNKNOWN_VERSION
