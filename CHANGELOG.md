@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.2.28](https://github.com/loonghao/dcc-mcp-maya/compare/v0.2.27...v0.2.28) (2026-05-12)
+
+
+### Bug Fixes
+
+* prune Maya log files on startup ([#207](https://github.com/loonghao/dcc-mcp-maya/issues/207)) ([334815c](https://github.com/loonghao/dcc-mcp-maya/commit/334815c64facbabe954ba63bd73bf3df28604fb5))
+* stabilize Maya MCP execution and discovery ([6dea24c](https://github.com/loonghao/dcc-mcp-maya/commit/6dea24c81f9e9e0263b8dafcaa7d27233089b2da))
+
+
+### Code Refactoring
+
+* narrow typed output exception handling ([3cc24f4](https://github.com/loonghao/dcc-mcp-maya/commit/3cc24f40fc06df20056220610037a2902b84e2f2))
+* split Maya registration into phases ([#208](https://github.com/loonghao/dcc-mcp-maya/issues/208)) ([0389919](https://github.com/loonghao/dcc-mcp-maya/commit/03899197274523d8f09f1dca4724c3f71b9a79bf))
+* split standalone e2e scenarios ([95c2c77](https://github.com/loonghao/dcc-mcp-maya/commit/95c2c772d5ad85c4c76421054c9103a82f8b0f86))
+
 ## [0.2.27](https://github.com/loonghao/dcc-mcp-maya/compare/v0.2.26...v0.2.27) (2026-05-09)
 
 
