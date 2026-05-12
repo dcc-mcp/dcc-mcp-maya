@@ -33,6 +33,15 @@ from __future__ import annotations
 
 # Import local modules
 from dcc_mcp_maya.__version__ import __version__
+from dcc_mcp_maya._env import (
+    ENV_DISABLE_ARBITRARY_SCRIPT,
+    ENV_DISABLE_EXECUTE_MEL,
+    ENV_DISABLE_EXECUTE_PYTHON,
+    ENV_ENABLE_GATEWAY_FAILOVER,
+    resolve_enable_gateway_failover,
+    resolve_execute_mel_disabled,
+    resolve_execute_python_disabled,
+)
 from dcc_mcp_maya._project_tools import (
     ENV_PROJECT_TOOLS,
     MayaSceneResolver,
@@ -57,26 +66,10 @@ from dcc_mcp_maya._resources import (
     MayaResourceBinder,
     install_resources,
 )
-from dcc_mcp_maya._env import (
-    ENV_DISABLE_ARBITRARY_SCRIPT,
-    ENV_DISABLE_EXECUTE_MEL,
-    ENV_DISABLE_EXECUTE_PYTHON,
-    ENV_ENABLE_GATEWAY_FAILOVER,
-    resolve_enable_gateway_failover,
-    resolve_execute_mel_disabled,
-    resolve_execute_python_disabled,
-)
 from dcc_mcp_maya._safe_session import (
     ENV_SAFE_SESSION,
     mcp_safe_session,
     suppressed_dialog_calls,
-)
-from dcc_mcp_maya._skill_loader import (
-    MINIMAL_SKILLS,
-    STAGES,
-    build_minimal_mode_config,
-    build_minimal_mode_for_stages,
-    skills_for_stage,
 )
 from dcc_mcp_maya._shutdown_safety import (
     ENV_ATEXIT_HOOK,
@@ -93,6 +86,13 @@ from dcc_mcp_maya._shutdown_safety import (
     unregister_atexit_hook,
     unregister_kmaya_exiting_hook,
     write_process_sentinel,
+)
+from dcc_mcp_maya._skill_loader import (
+    MINIMAL_SKILLS,
+    STAGES,
+    build_minimal_mode_config,
+    build_minimal_mode_for_stages,
+    skills_for_stage,
 )
 from dcc_mcp_maya.api import (
     MissingParamError,
@@ -229,6 +229,8 @@ __all__ = [
     "ENV_DISABLE_EXECUTE_PYTHON",
     "ENV_DISABLE_EXECUTE_MEL",
     "ENV_DISABLE_ARBITRARY_SCRIPT",
+    "ENV_ENABLE_GATEWAY_FAILOVER",
+    "resolve_enable_gateway_failover",
     "resolve_execute_python_disabled",
     "resolve_execute_mel_disabled",
     # 5-stage skill taxonomy + minimal-mode helpers

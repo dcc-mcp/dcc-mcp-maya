@@ -27,7 +27,7 @@ from __future__ import annotations
 # Import built-in modules
 from functools import lru_cache
 from pathlib import Path
-from typing import Dict, Iterable, Iterator, Mapping, Optional, Tuple
+from typing import Dict, Iterable, Iterator, Optional, Tuple
 
 # Import third-party modules
 from dcc_mcp_core import MinimalModeConfig, parse_skill_md
