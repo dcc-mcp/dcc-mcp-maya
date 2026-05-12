@@ -585,8 +585,8 @@ def _as_dict(value: Any) -> Dict[str, Any]:
             result = to_dict()
             if isinstance(result, dict):
                 return result
-        except Exception:  # noqa: BLE001
-            pass
+        except (TypeError, ValueError, AttributeError) as exc:
+            logger.debug("capability manifest: to_dict(%r) failed: %s", type(value), exc)
     # Best-effort: pull public attributes.
     out: Dict[str, Any] = {}
     for attr in dir(value):
@@ -594,7 +594,8 @@ def _as_dict(value: Any) -> Dict[str, Any]:
             continue
         try:
             candidate = getattr(value, attr)
-        except Exception:  # noqa: BLE001
+        except (AttributeError, TypeError) as exc:
+            logger.debug("capability manifest: getattr(%r, %s) failed: %s", type(value), attr, exc)
             continue
         if callable(candidate):
             continue
