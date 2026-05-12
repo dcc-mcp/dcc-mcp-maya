@@ -27,6 +27,11 @@ logger = logging.getLogger(__name__)
 #: Sentinel returned when Maya is not available or its version cannot be probed.
 UNKNOWN_VERSION = "unknown"
 
+#: Thread-safe cache for the Maya version string.
+# Only probe once (on the main thread); subsequent calls return the cached value.
+_version_cache: str | None = None
+_version_lock = threading.Lock()
+
 
 def maya_available() -> bool:
     """Return ``True`` if ``maya.cmds`` is importable in this Python env.
@@ -51,19 +56,39 @@ def get_maya_version_string() -> str:
     Returns :data:`UNKNOWN_VERSION` when Maya is not running, when this
     thread is not the interpreter main thread (``cmds`` is unsafe there in
     many Maya builds), or when ``about`` raises.  Never raises.
+
+    Thread-safe: probes at most once (on the main thread); subsequent
+    calls return the cached value.
     """
+    # Fast path — return cached value if available
+    global _version_cache
+    if _version_cache is not None:
+        return _version_cache
+
+    # Only probe on the main thread; off-main threads get UNKNOWN_VERSION
     if threading.current_thread() is not threading.main_thread():
         logger.debug(
             "Skipping Maya version probe off the interpreter main thread (thread=%s)",
             threading.current_thread().name,
         )
         return UNKNOWN_VERSION
-    if not maya_available():
-        return UNKNOWN_VERSION
-    try:
-        import maya.cmds as cmds  # noqa: PLC0415
 
-        return str(cmds.about(version=True))
-    except Exception as exc:  # noqa: BLE001
-        logger.debug("Failed to read Maya version: %s", exc)
-        return UNKNOWN_VERSION
+    # Probe once under lock to avoid concurrent probes
+    with _version_lock:
+        # Double-check cache after acquiring lock
+        if _version_cache is not None:
+            return _version_cache
+
+        if not maya_available():
+            _version_cache = UNKNOWN_VERSION
+            return _version_cache
+
+        try:
+            import maya.cmds as cmds  # noqa: PLC0415
+
+            _version_cache = str(cmds.about(version=True))
+            return _version_cache
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("Failed to read Maya version: %s", exc)
+            _version_cache = UNKNOWN_VERSION
+            return _version_cache
