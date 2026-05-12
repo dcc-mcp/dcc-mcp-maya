@@ -119,7 +119,6 @@ from dcc_mcp_maya.dispatcher import (
     MayaUiDispatcher,
     MayaUiPump,
     PyPumpedDispatcher,
-    PyStandaloneDispatcher,
     _CorePump,
     check_maya_cancelled,
     create_dispatcher,
@@ -144,9 +143,8 @@ __all__ = [
     "MayaStandaloneDispatcher",
     "create_dispatcher",
     "check_maya_cancelled",
-    # Dispatchers — Rust-backed (string-payload dispatch, dcc-mcp-core 0.14.14+)
+    # Dispatchers — Rust-backed (string-payload dispatch)
     "PyPumpedDispatcher",
-    "PyStandaloneDispatcher",
     "_CorePump",
     "create_pumped_dispatcher",
     # Skill authoring helpers
