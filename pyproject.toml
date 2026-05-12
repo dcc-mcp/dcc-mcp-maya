@@ -98,3 +98,5 @@ ignore = ["E501"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["dcc_mcp_maya"]
+# Prefer module-level imports (stdlib → third-party → first-party). ``ruff format`` does not
+# reorder imports; use ``ruff check --select I --fix`` when tightening import blocks.

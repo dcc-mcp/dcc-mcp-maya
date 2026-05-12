@@ -35,6 +35,8 @@ Or load the Maya plugin (`dcc_mcp_maya_plugin.py`) and the server starts automat
 
 - **README.md** — Installation, quick start, environment variables, bundled skills list.
 - **docs/guide/getting-started.md** — Step-by-step for first-time users.
+- **docs/guide/local-mcp-debug.md** — Cursor / Claude MCP HTTP URL, **debugpy** attach, gateway vs direct port.
+- **examples/mcp/** — Copy-paste MCP JSON (`cursor-maya-streamable-http.json`).
 - **docs/guide/installation.md** — Plugin mode, `userSetup.py`, multi-Maya setup.
 - **docs/guide/multi-instance.md** — Run multiple Maya sessions behind one gateway.
 - **docs/guide/mcp-tools.md** — Representative tool inventory (scene, geometry, material, animation, render).
@@ -315,7 +317,6 @@ All other skills appear as `__skill__<name>` stubs (default behavior). Call `loa
 | `DCC_MCP_MAYA_METRICS` | `0` | `1` = enable Prometheus `/metrics` endpoint. |
 | `DCC_MCP_MAYA_JOB_STORAGE` | `<data_dir>/jobs.db` | SQLite job persistence path. |
 | `DCC_MCP_MAYA_JOB_RECOVERY` | `drop` | `requeue` = resume idempotent jobs on startup. |
-| `DCC_MCP_MAYA_CURSOR_SAFE_TOOL_NAMES` | — (core default `1`) | Toggle Cursor-safe gateway tool names (core 0.14.22 / #656). Set `0` during SEP-986 migration. |
 | `DCC_MCP_MAYA_READINESS_TIMEOUT_SECS` | — | Advisory Maya-side timeout (positive integer seconds) for the runtime readiness probe (issue #184). Consumed by orchestrators that want to bound how long a cold Maya can stall before `/v1/readyz` is considered permanently red. |
 | `DCC_MCP_MAYA_KMAYA_EXITING_HOOK` | `1` | `0` = disable the `MSceneMessage.kMayaExiting` hook that catches clean `File → Exit Maya` / `⌘Q` exits (issue #186). |
 | `DCC_MCP_MAYA_ATEXIT_HOOK` | `1` | `0` = disable the `atexit` fallback that catches interpreter teardown (issue #186). |
@@ -378,6 +379,9 @@ Bugs that only reproduce through the **gateway REST** surface (`/v1/search`, `/v
 | `src/dcc_mcp_maya/api.py` | Skill authoring helpers |
 | `src/dcc_mcp_maya/plugin.py` | Maya plugin (`initializePlugin` / menu) |
 | `src/dcc_mcp_maya/skills/` | 12 built-in skill packages, 73 scripts |
+| `docs/guide/local-mcp-debug.md` | Cursor / Claude MCP URL + **debugpy** remote attach for Maya |
+| `examples/mcp/` | MCP host JSON snippets (e.g. `cursor-maya-streamable-http.json`) |
+| `tools/maya-dev-build-link-core-win.ps1` | Windows: `maturin develop` core with mayapy + symlink core + maya into `Documents/maya/modules` |
 | `docs/` | VitePress documentation site (EN + ZH) |
 | `tests/` | pytest suite (unit + E2E + integration) |
 
