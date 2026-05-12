@@ -516,6 +516,9 @@ class MayaMcpServer(DccServerBase):
             return False
 
     def search_actions(self, *args: Any, **kwargs: Any) -> list:
+        # Inject Maya-specific default for dcc_name
+        if "dcc_name" not in kwargs:
+            kwargs["dcc_name"] = self._dcc_name
         try:
             return list(super().search_actions(*args, **kwargs))
         except Exception as exc:  # noqa: BLE001
@@ -531,6 +534,9 @@ class MayaMcpServer(DccServerBase):
     def search_skills(
         self, query: Optional[str] = None, tags: Optional[list] = None, dcc: Optional[str] = None
     ) -> list:
+        # Inject Maya-specific default for dcc
+        if dcc is None:
+            dcc = self._dcc_name
         try:
             return list(super().search_skills(query=query, tags=tags, dcc=dcc))
         except Exception as exc:  # noqa: BLE001
