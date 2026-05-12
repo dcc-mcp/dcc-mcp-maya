@@ -33,10 +33,6 @@ from __future__ import annotations
 
 # Import local modules
 from dcc_mcp_maya.__version__ import __version__
-from dcc_mcp_maya._env import (
-    ENV_CURSOR_SAFE_TOOL_NAMES,
-    resolve_cursor_safe_tool_names,
-)
 from dcc_mcp_maya._project_tools import (
     ENV_PROJECT_TOOLS,
     MayaSceneResolver,
@@ -200,9 +196,6 @@ __all__ = [
     "SCHEME_MAYA_PROJECT",
     "MayaResourceBinder",
     "install_resources",
-    # Gateway cursor-safe naming
-    "ENV_CURSOR_SAFE_TOOL_NAMES",
-    "resolve_cursor_safe_tool_names",
     # Runtime readiness (issue #184) — Maya-side binder wrapping
     # ``dcc_mcp_core.ReadinessProbe`` (core 0.14.28+).  The three-state
     # probe itself comes from core; import directly when you need it:

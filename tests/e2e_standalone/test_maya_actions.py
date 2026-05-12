@@ -88,7 +88,7 @@ class TestScriptingActions:
 
     def test_execute_mel(self):
         mod = _load_script("maya-scripting", "execute_mel")
-        result = mod.execute_mel(script="polySphere -r 1 -n melSphere;")
+        result = mod.execute_mel(code="polySphere -r 1 -n melSphere;")
         assert result["success"] is True
 
     def test_execute_python(self):
@@ -99,7 +99,7 @@ class TestScriptingActions:
 
     def test_execute_mel_error_returns_failure(self):
         mod = _load_script("maya-scripting", "execute_mel")
-        result = mod.execute_mel(script="this_is_not_valid_mel_!!!;")
+        result = mod.execute_mel(code="this_is_not_valid_mel_!!!;")
         assert isinstance(result, dict)
 
 

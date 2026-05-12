@@ -1,7 +1,6 @@
 tools:
 - name: execute_mel
-  description: Execute MEL code inside Maya. Accepts `code` (preferred), `script`,
-    or `source` aliases.
+  description: Execute MEL code inside Maya. Requires `code`.
   execution: sync
   affinity: main
   group: core
@@ -10,17 +9,9 @@ tools:
     properties:
       code:
         type: string
-        description: MEL code to execute. Aliases `script` and `source` accepted for
-          backward compatibility.
-      script:
-        type: string
-        description: Deprecated alias for `code`.
-      source:
-        type: string
-        description: Alias for `code`.
+        description: MEL code to execute.
 - name: execute_python
-  description: Execute Python code inside Maya.  Accepts `code` (preferred), `script`,
-    or `source` aliases.  Captures stdout/stderr from both Python (`print`) and Maya's
+  description: Execute Python code inside Maya.  Requires `code`.  Captures stdout/stderr from both Python (`print`) and Maya's
     Script Editor (`cmds.warning`, `cmds.error`, MEL `print`).  When `defer=true`
     the snippet is scheduled via Maya's deferred queue so long-running scripts do
     not block the MCP request thread (cooperatively cancellable via `notifications/cancelled`).
@@ -33,12 +24,6 @@ tools:
       code:
         type: string
         description: Python source to execute in Maya's interpreter (cmds pre-imported).
-      script:
-        type: string
-        description: Alias for `code`.
-      source:
-        type: string
-        description: Alias for `code`.
       capture_output:
         type: boolean
         description: When true, captured stdout is returned in `context.stdout`. Default
@@ -46,12 +31,8 @@ tools:
         default: true
       timeout_secs:
         type: integer
-        description: Maximum execution time in seconds. Aliases `timeout`. Defaults
+        description: Maximum execution time in seconds. Defaults
           to no limit.
-        minimum: 1
-      timeout:
-        type: integer
-        description: Alias for `timeout_secs`.
         minimum: 1
       defer:
         type: boolean

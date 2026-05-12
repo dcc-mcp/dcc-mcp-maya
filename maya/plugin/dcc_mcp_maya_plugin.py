@@ -95,25 +95,90 @@ _DEFAULT_GATEWAY_PORT = 9765
 # ── ensure dcc_mcp_maya package is importable ────────────────────────────────
 
 
-def _ensure_package_importable() -> None:
-    """Add the module's python/ directory to sys.path if needed."""
+def _plugin_dir() -> Path:
+    """Directory containing this plugin file (``plug-ins/``).
+
+    Maya sometimes loads ``.py`` plug-ins in a context where ``__file__`` is
+    not injected; fall back to the code object filename (same approach as
+    ``inspect.getfile(inspect.currentframe())`` but without importing inspect).
+    """
     try:
-        import dcc_mcp_maya  # noqa: F401 — already importable, nothing to do
+        return Path(__file__).resolve().parent
+    except NameError:
+        # Frame 0 is this function; co_filename is the path to this source file.
+        return Path(sys._getframe(0).f_code.co_filename).resolve().parent
 
-        return
-    except ImportError:
-        pass
 
-    plugin_dir = Path(__file__).resolve().parent
+def _ensure_package_importable() -> None:
+    """Prefer the sibling ``python/`` (or ``python37/``) tree next to this plugin.
+
+    Maya may already have a different ``dcc_mcp_core`` / ``dcc_mcp_maya`` on
+    ``sys.path`` (site-packages, PYTHONPATH).  A mismatched pair leaves
+    ``dcc_mcp_core`` half-initialised when ``from dcc_mcp_core import _core``
+    races with lazy submodules — the classic "partially initialized module"
+    error.  We therefore pin the module-root ``python*`` directory to the
+    *front* of ``sys.path`` and drop stale ``sys.modules`` entries when their
+    files are not under that tree or when the first import fails.
+    """
+    plugin_dir = _plugin_dir()
     module_root = plugin_dir.parent
-
     python_dir = module_root / ("python37" if sys.version_info[:2] == (3, 7) else "python")
     if not python_dir.is_dir():
         python_dir = module_root / "python"
-    python_str = str(python_dir)
-    if python_dir.is_dir() and python_str not in sys.path:
+    if not python_dir.is_dir():
+        return
+
+    python_str = str(python_dir.resolve())
+
+    def _prepend_python_path() -> None:
+        while python_str in sys.path:
+            sys.path.remove(python_str)
         sys.path.insert(0, python_str)
-        logger.debug("Added %s to sys.path for dcc_mcp_maya package discovery", python_str)
+        logger.debug("Pinned %s to front of sys.path for dcc-mcp-maya imports", python_str)
+
+    def _purge_dcc_modules() -> None:
+        keys = [
+            k
+            for k in list(sys.modules)
+            if k == "dcc_mcp_core"
+            or k.startswith("dcc_mcp_core.")
+            or k == "dcc_mcp_maya"
+            or k.startswith("dcc_mcp_maya.")
+        ]
+        for k in keys:
+            del sys.modules[k]
+
+    def _module_tree_wrong_origin(name: str) -> bool:
+        mod = sys.modules.get(name)
+        if mod is None:
+            return False
+        roots = []
+        mod_file = getattr(mod, "__file__", None)
+        if mod_file:
+            roots.append(os.path.dirname(os.path.realpath(mod_file)))
+        for entry in getattr(mod, "__path__", None) or ():
+            roots.append(os.path.realpath(entry))
+        if not roots:
+            return False
+        want = os.path.realpath(python_str)
+        return not any(r == want or r.startswith(want + os.sep) for r in roots)
+
+    _prepend_python_path()
+
+    if _module_tree_wrong_origin("dcc_mcp_maya") or _module_tree_wrong_origin("dcc_mcp_core"):
+        logger.warning(
+            "Reloading dcc_mcp_* from %s (cached modules were not from this module root)",
+            python_str,
+        )
+        _purge_dcc_modules()
+        _prepend_python_path()
+
+    try:
+        import dcc_mcp_maya  # noqa: F401
+    except ImportError:
+        _purge_dcc_modules()
+        _prepend_python_path()
+        import dcc_mcp_maya  # noqa: F401
 
 
 _ensure_package_importable()

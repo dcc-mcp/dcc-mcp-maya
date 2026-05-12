@@ -86,7 +86,6 @@ class MayaServerOptions:
     dcc_window_title: Optional[str] = None
     dcc_window_handle: Optional[int] = None
     enable_workflows: Optional[bool] = None
-    cursor_safe_tool_names: Optional[bool] = None
     host_dispatcher: Optional[Any] = None
     readiness_timeout_secs: Optional[int] = None
 
@@ -151,7 +150,6 @@ class MayaMcpServer(DccServerBase):
         dcc_window_title: Optional[str] = None,
         dcc_window_handle: Optional[int] = None,
         enable_workflows: Optional[bool] = None,
-        cursor_safe_tool_names: Optional[bool] = None,
         host_dispatcher: Optional[Any] = None,
         readiness_timeout_secs: Optional[int] = None,
         options: Optional[MayaServerOptions] = None,
@@ -173,18 +171,16 @@ class MayaMcpServer(DccServerBase):
                 dcc_window_title=dcc_window_title,
                 dcc_window_handle=dcc_window_handle,
                 enable_workflows=enable_workflows,
-                cursor_safe_tool_names=cursor_safe_tool_names,
                 host_dispatcher=host_dispatcher,
                 readiness_timeout_secs=readiness_timeout_secs,
             )
 
-        super().__init__(options=options.to_core_options())
+        super().__init__(options.to_core_options())
 
         metrics_enabled = options.metrics_enabled
         job_storage_path = options.job_storage_path
         job_recovery = options.job_recovery
         enable_workflows = options.enable_workflows
-        cursor_safe_tool_names = options.cursor_safe_tool_names
         gateway_port = options.gateway_port
         enable_gateway_failover = options.enable_gateway_failover
         host_dispatcher = options.host_dispatcher
@@ -228,20 +224,6 @@ class MayaMcpServer(DccServerBase):
                     "maya",
                     exc,
                 )
-
-        # ── Cursor-safe tool names ─────────────────────────────────────
-        # Agents pointing Cursor/VS Code at a gateway want tool names
-        # matching ``^[A-Za-z0-9_]+$``; set
-        # ``DCC_MCP_MAYA_CURSOR_SAFE_TOOL_NAMES=0`` to opt out during a
-        # migration window where SEP-986 dotted names are still needed.
-        effective_cursor_safe = _env.resolve_cursor_safe_tool_names(cursor_safe_tool_names)
-        if effective_cursor_safe is not None:
-            self._config.gateway_cursor_safe_tool_names = bool(effective_cursor_safe)
-            logger.info(
-                "[%s] gateway_cursor_safe_tool_names=%s",
-                "maya",
-                effective_cursor_safe,
-            )
 
         if gateway_port == 0 or (gateway_port is None and not enable_gateway_failover):
             self._config.gateway_port = 0
