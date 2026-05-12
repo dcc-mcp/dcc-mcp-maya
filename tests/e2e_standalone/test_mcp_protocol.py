@@ -153,8 +153,7 @@ class TestMcpHttpConnectivity:
         # core omits group stubs from tools/list.
         expected_group_tools = {"new_scene", "open_scene", "save_scene", "create_locator"}
         assert expected_group_tools & after_names, (
-            f"Expected at least one {group_name!r} tool after activation; "
-            f"after={sorted(after_names)[:40]}"
+            f"Expected at least one {group_name!r} tool after activation; after={sorted(after_names)[:40]}"
         )
 
     @pytest.mark.xfail(

@@ -43,19 +43,15 @@ def _make_server():
     from dcc_mcp_core import McpHttpConfig
 
     server._config = McpHttpConfig()
-    # Mock the inner server
-    mock_inner = MagicMock()
-    server._server = mock_inner
+    # Mock the skill client (used by DccServerBase methods)
+    server._skill_client = MagicMock()
     return server
 
 
-def _make_server_with_registry():
-    """Create server + inject a mock ToolRegistry."""
+def _make_server_with_skill_client():
+    """Create server + return the mock skill client."""
     server = _make_server()
-    mock_registry = MagicMock()
-    # The `registry` property reads `self._server.registry`
-    server._server.registry = mock_registry
-    return server, mock_registry
+    return server, server._skill_client
 
 
 # ---------------------------------------------------------------------------
@@ -65,41 +61,41 @@ def _make_server_with_registry():
 
 class TestSearchSkills:
     def test_returns_list_from_search_actions(self):
-        server, reg = _make_server_with_registry()
-        reg.search_actions.return_value = [{"name": "maya_scene__create_object"}]
+        server, client = _make_server_with_skill_client()
+        client.search_actions.return_value = [{"name": "maya_scene__create_object"}]
         result = server.search_actions(category="geometry")
         assert isinstance(result, list)
         assert len(result) == 1
 
     def test_default_dcc_name_is_maya(self):
-        server, reg = _make_server_with_registry()
-        reg.search_actions.return_value = []
+        server, client = _make_server_with_skill_client()
+        client.search_actions.return_value = []
         server.search_actions(tags=["mesh"])
-        call_kwargs = reg.search_actions.call_args[1]
-        assert call_kwargs.get("dcc_name") == "maya"
+        args, kwargs = client.search_actions.call_args
+        assert kwargs.get("dcc_name") == "maya"
 
     def test_explicit_dcc_name_is_forwarded(self):
-        server, reg = _make_server_with_registry()
-        reg.search_actions.return_value = []
+        server, client = _make_server_with_skill_client()
+        client.search_actions.return_value = []
         server.search_actions(category="node", dcc_name="houdini")
-        call_kwargs = reg.search_actions.call_args[1]
-        assert call_kwargs.get("dcc_name") == "houdini"
+        args, kwargs = client.search_actions.call_args
+        assert kwargs.get("dcc_name") == "houdini"
 
-    def test_returns_empty_when_registry_none(self):
+    def test_returns_empty_when_client_none(self):
         server = _make_server()
-        server._server.registry = None
+        server._skill_client = None
         result = server.search_actions()
         assert result == []
 
     def test_returns_empty_on_exception(self):
-        server, reg = _make_server_with_registry()
-        reg.search_actions.side_effect = RuntimeError("boom")
+        server, client = _make_server_with_skill_client()
+        client.search_actions.side_effect = RuntimeError("boom")
         result = server.search_actions()
         assert result == []
 
-    def test_returns_empty_when_no_registry_attr(self):
+    def test_returns_empty_when_no_client_attr(self):
         server = _make_server()
-        server._server.registry = None
+        server._skill_client = None
         result = server.search_actions(category="foo")
         assert result == []
 
@@ -110,29 +106,29 @@ class TestSearchSkills:
 
 
 class TestUnregisterSkill:
-    def test_calls_registry_unregister(self):
-        server, reg = _make_server_with_registry()
+    def test_calls_client_unregister(self):
+        server, client = _make_server_with_skill_client()
         server.unregister_skill("maya_scene__create_object")
-        reg.unregister.assert_called_once_with("maya_scene__create_object", dcc_name=None)
+        client.unregister_skill.assert_called_once_with("maya_scene__create_object", None)
 
     def test_forwards_dcc_name(self):
-        server, reg = _make_server_with_registry()
+        server, client = _make_server_with_skill_client()
         server.unregister_skill("maya_scene__delete_object", dcc_name="maya")
-        reg.unregister.assert_called_once_with("maya_scene__delete_object", dcc_name="maya")
+        client.unregister_skill.assert_called_once_with("maya_scene__delete_object", "maya")
 
     def test_silently_ignores_exception(self):
-        server, reg = _make_server_with_registry()
-        reg.unregister.side_effect = KeyError("not found")
+        server, client = _make_server_with_skill_client()
+        client.unregister_skill.side_effect = KeyError("not found")
         server.unregister_skill("nonexistent_skill")  # must not raise
 
-    def test_does_nothing_when_registry_none(self):
+    def test_does_nothing_when_client_none(self):
         server = _make_server()
-        server._server.registry = None
+        server._skill_client = None
         server.unregister_skill("some_skill")  # must not raise
 
-    def test_does_nothing_when_no_registry_attr(self):
+    def test_does_nothing_when_no_client_attr(self):
         server = _make_server()
-        server._server.registry = None
+        server._skill_client = None
         server.unregister_skill("some_skill")  # must not raise
 
 
@@ -143,19 +139,19 @@ class TestUnregisterSkill:
 
 class TestCatalogSearchSkills:
     def test_returns_list(self):
-        server = _make_server()
+        server, client = _make_server_with_skill_client()
         mock_summary = MagicMock()
         mock_summary.name = "maya-scene"
-        server._server.search_skills.return_value = [mock_summary]
+        client.search_skills.return_value = [mock_summary]
         result = server.search_skills(query="scene")
         assert isinstance(result, list)
         assert len(result) == 1
 
     def test_forwards_query_tags_dcc(self):
-        server = _make_server()
-        server._server.search_skills.return_value = []
+        server, client = _make_server_with_skill_client()
+        client.search_skills.return_value = []
         server.search_skills(query="bounding", tags=["mesh"], dcc="maya")
-        call_args, call_kwargs = server._server.search_skills.call_args
+        call_args, call_kwargs = client.search_skills.call_args
         if call_kwargs:
             assert call_kwargs["query"] == "bounding"
             assert call_kwargs["tags"] == ["mesh"]
@@ -166,17 +162,17 @@ class TestCatalogSearchSkills:
             assert call_args[2] == "maya"
 
     def test_returns_empty_on_exception(self):
-        server = _make_server()
-        server._server.search_skills.side_effect = AttributeError("no catalog")
+        server, client = _make_server_with_skill_client()
+        client.search_skills.side_effect = AttributeError("no catalog")
         result = server.search_skills(query="x")
         assert result == []
 
     def test_none_args_forwarded(self):
-        server = _make_server()
-        server._server.search_skills.return_value = []
+        server, client = _make_server_with_skill_client()
+        client.search_skills.return_value = []
         server.search_skills()
-        server._server.search_skills.assert_called_once()
-        call_args, call_kwargs = server._server.search_skills.call_args
+        client.search_skills.assert_called_once()
+        call_args, call_kwargs = client.search_skills.call_args
         if call_kwargs:
             assert call_kwargs.get("query") is None
             assert call_kwargs.get("dcc") is None
@@ -192,21 +188,21 @@ class TestCatalogSearchSkills:
 
 class TestGetSkillCategories:
     def test_returns_sorted_list(self):
-        server, reg = _make_server_with_registry()
-        reg.get_categories.return_value = ["rigging", "animation", "geometry"]
+        server, client = _make_server_with_skill_client()
+        client.get_skill_categories.return_value = ["rigging", "animation", "geometry"]
         result = server.get_skill_categories()
         assert isinstance(result, list)
         assert len(result) == 3
 
     def test_returns_empty_on_exception(self):
-        server, reg = _make_server_with_registry()
-        reg.get_categories.side_effect = AttributeError("missing")
+        server, client = _make_server_with_skill_client()
+        client.get_skill_categories.side_effect = AttributeError("missing")
         result = server.get_skill_categories()
         assert result == []
 
-    def test_returns_empty_when_registry_none(self):
+    def test_returns_empty_when_client_none(self):
         server = _make_server()
-        server._server.registry = None
+        server._skill_client = None
         assert server.get_skill_categories() == []
 
 
@@ -217,34 +213,34 @@ class TestGetSkillCategories:
 
 class TestGetSkillTags:
     def test_returns_list(self):
-        server, reg = _make_server_with_registry()
-        reg.get_tags.return_value = ["mesh", "create", "scene"]
+        server, client = _make_server_with_skill_client()
+        client.get_skill_tags.return_value = ["mesh", "create", "scene"]
         result = server.get_skill_tags()
         assert isinstance(result, list)
 
     def test_default_dcc_is_maya(self):
-        server, reg = _make_server_with_registry()
-        reg.get_tags.return_value = []
+        server, client = _make_server_with_skill_client()
+        client.get_skill_tags.return_value = []
         server.get_skill_tags()
-        call_kwargs = reg.get_tags.call_args
-        assert call_kwargs[1].get("dcc_name") == "maya"
+        args, kwargs = client.get_skill_tags.call_args
+        assert kwargs.get("dcc_name") == "maya"
 
     def test_explicit_dcc_forwarded(self):
-        server, reg = _make_server_with_registry()
-        reg.get_tags.return_value = []
+        server, client = _make_server_with_skill_client()
+        client.get_skill_tags.return_value = []
         server.get_skill_tags(dcc_name="blender")
-        call_kwargs = reg.get_tags.call_args
-        assert call_kwargs[1].get("dcc_name") == "blender"
+        args, kwargs = client.get_skill_tags.call_args
+        assert kwargs.get("dcc_name") == "blender"
 
     def test_returns_empty_on_exception(self):
-        server, reg = _make_server_with_registry()
-        reg.get_tags.side_effect = AttributeError("missing")
+        server, client = _make_server_with_skill_client()
+        client.get_skill_tags.side_effect = AttributeError("missing")
         result = server.get_skill_tags()
         assert result == []
 
-    def test_returns_empty_when_registry_none(self):
+    def test_returns_empty_when_client_none(self):
         server = _make_server()
-        server._server.registry = None
+        server._skill_client = None
         assert server.get_skill_tags() == []
 
 
@@ -335,29 +331,29 @@ class TestFindBestService:
 
 class TestIsSkillLoaded:
     def test_returns_true_when_loaded(self):
-        server = _make_server()
-        server._server.is_loaded.return_value = True
+        server, client = _make_server_with_skill_client()
+        client.is_skill_loaded.return_value = True
         assert server.is_skill_loaded("maya-scene") is True
 
     def test_returns_false_when_not_loaded(self):
-        server = _make_server()
-        server._server.is_loaded.return_value = False
+        server, client = _make_server_with_skill_client()
+        client.is_skill_loaded.return_value = False
         assert server.is_skill_loaded("maya-nonexistent") is False
 
     def test_forwarded_name_to_is_loaded(self):
-        server = _make_server()
-        server._server.is_loaded.return_value = True
+        server, client = _make_server_with_skill_client()
+        client.is_skill_loaded.return_value = True
         server.is_skill_loaded("maya-rigging")
-        server._server.is_loaded.assert_called_once_with("maya-rigging")
+        client.is_skill_loaded.assert_called_once_with("maya-rigging")
 
     def test_returns_false_on_exception(self):
-        server = _make_server()
-        server._server.is_loaded.side_effect = AttributeError("no catalog")
+        server, client = _make_server_with_skill_client()
+        client.is_skill_loaded.side_effect = AttributeError("no catalog")
         assert server.is_skill_loaded("maya-scene") is False
 
     def test_truthy_return_coerced_to_bool(self):
-        server = _make_server()
-        server._server.is_loaded.return_value = 1
+        server, client = _make_server_with_skill_client()
+        client.is_skill_loaded.return_value = 1
         result = server.is_skill_loaded("maya-animation")
         assert isinstance(result, bool)
         assert result is True
@@ -370,37 +366,37 @@ class TestIsSkillLoaded:
 
 class TestGetSkillInfo:
     def test_returns_metadata_object(self):
-        server = _make_server()
+        server, client = _make_server_with_skill_client()
         fake_meta = MagicMock()
         fake_meta.name = "maya-scene"
         fake_meta.description = "Scene operations"
-        server._server.get_skill_info.return_value = fake_meta
+        client.get_skill_info.return_value = fake_meta
         result = server.get_skill_info("maya-scene")
         assert result is fake_meta
 
     def test_returns_none_for_unknown_skill(self):
-        server = _make_server()
-        server._server.get_skill_info.return_value = None
+        server, client = _make_server_with_skill_client()
+        client.get_skill_info.return_value = None
         result = server.get_skill_info("nonexistent")
         assert result is None
 
     def test_name_forwarded(self):
-        server = _make_server()
-        server._server.get_skill_info.return_value = None
+        server, client = _make_server_with_skill_client()
+        client.get_skill_info.return_value = None
         server.get_skill_info("maya-animation")
-        server._server.get_skill_info.assert_called_once_with("maya-animation")
+        client.get_skill_info.assert_called_once_with("maya-animation")
 
     def test_returns_none_on_exception(self):
-        server = _make_server()
-        server._server.get_skill_info.side_effect = KeyError("not found")
+        server, client = _make_server_with_skill_client()
+        client.get_skill_info.side_effect = KeyError("not found")
         result = server.get_skill_info("maya-scene")
         assert result is None
 
     def test_metadata_description_accessible(self):
-        server = _make_server()
+        server, client = _make_server_with_skill_client()
         meta = MagicMock()
         meta.description = "Manages Maya scenes"
-        server._server.get_skill_info.return_value = meta
+        client.get_skill_info.return_value = meta
         info = server.get_skill_info("maya-scene")
         assert info.description == "Manages Maya scenes"
 

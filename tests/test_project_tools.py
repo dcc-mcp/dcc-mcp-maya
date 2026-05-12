@@ -318,7 +318,9 @@ class TestProjectToolsListedAndCallableOverMcp:
         or schema; verify the new size is intentional before bumping.
         """
         _, handle = server_with_default_project
-        project_tools = [t for t in _list_all_mcp_tools(handle.mcp_url(), request_id=2) if t["name"].startswith("project.")]
+        project_tools = [
+            t for t in _list_all_mcp_tools(handle.mcp_url(), request_id=2) if t["name"].startswith("project.")
+        ]
         assert len(project_tools) == 4
         for tool in project_tools:
             wire = json.dumps(tool, separators=(",", ":")).encode("utf-8")

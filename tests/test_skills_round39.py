@@ -382,14 +382,14 @@ class TestGetBoundingBoxCrossModel:
 class TestServerFindSkills:
     """server.MayaMcpServer.search_skills wraps DccServerBase.search_skills (v0.14.0+)."""
 
-    def _make_server(self, catalog_server=None):
+    def _make_server(self, skill_client=None):
         from dcc_mcp_maya.server import MayaMcpServer
 
         server = object.__new__(MayaMcpServer)
         server._dcc_name = "maya"
         server._config = MagicMock()
         server._handle = None
-        server._server = catalog_server or MagicMock()
+        server._skill_client = skill_client or MagicMock()
         return server
 
     def test_method_exists(self):
@@ -398,11 +398,11 @@ class TestServerFindSkills:
         assert callable(server.search_skills)
 
     def test_delegates_to_catalog_search_skills(self):
-        mock_catalog = MagicMock()
-        mock_catalog.search_skills.return_value = ["skill_a", "skill_b"]
-        server = self._make_server(mock_catalog)
+        mock_client = MagicMock()
+        mock_client.search_skills.return_value = ["skill_a", "skill_b"]
+        server = self._make_server(mock_client)
         result = server.search_skills(query="scene", tags=["create"], dcc="maya")
-        call_args, call_kwargs = mock_catalog.search_skills.call_args
+        call_args, call_kwargs = mock_client.search_skills.call_args
         if call_kwargs:
             assert call_kwargs["query"] == "scene"
             assert call_kwargs["tags"] == ["create"]
@@ -414,26 +414,26 @@ class TestServerFindSkills:
         assert result == ["skill_a", "skill_b"]
 
     def test_returns_empty_list_on_exception(self):
-        mock_catalog = MagicMock()
-        mock_catalog.search_skills.side_effect = RuntimeError("catalog error")
-        server = self._make_server(mock_catalog)
+        mock_client = MagicMock()
+        mock_client.search_skills.side_effect = RuntimeError("catalog error")
+        server = self._make_server(mock_client)
         result = server.search_skills(query="something")
         assert result == []
 
     def test_returns_list_type(self):
-        mock_catalog = MagicMock()
-        mock_catalog.search_skills.return_value = iter(["a", "b"])
-        server = self._make_server(mock_catalog)
+        mock_client = MagicMock()
+        mock_client.search_skills.return_value = iter(["a", "b"])
+        server = self._make_server(mock_client)
         result = server.search_skills()
         assert isinstance(result, list)
 
     def test_no_args_passes_none_defaults(self):
-        mock_catalog = MagicMock()
-        mock_catalog.search_skills.return_value = []
-        server = self._make_server(mock_catalog)
+        mock_client = MagicMock()
+        mock_client.search_skills.return_value = []
+        server = self._make_server(mock_client)
         server.search_skills()
-        mock_catalog.search_skills.assert_called_once()
-        call_args, call_kwargs = mock_catalog.search_skills.call_args
+        mock_client.search_skills.assert_called_once()
+        call_args, call_kwargs = mock_client.search_skills.call_args
         if call_kwargs:
             assert call_kwargs.get("query") is None
             assert call_kwargs.get("dcc") is None

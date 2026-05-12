@@ -175,7 +175,7 @@ class MayaMcpServer(DccServerBase):
                 readiness_timeout_secs=readiness_timeout_secs,
             )
 
-        super().__init__(options.to_core_options())
+        super().__init__(options=options.to_core_options())
 
         metrics_enabled = options.metrics_enabled
         job_storage_path = options.job_storage_path

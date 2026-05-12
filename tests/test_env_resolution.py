@@ -96,4 +96,3 @@ class TestResolveWindowTitle:
         env.pop(_env.ENV_WINDOW_TITLE, None)
         with patch.dict(os.environ, env, clear=True):
             assert _env.resolve_window_title(None) is None
-
