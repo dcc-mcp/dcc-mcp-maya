@@ -74,6 +74,7 @@ from __future__ import annotations
 import contextlib
 import functools
 import logging
+from dataclasses import asdict, is_dataclass
 from typing import Any, Callable, Dict, Generator, List, Optional, TypeVar
 
 # Import third-party modules
@@ -786,7 +787,8 @@ def _default_schema_deriver(tp: Any) -> Optional[Dict[str, Any]]:
     """Default schema deriver using core's ``derive_schema``."""
     try:
         schema = derive_schema(tp)
-    except Exception:  # noqa: BLE001 — never fail a skill over schema derivation
+    except (TypeError, ValueError, AttributeError) as exc:
+        logger.debug("typed output schema derivation failed for %r: %s", tp, exc)
         return None
     return schema if isinstance(schema, dict) else None
 
@@ -800,18 +802,13 @@ def _default_as_plain_dict(value: Any) -> Dict[str, Any]:
     """
     if isinstance(value, dict):
         return dict(value)
-    try:
-        from dataclasses import asdict, is_dataclass  # noqa: PLC0415
-
-        if is_dataclass(value):
-            return asdict(value)
-    except Exception:  # noqa: BLE001
-        pass
+    if is_dataclass(value):
+        return asdict(value)
     if hasattr(value, "_asdict"):  # namedtuple
         try:
             return dict(value._asdict())
-        except Exception:  # noqa: BLE001
-            pass
+        except (TypeError, ValueError) as exc:
+            logger.debug("typed output namedtuple serialisation failed for %r: %s", type(value), exc)
     if hasattr(value, "__dict__"):
         return {k: v for k, v in vars(value).items() if not k.startswith("_")}
     return {"value": value}
