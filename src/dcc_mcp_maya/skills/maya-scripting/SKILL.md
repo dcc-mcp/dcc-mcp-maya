@@ -1,11 +1,12 @@
 ---
 name: maya-scripting
 description: |-
-  Bootstrap stage — primary fall-through for arbitrary Maya work. Load this when
-  no domain skill matches the user intent and you need to drive maya.cmds /
-  OpenMaya directly through execute_python or execute_mel. Includes API
-  introspection tools so an agent can discover flags and method signatures
-  without leaving the loop.
+  Bootstrap stage — escape hatch for Maya work that has no packaged skill yet.
+  Agents should prefer search_skills / dcc_capability_manifest → load_skill →
+  typed tools (inputSchema + annotations) from domain skills; use execute_python
+  or execute_mel only when no skill matches, for bulk in-process loops, or for
+  API introspection. Includes introspection tools so an agent can discover flags
+  and method signatures without leaving the loop.
 license: MIT
 allowed-tools: Bash Read
 metadata:
@@ -21,9 +22,9 @@ metadata:
     - python
     - introspect
     search-hint: |-
-      fallthrough, no-matching-tool, write-custom, arbitrary-task, run script,
-      MEL Python, custom automation, inspect api, cmds help, signature,
-      flag list
+      last resort after load_skill, no-matching-tool, bulk loop in maya,
+      MEL Python escape hatch, inspect api, cmds help, signature,
+      flag list, introspect only
     aliases:
     - maya-script
     - maya-fallthrough
@@ -39,12 +40,9 @@ metadata:
 ---
 # maya-scripting (Bootstrap stage)
 
-Primary **fall-through** skill. When no domain skill matches a user request,
-load this skill and call `execute_python` or `execute_mel` directly.
+**Skills-first default:** `search_skills` / `dcc_capability_manifest` → `load_skill("<domain>")` → call the concrete tool from `tools.yaml` (validated `inputSchema`, safety hints). Reserve `execute_python` / `execute_mel` for **escape hatches**: no matching skill, intentional bulk work inside one Maya payload, OpenMaya-only gaps, or introspection-only passes.
 
-This follows the Bitter Lesson: LLMs already know `maya.cmds` and `OpenMaya`
-from training data. A thin harness with good error messages lets agents
-self-heal better than wrapping every API in a named helper.
+Studios can hard-block arbitrary execution with `DCC_MCP_MAYA_DISABLE_EXECUTE_PYTHON=1`, `DCC_MCP_MAYA_DISABLE_EXECUTE_MEL=1`, or `DCC_MCP_MAYA_DISABLE_ARBITRARY_SCRIPT=1` (blocks both).
 
 ## Decision tree
 
@@ -55,11 +53,28 @@ Intent matches an Interchange skill (FBX/OBJ/preset import or export)?
   → load maya-geometry / maya-export-preset.
 Intent matches an Authoring skill (mesh, uv, material, rig, anim, light)?
   → load that domain skill — its tools.yaml has full inputSchema and safety hints.
-Anything else?
-  → load maya-scripting, read RECIPES.md, call execute_python.
-Unsure of flag name or method signature?
+Only need cmds / OpenMaya discovery (no mutation)?
+  → activate introspect group; prefer introspect_* over execute_python.
+Genuine gap, bulk loop, or one-off not worth a new skill yet?
+  → load maya-scripting, read RECIPES.md if helpful, call execute_python / execute_mel.
+Unsure of flag name or method signature while authoring a script?
   → activate the introspect group, call introspect_signature / introspect_search.
 ```
+
+## Bulk operations (agent guidance)
+
+When the user wants **many similar steps** inside Maya (e.g. 10 spheres → 10 FBX files with a naming convention, batch import folders, mass rename):
+
+1. **Prefer** loading the owning skill once (`load_skill("maya-geometry")`, `maya-primitives`, …) and either calling typed tools **or** mirroring the same flags after reading that skill's `SKILL.md` contract.
+2. When MCP round-trip cost dominates and everything is homogeneous, **one** `execute_python` payload that loops locally and returns structured `context` (`written_files`, `failed`, `roots`) is acceptable — it is still weaker than schema tools for validation and crash isolation.
+3. **Do not** emit dozens of sequential tool calls for the same mechanical pattern unless each step must be individually schema-validated or audited.
+4. **Gateway clients** (dcc-mcp-gateway): prefer the gateway **REST** API
+   (`POST /v1/search`, `/v1/describe`, `/v1/call`, `/v1/call_batch` on the
+   gateway port). Use MCP `call_tool` / per-Maya `/mcp` only when your host
+   requires Streamable HTTP. Use `call_tools` / `POST /v1/call_batch` for up
+   to **25** *distinct* tool steps; for homogeneous bulk I/O, still collapse
+   to **one** backend script when possible (see repo `examples/workflows/maya_bulk_rbd_fbx.md`).
+5. **Long loops**: import `check_maya_cancelled` from `dcc_mcp_maya` and poll inside the loop so cancellation does not wedge the session.
 
 ## Why this skill is special
 
@@ -89,8 +104,8 @@ payload.
 
 ## Scripts
 
-- `execute_python` — Execute arbitrary Python inside Maya's interpreter
-- `execute_mel` — Execute a MEL script inside Maya
+- `execute_python` — Inline Python (isolated namespace) or `file_path` / `script_path` to a `.py` (runs in `__main__` with `__file__` / `this_root`, Maya-native)
+- `execute_mel` — Inline MEL or `file_path` to a `.mel` (MEL `source` via `mel.eval`)
 - `list_mel_procedures` — List available MEL global procedures
 - `get_script_node` — Inspect a Maya scriptNode's content
 - `introspect_list_module` — List public names in `maya.cmds` / OpenMaya (paginated)

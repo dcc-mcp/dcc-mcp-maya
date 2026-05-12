@@ -1,30 +1,44 @@
 ---
 name: maya-attributes
-description: Maya node attribute management — get, set, lock, unlock, and create custom attributes. Use when reading or writing node properties. Not for scene-level operations, node connections, or scripting — use maya-scene, maya-node-graph, or maya-scripting for that.
+description: |-
+  Scene stage — read, write, lock, and create attributes on any Maya node.
+  Use whenever you need to query or set an attribute value with a typed,
+  validated tool instead of dropping into execute_python. Not for connecting
+  attributes (use maya-node-graph) or scripting full procedures (use
+  maya-scripting).
 license: MIT
 allowed-tools: Bash Read
 metadata:
   dcc-mcp:
     dcc: maya
     layer: domain
-    version: 1.0.0
+    stage: scene
+    version: 1.1.0
     tags:
     - maya
     - attribute
     - node
     - utility
-    search-hint: node property, custom attribute, get value, set attribute
+    search-hint: |-
+      get attribute, set attribute, add custom attribute, lock unlock attribute,
+      list attributes, attribute value
+    aliases:
+    - maya-attrs
+    side-effects:
+    - reads-scene
+    - writes-scene
     depends: []
     tools: tools.yaml
 ---
-> **Deprecated (merge bucket):** This skill contains only thin \maya.cmds\ wrappers.
-> Use \xecute_python\ with \maya-scripting/references/RECIPES.md#attributes\ instead.
-> Will be removed in the next release.
+# maya-attributes (Scene stage)
 
-# maya-attributes
+Typed wrappers around the most common `maya.cmds` attribute calls
+(`getAttr`, `setAttr`, `addAttr`, `deleteAttr`, `listAttr`).
 
-Maya attributes skill. Provides actions for getting and setting attribute values,
-and managing custom attributes on Maya nodes.
+These are kept as a dedicated skill — instead of being folded into
+`maya-scripting` — because attribute editing is the single most common
+operation an agent performs and it benefits from full `inputSchema`
+validation, error classification, and idempotency hints.
 
 ## Scripts
 

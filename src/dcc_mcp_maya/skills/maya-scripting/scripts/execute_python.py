@@ -1,13 +1,19 @@
 """Execute Python code inside Maya's interpreter.
 
-Supports two execution modes:
+Supports three execution shapes:
 
 * **Inline (default)** — ``exec()`` runs synchronously on the calling
-  thread.  ``maya.cmds`` output is captured via both
+  thread with an isolated namespace (``maya.cmds`` pre-imported).  Output
+  is captured via both
   :class:`~dcc_mcp_core.script_execution.ScriptExecutionCapture` and
   :class:`~dcc_mcp_maya._maya_output.MayaOutputCapture` so ``print()``,
   ``cmds.warning(...)``, ``cmds.error(...)`` and MEL ``print`` all reach
   the MCP client (issue #151).
+
+* **File (``file_path`` / ``script_path``)** — reads a ``.py`` file and
+  runs it in ``__import__('__main__').__dict__`` with ``__file__`` and
+  ``this_root`` set, matching typical Maya shelf / pipeline script
+  expectations.
 
 * **Deferred (``defer=True``)** — the snippet is scheduled via
   ``maya.utils.executeDeferred`` and a
@@ -28,9 +34,11 @@ Supports two execution modes:
 from __future__ import annotations
 
 # Import built-in modules
+import os
 import sys
 import threading
 import time
+from collections.abc import Mapping
 from typing import Any, Dict, Optional
 
 # Import local modules
@@ -64,6 +72,7 @@ def _normalize(params: Dict[str, Any]):
             str(exc),
             possible_solutions=[
                 "Pass the source via the 'code' parameter.",
+                "Or pass file_path (or script_path) to a .py file for native __main__ execution.",
             ],
         )
     except TypeError as exc:
@@ -81,42 +90,46 @@ def _merge_capture(primary: str, extra: str) -> str:
     return primary + "\n" + extra
 
 
-def _run_inline(
+def _resolve_script_file_path(params: Mapping[str, Any]) -> Optional[str]:
+    """Return the first non-empty ``file_path`` / ``script_path`` string, if any."""
+    for key in ("file_path", "script_path"):
+        raw = params.get(key)
+        if raw is None:
+            continue
+        s = str(raw).strip()
+        if s:
+            return s
+    return None
+
+
+def _parse_timeout_secs_param(params: Dict[str, Any]) -> Optional[float]:
+    """Parse ``timeout_secs`` from raw tool params (not via normalize_script_execution_params)."""
+    v = params.get("timeout_secs")
+    if v is None or isinstance(v, bool):
+        return None
+    if isinstance(v, (int, float)):
+        f = float(v)
+        return f if f > 0 else None
+    return None
+
+
+def _run_inline_impl(
     code: str,
+    filename: str,
+    exec_globals: Dict[str, Any],
     capture_output: bool,
     cancel_event: Optional[threading.Event] = None,
     timeout_secs: Optional[float] = None,
 ) -> dict:
-    """Run *code* synchronously and return the structured envelope.
-
-    Uses :class:`dcc_mcp_core.script_execution.ScriptExecutionCapture`
-    plus :class:`dcc_mcp_maya._maya_output.MayaOutputCapture` (issue
-    #151) so ``print()``, ``cmds.warning(...)`` and MEL ``print``
-    statements all reach the client while the artist still sees output
-    in the Script Editor.
-
-    When *cancel_event* is provided a lightweight :func:`sys.settrace`
-    hook checks it between Python lines and raises
-    :class:`~dcc_mcp_core.cancellation.CancelledError` when set — this
-    is the cooperative preemption used by the deferred path (issue
-    #153).
-    """
+    """Shared exec + capture path for inline and file-backed execution."""
     from dcc_mcp_core.script_execution import ScriptExecutionCapture  # noqa: PLC0415
 
     # Import local modules
     from dcc_mcp_maya._maya_output import MayaOutputCapture  # noqa: PLC0415
 
-    try:
-        import maya.cmds as cmds  # noqa: PLC0415
-    except ImportError:
-        cmds = None  # type: ignore[assignment]
-
-    exec_globals: Dict[str, Any] = {"cmds": cmds, "__name__": "__maya_exec__"}
     py_capture = ScriptExecutionCapture(tee=True) if capture_output else None
     maya_capture = MayaOutputCapture() if capture_output else None
 
-    # Optional cooperative cancel tracer (deferred path only).  Guarded
-    # so the sync path does not pay the ``sys.settrace`` cost.
     trace_installed = False
     previous_trace = None
     started_at = time.monotonic()
@@ -145,7 +158,7 @@ def _run_inline(
 
         exc_info: Optional[BaseException] = None
         try:
-            exec(compile(code, "<maya-python>", "exec"), exec_globals)  # noqa: S102
+            exec(compile(code, filename, "exec"), exec_globals)  # noqa: S102
         except BaseException as exc:  # noqa: BLE001 — relay traceback to client
             exc_info = exc
     finally:
@@ -198,6 +211,90 @@ def _run_inline(
         output=str(raw) if raw is not None else "",
         stdout=stdout,
         stderr=stderr,
+    )
+
+
+def _run_inline(
+    code: str,
+    capture_output: bool,
+    cancel_event: Optional[threading.Event] = None,
+    timeout_secs: Optional[float] = None,
+) -> dict:
+    """Run *code* synchronously and return the structured envelope.
+
+    Uses :class:`dcc_mcp_core.script_execution.ScriptExecutionCapture`
+    plus :class:`dcc_mcp_maya._maya_output.MayaOutputCapture` (issue
+    #151) so ``print()``, ``cmds.warning(...)`` and MEL ``print``
+    statements all reach the client while the artist still sees output
+    in the Script Editor.
+
+    When *cancel_event* is provided a lightweight :func:`sys.settrace`
+    hook checks it between Python lines and raises
+    :class:`~dcc_mcp_core.cancellation.CancelledError` when set — this
+    is the cooperative preemption used by the deferred path (issue
+    #153).
+    """
+    try:
+        import maya.cmds as cmds  # noqa: PLC0415
+    except ImportError:
+        cmds = None  # type: ignore[assignment]
+
+    exec_globals: Dict[str, Any] = {"cmds": cmds, "__name__": "__maya_exec__"}
+    return _run_inline_impl(
+        code,
+        "<maya-python>",
+        exec_globals,
+        capture_output,
+        cancel_event=cancel_event,
+        timeout_secs=timeout_secs,
+    )
+
+
+def _run_inline_file_path(
+    file_path: str,
+    capture_output: bool,
+    cancel_event: Optional[threading.Event] = None,
+    timeout_secs: Optional[float] = None,
+) -> dict:
+    """Run a ``.py`` file like Maya's Script Editor: ``__main__`` globals + ``__file__``."""
+    expanded = os.path.abspath(os.path.expanduser(str(file_path).strip()))
+    if not os.path.isfile(expanded):
+        return skill_error(
+            "Script file not found",
+            expanded,
+            possible_solutions=["Check file_path is readable from the Maya process."],
+        )
+    if not expanded.lower().endswith(".py"):
+        return skill_error(
+            "file_path must be a .py file",
+            expanded,
+            possible_solutions=["Use execute_mel with file_path for .mel scripts."],
+        )
+    try:
+        with open(expanded, encoding="utf-8", errors="replace") as fh:
+            body = fh.read()
+    except OSError as exc:
+        return skill_error("Could not read script file", str(exc), path=expanded)
+
+    ns = __import__("__main__").__dict__
+    ns["this_root"] = os.path.dirname(expanded)
+    ns["__file__"] = expanded
+    try:
+        import maya.cmds as cmds  # noqa: PLC0415
+
+        if "cmds" not in ns or ns.get("cmds") is None:
+            ns["cmds"] = cmds
+    except ImportError:
+        if "cmds" not in ns:
+            ns["cmds"] = None
+
+    return _run_inline_impl(
+        body,
+        expanded,
+        ns,
+        capture_output,
+        cancel_event=cancel_event,
+        timeout_secs=timeout_secs,
     )
 
 
@@ -265,10 +362,59 @@ def _run_deferred(code: str, capture_output: bool, timeout_secs: float):
     )
 
 
-def execute_python(**params: Any):
-    """Execute a Python snippet with ``maya.cmds`` pre-imported.
+def _run_deferred_file(file_path: str, capture_output: bool, timeout_secs: float):
+    """Like :func:`_run_deferred` but runs :func:`_run_inline_file_path` on the worker."""
+    from dcc_mcp_core._server import DeferredToolResult  # noqa: PLC0415
 
-    Accepts the source via ``code`` (preferred), ``script``, or ``source``
+    from dcc_mcp_maya.dispatcher import check_maya_cancelled  # noqa: PLC0415
+
+    cancel_event = threading.Event()
+    state: Dict[str, Any] = {"done": False, "result": None}
+
+    def _runner() -> None:
+        state["result"] = _run_inline_file_path(
+            file_path,
+            capture_output,
+            cancel_event=cancel_event,
+            timeout_secs=timeout_secs,
+        )
+        state["done"] = True
+
+    try:
+        import maya.cmds as cmds  # noqa: PLC0415
+        import maya.utils  # noqa: PLC0415
+
+        if cmds.about(batch=True):
+            _runner()
+        else:
+            maya.utils.executeDeferred(_runner)
+    except ImportError:
+        _runner()
+
+    def _check_is_finished():
+        try:
+            check_maya_cancelled()
+        except BaseException:  # noqa: BLE001
+            cancel_event.set()
+            raise
+        return state["result"] if state["done"] else None
+
+    return DeferredToolResult(
+        check_is_finished=_check_is_finished,
+        timeout_secs=float(timeout_secs),
+        poll_interval_secs=0.1,
+    )
+
+
+def execute_python(**params: Any):
+    """Execute a Python snippet or a ``.py`` file inside Maya.
+
+    Inline source uses an isolated namespace with ``maya.cmds`` pre-imported.
+    When ``file_path`` (or ``script_path``) is set, the file is run like Maya's
+    Script Editor: ``exec`` uses ``__import__('__main__').__dict__`` with
+    ``__file__`` and ``this_root`` populated (studio shelf / pipeline scripts).
+
+    Accepts inline source via ``code`` (preferred), ``script``, or ``source``
     (issue #150 / dcc-mcp-core #591).  When ``capture_output=True``
     (default) ``print()``, ``cmds.warning(...)`` and MEL ``print`` output
     are all captured (issue #151).  When ``defer=True`` the script is
@@ -276,6 +422,41 @@ def execute_python(**params: Any):
     returned so long-running scripts no longer block the MCP request
     thread, with cooperative cancellation wired in (issue #153).
     """
+    from dcc_mcp_maya._env import (  # noqa: PLC0415
+        ENV_DISABLE_ARBITRARY_SCRIPT,
+        ENV_DISABLE_EXECUTE_PYTHON,
+        resolve_execute_python_disabled,
+    )
+
+    if resolve_execute_python_disabled():
+        return skill_error(
+            "execute_python is disabled by operator policy",
+            "Unset {} or {} to re-enable arbitrary Python execution.".format(
+                ENV_DISABLE_EXECUTE_PYTHON,
+                ENV_DISABLE_ARBITRARY_SCRIPT,
+            ),
+            possible_solutions=[
+                "Use search_skills(query=...) → load_skill('<skill>') → call the typed tool "
+                "from that skill's tools.yaml (validated inputSchema).",
+                "Use dcc_capability_manifest with {loaded_only: false} to pick a skill without inflating tools/list.",
+                "Gateway / non-MCP clients: POST http://<gateway>:<port>/v1/search, /v1/describe, "
+                "/v1/call (or /v1/call_batch) — do not assume the per-Maya /mcp URL is the only surface.",
+                "MCP-only hosts: search_tools → describe_tool → call_tool on the bounded slug surface.",
+                "Use introspect_* tools in maya-scripting when you only need API discovery.",
+            ],
+        )
+
+    capture_output = bool(params.get("capture_output", True))
+    defer = bool(params.get("defer", False))
+
+    file_arg = _resolve_script_file_path(params)
+    if file_arg is not None:
+        from_file_timeout = _parse_timeout_secs_param(params)
+        effective_timeout = float(from_file_timeout or DEFAULT_EXECUTE_TIMEOUT_SECS)
+        if defer:
+            return _run_deferred_file(file_arg, capture_output, effective_timeout)
+        return _run_inline_file_path(file_arg, capture_output, timeout_secs=effective_timeout)
+
     normalized, err = _normalize(params)
     if err is not None:
         return err
@@ -284,8 +465,6 @@ def execute_python(**params: Any):
     if not code.strip():
         return skill_error("No Python code provided", "Provide non-empty source.")
 
-    capture_output = bool(params.get("capture_output", True))
-    defer = bool(params.get("defer", False))
     timeout_secs = normalized.timeout_secs  # type: ignore[union-attr]
 
     effective_timeout = float(timeout_secs or DEFAULT_EXECUTE_TIMEOUT_SECS)

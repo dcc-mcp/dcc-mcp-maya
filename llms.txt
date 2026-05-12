@@ -21,7 +21,7 @@
 ```python
 import dcc_mcp_maya
 handle = dcc_mcp_maya.start_server(port=8765)
-# MCP client → http://127.0.0.1:8765/mcp
+# Direct MCP host → http://127.0.0.1:8765/mcp  |  Gateway / REST clients → http://127.0.0.1:9765/v1/* (search, describe, call, call_batch)
 handle.shutdown()
 ```
 
@@ -100,7 +100,7 @@ manifest = server.build_capability_manifest()
 
 Each record is <=640 B serialised and omits `inputSchema` — roughly 4× cheaper than a full `tools/list` entry.  Loaded-skill actions are exposed that MCP `tools/list` intentionally skips (core uses `__skill__*` stubs), so the manifest fills a real discovery gap.
 
-**Gateway note:** When the client talks to **dcc-mcp-gateway** instead of Maya directly, use upstream `call_tools` / `POST /v1/call_batch` for ordered multi-invocations (see `dcc-mcp-core` `llms.txt` gateway rows) after the usual `search_tools` → `describe_tool` discovery pass.
+**Gateway note:** When the client talks to **dcc-mcp-gateway** instead of Maya directly, treat **REST** (`POST /v1/search`, `/v1/describe`, `/v1/call`, `/v1/call_batch` on the gateway port, default `9765`) as the primary bounded surface for orchestration; reserve per-Maya `…/mcp` Streamable HTTP for MCP-native hosts. After discovery, use upstream `call_tools` / `POST /v1/call_batch` for ordered multi-invocations (see `dcc-mcp-core` `llms.txt` gateway rows).
 
 Live sync with the gateway FileRegistry:
 
@@ -164,10 +164,12 @@ def create_sphere(radius: float = 1.0) -> dict:
 
 ## Skill Discovery & Loading
 
-Agent workflow:
-1. `search_tools(query)` or `find_skills("keyword")` — search by name/description/search_hint.
-2. `load_skill("maya-primitives")` — activate skill, return list of registered action names.
-3. `activate_group("extended")` — enable additional tool groups within a loaded skill.
+Agent workflow (skills-first — **default**):
+1. `search_skills` / `dcc_capability_manifest` / `search_tools` — find the domain skill or gateway slug.
+2. `load_skill("maya-primitives")` (or the matching skill) — activate tools with `inputSchema` + annotations.
+3. Call the concrete tool (e.g. `maya_primitives__create_sphere`). Use `activate_group("extended")` when you need optional groups.
+
+Reserve `maya_scripting__execute_python` / `execute_mel` for **escape hatches** (no skill yet, bulk in-Maya loops, OpenMaya-only). Operators can block them with `DCC_MCP_MAYA_DISABLE_EXECUTE_PYTHON=1`, `DCC_MCP_MAYA_DISABLE_EXECUTE_MEL=1`, or `DCC_MCP_MAYA_DISABLE_ARBITRARY_SCRIPT=1` (both).
 
 Tool naming: `{skill_name.replace("-","_")}__{script_stem}` (e.g. `maya_scene__new_scene`).
 
@@ -189,6 +191,9 @@ Tool naming: `{skill_name.replace("-","_")}__{script_stem}` (e.g. `maya_scene__n
 | `DCC_MCP_GATEWAY_PORT` | `9765` | Multi-instance gateway port (`0`=off) |
 | `DCC_MCP_REGISTRY_DIR` | OS temp | Shared discovery registry |
 | `DCC_MCP_MAYA_HOT_RELOAD` | `0` | `1`=watch skills for disk changes |
+| `DCC_MCP_MAYA_DISABLE_EXECUTE_PYTHON` | `0` | `1`/`true`/`yes`/`on` — refuse `execute_python` (skills-first enforcement) |
+| `DCC_MCP_MAYA_DISABLE_EXECUTE_MEL` | `0` | Same tokens — refuse `execute_mel` only |
+| `DCC_MCP_MAYA_DISABLE_ARBITRARY_SCRIPT` | `0` | Same tokens — refuse **both** `execute_python` and `execute_mel` |
 
 ---
 
