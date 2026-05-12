@@ -93,19 +93,22 @@ class TestUninitializePluginCleanup:
 
 
 class TestInitializePluginStaleScan:
-    """At startup, plugin best-effort warns about pre-existing stale entries."""
+    """At startup, plugin best-effort runs hygiene checks."""
 
-    def test_stale_scan_invoked_after_start(self, plugin_module):
+    def test_stale_scan_and_log_prune_invoked_after_start(self, plugin_module):
         module, _ = plugin_module
         with patch.object(module, "_print_startup_info"), patch.object(module, "_install_shutdown_safety"):
-            with patch("dcc_mcp_maya._stale_cleanup.warn_if_too_many_stale") as warn:
+            with patch("dcc_mcp_maya._log_hygiene.prune_maya_logs") as prune, patch(
+                "dcc_mcp_maya._stale_cleanup.warn_if_too_many_stale"
+            ) as warn:
                 module._post_start({})
+        prune.assert_called_once()
         warn.assert_called_once()
 
     def test_stale_scan_failure_does_not_break_init(self, plugin_module):
         module, _ = plugin_module
         with patch.object(module, "_print_startup_info"), patch.object(module, "_install_shutdown_safety"):
-            with patch(
+            with patch("dcc_mcp_maya._log_hygiene.prune_maya_logs"), patch(
                 "dcc_mcp_maya._stale_cleanup.warn_if_too_many_stale",
                 side_effect=RuntimeError("scan boom"),
             ):
