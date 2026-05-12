@@ -226,14 +226,15 @@ def test_default_deriver_swallows_upstream_crash(monkeypatch):
         _boom(SphereResult)
 
 
-def test_real_default_deriver_returns_none_when_core_schema_breaks(monkeypatch):
+@pytest.mark.parametrize("exc_type", [TypeError, ValueError, AttributeError])
+def test_real_default_deriver_returns_none_when_core_schema_breaks(monkeypatch, exc_type):
     # Simulate the ``from dcc_mcp_core.schema import derive_schema`` call
     # raising inside ``_default_schema_deriver``.  The helper must NOT
-    # propagate the exception.
+    # propagate expected schema-derivation failures.
     import dcc_mcp_maya.api as api_mod
 
     def _broken(tp):
-        raise ValueError("schema derivation broken")
+        raise exc_type("schema derivation broken")
 
     monkeypatch.setattr(api_mod, "derive_schema", _broken, raising=True)
     assert api_mod._default_schema_deriver(SphereResult) is None

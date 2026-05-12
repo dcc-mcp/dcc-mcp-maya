@@ -27,9 +27,38 @@ from unittest.mock import MagicMock
 from dcc_mcp_maya.capability_manifest import (
     CapabilityRecord,
     MayaCapabilityManifestBuilder,
+    _as_dict,
     build_manifest_payload,
     register_capability_mcp_tool,
 )
+
+# ---------------------------------------------------------------------------
+# _as_dict fallback conversion
+# ---------------------------------------------------------------------------
+
+
+class _BadToDict:
+    keep = "visible"
+
+    def to_dict(self):
+        raise ValueError("bad conversion")
+
+
+class _BadAttr:
+    ok = "yes"
+
+    @property
+    def broken(self):
+        raise AttributeError("not available")
+
+
+def test_as_dict_falls_back_when_to_dict_raises_expected_error():
+    assert _as_dict(_BadToDict())["keep"] == "visible"
+
+
+def test_as_dict_skips_expected_attribute_errors():
+    assert _as_dict(_BadAttr()) == {"ok": "yes"}
+
 
 # ---------------------------------------------------------------------------
 # Helpers
