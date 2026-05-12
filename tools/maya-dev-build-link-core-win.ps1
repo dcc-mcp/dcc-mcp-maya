@@ -13,6 +13,10 @@
 #
 # Maya 2022 uses Python 3.7: pass -MayaVersion 2022 so mayapy builds cp37 extensions and the
 # module layout uses python37/ + PYTHONPATH+:=python37 (matches dcc_mcp_maya_plugin path logic).
+#
+# Maya 2023+ mayapy is 3.8+: we pass abi3-py38 so maturin develop matches published wheels
+# (_core.cp38-abi3-*.pyd). One build loads on 3.8–3.13 for that arch — avoids cp311 vs cp312
+# mismatches when pytest uses a different interpreter than the mayapy that built core.
 
 param(
     [string]$MayaVersion = "2025",
@@ -52,8 +56,16 @@ $PyTag = & $Mayapy -c "import sys; print('%d.%d' % (sys.version_info[0], sys.ver
 $PyDirName = if ($PyTag -eq "3.7") { "python37" } else { "python" }
 Write-Host "   Detected mayapy Python $PyTag — module PYTHONPATH will use '$PyDirName/'" -ForegroundColor Gray
 
-# Same feature set as dcc-mcp-core justfile DEV_FEATURES (keep in sync when OPT_FEATURES changes).
-$DevFeatures = "python-bindings,ext-module,workflow,scheduler,prometheus,job-persist-sqlite"
+# OPT_FEATURES mirror dcc-mcp-core justfile; abi3-py38 matches [tool.maturin] / release wheels
+# for mayapy 3.8+. PyO3 abi3-py38 is unsupported on 3.7 — use the same non-abi3 set as WHEEL_FEATURES_PY37.
+$OptFeatures = "workflow,scheduler,prometheus,job-persist-sqlite"
+if ($PyTag -eq "3.7") {
+    $DevFeatures = "python-bindings,ext-module,$OptFeatures"
+    Write-Host "   Features: DEV (no abi3 — Maya 2022 / Python 3.7)" -ForegroundColor Gray
+} else {
+    $DevFeatures = "python-bindings,ext-module,abi3-py38,$OptFeatures"
+    Write-Host "   Features: DEV + abi3-py38 (stable ABI, same as PyPI wheel tag)" -ForegroundColor Gray
+}
 
 Write-Host "=== dcc-mcp-core (maturin develop via mayapy) ===" -ForegroundColor Cyan
 Write-Host "   Core repo : $CoreRepo"
@@ -71,6 +83,12 @@ if (-not $SkipBuild) {
 
         & $Mayapy -m pip install -q --upgrade pip
         & $Mayapy -m pip install -q maturin
+
+        $coreNativeDir = Join-Path $CoreRepo "python\dcc_mcp_core"
+        Get-ChildItem -Path $coreNativeDir -Filter "_core*.pyd" -ErrorAction SilentlyContinue | ForEach-Object {
+            Write-Host "   Removing stale $($_.Name) before rebuild" -ForegroundColor Gray
+            Remove-Item $_.FullName -Force
+        }
 
         Write-Host "   maturin develop --features $DevFeatures ..." -ForegroundColor Gray
         & $Mayapy -m maturin develop --features $DevFeatures

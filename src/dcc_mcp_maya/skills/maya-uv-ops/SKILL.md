@@ -1,20 +1,36 @@
 ---
 name: maya-uv-ops
-description: Maya UV operations — create, delete, project, unfold, layout, and normalize UV sets. Use when working with texture coordinates and UV layouts. Not for mesh modeling, material authoring, or texture baking — use maya-mesh-ops, maya-materials, or maya-texture-bake for that.
+description: |-
+  Authoring stage — UV operations: create, delete, project, unfold, layout,
+  and normalise UV sets. Use whenever working on texture coordinates. Not
+  for mesh modeling (maya-mesh-ops), material authoring (maya-materials),
+  or texture baking (maya-texture-bake).
 license: MIT
 allowed-tools: Bash Read
 metadata:
   dcc-mcp:
     dcc: maya
     layer: domain
-    version: 1.0.0
+    stage: authoring
+    version: 1.1.0
     tags:
     - maya
     - uv
     - texture
     - geometry
-    search-hint: layout UVs, unfold UV, texture coordinates, UV projection
+    search-hint: |-
+      layout UVs, unfold UV, texture coordinates, UV projection, automatic UV,
+      planar projection, UV set, normalize UV
+    aliases:
+    - maya-uv
+    side-effects:
+    - reads-scene
+    - writes-scene
     depends: []
     tools: tools.yaml
     groups: groups.yaml
 ---
+# maya-uv-ops (Authoring stage)
+
+UV-set authoring tools. All eight scripts are main-thread-affine because
+they touch UV nodes through `maya.cmds`.

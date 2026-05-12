@@ -78,8 +78,8 @@ def create_sphere(radius: float = 1.0) -> dict:
 - **Upstream core reference** — https://github.com/loonghao/dcc-mcp-core/blob/main/llms.txt (and the deeper [`llms-full.txt`](https://github.com/loonghao/dcc-mcp-core/blob/main/llms-full.txt)) — exhaustive `dcc_mcp_core` API surface; use it whenever a tool/skill needs to leverage core primitives that are not surfaced in this repo's own `llms.txt`.
 - **Skill discovery workflow:**
   1. Prefer MCP `dcc_capability_manifest` with `{loaded_only: false}` for a **compact** index of actions (avoids paying full `inputSchema` cost for every skill up front).
-  2. Alternatively: `search_tools` / `find_skills` → `load_skill` → optional `activate_group("extended")` → invoke the tool (e.g. `maya_mesh_ops__bevel_edge`).
-  3. For **bulk** work (many primitives, simulation, then export), prefer **one** `execute_python` payload or a gateway **`call_tools`** batch — see `examples/workflows/maya_bulk_rbd_fbx.md`.
+  2. Alternatively: `search_skills` / `search_tools` → **`load_skill`** → optional `activate_group("extended")` → invoke the **typed** tool (validated `inputSchema`, e.g. `maya_mesh_ops__bevel_edge`). Treat `maya_scripting__execute_python` / `execute_mel` as **last resort** when no skill covers the task (bulk in-Maya loops, OpenMaya gaps, one-off experiments). Studios can hard-block arbitrary execution with `DCC_MCP_MAYA_DISABLE_EXECUTE_PYTHON`, `DCC_MCP_MAYA_DISABLE_EXECUTE_MEL`, or `DCC_MCP_MAYA_DISABLE_ARBITRARY_SCRIPT` (see `README.md` / `llms.txt`).
+  3. When using the **gateway**, read **`resources/read` `uri=gateway://docs/agent-workflows`** for MCP + resources + efficiency guidance; for Maya-heavy examples see `examples/workflows/maya_bulk_rbd_fbx.md`.
   4. **cmds documentation:** `resources/read` on `maya-cmds://help/<command>` or `maya-cmds://flags/<command>` (use the exact URI from `resources/list`).
 - **Token hygiene:** Set `DCC_MCP_MAYA_EXCLUDE_STUBS_FROM_TOOLS_LIST=1` when your MCP host repeatedly syncs a large `tools/list`; discovery remains available via `dcc_capability_manifest` and gateway `/v1/search`.
 - **Always check cancellation in long-running loops:**
@@ -102,7 +102,7 @@ plus the cross-skill index [`src/dcc_mcp_maya/skills/SKILLS_INDEX.md`](src/dcc_m
 
 | Stage         | Purpose                                                              | Default loaded?           | Skills |
 |---------------|----------------------------------------------------------------------|---------------------------|--------|
-| `bootstrap`   | Generic fall-through; arbitrary code execution.                      | yes                       | `maya-scripting` |
+| `bootstrap`   | Escape hatch; arbitrary code **only** when no typed skill fits.   | yes                       | `maya-scripting` |
 | `scene`       | Scene file lifecycle, DAG, attributes, node graph, viewport display. | partial (`maya-scene` only) | `maya-scene`, `maya-scene-assembly`, `maya-display`, `maya-attributes`, `maya-node-graph` |
 | `authoring`   | Create / edit content (mesh, UV, mat, rig, anim, light).             | no                        | `maya-primitives`, `maya-mesh-ops`, `maya-uv-ops`, `maya-materials`, `maya-material-library`, `maya-texture-bake`, `maya-rigging`, `maya-animation`, `maya-pose-library`, `maya-expressions`, `maya-light-rig` |
 | `interchange` | Geometry / scene I/O across DCCs (FBX, OBJ, presets, save).          | no                        | `maya-geometry`, `maya-export-preset` |
@@ -385,6 +385,9 @@ All other skills appear as `__skill__<name>` stubs (default behavior). Call `loa
 | `DCC_MCP_GATEWAY_PORT` | `9765` | Multi-instance gateway election port. `0` = disable. |
 | `DCC_MCP_REGISTRY_DIR` | OS temp dir | Shared service-discovery registry directory. |
 | `DCC_MCP_MAYA_EXCLUDE_STUBS_FROM_TOOLS_LIST` | `0` | `1` = exclude ``__skill__*`` / ``__group__*`` stubs from ``tools/list`` (issue #174). Discovery still possible via capability manifest / ``/v1/search``. |
+| `DCC_MCP_MAYA_DISABLE_EXECUTE_PYTHON` | `0` | `1` / `true` / `yes` / `on` — refuse ``execute_python`` (skills-first policy). |
+| `DCC_MCP_MAYA_DISABLE_EXECUTE_MEL` | `0` | Same truthy tokens — refuse ``execute_mel`` only. |
+| `DCC_MCP_MAYA_DISABLE_ARBITRARY_SCRIPT` | `0` | Same truthy tokens — refuse **both** ``execute_python`` and ``execute_mel``. |
 
 ---
 
@@ -404,6 +407,9 @@ A: Same API — `dcc_mcp_maya.start_server(port=0)`. In batch mode the `MayaStan
 
 **Q: Where are the built-in skills?**  
 A: `src/dcc_mcp_maya/skills/` (12 packages, 73 scripts). Each package contains `SKILL.md`, `tools.yaml`, `groups.yaml`, and `scripts/*.py`.
+
+**Q: How do I force agents to stop using ``execute_python``?**  
+A: Set ``DCC_MCP_MAYA_DISABLE_EXECUTE_PYTHON=1`` (Python only) or ``DCC_MCP_MAYA_DISABLE_ARBITRARY_SCRIPT=1`` (Python + MEL). Callers get a structured error that points to ``load_skill`` + typed tools.
 
 ---
 

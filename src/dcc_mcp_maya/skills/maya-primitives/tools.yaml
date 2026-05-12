@@ -1,51 +1,180 @@
 tools:
-- name: create_cube
-  description: Create a polygon cube
-  execution: sync
-  affinity: main
-  group: modeling
-- name: create_cylinder
-  description: Create a polygon cylinder
-  execution: sync
-  affinity: main
-  group: modeling
-- name: create_plane
-  description: Create a polygon plane
-  execution: sync
-  affinity: main
-  group: modeling
 - name: create_sphere
-  description: Create a polygon sphere
+  description: Create a polygon sphere.
   execution: sync
   affinity: main
   group: modeling
+  inputSchema:
+    type: object
+    properties:
+      radius:
+        type: number
+        minimum: 0.0001
+        default: 1.0
+        description: Sphere radius in scene units.
+      name:
+        type: string
+        description: Optional name for the created object. Maya will fall back to the default polySphere name when omitted.
+- name: create_cube
+  description: Create a polygon cube.
+  execution: sync
+  affinity: main
+  group: modeling
+  inputSchema:
+    type: object
+    properties:
+      width:
+        type: number
+        minimum: 0.0001
+        default: 1.0
+      height:
+        type: number
+        minimum: 0.0001
+        default: 1.0
+      depth:
+        type: number
+        minimum: 0.0001
+        default: 1.0
+      name:
+        type: string
+- name: create_cylinder
+  description: Create a polygon cylinder.
+  execution: sync
+  affinity: main
+  group: modeling
+  inputSchema:
+    type: object
+    properties:
+      radius:
+        type: number
+        minimum: 0.0001
+        default: 1.0
+      height:
+        type: number
+        minimum: 0.0001
+        default: 2.0
+      subdivisions_axis:
+        type: integer
+        minimum: 3
+        default: 20
+      name:
+        type: string
+- name: create_plane
+  description: Create a polygon plane.
+  execution: sync
+  affinity: main
+  group: modeling
+  inputSchema:
+    type: object
+    properties:
+      width:
+        type: number
+        minimum: 0.0001
+        default: 1.0
+      height:
+        type: number
+        minimum: 0.0001
+        default: 1.0
+      subdivisions_x:
+        type: integer
+        minimum: 1
+        default: 1
+      subdivisions_y:
+        type: integer
+        minimum: 1
+        default: 1
+      name:
+        type: string
 - name: delete_objects
-  description: Delete objects from the Maya scene
+  description: Delete one or more objects from the Maya scene.
   execution: sync
   affinity: main
   annotations:
     destructive_hint: true
     idempotent_hint: true
   group: modeling
+  inputSchema:
+    type: object
+    required:
+    - names
+    properties:
+      names:
+        oneOf:
+        - type: string
+          description: Single object name.
+        - type: array
+          items:
+            type: string
+          minItems: 1
+          description: List of object names to delete.
 - name: get_transform
-  description: Get translate/rotate/scale of an object
+  description: Get translate / rotate / scale of an object.
   execution: sync
   affinity: main
   annotations:
     read_only_hint: true
     idempotent_hint: true
   group: modeling
+  inputSchema:
+    type: object
+    required:
+    - object_name
+    properties:
+      object_name:
+        type: string
+      world_space:
+        type: boolean
+        default: false
+        description: Read worldSpace transform values instead of object-space.
 - name: rename_object
-  description: Rename an object in the scene
+  description: Rename an object in the scene.
   execution: sync
   affinity: main
   annotations:
     idempotent_hint: true
   group: modeling
+  inputSchema:
+    type: object
+    required:
+    - old_name
+    - new_name
+    properties:
+      old_name:
+        type: string
+      new_name:
+        type: string
 - name: set_transform
-  description: Set translate/rotate/scale on an object
+  description: Set translate / rotate / scale on an object. Pass only the channels you want to change.
   execution: sync
   affinity: main
   annotations:
     idempotent_hint: true
   group: modeling
+  inputSchema:
+    type: object
+    required:
+    - object_name
+    properties:
+      object_name:
+        type: string
+      translate:
+        type: array
+        items:
+          type: number
+        minItems: 3
+        maxItems: 3
+        description: '[tx, ty, tz] in scene units.'
+      rotate:
+        type: array
+        items:
+          type: number
+        minItems: 3
+        maxItems: 3
+        description: '[rx, ry, rz] in degrees.'
+      scale:
+        type: array
+        items:
+          type: number
+        minItems: 3
+        maxItems: 3
+        description: '[sx, sy, sz].'

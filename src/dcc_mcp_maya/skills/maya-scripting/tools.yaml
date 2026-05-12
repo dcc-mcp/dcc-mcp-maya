@@ -1,29 +1,58 @@
 tools:
 - name: execute_mel
-  description: Execute MEL code inside Maya. Requires `code`.
+  description: |-
+    Last-resort arbitrary MEL. Prefer search_skills → load_skill → typed tools with inputSchema.
+    When talking through dcc-mcp-gateway, use the gateway REST surface (POST /v1/search,
+    /v1/describe, /v1/call or /v1/call_batch on the gateway port) instead of assuming clients
+    must open each Maya session's /mcp URL. Inline MEL requires `code`. Studio `.mel` files:
+    pass `file_path` (or `script_path`) — runs `mel.eval('source "..."')` with forward slashes.
+    Unset DCC_MCP_MAYA_DISABLE_EXECUTE_MEL or DCC_MCP_MAYA_DISABLE_ARBITRARY_SCRIPT if blocked.
   execution: sync
   affinity: main
+  annotations:
+    destructive_hint: true
+    read_only_hint: false
   group: core
   inputSchema:
     type: object
     properties:
       code:
         type: string
-        description: MEL code to execute.
+        description: Inline MEL to evaluate (required when file_path is omitted).
+      file_path:
+        type: string
+        description: Path to a .mel file; sources via MEL `source` (native). Alias `script_path`.
+      script_path:
+        type: string
+        description: Same as file_path.
 - name: execute_python
-  description: Execute Python code inside Maya.  Requires `code`.  Captures stdout/stderr from both Python (`print`) and Maya's
-    Script Editor (`cmds.warning`, `cmds.error`, MEL `print`).  When `defer=true`
-    the snippet is scheduled via Maya's deferred queue so long-running scripts do
-    not block the MCP request thread (cooperatively cancellable via `notifications/cancelled`).
+  description: |-
+    Last-resort arbitrary Python. Default path: search_skills / dcc_capability_manifest → load_skill
+    → typed tools with inputSchema. Gateway / non-MCP clients: prefer POST /v1/search, /v1/describe,
+    /v1/call (or /v1/call_batch) on the gateway host:port — do not document only the per-Maya /mcp
+    URL as if it were the primary integration surface. Inline snippets use `code` (or script/source).
+    For studio `.py` files pass `file_path` (or `script_path`): runs in `__import__('__main__').__dict__`
+    with `__file__` and `this_root` set (Maya-native shelf/pipeline style). Captures Python + Script
+    Editor channels (print, cmds.warning, MEL print). defer=true schedules on Maya's idle queue (cooperative cancel). Unset
+    DCC_MCP_MAYA_DISABLE_EXECUTE_PYTHON or DCC_MCP_MAYA_DISABLE_ARBITRARY_SCRIPT if blocked.
   execution: sync
   affinity: main
+  annotations:
+    destructive_hint: true
+    read_only_hint: false
   group: core
   inputSchema:
     type: object
     properties:
       code:
         type: string
-        description: Python source to execute in Maya's interpreter (cmds pre-imported).
+        description: Inline Python (required when file_path is omitted). cmds pre-imported in the isolated namespace.
+      file_path:
+        type: string
+        description: Path to a .py file; exec in __main__ with __file__ and this_root (native). Alias script_path.
+      script_path:
+        type: string
+        description: Same as file_path.
       capture_output:
         type: boolean
         description: When true, captured stdout is returned in `context.stdout`. Default

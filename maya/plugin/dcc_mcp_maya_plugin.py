@@ -202,7 +202,6 @@ _host_dispatcher = None
 _menu_name = "DccMcpMenu"
 _restart_lock = threading.Lock()  # prevent overlapping restart calls
 _shutdown_coordinator = None  # Issue #186 — safety-net composition root
-_startup_thread = None
 
 
 # ── standalone detection ──────────────────────────────────────────────────────
@@ -373,44 +372,66 @@ def _start() -> None:
 
 
 def _start_async() -> None:
-    """Start the MCP server off Maya's UI thread, then attach the idle pump."""
-    global _handle, _host, _host_dispatcher, _startup_thread
+    """Defer MCP server startup until Maya's main-thread boot is complete.
+
+    Design rationale
+    ----------------
+    Three previous revisions tried to keep ``initializePlugin`` non-blocking
+    by spawning a worker thread for ``start_server(...)`` and then handing
+    finalisation back to the UI thread. Every variant had a real-world
+    failure mode in interactive Maya:
+
+    1. ``cmds.evalDeferred(_finish_on_main, lowestPriority=True)`` from the
+       worker thread crashed with "必须为标志'lowestPriority'传递一个布尔
+       参数" — ``cmds.*`` is not thread-safe; kwargs are marshalled through
+       the MEL command engine on the wrong thread.
+
+    2. ``maya.utils.executeDeferred(_finish_on_main)`` from the worker
+       thread was thread-safe in theory (it routes through
+       ``executeInMainThreadWithResult`` to add the call to the deferred
+       queue) but **deadlocked** Maya in 2022/2023 builds: that channel is
+       gated on a state flag flipped only after plugin-init completes, so
+       the worker (holding the GIL while waiting) and the main thread
+       (inside ``initializePlugin``, waiting on the worker via the GIL)
+       form a cycle that pins Maya.
+
+    3. ``cmds.scriptJob(idleEvent=poll, protected=True)`` + a
+       ``threading.Event`` polled from the worker still raced against
+       Maya's plugin-init re-entrancy guards in some builds — the same
+       ``executeInMainThread`` channel is needed to register the scriptJob
+       safely from non-main threads, and Maya's idle-event dispatch can
+       freeze briefly during the late phases of boot.
+
+    The current design (per user request 2026-05-13) is the **simplest**
+    path that works everywhere: stay on the main thread, wait for Maya to
+    finish booting, then run the synchronous startup path in-place.
+
+    * ``initializePlugin`` is invoked on Maya's main thread.
+    * ``cmds.evalDeferred(_start, lowestPriority=True)`` queues ``_start``
+      at the **back** of Maya's deferred queue, *behind* every other
+      pending deferred task: ``userSetup.py`` follow-ups, autoload scene,
+      other plugins' init code, etc.
+    * When ``_start`` finally fires, Maya's main thread is fully idle and
+      the UI is responsive. ``start_server(...)`` and ``MayaHost.start()``
+      run synchronously on the main thread — no cross-thread invoke, no
+      worker, no scriptJob polling, no event coordination.
+    * ``start_server(...)`` itself spawns the HTTP server / gateway
+      election in its own internal worker threads; those don't need to
+      coordinate back to the main thread for completion (they are
+      independent loops).
+
+    The trade-off: when ``_start`` fires it briefly blocks the Maya UI
+    while skill discovery + builtin action registration happen (~10–500
+    ms depending on skill count). This pause is invisible to users
+    because it lands during the post-boot idle moment when Maya is
+    already showing its empty scene; the alternative (an unreliable
+    cross-thread hand-off that occasionally pins Maya forever) is far
+    worse.
+    """
     try:
-        from dcc_mcp_core.host import QueueDispatcher  # noqa: PLC0415
-
-        import dcc_mcp_maya  # noqa: PLC0415
-
-        _export_worker_env()
-        try:
-            from dcc_mcp_maya._commandport import suppress_security_warnings  # noqa: PLC0415
-
-            suppress_security_warnings()
-        except Exception as exc:  # noqa: BLE001
-            logger.debug("commandPort warning suppression skipped: %s", exc)
-        cfg = _resolve_config()
-        _host_dispatcher = QueueDispatcher()
-        _host = dcc_mcp_maya.MayaHost(_host_dispatcher)
-
-        def _finish_on_main() -> None:
-            try:
-                if _host is not None:
-                    _host.start()
-                _post_start(cfg)
-            except Exception as exc:  # noqa: BLE001
-                logger.error("dcc-mcp-maya async startup finalization failed: %s", exc)
-
-        def _worker() -> None:
-            global _handle
-            try:
-                _handle = dcc_mcp_maya.start_server(host_dispatcher=_host_dispatcher, **cfg)
-                cmds.evalDeferred(_finish_on_main, lowestPriority=True)
-            except Exception as exc:  # noqa: BLE001
-                logger.error("Failed to start MCP server asynchronously: %s", exc)
-
-        _startup_thread = threading.Thread(target=_worker, name="dcc-mcp-maya-startup", daemon=True)
-        _startup_thread.start()
+        cmds.evalDeferred(_start, lowestPriority=True)
     except Exception as exc:
-        logger.error("Failed to schedule async MCP server startup: %s", exc)
+        logger.error("Failed to schedule MCP server startup: %s", exc)
         raise
 
 

@@ -1,28 +1,42 @@
 ---
 name: maya-light-rig
-description: Maya light rig utilities — create standard three-point lighting rigs and HDRI dome setups. Use when deploying pre-configured lighting templates. Not for individual light creation or color grading — use maya-lighting or maya-color-grading for that.
+description: |-
+  Authoring stage — pre-configured lighting templates: three-point rigs,
+  HDRI domes, and rig-level intensity controls. Use when deploying a
+  ready-made lighting setup. Not for individual light creation or final
+  render output — use maya-scripting + cmds.shadingNode for ad-hoc lights,
+  maya-render for output settings.
 license: MIT
 allowed-tools: Bash Read
 metadata:
   dcc-mcp:
     dcc: maya
     layer: domain
-    version: 1.0.0
+    stage: authoring
+    version: 1.1.0
     tags:
     - maya
     - lighting
     - light-rig
     - three-point
     - hdri
-    search-hint: lighting template, three-point rig, studio setup, dome rig
+    search-hint: |-
+      lighting template, three point rig, key fill rim, HDRI dome,
+      studio setup, environment light
+    aliases:
+    - maya-lighting-rig
+    side-effects:
+    - reads-scene
+    - writes-scene
     depends: []
     tools: tools.yaml
     groups: groups.yaml
 ---
-# maya-light-rig
+# maya-light-rig (Authoring stage)
 
-Light rig creation and management for Maya. Provides standard lighting setups
-such as three-point rigs and HDRI dome lights for rapid scene illumination.
+Standard lighting rigs (three-point, HDRI dome) and rig-level intensity
+controls. Designed for fast scene illumination without manually wiring
+individual light nodes.
 
 ## Scripts
 
