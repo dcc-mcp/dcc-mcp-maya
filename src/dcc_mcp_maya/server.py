@@ -40,6 +40,7 @@ from dcc_mcp_maya import (
     _executor,
     _project_tools,
     _readiness,
+    _registration,
     _resources,
     _skill_loader,
     _transport,
@@ -396,16 +397,30 @@ class MayaMcpServer(DccServerBase):
         strict_scan: Optional[bool] = None,
     ) -> "MayaMcpServer":
         """Discover Maya skills and attach Maya-specific core integrations."""
-        super().register_builtin_actions(
+        context = _registration.RegistrationContext(
+            server=self,
             extra_skill_paths=extra_skill_paths,
             include_bundled=include_bundled,
-            minimal_mode=self._build_minimal_mode_config(minimal),
+            minimal=minimal,
+            strict_scan=strict_scan,
         )
-        self._run_strict_skill_scan_if_enabled(strict_scan, extra_skill_paths, include_bundled)
-        self._register_capability_manifest_tool()
-        self._attach_project_tools()
-        self._attach_resources()
+        report = _registration.run_registration_phases(_registration.default_registration_phases(), context)
+        self._registration_report = report
+        logger.info(
+            "[%s] builtin action registration completed success=%s phases=%s elapsed=%.3fs",
+            self._dcc_name,
+            report.success,
+            len(report.outcomes),
+            report.elapsed_secs,
+        )
         return self
+
+    def _register_core_builtin_actions(self, context: _registration.RegistrationContext) -> None:
+        super().register_builtin_actions(
+            extra_skill_paths=context.extra_skill_paths,
+            include_bundled=context.include_bundled,
+            minimal_mode=self._build_minimal_mode_config(context.minimal),
+        )
 
     def _build_minimal_mode_config(self, minimal: Optional[bool]) -> Any:
         """Return Maya's core MinimalModeConfig or ``None`` for full mode."""
