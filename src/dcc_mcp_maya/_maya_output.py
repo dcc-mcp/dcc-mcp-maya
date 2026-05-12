@@ -11,8 +11,8 @@ these messages invisible to MCP clients (issue #151).
 ``OpenMaya.MCommandMessage.addCommandOutputCallback`` to funnel these
 messages into an in-memory buffer during a ``with`` block.  It is safe
 to use outside Maya (e.g. plain ``pytest`` without ``maya.standalone``):
-when ``maya.api.OpenMaya`` / ``maya.OpenMaya`` cannot be imported, the
-context manager degrades to a **no-op** that simply records empty
+when ``maya.api.OpenMaya`` cannot be imported, the context manager
+degrades to a **no-op** that simply records empty
 buffers — matching the "lazy import inside the function" pattern the
 skill scripts already use.
 
@@ -58,23 +58,12 @@ _MSG_TYPE_STACK_TRACE = 5  # kStackTrace
 
 
 def _load_openmaya() -> Optional[Any]:
-    """Return the most appropriate ``OpenMaya`` module, or ``None``.
-
-    Prefers the modern API (``maya.api.OpenMaya``), falls back to the
-    legacy API if only that is available.  Returns ``None`` when neither
-    can be imported so callers can degrade gracefully.
-    """
+    """Return ``maya.api.OpenMaya``, or ``None`` when Maya is unavailable."""
     try:
         from maya.api import OpenMaya as _om  # noqa: PLC0415
 
         return _om
     except Exception:  # noqa: BLE001 — any import-time failure should degrade
-        pass
-    try:
-        from maya import OpenMaya as _om_legacy  # noqa: PLC0415
-
-        return _om_legacy
-    except Exception:  # noqa: BLE001
         return None
 
 
@@ -150,10 +139,7 @@ class MayaOutputCapture:
     def _on_output(self, message: str, message_type: int, _client_data: Any = None) -> None:
         """``MCommandMessage`` callback: route by message type.
 
-        Signature matches both the modern ``maya.api.OpenMaya`` and the
-        legacy ``maya.OpenMaya`` calling conventions — the legacy API
-        passes a ``client_data`` argument that the modern API omits, so
-        we default it to ``None`` and ignore it.
+        The optional ``client_data`` parameter is ignored when Maya supplies it.
         """
         try:
             text = str(message)

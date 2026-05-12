@@ -146,6 +146,30 @@ def _initialise(mcp_url: str):
     return session_id
 
 
+def _list_all_mcp_tools(mcp_url: str, *, session_id: str = None, request_id: int = 100) -> list:
+    """Walk core 0.15.9+ ``tools/list`` cursor pages and return every tool."""
+    tools = []
+    cursor = None
+    pages = 0
+    while True:
+        params = {}
+        if cursor:
+            params["cursor"] = cursor
+        response = _mcp_post(
+            mcp_url,
+            {"jsonrpc": "2.0", "id": request_id, "method": "tools/list", "params": params},
+            session_id=session_id,
+        )
+        result = response["result"]
+        tools.extend(result.get("tools", []))
+        cursor = result.get("nextCursor")
+        if not cursor:
+            return tools
+        pages += 1
+        if pages > 50:
+            raise RuntimeError("tools/list pagination exceeded 50 pages")
+
+
 # ---------------------------------------------------------------------------
 # Test 1 — capability manifest over MCP ``tools/call`` (issue #163)
 # ---------------------------------------------------------------------------
@@ -157,12 +181,7 @@ def test_capability_manifest_reachable_via_mcp(running_server):
     session = _initialise(mcp_url)
 
     # Confirm the tool is advertised in ``tools/list``.
-    tl = _mcp_post(
-        mcp_url,
-        {"jsonrpc": "2.0", "id": 10, "method": "tools/list", "params": {}},
-        session_id=session,
-    )
-    tools = [t["name"] for t in tl["result"]["tools"]]
+    tools = [t["name"] for t in _list_all_mcp_tools(mcp_url, session_id=session, request_id=10)]
     assert "dcc_capability_manifest" in tools, "capability manifest MCP tool missing: {}".format(tools)
 
     # Call the tool and validate the envelope.
@@ -312,12 +331,7 @@ def test_capability_manifest_exposes_skill_actions_mcp_does_not():
         )["result"]
         manifest = json.loads(_extract_text(manifest_response))["context"]
 
-        tools_list_response = _mcp_post(
-            mcp_url,
-            {"jsonrpc": "2.0", "id": 61, "method": "tools/list", "params": {}},
-            session_id=session,
-        )["result"]
-        mcp_tool_names = {t["name"] for t in tools_list_response["tools"]}
+        mcp_tool_names = {t["name"] for t in _list_all_mcp_tools(mcp_url, session_id=session, request_id=61)}
 
         manifest_tools = {r["backend_tool"] for r in manifest["capabilities"]}
         skill_actions_only_in_manifest = manifest_tools - mcp_tool_names

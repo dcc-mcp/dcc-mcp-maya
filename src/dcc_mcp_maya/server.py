@@ -30,7 +30,7 @@ from pathlib import Path
 from typing import Any, List, Optional
 
 # Import third-party modules
-from dcc_mcp_core import DccServerOptions, HostExecutionBridge
+from dcc_mcp_core import DccServerOptions, HostExecutionBridge, scan_and_load_strict
 from dcc_mcp_core.factory import create_dcc_server
 from dcc_mcp_core.server_base import DccServerBase
 
@@ -47,6 +47,7 @@ from dcc_mcp_maya import (
     _version_probe,
 )
 from dcc_mcp_maya.__version__ import __version__
+from dcc_mcp_maya._pyexec import auto_correct as _auto_correct_pyexec
 from dcc_mcp_maya.capability_manifest import (
     MayaCapabilityManifestBuilder,
     build_manifest_payload,
@@ -68,7 +69,7 @@ _BUILTIN_SKILLS_DIR = Path(__file__).resolve().parent / "skills"
 
 @dataclass
 class MayaServerOptions:
-    """Maya adapter options collapsed for the core 0.15.8 server contract."""
+    """Maya adapter options collapsed for the core 0.15.9 server contract."""
 
     port: int = 8765
     server_name: str = "maya-mcp"
@@ -476,8 +477,6 @@ class MayaMcpServer(DccServerBase):
             When any skill directory failed validation. The exception
             message lists the offending directories.
         """
-        from dcc_mcp_core import scan_and_load_strict  # noqa: PLC0415
-
         scan_paths = self.collect_skill_search_paths(
             extra_paths=extra_skill_paths,
             include_bundled=include_bundled,
@@ -531,94 +530,43 @@ class MayaMcpServer(DccServerBase):
             logger.debug("[%s] unload_skill(%r) failed: %s", self._dcc_name, skill_name, exc)
             return False
 
-    def _legacy_registry(self) -> Any:
-        inner = getattr(self, "_server", None)
-        return getattr(inner, "registry", None)
-
     def search_actions(self, *args: Any, **kwargs: Any) -> list:
-        if hasattr(self, "_skill_client"):
-            try:
-                return list(super().search_actions(*args, **kwargs))
-            except Exception as exc:  # noqa: BLE001
-                logger.debug("[%s] search_actions failed: %s", self._dcc_name, exc)
-                return []
-        registry = self._legacy_registry()
-        if registry is None:
-            return []
-        kwargs.setdefault("dcc_name", self._dcc_name)
         try:
-            return list(registry.search_actions(*args, **kwargs))
+            return list(super().search_actions(*args, **kwargs))
         except Exception as exc:  # noqa: BLE001
-            logger.debug("[%s] legacy search_actions failed: %s", self._dcc_name, exc)
+            logger.debug("[%s] search_actions failed: %s", self._dcc_name, exc)
             return []
 
     def unregister_skill(self, name: str, dcc_name: Optional[str] = None) -> None:
-        if hasattr(self, "_skill_client"):
-            try:
-                super().unregister_skill(name, dcc_name=dcc_name)
-            except Exception as exc:  # noqa: BLE001
-                logger.debug("[%s] unregister_skill(%r) failed: %s", self._dcc_name, name, exc)
-            return
-        registry = self._legacy_registry()
-        if registry is None:
-            return
         try:
-            registry.unregister(name, dcc_name=dcc_name)
+            super().unregister_skill(name, dcc_name=dcc_name)
         except Exception as exc:  # noqa: BLE001
-            logger.debug("[%s] legacy unregister_skill(%r) failed: %s", self._dcc_name, name, exc)
+            logger.debug("[%s] unregister_skill(%r) failed: %s", self._dcc_name, name, exc)
 
     def search_skills(
         self, query: Optional[str] = None, tags: Optional[list] = None, dcc: Optional[str] = None
     ) -> list:
-        if hasattr(self, "_skill_client"):
-            try:
-                return list(super().search_skills(query=query, tags=tags, dcc=dcc))
-            except Exception as exc:  # noqa: BLE001
-                logger.debug("[%s] search_skills failed: %s", self._dcc_name, exc)
-                return []
         try:
-            return list(self._server.search_skills(query=query, tags=tags, dcc=dcc))
+            return list(super().search_skills(query=query, tags=tags, dcc=dcc))
         except Exception as exc:  # noqa: BLE001
-            logger.debug("[%s] legacy search_skills failed: %s", self._dcc_name, exc)
+            logger.debug("[%s] search_skills failed: %s", self._dcc_name, exc)
             return []
 
     def get_skill_categories(self) -> list:
-        registry = self._legacy_registry()
-        if registry is not None:
-            try:
-                return list(registry.get_categories())
-            except Exception as exc:  # noqa: BLE001
-                logger.debug("[%s] legacy get_skill_categories failed: %s", self._dcc_name, exc)
-                return []
-        if hasattr(self, "_skill_client"):
-            try:
-                return list(super().get_skill_categories())
-            except Exception as exc:  # noqa: BLE001
-                logger.debug("[%s] get_skill_categories failed: %s", self._dcc_name, exc)
-        return []
+        try:
+            return list(super().get_skill_categories())
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("[%s] get_skill_categories failed: %s", self._dcc_name, exc)
+            return []
 
     def get_skill_tags(self, dcc_name: str = "maya") -> list:
-        registry = self._legacy_registry()
-        if registry is not None:
-            try:
-                return list(registry.get_tags(dcc_name=dcc_name))
-            except Exception as exc:  # noqa: BLE001
-                logger.debug("[%s] legacy get_skill_tags failed: %s", self._dcc_name, exc)
-                return []
-        if hasattr(self, "_skill_client"):
-            try:
-                return list(super().get_skill_tags(dcc_name=dcc_name))
-            except Exception as exc:  # noqa: BLE001
-                logger.debug("[%s] get_skill_tags failed: %s", self._dcc_name, exc)
-        return []
+        try:
+            return list(super().get_skill_tags(dcc_name=dcc_name))
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("[%s] get_skill_tags failed: %s", self._dcc_name, exc)
+            return []
 
     def is_skill_loaded(self, name: str) -> bool:
-        if not hasattr(self, "_skill_client"):
-            try:
-                return bool(self._server.is_loaded(name))
-            except Exception as exc:  # noqa: BLE001
-                logger.debug("[%s] legacy is_skill_loaded(%r) failed: %s", self._dcc_name, name, exc)
-                return False
         try:
             return bool(super().is_skill_loaded(name))
         except Exception as exc:  # noqa: BLE001
@@ -626,12 +574,6 @@ class MayaMcpServer(DccServerBase):
             return False
 
     def get_skill_info(self, name: str) -> Any:
-        if not hasattr(self, "_skill_client"):
-            try:
-                return self._server.get_skill_info(name)
-            except Exception as exc:  # noqa: BLE001
-                logger.debug("[%s] legacy get_skill_info(%r) failed: %s", self._dcc_name, name, exc)
-                return None
         try:
             return super().get_skill_info(name)
         except Exception as exc:  # noqa: BLE001
@@ -799,9 +741,8 @@ class MayaMcpServer(DccServerBase):
     def find_best_service(transport_manager: Any, dcc_type: str = "maya") -> Any:
         """Find the best available Maya MCP service via the transport manager.
 
-        Static for backward-compat with callers that pass an externally-owned
-        :class:`TransportManager` (issue #71 ergonomics).  Delegates to
-        :func:`_transport.find_best_service`.
+        Delegates to :func:`_transport.find_best_service` for callers that
+        operate on an externally-owned :class:`TransportManager`.
         """
         return _transport.find_best_service(transport_manager, dcc_type)
 
@@ -809,8 +750,8 @@ class MayaMcpServer(DccServerBase):
     def rank_services(transport_manager: Any, dcc_type: str = "maya") -> List[Any]:
         """Rank all active Maya MCP instances via the transport manager.
 
-        Static for backward-compat (see :meth:`find_best_service`).  Delegates
-        to :func:`_transport.rank_services`.
+        Delegates to :func:`_transport.rank_services` for callers that operate
+        on an externally-owned :class:`TransportManager`.
         """
         return _transport.rank_services(transport_manager, dcc_type)
 
@@ -866,8 +807,6 @@ def start_server(
     dcc_window_title = _env.resolve_window_title(dcc_window_title)
 
     # Issue #125 — fix DCC_MCP_PYTHON_EXECUTABLE if it points at a GUI binary.
-    from dcc_mcp_maya._pyexec import auto_correct as _auto_correct_pyexec  # noqa: PLC0415
-
     _auto_correct_pyexec()
 
     if register_builtins:
@@ -901,6 +840,8 @@ def start_server(
                 effective_hot_reload = env_val == "1"
             if effective_hot_reload:
                 try:
+                    # Optional core feature: keep this import local so normal startup
+                    # does not fail when a core build omits hot_reload support.
                     from dcc_mcp_core.hot_reload import HotReloader  # noqa: PLC0415
 
                     server._hot_reloader = HotReloader(server)  # type: ignore[attr-defined]
@@ -912,7 +853,7 @@ def start_server(
             _server_instance = server
             return handle
 
-    # No builtin registration — delegate to factory (backward compat)
+    # No builtin registration — delegate to the shared core factory path.
     handle = create_dcc_server(
         instance_holder=_instance_holder,
         lock=_server_lock,
