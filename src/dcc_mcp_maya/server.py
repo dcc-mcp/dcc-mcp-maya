@@ -78,7 +78,7 @@ class MayaServerOptions:
     registry_dir: Optional[str] = None
     dcc_version: Optional[str] = None
     scene: Optional[str] = None
-    enable_gateway_failover: bool = True
+    enable_gateway_failover: Optional[bool] = None
     metrics_enabled: Optional[bool] = None
     job_storage_path: Optional[str] = None
     job_recovery: Optional[str] = None
@@ -100,7 +100,10 @@ class MayaServerOptions:
             registry_dir=self.registry_dir,
             dcc_version=self.dcc_version,
             scene=self.scene,
-            enable_gateway_failover=self.enable_gateway_failover,
+            enable_gateway_failover=_env.resolve_enable_gateway_failover(
+                self.enable_gateway_failover,
+                default=True,
+            ),
             dcc_pid=self.dcc_pid,
             dcc_window_title=self.dcc_window_title,
             dcc_window_handle=self.dcc_window_handle,
@@ -142,7 +145,7 @@ class MayaMcpServer(DccServerBase):
         registry_dir: Optional[str] = None,
         dcc_version: Optional[str] = None,
         scene: Optional[str] = None,
-        enable_gateway_failover: bool = True,
+        enable_gateway_failover: Optional[bool] = None,
         metrics_enabled: Optional[bool] = None,
         job_storage_path: Optional[str] = None,
         job_recovery: Optional[str] = None,
@@ -182,7 +185,10 @@ class MayaMcpServer(DccServerBase):
         job_recovery = options.job_recovery
         enable_workflows = options.enable_workflows
         gateway_port = options.gateway_port
-        enable_gateway_failover = options.enable_gateway_failover
+        enable_gateway_failover = _env.resolve_enable_gateway_failover(
+            options.enable_gateway_failover,
+            default=True,
+        )
         host_dispatcher = options.host_dispatcher
         readiness_timeout_secs = options.readiness_timeout_secs
 

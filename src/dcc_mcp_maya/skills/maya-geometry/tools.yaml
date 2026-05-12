@@ -12,6 +12,8 @@ tools:
     properties:
       path:
         type: string
+        description: Absolute or workspace-relative output path. Extension decides ASCII
+          vs binary.
       file_type:
         type: string
         enum:
@@ -33,11 +35,22 @@ tools:
     properties:
       path:
         type: string
+        description: Path to test for existence.
 - name: export_fbx
-  description: Export the current Maya scene or selected objects to FBX.
+  description: 'Export the current Maya scene or selection to FBX. Animation is baked
+  
+    by default so constraints / IK / driven keys round-trip correctly.
+  
+    All FBXExport* options are pushed via mel.eval before cmds.file is
+  
+    called, and the destination is verified for non-zero size afterwards.
+  
+    '
   execution: async
   affinity: main
   timeout_hint_secs: 300
+  annotations:
+    destructive_hint: true
   group: geometry
   inputSchema:
     type: object
@@ -46,14 +59,124 @@ tools:
     properties:
       path:
         type: string
+        description: Destination .fbx path. Created or overwritten.
       selected_only:
         type: boolean
         default: false
+        description: Export current selection instead of the whole scene.
+      bake_animation:
+        type: boolean
+        default: true
+        description: Bake complex animation to per-frame keys (FBXExportBakeComplexAnimation).
+      start_frame:
+        type: integer
+        description: Override playback start. Honored only when bake_animation is true.
+      end_frame:
+        type: integer
+        description: Override playback end. Honored only when bake_animation is true.
+      step:
+        type: integer
+        default: 1
+        minimum: 1
+        description: Bake step in frames (FBXExportBakeComplexStep).
+      up_axis:
+        type: string
+        enum:
+        - y
+        - z
+        description: FBXExportUpAxis. Omit to keep plugin default.
+      embed_media:
+        type: boolean
+        default: false
+        description: Embed referenced textures in the FBX (FBXExportEmbeddedTextures).
+      fbx_version:
+        type: string
+        enum:
+        - FBX202000
+        - FBX201900
+        - FBX201800
+        - FBX201600
+        - FBX201400
+        description: Pin the FBX SDK file version. Omit to keep plugin default.
+      ascii:
+        type: boolean
+        default: false
+        description: Write the FBX in ASCII (debugging) instead of binary.
+      cameras:
+        type: boolean
+        default: true
+        description: Include cameras (FBXExportCameras).
+      lights:
+        type: boolean
+        default: true
+        description: Include lights (FBXExportLights).
+      constraints:
+        type: boolean
+        default: true
+        description: Include constraint nodes (FBXExportConstraints).
+      smoothing_groups:
+        type: boolean
+        default: true
+        description: Export smoothing groups (FBXExportSmoothingGroups).
+      triangulate:
+        type: boolean
+        default: false
+        description: Triangulate meshes on export (FBXExportTriangulate).
+      instances:
+        type: boolean
+        default: false
+        description: Preserve instances (FBXExportInstances).
+      tangents_binormals:
+        type: boolean
+        default: false
+        description: Include tangents and binormals (FBXExportTangents).
+- name: import_fbx
+  description: 'Import an FBX file into the current scene. Returns the new node list
+  
+    (short + long names) so follow-up tools can act on exactly what was
+  
+    just imported. Optional namespace and post-import grouping.
+  
+    '
+  execution: sync
+  affinity: main
+  annotations:
+    destructive_hint: true
+  group: geometry
+  inputSchema:
+    type: object
+    required:
+    - path
+    properties:
+      path:
+        type: string
+        description: Source .fbx path. Must exist on disk.
+      namespace:
+        type: string
+        description: Optional namespace prefix for imported nodes.
+      group_name:
+        type: string
+        description: Optional name for a wrapper transform created at the world root.
+      merge_namespaces:
+        type: boolean
+        default: false
+        description: Merge into an existing namespace instead of generating a numeric
+          suffix.
+      generate_log:
+        type: boolean
+        default: false
+        description: Write FBXImport diagnostics to the Script Editor.
+      take:
+        type: integer
+        minimum: 1
+        description: Animation take index (1-based) for files with multiple takes.
 - name: export_obj
   description: Export the current Maya scene to OBJ.
   execution: async
   affinity: main
   timeout_hint_secs: 300
+  annotations:
+    destructive_hint: true
   group: geometry
   inputSchema:
     type: object
@@ -62,3 +185,4 @@ tools:
     properties:
       path:
         type: string
+        description: Destination .obj path.

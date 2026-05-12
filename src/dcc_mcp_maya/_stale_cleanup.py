@@ -5,10 +5,9 @@ Issue #126: when Maya crashes (or is killed via Task Manager), the
 time this accumulates "stale" instances that show up in gateway logs
 (``Gateway: evicted 43 stale instance(s)``).
 
-``dcc-mcp-core`` 0.14.17 added Rust-side auto-eviction
-(``FileRegistry::read_alive``); this module adds a Python-side complement
-that runs at plugin start-up so users see a single clear warning instead
-of a slow accumulation.
+The Rust core owns auto-eviction (``FileRegistry::read_alive``); this
+module is a Python-side diagnostic that runs at plugin start-up so
+users see a single clear warning instead of a slow accumulation.
 
 The helpers here are intentionally side-effect-free: they only **read**
 the on-disk registry and emit log messages.  Removal of stale entries is
@@ -141,9 +140,9 @@ def warn_if_too_many_stale(
     if stale > threshold:
         logger.warning(
             "FileRegistry contains %d stale Maya instance(s) (alive=%d, threshold=%d). "
-            "These will be auto-evicted by dcc-mcp-core 0.14.17+ on the next gateway "
-            "scan; if the count keeps growing, check for crashed Maya processes or "
-            "remove the registry manually: %s",
+            "The Rust core auto-evicts these on the next gateway scan; if the "
+            "count keeps growing, check for crashed Maya processes or remove "
+            "the registry manually: %s",
             stale,
             alive,
             threshold,

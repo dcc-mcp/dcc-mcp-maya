@@ -78,6 +78,23 @@ def test_hotreload_attributes_on_core_class():
     assert "reload_now" in methods
 
 
+def test_resolve_enable_gateway_failover_env(monkeypatch):
+    """``DCC_MCP_MAYA_ENABLE_GATEWAY_FAILOVER`` applies when the arg is omitted."""
+    from dcc_mcp_maya import _env
+
+    monkeypatch.delenv(_env.ENV_ENABLE_GATEWAY_FAILOVER, raising=False)
+    assert _env.resolve_enable_gateway_failover(None, default=True) is True
+    assert _env.resolve_enable_gateway_failover(False, default=True) is False
+    assert _env.resolve_enable_gateway_failover(True, default=True) is True
+
+    monkeypatch.setenv(_env.ENV_ENABLE_GATEWAY_FAILOVER, "0")
+    assert _env.resolve_enable_gateway_failover(None, default=True) is False
+
+    monkeypatch.setenv(_env.ENV_ENABLE_GATEWAY_FAILOVER, "1")
+    assert _env.resolve_enable_gateway_failover(None, default=True) is True
+    assert _env.resolve_enable_gateway_failover(False, default=True) is False
+
+
 def test_start_server_has_enable_gateway_failover():
     """Verify start_server() forwards enable_gateway_failover through to MayaMcpServer.
 
@@ -98,7 +115,7 @@ def test_start_server_has_enable_gateway_failover():
 
     srv_sig = inspect.signature(MayaMcpServer.__init__)
     assert "enable_gateway_failover" in srv_sig.parameters
-    assert srv_sig.parameters["enable_gateway_failover"].default is True
+    assert srv_sig.parameters["enable_gateway_failover"].default is None
 
 
 def test_config_has_gateway_fields():

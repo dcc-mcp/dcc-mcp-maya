@@ -1,0 +1,90 @@
+# Maya Skills Index
+
+> Cross-skill navigation map. Read this before deciding which skill to load.
+
+The 23 bundled skills are organised into **five stages** that match the
+mental model of a Maya pipeline. Each skill carries the stage in its
+SKILL.md frontmatter under `metadata.dcc-mcp.stage`.
+
+## The five stages
+
+| Stage | Purpose | Default loaded? | Skills |
+|-------|---------|-----------------|--------|
+| `bootstrap` | Escape hatch; arbitrary code only when no typed skill fits. | yes | `maya-scripting` |
+| `scene` | Scene file lifecycle, DAG navigation, attributes, node graph, viewport visibility. | partial (`maya-scene` only) | `maya-scene`, `maya-scene-assembly`, `maya-display`, `maya-attributes`, `maya-node-graph` |
+| `authoring` | Create / edit content: meshes, UVs, materials, rigs, animation, light rigs. | no | `maya-primitives`, `maya-mesh-ops`, `maya-uv-ops`, `maya-materials`, `maya-material-library`, `maya-texture-bake`, `maya-rigging`, `maya-animation`, `maya-pose-library`, `maya-expressions`, `maya-light-rig` |
+| `interchange` | Move geometry / scenes across DCCs (FBX, OBJ, presets, save). | no | `maya-geometry`, `maya-export-preset` |
+| `pipeline` | Production pipeline: project, publish, shot export, render, render farm. | no | `maya-pipeline`, `maya-shot-export`, `maya-render`, `maya-render-farm` |
+
+## Deciding which skill to load
+
+Ask yourself, in order:
+
+1. **What does the user want to *produce*?**
+   - A file on disk? → start with the **interchange** or **pipeline** skill that owns that file.
+   - A change inside the current scene? → start with the **authoring** skill that owns that change.
+   - A query / inspection? → start with the **scene** skill (`maya-scene`, `maya-attributes`, `maya-node-graph`).
+2. **Match a domain skill first:** `search_skills(query=...)` (or `dcc_capability_manifest` / `search_tools` on the gateway) → `load_skill(...)` → call the **typed** tool (`inputSchema` + annotations). This is the default path for stability and crash avoidance.
+3. **Only when no skill fits** (bulk homogeneous loop, OpenMaya-only gap, quick one-off): load `maya-scripting` and use `execute_python` / `execute_mel`, optionally guided by `maya-scripting/references/RECIPES.md`.
+
+## Bulk import, export, and naming
+
+For **N similar operations** (many FBX/OBJ writes, batch rename, procedural primitives):
+
+1. Prefer **`load_skill`** once, then either **typed export / modelling tools** (schema-validated) **or** a **single** `execute_python` loop when MCP round-trips would dominate and you accept weaker validation — return `written_files` / errors in `context`.
+2. **Gateway** users: use `call_tools` / `/v1/call_batch` for a **short** chain of different tools (≤25), not as a substitute for a local loop over identical exports.
+3. When mixing approaches, load domain skills **once** (`load_skill("maya-geometry")`) then either call typed export tools **or** mirror the same FBX flags inside your script (see `maya-geometry/SKILL.md` contract).
+4. Pass **absolute paths** and a **naming rule** (prefix, zero-padded index, shot/asset ids) as structured arguments.
+
+Full rationale: repo root `AGENTS.md` § *Bulk import, export, and naming*; example: `examples/workflows/maya_bulk_rbd_fbx.md`.
+
+## Common task → skill chains
+
+| Task | Skill chain |
+|------|-------------|
+| Create N spheres with random transforms, bake bounce animation, export FBX, import in another Maya | Prefer **`load_skill`** chain: `maya-primitives` → `maya-animation` → `maya-geometry` (`export_fbx` / `import_fbx`). Use **one** `execute_python` only when round-trip count would dominate latency and you accept weaker validation |
+| Build a rig + animate + send to render farm | `maya-rigging` → `maya-animation` → `maya-render-farm` |
+| Look-dev a hero asset, save material preset | `maya-materials` → `maya-material-library` |
+| Publish an asset version | `maya-pipeline` (uses `maya-geometry` under the hood; declared in `depends`) |
+| Bake AO maps from high-res to low-res | `maya-uv-ops` → `maya-texture-bake` |
+| Create a three-point light rig and tweak intensity | `maya-light-rig` |
+| Snapshot the viewport | `maya-render` (`playblast`) |
+
+## Side-effect taxonomy
+
+Each SKILL.md declares `metadata.dcc-mcp.side-effects` with one or more of:
+
+- `reads-scene` — calls `maya.cmds` queries; safe.
+- `writes-scene` — mutates DAG / DG state; should run on the main thread.
+- `reads-disk` / `writes-disk` — touches the filesystem.
+- `calls-fbx-plugin` — depends on the bundled FBX plugin being available.
+- `calls-external-service` — talks to a non-Maya service (e.g. Deadline).
+- `executes-arbitrary-code` — `maya-scripting` only.
+- `heavy-cpu` — long-running; set realistic `timeout_hint_secs`.
+
+An agent can use these to:
+
+* warn the user before destructive operations,
+* batch read-only queries,
+* avoid blasting `executes-arbitrary-code` skills when a typed alternative exists.
+
+## Cross-cutting safety nets
+
+Every dispatched job runs inside `dcc_mcp_maya._safe_session.mcp_safe_session`:
+
+* Maya AutoSave is paused for the job's duration.
+* `cmds.confirmDialog` / `promptDialog` / `fileDialog` / `fileDialog2` /
+  `layoutDialog` are replaced with non-blocking stubs that log the
+  intercepted call to `stderr` and return a defaulted value.
+
+This means an `execute_python` body that *would* have spawned a modal
+dialog can no longer deadlock the dispatcher. Set
+`DCC_MCP_MAYA_SAFE_SESSION=0` to disable this for an interactive
+authoring session.
+
+## Aliases
+
+Each skill carries a `metadata.dcc-mcp.aliases` list so that future
+renames are non-breaking. For example, `maya-geometry` already advertises
+`maya-interchange`, `maya-io`, `maya-fbx` — searches for any of these
+should match.

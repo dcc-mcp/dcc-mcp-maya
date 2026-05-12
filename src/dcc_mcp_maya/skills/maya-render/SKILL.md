@@ -1,27 +1,42 @@
 ---
 name: maya-render
-description: Maya render settings and viewport capture — configure render globals, playblast, and viewport snapshots. Use when producing final or preview images. Not for modeling, animation editing, or render farm submission — use maya-mesh-ops, maya-animation, or maya-render-farm for that.
+description: |-
+  Pipeline stage — render globals and viewport capture: configure render
+  settings, query them, capture playblasts. Use for producing final or
+  preview imagery. Not for modeling (maya-mesh-ops), animation editing
+  (maya-animation), or render farm submission (maya-render-farm).
 license: MIT
 allowed-tools: Bash Read
 metadata:
   dcc-mcp:
     dcc: maya
     layer: domain
-    version: 1.0.0
+    stage: pipeline
+    version: 1.1.0
     tags:
     - maya
     - render
     - playblast
     - settings
-    search-hint: final output, preview render, playblast, viewport capture
+    - viewport
+    search-hint: |-
+      final output, preview render, playblast, viewport capture, render globals,
+      set render settings, image format, frame range render
+    aliases:
+    - maya-render-settings
+    side-effects:
+    - reads-scene
+    - writes-scene
+    - writes-disk
     depends: []
     tools: tools.yaml
     groups: groups.yaml
 ---
-# maya-render
+# maya-render (Pipeline stage)
 
-Maya render skill. Provides actions for managing render settings and capturing
-viewport images.
+Render globals + viewport capture. Three small scripts that handle
+"set render settings → playblast / read settings" without going to a
+render farm. For distributed rendering, see `maya-render-farm`.
 
 ## Scripts
 

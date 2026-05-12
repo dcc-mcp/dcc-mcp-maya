@@ -1,13 +1,33 @@
-"""Execute a MEL script inside Maya."""
+"""Execute a MEL script inside Maya (inline ``code`` or ``file_path`` / ``script_path``)."""
 
 # Import future modules
 from __future__ import annotations
 
 # Import built-in modules
-from typing import Any, Dict
+import os
+from typing import Any, Dict, Optional
 
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
+
+
+def _resolve_script_file_path(params: Dict[str, Any]) -> Optional[str]:
+    for key in ("file_path", "script_path"):
+        raw = params.get(key)
+        if raw is None:
+            continue
+        s = str(raw).strip()
+        if s:
+            return s
+    return None
+
+
+def _mel_source_statement(path: str) -> str:
+    """Build a MEL ``source`` argument with forward slashes (Maya-friendly)."""
+    norm = os.path.abspath(os.path.expanduser(path)).replace("\\", "/")
+    if '"' in norm:
+        norm = norm.replace('"', '\\"')
+    return 'source "{}"'.format(norm)
 
 
 def _merge_capture(primary: str, extra: str) -> str:
@@ -37,6 +57,76 @@ def execute_mel(**params: Any) -> dict:
         ToolResult dict with ``context.result`` (MEL return value),
         ``context.stdout`` and ``context.stderr``.
     """
+    from dcc_mcp_maya._env import (  # noqa: PLC0415
+        ENV_DISABLE_ARBITRARY_SCRIPT,
+        ENV_DISABLE_EXECUTE_MEL,
+        resolve_execute_mel_disabled,
+    )
+
+    if resolve_execute_mel_disabled():
+        return skill_error(
+            "execute_mel is disabled by operator policy",
+            "Unset {} or {} to re-enable arbitrary MEL execution.".format(
+                ENV_DISABLE_EXECUTE_MEL,
+                ENV_DISABLE_ARBITRARY_SCRIPT,
+            ),
+            possible_solutions=[
+                "Prefer load_skill + typed Python tools over raw MEL when a skill exists.",
+                "Use list_mel_procedures or domain skills that wrap the MEL you need.",
+                "Gateway / REST clients: POST /v1/call (or /v1/call_batch) on the gateway port — "
+                "not only the per-Maya /mcp Streamable HTTP URL.",
+            ],
+        )
+
+    file_arg = _resolve_script_file_path(params)
+    if file_arg is not None:
+        expanded = os.path.abspath(os.path.expanduser(file_arg))
+        if not os.path.isfile(expanded):
+            return skill_error(
+                "MEL script file not found",
+                expanded,
+                possible_solutions=["Verify file_path is visible to the Maya process."],
+            )
+        if not expanded.lower().endswith(".mel"):
+            return skill_error(
+                "file_path must be a .mel file",
+                expanded,
+                possible_solutions=["Pass inline MEL via the code parameter instead."],
+            )
+        try:
+            import maya.mel as mel  # noqa: PLC0415
+        except ImportError:
+            return skill_error("Maya not available", "maya.mel could not be imported")
+
+        from dcc_mcp_core.script_execution import ScriptExecutionCapture  # noqa: PLC0415
+
+        from dcc_mcp_maya._maya_output import MayaOutputCapture  # noqa: PLC0415
+
+        py_capture = ScriptExecutionCapture(tee=True)
+        maya_capture = MayaOutputCapture()
+        try:
+            with py_capture, maya_capture:
+                raw = mel.eval(_mel_source_statement(expanded))
+        except BaseException as exc:  # noqa: BLE001
+            stdout = _merge_capture(py_capture.stdout, maya_capture.stdout)
+            stderr = _merge_capture(py_capture.stderr, maya_capture.stderr)
+            return skill_exception(
+                exc,
+                message="MEL source failed",
+                stdout=stdout,
+                stderr=stderr,
+            )
+        stdout = _merge_capture(py_capture.stdout, maya_capture.stdout)
+        stderr = _merge_capture(py_capture.stderr, maya_capture.stderr)
+        return skill_success(
+            "MEL sourced successfully",
+            prompt="MEL script finished. Check 'output' for any return value.",
+            output=str(raw) if raw is not None else "",
+            stdout=stdout,
+            stderr=stderr,
+            file_path=expanded,
+        )
+
     from dcc_mcp_core.script_execution import (  # noqa: PLC0415
         ScriptExecutionCapture,
         normalize_script_execution_params,
@@ -53,6 +143,7 @@ def execute_mel(**params: Any) -> dict:
             str(exc),
             possible_solutions=[
                 "Pass the source via the 'code' parameter.",
+                "Or pass file_path (or script_path) to a .mel file for MEL `source`.",
             ],
         )
     except TypeError as exc:
