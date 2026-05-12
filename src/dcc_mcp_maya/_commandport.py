@@ -14,11 +14,14 @@ commandPort for unrelated tooling.
 
 This module exposes a single best-effort helper:
 
+* :func:`close_default_commandport` — closes Maya's default MEL commandPort
+  on ``127.0.0.1:50007`` so HTTP probes cannot trigger a security dialog.
 * :func:`suppress_security_warnings` — re-opens every currently-open
   commandPort with ``-securityWarning false``, so the modal dialog
   never appears.  Idempotent; never raises; never opens new ports.
 
-Set ``DCC_MCP_MAYA_DISABLE_COMMANDPORT_WARNING=0`` to opt out.
+Set ``DCC_MCP_MAYA_CLOSE_DEFAULT_COMMANDPORT=0`` to keep the default port open.
+Set ``DCC_MCP_MAYA_DISABLE_COMMANDPORT_WARNING=0`` to opt out of warning suppression.
 """
 
 # Import future modules
@@ -32,11 +35,18 @@ from typing import List
 logger = logging.getLogger(__name__)
 
 ENV_DISABLE_WARNING = "DCC_MCP_MAYA_DISABLE_COMMANDPORT_WARNING"
+ENV_CLOSE_DEFAULT = "DCC_MCP_MAYA_CLOSE_DEFAULT_COMMANDPORT"
+_DEFAULT_COMMANDPORT_NAMES = (":50007", "commandportDefault")
 
 
 def _is_disabled_by_env() -> bool:
     """Return True when the user opted out via env var (``=0``)."""
     return os.environ.get(ENV_DISABLE_WARNING, "1").strip() == "0"
+
+
+def _close_default_enabled() -> bool:
+    """Return True unless the user opted out of closing the default port."""
+    return os.environ.get(ENV_CLOSE_DEFAULT, "1").strip() != "0"
 
 
 def _list_open_ports() -> List[str]:
@@ -65,6 +75,40 @@ def _list_open_ports() -> List[str]:
         return [str(p) for p in raw if p]
     except TypeError:
         return []
+
+
+def close_default_commandport() -> int:
+    """Close Maya's default MEL commandPort if it is open.
+
+    The default listener is named both ``:50007`` and ``commandportDefault``
+    across Maya versions.  Closing it is safer than suppressing its security
+    warning because dcc-mcp-maya never uses the legacy MEL transport.
+    """
+    if not _close_default_enabled():
+        logger.debug("%s=0 — leaving default commandPort open", ENV_CLOSE_DEFAULT)
+        return 0
+    try:
+        import maya.cmds as cmds  # noqa: PLC0415
+    except ImportError:
+        return 0
+
+    closed = 0
+    for name in _DEFAULT_COMMANDPORT_NAMES:
+        try:
+            is_open = bool(cmds.commandPort(name, query=True, sourceType="mel"))
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("default commandPort query failed for %s: %s", name, exc)
+            continue
+        if not is_open:
+            continue
+        try:
+            cmds.commandPort(name=name, close=True)
+            closed += 1
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("default commandPort close failed for %s: %s", name, exc)
+    if closed:
+        logger.info("Closed Maya default commandPort (%d alias(es)) — see issue #217", closed)
+    return closed
 
 
 def suppress_security_warnings() -> int:

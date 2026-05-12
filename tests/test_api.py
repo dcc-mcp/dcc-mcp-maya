@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 # Import built-in modules
+import threading
 from unittest.mock import MagicMock, patch
 
 # Import third-party modules
@@ -12,12 +13,14 @@ import pytest
 # Import local modules
 from dcc_mcp_maya.api import (
     MissingParamError,
+    canonical_maya_exception_message,
     classify_maya_exception,
     is_maya_available,
     maya_error,
     maya_from_exception,
     maya_success,
     missing_param_error,
+    require_main_thread,
     require_param,
     validate_node_exists,
     validate_node_type,
@@ -105,6 +108,20 @@ def test_maya_from_exception_with_solutions():
 def test_classify_localised_arg_type_error():
     exc = TypeError("必须为标志「allObjects」传递一个布尔参数")
     assert classify_maya_exception(exc) == "ARG_TYPE_MISMATCH"
+    assert canonical_maya_exception_message(exc) == "Maya command flag received a value of the wrong type."
+
+
+def test_classify_common_localised_maya_errors():
+    cases = [
+        (TypeError('标志"friction"无效'), "INVALID_FLAG"),
+        (RuntimeError("没有匹配的对象: missingCube"), "NODE_NOT_FOUND"),
+        (RuntimeError("插件 fbxmaya 未加载"), "PLUGIN_NOT_LOADED"),
+        (RuntimeError("找不到文件: missing.ma"), "FILE_NOT_FOUND"),
+        (RuntimeError("nucleus solver failed"), "NUCLEUS_SOLVER"),
+    ]
+    for exc, expected in cases:
+        assert classify_maya_exception(exc) == expected
+        assert canonical_maya_exception_message(exc)
 
 
 def test_maya_from_exception_includes_stable_error_code():
@@ -113,6 +130,37 @@ def test_maya_from_exception_includes_stable_error_code():
     assert result["error_code"] == "NODE_NOT_FOUND"
     assert result["error_type"] == "RuntimeError"
     assert result["context"]["error_code"] == "NODE_NOT_FOUND"
+    assert result["context"]["canonical_message_en"] == "Maya object was not found."
+
+
+def test_require_main_thread_allows_main_thread():
+    @require_main_thread
+    def touches_maya() -> str:
+        return "ok"
+
+    assert touches_maya() == "ok"
+
+
+def test_require_main_thread_rejects_worker_thread():
+    @require_main_thread
+    def touches_maya() -> None:
+        raise AssertionError("should not run")
+
+    errors = []
+
+    def run() -> None:
+        try:
+            touches_maya()
+        except RuntimeError as exc:
+            errors.append(exc)
+
+    thread = threading.Thread(target=run, name="worker-test")
+    thread.start()
+    thread.join()
+
+    assert errors
+    assert "must run on the Maya main thread" in str(errors[0])
+    assert "worker-test" in str(errors[0])
 
 
 # ---------------------------------------------------------------------------
@@ -214,11 +262,13 @@ def test_public_api_reexport():
         "maya_success",
         "maya_error",
         "maya_from_exception",
+        "canonical_maya_exception_message",
         "classify_maya_exception",
         "is_maya_available",
         "with_maya",
         "get_cmds",
         "require_cmds",
+        "require_main_thread",
         "require_param",
         "missing_param_error",
         "MissingParamError",

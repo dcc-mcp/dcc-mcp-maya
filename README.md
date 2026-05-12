@@ -76,6 +76,7 @@ The server starts automatically when the plugin loads.
 | `DCC_MCP_SKILL_PATHS` | _(none)_ | Global fallback skill directories for all DCC adapters |
 | `DCC_MCP_MINIMAL` | `1` | `0` = full mode; `1` = minimal mode |
 | `DCC_MCP_DEFAULT_TOOLS` | _(none)_ | Comma-separated skill names to load at startup (overrides minimal default) |
+| `DCC_MCP_MAYA_CLOSE_DEFAULT_COMMANDPORT` | `1` | `0` = keep Maya's legacy `127.0.0.1:50007` MEL commandPort open; default closes it during plugin init to avoid security-dialog probes |
 
 ### Progressive Loading (Minimal Mode)
 
