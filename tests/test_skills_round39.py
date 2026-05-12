@@ -433,13 +433,14 @@ class TestServerFindSkills:
         server = self._make_server(mock_client)
         server.search_skills()
         mock_client.search_skills.assert_called_once()
-        call_args, call_kwargs = mock_client.search_skills.call_args
-        if call_kwargs:
-            assert call_kwargs.get("query") is None
-            assert call_kwargs.get("dcc") is None
+        args, kwargs = mock_client.search_skills.call_args
+        # MayaMcpServer injects dcc="maya" as default
+        if kwargs:
+            assert kwargs.get("query") is None
+            assert kwargs.get("dcc") == "maya"
         else:
-            assert call_args[0] is None
-            assert call_args[2] is None
+            assert args[0] is None
+            assert args[2] == "maya"
 
 
 # ---------------------------------------------------------------------------
