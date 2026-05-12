@@ -4,13 +4,15 @@ Two pure helpers extracted from the previous monolithic ``server.py``:
 
 * :func:`maya_available` returns ``True`` when ``maya.cmds`` can be
   imported in the current Python environment.
-* :func:`get_maya_version_string` returns the result of
-  ``maya.cmds.about(version=True)`` or the literal ``"unknown"`` when
-  Maya is not running / not importable.
+* :func:`get_maya_version_string` returns ``maya.cmds.about(version=True)``
+  on the **interpreter main thread**, or :data:`UNKNOWN_VERSION` when Maya
+  is unavailable, ``about`` fails, or the caller is on a worker thread (Maya
+  ``cmds`` is main-thread-only in common builds — concurrent
+  :func:`dcc_mcp_maya.start_server` must not probe from background threads).
 
-Both helpers are safe to call from any thread and never raise: failures
-collapse to ``"unknown"`` / ``False`` so the server can still report a
-sensible value during the very first start-up tick.
+:func:`maya_available` is a cheap import check (not cached).  Neither helper
+raises for normal failures; version probe failures collapse to
+:data:`UNKNOWN_VERSION`.
 """
 
 # Import future modules
@@ -18,6 +20,7 @@ from __future__ import annotations
 
 # Import built-in modules
 import logging
+import threading
 
 logger = logging.getLogger(__name__)
 
@@ -45,10 +48,16 @@ def maya_available() -> bool:
 def get_maya_version_string() -> str:
     """Return Maya's version string via ``cmds.about(version=True)``.
 
-    Returns :data:`UNKNOWN_VERSION` when Maya is not running or the
-    ``about`` call raises (mocked Maya, partially-initialised module,
-    etc.).  Never raises.
+    Returns :data:`UNKNOWN_VERSION` when Maya is not running, when this
+    thread is not the interpreter main thread (``cmds`` is unsafe there in
+    many Maya builds), or when ``about`` raises.  Never raises.
     """
+    if threading.current_thread() is not threading.main_thread():
+        logger.debug(
+            "Skipping Maya version probe off the interpreter main thread (thread=%s)",
+            threading.current_thread().name,
+        )
+        return UNKNOWN_VERSION
     if not maya_available():
         return UNKNOWN_VERSION
     try:
