@@ -60,7 +60,7 @@ def plugin_module(mock_maya_modules):
 
 
 class TestPluginStartupMode:
-    def test_interactive_initialize_schedules_async_start(self, plugin_module, mock_maya_modules):
+    def test_interactive_initialize_starts_on_main_thread(self, plugin_module, mock_maya_modules):
         mock_maya_modules.cmds.about.side_effect = lambda **kwargs: False if kwargs.get("batch") else "2025"
         plugin_module._add_menu = MagicMock()
         plugin_module._start_async = MagicMock()
@@ -68,8 +68,9 @@ class TestPluginStartupMode:
 
         plugin_module.initializePlugin(MagicMock())
 
-        plugin_module._start_async.assert_called_once_with()
-        plugin_module._start.assert_not_called()
+        plugin_module._add_menu.assert_called_once_with()
+        plugin_module._start.assert_called_once_with()
+        plugin_module._start_async.assert_not_called()
 
     def test_batch_initialize_starts_synchronously(self, plugin_module, mock_maya_modules):
         mock_maya_modules.cmds.about.side_effect = lambda **kwargs: True if kwargs.get("batch") else "2025"

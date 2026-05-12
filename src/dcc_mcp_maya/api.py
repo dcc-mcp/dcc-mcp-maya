@@ -74,6 +74,7 @@ from __future__ import annotations
 import contextlib
 import functools
 import logging
+import threading
 from dataclasses import asdict, is_dataclass
 from typing import Any, Callable, Dict, Generator, List, Optional, TypeVar
 
@@ -91,19 +92,33 @@ _SENTINEL = object()
 _MAYA_ERROR_CODE_NEEDLES = (
     ("must pass a boolean", "ARG_TYPE_MISMATCH"),
     ("boolean argument must be passed", "ARG_TYPE_MISMATCH"),
+    ("must be of type bool", "ARG_TYPE_MISMATCH"),
+    ("用于查询标志的参数必须为布尔值", "ARG_TYPE_MISMATCH"),
     ("必须为标志", "ARG_TYPE_MISMATCH"),
     ("オプション", "ARG_TYPE_MISMATCH"),
+    ("invalid flag", "INVALID_FLAG"),
+    ('flag "', "INVALID_FLAG"),
+    ("标志", "INVALID_FLAG"),
+    ("無効", "INVALID_FLAG"),
+    ("无效", "INVALID_FLAG"),
+    ("cannot find file", "FILE_NOT_FOUND"),
+    ("no such file", "FILE_NOT_FOUND"),
+    ("file not found", "FILE_NOT_FOUND"),
+    ("找不到文件", "FILE_NOT_FOUND"),
     ("does not exist", "NODE_NOT_FOUND"),
     ("no object matches name", "NODE_NOT_FOUND"),
+    ("没有匹配的对象", "NODE_NOT_FOUND"),
     ("找不到", "NODE_NOT_FOUND"),
     ("attribute not found", "ATTRIBUTE_NOT_FOUND"),
     ("has no attribute", "ATTRIBUTE_NOT_FOUND"),
     ("locked or connected", "LOCKED_ATTRIBUTE"),
     ("is locked", "LOCKED_ATTRIBUTE"),
     ("not loaded", "PLUGIN_NOT_LOADED"),
+    ("plug-in", "PLUGIN_NOT_LOADED"),
     ("plugin", "PLUGIN_NOT_LOADED"),
-    ("no such file", "FILE_NOT_FOUND"),
-    ("file not found", "FILE_NOT_FOUND"),
+    ("插件", "PLUGIN_NOT_LOADED"),
+    ("nucleus", "NUCLEUS_SOLVER"),
+    ("ncloth", "NUCLEUS_SOLVER"),
     ("permission denied", "PERMISSION_DENIED"),
     ("access is denied", "PERMISSION_DENIED"),
     ("undo", "UNDO_LOCKED"),
@@ -111,6 +126,22 @@ _MAYA_ERROR_CODE_NEEDLES = (
     ("timed out", "EXECUTION_TIMEOUT"),
     ("version", "VERSION_MISMATCH"),
 )
+
+_CANONICAL_MAYA_MESSAGES = {
+    "INVALID_FLAG": "Maya command received an invalid flag.",
+    "ARG_TYPE_MISMATCH": "Maya command flag received a value of the wrong type.",
+    "NODE_NOT_FOUND": "Maya object was not found.",
+    "ATTRIBUTE_NOT_FOUND": "Maya attribute was not found.",
+    "LOCKED_ATTRIBUTE": "Maya attribute is locked or connected.",
+    "PLUGIN_NOT_LOADED": "Required Maya plug-in is not loaded.",
+    "FILE_NOT_FOUND": "Referenced file was not found.",
+    "NUCLEUS_SOLVER": "Maya nucleus or nCloth solver reported an error.",
+    "PERMISSION_DENIED": "Maya could not access the requested resource.",
+    "UNDO_LOCKED": "Maya undo queue rejected the operation.",
+    "EXECUTION_TIMEOUT": "Maya operation exceeded its timeout.",
+    "VERSION_MISMATCH": "Maya version does not satisfy the operation requirements.",
+    "UNKNOWN": "Maya operation failed with an unclassified error.",
+}
 
 # ---------------------------------------------------------------------------
 # Core result helpers
@@ -204,6 +235,27 @@ def maya_warning(message: str, warning: str = "", prompt: Optional[str] = None, 
     return skill_warning(message, warning=warning, prompt=prompt, **context)
 
 
+_MAIN_THREAD = threading.main_thread()
+
+
+def require_main_thread(fn: F) -> F:
+    """Raise a clear error when a Maya API helper runs off the main thread."""
+
+    @functools.wraps(fn)
+    def _wrapper(*args: Any, **kwargs: Any) -> Any:
+        if threading.current_thread() is not _MAIN_THREAD:
+            raise RuntimeError(
+                "{} touches maya.cmds — must run on the Maya main thread "
+                "(current={}). Use MayaUiDispatcher.submit_callable(...) to marshal.".format(
+                    fn.__qualname__,
+                    threading.current_thread().name,
+                )
+            )
+        return fn(*args, **kwargs)
+
+    return _wrapper  # type: ignore[return-value]
+
+
 def classify_maya_exception(exc: BaseException) -> str:
     """Return a stable locale-independent code for common Maya exceptions."""
     haystack = "{} {}".format(type(exc).__name__, exc).lower()
@@ -211,6 +263,11 @@ def classify_maya_exception(exc: BaseException) -> str:
         if needle.lower() in haystack:
             return code
     return "UNKNOWN"
+
+
+def canonical_maya_exception_message(exc: BaseException) -> str:
+    """Return a stable English summary for a Maya exception."""
+    return _CANONICAL_MAYA_MESSAGES.get(classify_maya_exception(exc), _CANONICAL_MAYA_MESSAGES["UNKNOWN"])
 
 
 def maya_from_exception(
@@ -245,6 +302,7 @@ def maya_from_exception(
             return maya_from_exception(exc, "Failed to create sphere")
     """
     context.setdefault("error_code", classify_maya_exception(exc))
+    context.setdefault("canonical_message_en", canonical_maya_exception_message(exc))
     context.setdefault("error_type", type(exc).__name__)
     result = skill_exception(
         exc,
