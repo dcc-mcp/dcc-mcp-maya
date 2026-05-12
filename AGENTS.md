@@ -347,6 +347,12 @@ A: `src/dcc_mcp_maya/skills/` (12 packages, 73 scripts). Each package contains `
 
 ---
 
+## Gateway HTTP regression traces (VRS)
+
+Bugs that only reproduce through the **gateway REST** surface (`/v1/search`, `/v1/call`, …) — for example `execute_python` crashing the host after a handled Python error — should get a **JSONL replay trace** in **dcc-mcp-core** (`tests/vrs/traces/`), not only a pytest in this repo. Workflow, `just vrs-replay`, and naming rules live in upstream [`AGENTS.md`](https://github.com/loonghao/dcc-mcp-core/blob/main/AGENTS.md) (section **Verified Regression Suite (VRS)**) and [`tests/vrs/README.md`](https://github.com/loonghao/dcc-mcp-core/blob/main/tests/vrs/README.md). Reference trace: [`maya-215-execute-python-regression.jsonl`](https://github.com/loonghao/dcc-mcp-core/blob/main/tests/vrs/traces/maya-215-execute-python-regression.jsonl).
+
+---
+
 ## File Index (Agent Quick-Look)
 
 | File | Role |
