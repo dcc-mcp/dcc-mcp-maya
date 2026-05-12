@@ -172,13 +172,14 @@ class TestCatalogSearchSkills:
         client.search_skills.return_value = []
         server.search_skills()
         client.search_skills.assert_called_once()
-        call_args, call_kwargs = client.search_skills.call_args
-        if call_kwargs:
-            assert call_kwargs.get("query") is None
-            assert call_kwargs.get("dcc") is None
+        args, kwargs = client.search_skills.call_args
+        # MayaMcpServer injects dcc="maya" as default
+        if kwargs:
+            assert kwargs.get("query") is None
+            assert kwargs.get("dcc") == "maya"
         else:
-            assert call_args[0] is None
-            assert call_args[2] is None
+            assert args[0] is None
+            assert args[2] == "maya"
 
 
 # ---------------------------------------------------------------------------
@@ -223,14 +224,16 @@ class TestGetSkillTags:
         client.get_skill_tags.return_value = []
         server.get_skill_tags()
         args, kwargs = client.get_skill_tags.call_args
-        assert kwargs.get("dcc_name") == "maya"
+        # DccServerBase passes dcc_name as positional arg
+        assert args[0] == "maya"
 
     def test_explicit_dcc_forwarded(self):
         server, client = _make_server_with_skill_client()
         client.get_skill_tags.return_value = []
         server.get_skill_tags(dcc_name="blender")
         args, kwargs = client.get_skill_tags.call_args
-        assert kwargs.get("dcc_name") == "blender"
+        # DccServerBase passes dcc_name as positional arg
+        assert args[0] == "blender"
 
     def test_returns_empty_on_exception(self):
         server, client = _make_server_with_skill_client()
