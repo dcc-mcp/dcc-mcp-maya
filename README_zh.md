@@ -77,6 +77,7 @@ print(handle.mcp_url())   # http://127.0.0.1:8765/mcp
 | `DCC_MCP_SKILL_PATHS` | _(无)_ | 所有 DCC 适配器的全局回退技能目录 |
 | `DCC_MCP_MINIMAL` | `1` | `0` = full mode；`1` = minimal mode |
 | `DCC_MCP_DEFAULT_TOOLS` | _(无)_ | 启动时加载的逗号分隔技能名称（覆盖最小默认） |
+| `DCC_MCP_MAYA_CLOSE_DEFAULT_COMMANDPORT` | `1` | `0` = 保留 Maya 旧式 `127.0.0.1:50007` MEL commandPort；默认在插件初始化时关闭，避免误探测触发安全弹窗 |
 
 ### 渐进式加载（最小模式）
 

@@ -19,6 +19,8 @@ from __future__ import annotations
 # Import built-in modules
 import logging
 
+from dcc_mcp_maya.api import require_main_thread
+
 logger = logging.getLogger(__name__)
 
 #: Sentinel returned when Maya is not available or its version cannot be probed.
@@ -41,6 +43,7 @@ def maya_available() -> bool:
         return False
 
 
+@require_main_thread
 def get_maya_version_string() -> str:
     """Return Maya's version string via ``cmds.about(version=True)``.
 

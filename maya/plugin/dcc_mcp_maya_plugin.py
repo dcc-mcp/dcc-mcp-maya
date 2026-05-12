@@ -167,10 +167,7 @@ def initializePlugin(plugin):
     try:
         if _is_interactive():
             _add_menu()
-        if _is_interactive():
-            _start_async()
-        else:
-            _start()
+        _start()
     except Exception as exc:
         logger.error("dcc-mcp-maya plugin failed to initialize: %s", exc)
         raise RuntimeError(f"dcc-mcp-maya init failed: {exc}") from exc
@@ -291,11 +288,15 @@ def _start() -> None:
         # would otherwise freeze Maya's main thread when a stray client
         # (or the gateway probe) connects to the legacy commandPort.
         try:
-            from dcc_mcp_maya._commandport import suppress_security_warnings  # noqa: PLC0415
+            from dcc_mcp_maya._commandport import (  # noqa: PLC0415
+                close_default_commandport,
+                suppress_security_warnings,
+            )
 
+            close_default_commandport()
             suppress_security_warnings()
         except Exception as exc:  # noqa: BLE001 — never block plugin load
-            logger.debug("commandPort warning suppression skipped: %s", exc)
+            logger.debug("commandPort hardening skipped: %s", exc)
         cfg = _resolve_config()
         _host_dispatcher = BlockingDispatcher() if cmds.about(batch=True) else QueueDispatcher()
         _host = dcc_mcp_maya.MayaHost(_host_dispatcher)
@@ -308,45 +309,14 @@ def _start() -> None:
 
 
 def _start_async() -> None:
-    """Start the MCP server off Maya's UI thread, then attach the idle pump."""
-    global _handle, _host, _host_dispatcher, _startup_thread
-    try:
-        from dcc_mcp_core.host import QueueDispatcher  # noqa: PLC0415
+    """Compatibility wrapper for the removed worker-thread startup path.
 
-        import dcc_mcp_maya  # noqa: PLC0415
-
-        _export_worker_env()
-        try:
-            from dcc_mcp_maya._commandport import suppress_security_warnings  # noqa: PLC0415
-
-            suppress_security_warnings()
-        except Exception as exc:  # noqa: BLE001
-            logger.debug("commandPort warning suppression skipped: %s", exc)
-        cfg = _resolve_config()
-        _host_dispatcher = QueueDispatcher()
-        _host = dcc_mcp_maya.MayaHost(_host_dispatcher)
-
-        def _finish_on_main() -> None:
-            try:
-                if _host is not None:
-                    _host.start()
-                _post_start(cfg)
-            except Exception as exc:  # noqa: BLE001
-                logger.error("dcc-mcp-maya async startup finalization failed: %s", exc)
-
-        def _worker() -> None:
-            global _handle
-            try:
-                _handle = dcc_mcp_maya.start_server(host_dispatcher=_host_dispatcher, **cfg)
-                cmds.evalDeferred(_finish_on_main, lowestPriority=True)
-            except Exception as exc:  # noqa: BLE001
-                logger.error("Failed to start MCP server asynchronously: %s", exc)
-
-        _startup_thread = threading.Thread(target=_worker, name="dcc-mcp-maya-startup", daemon=True)
-        _startup_thread.start()
-    except Exception as exc:
-        logger.error("Failed to schedule async MCP server startup: %s", exc)
-        raise
+    ``start_server`` and the final host pump both touch Maya APIs during
+    registration.  Running them on a daemon thread violates Maya's main-thread
+    contract and produces misleading localised flag errors, so plugin startup
+    now always delegates to the synchronous main-thread path.
+    """
+    _start()
 
 
 def _post_start(cfg: dict) -> None:

@@ -21,7 +21,7 @@ on:
 
 jobs:
   e2e:
-    name: E2E mayapy ${{ matrix.maya-version }}
+    name: E2E mayapy ${{ matrix.maya-version }} (${{ matrix.maya-lang }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -29,15 +29,24 @@ jobs:
         include:
           - maya-version: "2025"
             python-version: "3.11"
+            maya-lang: "en_US"
           - maya-version: "2024"
             python-version: "3.10"
+            maya-lang: "en_US"
+          - maya-version: "2024"
+            python-version: "3.10"
+            maya-lang: "zh_CN"
           - maya-version: "2023"
             python-version: "3.9"
+            maya-lang: "en_US"
           - maya-version: "2022"
             python-version: "3.7"
+            maya-lang: "en_US"
 
     container:
       image: tahv/mayapy:${{ matrix.maya-version }}
+    env:
+      MAYA_LANG: ${{ matrix.maya-lang }}
 
     steps:
       - name: Checkout

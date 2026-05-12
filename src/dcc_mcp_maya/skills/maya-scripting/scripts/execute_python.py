@@ -28,6 +28,8 @@ Supports two execution modes:
 from __future__ import annotations
 
 # Import built-in modules
+import logging
+import re
 import sys
 import threading
 import time
@@ -37,6 +39,7 @@ from typing import Any, Dict, Optional
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 DEFAULT_EXECUTE_TIMEOUT_SECS = 60.0
+_LOG = logging.getLogger(__name__)
 
 
 class ToolTimeoutError(TimeoutError):
@@ -70,15 +73,34 @@ def _normalize(params: Dict[str, Any]):
         return None, skill_error("Invalid script parameter", str(exc))
 
 
+def _normalise_capture_window(text: str) -> str:
+    """Collapse capture whitespace so mirrored Maya output can be compared."""
+    return re.sub(r"\s+", " ", text).strip()
+
+
 def _merge_capture(primary: str, extra: str) -> str:
-    """Concatenate two capture buffers, preserving blank-line separation."""
+    """Concatenate capture buffers while dropping exact mirrored output."""
     if not extra:
         return primary
     if not primary:
         return extra
+    primary_norm = _normalise_capture_window(primary)
+    extra_norm = _normalise_capture_window(extra)
+    if extra_norm and (extra_norm == primary_norm or extra_norm in primary_norm):
+        return primary
     if primary.endswith("\n"):
         return primary + extra
     return primary + "\n" + extra
+
+
+def _safe_exit_capture(capture: Any, label: str) -> None:
+    """Exit one capture layer without letting cleanup failures cascade."""
+    if capture is None:
+        return
+    try:
+        capture.__exit__(None, None, None)
+    except Exception as exc:  # noqa: BLE001
+        _LOG.warning("execute_python %s cleanup failed: %s", label, exc)
 
 
 def _run_inline(
@@ -151,10 +173,8 @@ def _run_inline(
     finally:
         if trace_installed:
             sys.settrace(previous_trace)
-        if maya_capture is not None:
-            maya_capture.__exit__(None, None, None)
-        if py_capture is not None:
-            py_capture.__exit__(None, None, None)
+        _safe_exit_capture(maya_capture, "MayaOutputCapture")
+        _safe_exit_capture(py_capture, "ScriptExecutionCapture")
 
     py_stdout = py_capture.stdout if py_capture is not None else ""
     py_stderr = py_capture.stderr if py_capture is not None else ""
@@ -174,20 +194,27 @@ def _run_inline(
                 stderr=stderr,
             )
         try:
-            from dcc_mcp_maya.api import classify_maya_exception  # noqa: PLC0415
+            from dcc_mcp_maya.api import (  # noqa: PLC0415
+                canonical_maya_exception_message,
+                classify_maya_exception,
+            )
 
             error_code = classify_maya_exception(exc_info)
+            canonical_message_en = canonical_maya_exception_message(exc_info)
         except Exception:  # noqa: BLE001
             error_code = "UNKNOWN"
+            canonical_message_en = "Maya operation failed with an unclassified error."
         result = skill_exception(
             exc_info,
             message="Python execution failed",
             stdout=stdout,
             stderr=stderr,
             error_code=error_code,
+            canonical_message_en=canonical_message_en,
             error_type=type(exc_info).__name__,
         )
         result.setdefault("error_code", error_code)
+        result.setdefault("canonical_message_en", canonical_message_en)
         result.setdefault("error_type", type(exc_info).__name__)
         return result
 
