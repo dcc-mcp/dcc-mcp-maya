@@ -125,12 +125,12 @@ jobs:
           if mod_python not in sys.path:
               sys.path.insert(0, mod_python)
 
-          # Run e2e tests via pytest inside mayapy
-          # Only collect test_e2e_maya_standalone.py to avoid importing
+          # Run e2e tests via pytest inside mayapy.
+          # Only collect standalone E2E scenarios to avoid importing
           # other test modules that need dcc_mcp_maya in site-packages.
           result = subprocess.run(
               [sys.executable, '-m', 'pytest',
-               'tests/test_e2e_maya_standalone.py',
+               'tests/e2e_standalone',
                '-v', '--tb=short', '-m', 'e2e'],
               env=dict(os.environ),
           )
@@ -268,7 +268,7 @@ jobs:
           # (cmds stubs are present but commands are not wired up).
           # This is a pre-existing upstream issue and is already covered
           # by the xfail-marked tests in Phase 3's pytest run
-          # (tests/test_e2e_maya_standalone.py —
+          # (tests/e2e_standalone/test_mcp_protocol.py —
           # test_tools_call_get_session_info_via_http etc.). Re-enable
           # the calls once dcc-mcp-core initializes Maya in the child.
 
