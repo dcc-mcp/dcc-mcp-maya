@@ -365,7 +365,10 @@ class MayaMcpServer(DccServerBase):
             try:
                 shutdown = getattr(dispatcher, "shutdown", None)
                 if callable(shutdown):
-                    signalled = shutdown("Interrupted")
+                    try:
+                        signalled = shutdown("Interrupted")
+                    except TypeError:
+                        signalled = shutdown()
                     logger.info(
                         "[%s] dispatcher.shutdown signalled %s job(s)",
                         self._dcc_name,

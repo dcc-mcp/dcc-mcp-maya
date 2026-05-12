@@ -34,10 +34,11 @@ def maya_available() -> bool:
     so callers that mock ``sys.modules`` mid-test see the updated value.
     """
     try:
+        # Maya import itself may enforce main-thread access in mayapy builds.
         import maya.cmds  # noqa: F401, PLC0415
 
         return True
-    except ImportError:
+    except Exception:  # noqa: BLE001
         return False
 
 
