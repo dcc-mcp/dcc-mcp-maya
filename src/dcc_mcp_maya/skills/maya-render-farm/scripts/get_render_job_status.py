@@ -79,8 +79,6 @@ def get_render_job_status(
             failed_tasks=errors,
             raw=status_info,
         )
-    except ImportError:
-        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
         return skill_exception(exc, message="Failed to query job status")
 
