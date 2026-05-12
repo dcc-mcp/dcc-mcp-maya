@@ -72,10 +72,15 @@ uv.lock
 /0.14.*
 /0.15.*
 
-# Local documentation (development reference only)
+# Local documentation and agent scratch files (development reference only)
 DOCKER_CHANGES.md
 DOCKER_QUICK_START.md
-.codebuddy/automations/
+.codebuddy/
+/MCP_Usage_Feedback_Report.md
+/REVIEW_REPORTS/
+/create_dynamics_animation.py
+/task_completion_report.md
+/test_maya_commands.py
 
 # Mock artefacts occasionally produced by tests that patch `cmds.file`
 /MagicMock/

@@ -353,6 +353,12 @@ def _post_start(cfg: dict) -> None:
     _print_startup_info(cfg)
     _install_shutdown_safety()
     try:
+        from dcc_mcp_maya._log_hygiene import prune_maya_logs  # noqa: PLC0415
+
+        prune_maya_logs()
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("log pruning skipped: %s", exc)
+    try:
         from dcc_mcp_maya._stale_cleanup import warn_if_too_many_stale  # noqa: PLC0415
 
         warn_if_too_many_stale(
