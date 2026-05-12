@@ -90,6 +90,50 @@ class TestListOpenPorts:
 
 
 # ────────────────────────────────────────────────────────────────────────
+# close_default_commandport
+# ────────────────────────────────────────────────────────────────────────
+
+
+class TestCloseDefaultCommandPort:
+    def test_zero_when_env_disabled(self, monkeypatch):
+        monkeypatch.setenv(_commandport.ENV_CLOSE_DEFAULT, "0")
+        fake_cmds = MagicMock()
+        fake_maya = MagicMock()
+        fake_maya.cmds = fake_cmds
+        with patch.dict(sys.modules, {"maya": fake_maya, "maya.cmds": fake_cmds}):
+            assert _commandport.close_default_commandport() == 0
+        fake_cmds.commandPort.assert_not_called()
+
+    def test_closes_open_default_aliases(self, monkeypatch):
+        monkeypatch.delenv(_commandport.ENV_CLOSE_DEFAULT, raising=False)
+        fake_cmds = MagicMock()
+        fake_cmds.commandPort.side_effect = [True, None, True, None]
+        fake_maya = MagicMock()
+        fake_maya.cmds = fake_cmds
+
+        with patch.dict(sys.modules, {"maya": fake_maya, "maya.cmds": fake_cmds}):
+            assert _commandport.close_default_commandport() == 2
+
+        kwargs_seq = [c[1] for c in fake_cmds.commandPort.call_args_list]
+        assert kwargs_seq[0] == {"query": True, "sourceType": "mel"}
+        assert fake_cmds.commandPort.call_args_list[0][0] == (":50007",)
+        assert kwargs_seq[1] == {"name": ":50007", "close": True}
+        assert kwargs_seq[2] == {"query": True, "sourceType": "mel"}
+        assert fake_cmds.commandPort.call_args_list[2][0] == ("commandportDefault",)
+        assert kwargs_seq[3] == {"name": "commandportDefault", "close": True}
+
+    def test_ignores_closed_default_port(self, monkeypatch):
+        monkeypatch.delenv(_commandport.ENV_CLOSE_DEFAULT, raising=False)
+        fake_cmds = MagicMock()
+        fake_cmds.commandPort.return_value = False
+        fake_maya = MagicMock()
+        fake_maya.cmds = fake_cmds
+
+        with patch.dict(sys.modules, {"maya": fake_maya, "maya.cmds": fake_cmds}):
+            assert _commandport.close_default_commandport() == 0
+
+
+# ────────────────────────────────────────────────────────────────────────
 # suppress_security_warnings
 # ────────────────────────────────────────────────────────────────────────
 
