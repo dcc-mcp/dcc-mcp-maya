@@ -505,6 +505,78 @@ def check_depends_exist(
     return issues
 
 
+def _references_metadata_ok(fm: dict) -> bool:
+    """True when references/ content is wired for agent read tools (recipes, introspection, or skill-reference-docs)."""
+    srd = _extract_dcc_mcp_field(fm, "skill-reference-docs")
+    if srd:
+        return True
+    recipes = _extract_dcc_mcp_field(fm, "recipes")
+    if isinstance(recipes, str) and recipes.strip().startswith("references"):
+        return True
+    if isinstance(recipes, list) and any(isinstance(x, str) and x.strip().startswith("references") for x in recipes):
+        return True
+    intro = _extract_dcc_mcp_field(fm, "introspection")
+    if isinstance(intro, str) and intro.strip().startswith("references"):
+        return True
+    return False
+
+
+def check_references_dir_wiring(skill_dir: Path, skill_name: str, fm: dict) -> List[LintIssue]:
+    """Warn when a references/ directory exists but SKILL metadata does not wire it."""
+    ref_dir = skill_dir / "references"
+    if not ref_dir.is_dir():
+        return []
+    if _references_metadata_ok(fm):
+        return []
+    return [
+        LintIssue(
+            skill=skill_name,
+            file=str(skill_dir / "SKILL.md"),
+            severity="WARNING",
+            rule="REF_DIR_UNWIRED",
+            message=(
+                "references/ exists — add metadata.dcc-mcp.skill-reference-docs (glob list), "
+                "or point recipes/introspection under references/ "
+                "(see docs/guide/skill-maintenance.md in dcc-mcp-core)"
+            ),
+        )
+    ]
+
+
+def check_io_tool_descriptions(skill_dir: Path, skill_name: str, fm: dict) -> List[LintIssue]:
+    """Warn when interchange-style tools have very short descriptions (agents rely on tools/list text)."""
+    issues: List[LintIssue] = []
+    tools = _resolve_tools_list(skill_dir, fm)
+    if not tools:
+        return issues
+    tools_yaml = _extract_dcc_mcp_field(fm, "tools", default=None)
+    yaml_label = str(tools_yaml) if tools_yaml else "tools.yaml"
+
+    for tool_entry in tools:
+        if not isinstance(tool_entry, dict):
+            continue
+        name = str(tool_entry.get("name") or "")
+        if not (name.startswith("export_") or name.startswith("import_")):
+            continue
+        desc = str(tool_entry.get("description") or "").replace("\n", " ").strip()
+        if len(desc) >= 100:
+            continue
+        issues.append(
+            LintIssue(
+                skill=skill_name,
+                file=str(skill_dir / yaml_label),
+                severity="WARNING",
+                rule="IO_TOOL_DESC_SHORT",
+                message=(
+                    f"tool '{name}': description is short ({len(desc)} chars) — expand with "
+                    "absolute paths, plugins, prerequisites, and common failures "
+                    "(see docs/guide/skill-maintenance.md in dcc-mcp-core)"
+                ),
+            )
+        )
+    return issues
+
+
 # ---------------------------------------------------------------------------
 # Cross-skill checks
 # ---------------------------------------------------------------------------
@@ -594,6 +666,8 @@ def lint_skill(
     issues += check_scripts_section(skill_dir, skill_name, content)
     issues += check_tools_source_files(skill_dir, skill_name, fm)
     issues += check_depends_exist(skill_dir, skill_name, fm, all_skill_names)
+    issues += check_references_dir_wiring(skill_dir, skill_name, fm)
+    issues += check_io_tool_descriptions(skill_dir, skill_name, fm)
 
     return issues, info
 

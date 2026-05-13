@@ -212,7 +212,8 @@ class TestStartAsyncSchedulesFinalisation:
         plugin_module._start = MagicMock()
         plugin_module._start_async()
 
-        deferred_callable = mock_maya_modules.cmds.evalDeferred.call_args.args[0]
+        args, _kwargs = mock_maya_modules.cmds.evalDeferred.call_args
+        deferred_callable = args[0]
 
         # Simulate Maya firing the deferred callback on the main thread.
         deferred_callable()

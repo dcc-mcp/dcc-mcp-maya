@@ -6,7 +6,10 @@ tools:
   annotations:
     read_only_hint: true
     idempotent_hint: true
-  description: Export a camera in the current Maya scene.
+  description: >-
+    Export a camera rig and related nodes from the Maya scene to a pipeline path.
+    Requires an absolute or workspace-relative output path and writable parent
+    directory; confirm frame range and overscan before farm submission.
 - name: export_shot_alembic
   execution: async
   affinity: main
@@ -14,7 +17,10 @@ tools:
   annotations:
     read_only_hint: true
     idempotent_hint: true
-  description: Export shot Alembic data in the current Maya scene.
+  description: >-
+    Export shot geometry/animation to Alembic (.abc) at a given absolute path.
+    Parent directory must exist; ensure GPU cache and namespaces match studio naming
+    conventions. Long exports may require increased timeout_hint on the gateway.
 - name: export_shot_fbx
   execution: async
   affinity: main
@@ -22,7 +28,10 @@ tools:
   annotations:
     read_only_hint: true
     idempotent_hint: true
-  description: Export shot FBX data in the current Maya scene.
+  description: >-
+    Export shot data to FBX using the same FBX plugin contract as maya-geometry.
+    Provide an absolute destination path; parent directory must exist. For generic
+    FBX exports outside shot packaging, prefer maya_geometry__export_fbx.
 - name: get_shot_info
   execution: sync
   affinity: main

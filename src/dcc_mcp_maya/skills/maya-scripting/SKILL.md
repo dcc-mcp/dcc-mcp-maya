@@ -37,6 +37,8 @@ metadata:
     groups: groups.yaml
     recipes: references/RECIPES.md
     introspection: references/INTROSPECTION.md
+    skill-reference-docs:
+      - "references/*.md"
 ---
 # maya-scripting (Bootstrap stage)
 

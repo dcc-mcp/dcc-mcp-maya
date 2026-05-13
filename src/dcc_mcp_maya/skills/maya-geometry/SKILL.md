@@ -40,6 +40,8 @@ metadata:
     depends: []
     tools: tools.yaml
     groups: groups.yaml
+    skill-reference-docs:
+      - "references/*.md"
 ---
 # maya-geometry (Interchange stage)
 

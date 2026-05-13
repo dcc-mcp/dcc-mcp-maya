@@ -64,8 +64,8 @@ def _persist_inline_spill_to_host_temp(code: str) -> str:
     installed ``dcc-mcp-core`` wheel exposes it; this fallback keeps Maya
     adapters functional on slightly older core builds.
     """
-    from pathlib import Path
     import tempfile
+    from pathlib import Path
 
     root_dir = Path.home() / ".dcc-mcp-core" / "temp_scripts"
     root_dir.mkdir(parents=True, exist_ok=True)
@@ -114,11 +114,17 @@ def _normalize(params: Dict[str, Any]):
 
 
 def _merge_capture(primary: str, extra: str) -> str:
-    """Concatenate two capture buffers, preserving blank-line separation."""
+    """Concatenate capture buffers while dropping Maya's mirrored stdout."""
     if not extra:
         return primary
     if not primary:
         return extra
+    primary_lines = [line.strip() for line in primary.splitlines() if line.strip()]
+    extra_lines = [line.strip() for line in extra.splitlines() if line.strip()]
+    if extra_lines and all(line in primary_lines for line in extra_lines):
+        return primary
+    if extra_lines and " ".join(extra_lines) in primary_lines:
+        return primary
     if primary.endswith("\n"):
         return primary + extra
     return primary + "\n" + extra
@@ -193,6 +199,8 @@ def _run_inline_impl(
                 raise CancelledError("execute_python cancelled by client")
         return _cancel_tracer
 
+    exc_info: Optional[BaseException] = None
+    cleanup_error: Optional[BaseException] = None
     try:
         if py_capture is not None:
             py_capture.__enter__()
@@ -204,7 +212,6 @@ def _run_inline_impl(
             sys.settrace(_cancel_tracer)
             trace_installed = True
 
-        exc_info: Optional[BaseException] = None
         try:
             exec(compile(code, filename, "exec"), exec_globals)  # noqa: S102
         except BaseException as exc:  # noqa: BLE001 — relay traceback to client
@@ -212,10 +219,16 @@ def _run_inline_impl(
     finally:
         if trace_installed:
             sys.settrace(previous_trace)
-        if maya_capture is not None:
-            maya_capture.__exit__(None, None, None)
-        if py_capture is not None:
-            py_capture.__exit__(None, None, None)
+        for capture in (maya_capture, py_capture):
+            if capture is None:
+                continue
+            try:
+                capture.__exit__(None, None, None)
+            except BaseException as exc:  # noqa: BLE001
+                if cleanup_error is None:
+                    cleanup_error = exc
+        if exc_info is None and cleanup_error is not None:
+            exc_info = cleanup_error
 
     py_stdout = py_capture.stdout if py_capture is not None else ""
     py_stderr = py_capture.stderr if py_capture is not None else ""
@@ -235,20 +248,27 @@ def _run_inline_impl(
                 stderr=stderr,
             )
         try:
-            from dcc_mcp_maya.api import classify_maya_exception  # noqa: PLC0415
+            from dcc_mcp_maya.api import (  # noqa: PLC0415
+                canonical_maya_exception_message,
+                classify_maya_exception,
+            )
 
             error_code = classify_maya_exception(exc_info)
+            canonical_message = canonical_maya_exception_message(exc_info)
         except Exception:  # noqa: BLE001
             error_code = "UNKNOWN"
+            canonical_message = "Unknown Maya error."
         result = skill_exception(
             exc_info,
             message="Python execution failed",
             stdout=stdout,
             stderr=stderr,
             error_code=error_code,
+            canonical_message_en=canonical_message,
             error_type=type(exc_info).__name__,
         )
         result.setdefault("error_code", error_code)
+        result.setdefault("canonical_message_en", canonical_message)
         result.setdefault("error_type", type(exc_info).__name__)
         return result
 
