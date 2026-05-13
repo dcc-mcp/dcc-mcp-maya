@@ -8,6 +8,10 @@ Run locally::
 
     mayapy -m pytest tests/e2e/ -v
 
+Default ``pyproject.toml`` addopts exclude ``e2e`` markers; run this folder explicitly::
+
+    mayapy -m pytest tests/e2e/test_gateway_failover_e2e.py -o addopts=-v
+
 CI::
 
     docker run --rm -v $(pwd):/workspace -w /workspace \\

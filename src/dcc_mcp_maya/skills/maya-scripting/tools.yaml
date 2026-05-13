@@ -1,12 +1,8 @@
 tools:
 - name: execute_mel
-  description: |-
-    Last-resort arbitrary MEL. Prefer search_skills → load_skill → typed tools with inputSchema.
-    When talking through dcc-mcp-gateway, use the gateway REST surface (POST /v1/search,
-    /v1/describe, /v1/call or /v1/call_batch on the gateway port) instead of assuming clients
-    must open each Maya session's /mcp URL. Inline MEL requires `code`. Studio `.mel` files:
-    pass `file_path` (or `script_path`) — runs `mel.eval('source "..."')` with forward slashes.
-    Unset DCC_MCP_MAYA_DISABLE_EXECUTE_MEL or DCC_MCP_MAYA_DISABLE_ARBITRARY_SCRIPT if blocked.
+  description: >-
+    Last-resort arbitrary MEL. Prefer search_skills → load_skill → typed tools. Inline MEL uses
+    `code`; studio `.mel` files use `file_path` / `script_path` and are sourced with forward slashes.
   execution: sync
   affinity: main
   annotations:
@@ -26,23 +22,11 @@ tools:
         type: string
         description: Same as file_path.
 - name: execute_python
-  description: |-
-    Last-resort arbitrary Python. Default path: search_skills / dcc_capability_manifest → load_skill
-    → typed tools with inputSchema. Gateway / non-MCP clients: prefer POST /v1/search, /v1/describe,
-    /v1/call (or /v1/call_batch) on the gateway host:port — do not document only the per-Maya /mcp
-    URL as if it were the primary integration surface.
-    **Long or escaping-heavy scripts:** load the `write_temp_file` skill (or call
-    `dcc_mcp_core.script_execution.write_temp_script` from an in-process tool), then call
-    `execute_python` with **`file_path`** (or `script_path`) pointing at that ``.py`` file — the path
-    must be readable **inside the Maya process host** (not only on an agent laptop behind a remote gateway).
-    Inline payloads longer than ~4096 characters are **automatically** mirrored to a host temp file under
-    ``~/.dcc-mcp-core/temp_scripts/`` before ``exec``; the response includes ``context.host_spilled_inline_script_path``.
-    Inline snippets: use `code` (or `script` / `source`). For studio `.py` files pass `file_path`: runs in
-    `__import__('__main__').__dict__` with `__file__` and `this_root` set (Maya-native shelf/pipeline style).
-    Captures Python + Script Editor channels (print, cmds.warning, MEL print). defer=true schedules on Maya's
-    idle queue and a DeferredToolResult is returned so long-running scripts no longer block the MCP request
-    thread, with cooperative cancellation wired in (issue #153). Unset DCC_MCP_MAYA_DISABLE_EXECUTE_PYTHON or
-    DCC_MCP_MAYA_DISABLE_ARBITRARY_SCRIPT if blocked.
+  description: >-
+    Last-resort arbitrary Python. Prefer search_skills / dcc_capability_manifest → load_skill → typed tools.
+    Use `code` for short snippets, `file_path` / `script_path` for host-readable `.py` files,
+    and `defer=true` for long jobs. Gateway REST: /v1/search + /v1/call. Captures Script Editor
+    / cmds.warning output. Inline code over 4096 chars spills to temp_scripts.
   execution: sync
   affinity: main
   annotations:

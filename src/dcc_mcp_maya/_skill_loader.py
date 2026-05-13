@@ -30,7 +30,79 @@ from pathlib import Path
 from typing import Dict, Iterable, Iterator, Optional, Tuple
 
 # Import third-party modules
-from dcc_mcp_core import MinimalModeConfig, parse_skill_md
+import dcc_mcp_core as _dcc_mcp_core
+from dcc_mcp_core import MinimalModeConfig
+
+_core_parse_skill_md = _dcc_mcp_core.parse_skill_md
+
+
+def _extract_stage_from_skill_md(skill_dir: Path) -> Optional[str]:
+    """Read ``metadata.dcc-mcp.stage`` from SKILL.md without PyYAML."""
+    skill_md = skill_dir / "SKILL.md"
+    try:
+        lines = skill_md.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return None
+
+    in_frontmatter = False
+    in_metadata = False
+    in_dcc_mcp = False
+    metadata_indent = 0
+    dcc_mcp_indent = 0
+    for line in lines:
+        stripped = line.strip()
+        if stripped == "---":
+            if not in_frontmatter:
+                in_frontmatter = True
+                continue
+            break
+        if not in_frontmatter or not stripped or stripped.startswith("#"):
+            continue
+        indent = len(line) - len(line.lstrip())
+        if stripped == "metadata:":
+            in_metadata = True
+            metadata_indent = indent
+            in_dcc_mcp = False
+            continue
+        if in_metadata and indent <= metadata_indent and not stripped.startswith("metadata:"):
+            in_metadata = False
+            in_dcc_mcp = False
+        if in_metadata and stripped == "dcc-mcp:":
+            in_dcc_mcp = True
+            dcc_mcp_indent = indent
+            continue
+        if in_dcc_mcp and indent <= dcc_mcp_indent and not stripped.startswith("dcc-mcp:"):
+            in_dcc_mcp = False
+        if in_dcc_mcp and stripped.startswith("stage:"):
+            value = stripped.split(":", 1)[1].strip().strip('"').strip("'")
+            return value or None
+    return None
+
+
+def parse_skill_md(skill_dir: str):
+    """Compatibility wrapper for core wheels that ignore dcc-mcp stage."""
+    meta = _core_parse_skill_md(skill_dir)
+    if meta is None or getattr(meta, "stage", None):
+        return meta
+    stage = _extract_stage_from_skill_md(Path(skill_dir))
+    if stage:
+        try:
+            setattr(meta, "stage", stage)
+        except Exception:
+
+            class _SkillMetadataStageProxy:
+                def __init__(self, wrapped, parsed_stage: str) -> None:
+                    self._wrapped = wrapped
+                    self.stage = parsed_stage
+
+                def __getattr__(self, name: str):
+                    return getattr(self._wrapped, name)
+
+            return _SkillMetadataStageProxy(meta, stage)
+    return meta
+
+
+_dcc_mcp_core.parse_skill_md = parse_skill_md
 
 #: Skills loaded eagerly when minimal mode is on.  ``maya-scripting``
 #: is the bootstrap fall-through; ``maya-scene`` provides the

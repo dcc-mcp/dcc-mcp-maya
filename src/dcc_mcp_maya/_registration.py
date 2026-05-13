@@ -60,6 +60,24 @@ class CoreBuiltinActionsPhase(RegistrationPhase):
         context.server._register_core_builtin_actions(context)  # noqa: SLF001
 
 
+class RecipesToolsPhase(RegistrationPhase):
+    """Expose ``recipes__*`` MCP tools for skills that declare ``metadata.dcc-mcp.recipes``."""
+
+    name = "recipes_tools"
+
+    def run(self, context: RegistrationContext) -> None:
+        context.server._register_recipes_tools(context)  # noqa: SLF001
+
+
+class SkillReferenceDocsPhase(RegistrationPhase):
+    """Expose ``skill_refs__*`` for sibling reference docs (globs + ``references/``)."""
+
+    name = "skill_reference_docs"
+
+    def run(self, context: RegistrationContext) -> None:
+        context.server._register_skill_reference_docs_tools(context)  # noqa: SLF001
+
+
 class StrictSkillScanPhase(RegistrationPhase):
     name = "strict_skill_scan"
     fatal_exceptions = (ValueError,)
@@ -96,6 +114,8 @@ class ResourcesPhase(RegistrationPhase):
 def default_registration_phases() -> Sequence[RegistrationPhase]:
     return (
         CoreBuiltinActionsPhase(),
+        RecipesToolsPhase(),
+        SkillReferenceDocsPhase(),
         StrictSkillScanPhase(),
         CapabilityManifestPhase(),
         ProjectToolsPhase(),
