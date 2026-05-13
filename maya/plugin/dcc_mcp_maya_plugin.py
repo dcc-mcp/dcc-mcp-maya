@@ -740,25 +740,33 @@ def _openapi_base_url() -> str:
 
 
 def _open_openapi_docs() -> None:
-    """Open the OpenAPI docs (Swagger UI) in the default browser."""
-    base = _openapi_base_url()
-    if not base:
-        cmds.warning("MCP server is not running.")
+    """Open the gateway OpenAPI docs (Swagger UI) in the default browser."""
+    gw = _gateway_url()
+    if not gw:
+        cmds.warning("Gateway is disabled (DCC_MCP_GATEWAY_PORT=0). Cannot open OpenAPI docs.")
         return
     import webbrowser  # noqa: PLC0415
 
-    webbrowser.open(base + "/docs")
+    webbrowser.open(gw + "/docs")
+
+
+def _gateway_url() -> str:
+    """Return the gateway base URL (from DCC_MCP_GATEWAY_PORT env var)."""
+    gateway_port = int(os.environ.get("DCC_MCP_GATEWAY_PORT", str(_DEFAULT_GATEWAY_PORT)))
+    if gateway_port <= 0:
+        return ""
+    return f"http://127.0.0.1:{gateway_port}"
 
 
 def _open_admin_panel() -> None:
-    """Open the admin panel in the default browser."""
-    base = _openapi_base_url()
-    if not base:
-        cmds.warning("MCP server is not running.")
+    """Open the gateway admin panel in the default browser."""
+    gw = _gateway_url()
+    if not gw:
+        cmds.warning("Gateway is disabled (DCC_MCP_GATEWAY_PORT=0). Cannot open admin panel.")
         return
     import webbrowser  # noqa: PLC0415
 
-    webbrowser.open(base + "/admin")
+    webbrowser.open(gw + "/admin")
 
 
 def _toggle_hot_reload() -> None:
