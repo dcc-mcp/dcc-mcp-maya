@@ -414,6 +414,45 @@ class MayaMcpServer(DccServerBase):
             minimal_mode=self._build_minimal_mode_config(context.minimal),
         )
 
+    def _register_recipes_tools(self, context: _registration.RegistrationContext) -> None:
+        """Register ``recipes__*`` tools so ``metadata.dcc-mcp.recipes`` files are agent-readable."""
+        try:
+            from dcc_mcp_core.recipes import register_recipes_tools
+        except ImportError as exc:
+            logger.debug("[%s] recipes tools skipped (import): %s", self._dcc_name, exc)
+            return
+        try:
+            skills = self._scan_skill_metadata_for_sidecars(context)
+            register_recipes_tools(self._server, skills=skills, dcc_name=self._dcc_name)
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("[%s] register_recipes_tools failed: %s", self._dcc_name, exc)
+
+    def _register_skill_reference_docs_tools(self, context: _registration.RegistrationContext) -> None:
+        """Register ``skill_refs__*`` for arbitrary reference Markdown/text beside a skill."""
+        try:
+            from dcc_mcp_core.skill_reference_docs import register_skill_reference_docs_tools
+        except ImportError as exc:
+            logger.debug("[%s] skill_refs tools skipped (import): %s", self._dcc_name, exc)
+            return
+        try:
+            skills = self._scan_skill_metadata_for_sidecars(context)
+            register_skill_reference_docs_tools(self._server, skills=skills, dcc_name=self._dcc_name)
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("[%s] register_skill_reference_docs_tools failed: %s", self._dcc_name, exc)
+
+    def _scan_skill_metadata_for_sidecars(self, context: _registration.RegistrationContext) -> List[Any]:
+        """Return ``SkillMetadata`` list aligned with ``collect_skill_search_paths`` (read-only scan)."""
+        from dcc_mcp_core import scan_and_load_lenient
+
+        paths = self.collect_skill_search_paths(
+            extra_paths=context.extra_skill_paths,
+            include_bundled=context.include_bundled,
+            filter_existing=True,
+        )
+        extra = paths if paths else None
+        skills, _skipped = scan_and_load_lenient(extra_paths=extra, dcc_name=self._dcc_name)
+        return skills
+
     def _build_minimal_mode_config(self, minimal: Optional[bool]) -> Any:
         """Return Maya's core MinimalModeConfig or ``None`` for full mode."""
         if minimal is False:
@@ -592,6 +631,39 @@ class MayaMcpServer(DccServerBase):
         heartbeat (5 s) publishes our metadata anyway.
         """
         return super().start()
+
+    def _upgrade_to_gateway(self) -> bool:
+        """Promote to gateway on the Maya UI thread when possible.
+
+        :class:`~dcc_mcp_core.gateway_election.DccGatewayElection` runs on a
+        daemon thread. The default implementation shuts down the inner HTTP
+        handle and calls ``McpHttpServer.start()``, which uses Tokio
+        ``Runtime::block_on`` — that path must match the initial bootstrap
+        thread (Maya main thread) so promotion and MCP restart stay reliable.
+        """
+        try:
+            import maya.cmds as cmds  # noqa: PLC0415
+            import maya.utils as mu  # noqa: PLC0415
+        except ImportError:
+            return super()._upgrade_to_gateway()
+
+        try:
+            if bool(cmds.about(batch=True)):
+                return super()._upgrade_to_gateway()
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("[%s] cmds.about(batch) failed during gateway promotion: %s", self._dcc_name, exc)
+            return super()._upgrade_to_gateway()
+
+        try:
+            parent_upgrade = super()._upgrade_to_gateway
+            return bool(mu.executeInMainThreadWithResult(parent_upgrade))
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(
+                "[%s] executeInMainThreadWithResult gateway promotion failed: %s — falling back",
+                self._dcc_name,
+                exc,
+            )
+            return super()._upgrade_to_gateway()
 
     def publish_capability_snapshot(self, *, reason: str = "manual") -> bool:
         """Push current Maya context into the gateway registry.

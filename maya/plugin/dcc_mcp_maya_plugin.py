@@ -232,7 +232,7 @@ def initializePlugin(plugin):
         if _is_interactive():
             _add_menu()
         if _is_interactive():
-            _start_async()
+            _start()
         else:
             _start()
     except Exception as exc:

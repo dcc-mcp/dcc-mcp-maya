@@ -578,6 +578,27 @@ class MayaResourceBinder:
     def _publish_scene_now(self) -> None:
         """Resolve the current snapshot and publish via :meth:`publish_scene`."""
         self.publish_scene()
+        self._sync_gateway_scene_metadata()
+
+    def _sync_gateway_scene_metadata(self) -> None:
+        """Push scene path / version into the gateway FileRegistry (admin SCENE column).
+
+        MCP ``scene://current`` already refreshes on Maya scriptJob events, but
+        the gateway registry row only updates when
+        :meth:`~dcc_mcp_maya.server.MayaMcpServer.publish_capability_snapshot`
+        runs.  Re-use the same throttled path so save / open / rename keep the
+        admin UI and ``gateway://instances`` in sync.
+        """
+        server = self.bound_server
+        if server is None:
+            return
+        publish = getattr(server, "publish_capability_snapshot", None)
+        if publish is None:
+            return
+        try:
+            publish(reason="scene_resource")
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("resources: publish_capability_snapshot failed: %s", exc)
 
 
 # ---------------------------------------------------------------------------
