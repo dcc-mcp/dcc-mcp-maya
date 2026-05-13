@@ -369,7 +369,7 @@ class TestExecuteMelScript:
         mod = _import_bundled("execute_mel")
         fake_maya["mel"].eval.return_value = "melOk"
 
-        result = mod.execute_mel(script="polySphere -r 1 -n unitTestSphere;")
+        result = mod.execute_mel(code="polySphere -r 1 -n unitTestSphere;")
 
         assert result["success"] is True
         fake_maya["mel"].eval.assert_called_once_with("polySphere -r 1 -n unitTestSphere;")
@@ -378,7 +378,7 @@ class TestExecuteMelScript:
     def test_empty_script_returns_failure(self, fake_maya):
         mod = _import_bundled("execute_mel")
 
-        result = mod.execute_mel(script="   ")
+        result = mod.execute_mel(code="   ")
 
         assert result["success"] is False
 
@@ -386,7 +386,7 @@ class TestExecuteMelScript:
         mod = _import_bundled("execute_mel")
         fake_maya["mel"].eval.side_effect = RuntimeError("MEL syntax error")
 
-        result = mod.execute_mel(script="this_is_invalid_mel_xyz!!!;")
+        result = mod.execute_mel(code="this_is_invalid_mel_xyz!!!;")
 
         assert result["success"] is False
         assert isinstance(result, dict)

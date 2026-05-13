@@ -1,24 +1,42 @@
 ---
 name: maya-materials
-description: Maya shading materials — create, assign, query, and manage Lambert, Blinn, and surface shader networks. Use when building basic material assignments. Not for material library management or advanced render setups — use maya-material-library or maya-render for that.
+description: |-
+  Authoring stage — create, assign, query, and manage Lambert / Blinn /
+  surface shader networks. Use for ad-hoc material assignment. For reusable
+  presets and library workflows use maya-material-library; for final
+  rendering use maya-render.
 license: MIT
 allowed-tools: Bash Read
 metadata:
   dcc-mcp:
     dcc: maya
     layer: domain
-    version: 1.0.0
+    stage: authoring
+    version: 1.1.0
     tags:
     - maya
     - material
     - shader
     - shading
-    search-hint: assign shader, basic material, surface shader, lambert blinn
+    - lambert
+    - blinn
+    search-hint: |-
+      assign shader, basic material, surface shader, lambert blinn,
+      create material, shading group, shadingEngine, sets surfaceShader
+    aliases:
+    - maya-shading
+    side-effects:
+    - reads-scene
+    - writes-scene
     depends: []
     tools: tools.yaml
     groups: groups.yaml
 ---
-> **Deprecated (merge bucket):** This skill contains only thin \maya.cmds\ wrappers.
-> Use \xecute_python\ with \maya-scripting/references/RECIPES.md#materials\ instead.
-> Will be removed in the next release.
+# maya-materials (Authoring stage)
 
+Build and assign basic shader networks. Eight scripts cover the typical
+"create a Lambert and assign it" loop while keeping `inputSchema`
+validation in place.
+
+For sharing material presets across assets / shots, use
+`maya-material-library`.

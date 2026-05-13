@@ -34,10 +34,10 @@ Connect your MCP client (Claude Desktop, etc.) to the **single gateway endpoint*
 
     http://127.0.0.1:9765/mcp
 
-The gateway exposes three discovery meta-tools:
-  - ``list_dcc_instances`` — show all running Maya instances
-  - ``connect_to_dcc``     — get the direct URL for a specific instance
-  - ``get_dcc_instance``   — query a specific instance by id or scene
+The gateway exposes a bounded dynamic surface (``search_tools`` / ``describe_tool`` /
+``call_tool``) and MCP ``resources/read`` on ``gateway://instances`` for instance
+discovery (see ``gateway://docs/agent-workflows``). Legacy ``list_dcc_instances`` /
+``connect_to_dcc`` meta-tools are no longer advertised on current gateways.
 
 To **disable** the gateway: set ``DCC_MCP_GATEWAY_PORT=0`` before starting Maya.
 
@@ -95,25 +95,90 @@ _DEFAULT_GATEWAY_PORT = 9765
 # ── ensure dcc_mcp_maya package is importable ────────────────────────────────
 
 
-def _ensure_package_importable() -> None:
-    """Add the module's python/ directory to sys.path if needed."""
+def _plugin_dir() -> Path:
+    """Directory containing this plugin file (``plug-ins/``).
+
+    Maya sometimes loads ``.py`` plug-ins in a context where ``__file__`` is
+    not injected; fall back to the code object filename (same approach as
+    ``inspect.getfile(inspect.currentframe())`` but without importing inspect).
+    """
     try:
-        import dcc_mcp_maya  # noqa: F401 — already importable, nothing to do
+        return Path(__file__).resolve().parent
+    except NameError:
+        # Frame 0 is this function; co_filename is the path to this source file.
+        return Path(sys._getframe(0).f_code.co_filename).resolve().parent
 
-        return
-    except ImportError:
-        pass
 
-    plugin_dir = Path(__file__).resolve().parent
+def _ensure_package_importable() -> None:
+    """Prefer the sibling ``python/`` (or ``python37/``) tree next to this plugin.
+
+    Maya may already have a different ``dcc_mcp_core`` / ``dcc_mcp_maya`` on
+    ``sys.path`` (site-packages, PYTHONPATH).  A mismatched pair leaves
+    ``dcc_mcp_core`` half-initialised when ``from dcc_mcp_core import _core``
+    races with lazy submodules — the classic "partially initialized module"
+    error.  We therefore pin the module-root ``python*`` directory to the
+    *front* of ``sys.path`` and drop stale ``sys.modules`` entries when their
+    files are not under that tree or when the first import fails.
+    """
+    plugin_dir = _plugin_dir()
     module_root = plugin_dir.parent
-
     python_dir = module_root / ("python37" if sys.version_info[:2] == (3, 7) else "python")
     if not python_dir.is_dir():
         python_dir = module_root / "python"
-    python_str = str(python_dir)
-    if python_dir.is_dir() and python_str not in sys.path:
+    if not python_dir.is_dir():
+        return
+
+    python_str = str(python_dir.resolve())
+
+    def _prepend_python_path() -> None:
+        while python_str in sys.path:
+            sys.path.remove(python_str)
         sys.path.insert(0, python_str)
-        logger.debug("Added %s to sys.path for dcc_mcp_maya package discovery", python_str)
+        logger.debug("Pinned %s to front of sys.path for dcc-mcp-maya imports", python_str)
+
+    def _purge_dcc_modules() -> None:
+        keys = [
+            k
+            for k in list(sys.modules)
+            if k == "dcc_mcp_core"
+            or k.startswith("dcc_mcp_core.")
+            or k == "dcc_mcp_maya"
+            or k.startswith("dcc_mcp_maya.")
+        ]
+        for k in keys:
+            del sys.modules[k]
+
+    def _module_tree_wrong_origin(name: str) -> bool:
+        mod = sys.modules.get(name)
+        if mod is None:
+            return False
+        roots = []
+        mod_file = getattr(mod, "__file__", None)
+        if mod_file:
+            roots.append(os.path.dirname(os.path.realpath(mod_file)))
+        for entry in getattr(mod, "__path__", None) or ():
+            roots.append(os.path.realpath(entry))
+        if not roots:
+            return False
+        want = os.path.realpath(python_str)
+        return not any(r == want or r.startswith(want + os.sep) for r in roots)
+
+    _prepend_python_path()
+
+    if _module_tree_wrong_origin("dcc_mcp_maya") or _module_tree_wrong_origin("dcc_mcp_core"):
+        logger.warning(
+            "Reloading dcc_mcp_* from %s (cached modules were not from this module root)",
+            python_str,
+        )
+        _purge_dcc_modules()
+        _prepend_python_path()
+
+    try:
+        import dcc_mcp_maya  # noqa: F401
+    except ImportError:
+        _purge_dcc_modules()
+        _prepend_python_path()
+        import dcc_mcp_maya  # noqa: F401
 
 
 _ensure_package_importable()
@@ -137,7 +202,6 @@ _host_dispatcher = None
 _menu_name = "DccMcpMenu"
 _restart_lock = threading.Lock()  # prevent overlapping restart calls
 _shutdown_coordinator = None  # Issue #186 — safety-net composition root
-_startup_thread = None
 
 
 # ── standalone detection ──────────────────────────────────────────────────────
@@ -167,7 +231,10 @@ def initializePlugin(plugin):
     try:
         if _is_interactive():
             _add_menu()
-        _start()
+        if _is_interactive():
+            _start()
+        else:
+            _start()
     except Exception as exc:
         logger.error("dcc-mcp-maya plugin failed to initialize: %s", exc)
         raise RuntimeError(f"dcc-mcp-maya init failed: {exc}") from exc
@@ -288,15 +355,11 @@ def _start() -> None:
         # would otherwise freeze Maya's main thread when a stray client
         # (or the gateway probe) connects to the legacy commandPort.
         try:
-            from dcc_mcp_maya._commandport import (  # noqa: PLC0415
-                close_default_commandport,
-                suppress_security_warnings,
-            )
+            from dcc_mcp_maya._commandport import suppress_security_warnings  # noqa: PLC0415
 
-            close_default_commandport()
             suppress_security_warnings()
         except Exception as exc:  # noqa: BLE001 — never block plugin load
-            logger.debug("commandPort hardening skipped: %s", exc)
+            logger.debug("commandPort warning suppression skipped: %s", exc)
         cfg = _resolve_config()
         _host_dispatcher = BlockingDispatcher() if cmds.about(batch=True) else QueueDispatcher()
         _host = dcc_mcp_maya.MayaHost(_host_dispatcher)
@@ -309,14 +372,67 @@ def _start() -> None:
 
 
 def _start_async() -> None:
-    """Compatibility wrapper for the removed worker-thread startup path.
+    """Defer MCP server startup until Maya's main-thread boot is complete.
 
-    ``start_server`` and the final host pump both touch Maya APIs during
-    registration.  Running them on a daemon thread violates Maya's main-thread
-    contract and produces misleading localised flag errors, so plugin startup
-    now always delegates to the synchronous main-thread path.
+    Design rationale
+    ----------------
+    Three previous revisions tried to keep ``initializePlugin`` non-blocking
+    by spawning a worker thread for ``start_server(...)`` and then handing
+    finalisation back to the UI thread. Every variant had a real-world
+    failure mode in interactive Maya:
+
+    1. ``cmds.evalDeferred(_finish_on_main, lowestPriority=True)`` from the
+       worker thread crashed with "必须为标志'lowestPriority'传递一个布尔
+       参数" — ``cmds.*`` is not thread-safe; kwargs are marshalled through
+       the MEL command engine on the wrong thread.
+
+    2. ``maya.utils.executeDeferred(_finish_on_main)`` from the worker
+       thread was thread-safe in theory (it routes through
+       ``executeInMainThreadWithResult`` to add the call to the deferred
+       queue) but **deadlocked** Maya in 2022/2023 builds: that channel is
+       gated on a state flag flipped only after plugin-init completes, so
+       the worker (holding the GIL while waiting) and the main thread
+       (inside ``initializePlugin``, waiting on the worker via the GIL)
+       form a cycle that pins Maya.
+
+    3. ``cmds.scriptJob(idleEvent=poll, protected=True)`` + a
+       ``threading.Event`` polled from the worker still raced against
+       Maya's plugin-init re-entrancy guards in some builds — the same
+       ``executeInMainThread`` channel is needed to register the scriptJob
+       safely from non-main threads, and Maya's idle-event dispatch can
+       freeze briefly during the late phases of boot.
+
+    The current design (per user request 2026-05-13) is the **simplest**
+    path that works everywhere: stay on the main thread, wait for Maya to
+    finish booting, then run the synchronous startup path in-place.
+
+    * ``initializePlugin`` is invoked on Maya's main thread.
+    * ``cmds.evalDeferred(_start, lowestPriority=True)`` queues ``_start``
+      at the **back** of Maya's deferred queue, *behind* every other
+      pending deferred task: ``userSetup.py`` follow-ups, autoload scene,
+      other plugins' init code, etc.
+    * When ``_start`` finally fires, Maya's main thread is fully idle and
+      the UI is responsive. ``start_server(...)`` and ``MayaHost.start()``
+      run synchronously on the main thread — no cross-thread invoke, no
+      worker, no scriptJob polling, no event coordination.
+    * ``start_server(...)`` itself spawns the HTTP server / gateway
+      election in its own internal worker threads; those don't need to
+      coordinate back to the main thread for completion (they are
+      independent loops).
+
+    The trade-off: when ``_start`` fires it briefly blocks the Maya UI
+    while skill discovery + builtin action registration happen (~10–500
+    ms depending on skill count). This pause is invisible to users
+    because it lands during the post-boot idle moment when Maya is
+    already showing its empty scene; the alternative (an unreliable
+    cross-thread hand-off that occasionally pins Maya forever) is far
+    worse.
     """
-    _start()
+    try:
+        cmds.evalDeferred(_start, lowestPriority=True)
+    except Exception as exc:
+        logger.error("Failed to schedule MCP server startup: %s", exc)
+        raise
 
 
 def _post_start(cfg: dict) -> None:
@@ -366,7 +482,7 @@ def _print_startup_info(cfg: dict) -> None:
         else:
             lines.append(f"  Gateway URL  : {gw_url}  [registered as instance]")
             lines.append(f"  Connect MCP client to: {gw_url}/mcp  (via gateway)")
-        lines.append("  Gateway tools: list_dcc_instances / connect_to_dcc")
+        lines.append("  Instance discovery: MCP resources/read uri=gateway://instances")
     else:
         lines.append(f"  Connect MCP client to: {instance_url}")
         lines.append("  (Gateway disabled — set DCC_MCP_GATEWAY_PORT=9765 to enable)")
@@ -483,31 +599,36 @@ def _uninstall_shutdown_safety() -> None:
         logger.debug("shutdown safety uninstall failed: %s", exc)
 
 
-def _stop_async() -> None:
-    """Signal shutdown without blocking the Maya main thread.
-
-    Sends a non-blocking shutdown signal, then waits in a background
-    thread.  Used by the Restart menu item to avoid freezing Maya.
-    """
-    global _handle, _host, _host_dispatcher
+def _stop_host_on_main_thread() -> None:
+    """Stop the Maya host idle tick (``detach_tick`` / ``scriptJob`` — main thread only)."""
+    global _host, _host_dispatcher
+    if _host is None:
+        return
     try:
-        import dcc_mcp_maya.server as _srv_mod  # noqa: PLC0415
+        _host.stop()
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("MCP host stop failed: %s", exc)
+    finally:
+        _host = None
+        _host_dispatcher = None
 
-        # Signal shutdown (non-blocking — returns immediately)
-        srv = _srv_mod._server_instance  # noqa: SLF001
-        if srv and srv._handle:
-            srv._handle.signal_shutdown()
 
-        if _host is not None:
-            _host.stop()
-            _host = None
-            _host_dispatcher = None
+def _running_mcp_server():
+    """Return the live :class:`~dcc_mcp_maya.server.MayaMcpServer` or ``None``.
 
-        # Deregister singleton so start_server() creates a fresh instance
-        _srv_mod._server_instance = None  # noqa: SLF001
-        _handle = None
-    except Exception as exc:
-        logger.warning("Failed to signal MCP server shutdown: %s", exc)
+    Prefer the public module alias, but fall back to the internal holder so
+    menu actions still work if those two ever diverge during a bad partial
+    shutdown path.
+    """
+    import dcc_mcp_maya.server as _srv_mod  # noqa: PLC0415
+
+    srv = _srv_mod._server_instance  # noqa: SLF001
+    if srv is not None:
+        return srv
+    holder = getattr(_srv_mod, "_instance_holder", None)
+    if holder and holder[0] is not None:
+        return holder[0]
+    return None
 
 
 def _server_url() -> str:
@@ -527,12 +648,13 @@ def _add_menu() -> None:
         if cmds.menu(_menu_name, exists=True):
             cmds.deleteUI(_menu_name)
         cmds.menu(_menu_name, label="DCC MCP", parent="MayaWindow", tearOff=False)
-        cmds.menuItem(label="Show MCP URL", command=lambda *_: _show_url())
+        cmds.menuItem(label="OpenAPI Docs", command=lambda *_: _open_openapi_docs())
+        cmds.menuItem(label="Admin Panel", command=lambda *_: _open_admin_panel())
+        cmds.menuItem(divider=True)
         cmds.menuItem(label="Restart MCP Server", command=lambda *_: _restart_deferred())
         cmds.menuItem(label="Stop MCP Server", command=lambda *_: _stop_blocking())
         cmds.menuItem(divider=True)
         cmds.menuItem(label="Enable/Disable Hot Reload", command=lambda *_: _toggle_hot_reload())
-        cmds.menuItem(label="Open MCP in Browser", command=lambda *_: _open_browser())
     except Exception as exc:
         logger.warning("Could not add DCC MCP menu: %s", exc)
 
@@ -546,9 +668,7 @@ def _remove_menu() -> None:
 
 
 def _show_url() -> None:
-    import dcc_mcp_maya.server as _srv_mod  # noqa: PLC0415
-
-    srv = _srv_mod._server_instance  # noqa: SLF001
+    srv = _running_mcp_server()
     instance_url = _server_url()
     gateway_port = int(os.environ.get("DCC_MCP_GATEWAY_PORT", str(_DEFAULT_GATEWAY_PORT)))
     is_gw = bool(srv and getattr(srv, "is_gateway", False))
@@ -566,42 +686,58 @@ def _show_url() -> None:
 
 
 def _restart_deferred() -> None:
-    """Restart the MCP server without blocking the Maya main thread.
+    """Restart the MCP server without blocking the Maya UI thread for long.
 
-    Pattern:
-      1. Signal shutdown (non-blocking, returns immediately).
-      2. Spawn a background thread that waits ~0.5 s for the Rust runtime
-         to drain, then reschedules _start() back on the Maya main thread
-         via ``maya.utils.executeDeferred``.
+    ``MayaHost.stop()`` / ``detach_tick`` must run on the Maya main thread.
+    ``dcc_mcp_maya.stop_server()`` joins the Rust HTTP stack and may take
+    hundreds of milliseconds — that work runs on a daemon thread.  A prior
+    implementation only ``signal_shutdown`` + cleared ``_server_instance``
+    without clearing ``_instance_holder``; ``start_server()`` then saw the old
+    server as still ``is_running`` and returned the stale handle, so Restart
+    appeared to do nothing and Hot Reload thought the server was down.
     """
     if not _restart_lock.acquire(blocking=False):
         cmds.warning("DCC MCP: restart already in progress, please wait.")
         return
 
     cmds.inViewMessage(amg="DCC MCP: restarting…", pos="topCenter", fade=True)
-    _stop_async()
 
-    def _bg_restart():
-        import time
+    try:
+        _stop_host_on_main_thread()
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("DCC MCP: restart host phase failed: %s", exc)
 
-        time.sleep(0.6)  # let the Rust runtime finish shutting down
-
-        try:
-            import maya.utils  # noqa: PLC0415
-
-            maya.utils.executeDeferred(_main_thread_start)
-        except Exception as exc:
-            logger.error("DCC MCP: background restart failed: %s", exc)
-        finally:
-            _restart_lock.release()
-
-    def _main_thread_start():
+    def _main_thread_finish_restart() -> None:
         try:
             _start()
         except Exception as exc:
             logger.error("DCC MCP: restart _start() failed: %s", exc)
+        finally:
+            _restart_lock.release()
 
-    threading.Thread(target=_bg_restart, daemon=True, name="dcc-mcp-restart").start()
+    def _bg_shutdown_then_schedule_start() -> None:
+        global _handle
+        try:
+            import dcc_mcp_maya  # noqa: PLC0415
+
+            dcc_mcp_maya.stop_server()
+        except Exception as exc:
+            logger.warning("DCC MCP: restart stop_server failed: %s", exc)
+        finally:
+            _handle = None
+        try:
+            import maya.utils  # noqa: PLC0415
+
+            maya.utils.executeDeferred(_main_thread_finish_restart)
+        except Exception as exc:
+            logger.error("DCC MCP: restart executeDeferred failed: %s", exc)
+            _restart_lock.release()
+
+    threading.Thread(
+        target=_bg_shutdown_then_schedule_start,
+        daemon=True,
+        name="dcc-mcp-restart",
+    ).start()
 
 
 def _open_browser() -> None:
@@ -614,11 +750,47 @@ def _open_browser() -> None:
         cmds.warning("MCP server is not running.")
 
 
+def _openapi_base_url() -> str:
+    """Return base URL for the running server (strip /mcp suffix)."""
+    url = _server_url()
+    if url and url != "<not running>":
+        return url.replace("/mcp", "")
+    return ""
+
+
+def _open_openapi_docs() -> None:
+    """Open the DCC service OpenAPI docs (Swagger UI) in the default browser."""
+    base = _openapi_base_url()
+    if not base:
+        cmds.warning("MCP server is not running.")
+        return
+    import webbrowser  # noqa: PLC0415
+
+    webbrowser.open(base + "/docs")
+
+
+def _gateway_url() -> str:
+    """Return the gateway base URL (from DCC_MCP_GATEWAY_PORT env var)."""
+    gateway_port = int(os.environ.get("DCC_MCP_GATEWAY_PORT", str(_DEFAULT_GATEWAY_PORT)))
+    if gateway_port <= 0:
+        return ""
+    return f"http://127.0.0.1:{gateway_port}"
+
+
+def _open_admin_panel() -> None:
+    """Open the gateway admin panel in the default browser."""
+    gw = _gateway_url()
+    if not gw:
+        cmds.warning("Gateway is disabled (DCC_MCP_GATEWAY_PORT=0). Cannot open admin panel.")
+        return
+    import webbrowser  # noqa: PLC0415
+
+    webbrowser.open(gw + "/admin")
+
+
 def _toggle_hot_reload() -> None:
     """Toggle hot-reload on/off for the MCP server."""
-    import dcc_mcp_maya.server as _srv_mod  # noqa: PLC0415
-
-    srv = _srv_mod._server_instance  # noqa: SLF001
+    srv = _running_mcp_server()
     if srv is None:
         cmds.warning("MCP server is not running.")
         return

@@ -1,27 +1,48 @@
 ---
 name: maya-animation
-description: Maya animation keyframes, timeline, curves, constraint baking, and simulation caching. Use when creating or editing time-based motion. Not for rigging setup or render output — use maya-rigging or maya-render for that.
+description: |-
+  Authoring stage — keyframes, timeline, animation curves, constraint
+  baking, and curve I/O. Use whenever you create or edit time-based motion.
+  Not for rigging setup (maya-rigging), pose library (maya-pose-library),
+  or render output (maya-render).
 license: MIT
 allowed-tools: Bash Read
 metadata:
   dcc-mcp:
     dcc: maya
     layer: domain
-    version: 1.0.0
+    stage: authoring
+    version: 1.1.0
     tags:
     - maya
     - animation
     - keyframe
     - timeline
-    search-hint: animate motion, keyframe, timeline, curve editing, bake simulation
-      tangent
+    - curve
+    - bake
+    search-hint: |-
+      animate motion, keyframe, set key, timeline range, animation curve,
+      curve tangent, bake constraint, bake simulation, anim file import export
+    aliases:
+    - maya-anim
+    side-effects:
+    - reads-scene
+    - writes-scene
     depends: []
     tools: tools.yaml
     groups: groups.yaml
 ---
-# maya-animation
+# maya-animation (Authoring stage)
 
-Maya animation skill. Provides actions for managing keyframes, timeline settings, animation curves, baking simulations and constraints, and importing/exporting animation data.
+Keyframes, timeline, curves, constraint / simulation baking, and
+animation curve I/O. Fourteen scripts in three logical clusters:
+
+1. **Frame / time queries** — `get_current_time`, `set_current_time`,
+   `set_timeline`, `get_frame_range`, `query_scene_time_info`.
+2. **Key editing** — `set_keyframe`, `get_keyframes`, `delete_keyframes`,
+   `list_animation_curves`, `set_animation_curve_tangent`.
+3. **Bake + persistence** — `bake_simulation`, `bake_constraints`,
+   `export_animation_curves`, `import_animation_curves`.
 
 ## Scripts
 
@@ -38,3 +59,4 @@ Maya animation skill. Provides actions for managing keyframes, timeline settings
 - `export_animation_curves` — Export animation curves for an object to a Maya .anim file
 - `import_animation_curves` — Import animation curves from a file and optionally apply them to an object
 - `query_scene_time_info` — Query the current scene time and playback settings
+- `get_frame_range` — Return the scene's animation frame range

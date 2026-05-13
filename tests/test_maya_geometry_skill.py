@@ -1,4 +1,4 @@
-"""Unit tests for the maya-geometry skill."""
+"""Unit tests for the maya-geometry skill (Interchange stage)."""
 
 # Import future modules
 from __future__ import annotations
@@ -8,10 +8,12 @@ from pathlib import Path
 from unittest.mock import MagicMock
 
 # Import local modules
-from conftest import load_and_call
+from conftest import load_and_call, load_and_call_with_mel
 
 
 def test_create_sphere_calls_poly_sphere():
+    """Legacy create_sphere lives under maya-primitives now; this test pins
+    the maya-geometry copy still works for backward compatibility."""
     cmds = MagicMock()
     cmds.polySphere.return_value = ["heroSphere", "heroSphereShape"]
 
@@ -65,29 +67,150 @@ def test_file_exists_uses_filesystem(tmp_path):
     assert result["context"]["exists"] is True
 
 
-def test_export_fbx_loads_plugin_and_exports_selection():
+def test_export_fbx_pushes_options_through_mel_and_verifies(tmp_path):
+    """The MEL-driven rewrite pushes every FBXExport* option through
+    ``mel.eval`` before invoking ``cmds.file``, then verifies the
+    destination has non-zero size.
+    """
     cmds = MagicMock()
+    mel = MagicMock()
     cmds.pluginInfo.return_value = False
-    cmds.file.return_value = "c:/tmp/out.fbx"
+    out_path = tmp_path / "out.fbx"
 
-    result = load_and_call(
+    def _write_file(path, **_kwargs):
+        out_path.write_bytes(b"FBX-bytes")
+        return str(out_path)
+
+    cmds.file.side_effect = _write_file
+
+    result = load_and_call_with_mel(
         "maya-geometry/scripts/export_fbx.py",
         cmds,
+        mel,
         "main",
-        path="c:/tmp/out.fbx",
+        path=str(out_path),
         selected_only=True,
+        bake_animation=True,
+        start_frame=1,
+        end_frame=10,
+        fbx_version="FBX202000",
+        up_axis="y",
     )
 
-    assert result["success"] is True
-    cmds.pluginInfo.assert_called_once_with("fbxmaya", query=True, loaded=True)
+    assert result["success"] is True, result
+    ctx = result["context"]
+    assert ctx["selected_only"] is True
+    assert ctx["size_bytes"] == len(b"FBX-bytes")
+    applied = ctx["applied_options"]
+    # Every meaningful option lands in the applied bag.
+    assert applied["FBXExportBakeComplexAnimation"] == "true"
+    assert applied["FBXExportBakeComplexStart"] == 1
+    assert applied["FBXExportBakeComplexEnd"] == 10
+    assert applied["FBXExportFileVersion"] == "FBX202000"
+    assert applied["FBXExportUpAxis"] == "y"
+    # Plugin loaded; options reset before configuration; cmds.file selected-only.
+    cmds.pluginInfo.assert_called_with("fbxmaya", query=True, loaded=True)
     cmds.loadPlugin.assert_called_once_with("fbxmaya")
-    cmds.file.assert_called_once_with(
-        "c:/tmp/out.fbx",
-        force=True,
-        options="v=0;",
-        type="FBX export",
-        exportSelected=True,
+    mel.eval.assert_any_call("FBXResetExport")
+    cmds.file.assert_called_once()
+    file_args, file_kwargs = cmds.file.call_args
+    assert file_args[0] == str(out_path).replace("\\", "/")
+    assert file_kwargs.get("type") == "FBX export"
+    assert file_kwargs.get("exportSelected") is True
+
+
+def test_export_fbx_reports_zero_byte_failure(tmp_path):
+    """A 0-byte FBX file must fail explicitly so the agent does not
+    proceed with a corrupt round-trip."""
+    cmds = MagicMock()
+    mel = MagicMock()
+    cmds.pluginInfo.return_value = True
+    out_path = tmp_path / "empty.fbx"
+
+    def _write_empty(path, **_kwargs):
+        out_path.write_bytes(b"")
+        return str(out_path)
+
+    cmds.file.side_effect = _write_empty
+
+    result = load_and_call_with_mel(
+        "maya-geometry/scripts/export_fbx.py",
+        cmds,
+        mel,
+        "main",
+        path=str(out_path),
     )
+
+    assert result["success"] is False
+    assert "0-byte" in result["message"]
+    assert result["context"]["path"].endswith("empty.fbx")
+
+
+def test_export_fbx_rejects_unknown_fbx_version(tmp_path):
+    cmds = MagicMock()
+    mel = MagicMock()
+    cmds.pluginInfo.return_value = True
+
+    result = load_and_call_with_mel(
+        "maya-geometry/scripts/export_fbx.py",
+        cmds,
+        mel,
+        "main",
+        path=str(tmp_path / "out.fbx"),
+        fbx_version="FBX9999",
+    )
+
+    assert result["success"] is False
+    # cmds.file must not be reached when the parameter validation fails.
+    cmds.file.assert_not_called()
+
+
+def test_import_fbx_returns_new_node_names(tmp_path):
+    fbx_path = tmp_path / "in.fbx"
+    fbx_path.write_bytes(b"FBX-bytes")
+    cmds = MagicMock()
+    mel = MagicMock()
+    cmds.pluginInfo.return_value = True
+
+    # Simulate cmds.ls before/after the import.
+    before_nodes = ["|persp", "|top", "|front", "|side"]
+    after_nodes = before_nodes + ["|imported_grp", "|imported_grp|mesh1"]
+    cmds.ls.side_effect = [before_nodes, after_nodes]
+    cmds.objectType.return_value = "transform"
+
+    result = load_and_call_with_mel(
+        "maya-geometry/scripts/import_fbx.py",
+        cmds,
+        mel,
+        "main",
+        path=str(fbx_path),
+        namespace="ns",
+    )
+
+    assert result["success"] is True, result
+    ctx = result["context"]
+    assert "imported_grp" in ctx["imported_short_names"]
+    assert "mesh1" in ctx["imported_short_names"]
+    assert ctx["namespace"] == "ns"
+    cmds.loadPlugin.assert_not_called()  # plugin already loaded
+    cmds.file.assert_called_once()
+
+
+def test_import_fbx_rejects_missing_path(tmp_path):
+    cmds = MagicMock()
+    mel = MagicMock()
+    cmds.pluginInfo.return_value = True
+
+    result = load_and_call_with_mel(
+        "maya-geometry/scripts/import_fbx.py",
+        cmds,
+        mel,
+        "main",
+        path=str(tmp_path / "nonexistent.fbx"),
+    )
+
+    assert result["success"] is False
+    assert "not found" in result["message"].lower() or "missing" in result["message"].lower()
 
 
 def test_export_obj_loads_plugin_and_exports_all():
@@ -113,3 +236,6 @@ def test_geometry_tools_yaml_declares_affinity():
     assert "affinity: any" in text
     assert "name: create_sphere" not in text
     assert text.count("affinity: main") >= 3
+    # Interchange skill must expose both export and import contracts.
+    assert "name: export_fbx" in text
+    assert "name: import_fbx" in text

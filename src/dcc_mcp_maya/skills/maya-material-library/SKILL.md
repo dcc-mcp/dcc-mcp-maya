@@ -1,28 +1,48 @@
 ---
 name: maya-material-library
-description: Maya material library — save, load, and manage reusable material presets and shader collections. Use when reusing materials across assets. Not for creating new materials from scratch or rendering — use maya-materials or maya-render for that.
+description: |-
+  Authoring stage — save / load / manage reusable material presets as JSON
+  side-files. Use for cross-shot or cross-asset shader reuse. Not for
+  building a one-off material on the fly (use maya-materials) or final
+  rendering (use maya-render).
 license: MIT
 allowed-tools: Bash Read
 metadata:
   dcc-mcp:
     dcc: maya
     layer: domain
-    version: 1.0.0
+    stage: authoring
+    version: 1.1.0
     tags:
     - maya
     - materials
     - library
     - shading
     - presets
-    search-hint: reuse material, material preset, shader library, share material
+    search-hint: |-
+      reuse material, material preset, shader library, share material,
+      load preset, save preset, JSON shader
+    aliases:
+    - maya-mat-lib
+    side-effects:
+    - reads-scene
+    - writes-scene
+    - reads-disk
+    - writes-disk
     depends: []
     tools: tools.yaml
     groups: groups.yaml
 ---
-# maya-material-library
+# maya-material-library (Authoring stage)
 
-Reusable material preset management for Maya. Saves shader networks to a JSON
-library and restores them, enabling consistent look-dev across shots and assets.
+Save, load, list, and delete JSON material presets. Lives next to
+`maya-materials` so the agent decision tree is clear:
+
+| Goal | Use |
+|------|-----|
+| Build a fresh shader and assign it | maya-materials |
+| Save a shader for reuse later | **maya-material-library** |
+| Reapply a saved look-dev preset | **maya-material-library** |
 
 ## Scripts
 

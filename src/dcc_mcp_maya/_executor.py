@@ -23,6 +23,7 @@ from dcc_mcp_core.skill import skill_exception
 
 # Import local modules
 from dcc_mcp_maya import _affinity
+from dcc_mcp_maya._safe_session import mcp_safe_session
 
 logger = logging.getLogger(__name__)
 
@@ -49,8 +50,15 @@ def is_busy() -> bool:
 
 
 def run_skill_script(script_path: str, params: Dict[str, Any]) -> Dict[str, Any]:
-    """Run a skill script and mark the in-process executor busy."""
-    with _busy_scope():
+    """Run a skill script and mark the in-process executor busy.
+
+    The script body is wrapped in :func:`mcp_safe_session` so that any
+    modal dialog Maya might raise (AutoSave save-prompt,
+    ``confirmDialog``, ``fileDialog2`` …) is neutralised for the
+    duration of the call.  Without this guard a single modal blocks
+    the UI thread and every queued MCP request piles up behind it.
+    """
+    with _busy_scope(), mcp_safe_session():
         return _run_skill_script_untracked(script_path, params)
 
 

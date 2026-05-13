@@ -1,7 +1,11 @@
 tools:
 - name: capture_viewport
-  description: Capture the active Maya viewport as a base64 PNG. Works when Maya is
-    minimized or in batch mode (auto-falls back to off-screen rendering — issue
+  description: >-
+    Capture the active Maya viewport as a base64 PNG via playblast. When Maya
+    is minimized or in batch mode, off-screen rendering is auto-enabled (issue
+    #152). Use optional view_fit instead of execute_python with viewFit: the
+    correct flag is allObjects=True, not all=True. Width and height are clamped
+    to reduce GPU OOM risk.
   execution: async
   affinity: main
   timeout_hint_secs: 600
@@ -12,10 +16,12 @@ tools:
       width:
         type: integer
         minimum: 1
+        maximum: 8192
         default: 1920
       height:
         type: integer
         minimum: 1
+        maximum: 8192
         default: 1080
       frame:
         type: number
@@ -24,6 +30,13 @@ tools:
         type: boolean
         description: Force off-screen capture. Auto-enabled in batch mode and when
           no model panel is visible.
+      view_fit:
+        type: boolean
+        default: false
+        description: >-
+          When true, runs cmds.viewFit(allObjects=True, animate=False) on the
+          active model panel before capture. Prefer this over raw viewFit in
+          execute_python.
 - name: export_selection
   execution: async
   affinity: main
@@ -32,7 +45,11 @@ tools:
     read_only_hint: true
     idempotent_hint: true
   group: rendering
-  description: Export the current selection in the current Maya scene.
+  description: >-
+    Export the current selection to a render interchange or archive file on disk.
+    Requires an absolute or workspace-relative destination path and an existing
+    parent directory. Validate the renderer plug-in and file extension match the
+    intended pipeline before calling in batch.
 - name: get_render_settings
   description: Query current render settings
   execution: sync
@@ -54,13 +71,41 @@ tools:
   affinity: main
   timeout_hint_secs: 300
   group: rendering
-  description: Import a scene file in the current Maya scene.
+  description: >-
+    Import a renderer or scene auxiliary file from disk into the Maya session.
+    Source path must exist; use absolute paths on multi-host setups. Unsupported
+    formats surface as structured errors — consult describe_tool schema for
+    accepted extensions.
 - name: playblast
-  description: Capture a viewport screenshot as a base64-encoded PNG
+  description: >-
+    Capture a viewport screenshot as a base64-encoded PNG via playblast
+    (off-screen). Frame is passed as a proper Maya time range; width and height
+    are clamped to reduce GPU OOM risk.
   execution: async
   affinity: main
   timeout_hint_secs: 600
   group: rendering
+  inputSchema:
+    type: object
+    properties:
+      width:
+        type: integer
+        minimum: 1
+        maximum: 8192
+        default: 1920
+      height:
+        type: integer
+        minimum: 1
+        maximum: 8192
+        default: 1080
+      frame:
+        type: number
+        description: Frame to capture; defaults to current frame.
+      percent:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 100
 - name: set_render_quality
   execution: sync
   affinity: main

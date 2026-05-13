@@ -84,6 +84,27 @@ def _post_json(url: str, payload: Dict[str, Any], timeout: float = 10.0) -> Tupl
     return status, json.loads(raw)
 
 
+def _list_all_mcp_tools(url: str, *, request_id: int = 100) -> list:
+    """Walk core 0.15.9+ ``tools/list`` cursor pages and return every tool."""
+    tools = []
+    cursor = None
+    pages = 0
+    while True:
+        payload: Dict[str, Any] = {"jsonrpc": "2.0", "id": request_id, "method": "tools/list"}
+        if cursor:
+            payload["params"] = {"cursor": cursor}
+        status, body = _post_json(url, payload)
+        assert status == 200, body
+        result = body.get("result", {})
+        tools.extend(result.get("tools", []))
+        cursor = result.get("nextCursor")
+        if not cursor:
+            return tools
+        pages += 1
+        if pages > 50:
+            raise RuntimeError("tools/list pagination exceeded 50 pages")
+
+
 @contextmanager
 def _running_server(*, scene_resolver: Optional[MayaSceneResolver] = None):
     """Start a real ``MayaMcpServer`` on a free port and yield it.
@@ -283,12 +304,7 @@ class TestProjectToolsListedAndCallableOverMcp:
 
     def test_tools_list_includes_all_four_project_tools(self, server_with_default_project) -> None:
         _, handle = server_with_default_project
-        status, body = _post_json(
-            handle.mcp_url(),
-            {"jsonrpc": "2.0", "id": 1, "method": "tools/list"},
-        )
-        assert status == 200, body
-        names = {t["name"] for t in body["result"]["tools"]}
+        names = {t["name"] for t in _list_all_mcp_tools(handle.mcp_url(), request_id=1)}
         assert {"project.save", "project.load", "project.resume", "project.status"} <= names
 
     def test_token_budget_per_project_tool_is_under_800_bytes(self, server_with_default_project) -> None:
@@ -302,11 +318,9 @@ class TestProjectToolsListedAndCallableOverMcp:
         or schema; verify the new size is intentional before bumping.
         """
         _, handle = server_with_default_project
-        _, body = _post_json(
-            handle.mcp_url(),
-            {"jsonrpc": "2.0", "id": 2, "method": "tools/list"},
-        )
-        project_tools = [t for t in body["result"]["tools"] if t["name"].startswith("project.")]
+        project_tools = [
+            t for t in _list_all_mcp_tools(handle.mcp_url(), request_id=2) if t["name"].startswith("project.")
+        ]
         assert len(project_tools) == 4
         for tool in project_tools:
             wire = json.dumps(tool, separators=(",", ":")).encode("utf-8")
@@ -617,11 +631,7 @@ class TestProjectToolsOptOut:
         monkeypatch.setenv(ENV_PROJECT_TOOLS, "0")
         with _running_server() as (server, handle):
             assert server._project_tools is None
-            _, body = _post_json(
-                handle.mcp_url(),
-                {"jsonrpc": "2.0", "id": 60, "method": "tools/list"},
-            )
-            names = {t["name"] for t in body["result"]["tools"]}
+            names = {t["name"] for t in _list_all_mcp_tools(handle.mcp_url(), request_id=60)}
             assert not any(n.startswith("project.") for n in names)
 
 

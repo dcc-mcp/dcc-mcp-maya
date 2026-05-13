@@ -1,33 +1,45 @@
 ---
 name: maya-expressions
-description: Maya expression nodes — create, list, and delete procedural expressions that drive attributes. Use when building procedural animation or rig logic. Not for keyframe animation or general scripting — use maya-animation or maya-scripting for that.
+description: |-
+  Authoring stage Maya expression nodes: create, list, delete procedural
+  expressions that drive attributes. Use for procedural animation / rig
+  logic. Not for keyframe animation (maya-animation) or arbitrary scripting
+  (maya-scripting).
 license: MIT
 allowed-tools: Bash Read
 metadata:
   dcc-mcp:
     dcc: maya
     layer: domain
-    version: 1.0.0
+    stage: authoring
+    version: 1.1.0
     tags:
     - maya
     - expression
     - scripting
     - procedural
-    search-hint: procedural animation, expression node, drive attribute
+    search-hint: |-
+      procedural animation, expression node, drive attribute, expression node,
+      expression-driven motion, drive translateX with sin
+    aliases:
+    - maya-expr
+    side-effects:
+    - reads-scene
+    - writes-scene
     depends: []
     tools: tools.yaml
     groups: groups.yaml
 ---
-> **Deprecated (merge bucket):** This skill contains only thin \maya.cmds\ wrappers.
-> Use \xecute_python\ with \maya-scripting/references/RECIPES.md#expressions\ instead.
-> Will be removed in the next release.
+# maya-expressions (Authoring stage)
 
-# maya-expressions
-
-Maya expressions skill. Provides actions for creating, listing, and deleting Maya expression nodes.
+Lifecycle for Maya expression nodes (`expression` DG nodes). Four small
+scripts � kept as a dedicated skill rather than folded into
+`maya-scripting` because they have a stable schema and benefit from
+typed parameters.
 
 ## Scripts
 
-- `create_expression` — Create a Maya expression node
-- `list_expressions` — List Maya expression nodes in the scene
-- `delete_expression` — Delete a Maya expression node by name
+- `create_expression` � Create a Maya expression node
+- `list_expressions` � List Maya expression nodes in the scene
+- `delete_expression` � Delete a Maya expression node by name
+- `get_expression_string` � Read the MEL expression body of a node

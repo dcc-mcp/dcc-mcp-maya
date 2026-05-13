@@ -77,7 +77,9 @@ print(handle.mcp_url())   # http://127.0.0.1:8765/mcp
 | `DCC_MCP_SKILL_PATHS` | _(无)_ | 所有 DCC 适配器的全局回退技能目录 |
 | `DCC_MCP_MINIMAL` | `1` | `0` = full mode；`1` = minimal mode |
 | `DCC_MCP_DEFAULT_TOOLS` | _(无)_ | 启动时加载的逗号分隔技能名称（覆盖最小默认） |
-| `DCC_MCP_MAYA_CLOSE_DEFAULT_COMMANDPORT` | `1` | `0` = 保留 Maya 旧式 `127.0.0.1:50007` MEL commandPort；默认在插件初始化时关闭，避免误探测触发安全弹窗 |
+| `DCC_MCP_MAYA_DISABLE_EXECUTE_PYTHON` | `0` | `1`/`true`/`yes`/`on` — 拒绝 `execute_python`（强制技能优先） |
+| `DCC_MCP_MAYA_DISABLE_EXECUTE_MEL` | `0` | 同上真值 — 仅拒绝 `execute_mel` |
+| `DCC_MCP_MAYA_DISABLE_ARBITRARY_SCRIPT` | `0` | 同上真值 — 同时拒绝 `execute_python` 与 `execute_mel` |
 
 ### 渐进式加载（最小模式）
 
@@ -85,8 +87,8 @@ print(handle.mcp_url())   # http://127.0.0.1:8765/mcp
 
 | 工具 | 角色 | 来源技能 |
 |------|------|-------------|
-| `execute_python` | 写入 + 执行 | `maya-scripting`（核心组） |
-| `execute_mel` | 写入 + 执行 | `maya-scripting`（核心组） |
+| `execute_python` | 兜底任意 Python（优先 `load_skill` + 带 schema 的工具） | `maya-scripting`（核心组） |
+| `execute_mel` | 兜底任意 MEL | `maya-scripting`（核心组） |
 | `get_scene_info` | 读取 | `maya-scene`（核心组） |
 | `get_selection` | 读取 | `maya-scene`（核心组） |
 | `get_session_info` | 读取 | `maya-scene`（核心组） |
@@ -94,7 +96,7 @@ print(handle.mcp_url())   # http://127.0.0.1:8765/mcp
 | `list_skills` | 浏览 | 核心 |
 | `load_skill` | 渐进式激活 | 核心 |
 
-所有其他技能显示为 `__skill__<name>` 存根。Agent 调用 `load_skill("maya-primitives")` 按需扩展工具面，并调用 `activate_group("extended")` 在已加载技能中暴露额外的工具组。
+所有其他技能显示为 `__skill__<name>` 存根。Agent 调用 `load_skill("maya-primitives")` 按需扩展工具面，并调用 `activate_group("extended")` 在已加载技能中暴露额外的工具组。**推荐策略：**先 `search_skills` / `dcc_capability_manifest` → `load_skill` → 调用带 `inputSchema` 的具体工具；仅在无对应技能或需批量内联时再使用 `execute_python` / `execute_mel`（可用 `DCC_MCP_MAYA_DISABLE_*` 在生产环境禁用）。
 
 **退出**（恢复旧的全加载行为）：
 

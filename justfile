@@ -327,6 +327,42 @@ _maya-modules-dir := if os() == "windows" {
 @maya-link-win:
     powershell -NoProfile -ExecutionPolicy Bypass -File tools/maya-link-win.ps1 -MayaVersion {{ maya-version }}
 
+# Windows: build dcc-mcp-core with **this Maya's mayapy**, then symlink both
+# `dcc_mcp_core` (from core's `python/dcc_mcp_core`) and `dcc_mcp_maya` (from `src/dcc_mcp_maya`)
+# into `%USERPROFILE%/Documents/maya/modules/dcc-mcp-maya/python/`. Then start Maya for debugging.
+#
+# After run, use MCP URL printed below; see `docs/guide/local-mcp-debug.md` for Cursor + debugpy.
+# Default core repo: sibling directory `../dcc-mcp-core` or env `DCC_MCP_CORE_REPO`.
+# Requires: Git, Rust (cargo), Maya installed under `Program Files/Autodesk/Maya<ver>/`.
+#
+#   just maya-dev-build-link-core-win
+#   just maya-dev-debug-win
+#   just maya-version=2024 maya-dev-debug-win
+@maya-dev-build-link-core-win:
+    powershell -NoProfile -ExecutionPolicy Bypass -File tools/maya-dev-build-link-core-win.ps1 -MayaVersion {{ maya-version }}
+
+@maya-dev-debug-win:
+    powershell -NoProfile -ExecutionPolicy Bypass -File tools/maya-dev-build-link-core-win.ps1 -MayaVersion {{ maya-version }} -LaunchMaya
+
+# Windows: only refresh symlinks (skip maturin develop) after you already built core.
+@maya-dev-relink-core-win:
+    powershell -NoProfile -ExecutionPolicy Bypass -File tools/maya-dev-build-link-core-win.ps1 -MayaVersion {{ maya-version }} -SkipBuild
+
+# Windows: copy a **local** dcc-mcp-core wheel + dcc-mcp-maya sources into
+# %USERPROFILE%/Documents/maya (no PyPI). Does not touch git remotes.
+#
+# 1) Build core wheel (same machine / same Python ABI as your Maya, e.g. cp311 for Maya 2025):
+#      cd ../dcc-mcp-core && vx just build
+# 2) From this repo:
+#      just maya-local-mod-win ABI3_WHEEL=G:/PycharmProjects/github/dcc-mcp-core/dist/dcc_mcp_core-0.15.9-cp311-cp311-win_amd64.whl
+# Maya 2022 (cp37): also pass a cp37 wheel:
+#      just maya-local-mod-win2022 ABI3_WHEEL=...cp38-abi3...whl CP37_WHEEL=...cp37-cp37m...whl
+@maya-local-mod-win ABI3_WHEEL:
+    python packaging/assemble_mod_local.py --abi3-wheel "{{ABI3_WHEEL}}"
+
+@maya-local-mod-win2022 ABI3_WHEEL CP37_WHEEL:
+    python packaging/assemble_mod_local.py --abi3-wheel "{{ABI3_WHEEL}}" --cp37-wheel "{{CP37_WHEEL}}"
+
 # Remove dev symlinks and .mod file
 @maya-unlink:
     #!/usr/bin/env bash
