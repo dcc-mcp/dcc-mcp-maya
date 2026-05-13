@@ -105,9 +105,24 @@ def _load_dcc_mcp_maya():
         logger.warning("dcc-mcp-maya auto-load failed: %s", exc)
 
 
+# Defer the plugin load until Maya's main-thread boot sequence is fully
+# drained. ``lowestPriority=True`` is critical here: without it the callback
+# fires at the FRONT of Maya's deferred queue — usually before other
+# ``userSetup.py`` deferred tasks, the autoload scene, and other plugins'
+# init code have completed. ``initializePlugin`` would then run while Maya
+# is still half-initialised, and any cross-thread hand-off the plugin
+# attempts (worker → main via ``executeInMainThreadWithResult``) deadlocks
+# because Maya 2022/2023 gate that channel on a state flag flipped only
+# after plugin-init completes.
+#
+# With ``lowestPriority=True`` the callback joins the *back* of the
+# deferred queue and only fires once Maya's UI is fully idle and
+# responsive. By that point ``cmds.loadPlugin`` → ``initializePlugin`` →
+# ``start_server`` can run safely on the main thread without any cross-
+# thread synchronisation gymnastics.
 try:
     import maya.utils
 
-    maya.utils.executeDeferred(_load_dcc_mcp_maya)
+    maya.utils.executeDeferred(_load_dcc_mcp_maya, lowestPriority=True)
 except ImportError:
     pass

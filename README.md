@@ -76,7 +76,9 @@ The server starts automatically when the plugin loads.
 | `DCC_MCP_SKILL_PATHS` | _(none)_ | Global fallback skill directories for all DCC adapters |
 | `DCC_MCP_MINIMAL` | `1` | `0` = full mode; `1` = minimal mode |
 | `DCC_MCP_DEFAULT_TOOLS` | _(none)_ | Comma-separated skill names to load at startup (overrides minimal default) |
-| `DCC_MCP_MAYA_CLOSE_DEFAULT_COMMANDPORT` | `1` | `0` = keep Maya's legacy `127.0.0.1:50007` MEL commandPort open; default closes it during plugin init to avoid security-dialog probes |
+| `DCC_MCP_MAYA_DISABLE_EXECUTE_PYTHON` | `0` | `1` / `true` / `yes` / `on` — refuse `execute_python` (skills-first enforcement) |
+| `DCC_MCP_MAYA_DISABLE_EXECUTE_MEL` | `0` | Same tokens — refuse `execute_mel` only |
+| `DCC_MCP_MAYA_DISABLE_ARBITRARY_SCRIPT` | `0` | Same tokens — refuse both `execute_python` and `execute_mel` |
 
 ### Progressive Loading (Minimal Mode)
 
@@ -86,8 +88,8 @@ essential tools are active:
 
 | Tool | Role | Source skill |
 |------|------|-------------|
-| `execute_python` | Write + execute | `maya-scripting` (core group) |
-| `execute_mel` | Write + execute | `maya-scripting` (core group) |
+| `execute_python` | Escape-hatch arbitrary Python (prefer `load_skill` + typed tools first) | `maya-scripting` (core group) |
+| `execute_mel` | Escape-hatch arbitrary MEL | `maya-scripting` (core group) |
 | `get_scene_info` | Read | `maya-scene` (core group) |
 | `get_selection` | Read | `maya-scene` (core group) |
 | `get_session_info` | Read | `maya-scene` (core group) |
@@ -98,7 +100,7 @@ essential tools are active:
 All other skills appear as `__skill__<name>` stubs. The agent calls
 `load_skill("maya-primitives")` to expand the surface on demand, and
 `activate_group("extended")` to expose additional tool groups within a
-loaded skill.
+loaded skill. **Agent policy:** use `search_skills` / `dcc_capability_manifest` → `load_skill` → concrete tools with `inputSchema` first; call `execute_python` / `execute_mel` only as a last resort (or set `DCC_MCP_MAYA_DISABLE_*` to block them in production).
 
 **Opt out** (full mode):
 
@@ -237,24 +239,19 @@ routing logic:
 
 ```
 Intent matches a domain skill (shot export, render farm, scene assembly)?
-  → load that skill.
+  → load that skill and call its typed tools (inputSchema).
 Intent matches a primitive (create cube, move object, set attr)?
-  → load maya-scripting, read RECIPES.md (if available), call execute_python.
+  → load maya-primitives / maya-scene / maya-attributes (etc.) — not execute_python first.
+No matching skill or you need a single bulk in-Maya loop?
+  → load maya-scripting, read RECIPES.md (if available), call execute_python as escape hatch.
 Error on a wrapped tool?
-  → read _meta.dcc.raw_trace, switch to execute_python with the corrected call.
+  → read _meta.dcc.raw_trace; fix args and retry the typed tool before falling back to execute_python.
 ```
 
-`maya-scripting` is the **explicit fall-through entry point** — when no
-dedicated domain skill covers the request, the agent should use
-`execute_python` / `execute_mel` to write the call directly rather than
-guess or invent API usage from memory.
-
-### Scripting
-
-| Tool | Description |
-|------|-------------|
-| `execute_mel` | Execute a MEL script |
-| `execute_python` | Execute Python inside Maya |
+`maya-scripting` is the **escape hatch** — prefer dedicated skills for validation
+and safety hints; use `execute_python` / `execute_mel` only when no skill covers
+the workflow or when collapsing N round-trips into one in-process script is
+worth the trade-off.
 
 ## Authoring Skills (`execution` + `affinity`)
 

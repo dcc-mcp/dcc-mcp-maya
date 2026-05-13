@@ -1,28 +1,42 @@
 ---
 name: maya-pose-library
-description: Maya pose library — save, load, apply, and manage character poses as presets. Use when reusing character poses across scenes. Not for animation curves or rigging setup — use maya-animation or maya-rigging for that.
+description: |-
+  Authoring stage — save / load / mirror character poses as JSON presets.
+  Use for reusable pose libraries on rigged characters. Not for keyframe
+  animation (maya-animation) or rigging setup (maya-rigging).
 license: MIT
 allowed-tools: Bash Read
 metadata:
   dcc-mcp:
     dcc: maya
     layer: domain
-    version: 1.0.0
+    stage: authoring
+    version: 1.1.0
     tags:
     - maya
     - animation
     - pose
     - library
     - rigging
-    search-hint: save load pose, character pose preset, reuse pose
+    search-hint: |-
+      save pose, load pose, mirror pose, character pose preset, pose library,
+      pose JSON, reuse pose
+    aliases:
+    - maya-poses
+    side-effects:
+    - reads-scene
+    - writes-scene
+    - reads-disk
+    - writes-disk
     depends: []
     tools: tools.yaml
     groups: groups.yaml
 ---
-# maya-pose-library
+# maya-pose-library (Authoring stage)
 
-Pose capture and application utilities for Maya. Saves attribute snapshots to JSON
-files and restores them, enabling pose library workflows for character animation.
+Pose capture and reapplication for character animation. Saves
+attribute snapshots to JSON files and restores them, with an explicit
+`mirror_pose` for left/right swapping conventions.
 
 ## Scripts
 

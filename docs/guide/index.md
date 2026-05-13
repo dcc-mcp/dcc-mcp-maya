@@ -71,6 +71,7 @@ Paths are resolved in order (highest priority first):
 ## Next Steps
 
 - [Quick Start](./getting-started) — get Maya talking to Claude Desktop in 5 minutes
+- [Local MCP + debug](./local-mcp-debug) — Cursor MCP URL, debugpy attach, gateway vs direct port
 - [Action List](./actions) — full catalogue of built-in MCP tools
 - [Advanced Usage](./advanced) — custom skills, main-thread scheduling, `defer=True` long-running scripts
 - [Multi-instance Deployment](./multi-instance) — run multiple Maya instances on a single workstation

@@ -1,44 +1,53 @@
 tools:
 - name: execute_mel
-  description: Execute MEL code inside Maya. Accepts `code` (preferred), `script`,
-    or `source` aliases.
+  description: >-
+    Last-resort arbitrary MEL. Prefer search_skills → load_skill → typed tools. Inline MEL uses
+    `code`; studio `.mel` files use `file_path` / `script_path` and are sourced with forward slashes.
   execution: sync
   affinity: main
+  annotations:
+    destructive_hint: true
+    read_only_hint: false
   group: core
   inputSchema:
     type: object
     properties:
       code:
         type: string
-        description: MEL code to execute. Aliases `script` and `source` accepted for
-          backward compatibility.
-      script:
+        description: Inline MEL to evaluate (required when file_path is omitted).
+      file_path:
         type: string
-        description: Deprecated alias for `code`.
-      source:
+        description: Path to a .mel file; sources via MEL `source` (native). Alias `script_path`.
+      script_path:
         type: string
-        description: Alias for `code`.
+        description: Same as file_path.
 - name: execute_python
-  description: Execute Python code inside Maya.  Accepts `code` (preferred), `script`,
-    or `source` aliases.  Captures stdout/stderr from both Python (`print`) and Maya's
-    Script Editor (`cmds.warning`, `cmds.error`, MEL `print`).  When `defer=true`
-    the snippet is scheduled via Maya's deferred queue so long-running scripts do
-    not block the MCP request thread (cooperatively cancellable via `notifications/cancelled`).
+  description: >-
+    Last-resort arbitrary Python. Prefer search_skills / dcc_capability_manifest → load_skill → typed tools.
+    Use `code` for short snippets, `file_path` / `script_path` for host-readable `.py` files,
+    and `defer=true` for long jobs. Gateway REST: /v1/search + /v1/call. Captures Script Editor
+    / cmds.warning output. Inline code over 4096 chars spills to temp_scripts.
   execution: sync
   affinity: main
+  annotations:
+    destructive_hint: true
+    read_only_hint: false
   group: core
   inputSchema:
     type: object
     properties:
       code:
         type: string
-        description: Python source to execute in Maya's interpreter (cmds pre-imported).
-      script:
+        description: Inline Python (required when file_path is omitted). cmds pre-imported in the isolated namespace.
+      file_path:
         type: string
-        description: Alias for `code`.
-      source:
+        description: >-
+          Absolute path to a .py file executed in __main__ with __file__ / this_root (Maya-native).
+          Preferred for large scripts: use write_temp_file / write_temp_script on a path this Maya process can read.
+          Remote-gateway agents must not assume a path on their laptop is visible to Maya.
+      script_path:
         type: string
-        description: Alias for `code`.
+        description: Same as file_path.
       capture_output:
         type: boolean
         description: When true, captured stdout is returned in `context.stdout`. Default
@@ -46,12 +55,8 @@ tools:
         default: true
       timeout_secs:
         type: integer
-        description: Maximum execution time in seconds. Aliases `timeout`. Defaults
+        description: Maximum execution time in seconds. Defaults
           to no limit.
-        minimum: 1
-      timeout:
-        type: integer
-        description: Alias for `timeout_secs`.
         minimum: 1
       defer:
         type: boolean

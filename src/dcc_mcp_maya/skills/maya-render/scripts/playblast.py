@@ -7,10 +7,23 @@ from __future__ import annotations
 import base64
 import os
 import tempfile
-from typing import Optional
+from typing import Optional, Tuple
 
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
+
+_MAX_PLAYBLAST_DIM = 8192
+
+
+def _clamp_playblast_dims(width: int, height: int) -> Tuple[int, int]:
+    w = max(1, min(int(width), _MAX_PLAYBLAST_DIM))
+    h = max(1, min(int(height), _MAX_PLAYBLAST_DIM))
+    return w, h
+
+
+def _playblast_frame_range(frame: float) -> Tuple[int, int]:
+    fnum = int(round(float(frame)))
+    return (fnum, fnum)
 
 
 def playblast(
@@ -41,11 +54,15 @@ def playblast(
         if frame is None:
             frame = cmds.currentTime(query=True)
 
+        width, height = _clamp_playblast_dims(width, height)
+        percent = max(1, min(int(percent), 100))
+        f0, f1 = _playblast_frame_range(frame)
+
         with tempfile.NamedTemporaryFile(suffix=".png", delete=False, prefix="mcp_blast_") as tmp:
             tmp_base = tmp.name[:-4]  # strip .png — playblast appends frame number
 
         cmds.playblast(
-            frame=[frame],
+            frame=(f0, f1),
             format="image",
             compression="png",
             filename=tmp_base,
@@ -55,13 +72,12 @@ def playblast(
             viewer=False,
             showOrnaments=False,
             offScreen=True,
-            forceOverwrite=True,
         )
 
         # Maya appends ".{frame}.png" → look for the file
         candidates = [
-            "{}.{:04d}.png".format(tmp_base, int(frame)),
-            "{}.{}.png".format(tmp_base, int(frame)),
+            "{}.{:04d}.png".format(tmp_base, f0),
+            "{}.{}.png".format(tmp_base, f0),
             "{}.png".format(tmp_base),
         ]
         img_path = None
@@ -83,8 +99,8 @@ def playblast(
         img_b64 = base64.b64encode(img_bytes).decode("ascii")
 
         return skill_success(
-            "Viewport captured at frame {} ({}×{})".format(int(frame), width, height),
-            prompt="Image captured. Use render_frame for final quality render.",
+            "Viewport captured at frame {} ({}×{})".format(f0, width, height),
+            prompt="Image captured. For framing before capture, use capture_viewport with view_fit=True.",
             image=img_b64,
             frame=frame,
             width=width,

@@ -35,6 +35,8 @@ Or load the Maya plugin (`dcc_mcp_maya_plugin.py`) and the server starts automat
 
 - **README.md** — Installation, quick start, environment variables, bundled skills list.
 - **docs/guide/getting-started.md** — Step-by-step for first-time users.
+- **docs/guide/local-mcp-debug.md** — Cursor / Claude MCP HTTP URL, **debugpy** attach, gateway vs direct port.
+- **examples/mcp/** — Copy-paste MCP JSON (`cursor-maya-streamable-http.json`).
 - **docs/guide/installation.md** — Plugin mode, `userSetup.py`, multi-Maya setup.
 - **docs/guide/multi-instance.md** — Run multiple Maya sessions behind one gateway.
 - **docs/guide/mcp-tools.md** — Representative tool inventory (scene, geometry, material, animation, render).
@@ -71,13 +73,15 @@ def create_sphere(radius: float = 1.0) -> dict:
 *Goal: Discover and use tools effectively inside a live Maya session.*
 
 - **llms.txt** — Core API surface, environment variables, key files (fits in a small context window).
-- **llms-full.txt** — Complete public API signatures, all environment variables, 12 built-in skill categories.
+- **llms-full.txt** — Complete public API signatures, all environment variables, bundled skill categories.
+- **`src/dcc_mcp_maya/skills/SKILLS_INDEX.md`** — **Cross-skill navigation map**: 5-stage taxonomy and ready-made task → skill chains. Read first before deciding which skill to load.
 - **Upstream core reference** — https://github.com/loonghao/dcc-mcp-core/blob/main/llms.txt (and the deeper [`llms-full.txt`](https://github.com/loonghao/dcc-mcp-core/blob/main/llms-full.txt)) — exhaustive `dcc_mcp_core` API surface; use it whenever a tool/skill needs to leverage core primitives that are not surfaced in this repo's own `llms.txt`.
 - **Skill discovery workflow:**
-  1. Call `search_tools(query="bevel")` or `find_skills("bevel")` to locate relevant skills.
-  2. Call `load_skill("maya-mesh-ops")` to materialize the skill's tools.
-  3. Call `activate_group("extended")` if additional tool groups are available.
-  4. Execute the specific tool (e.g., `maya_mesh_ops__bevel_edge`).
+  1. Prefer MCP `dcc_capability_manifest` with `{loaded_only: false}` for a **compact** index of actions (avoids paying full `inputSchema` cost for every skill up front).
+  2. Alternatively: `search_skills` / `search_tools` → **`load_skill`** → optional `activate_group("extended")` → invoke the **typed** tool (validated `inputSchema`, e.g. `maya_mesh_ops__bevel_edge`). Treat `maya_scripting__execute_python` / `execute_mel` as **last resort** when no skill covers the task (bulk in-Maya loops, OpenMaya gaps, one-off experiments). Studios can hard-block arbitrary execution with `DCC_MCP_MAYA_DISABLE_EXECUTE_PYTHON`, `DCC_MCP_MAYA_DISABLE_EXECUTE_MEL`, or `DCC_MCP_MAYA_DISABLE_ARBITRARY_SCRIPT` (see `README.md` / `llms.txt`).
+  3. When using the **gateway**, read **`resources/read` `uri=gateway://docs/agent-workflows`** for MCP + resources + efficiency guidance; for Maya-heavy examples see `examples/workflows/maya_bulk_rbd_fbx.md`.
+  4. **cmds documentation:** `resources/read` on `maya-cmds://help/<command>` or `maya-cmds://flags/<command>` (use the exact URI from `resources/list`).
+- **Token hygiene:** Set `DCC_MCP_MAYA_EXCLUDE_STUBS_FROM_TOOLS_LIST=1` when your MCP host repeatedly syncs a large `tools/list`; discovery remains available via `dcc_capability_manifest` and gateway `/v1/search`.
 - **Always check cancellation in long-running loops:**
   ```python
   from dcc_mcp_maya import check_maya_cancelled
@@ -86,6 +90,63 @@ def create_sphere(radius: float = 1.0) -> dict:
       cmds.currentTime(frame)
       cmds.render()
   ```
+
+---
+
+## Skill Stage Taxonomy (5-stage map)
+
+Every bundled skill is tagged with `metadata.dcc-mcp.stage` in its
+`SKILL.md`. The single source of truth for the mapping is
+[`src/dcc_mcp_maya/_skill_loader.py::SKILL_STAGE`](src/dcc_mcp_maya/_skill_loader.py)
+plus the cross-skill index [`src/dcc_mcp_maya/skills/SKILLS_INDEX.md`](src/dcc_mcp_maya/skills/SKILLS_INDEX.md).
+
+| Stage         | Purpose                                                              | Default loaded?           | Skills |
+|---------------|----------------------------------------------------------------------|---------------------------|--------|
+| `bootstrap`   | Escape hatch; arbitrary code **only** when no typed skill fits.   | yes                       | `maya-scripting` |
+| `scene`       | Scene file lifecycle, DAG, attributes, node graph, viewport display. | partial (`maya-scene` only) | `maya-scene`, `maya-scene-assembly`, `maya-display`, `maya-attributes`, `maya-node-graph` |
+| `authoring`   | Create / edit content (mesh, UV, mat, rig, anim, light).             | no                        | `maya-primitives`, `maya-mesh-ops`, `maya-uv-ops`, `maya-materials`, `maya-material-library`, `maya-texture-bake`, `maya-rigging`, `maya-animation`, `maya-pose-library`, `maya-expressions`, `maya-light-rig` |
+| `interchange` | Geometry / scene I/O across DCCs (FBX, OBJ, presets, save).          | no                        | `maya-geometry`, `maya-export-preset` |
+| `pipeline`    | Production: project, publish, shot export, render, render farm.       | no                        | `maya-pipeline`, `maya-shot-export`, `maya-render`, `maya-render-farm` |
+
+Helpers in `_skill_loader.py`:
+
+```python
+from dcc_mcp_maya._skill_loader import (
+    SKILL_STAGE,                  # dict[str, str] — single source of truth
+    STAGES,                       # canonical 5-stage tuple
+    skills_for_stage,             # tuple of skills in a given stage
+    build_minimal_mode_config,    # default minimal-mode config
+    build_minimal_mode_for_stages,  # eager-load whole stages at once
+)
+```
+
+A custom minimal mode that pre-loads `bootstrap + scene + interchange` so the
+"create geometry → export FBX" path does not require a `load_skill` call:
+
+```python
+cfg = build_minimal_mode_for_stages(["scene", "interchange"])  # bootstrap auto-included
+server.register_builtin_actions(minimal_mode=cfg)
+```
+
+## MCP-dispatched Safe Session (modal-dialog firewall)
+
+Every in-process skill job runs inside
+[`dcc_mcp_maya._safe_session.mcp_safe_session`](src/dcc_mcp_maya/_safe_session.py),
+which:
+
+* snoozes Maya AutoSave for the duration of the job;
+* replaces `cmds.confirmDialog` / `promptDialog` / `fileDialog` /
+  `fileDialog2` / `layoutDialog` with non-blocking stubs that emit a
+  `stderr` warning and return a defaulted value (so the calling code keeps
+  running);
+* restores everything on exit, even on exception. The context is
+  reentrant via thread-local refcount so nested invocations do not
+  undo each other's state.
+
+This is the single most important line of defence against the
+"adapter looks alive but every MCP request hangs" failure mode. Set
+`DCC_MCP_MAYA_SAFE_SESSION=0` to disable for an interactive
+authoring session that *actually* needs to spawn dialogs.
 
 ---
 
@@ -315,7 +376,6 @@ All other skills appear as `__skill__<name>` stubs (default behavior). Call `loa
 | `DCC_MCP_MAYA_METRICS` | `0` | `1` = enable Prometheus `/metrics` endpoint. |
 | `DCC_MCP_MAYA_JOB_STORAGE` | `<data_dir>/jobs.db` | SQLite job persistence path. |
 | `DCC_MCP_MAYA_JOB_RECOVERY` | `drop` | `requeue` = resume idempotent jobs on startup. |
-| `DCC_MCP_MAYA_CURSOR_SAFE_TOOL_NAMES` | — (core default `1`) | Toggle Cursor-safe gateway tool names (core 0.14.22 / #656). Set `0` during SEP-986 migration. |
 | `DCC_MCP_MAYA_READINESS_TIMEOUT_SECS` | — | Advisory Maya-side timeout (positive integer seconds) for the runtime readiness probe (issue #184). Consumed by orchestrators that want to bound how long a cold Maya can stall before `/v1/readyz` is considered permanently red. |
 | `DCC_MCP_MAYA_KMAYA_EXITING_HOOK` | `1` | `0` = disable the `MSceneMessage.kMayaExiting` hook that catches clean `File → Exit Maya` / `⌘Q` exits (issue #186). |
 | `DCC_MCP_MAYA_ATEXIT_HOOK` | `1` | `0` = disable the `atexit` fallback that catches interpreter teardown (issue #186). |
@@ -325,6 +385,9 @@ All other skills appear as `__skill__<name>` stubs (default behavior). Call `loa
 | `DCC_MCP_GATEWAY_PORT` | `9765` | Multi-instance gateway election port. `0` = disable. |
 | `DCC_MCP_REGISTRY_DIR` | OS temp dir | Shared service-discovery registry directory. |
 | `DCC_MCP_MAYA_EXCLUDE_STUBS_FROM_TOOLS_LIST` | `0` | `1` = exclude ``__skill__*`` / ``__group__*`` stubs from ``tools/list`` (issue #174). Discovery still possible via capability manifest / ``/v1/search``. |
+| `DCC_MCP_MAYA_DISABLE_EXECUTE_PYTHON` | `0` | `1` / `true` / `yes` / `on` — refuse ``execute_python`` (skills-first policy). |
+| `DCC_MCP_MAYA_DISABLE_EXECUTE_MEL` | `0` | Same truthy tokens — refuse ``execute_mel`` only. |
+| `DCC_MCP_MAYA_DISABLE_ARBITRARY_SCRIPT` | `0` | Same truthy tokens — refuse **both** ``execute_python`` and ``execute_mel``. |
 
 ---
 
@@ -344,6 +407,15 @@ A: Same API — `dcc_mcp_maya.start_server(port=0)`. In batch mode the `MayaStan
 
 **Q: Where are the built-in skills?**  
 A: `src/dcc_mcp_maya/skills/` (12 packages, 73 scripts). Each package contains `SKILL.md`, `tools.yaml`, `groups.yaml`, and `scripts/*.py`.
+
+**Q: How do I force agents to stop using ``execute_python``?**  
+A: Set ``DCC_MCP_MAYA_DISABLE_EXECUTE_PYTHON=1`` (Python only) or ``DCC_MCP_MAYA_DISABLE_ARBITRARY_SCRIPT=1`` (Python + MEL). Callers get a structured error that points to ``load_skill`` + typed tools.
+
+---
+
+## Gateway HTTP regression traces (VRS)
+
+Bugs that only reproduce through the **gateway REST** surface (`/v1/search`, `/v1/call`, …) — for example `execute_python` crashing the host after a handled Python error — should get a **JSONL replay trace** in **dcc-mcp-core** (`tests/vrs/traces/`), not only a pytest in this repo. Workflow, `just vrs-replay`, and naming rules live in upstream [`AGENTS.md`](https://github.com/loonghao/dcc-mcp-core/blob/main/AGENTS.md) (section **Verified Regression Suite (VRS)**) and [`tests/vrs/README.md`](https://github.com/loonghao/dcc-mcp-core/blob/main/tests/vrs/README.md). Reference trace: [`maya-215-execute-python-regression.jsonl`](https://github.com/loonghao/dcc-mcp-core/blob/main/tests/vrs/traces/maya-215-execute-python-regression.jsonl).
 
 ---
 
@@ -378,6 +450,9 @@ Bugs that only reproduce through the **gateway REST** surface (`/v1/search`, `/v
 | `src/dcc_mcp_maya/api.py` | Skill authoring helpers |
 | `src/dcc_mcp_maya/plugin.py` | Maya plugin (`initializePlugin` / menu) |
 | `src/dcc_mcp_maya/skills/` | 12 built-in skill packages, 73 scripts |
+| `docs/guide/local-mcp-debug.md` | Cursor / Claude MCP URL + **debugpy** remote attach for Maya |
+| `examples/mcp/` | MCP host JSON snippets (e.g. `cursor-maya-streamable-http.json`) |
+| `tools/maya-dev-build-link-core-win.ps1` | Windows: `maturin develop` core with mayapy (`abi3-py38` for mayapy 3.8+ to match PyPI wheels; non-abi3 for Maya 2022 / 3.7) + symlink into `Documents/maya/modules` |
 | `docs/` | VitePress documentation site (EN + ZH) |
 | `tests/` | pytest suite (unit + E2E + integration) |
 
