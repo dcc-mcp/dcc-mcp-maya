@@ -206,6 +206,12 @@ class TestToolsYamlContract:
         desc = tool["description"].lower()
         assert "/v1/" in desc or "v1/call" in desc
 
+    def test_execute_python_description_mentions_auto_spill(self):
+        data = self._load_tools()
+        tool = next(t for t in data["tools"] if t["name"] == "execute_python")
+        desc = tool["description"].lower()
+        assert "4096" in desc or "temp_scripts" in desc
+
     def test_execute_python_still_declares_main_affinity(self):
         """Even though `defer=True` is async, the tool still touches Maya."""
         data = self._load_tools()
@@ -306,6 +312,35 @@ class TestExecutePythonFilePath:
         finally:
             __main__.__dict__.pop("result", None)
             os.unlink(path)
+
+
+class TestExecutePythonInlineSpill:
+    """Long inline ``code`` is mirrored to the host before ``exec``."""
+
+    def test_long_inline_sets_host_spill_path(self, monkeypatch):
+        mod = load_skill_script("maya-scripting", "execute_python")
+        monkeypatch.setattr(mod, "INLINE_CODE_SPILL_THRESHOLD_CHARS", 32)
+        code = "#" * 80 + "\nresult = 99\n"
+        out = mod.execute_python(code=code, capture_output=False)
+        assert out.get("success") is True
+        ctx = out.get("context") or {}
+        spill = ctx.get("host_spilled_inline_script_path")
+        assert spill and str(spill).endswith(".py")
+        assert os.path.isfile(spill)
+        assert ctx.get("host_spill_reason") == "inline_code_exceeded_threshold_chars"
+        assert "99" in str(ctx.get("output", ""))
+        try:
+            os.unlink(spill)
+        except OSError:
+            pass
+
+    def test_short_inline_skips_spill_when_under_threshold(self, monkeypatch):
+        mod = load_skill_script("maya-scripting", "execute_python")
+        monkeypatch.setattr(mod, "INLINE_CODE_SPILL_THRESHOLD_CHARS", 99999)
+        out = mod.execute_python(code="result = 1", capture_output=False)
+        assert out.get("success") is True
+        ctx = out.get("context") or {}
+        assert ctx.get("host_spilled_inline_script_path") is None
 
 
 class TestInlineCaptureMerging:

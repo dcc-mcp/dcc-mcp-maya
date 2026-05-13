@@ -30,11 +30,19 @@ tools:
     Last-resort arbitrary Python. Default path: search_skills / dcc_capability_manifest → load_skill
     → typed tools with inputSchema. Gateway / non-MCP clients: prefer POST /v1/search, /v1/describe,
     /v1/call (or /v1/call_batch) on the gateway host:port — do not document only the per-Maya /mcp
-    URL as if it were the primary integration surface. Inline snippets use `code` (or script/source).
-    For studio `.py` files pass `file_path` (or `script_path`): runs in `__import__('__main__').__dict__`
-    with `__file__` and `this_root` set (Maya-native shelf/pipeline style). Captures Python + Script
-    Editor channels (print, cmds.warning, MEL print). defer=true schedules on Maya's idle queue (cooperative cancel). Unset
-    DCC_MCP_MAYA_DISABLE_EXECUTE_PYTHON or DCC_MCP_MAYA_DISABLE_ARBITRARY_SCRIPT if blocked.
+    URL as if it were the primary integration surface.
+    **Long or escaping-heavy scripts:** load the `write_temp_file` skill (or call
+    `dcc_mcp_core.script_execution.write_temp_script` from an in-process tool), then call
+    `execute_python` with **`file_path`** (or `script_path`) pointing at that ``.py`` file — the path
+    must be readable **inside the Maya process host** (not only on an agent laptop behind a remote gateway).
+    Inline payloads longer than ~4096 characters are **automatically** mirrored to a host temp file under
+    ``~/.dcc-mcp-core/temp_scripts/`` before ``exec``; the response includes ``context.host_spilled_inline_script_path``.
+    Inline snippets: use `code` (or `script` / `source`). For studio `.py` files pass `file_path`: runs in
+    `__import__('__main__').__dict__` with `__file__` and `this_root` set (Maya-native shelf/pipeline style).
+    Captures Python + Script Editor channels (print, cmds.warning, MEL print). defer=true schedules on Maya's
+    idle queue and a DeferredToolResult is returned so long-running scripts no longer block the MCP request
+    thread, with cooperative cancellation wired in (issue #153). Unset DCC_MCP_MAYA_DISABLE_EXECUTE_PYTHON or
+    DCC_MCP_MAYA_DISABLE_ARBITRARY_SCRIPT if blocked.
   execution: sync
   affinity: main
   annotations:
@@ -49,7 +57,10 @@ tools:
         description: Inline Python (required when file_path is omitted). cmds pre-imported in the isolated namespace.
       file_path:
         type: string
-        description: Path to a .py file; exec in __main__ with __file__ and this_root (native). Alias script_path.
+        description: >-
+          Absolute path to a .py file executed in __main__ with __file__ / this_root (Maya-native).
+          Preferred for large scripts: use write_temp_file / write_temp_script on a path this Maya process can read.
+          Remote-gateway agents must not assume a path on their laptop is visible to Maya.
       script_path:
         type: string
         description: Same as file_path.

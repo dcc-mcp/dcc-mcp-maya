@@ -1,6 +1,10 @@
 tools:
 - name: save_scene
-  description: Save the current Maya scene to a .ma or .mb file.
+  description: >-
+    Save the current Maya scene to a .ma or .mb file. Uses cmds.file(rename=path)
+    then cmds.file(save=True) so untitled scenes do not trigger Maya's modal
+    "must rename first" error. Pass an absolute or workspace-relative path; parent
+    directory must exist. Prefer this over ad-hoc execute_python save logic.
   execution: async
   affinity: main
   timeout_hint_secs: 120
@@ -44,6 +48,9 @@ tools:
     All FBXExport* options are pushed via mel.eval before cmds.file is
   
     called, and the destination is verified for non-zero size afterwards.
+  
+    Prefer this over raw ``FBXExport`` MEL from ``execute_mel`` / ``execute_python`` —
+    the tool sets the correct MEL command spelling and plugin state.
   
     '
   execution: async
@@ -171,7 +178,11 @@ tools:
         minimum: 1
         description: Animation take index (1-based) for files with multiple takes.
 - name: export_obj
-  description: Export the current Maya scene to OBJ.
+  description: >-
+    Export the current Maya scene (or selection, per script) to Wavefront OBJ at an
+    absolute or workspace-relative path. Parent directory must exist; large meshes
+    may take minutes — keep timeout_hint in mind. Not a substitute for FBX when
+    animation or materials must round-trip — use maya_geometry__export_fbx instead.
   execution: async
   affinity: main
   timeout_hint_secs: 300

@@ -8,12 +8,16 @@ Supports three execution shapes:
   :class:`~dcc_mcp_core.script_execution.ScriptExecutionCapture` and
   :class:`~dcc_mcp_maya._maya_output.MayaOutputCapture` so ``print()``,
   ``cmds.warning(...)``, ``cmds.error(...)`` and MEL ``print`` all reach
-  the MCP client (issue #151).
+  the MCP client (issue #151).  Very long inline ``code`` strings are
+  mirrored to a host-local temp file before ``exec`` (see
+  ``context.host_spilled_inline_script_path``); prefer explicit
+  ``file_path`` or typed skills when possible.
 
 * **File (``file_path`` / ``script_path``)** — reads a ``.py`` file and
   runs it in ``__import__('__main__').__dict__`` with ``__file__`` and
   ``this_root`` set, matching typical Maya shelf / pipeline script
-  expectations.
+  expectations. The path must be readable **inside this Maya process**
+  (not only on a remote agent host talking to the gateway).
 
 * **Deferred (``defer=True``)** — the snippet is scheduled via
   ``maya.utils.executeDeferred`` and a
@@ -45,6 +49,36 @@ from typing import Any, Dict, Optional
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 DEFAULT_EXECUTE_TIMEOUT_SECS = 60.0
+
+# Inline ``code`` longer than this is copied to a host-local file (see
+# :func:`dcc_mcp_core.script_execution.write_temp_script`) before ``exec`` so
+# large gateway payloads and JSON escaping issues align with the file-backed
+# execution path. Typed skills remain preferred over long inline scripts.
+INLINE_CODE_SPILL_THRESHOLD_CHARS = 4096
+
+
+def _persist_inline_spill_to_host_temp(code: str) -> str:
+    """Write *code* to ``~/.dcc-mcp-core/temp_scripts/`` and return the path.
+
+    Prefer :func:`dcc_mcp_core.script_execution.write_temp_script` when the
+    installed ``dcc-mcp-core`` wheel exposes it; this fallback keeps Maya
+    adapters functional on slightly older core builds.
+    """
+    from pathlib import Path
+    import tempfile
+
+    root_dir = Path.home() / ".dcc-mcp-core" / "temp_scripts"
+    root_dir.mkdir(parents=True, exist_ok=True)
+    fd, path = tempfile.mkstemp(suffix=".py", prefix="dcc_mcp_", dir=str(root_dir))
+    with os.fdopen(fd, "w", encoding="utf-8") as fp:
+        fp.write(code)
+    return path
+
+
+try:
+    from dcc_mcp_core.script_execution import write_temp_script as _write_inline_spill_file
+except ImportError:  # pragma: no cover — older dcc-mcp-core without write_temp_script
+    _write_inline_spill_file = _persist_inline_spill_to_host_temp
 
 
 class ToolTimeoutError(TimeoutError):
@@ -88,6 +122,20 @@ def _merge_capture(primary: str, extra: str) -> str:
     if primary.endswith("\n"):
         return primary + extra
     return primary + "\n" + extra
+
+
+def _attach_spill_context(result: Dict[str, Any], spilled_path: Optional[str]) -> Dict[str, Any]:
+    """Annotate success envelopes when inline code was mirrored to disk on the Maya host."""
+    if not spilled_path or not result.get("success"):
+        return result
+    ctx = result.get("context")
+    if not isinstance(ctx, dict):
+        return result
+    if ctx.get("host_spilled_inline_script_path"):
+        return result
+    ctx["host_spilled_inline_script_path"] = spilled_path
+    ctx["host_spill_reason"] = "inline_code_exceeded_threshold_chars"
+    return result
 
 
 def _resolve_script_file_path(params: Mapping[str, Any]) -> Optional[str]:
@@ -219,6 +267,8 @@ def _run_inline(
     capture_output: bool,
     cancel_event: Optional[threading.Event] = None,
     timeout_secs: Optional[float] = None,
+    *,
+    exec_filename: str = "<maya-python>",
 ) -> dict:
     """Run *code* synchronously and return the structured envelope.
 
@@ -233,6 +283,9 @@ def _run_inline(
     :class:`~dcc_mcp_core.cancellation.CancelledError` when set — this
     is the cooperative preemption used by the deferred path (issue
     #153).
+
+    *exec_filename* is passed to :func:`compile` for stack traces (may be a
+    host temp path when inline code was spilled to disk).
     """
     try:
         import maya.cmds as cmds  # noqa: PLC0415
@@ -242,7 +295,7 @@ def _run_inline(
     exec_globals: Dict[str, Any] = {"cmds": cmds, "__name__": "__maya_exec__"}
     return _run_inline_impl(
         code,
-        "<maya-python>",
+        exec_filename,
         exec_globals,
         capture_output,
         cancel_event=cancel_event,
@@ -298,7 +351,14 @@ def _run_inline_file_path(
     )
 
 
-def _run_deferred(code: str, capture_output: bool, timeout_secs: float):
+def _run_deferred(
+    code: str,
+    capture_output: bool,
+    timeout_secs: float,
+    *,
+    exec_filename: str = "<maya-python>",
+    spilled_path: Optional[str] = None,
+):
     """Schedule *code* on Maya's idle queue and return a DeferredToolResult.
 
     The MCP request returns immediately; the dispatcher polls
@@ -331,7 +391,14 @@ def _run_deferred(code: str, capture_output: bool, timeout_secs: float):
     state: Dict[str, Any] = {"done": False, "result": None}
 
     def _runner() -> None:
-        state["result"] = _run_inline(code, capture_output, cancel_event=cancel_event, timeout_secs=timeout_secs)
+        envelope = _run_inline(
+            code,
+            capture_output,
+            cancel_event=cancel_event,
+            timeout_secs=timeout_secs,
+            exec_filename=exec_filename,
+        )
+        state["result"] = _attach_spill_context(envelope, spilled_path)
         state["done"] = True
 
     try:
@@ -468,9 +535,28 @@ def execute_python(**params: Any):
     timeout_secs = normalized.timeout_secs  # type: ignore[union-attr]
 
     effective_timeout = float(timeout_secs or DEFAULT_EXECUTE_TIMEOUT_SECS)
+
+    exec_filename = "<maya-python>"
+    spilled_path: Optional[str] = None
+    if len(code) > INLINE_CODE_SPILL_THRESHOLD_CHARS:
+        spilled_path = _write_inline_spill_file(code)
+        exec_filename = spilled_path
+
     if defer:
-        return _run_deferred(code, capture_output, effective_timeout)
-    return _run_inline(code, capture_output, timeout_secs=effective_timeout)
+        return _run_deferred(
+            code,
+            capture_output,
+            effective_timeout,
+            exec_filename=exec_filename,
+            spilled_path=spilled_path,
+        )
+    envelope = _run_inline(
+        code,
+        capture_output,
+        timeout_secs=effective_timeout,
+        exec_filename=exec_filename,
+    )
+    return _attach_spill_context(envelope, spilled_path)
 
 
 @skill_entry
