@@ -1,33 +1,51 @@
 ---
 name: maya-scene
-description: Maya scene management — create new scenes, open, save, import, export, and list scene contents. Use when managing scene files and top-level hierarchy. Not for individual object creation or mesh editing — use maya-primitives or maya-mesh-ops for that.
+description: |-
+  Scene stage — scene file lifecycle and DAG navigation. Use for new / open /
+  save scenes, hierarchy queries, selection management, and top-level
+  organisation. Not for mesh editing or interchange (FBX/OBJ): use
+  maya-mesh-ops or maya-geometry instead.
 license: MIT
 allowed-tools: Bash Read
 metadata:
   dcc-mcp:
     dcc: maya
     layer: domain
-    version: 1.0.0
+    stage: scene
+    version: 1.1.0
     tags:
     - maya
     - scene
     - hierarchy
-    - open
-    - save
-    - manage
-    search-hint: manage scene file, open save import export, scene hierarchy
+    - selection
+    - dag
+    search-hint: |-
+      manage scene file, open save scene, hierarchy query, selection,
+      camera list, frame rate, locator, group parent, freeze pivot, bounding box
+    aliases:
+    - maya-scene-mgmt
+    side-effects:
+    - reads-scene
+    - writes-scene
+    - writes-disk
     depends: []
     tools: tools.yaml
     groups: groups.yaml
 ---
-# maya-scene
+# maya-scene (Scene stage)
 
-Maya scene management skill. Provides actions for creating, opening, saving scenes, listing and selecting objects, managing hierarchy, and querying scene state.
+Scene file lifecycle (new / open / save) plus DAG navigation: list,
+select, group, parent, freeze, lock, query bounding boxes, list
+cameras, set frame rate, etc.
 
 ## Groups
 
-- **core** — Core read-only scene queries (`get_scene_info`, `get_selection`, `get_session_info`). Active by default in minimal mode.
-- **scene-management** — Scene management, organization, and navigation tools. Active by default in full mode; deactivated in minimal mode.
+- **core** (`default_active: true`) — Read-only scene queries (`get_scene_info`,
+  `get_selection`, `get_session_info`). Active in minimal mode.
+- **scene-management** (deactivated in minimal mode) — write-side tools:
+  open / save / export / group / parent / set selection, etc. Activate with
+  `activate_group("scene-management")` when the agent needs to mutate the
+  scene.
 
 ## Scripts
 
@@ -52,3 +70,4 @@ Maya scene management skill. Provides actions for creating, opening, saving scen
 - `set_frame_rate` — Change the scene's playback frame rate
 - `list_cameras` — List all cameras in the scene
 - `create_locator` — Create a Maya locator node
+- `find_by_pattern` — Find nodes by Maya wildcard pattern

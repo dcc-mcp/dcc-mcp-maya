@@ -7,10 +7,42 @@ from __future__ import annotations
 import base64
 import os
 import tempfile
-from typing import Optional
+from typing import Optional, Tuple
 
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
+
+_MAX_PLAYBLAST_DIM = 8192
+
+
+def _clamp_playblast_dims(width: int, height: int) -> Tuple[int, int]:
+    w = max(1, min(int(width), _MAX_PLAYBLAST_DIM))
+    h = max(1, min(int(height), _MAX_PLAYBLAST_DIM))
+    return w, h
+
+
+def _playblast_frame_range(frame: float) -> Tuple[int, int]:
+    """Maya playblast expects a time range; a one-element list is unreliable."""
+    fnum = int(round(float(frame)))
+    return (fnum, fnum)
+
+
+def _apply_view_fit(cmds) -> bool:
+    """Fit the scene in the active model panel (correct ``allObjects`` flag)."""
+    try:
+        model_panels = cmds.getPanel(type="modelPanel") or []
+        visible = set(cmds.getPanel(visiblePanels=True) or [])
+        for panel in model_panels:
+            if panel in visible:
+                cmds.viewFit(panel, allObjects=True, animate=False)
+                return True
+        if model_panels:
+            cmds.viewFit(model_panels[0], allObjects=True, animate=False)
+            return True
+        cmds.viewFit(allObjects=True, animate=False)
+        return True
+    except Exception:  # noqa: BLE001
+        return False
 
 
 def capture_viewport(
@@ -18,6 +50,7 @@ def capture_viewport(
     height: int = 1080,
     frame: Optional[float] = None,
     off_screen: Optional[bool] = None,
+    view_fit: bool = False,
 ) -> dict:
     """Capture the Maya viewport as a PNG image (base64-encoded).
 
@@ -35,6 +68,9 @@ def capture_viewport(
         off_screen: When ``True`` (or when running in batch mode / no
             visible Maya window) render off-screen via Maya's offscreen
             framebuffer.  Default: auto-detect.
+        view_fit: When ``True``, run ``viewFit`` with ``allObjects=True`` on the
+            active model panel before capture (never use the invalid ``all=True``
+            flag in ad-hoc scripts).
 
     Returns:
         ToolResult dict with ``context.image`` (base64 PNG string).
@@ -46,8 +82,16 @@ def capture_viewport(
         return skill_error("Maya not available", "maya.cmds could not be imported")
 
     try:
+        tmp_path: Optional[str] = None
         if frame is None:
             frame = cmds.currentTime(query=True)
+
+        width, height = _clamp_playblast_dims(width, height)
+        f0, f1 = _playblast_frame_range(frame)
+
+        view_fit_applied = False
+        if view_fit:
+            view_fit_applied = _apply_view_fit(cmds)
 
         # Auto-enable off-screen rendering when Maya is running in batch
         # mode (mayapy) or when no model panel is currently focusable —
@@ -63,7 +107,7 @@ def capture_viewport(
         # Remove the .png suffix for playblast prefix
         prefix = tmp_path[:-4]
         cmds.playblast(
-            frame=[frame],
+            frame=(f0, f1),
             format="image",
             compression="png",
             filename=prefix,
@@ -76,7 +120,7 @@ def capture_viewport(
         )
 
         # playblast appends .<frame>.png
-        padded = "{}.{}.png".format(prefix, str(int(frame)).zfill(4))
+        padded = "{}.{}.png".format(prefix, str(f0).zfill(4))
         img_path = padded if os.path.exists(padded) else prefix + ".png"
 
         with open(img_path, "rb") as fh:
@@ -91,9 +135,16 @@ def capture_viewport(
             height=height,
             frame=frame,
             off_screen=bool(off_screen),
-            prompt="Use render_frame for final-quality output.",
+            view_fit=bool(view_fit),
+            view_fit_applied=view_fit_applied,
+            prompt="Use capture_viewport with view_fit=True instead of execute_python viewFit(all=True).",
         )
     except Exception as exc:
+        if tmp_path is not None:
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass
         return skill_exception(
             exc,
             message="Failed to capture viewport",

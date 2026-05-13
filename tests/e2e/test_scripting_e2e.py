@@ -59,14 +59,14 @@ class TestScriptingE2E:
 
     def test_execute_mel_polysphere(self):
         mod = _load("maya-scripting", "execute_mel")
-        result = mod.execute_mel(script="polySphere -r 1 -n melE2ESphere;")
+        result = mod.execute_mel(code="polySphere -r 1 -n melE2ESphere;")
         assert result["success"] is True
         assert cmds.objExists("melE2ESphere")
 
     def test_execute_mel_syntax_error_returns_result(self):
         """Invalid MEL returns a result dict (success or failure, not crash)."""
         mod = _load("maya-scripting", "execute_mel")
-        result = mod.execute_mel(script="this_is_invalid_mel_xyz!!!;")
+        result = mod.execute_mel(code="this_is_invalid_mel_xyz!!!;")
         assert isinstance(result, dict)
         # Should be failure, not a Python exception
         assert "success" in result

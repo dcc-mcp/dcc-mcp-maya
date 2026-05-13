@@ -22,7 +22,11 @@ tools:
     read_only_hint: true
     idempotent_hint: true
   group: scene-management
-  description: Export the scene in the current Maya scene.
+  description: >-
+    Export the live Maya scene (or a supported subset per script) to a non-native
+    interchange file on disk. Destination must use an absolute or workspace-relative
+    path with an existing parent directory. Prefer maya_geometry__export_fbx for FBX
+    interchange; this tool follows the script-specific format rules.
 - name: freeze_transforms
   execution: sync
   affinity: main

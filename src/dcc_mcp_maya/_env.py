@@ -16,7 +16,7 @@ from __future__ import annotations
 import logging
 import os
 from pathlib import Path
-from typing import Any, Optional
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -34,14 +34,42 @@ ENV_STRICT_SKILL_SCAN = "DCC_MCP_MAYA_STRICT_SKILL_SCAN"
 #: (``workflows.run``, ``workflows.resume``, ``workflows.list_runs`` MCP
 #: tools).  Off by default so the minimal-mode tools/list stays small.
 ENV_ENABLE_WORKFLOWS = "DCC_MCP_MAYA_ENABLE_WORKFLOWS"
-#: dcc-mcp-core#656 (0.14.22) — toggle the Cursor-safe tool-name format
-#: (``i_<id8>__<escaped_tool>``) emitted by the upstream gateway.  The
-#: default is ``True`` on the core side; set ``DCC_MCP_MAYA_CURSOR_SAFE_TOOL_NAMES=0``
-#: to restore the legacy dotted ``<id8>.<tool>`` form during a migration
-#: window.  Only consulted when a gateway port is configured.
-ENV_CURSOR_SAFE_TOOL_NAMES = "DCC_MCP_MAYA_CURSOR_SAFE_TOOL_NAMES"
+#: When set, overrides the ``enable_gateway_failover`` constructor flag so
+#: integration tests and operators can force failover on/off without code
+#: changes (matches ``tests/fixtures/maya_instances.py``).
+ENV_ENABLE_GATEWAY_FAILOVER = "DCC_MCP_MAYA_ENABLE_GATEWAY_FAILOVER"
+#: When ``"1"`` / ``"true"`` / ``"yes"``, :func:`execute_python` returns a
+#: structured refusal so agents must use ``load_skill`` + typed tools.
+ENV_DISABLE_EXECUTE_PYTHON = "DCC_MCP_MAYA_DISABLE_EXECUTE_PYTHON"
+#: When set (same truthy tokens as above), both ``execute_python`` and
+#: ``execute_mel`` are refused — strictest pipeline / classroom mode.
+ENV_DISABLE_ARBITRARY_SCRIPT = "DCC_MCP_MAYA_DISABLE_ARBITRARY_SCRIPT"
+#: Optional per-tool opt-out for MEL when arbitrary script is otherwise allowed.
+ENV_DISABLE_EXECUTE_MEL = "DCC_MCP_MAYA_DISABLE_EXECUTE_MEL"
 #: Default SQLite filename inside the platform data directory.
 DEFAULT_JOB_DB_FILENAME = "jobs.db"
+
+
+def _env_truthy(name: str) -> bool:
+    return os.environ.get(name, "").strip().lower() in ("1", "true", "yes", "on")
+
+
+def resolve_execute_python_disabled() -> bool:
+    """Return True when ``execute_python`` must refuse all calls.
+
+    ``DCC_MCP_MAYA_DISABLE_ARBITRARY_SCRIPT`` implies this flag.  Used by
+    ``maya-scripting`` scripts so studios can enforce skills-first workflows.
+    """
+    if _env_truthy(ENV_DISABLE_ARBITRARY_SCRIPT):
+        return True
+    return _env_truthy(ENV_DISABLE_EXECUTE_PYTHON)
+
+
+def resolve_execute_mel_disabled() -> bool:
+    """Return True when ``execute_mel`` must refuse all calls."""
+    if _env_truthy(ENV_DISABLE_ARBITRARY_SCRIPT):
+        return True
+    return _env_truthy(ENV_DISABLE_EXECUTE_MEL)
 
 
 def resolve_metrics_enabled(metrics_enabled: Optional[bool]) -> bool:
@@ -147,41 +175,22 @@ def resolve_enable_workflows(enable_workflows: Optional[bool] = None) -> bool:
     return os.environ.get(ENV_ENABLE_WORKFLOWS, "").strip() == "1"
 
 
-def resolve_cursor_safe_tool_names(cursor_safe: Optional[bool] = None) -> Optional[bool]:
-    """Resolve the Cursor-safe tool-name toggle (core 0.14.22).
+def resolve_enable_gateway_failover(
+    enable_gateway_failover: Optional[bool],
+    *,
+    default: bool = True,
+) -> bool:
+    """Resolve gateway failover from constructor + optional env override.
 
-    Returns ``True`` / ``False`` to drive :attr:`McpHttpConfig.gateway_cursor_safe_tool_names`,
-    or ``None`` when neither caller nor environment opted in (leaves the
-    inner config's default — currently ``True`` on the core side).
+    Priority: explicit ``enable_gateway_failover`` argument (when not ``None``)
+    > ``DCC_MCP_MAYA_ENABLE_GATEWAY_FAILOVER`` (when set) > ``default``.
 
-    Priority order:
-
-    1. Explicit ``cursor_safe`` argument (when not ``None``).
-    2. ``DCC_MCP_MAYA_CURSOR_SAFE_TOOL_NAMES``:
-       - ``"0"`` / ``"false"`` / ``"no"`` → ``False``
-       - ``"1"`` / ``"true"`` / ``"yes"`` → ``True``
-       - any other value → ``None`` with a debug log line so the inner
-         default is preserved.
-    3. Unset → ``None``.
+    This matches :func:`resolve_metrics_enabled` and avoids CI subprocess env
+    accidentally defeating ``MayaMcpServer(..., enable_gateway_failover=False)``.
     """
-    if cursor_safe is not None:
-        return bool(cursor_safe)
-    raw = os.environ.get(ENV_CURSOR_SAFE_TOOL_NAMES)
-    if raw is None:
-        return None
-    normalised = raw.strip().lower()
-    if normalised in ("0", "false", "no", "off"):
-        return False
-    if normalised in ("1", "true", "yes", "on"):
-        return True
-    logger.debug(
-        "Ignoring invalid %s=%r (expected 0/1/true/false); leaving inner default",
-        ENV_CURSOR_SAFE_TOOL_NAMES,
-        raw,
-    )
-    return None
-
-
-def _unused_marker(_value: Any) -> None:  # pragma: no cover
-    """Sentinel referencing :data:`Any` so the type-only import is retained."""
-    return None
+    if enable_gateway_failover is not None:
+        return bool(enable_gateway_failover)
+    raw = os.environ.get(ENV_ENABLE_GATEWAY_FAILOVER, "").strip()
+    if raw:
+        return _env_truthy(ENV_ENABLE_GATEWAY_FAILOVER)
+    return bool(default)

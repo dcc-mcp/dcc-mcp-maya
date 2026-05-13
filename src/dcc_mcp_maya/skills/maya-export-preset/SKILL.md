@@ -1,13 +1,18 @@
 ---
 name: maya-export-preset
-description: Maya export preset management — save and load export configurations for FBX, OBJ, and Alembic. Use when standardizing export settings across a project. Not for one-off exports or pipeline publishing — use maya-scene or maya-pipeline for that.
+description: |-
+  Interchange stage — save / load / list / delete export presets (FBX, OBJ,
+  Alembic configurations stored as JSON). Use to standardise export
+  settings across a team or project. Not for one-off exports (use
+  maya-geometry) or pipeline publishing (use maya-pipeline / maya-shot-export).
 license: MIT
 allowed-tools: Bash Read
 metadata:
   dcc-mcp:
     dcc: maya
     layer: domain
-    version: 1.0.0
+    stage: interchange
+    version: 1.1.0
     tags:
     - maya
     - export
@@ -15,10 +20,30 @@ metadata:
     - pipeline
     - fbx
     - alembic
-    search-hint: standardize export, export configuration, FBX OBJ preset
+    search-hint: |-
+      standardize export, export preset, FBX preset, Alembic preset,
+      load export config, save export config, share export settings
+    aliases:
+    - maya-export-presets
+    side-effects:
+    - reads-disk
+    - writes-disk
     depends: []
     tools: tools.yaml
 ---
-# Maya Export Preset Skill
+# maya-export-preset (Interchange stage)
 
-Provides actions for saving, loading, listing and deleting Maya export presets (JSON-based configurations for FBX/Alembic export).
+JSON-backed export preset management. Sits next to `maya-geometry` so
+an agent can:
+
+1. `maya-export-preset/load_export_preset` to materialise a saved
+   FBX/OBJ/Alembic config, then
+2. `maya-geometry/export_fbx` (or `maya-shot-export`) with those
+   settings.
+
+## Scripts
+
+- `save_export_preset` — Persist current export settings as a JSON file
+- `load_export_preset` — Load a JSON preset and return its parameter dict
+- `list_export_presets` — List preset files in a directory
+- `delete_export_preset` — Remove a preset file
