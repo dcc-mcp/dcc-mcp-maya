@@ -1,30 +1,39 @@
 ---
 name: maya-display
-description: Maya display layers and viewport shading mode management — create layers, toggle visibility, and set wireframe/shaded modes. Use when controlling visual feedback in the viewport. Not for render layer setup or final output — use maya-render-layers or maya-render for that.
+description: |-
+  Scene stage — Maya display layers and viewport visibility management. Use
+  for organising what artists / agents see in the viewport (display layers,
+  show/hide). Not for render layers or final imagery — use maya-render or a
+  future maya-render-layers skill for that.
 license: MIT
 allowed-tools: Bash Read
 metadata:
   dcc-mcp:
     dcc: maya
     layer: domain
-    version: 1.0.0
+    stage: scene
+    version: 1.1.0
     tags:
     - maya
     - display
     - layer
     - visibility
-    search-hint: viewport visibility, display layer, wireframe shaded, show hide
+    search-hint: |-
+      viewport visibility, display layer, show hide, layer assign,
+      hide group, isolate selection
+    aliases:
+    - maya-display-layers
+    side-effects:
+    - reads-scene
+    - writes-scene
     depends: []
     tools: tools.yaml
     groups: groups.yaml
 ---
-> **Deprecated (merge bucket):** This skill contains only thin \maya.cmds\ wrappers.
-> Use \xecute_python\ with \maya-scripting/references/RECIPES.md#display\ instead.
-> Will be removed in the next release.
+# maya-display (Scene stage)
 
-# maya-display
-
-Maya display skill. Provides actions for creating, setting, deleting, and listing display layers in Maya.
+Display layers and viewport visibility. Strictly **viewport-side**: nothing
+here changes geometry, materials, or render output.
 
 ## Scripts
 

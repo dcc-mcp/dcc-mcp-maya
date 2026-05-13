@@ -24,7 +24,10 @@ tools:
     read_only_hint: true
     idempotent_hint: true
   group: animation
-  description: Export animation curves in the current Maya scene.
+  description: >-
+    Export animation curves from the Maya scene to a host path. Pass an absolute
+    or workspace-relative file path; the parent directory must exist and be writable.
+    Use for backup or transfer of curve data — verify disk space on long takes.
 - name: get_current_time
   description: Get the current frame number
   execution: sync
@@ -53,7 +56,10 @@ tools:
   execution: sync
   affinity: main
   group: animation
-  description: Import animation curves in the current Maya scene.
+  description: >-
+    Import animation curves from a file on disk into the Maya scene. Source path
+    must exist (expand ~ and env vars first); prefer absolute paths. On failure,
+    check file format and Maya version compatibility before retrying.
 - name: list_animation_curves
   execution: sync
   affinity: main

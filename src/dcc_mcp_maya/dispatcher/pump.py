@@ -24,7 +24,7 @@ import time
 from typing import Any, Dict, Optional, Tuple
 
 # Import third-party modules
-from dcc_mcp_core import PyPumpedDispatcher, PyStandaloneDispatcher  # noqa: F401
+from dcc_mcp_core import PyPumpedDispatcher
 
 # Import local modules
 from dcc_mcp_maya.dispatcher.standalone import MayaStandaloneDispatcher

@@ -40,6 +40,8 @@ server.stop()
 Plugin mode: copy `maya/plugin/dcc_mcp_maya_plugin.py` to a directory on `MAYA_PLUG_IN_PATH`.
 The server starts automatically when the plugin loads. In interactive mode a "DCC MCP" menu is added to Maya.
 
+**Bulk / batch (agents):** Prefer one `execute_python` loop for N imports/exports/naming; gateway `call_tools` / `/v1/call_batch` for ≤25 distinct tool steps. See root `AGENTS.md` § *Bulk import, export, and naming* and `examples/workflows/maya_bulk_rbd_fbx.md`.
+
 ---
 
 ## MayaMcpServer — Complete API
@@ -449,6 +451,9 @@ tools:
 | `DCC_MCP_MAYA_JOB_STORAGE` | `<data_dir>/jobs.db` | per-process | SQLite job persistence path. `""`=disable. |
 | `DCC_MCP_MAYA_JOB_RECOVERY` | `drop` | per-process | `requeue`=resume idempotent interrupted jobs on startup. |
 | `DCC_MCP_MAYA_HOT_RELOAD` | `0` | per-process | `1`=watch bundled skills for edit-on-disk reload. |
+| `DCC_MCP_MAYA_DISABLE_EXECUTE_PYTHON` | `0` | per-process | `1`/`true`/`yes`/`on` — refuse `execute_python` (skills-first enforcement). |
+| `DCC_MCP_MAYA_DISABLE_EXECUTE_MEL` | `0` | per-process | Same truthy tokens — refuse `execute_mel` only. |
+| `DCC_MCP_MAYA_DISABLE_ARBITRARY_SCRIPT` | `0` | per-process | Same truthy tokens — refuse both `execute_python` and `execute_mel`. |
 | `DCC_MCP_MAYA_ENABLE_GATEWAY_FAILOVER` | `1` | per-process | Auto-promote on gateway loss. |
 | `DCC_MCP_MAYA_DCC_PID` | `os.getpid()` | per-process | PID advertised to gateway for diagnostics routing. |
 | `DCC_MCP_MAYA_READINESS_TIMEOUT_SECS` | — | per-process | Advisory timeout (positive integer seconds) for the three-state readiness probe (issue #184). Consumed by orchestrators; never auto-fails the probe on its own. |

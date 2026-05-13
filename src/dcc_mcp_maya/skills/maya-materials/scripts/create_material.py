@@ -14,16 +14,14 @@ _SUPPORTED_SHADERS = ("lambert", "blinn", "phong", "phongE", "aiStandardSurface"
 
 def create_material(
     material_type: str = "lambert",
-    shader_type: Optional[str] = None,
     name: Optional[str] = None,
 ) -> dict:
     """Create a Maya shading material.
 
     Args:
-        material_type: Shader node type (preferred param name).  Supported:
+        material_type: Shader node type.  Supported:
             ``lambert``, ``blinn``, ``phong``, ``phongE``, ``aiStandardSurface``.
             Default: ``lambert``.
-        shader_type: Alias for ``material_type`` (legacy).
         name: Optional name for the created material.
 
     Returns:
@@ -33,9 +31,7 @@ def create_material(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        # shader_type is legacy alias for material_type
-        resolved_type = shader_type if shader_type is not None else material_type
-        mat = cmds.shadingNode(resolved_type, asShader=True)
+        mat = cmds.shadingNode(material_type, asShader=True)
         if name:
             mat = cmds.rename(mat, name)
         sg = cmds.sets(renderable=True, noSurfaceShader=True, empty=True, name="{}_SG".format(mat))
@@ -43,7 +39,7 @@ def create_material(
         return skill_success(
             "Created material: {}".format(mat),
             material_name=mat,
-            material_type=resolved_type,
+            material_type=material_type,
             shading_group=sg,
             prompt="Use assign_material to apply to objects or set_material_attribute to configure.",
         )

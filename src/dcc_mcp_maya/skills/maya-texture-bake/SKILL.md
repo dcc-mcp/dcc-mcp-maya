@@ -1,13 +1,18 @@
 ---
 name: maya-texture-bake
-description: Maya texture baking — bake lighting, AO, normals, and custom maps from high-res to low-res geometry. Use when generating static texture maps for game or render assets. Not for material assignment or UV layout — use maya-materials or maya-uv-ops for that.
+description: |-
+  Authoring stage — bake lighting, AO, normals, and custom maps from
+  high-resolution sources to texture files. Use when generating static
+  texture maps for game / render assets. Not for material assignment
+  (maya-materials) or UV layout (maya-uv-ops).
 license: MIT
 allowed-tools: Bash Read
 metadata:
   dcc-mcp:
     dcc: maya
     layer: domain
-    version: 1.0.0
+    stage: authoring
+    version: 1.1.0
     tags:
     - maya
     - baking
@@ -15,16 +20,26 @@ metadata:
     - ao
     - lighting
     - normals
-    search-hint: bake texture map, AO normal, high to low res, static map
+    search-hint: |-
+      bake texture map, AO normal, ambient occlusion, high to low res,
+      static map, transfer maps, bake lighting
+    aliases:
+    - maya-bake
+    side-effects:
+    - reads-scene
+    - writes-scene
+    - writes-disk
+    - heavy-cpu
     depends: []
     tools: tools.yaml
     groups: groups.yaml
 ---
-# maya-texture-bake
+# maya-texture-bake (Authoring stage)
 
-Texture baking utilities for Maya.  Bake lighting, ambient occlusion, normal maps,
-and custom shading networks to image textures using Maya's built-in Convert to File
-Texture or the Transfer Maps workflow.
+Bake lighting / AO / normals / custom shading networks to image
+textures via Maya's bundled bake workflow. All four scripts are
+main-thread-affine and CPU-heavy — set realistic `timeout_hint_secs`
+in `tools.yaml`.
 
 ## Scripts
 

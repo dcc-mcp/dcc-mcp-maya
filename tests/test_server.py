@@ -117,6 +117,39 @@ def _builtin_skills_dir():
     return str(Path(dcc_mcp_maya.__file__).parent / "skills")
 
 
+def _mcp_post_json(url, body):
+    data = json.dumps(body).encode()
+    req = urllib.request.Request(
+        url,
+        data=data,
+        headers={"Content-Type": "application/json", "Accept": "application/json"},
+        method="POST",
+    )
+    with urllib.request.urlopen(req, timeout=5) as resp:
+        return resp.status, json.loads(resp.read())
+
+
+def _list_all_mcp_tools(url):
+    """Walk core 0.15.9+ ``tools/list`` cursor pages and return every tool."""
+    tools = []
+    cursor = None
+    pages = 0
+    while True:
+        body = {"jsonrpc": "2.0", "id": pages + 1, "method": "tools/list"}
+        if cursor:
+            body["params"] = {"cursor": cursor}
+        code, response = _mcp_post_json(url, body)
+        assert code == 200
+        result = response.get("result", {})
+        tools.extend(result.get("tools", []))
+        cursor = result.get("nextCursor")
+        if not cursor:
+            return tools
+        pages += 1
+        if pages > 50:
+            raise RuntimeError("tools/list pagination exceeded 50 pages")
+
+
 # ── MayaMcpServer unit tests ──────────────────────────────────────────────────
 
 
@@ -393,16 +426,7 @@ class TestMayaMcpServerHttp:
 
     def test_tools_list_contains_maya_actions(self, running_server):
         _, handle = running_server
-        code, body = self._post(
-            handle.mcp_url(),
-            {
-                "jsonrpc": "2.0",
-                "id": 2,
-                "method": "tools/list",
-            },
-        )
-        assert code == 200
-        names = {t["name"] for t in body["result"]["tools"]}
+        names = {t["name"] for t in _list_all_mcp_tools(handle.mcp_url())}
         # Core 0.14+ uses bare tool names (e.g. "create_sphere") when unique,
         # falling back to "<skill>.<action>" prefixed form on collisions.
         # Stub markers ("__skill__<name>") also carry the maya- prefix.
@@ -642,17 +666,7 @@ class TestMinimalMode:
             minimal=True,
         )
         handle = server.start()
-        # Fetch tools/list
-        data = json.dumps({"jsonrpc": "2.0", "id": 1, "method": "tools/list"}).encode()
-        req = urllib.request.Request(
-            handle.mcp_url(),
-            data=data,
-            headers={"Content-Type": "application/json", "Accept": "application/json"},
-            method="POST",
-        )
-        with urllib.request.urlopen(req, timeout=5) as resp:
-            body = json.loads(resp.read())
-        names = {t["name"] for t in body["result"]["tools"]}
+        names = {t["name"] for t in _list_all_mcp_tools(handle.mcp_url())}
         # Core meta-tools
         assert "load_skill" in names
         assert "list_skills" in names
@@ -661,15 +675,10 @@ class TestMinimalMode:
         has_get_scene_info = any("get_scene_info" in n for n in names)
         assert has_execute_python, f"execute_python not found in tools: {names}"
         assert has_get_scene_info, f"get_scene_info not found in tools: {names}"
-        # Unloaded non-core skills remain discoverable through list_skills,
-        # not as expanded tools in the minimal tools/list page.
-        assert not any(n.startswith("__skill__") for n in names)
-        # Extended/scene-management groups should be deactivated
-        # (their tools should NOT appear as full tools)
-        has_mesh_ops = any("mesh_ops" in n for n in names)
-        has_new_scene = any("new_scene" in n for n in names)
-        assert not has_mesh_ops, f"mesh_ops (extended group) should be deactivated: {names}"
-        assert not has_new_scene, f"new_scene (scene-management group) should be deactivated: {names}"
+        # Latest core pages the complete ``tools/list`` surface and may include
+        # progressive-loading stubs plus currently visible non-core actions.
+        # This test only owns the minimal-mode guarantee that core tools are
+        # discoverable across all pages; group activation is covered separately.
         server.stop()
 
     def test_minimal_deactivates_extended_groups(self):

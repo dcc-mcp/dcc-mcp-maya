@@ -6,7 +6,7 @@ into core's post-tool `append_context_snapshot` helper and into
 state (open file, selection, display name, version) through:
 
 * the gateway registry (used by `list_dcc_instances`), and
-* the per-DCC `GET /v1/context` REST endpoint (core 0.14.21+).
+* the per-DCC `GET /v1/context` REST endpoint.
 
 Design
 ------

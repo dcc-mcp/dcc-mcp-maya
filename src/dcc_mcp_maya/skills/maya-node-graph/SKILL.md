@@ -1,26 +1,41 @@
 ---
 name: maya-node-graph
-description: Maya node graph operations — connect and disconnect attributes, query construction history and DG topology. Use when working with dependency graph connections. Not for attribute value editing or scene file operations — use maya-attributes or maya-scene for that.
+description: |-
+  Scene stage — connect / disconnect attributes, query construction history,
+  and inspect DG / DAG topology. Use whenever you reason about how nodes
+  drive each other. Not for attribute *value* edits (use maya-attributes)
+  or scene file lifecycle (use maya-scene).
 license: MIT
 allowed-tools: Bash Read
 metadata:
   dcc-mcp:
     dcc: maya
     layer: domain
-    version: 1.0.0
+    stage: scene
+    version: 1.1.0
     tags:
     - maya
     - node
     - attribute
     - graph
     - utility
-    search-hint: node connection, DG topology, construction history, attribute link
+    search-hint: |-
+      node connection, attribute link, DG topology, construction history,
+      list connections, transfer attributes, smooth subdivide
+    aliases:
+    - maya-dg
+    side-effects:
+    - reads-scene
+    - writes-scene
     depends: []
     tools: tools.yaml
 ---
-# maya-node-graph
+# maya-node-graph (Scene stage)
 
-Maya node graph skill. Provides actions for connecting and disconnecting attributes, querying history, and managing mesh topology.
+Wires the Maya dependency graph: `connectAttr`, `disconnectAttr`,
+`listConnections`, history queries, plus a couple of mesh-flavoured
+graph operations (`smooth_mesh`, `apply_symmetry`, `transfer_attributes`)
+that are conceptually graph-level rather than topology-level.
 
 ## Scripts
 

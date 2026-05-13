@@ -1,9 +1,7 @@
 """Maya thread-affinity dispatchers (issue #128 directory module).
 
-Public API surface preserved 1:1 with the previous single-file
-``dispatcher.py``: every symbol documented in :pep:`8`-compliant
-``__all__`` below remains importable from
-``dcc_mcp_maya.dispatcher``.
+Public dispatcher symbols are re-exported from their focused submodules
+through the :pep:`8`-compliant ``__all__`` below.
 
 The implementation is split per Single Responsibility into:
 
@@ -35,7 +33,6 @@ from dcc_mcp_maya.dispatcher.pump import (
     OVERRUN_MULTIPLIER,
     MayaUiPump,
     PyPumpedDispatcher,
-    PyStandaloneDispatcher,
     _CorePump,
     create_dispatcher,
     create_pumped_dispatcher,
@@ -58,10 +55,9 @@ __all__ = [
     # Factories
     "create_dispatcher",
     "create_pumped_dispatcher",
-    # Core re-exports
+    # Core dispatcher used by create_pumped_dispatcher
     "PyPumpedDispatcher",
-    "PyStandaloneDispatcher",
-    # Internals exposed for compatibility / advanced use
+    # Internals exposed for advanced use
     "_CorePump",
     "_JobEntry",
     "_current_job",

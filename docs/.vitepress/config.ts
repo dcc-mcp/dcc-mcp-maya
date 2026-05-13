@@ -32,6 +32,7 @@ export default defineConfig({
                 { text: '简介', link: '/zh/guide/' },
                 { text: '快速开始', link: '/zh/guide/getting-started' },
                 { text: '安装指南', link: '/zh/guide/installation' },
+                { text: '本地 MCP 与调试', link: '/zh/guide/local-mcp-debug' },
               ],
             },
             {
@@ -87,6 +88,7 @@ export default defineConfig({
             { text: 'Introduction', link: '/guide/' },
             { text: 'Quick Start', link: '/guide/getting-started' },
             { text: 'Installation', link: '/guide/installation' },
+            { text: 'Local MCP + Debug', link: '/guide/local-mcp-debug' },
           ],
         },
         {
