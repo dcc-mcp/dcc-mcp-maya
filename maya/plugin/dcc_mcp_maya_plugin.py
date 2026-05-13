@@ -643,12 +643,13 @@ def _add_menu() -> None:
         if cmds.menu(_menu_name, exists=True):
             cmds.deleteUI(_menu_name)
         cmds.menu(_menu_name, label="DCC MCP", parent="MayaWindow", tearOff=False)
-        cmds.menuItem(label="Show MCP URL", command=lambda *_: _show_url())
+        cmds.menuItem(label="OpenAPI Docs", command=lambda *_: _open_openapi_docs())
+        cmds.menuItem(label="Admin Panel", command=lambda *_: _open_admin_panel())
+        cmds.menuItem(divider=True)
         cmds.menuItem(label="Restart MCP Server", command=lambda *_: _restart_deferred())
         cmds.menuItem(label="Stop MCP Server", command=lambda *_: _stop_blocking())
         cmds.menuItem(divider=True)
         cmds.menuItem(label="Enable/Disable Hot Reload", command=lambda *_: _toggle_hot_reload())
-        cmds.menuItem(label="Open MCP in Browser", command=lambda *_: _open_browser())
     except Exception as exc:
         logger.warning("Could not add DCC MCP menu: %s", exc)
 
@@ -728,6 +729,36 @@ def _open_browser() -> None:
         webbrowser.open(url)
     else:
         cmds.warning("MCP server is not running.")
+
+
+def _openapi_base_url() -> str:
+    """Return base URL for the running server (strip /mcp suffix)."""
+    url = _server_url()
+    if url and url != "<not running>":
+        return url.replace("/mcp", "")
+    return ""
+
+
+def _open_openapi_docs() -> None:
+    """Open the OpenAPI docs (Swagger UI) in the default browser."""
+    base = _openapi_base_url()
+    if not base:
+        cmds.warning("MCP server is not running.")
+        return
+    import webbrowser  # noqa: PLC0415
+
+    webbrowser.open(base + "/docs")
+
+
+def _open_admin_panel() -> None:
+    """Open the admin panel in the default browser."""
+    base = _openapi_base_url()
+    if not base:
+        cmds.warning("MCP server is not running.")
+        return
+    import webbrowser  # noqa: PLC0415
+
+    webbrowser.open(base + "/admin")
 
 
 def _toggle_hot_reload() -> None:
