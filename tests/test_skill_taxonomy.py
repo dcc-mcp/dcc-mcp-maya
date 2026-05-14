@@ -78,6 +78,30 @@ def test_every_skill_dir_has_stage_field() -> None:
         assert stage in STAGES, "{}: stage {!r} is not one of {}".format(skill_md, stage, STAGES)
 
 
+def test_skills_index_stage_table_matches_disk() -> None:
+    """The human-readable skill inventory must match the bundled skill dirs."""
+    from dcc_mcp_maya._skill_loader import STAGES
+
+    index_text = (SKILLS_DIR / "SKILLS_INDEX.md").read_text(encoding="utf-8")
+    count_match = re.search(r"The (\d+) bundled skills", index_text)
+    assert count_match, "SKILLS_INDEX.md must state the bundled skill count"
+    assert int(count_match.group(1)) == len(_bundled_skill_dirs())
+
+    on_disk = {stage: set() for stage in STAGES}
+    for skill_dir in _bundled_skill_dirs():
+        on_disk[_read_stage_field(skill_dir / "SKILL.md")].add(skill_dir.name)
+
+    for stage, expected in on_disk.items():
+        row_match = re.search(r"\| `{}` \|[^\n]*\|([^\n]*)\|".format(stage), index_text)
+        assert row_match, "SKILLS_INDEX.md is missing stage row {!r}".format(stage)
+        documented = set(re.findall(r"`([^`]+)`", row_match.group(1)))
+        assert documented == expected, "SKILLS_INDEX.md stage {!r} drift: docs={} disk={}".format(
+            stage,
+            sorted(documented),
+            sorted(expected),
+        )
+
+
 def test_no_hardcoded_skill_stage_dict_exists() -> None:
     """The deprecated ``SKILL_STAGE`` constant must NOT be re-exposed.
 

@@ -3,8 +3,9 @@ name: maya-node-graph
 description: |-
   Scene stage — connect / disconnect attributes, query construction history,
   and inspect DG / DAG topology. Use whenever you reason about how nodes
-  drive each other. Not for attribute *value* edits (use maya-attributes)
-  or scene file lifecycle (use maya-scene).
+  drive each other or construction history. Not for attribute *value* edits
+  (use maya-attributes), polygon topology cleanup (use maya-mesh-ops), or
+  scene file lifecycle (use maya-scene).
 license: MIT
 allowed-tools: Bash Read
 metadata:
@@ -33,9 +34,9 @@ metadata:
 # maya-node-graph (Scene stage)
 
 Wires the Maya dependency graph: `connectAttr`, `disconnectAttr`,
-`listConnections`, history queries, plus a couple of mesh-flavoured
-graph operations (`smooth_mesh`, `apply_symmetry`, `transfer_attributes`)
-that are conceptually graph-level rather than topology-level.
+`listConnections`, history queries, plus mesh-flavoured graph operations
+that are conceptually construction-history / attribute-transfer operations
+rather than polygon topology cleanup.
 
 ## Scripts
 
@@ -43,7 +44,7 @@ that are conceptually graph-level rather than topology-level.
 - `disconnect_attr` — Disconnect two connected Maya node attributes
 - `list_connections` — List nodes/attributes connected to a Maya node or attribute
 - `get_dag_path` — Return the full DAG path of a Maya node
-- `smooth_mesh` — Apply smooth mesh preview or subdivision to a polygon mesh
+- `smooth_mesh` — Apply construction-history smoothing; use maya-mesh-ops for topology cleanup
 - `list_history` — List construction history nodes for a Maya object
 - `delete_history` — Delete the construction history on a Maya object
 - `apply_symmetry` — Apply mesh symmetry to a polygon object

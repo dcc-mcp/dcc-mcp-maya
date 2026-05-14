@@ -48,5 +48,5 @@ Save, load, list, and delete JSON material presets. Lives next to
 
 - `save_material` — Serialize a material and its attributes to a JSON preset file
 - `load_material` — Recreate a material from a JSON preset and assign it optionally
-- `list_materials` — List all preset files in a material library directory
+- `list_material_presets` — List all preset files in a material library directory
 - `delete_material_preset` — Remove a material preset file from the library

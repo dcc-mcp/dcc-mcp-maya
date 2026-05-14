@@ -4,6 +4,6 @@ groups:
   default_active: false
   tools:
   - delete_material_preset
-  - list_materials
+  - list_material_presets
   - load_material
   - save_material

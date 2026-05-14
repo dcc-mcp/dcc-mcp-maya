@@ -7,10 +7,10 @@
 
 ## 30-Second Summary
 
-`dcc-mcp-maya` embeds a standards-compliant MCP Streamable HTTP server directly inside Autodesk Maya. It exposes 73+ Maya operations as MCP tools that any AI agent (Claude, Cursor, Gemini, etc.) can call over HTTP — no external gateway, no subprocess bridge.
+`dcc-mcp-maya` embeds a standards-compliant MCP Streamable HTTP server directly inside Autodesk Maya. It exposes 164 Maya operations as MCP tools that any AI agent (Claude, Cursor, Gemini, etc.) can call over HTTP — no external gateway, no subprocess bridge.
 
 **Current version:** 0.2.28 <!-- x-release-please-version -->
-**Core dependency:** `dcc-mcp-core>=0.15.7,<1.0.0`
+**Core dependency:** `dcc-mcp-core>=0.15.9,<1.0.0`
 **Python:** 3.7+
 **Maya:** 2020+
 
@@ -96,9 +96,10 @@ def create_sphere(radius: float = 1.0) -> dict:
 ## Skill Stage Taxonomy (5-stage map)
 
 Every bundled skill is tagged with `metadata.dcc-mcp.stage` in its
-`SKILL.md`. The single source of truth for the mapping is
-[`src/dcc_mcp_maya/_skill_loader.py::SKILL_STAGE`](src/dcc_mcp_maya/_skill_loader.py)
-plus the cross-skill index [`src/dcc_mcp_maya/skills/SKILLS_INDEX.md`](src/dcc_mcp_maya/skills/SKILLS_INDEX.md).
+`SKILL.md`. `_skill_loader.skills_for_stage()` derives the mapping from
+frontmatter at runtime; the cross-skill index
+[`src/dcc_mcp_maya/skills/SKILLS_INDEX.md`](src/dcc_mcp_maya/skills/SKILLS_INDEX.md)
+is checked against disk by tests so the human-readable inventory cannot drift.
 
 | Stage         | Purpose                                                              | Default loaded?           | Skills |
 |---------------|----------------------------------------------------------------------|---------------------------|--------|
@@ -112,7 +113,6 @@ Helpers in `_skill_loader.py`:
 
 ```python
 from dcc_mcp_maya._skill_loader import (
-    SKILL_STAGE,                  # dict[str, str] — single source of truth
     STAGES,                       # canonical 5-stage tuple
     skills_for_stage,             # tuple of skills in a given stage
     build_minimal_mode_config,    # default minimal-mode config
@@ -406,7 +406,7 @@ A: Poll `check_maya_cancelled()` inside the loop. It raises `CancelledError` whe
 A: Same API — `dcc_mcp_maya.start_server(port=0)`. In batch mode the `MayaStandaloneDispatcher` runs jobs on the calling thread directly.
 
 **Q: Where are the built-in skills?**  
-A: `src/dcc_mcp_maya/skills/` (12 packages, 73 scripts). Each package contains `SKILL.md`, `tools.yaml`, `groups.yaml`, and `scripts/*.py`.
+A: `src/dcc_mcp_maya/skills/` (23 packages, 161 scripts, 164 tool declarations). Each package contains `SKILL.md`, `tools.yaml`, optional `groups.yaml`, and `scripts/*.py`.
 
 **Q: How do I force agents to stop using ``execute_python``?**  
 A: Set ``DCC_MCP_MAYA_DISABLE_EXECUTE_PYTHON=1`` (Python only) or ``DCC_MCP_MAYA_DISABLE_ARBITRARY_SCRIPT=1`` (Python + MEL). Callers get a structured error that points to ``load_skill`` + typed tools.

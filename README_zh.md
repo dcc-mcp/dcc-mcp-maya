@@ -208,8 +208,15 @@ server.register_builtin_actions(include_bundled=False)
 |------|-------------|
 | `set_render_settings` | 设置分辨率、帧范围、渲染器 |
 | `capture_viewport` | 将视口捕获为 base64 编码的 PNG |
-| `import_file` | 导入 FBX/OBJ/Alembic/Maya 文件 |
-| `export_selection` | 将选择导出为 FBX/OBJ/Alembic |
+| `get_scene_render_stats` | 查询面向渲染的场景统计 |
+
+### 几何交换
+
+| 工具 | 说明 |
+|------|-------------|
+| `import_file` | 导入 FBX/OBJ/Alembic/Maya 文件，并自动加载所需插件 |
+| `export_fbx` | 导出场景或选择为 FBX |
+| `export_obj` | 导出场景或选择为 OBJ |
 
 ### 脚本
 

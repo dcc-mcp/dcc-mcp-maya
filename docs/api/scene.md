@@ -180,17 +180,3 @@ Duplicate an object.
 ```json
 { "success": true, "duplicate": "pSphere2" }
 ```
-
----
-
-## `maya_scene__export_scene`
-
-Export the entire scene to a file.
-
-### Parameters
-
-| Name | Type | Default | Description |
-|------|------|---------|-------------|
-| `file_path` | str | — | Output file path |
-| `file_type` | str | `"mayaAscii"` | `"mayaAscii"`, `"mayaBinary"`, `"fbx"`, `"obj"` |
-| `selection_only` | bool | `false` | Export only selected objects |

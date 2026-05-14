@@ -60,7 +60,7 @@ def export_shot_fbx(
 
         return skill_success(
             "Exported FBX to '{}'".format(file_path),
-            prompt="Use import_file or export_shot_alembic for alternative formats.",
+            prompt="Use maya_geometry__import_file or export_shot_alembic for alternative formats.",
             file_path=file_path,
             start_frame=sf,
             end_frame=ef,
