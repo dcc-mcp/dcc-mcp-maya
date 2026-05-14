@@ -1,12 +1,12 @@
 ---
 name: maya-geometry
 description: |-
-  Interchange stage — scene I/O and FBX / OBJ interchange. Save Maya
-  scenes (.ma / .mb) and round-trip geometry through FBX or OBJ. The FBX
-  export tool drives every FBXExport* option through the FBX plugin's MEL
-  globals, bakes animation by default, and verifies the output file. Use
-  for cross-DCC handoff. Not for primitive creation (maya-primitives) or
-  shot packaging (maya-shot-export).
+  Interchange stage — FBX / OBJ geometry interchange. Round-trip geometry
+  through FBX or OBJ; scene save is owned by maya-scene. The FBX export
+  tool drives every FBXExport* option through the FBX plugin's MEL globals,
+  bakes animation by default, and verifies the output file. Use for cross-DCC
+  handoff. Not for primitive creation (maya-primitives) or shot packaging
+  (maya-shot-export).
 license: MIT
 allowed-tools: Bash Read
 metadata:
@@ -21,13 +21,12 @@ metadata:
     - interchange
     - fbx
     - obj
-    - save
     - export
     - import
     search-hint: |-
-      save Maya scene, save .ma .mb, export FBX, import FBX, export OBJ,
-      file_exists, geometry round trip, scene interchange, FBXExport options,
-      bake animation FBX
+      export FBX, import FBX, export OBJ, file_exists, geometry round trip,
+      scene interchange, FBXExport options, bake animation FBX. Use
+      maya-scene save_scene for .ma/.mb scene saves.
     aliases:
     - maya-interchange
     - maya-io
@@ -45,16 +44,18 @@ metadata:
 ---
 # maya-geometry (Interchange stage)
 
-Scene I/O and geometry interchange. Despite the legacy name `maya-geometry`,
-the responsibility is **interchange**, not modelling — see the alias list
-in the frontmatter (`maya-interchange`, `maya-io`, `maya-fbx`).
+Geometry interchange. Despite the legacy name `maya-geometry`, the
+responsibility is **interchange**, not modelling or native scene-file
+persistence — see the alias list in the frontmatter (`maya-interchange`,
+`maya-io`, `maya-fbx`).
 
 ## Why this stage exists
 
 Once an Authoring-stage skill has produced geometry / animation, you
-need a reliable way to (a) save the Maya scene file and (b) hand the
-geometry off to other DCCs or downstream pipelines. That is what the
-Interchange stage handles. Every export tool here:
+need a reliable way to hand geometry off to other DCCs or downstream
+pipelines. That is what the Interchange stage handles. Native `.ma` / `.mb`
+scene saves are intentionally routed through `maya_scene__save_scene`.
+Every export tool here:
 
 - pushes its full option surface through the official MEL globals (no
   silent reliance on plugin defaults);
@@ -84,13 +85,12 @@ For **N separate FBX paths** (e.g. one file per root transform), prefer **one** 
 
 - **core** (`default_active: true`) — `file_exists`. Pure filesystem,
   no Maya state.
-- **geometry** (`default_active: true`) — main-thread Maya scene save +
-  FBX/OBJ import / export.
+- **geometry** (`default_active: true`) — main-thread FBX/OBJ import / export.
 
 ## Scripts
 
-- `save_scene` — Save the current scene as Maya ASCII or Maya Binary
 - `file_exists` — Check whether a file exists on disk (no Maya state)
 - `export_fbx` — Export the scene or current selection to FBX with full FBXExport* control
+- `import_file` — Import generic Maya-recognised scene / geometry files
 - `import_fbx` — Import an FBX into the current scene; returns new node names
 - `export_obj` — Export the scene to OBJ

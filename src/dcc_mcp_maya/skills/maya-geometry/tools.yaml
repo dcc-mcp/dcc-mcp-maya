@@ -1,29 +1,4 @@
 tools:
-- name: save_scene
-  description: >-
-    Save the current Maya scene to a .ma or .mb file. Uses cmds.file(rename=path)
-    then cmds.file(save=True) so untitled scenes do not trigger Maya's modal
-    "must rename first" error. Pass an absolute or workspace-relative path; parent
-    directory must exist. Prefer this over ad-hoc execute_python save logic.
-  execution: async
-  affinity: main
-  timeout_hint_secs: 120
-  group: geometry
-  inputSchema:
-    type: object
-    required:
-    - path
-    properties:
-      path:
-        type: string
-        description: Absolute or workspace-relative output path. Extension decides ASCII
-          vs binary.
-      file_type:
-        type: string
-        enum:
-        - mayaAscii
-        - mayaBinary
-        default: mayaAscii
 - name: file_exists
   description: Check whether a file exists on disk.
   execution: sync
@@ -120,6 +95,33 @@ tools:
       tangents_binormals:
         type: boolean
         default: false
+- name: import_file
+  description: >-
+    Import a generic Maya-recognised scene or geometry file into the current scene
+    for interchange. Automatically checks and loads known required plug-ins for
+    FBX (fbxmaya), OBJ (objExport), and Alembic (AbcImport) before import. Use
+    import_fbx when you need FBX-specific take, namespace, and diagnostics controls.
+  execution: async
+  affinity: main
+  timeout_hint_secs: 300
+  annotations:
+    destructive_hint: true
+  group: geometry
+  inputSchema:
+    type: object
+    required:
+    - file_path
+    properties:
+      file_path:
+        type: string
+        description: Source file path. Must be readable by Maya or a loaded plug-in.
+      namespace:
+        type: string
+        description: Optional namespace prefix for imported nodes.
+      merge_namespaces:
+        type: boolean
+        default: false
+        description: Merge into an existing namespace on clashes.
 - name: import_fbx
   description: 'Import an FBX file into the current scene. Returns the new node list
   

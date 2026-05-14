@@ -15,7 +15,6 @@
 | 新建场景 | `maya_scene__new_scene` | 创建新的空 Maya 场景 |
 | 保存场景 | `maya_scene__save_scene` | 将当前场景保存到磁盘 |
 | 打开场景 | `maya_scene__open_scene` | 打开 Maya 场景文件（.ma/.mb） |
-| 导出场景 | `maya_scene__export_scene` | 将整个场景导出到文件 |
 | 列出对象 | `maya_scene__list_objects` | 列出 DAG 对象（支持类型过滤） |
 | 获取选择 | `maya_scene__get_selection` | 返回当前选择列表 |
 | 设置选择 | `maya_scene__set_selection` | 设置当前活动选择 |
