@@ -120,7 +120,6 @@ SKILL_DEFAULTS: Dict[str, ExecAffinity] = {
 # Used when the skill default is not right for a specific verb.
 TOOL_OVERRIDES: Dict[Tuple[str, str], ExecAffinity] = {
     # maya-scene long-running I/O
-    ("maya-scene", "export_scene"): ("async", "main", 300),
     ("maya-scene", "save_scene"): ("async", "main", 120),
     ("maya-scene", "open_scene"): ("async", "main", 300),
     ("maya-scene", "new_scene"): ("async", "main", 60),
@@ -132,14 +131,12 @@ TOOL_OVERRIDES: Dict[Tuple[str, str], ExecAffinity] = {
     ("maya-render", "set_render_settings"): ("sync", "main", None),
     ("maya-render", "set_render_quality"): ("sync", "main", None),
     ("maya-render", "get_scene_render_stats"): ("sync", "main", None),
-    ("maya-render", "export_selection"): ("async", "main", 300),
-    ("maya-render", "import_file"): ("async", "main", 300),
     # maya-render-farm — all async
     ("maya-render-farm", "get_render_job_status"): ("sync", "any", None),
     # maya-geometry
     ("maya-geometry", "file_exists"): ("sync", "any", None),
-    ("maya-geometry", "save_scene"): ("async", "main", 120),
     ("maya-geometry", "export_fbx"): ("async", "main", 300),
+    ("maya-geometry", "import_file"): ("async", "main", 300),
     ("maya-geometry", "export_obj"): ("async", "main", 300),
     # maya-scripting execute_* stays sync; long scripts submitted separately
     # maya-cache

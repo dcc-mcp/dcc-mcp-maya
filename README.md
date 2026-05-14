@@ -229,8 +229,15 @@ The sections below are representative categories, not an exhaustive inventory.
 |------|-------------|
 | `set_render_settings` | Set resolution, frame range, renderer |
 | `capture_viewport` | Capture viewport as base64-encoded PNG |
-| `import_file` | Import FBX/OBJ/Alembic/Maya file |
-| `export_selection` | Export selection to FBX/OBJ/Alembic |
+| `get_scene_render_stats` | Query render-facing scene statistics |
+
+### Geometry Interchange
+
+| Tool | Description |
+|------|-------------|
+| `import_file` | Import FBX/OBJ/Alembic/Maya file with required plug-in auto-load |
+| `export_fbx` | Export scene or selection to FBX |
+| `export_obj` | Export scene or selection to OBJ |
 
 ### Skill Routing Decision Tree
 

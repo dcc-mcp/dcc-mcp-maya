@@ -75,6 +75,7 @@ class SkillInfo:
     name: str
     skill_dir: Path
     scripts: List[Path] = field(default_factory=list)
+    tools: List[Tuple[str, Path, dict]] = field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------
@@ -582,17 +583,67 @@ def check_io_tool_descriptions(skill_dir: Path, skill_name: str, fm: dict) -> Li
 # ---------------------------------------------------------------------------
 
 
+def _is_deprecated_alias(tool_entry: dict) -> bool:
+    """Return True when a duplicate tool is explicitly documented as an alias."""
+    if tool_entry.get("deprecated") is True:
+        return True
+    if tool_entry.get("deprecated_alias_for") or tool_entry.get("x-deprecated-alias-for"):
+        return True
+    metadata = tool_entry.get("metadata")
+    if isinstance(metadata, dict) and metadata.get("deprecated_alias_for"):
+        return True
+    return False
+
+
+def check_duplicate_tool_action_names(
+    all_skills_info: List[SkillInfo],
+) -> List[LintIssue]:
+    """Error when bundled tool manifests expose duplicate bare action names."""
+    issues: List[LintIssue] = []
+    action_map: Dict[str, List[Tuple[str, Path, dict]]] = {}
+
+    for info in all_skills_info:
+        for name, tools_yaml, tool_entry in info.tools:
+            action_map.setdefault(name, []).append((info.name, tools_yaml, tool_entry))
+
+    for action_name, occurrences in action_map.items():
+        if len(occurrences) <= 1:
+            continue
+        active_occurrences = [item for item in occurrences if not _is_deprecated_alias(item[2])]
+        if len(active_occurrences) <= 1:
+            continue
+        skill_list = ", ".join(skill for skill, _path, _tool_entry in occurrences)
+        for skill_name, tools_yaml, tool_entry in active_occurrences:
+            issues.append(
+                LintIssue(
+                    skill=skill_name,
+                    file=str(tools_yaml),
+                    severity="ERROR",
+                    rule="DUPLICATE_TOOL_ACTION",
+                    message=(
+                        "tool action '{}' appears in multiple bundled skill manifests: {}. "
+                        "Choose one owner or mark a forwarding compatibility alias with "
+                        "deprecated_alias_for."
+                    ).format(action_name, skill_list),
+                )
+            )
+    return issues
+
+
 def check_duplicate_action_names(
     all_skills_info: List[SkillInfo],
 ) -> List[LintIssue]:
-    """Warn when two skills share the same script stem (action name collision)."""
+    """Warn when two skills share the same script stem (implementation collision)."""
     issues: List[LintIssue] = []
     # stem -> list of (skill_name, script_path)
     stem_map: Dict[str, List[Tuple[str, Path]]] = {}
 
     for info in all_skills_info:
+        exposed_actions = {name for name, _path, _tool_entry in info.tools}
         for script in info.scripts:
             stem = script.stem
+            if stem not in exposed_actions:
+                continue
             stem_map.setdefault(stem, []).append((info.name, script))
 
     for stem, occurrences in stem_map.items():
@@ -605,7 +656,7 @@ def check_duplicate_action_names(
                         file=str(script_path),
                         severity="WARNING",
                         rule="DUPLICATE_SCRIPT_STEM",
-                        message=f"script stem '{stem}' appears in multiple skills: {skill_list}",
+                        message=f"script stem '{stem}' appears in multiple exposed tools: {skill_list}",
                     )
                 )
     return issues
@@ -668,6 +719,13 @@ def lint_skill(
     issues += check_depends_exist(skill_dir, skill_name, fm, all_skill_names)
     issues += check_references_dir_wiring(skill_dir, skill_name, fm)
     issues += check_io_tool_descriptions(skill_dir, skill_name, fm)
+    tools_yaml_ref = _extract_dcc_mcp_field(fm, "tools", default="tools.yaml")
+    tools_yaml = skill_dir / str(tools_yaml_ref) if isinstance(tools_yaml_ref, str) else skill_dir / "tools.yaml"
+    info.tools = [
+        (str(tool_entry.get("name")), tools_yaml, tool_entry)
+        for tool_entry in _resolve_tools_list(skill_dir, fm)
+        if isinstance(tool_entry, dict) and str(tool_entry.get("name") or "").strip()
+    ]
 
     return issues, info
 
@@ -724,6 +782,7 @@ def lint_all(
         all_info.append(info)
 
     # Cross-skill checks
+    all_issues += check_duplicate_tool_action_names(all_info)
     all_issues += check_duplicate_action_names(all_info)
 
     if error_only:

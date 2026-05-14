@@ -43,14 +43,14 @@ cameras, set frame rate, etc.
 - **core** (`default_active: true`) — Read-only scene queries (`get_scene_info`,
   `get_selection`, `get_session_info`). Active in minimal mode.
 - **scene-management** (deactivated in minimal mode) — write-side tools:
-  open / save / export / group / parent / set selection, etc. Activate with
+  open / save / group / parent / set selection, etc. Activate with
   `activate_group("scene-management")` when the agent needs to mutate the
   scene.
 
 ## Scripts
 
 - `new_scene` — Create a new empty Maya scene
-- `save_scene` — Save the current Maya scene
+- `save_scene` — Canonical native .ma/.mb scene save; use maya-geometry for FBX/OBJ interchange
 - `open_scene` — Open a Maya scene file
 - `list_objects` — List objects in the current Maya scene
 - `get_selection` — Return the current Maya selection
@@ -66,7 +66,6 @@ cameras, set frame rate, etc.
 - `get_bounding_box` — Query the world-space bounding box of an object
 - `set_visibility` — Show or hide an object
 - `lock_object` — Lock or unlock the transform attributes of an object
-- `export_scene` — Export the entire current scene to a file
 - `set_frame_rate` — Change the scene's playback frame rate
 - `list_cameras` — List all cameras in the scene
 - `create_locator` — Create a Maya locator node

@@ -5,10 +5,10 @@ groups:
   tools:
   - file_exists
 - name: geometry
-  description: Maya scene save and FBX / OBJ interchange tools (main-thread).
+  description: FBX / OBJ interchange tools (main-thread).
   default_active: true
   tools:
-  - save_scene
   - export_fbx
+  - import_file
   - import_fbx
   - export_obj

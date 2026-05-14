@@ -40,7 +40,9 @@ metadata:
 
 Shot-level export utilities. Differs from `maya-geometry` in that it
 encodes **shot conventions**: frame range, camera, sequence/shot
-metadata. For raw FBX export of arbitrary geometry use `maya-geometry`.
+metadata, and editorial handoff expectations. For raw FBX export of
+arbitrary geometry use `maya_geometry__export_fbx`; for generic file
+imports use `maya_geometry__import_file` or `maya_geometry__import_fbx`.
 
 ## Scripts
 
