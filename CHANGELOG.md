@@ -1,5 +1,43 @@
 # Changelog
 
+## [0.2.29](https://github.com/loonghao/dcc-mcp-maya/compare/v0.2.28...v0.2.29) (2026-05-14)
+
+
+### Features
+
+* **plugin:** replace MCP menu items with OpenAPI docs and Admin panel links ([2eafe7a](https://github.com/loonghao/dcc-mcp-maya/commit/2eafe7a7a8eb812ba7173e7d5da01117c93001c0))
+* **scripting:** spill long inline execute_python to host temp file ([09645b0](https://github.com/loonghao/dcc-mcp-maya/commit/09645b04f23bd0272999689302adb808a40a5006))
+
+
+### Bug Fixes
+
+* align maya CI with core 0.15.9 ([06dd328](https://github.com/loonghao/dcc-mcp-maya/commit/06dd3283e55b6e41aa669ae3009f4eba96f4e355))
+* align MayaMcpServer with DccServerBase 0.15.9 ([6007ce8](https://github.com/loonghao/dcc-mcp-maya/commit/6007ce89955244c3fe7dbbdf6cff5a6d71495c8d))
+* harden Maya plugin threading and execute_python ([6c39aea](https://github.com/loonghao/dcc-mcp-maya/commit/6c39aea1a11cc6c108f142465ac4a4ea26cf46d8)), closes [#211](https://github.com/loonghao/dcc-mcp-maya/issues/211) [#212](https://github.com/loonghao/dcc-mcp-maya/issues/212) [#213](https://github.com/loonghao/dcc-mcp-maya/issues/213) [#214](https://github.com/loonghao/dcc-mcp-maya/issues/214) [#215](https://github.com/loonghao/dcc-mcp-maya/issues/215) [#216](https://github.com/loonghao/dcc-mcp-maya/issues/216) [#217](https://github.com/loonghao/dcc-mcp-maya/issues/217) [#218](https://github.com/loonghao/dcc-mcp-maya/issues/218)
+* make get_maya_version_string thread-safe with caching ([1797164](https://github.com/loonghao/dcc-mcp-maya/commit/17971641ec2d992f5b9761e99919b5923c1ec34b))
+* make get_maya_version_string thread-safe without breaking unit tests ([3365597](https://github.com/loonghao/dcc-mcp-maya/commit/3365597a79c036788de7adfe68d27e7fd9da9ed6))
+* **plugin:** OpenAPI docs uses instance URL, Admin uses gateway URL ([b20d17e](https://github.com/loonghao/dcc-mcp-maya/commit/b20d17e730857557cbb9612fc6a4f38b55041057))
+* **plugin:** use gateway URL for OpenAPI docs and Admin panel ([69e08f5](https://github.com/loonghao/dcc-mcp-maya/commit/69e08f56d470fe12f014a2404f3f760f5b5467a8))
+* resolve F401 lint errors in __init__.py and _skill_loader.py ([0c0e335](https://github.com/loonghao/dcc-mcp-maya/commit/0c0e335fb5270e760dd414ef46bccbfc05e66041))
+* **server:** pass DccServerOptions with options= keyword ([b27bbd4](https://github.com/loonghao/dcc-mcp-maya/commit/b27bbd4a811b3dc1a6b780bf703869a37e4075c3))
+* **skills:** deduplicate bundled skill ownership ([#232](https://github.com/loonghao/dcc-mcp-maya/issues/232)) ([1ad8a1a](https://github.com/loonghao/dcc-mcp-maya/commit/1ad8a1a08ac3fc30480a3ceca6c3b3980d94e114))
+* stabilize Maya CI against dcc-mcp-core 0.15.9 ([fd0d974](https://github.com/loonghao/dcc-mcp-maya/commit/fd0d9741f0db9a679e4e0d3f426881fcedcf98c9))
+* stabilize Maya standalone E2E on core 0.15.9 ([db1908d](https://github.com/loonghao/dcc-mcp-maya/commit/db1908dee4fd8c86abc40af1a4a0eb116b087b22))
+* **version-probe:** avoid cmds.about off main thread ([ee57310](https://github.com/loonghao/dcc-mcp-maya/commit/ee57310cb4bc6b3290b89d4672d8df44ad414afe))
+
+
+### Code Refactoring
+
+* remove legacy gateway toggles and align scripting surface ([3dd1a8a](https://github.com/loonghao/dcc-mcp-maya/commit/3dd1a8abdba9a448608af81929f682e2ebe22e3b))
+
+
+### Documentation
+
+* **maya:** P0-P2 token path, FBX contract, bulk workflow ([70718d1](https://github.com/loonghao/dcc-mcp-maya/commit/70718d1107eb5430369c191c42908989afe7f8fb))
+* point AGENTS to upstream VRS gateway replay traces ([ff676f0](https://github.com/loonghao/dcc-mcp-maya/commit/ff676f032e6cf07b8b173f27d157f3cd73f29cb7))
+* point AGENTS to upstream VRS gateway replay traces ([e36076c](https://github.com/loonghao/dcc-mcp-maya/commit/e36076c1593babc5fe98dc9765e30fe28e483d1b))
+* **skills:** warn about rigidBody dynamics crashes in execute_python ([9c4f3fc](https://github.com/loonghao/dcc-mcp-maya/commit/9c4f3fcaa7a718af5e12005a227dbf17134744ef))
+
 ## [0.2.28](https://github.com/loonghao/dcc-mcp-maya/compare/v0.2.27...v0.2.28) (2026-05-12)
 
 
