@@ -29,9 +29,11 @@ tools:
     read_only_hint: true
     idempotent_hint: true
   description: >-
-    Export shot data to FBX using the same FBX plugin contract as maya-geometry.
-    Provide an absolute destination path; parent directory must exist. For generic
-    FBX exports outside shot packaging, prefer maya_geometry__export_fbx.
+    Export shot data to FBX using the same FBX plugin contract as maya-geometry,
+    plus a required shot/export contract: selected nodes are packaged for a
+    specific frame range and downstream editorial context. Provide an absolute
+    destination path; parent directory must exist. Use maya_geometry__export_fbx
+    for generic asset or selection round-trips that do not need shot packaging.
 - name: get_shot_info
   execution: sync
   affinity: main

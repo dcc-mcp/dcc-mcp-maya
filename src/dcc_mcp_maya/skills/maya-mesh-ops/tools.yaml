@@ -5,12 +5,12 @@ tools:
   annotations:
     idempotent_hint: true
   group: modeling
-  description: Apply subdivision smoothing in the current Maya scene.
+  description: Apply mesh-focused subdivision/topology smoothing. Use maya-node-graph for construction-history inspection or attribute wiring.
 - name: cleanup_mesh
   execution: sync
   affinity: main
   group: modeling
-  description: Clean up mesh data in the current Maya scene.
+  description: Clean up polygon mesh topology and invalid components. Use maya-node-graph delete_history/list_history for construction-history operations.
 - name: combine_meshes
   execution: sync
   affinity: main

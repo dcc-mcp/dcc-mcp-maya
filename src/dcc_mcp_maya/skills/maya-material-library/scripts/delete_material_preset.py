@@ -23,7 +23,7 @@ def delete_material_preset(file_path: str) -> dict:
         if not os.path.isfile(file_path):
             return skill_error(
                 "Preset file not found: '{}'".format(file_path),
-                "Use list_materials to find available preset paths",
+                "Use list_material_presets to find available preset paths",
             )
 
         os.remove(file_path)
@@ -31,7 +31,7 @@ def delete_material_preset(file_path: str) -> dict:
 
         return skill_success(
             "Deleted material preset '{}'".format(name),
-            prompt="Use list_materials to verify the preset has been removed.",
+            prompt="Use list_material_presets to verify the preset has been removed.",
             file_path=file_path,
             preset_name=name,
         )

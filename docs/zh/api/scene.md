@@ -105,17 +105,3 @@
 ```json
 { "success": true, "group": "group1" }
 ```
-
----
-
-## `maya_scene__export_scene`
-
-将整个场景导出为文件。
-
-### 参数
-
-| 名称 | 类型 | 默认值 | 说明 |
-|------|------|--------|------|
-| `file_path` | str | — | 输出文件路径 |
-| `file_type` | str | `"mayaAscii"` | `"mayaAscii"`、`"mayaBinary"`、`"fbx"`、`"obj"` |
-| `selection_only` | bool | `false` | 仅导出选中的对象 |

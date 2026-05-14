@@ -4,7 +4,8 @@ description: |-
   Pipeline stage — render globals and viewport capture: configure render
   settings, query them, capture playblasts. Use for producing final or
   preview imagery. Not for modeling (maya-mesh-ops), animation editing
-  (maya-animation), or render farm submission (maya-render-farm).
+  (maya-animation), generic file import/export (maya-geometry), or render
+  farm submission (maya-render-farm).
 license: MIT
 allowed-tools: Bash Read
 metadata:
@@ -34,12 +35,17 @@ metadata:
 ---
 # maya-render (Pipeline stage)
 
-Render globals + viewport capture. Three small scripts that handle
-"set render settings → playblast / read settings" without going to a
-render farm. For distributed rendering, see `maya-render-farm`.
+Render globals + viewport capture. This skill intentionally exposes only
+renderer configuration, diagnostics, and render/viewport outputs. Generic
+scene or geometry file import/export belongs to `maya-geometry`; shot
+packaging belongs to `maya-shot-export`. For distributed rendering, see
+`maya-render-farm`.
 
 ## Scripts
 
 - `set_render_settings` — Set render parameters (resolution, frame range, renderer, image format)
 - `get_render_settings` — Query current render settings
+- `get_scene_render_stats` — Query render-facing scene statistics
+- `set_render_quality` — Set render quality presets
+- `capture_viewport` — Capture the active viewport as a base64-encoded PNG
 - `playblast` — Capture a viewport screenshot as a base64-encoded PNG

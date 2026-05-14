@@ -52,7 +52,7 @@ tools:
   execution: sync
   affinity: main
   group: node_graph
-  description: Smooth mesh data in the current Maya scene.
+  description: Apply node-history mesh smoothing by creating/updating construction history. Use maya-mesh-ops for polygon topology edits or mesh cleanup.
 - name: transfer_attributes
   execution: sync
   affinity: main

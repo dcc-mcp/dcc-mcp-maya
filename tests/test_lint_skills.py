@@ -337,11 +337,13 @@ class TestCheckDuplicateActionNames:
             name="skill-a",
             skill_dir=tmp_path / "skill-a",
             scripts=[tmp_path / "skill-a" / "scripts" / "alpha.py"],
+            tools=[("alpha", tmp_path / "skill-a" / "tools.yaml", {"name": "alpha"})],
         )
         info_b = lint_skills.SkillInfo(
             name="skill-b",
             skill_dir=tmp_path / "skill-b",
             scripts=[tmp_path / "skill-b" / "scripts" / "beta.py"],
+            tools=[("beta", tmp_path / "skill-b" / "tools.yaml", {"name": "beta"})],
         )
         issues = lint_skills.check_duplicate_action_names([info_a, info_b])
         assert issues == []
@@ -351,16 +353,54 @@ class TestCheckDuplicateActionNames:
             name="skill-a",
             skill_dir=tmp_path / "skill-a",
             scripts=[tmp_path / "skill-a" / "scripts" / "shared.py"],
+            tools=[("shared", tmp_path / "skill-a" / "tools.yaml", {"name": "shared"})],
         )
         info_b = lint_skills.SkillInfo(
             name="skill-b",
             skill_dir=tmp_path / "skill-b",
             scripts=[tmp_path / "skill-b" / "scripts" / "shared.py"],
+            tools=[("shared", tmp_path / "skill-b" / "tools.yaml", {"name": "shared"})],
         )
         issues = lint_skills.check_duplicate_action_names([info_a, info_b])
         assert len(issues) == 2  # one per skill
         assert all(i.rule == "DUPLICATE_SCRIPT_STEM" for i in issues)
         assert all(i.severity == "WARNING" for i in issues)
+
+    def test_duplicate_manifest_actions_are_errors(self, tmp_path):
+        info_a = lint_skills.SkillInfo(
+            name="skill-a",
+            skill_dir=tmp_path / "skill-a",
+            tools=[("shared", tmp_path / "skill-a" / "tools.yaml", {"name": "shared"})],
+        )
+        info_b = lint_skills.SkillInfo(
+            name="skill-b",
+            skill_dir=tmp_path / "skill-b",
+            tools=[("shared", tmp_path / "skill-b" / "tools.yaml", {"name": "shared"})],
+        )
+        issues = lint_skills.check_duplicate_tool_action_names([info_a, info_b])
+        assert len(issues) == 2
+        assert all(i.rule == "DUPLICATE_TOOL_ACTION" for i in issues)
+        assert all(i.severity == "ERROR" for i in issues)
+
+    def test_deprecated_alias_exempts_duplicate_manifest_action(self, tmp_path):
+        info_a = lint_skills.SkillInfo(
+            name="skill-a",
+            skill_dir=tmp_path / "skill-a",
+            tools=[("shared", tmp_path / "skill-a" / "tools.yaml", {"name": "shared"})],
+        )
+        info_b = lint_skills.SkillInfo(
+            name="skill-b",
+            skill_dir=tmp_path / "skill-b",
+            tools=[
+                (
+                    "shared",
+                    tmp_path / "skill-b" / "tools.yaml",
+                    {"name": "shared", "deprecated_alias_for": "skill-a.shared"},
+                )
+            ],
+        )
+        issues = lint_skills.check_duplicate_tool_action_names([info_a, info_b])
+        assert issues == []
 
 
 # ---------------------------------------------------------------------------

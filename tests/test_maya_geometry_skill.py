@@ -11,51 +11,6 @@ from unittest.mock import MagicMock
 from conftest import load_and_call, load_and_call_with_mel
 
 
-def test_create_sphere_calls_poly_sphere():
-    """Legacy create_sphere lives under maya-primitives now; this test pins
-    the maya-geometry copy still works for backward compatibility."""
-    cmds = MagicMock()
-    cmds.polySphere.return_value = ["heroSphere", "heroSphereShape"]
-
-    result = load_and_call(
-        "maya-geometry/scripts/create_sphere.py",
-        cmds,
-        "main",
-        radius=2.5,
-        name="heroSphere",
-    )
-
-    assert result["success"] is True
-    assert result["context"]["object_name"] == "heroSphere"
-    cmds.polySphere.assert_called_once_with(radius=2.5, name="heroSphere")
-
-
-def test_create_sphere_rejects_invalid_radius():
-    cmds = MagicMock()
-
-    result = load_and_call("maya-geometry/scripts/create_sphere.py", cmds, "main", radius=0)
-
-    assert result["success"] is False
-    cmds.polySphere.assert_not_called()
-
-
-def test_save_scene_renames_and_saves():
-    cmds = MagicMock()
-    cmds.file.side_effect = [None, "c:/tmp/test.ma"]
-
-    result = load_and_call(
-        "maya-geometry/scripts/save_scene.py",
-        cmds,
-        "main",
-        path="c:/tmp/test.ma",
-        file_type="mayaAscii",
-    )
-
-    assert result["success"] is True
-    cmds.file.assert_any_call(rename="c:/tmp/test.ma")
-    cmds.file.assert_any_call(save=True, type="mayaAscii")
-
-
 def test_file_exists_uses_filesystem(tmp_path):
     path = tmp_path / "mesh.fbx"
     path.write_text("x")
@@ -65,6 +20,37 @@ def test_file_exists_uses_filesystem(tmp_path):
 
     assert result["success"] is True
     assert result["context"]["exists"] is True
+
+
+def test_import_file_loads_required_plugin_before_import(tmp_path):
+    path = tmp_path / "cache.abc"
+    path.write_bytes(b"abc")
+    cmds = MagicMock()
+    cmds.pluginInfo.return_value = False
+    cmds.ls.return_value = ["cacheRoot"]
+
+    result = load_and_call("maya-geometry/scripts/import_file.py", cmds, "main", file_path=str(path))
+
+    assert result["success"] is True, result
+    cmds.pluginInfo.assert_called_once_with("AbcImport", query=True, loaded=True)
+    cmds.loadPlugin.assert_called_once_with("AbcImport")
+    args, kwargs = cmds.file.call_args
+    assert args[0] == str(path).replace("\\", "/")
+    assert kwargs["i"] is True
+    assert result["context"]["loaded_plugins"] == ["AbcImport"]
+
+
+def test_import_file_skips_plugin_load_for_native_maya_file(tmp_path):
+    path = tmp_path / "scene.ma"
+    path.write_text("// maya ascii")
+    cmds = MagicMock()
+    cmds.ls.return_value = []
+
+    result = load_and_call("maya-geometry/scripts/import_file.py", cmds, "main", file_path=str(path))
+
+    assert result["success"] is True, result
+    cmds.pluginInfo.assert_not_called()
+    cmds.loadPlugin.assert_not_called()
 
 
 def test_export_fbx_pushes_options_through_mel_and_verifies(tmp_path):
