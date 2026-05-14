@@ -34,7 +34,7 @@
 
 ## 3. 连接 Claude Desktop（参考）
 
-在 `claude_desktop_config.json` 中加入（详见 [CLAUDE.md](../../CLAUDE.md)）：
+在 `claude_desktop_config.json` 中加入（详见仓库根目录 `CLAUDE.md`）：
 
 ```json
 {
