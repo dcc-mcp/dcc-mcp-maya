@@ -11,7 +11,7 @@ import os
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
-def list_materials(library_dir: str) -> dict:
+def list_material_presets(library_dir: str) -> dict:
     """List all material preset JSON files in a library directory.
 
     Args:
@@ -61,7 +61,7 @@ def list_materials(library_dir: str) -> dict:
 
 @skill_entry
 def main(**kwargs):
-    return list_materials(**kwargs)
+    return list_material_presets(**kwargs)
 
 
 if __name__ == "__main__":

@@ -13,7 +13,6 @@ groups:
   - center_pivot
   - create_locator
   - duplicate_object
-  - export_scene
   - freeze_transforms
   - get_bounding_box
   - list_cameras

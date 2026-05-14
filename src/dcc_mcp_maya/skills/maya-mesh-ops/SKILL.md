@@ -2,9 +2,10 @@
 name: maya-mesh-ops
 description: |-
   Authoring stage — polygon mesh editing: bevel, extrude, bridge, combine,
-  separate, cleanup, boolean. Use for modifying existing geometry. Not for
-  primitive creation (use maya-primitives), UV layout (maya-uv-ops), or
-  material assignment (maya-materials).
+  separate, cleanup, boolean. Use for modifying existing polygon topology.
+  Not for primitive creation (use maya-primitives), construction-history or
+  DG inspection (use maya-node-graph), UV layout (maya-uv-ops), or material
+  assignment (maya-materials).
 license: MIT
 allowed-tools: Bash Read
 metadata:
@@ -37,8 +38,9 @@ metadata:
 ---
 # maya-mesh-ops (Authoring stage)
 
-Polygon mesh editing operations. Strictly **modifies existing geometry**;
-all creation primitives live in `maya-primitives`.
+Polygon mesh editing operations. Strictly **modifies existing polygon
+topology**; all creation primitives live in `maya-primitives`, while
+construction-history inspection belongs to `maya-node-graph`.
 
 Each tool declares `affinity: main` because every operation touches
 `maya.cmds`; the dispatcher schedules them on Maya's UI thread via
