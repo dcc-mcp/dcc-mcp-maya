@@ -5,6 +5,13 @@ on:
     branches: [main]
     paths:
       - "docs/**"
+      - "examples/mcp/**"
+      - ".github/workflows/docs.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - "examples/mcp/**"
       - ".github/workflows/docs.yml"
   workflow_dispatch:
 
@@ -42,11 +49,13 @@ jobs:
         run: npm run build
 
       - name: Upload artifact
+        if: github.event_name != 'pull_request'
         uses: actions/upload-pages-artifact@v5
         with:
           path: docs/.vitepress/dist
 
   deploy:
+    if: github.event_name != 'pull_request'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
