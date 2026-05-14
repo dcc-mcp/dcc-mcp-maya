@@ -15,7 +15,6 @@ Manage the Maya scene lifecycle, object hierarchy, and scene state.
 | New Scene | `maya_scene__new_scene` | Create a new empty Maya scene |
 | Save Scene | `maya_scene__save_scene` | Save the current scene to disk |
 | Open Scene | `maya_scene__open_scene` | Open a Maya scene file (.ma, .mb) |
-| Export Scene | `maya_scene__export_scene` | Export the entire scene to a file |
 | List Objects | `maya_scene__list_objects` | List DAG objects with optional type filter |
 | Get Selection | `maya_scene__get_selection` | Return the current selection list |
 | Set Selection | `maya_scene__set_selection` | Set the active selection |

@@ -72,7 +72,7 @@ def export_shot_alembic(
 
         return skill_success(
             "Exported Alembic to '{}'".format(file_path),
-            prompt="Use import_file to bring the Alembic back into a scene.",
+            prompt="Use maya_geometry__import_file to bring the Alembic back into a scene.",
             file_path=file_path,
             start_frame=sf,
             end_frame=ef,
