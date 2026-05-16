@@ -1,64 +1,69 @@
 """Out-of-process sidecar integration for dcc-mcp-maya (RFC #998).
 
-This sub-package wires Maya's plugin into the `dcc-mcp-server sidecar`
-binary that ships from `dcc-mcp-core` (see PRs loonghao/dcc-mcp-core#1003,
-#1005). The sidecar runs as a **separate OS process**, supervised by the
-Maya plugin's PID, and survives Maya's C++ aborts / Qt-modal crashes /
-non-cooperative shutdowns. When the DCC dies it surfaces a structured
-`host-died` envelope to the gateway instead of cascading transport
-errors.
+This sub-package wires Maya's plug-in into the ``dcc-mcp-server sidecar``
+binary that ships from ``dcc-mcp-core`` (see PRs loonghao/dcc-mcp-core#1003,
+#1005, #1010, #1012). The sidecar runs as a **separate OS process**,
+supervised by the Maya plug-in's PID, and survives Maya's C++ aborts /
+Qt-modal crashes / non-cooperative shutdowns. When the DCC dies it
+surfaces a structured ``host-died`` envelope to the gateway instead of
+cascading transport errors.
+
+## Wire format — ``qtserver://`` (RFC #998 Addendum B item 2)
+
+The sidecar binary talks to Maya over the universal Qt-event-loop JSON-line
+dispatcher (:mod:`dcc_mcp_maya.sidecar._qt_dispatcher`). The dispatcher
+binds an ephemeral TCP port via ``QTcpServer`` and runs cooperatively on
+Maya's own Qt event loop — structurally immune to the single-flight /
+modal-dialog / PyO3-tokio contention failure modes the legacy
+``commandPort`` path suffered from (see #1009).
+
+The plug-in flow:
+
+1. Plug-in load → :func:`start_sidecar` eagerly starts the in-Maya Qt
+   server on an ephemeral port.
+2. The Qt server's registry gains a ``dispatch`` method handler that
+   forwards to the existing
+   :mod:`dcc_mcp_maya.sidecar._dispatcher.dispatch_payload` —
+   same action-lookup contract as the in-process path.
+3. The supervisor spawns ``dcc-mcp-server sidecar --host-rpc
+   qtserver://127.0.0.1:<port>`` and the sidecar binary connects back
+   to Maya over the JSON-line wire.
+
+No ``commandPort`` is ever opened on the Maya side. The legacy
+``commandport://`` URI scheme is still supported by the Rust router
+(useful for one-shot bootstrap fallback on hosts that cannot ship a
+Qt binding) but the Maya plug-in does not use it.
 
 ## Activation
 
-Sidecar mode is **opt-in** and **does not replace** the existing
-in-process MCP HTTP server. Operators enable it by:
-
-1. Setting the environment variable ``DCC_MCP_MAYA_SIDECAR=1``
-   before launching Maya.
-2. Loading the dedicated Maya plug-in
-   ``dcc_mcp_maya_sidecar_plugin`` (a separate plug-in from
-   the default ``dcc_mcp_maya_plugin``).
-
-When both conditions are met, plug-in load opens a Maya ``commandPort``
-on a free TCP port and spawns the sidecar binary with
-``--host-rpc commandport://...`` plus ``--watch-pid <maya pid>``. When
-Maya exits (cleanly or via crash) the sidecar's PPID-watch loop
-terminates it, and the OS-held FileRegistry sentinel lock is released.
-
-## Why opt-in
-
-The default in-process path remains the lowest-latency route for the
-vast majority of skill actions (cheap reads, pure-Python ops). Sidecar
-mode is reserved for actions tagged ``risk_class: high-crash`` in
-``tools.yaml`` once the gateway router in ``dcc-mcp-core`` learns to
-honour the field (Phase 2 of #998). Until that wiring lands, this
-package exercises the **lifecycle** half of the contract: spawn,
-register, supervise, deregister.
+Sidecar mode is **opt-in** and **does not replace** the in-process MCP
+HTTP server. Operators enable it by setting
+``DCC_MCP_MAYA_SIDECAR=1`` before launching Maya. The default plug-in
+(``dcc_mcp_maya_plugin``) reads the env var inside ``_post_start`` and
+spawns the supervisor automatically when set.
 
 ## Public surface
 
-* :func:`start_sidecar` — open commandPort, spawn the sidecar
+* :func:`start_sidecar` — start the in-Maya Qt server, spawn the sidecar
   subprocess, return a :class:`SidecarHandle`.
-* :func:`stop_sidecar` — terminate the sidecar and close the commandPort.
+* :func:`stop_sidecar` — terminate the subprocess and stop the Qt server.
+* :func:`build_qtserver_uri` — format the ``qtserver://`` URI the sidecar
+  dials. Kept public so tests assert on the wire format from one
+  authoritative place.
 * :func:`is_sidecar_mode_enabled` — read the env-var gate.
-* :class:`SidecarHandle` — lifetime handle exposing
-  ``proc`` (``subprocess.Popen``), ``command_port`` (``int``),
-  ``host_rpc_uri`` (``str``), ``binary_path`` (``Path``).
-* :class:`SidecarSpawnError` — raised on resolver / port-allocation
-  failure.
-
-The plug-in entry point (`maya/plugin/dcc_mcp_maya_sidecar_plugin.py`)
-is intentionally thin — all real logic lives here so unit tests can
-exercise the lifecycle without loading Maya.
+* :class:`SidecarHandle` — lifetime handle exposing ``proc``,
+  ``qt_port``, ``qt_binding``, ``host_rpc_uri``, ``binary_path``,
+  ``maya_pid``.
+* :class:`SidecarSpawnError` — raised on resolver / Qt-start /
+  spawn failure.
+* :func:`dispatch` / :func:`dispatch_payload` — Maya-side wire-frame
+  handler. Used by the in-Maya Qt server (auto-registered as the
+  ``dispatch`` method) and re-exported here so external callers /
+  tests can exercise the same lookup directly.
 """
 
 from __future__ import annotations
 
-from dcc_mcp_maya.sidecar._commandport import (
-    DEFAULT_COMMAND_PORT_HINT,
-    allocate_free_port,
-    build_host_rpc_uri,
-)
 from dcc_mcp_maya.sidecar._dispatcher import dispatch, dispatch_payload
 from dcc_mcp_maya.sidecar._resolver import (
     ENV_SIDECAR_BINARY,
@@ -69,20 +74,19 @@ from dcc_mcp_maya.sidecar._supervisor import (
     ENV_SIDECAR_MODE,
     SidecarHandle,
     SidecarSpawnError,
+    build_qtserver_uri,
     is_sidecar_mode_enabled,
     start_sidecar,
     stop_sidecar,
 )
 
 __all__ = [
-    "DEFAULT_COMMAND_PORT_HINT",
     "ENV_SIDECAR_BINARY",
     "ENV_SIDECAR_MODE",
     "SidecarBinaryError",
     "SidecarHandle",
     "SidecarSpawnError",
-    "allocate_free_port",
-    "build_host_rpc_uri",
+    "build_qtserver_uri",
     "dispatch",
     "dispatch_payload",
     "is_sidecar_mode_enabled",
