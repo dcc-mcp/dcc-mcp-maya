@@ -321,12 +321,17 @@ def test_build_minimal_mode_for_stages_rejects_unknown() -> None:
 def fake_maya_cmds() -> Iterator[types.SimpleNamespace]:
     """Inject a tiny fake ``maya.cmds`` so ``mcp_safe_session`` engages.
 
-    The fake records every call to ``autoSave`` and to each modal
-    dialog so we can assert the safe-session wrapper:
-
-    * disables AutoSave for the block,
-    * patches the dialog functions to non-blocking stubs,
-    * restores everything on exit.
+    The fake records every call to ``autoSave`` so we can assert the
+    safe-session wrapper disables AutoSave on entry and restores it on
+    exit. Dialog functions (``confirmDialog`` / ``promptDialog`` /
+    ``fileDialog`` / ``fileDialog2`` / ``layoutDialog``) are
+    intentionally NOT included on the fake — the safe-session wrapper
+    no longer monkey-patches them (RFC #998 follow-up 2026-05-16:
+    intercepting Maya's dialog ``cmds.*`` corrupted the engine's
+    internal state on common paths like ``cmds.file(new=True)`` and
+    Arnold renderer switch, so the patch was removed). Tests that
+    previously asserted "real confirmDialog must NEVER fire" are
+    replaced by AutoSave-only assertions below.
     """
     autosave_state: Dict[str, bool] = {"enabled": True}
     autosave_calls: List[Dict[str, object]] = []
@@ -338,19 +343,8 @@ def fake_maya_cmds() -> Iterator[types.SimpleNamespace]:
         autosave_state["enabled"] = bool(enable)
         return autosave_state["enabled"]
 
-    def confirm_dialog(*_args: object, **_kwargs: object) -> str:
-        raise AssertionError("real confirmDialog must NEVER fire under mcp_safe_session")
-
-    def file_dialog2(*_args: object, **_kwargs: object) -> List[str]:
-        raise AssertionError("real fileDialog2 must NEVER fire under mcp_safe_session")
-
     cmds = types.SimpleNamespace(
         autoSave=auto_save,
-        confirmDialog=confirm_dialog,
-        promptDialog=confirm_dialog,
-        fileDialog=file_dialog2,
-        fileDialog2=file_dialog2,
-        layoutDialog=confirm_dialog,
         # Auxiliary state for assertions.
         _autosave_calls=autosave_calls,
         _autosave_state=autosave_state,
@@ -398,28 +392,61 @@ def test_safe_session_disables_autosave_and_restores(fake_maya_cmds: types.Simpl
     assert fake_maya_cmds._autosave_state["enabled"] is True
 
 
-def test_safe_session_intercepts_dialogs_and_records(fake_maya_cmds: types.SimpleNamespace) -> None:
-    from dcc_mcp_maya._safe_session import mcp_safe_session, suppressed_dialog_calls
+def test_safe_session_does_not_monkey_patch_dialog_cmds(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Dialog ``cmds.*`` entries must NOT be replaced for the duration of the block.
+
+    The previous implementation monkey-patched ``cmds.confirmDialog`` /
+    ``promptDialog`` / ``fileDialog`` / ``fileDialog2`` / ``layoutDialog``
+    to non-blocking stubs that returned a fixed ``"dismiss"`` value.
+    Maya's C++ side consults those same entry points internally
+    (``cmds.file(new=True)``, Arnold renderer switch, reference
+    machinery, …) and expects specific return values; the stub
+    return value crashed Maya on real-world scripts (RFC #998
+    follow-up 2026-05-16). The patch was removed — this regression
+    test pins the behaviour so it cannot accidentally come back.
+    """
+    sentinel_calls: List[str] = []
+
+    def real_confirm_dialog(*args: object, **kwargs: object) -> str:
+        sentinel_calls.append("confirmDialog")
+        return "Yes"
+
+    def real_file_dialog2(*args: object, **kwargs: object) -> List[str]:
+        sentinel_calls.append("fileDialog2")
+        return ["/some/real/path.ma"]
+
+    cmds = types.SimpleNamespace(
+        autoSave=lambda **kw: True,
+        confirmDialog=real_confirm_dialog,
+        fileDialog2=real_file_dialog2,
+    )
+    fake_maya = types.ModuleType("maya")
+    fake_maya.cmds = cmds  # type: ignore[attr-defined]
+    monkeypatch.setitem(sys.modules, "maya", fake_maya)
+    monkeypatch.setitem(sys.modules, "maya.cmds", cmds)  # type: ignore[arg-type]
+
+    from dcc_mcp_maya._safe_session import (
+        mcp_safe_session,
+        suppressed_dialog_calls,
+    )
 
     with mcp_safe_session():
-        # These would deadlock the dispatcher in real Maya.
-        result = fake_maya_cmds.confirmDialog(title="Save?", message="Hello")
-        assert result == "dismiss"
-        files = fake_maya_cmds.fileDialog2(title="Pick a file")
-        assert files == []
-        # The recorder captured both calls (titles included for audit).
-        captured = suppressed_dialog_calls()
-        assert any("confirmDialog" in c for c in captured), captured
-        assert any("fileDialog2" in c for c in captured), captured
-
-    # After exit the originals are restored — the next call would raise
-    # AssertionError from the fake fixture, proving the patch was undone.
-    with pytest.raises(AssertionError):
-        fake_maya_cmds.confirmDialog(title="real")
+        # Calling the dialog from inside the block must hit the REAL
+        # function (the sentinel above), not a stub. If a future
+        # contributor reintroduces the monkey-patch, this assertion
+        # fails and they get pointed at the safe-session docstring.
+        assert cmds.confirmDialog(title="Save?") == "Yes"
+        assert cmds.fileDialog2(title="Pick a file") == ["/some/real/path.ma"]
+        assert sentinel_calls == ["confirmDialog", "fileDialog2"]
+        # The audit accessor stays callable for source-compat but is
+        # always empty now — see :func:`suppressed_dialog_calls`.
+        assert suppressed_dialog_calls() == []
 
 
 def test_safe_session_is_reentrant(fake_maya_cmds: types.SimpleNamespace) -> None:
-    """Nested invocations refcount; only the outermost exit restores state."""
+    """Nested invocations refcount; only the outermost exit restores AutoSave."""
     from dcc_mcp_maya._safe_session import mcp_safe_session
 
     with mcp_safe_session():
@@ -427,9 +454,7 @@ def test_safe_session_is_reentrant(fake_maya_cmds: types.SimpleNamespace) -> Non
         with mcp_safe_session():
             # AutoSave already paused; nested entry must not flip it back.
             assert fake_maya_cmds._autosave_state["enabled"] is False
-            # Dialog patches still active.
-            assert fake_maya_cmds.confirmDialog(title="nested") == "dismiss"
-        # After inner exit, still inside outer scope → state stays patched.
+        # After inner exit, still inside outer scope → AutoSave stays paused.
         assert fake_maya_cmds._autosave_state["enabled"] is False
         assert outer_disabled is False
     # Only after the outer exit does AutoSave come back.
@@ -446,10 +471,10 @@ def test_safe_session_restores_on_exception(fake_maya_cmds: types.SimpleNamespac
         with mcp_safe_session():
             assert fake_maya_cmds._autosave_state["enabled"] is False
             raise _Boom("simulated skill failure")
-    # AutoSave + dialog patches restored even though the body raised.
+    # AutoSave restored even though the body raised. Dialog ``cmds.*``
+    # entries are no longer monkey-patched, so there is nothing to
+    # restore on that side; assert AutoSave only.
     assert fake_maya_cmds._autosave_state["enabled"] is True
-    with pytest.raises(AssertionError):
-        fake_maya_cmds.confirmDialog(title="post-exception")
 
 
 # ---------------------------------------------------------------------------

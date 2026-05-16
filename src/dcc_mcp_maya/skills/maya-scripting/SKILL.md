@@ -83,8 +83,15 @@ When the user wants **many similar steps** inside Maya (e.g. 10 spheres → 10 F
 - It is the **only** stage = `bootstrap` skill. The minimal-mode default
   loads it eagerly so an agent always has a reachable escape hatch.
 - Every dispatched job runs inside `dcc_mcp_maya._safe_session.mcp_safe_session`,
-  so even an `execute_python` body that calls `cmds.confirmDialog` or triggers
-  Maya's AutoSave save-prompt will not deadlock the dispatcher.
+  which **snoozes Maya's AutoSave** for the job's duration so an unsaved-scene
+  AutoSave prompt cannot block the UI thread mid-dispatch.
+- Dialog `cmds.*` entries (`confirmDialog`, `promptDialog`, `fileDialog`,
+  `fileDialog2`, `layoutDialog`) are **not** monkey-patched. The previous
+  monkey-patch corrupted Maya's internal state on `cmds.file(new=True)`,
+  Arnold renderer switch, and other paths where the engine consumes the same
+  `cmds.*` entries internally (removed 2026-05-16). If a script genuinely
+  needs to spawn a dialog it spawns; rely on the server-side request timeout
+  to recover from a hung MCP-dispatched job rather than a global override.
 
 ## Dynamics / solver safety (host crashes)
 
