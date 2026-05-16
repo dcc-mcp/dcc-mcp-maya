@@ -486,15 +486,17 @@ def _maybe_spawn_sidecar() -> None:
             is_sidecar_mode_enabled,
             start_sidecar,
         )
-    except ImportError as exc:
-        logger.debug("dcc-mcp-maya: sidecar package unavailable: %s", exc)
+    except ImportError:
+        # Package unavailable (older dcc-mcp-maya wheel) — silent no-op.
+        # Sidecar is opt-in; logging here would be noise on every Maya
+        # boot for users who do not care about the feature.
         return
 
     if not is_sidecar_mode_enabled():
-        logger.debug(
-            "dcc-mcp-maya: DCC_MCP_MAYA_SIDECAR not set — sidecar not spawned. "
-            "This is the default."
-        )
+        # Opt-in feature disabled. Stay silent — no script-editor
+        # output, no debug log. Users who want signal can grep their
+        # log file for "DCC_MCP_MAYA_SIDECAR" or read the plug-in
+        # docstring.
         return
 
     try:
