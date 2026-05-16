@@ -311,6 +311,18 @@ def _resolve_config():
         gateway_port = int(gateway_port_str)
     except ValueError:
         gateway_port = _DEFAULT_GATEWAY_PORT
+
+    # Sidecar mode runs gateway election in the out-of-process
+    # ``dcc-mcp-server sidecar`` binary (immune to Maya main-thread
+    # starvation). Keep the in-process server as a plain instance only.
+    try:
+        from dcc_mcp_maya.sidecar import is_sidecar_mode_enabled  # noqa: PLC0415
+
+        if is_sidecar_mode_enabled():
+            gateway_port = 0
+    except ImportError:
+        pass
+
     registry_dir = os.environ.get("DCC_MCP_REGISTRY_DIR") or None
     try:
         dcc_version = str(cmds.about(version=True))

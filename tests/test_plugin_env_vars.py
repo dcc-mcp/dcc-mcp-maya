@@ -273,6 +273,13 @@ class TestSidecarSharesRegistryWithInProcessServer:
         assert "registry_dir" in kwargs, "start_sidecar must receive registry_dir to keep registries unified"
         assert str(kwargs["registry_dir"]) == str(custom_dir)
 
+    def test_sidecar_mode_disables_in_process_gateway_port(self, plugin_module, monkeypatch):
+        """Gateway election must run in the sidecar binary, not in Maya's PyO3 server."""
+        monkeypatch.setenv("DCC_MCP_MAYA_SIDECAR", "1")
+        monkeypatch.setenv("DCC_MCP_GATEWAY_PORT", "9765")
+        cfg = plugin_module._resolve_config()
+        assert cfg.get("gateway_port") is None or cfg.get("gateway_port") == 0
+
     def test_sidecar_defaults_to_maya_gateway_registry_path(self, plugin_module, monkeypatch, tmp_path):
         """When ``DCC_MCP_REGISTRY_DIR`` is unset, the sidecar must default
         to the SAME path the in-process ``GatewayRunner`` uses, namely
