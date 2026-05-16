@@ -248,6 +248,7 @@ class TestSidecarSharesRegistryWithInProcessServer:
         sidecar_pkg.SidecarSpawnError = type("SidecarSpawnError", (Exception,), {})
         sidecar_pkg.is_sidecar_mode_enabled = lambda: True
         sidecar_pkg.start_sidecar = MagicMock(name="start_sidecar", return_value=MagicMock())
+        sidecar_pkg.stop_sidecar = MagicMock(name="stop_sidecar")
 
         dcc_mcp_maya = types.ModuleType("dcc_mcp_maya")
         dcc_mcp_maya.sidecar = sidecar_pkg
@@ -294,6 +295,67 @@ class TestSidecarSharesRegistryWithInProcessServer:
             f"({tmp_path / 'dcc-mcp' / 'registry'}) is the wrong path and "
             f"splits the registry."
         )
+
+
+class TestRestartStopsSidecar:
+    """Restart MCP Server must tear down the prior sidecar before respawning."""
+
+    def test_stop_sidecar_if_running_clears_handle(self, plugin_module, monkeypatch):
+        sidecar_pkg = TestSidecarSharesRegistryWithInProcessServer()._arm_plugin(
+            plugin_module, monkeypatch
+        )
+        mock_handle = MagicMock()
+        plugin_module._sidecar_handle = mock_handle
+
+        plugin_module._stop_sidecar_if_running()
+
+        sidecar_pkg.stop_sidecar.assert_called_once_with(mock_handle)
+        assert plugin_module._sidecar_handle is None
+
+    def test_stop_sidecar_if_running_is_noop_when_absent(self, plugin_module, monkeypatch):
+        sidecar_pkg = TestSidecarSharesRegistryWithInProcessServer()._arm_plugin(
+            plugin_module, monkeypatch
+        )
+        sidecar_pkg.stop_sidecar = MagicMock(name="stop_sidecar")
+        plugin_module._sidecar_handle = None
+
+        plugin_module._stop_sidecar_if_running()
+
+        sidecar_pkg.stop_sidecar.assert_not_called()
+
+    def test_restart_deferred_stops_sidecar_before_respawn(
+        self, plugin_module, monkeypatch, mock_maya_modules
+    ):
+        sidecar_pkg = TestSidecarSharesRegistryWithInProcessServer()._arm_plugin(
+            plugin_module, monkeypatch
+        )
+        mock_handle = MagicMock()
+        plugin_module._sidecar_handle = mock_handle
+        plugin_module._stop_host_on_main_thread = MagicMock()
+        plugin_module._start = MagicMock()
+
+        if plugin_module._restart_lock.locked():
+            plugin_module._restart_lock.release()
+
+        import dcc_mcp_maya
+
+        dcc_mcp_maya.stop_server = MagicMock()
+
+        def _run_thread_immediately(target, daemon=True, name=None):  # noqa: ARG001
+            target()
+            return MagicMock()
+
+        def _run_deferred(fn):
+            fn()
+
+        monkeypatch.setattr("threading.Thread", _run_thread_immediately)
+        mock_maya_modules.utils.executeDeferred = _run_deferred
+
+        plugin_module._restart_deferred()
+
+        sidecar_pkg.stop_sidecar.assert_called_once_with(mock_handle)
+        assert plugin_module._sidecar_handle is None
+        plugin_module._start.assert_called_once_with()
 
 
 class TestExportWorkerEnv:
