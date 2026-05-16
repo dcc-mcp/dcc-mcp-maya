@@ -202,6 +202,7 @@ _host_dispatcher = None
 _menu_name = "DccMcpMenu"
 _restart_lock = threading.Lock()  # prevent overlapping restart calls
 _shutdown_coordinator = None  # Issue #186 — safety-net composition root
+_sidecar_handle = None  # RFC #998 — opt-in dcc-mcp-server sidecar subprocess
 
 
 # ── standalone detection ──────────────────────────────────────────────────────
@@ -453,6 +454,92 @@ def _post_start(cfg: dict) -> None:
     except Exception as exc:  # noqa: BLE001
         logger.debug("stale-instance scan skipped: %s", exc)
 
+    _maybe_spawn_sidecar()
+
+
+def _maybe_spawn_sidecar() -> None:
+    """Spawn the ``dcc-mcp-server sidecar`` subprocess when opted-in.
+
+    Sidecar mode is the **strategic** direction for crash-isolated
+    actions (RFC #998 — Maya / Blender / Houdini C++ aborts and
+    modal native dialogs that the in-process Python dispatcher cannot
+    intercept). The sidecar process runs alongside Maya, is supervised
+    by Maya's PID via the binary's PPID-watch, and survives non-
+    cooperative Maya shutdowns so the gateway can emit structured
+    ``host-died`` envelopes instead of transport-error cascades.
+
+    Activation is gated by :data:`dcc_mcp_maya.sidecar.ENV_SIDECAR_MODE`
+    (``DCC_MCP_MAYA_SIDECAR=1``) and is **opt-in by default** — every
+    existing user sees identical behaviour to today. When the env var
+    is set but the binary cannot be resolved, the failure is logged
+    structurally and the in-process server keeps running; sidecar
+    spawn never blocks plug-in init.
+
+    The handle is parked on module-level state so
+    :func:`_stop_blocking` can tear it down ahead of the in-process
+    server during ``uninitializePlugin``.
+    """
+    global _sidecar_handle
+    try:
+        from dcc_mcp_maya.sidecar import (  # noqa: PLC0415
+            SidecarSpawnError,
+            is_sidecar_mode_enabled,
+            start_sidecar,
+        )
+    except ImportError:
+        # Package unavailable (older dcc-mcp-maya wheel) — silent no-op.
+        # Sidecar is opt-in; logging here would be noise on every Maya
+        # boot for users who do not care about the feature.
+        return
+
+    if not is_sidecar_mode_enabled():
+        # Opt-in feature disabled. Stay silent — no script-editor
+        # output, no debug log. Users who want signal can grep their
+        # log file for "DCC_MCP_MAYA_SIDECAR" or read the plug-in
+        # docstring.
+        return
+
+    try:
+        _sidecar_handle = start_sidecar(adapter_version=VERSION)
+    except SidecarSpawnError as exc:
+        logger.error(
+            "dcc-mcp-maya: sidecar spawn failed; continuing in-process only. "
+            "Cause: %s",
+            exc,
+        )
+        _sidecar_handle = None
+        return
+
+    _print_sidecar_info(_sidecar_handle)
+
+
+def _print_sidecar_info(handle) -> None:  # noqa: ANN001
+    """Append a sidecar banner to the script editor / viewport HUD."""
+    border = "=" * 60
+    lines = [
+        border,
+        f"  dcc-mcp-maya v{VERSION}  |  SIDECAR ACTIVE (RFC #998)",
+        border,
+        f"  Binary       : {handle.binary_path}",
+        f"  PID          : {handle.proc.pid}",
+        f"  commandPort  : :{handle.command_port}",
+        f"  host-rpc URI : {handle.host_rpc_uri}",
+        f"  watch-pid    : {handle.maya_pid} (Maya)",
+        border,
+    ]
+    print("\n".join(lines))  # noqa: T201 — intentional console output
+
+    if _is_interactive():
+        try:
+            cmds.inViewMessage(
+                amg=f"DCC MCP <b>sidecar</b> PID <b>{handle.proc.pid}</b> attached",
+                pos="topCenter",
+                fade=True,
+                fadeStayTime=4000,
+            )
+        except Exception:  # noqa: BLE001 — viewport HUD is cosmetic
+            pass
+
 
 def _print_startup_info(cfg: dict) -> None:
     """Print startup info to Maya console and script editor."""
@@ -514,8 +601,34 @@ def _stop_blocking() -> None:
     Safe to call from any thread.  Uses the standard stop_server() path
     which calls handle.shutdown() (blocking).  Only used during plugin
     unload (``uninitializePlugin``), where blocking is acceptable.
+
+    Ordering matters here:
+
+    1. Sidecar subprocess teardown is attempted **first** so it
+       deregisters from the shared FileRegistry while we still have
+       a healthy Python interpreter. If we let it ride the PPID-watch
+       path during Maya exit instead, the row would still be cleaned
+       up by the OS sentinel fallback, but the call path is
+       structurally cleaner when we tear down explicitly.
+    2. In-process MCP HTTP server stops next via the standard
+       ``stop_server()`` path.
+
+    Any single failure does NOT abort the whole sequence — each step
+    is wrapped so the others still run, mirroring the resilience
+    contract issue #126 added for the in-process path.
     """
-    global _handle, _host, _host_dispatcher
+    global _handle, _host, _host_dispatcher, _sidecar_handle
+
+    if _sidecar_handle is not None:
+        try:
+            from dcc_mcp_maya.sidecar import stop_sidecar  # noqa: PLC0415
+
+            stop_sidecar(_sidecar_handle)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("dcc-mcp-maya: sidecar stop_sidecar raised: %s", exc)
+        finally:
+            _sidecar_handle = None
+
     try:
         if _host is not None:
             _host.stop()

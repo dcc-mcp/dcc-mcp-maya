@@ -93,6 +93,15 @@ if (-not $SkipBuild) {
         Write-Host "   maturin develop --features $DevFeatures ..." -ForegroundColor Gray
         & $Mayapy -m maturin develop --features $DevFeatures
         if ($LASTEXITCODE -ne 0) { throw "maturin develop failed" }
+
+        # Build the standalone dcc-mcp-server binary for sidecar mode (RFC #998).
+        # No mayapy involvement — this is a pure Rust binary. We reuse the same
+        # target/ directory the maturin develop step just populated so cargo
+        # finds most artefacts already compiled (link step only, ~5s on a warm
+        # build).
+        Write-Host "   cargo build --release -p dcc-mcp-server (sidecar binary) ..." -ForegroundColor Gray
+        & cargo build --release -p dcc-mcp-server
+        if ($LASTEXITCODE -ne 0) { throw "cargo build dcc-mcp-server failed" }
     } finally {
         Pop-Location
     }
@@ -104,6 +113,18 @@ if (-not $SkipBuild) {
     Write-Host "   ✅ dcc_mcp_core built under $corePkg" -ForegroundColor Green
 } else {
     Write-Host "   SkipBuild: not rebuilding core" -ForegroundColor Yellow
+}
+
+# Resolve the sidecar binary path produced by the build step above.
+# We resolve it AFTER -SkipBuild handling so re-link runs can still
+# wire the .mod file correctly when a prior build is reusable.
+$ServerBin = Join-Path $CoreRepo "target\release\dcc-mcp-server.exe"
+if (-not (Test-Path $ServerBin)) {
+    Write-Host "   ⚠️  dcc-mcp-server.exe not found at $ServerBin" -ForegroundColor Yellow
+    Write-Host "       Sidecar mode (DCC_MCP_MAYA_SIDECAR=1) will fall back to PATH lookup or fail." -ForegroundColor Yellow
+    $ServerBin = $null
+} else {
+    Write-Host "   ✅ dcc-mcp-server binary at $ServerBin" -ForegroundColor Green
 }
 
 Write-Host ""
@@ -145,8 +166,44 @@ try {
 }
 
 Copy-Item -Path (Join-Path $MayaRoot "maya\plugin\dcc_mcp_maya_plugin.py") -Destination (Join-Path $Target "plug-ins") -Force
-Copy-Item -Path (Join-Path $MayaRoot "maya\userSetup.py") -Destination (Join-Path $Target "scripts") -Force
+$UserSetupDest = Join-Path $Target "scripts\userSetup.py"
+Copy-Item -Path (Join-Path $MayaRoot "maya\userSetup.py") -Destination $UserSetupDest -Force
 Write-Host "   ✅ plug-ins + scripts copied" -ForegroundColor Green
+
+# Dev-mode env-var defaults appended to userSetup.py (NOT to the .mod file).
+#
+# Why not the .mod file? Maya parses `.mod` files for module discovery and
+# only reliably supports `:=` / `+:=` / `+=` for **path-list** variables
+# (PYTHONPATH, MAYA_PLUG_IN_PATH, MAYA_SCRIPT_PATH). Plain env vars set via
+# `KEY := value` are honoured by some Maya versions but silently ignored by
+# others (verified Maya 2026: dcc-mcp-maya#244 — sidecar did not spawn even
+# though the line was in the .mod file).
+#
+# `userSetup.py` runs Python code during Maya init and is honoured by every
+# Maya version we target. Using ``os.environ.setdefault`` keeps any
+# shell-level override the operator set before launching Maya (e.g.
+# ``set DCC_MCP_MAYA_SIDECAR=0``).
+#
+# PyPI / production installs ship `maya/userSetup.py` unmodified — only
+# this dev script appends the block, keeping the production opt-in
+# contract intact.
+if ($ServerBin) {
+    $ServerBinEscaped = $ServerBin -replace '\\', '\\'
+    $DevBlock = @"
+
+
+# ── Dev-mode env defaults (appended by tools/maya-dev-build-link-core-win.ps1) ──
+# NOT present in PyPI installs. Auto-enables the sidecar workflow (RFC #998)
+# so a fresh ``vx just maya-dev-build-link-core-win`` run produces a Maya
+# session that immediately spawns ``dcc-mcp-server.exe`` alongside Maya.
+# Shell-level ``set DCC_MCP_MAYA_SIDECAR=0`` still wins via ``setdefault``.
+import os as _dcc_mcp_dev_os
+_dcc_mcp_dev_os.environ.setdefault("DCC_MCP_MAYA_SIDECAR", "1")
+_dcc_mcp_dev_os.environ.setdefault("DCC_MCP_SERVER_BIN", "$ServerBinEscaped")
+"@
+    Add-Content -Path $UserSetupDest -Value $DevBlock -Encoding UTF8
+    Write-Host "   ✅ dev-mode env defaults appended to userSetup.py" -ForegroundColor Green
+}
 
 $ModContent = @(
     "+ dcc-mcp-maya 0.0.0-dev $Target",
@@ -166,6 +223,19 @@ Write-Host "   http://127.0.0.1:8765/mcp"
 Write-Host "MCP via elected gateway (multi-instance, if enabled):" -ForegroundColor Cyan
 Write-Host "   http://127.0.0.1:9765/mcp"
 Write-Host "Docs: docs/guide/local-mcp-debug.md | examples/mcp/cursor-maya-streamable-http.json" -ForegroundColor Gray
+
+if ($ServerBin) {
+    Write-Host ""
+    Write-Host "Sidecar mode (experimental, RFC #998) — AUTO-ENABLED for dev builds:" -ForegroundColor Cyan
+    Write-Host "   The dev script appended ``os.environ.setdefault`` calls to the" -ForegroundColor Gray
+    Write-Host "   shipped userSetup.py so DCC_MCP_MAYA_SIDECAR=1 and the binary" -ForegroundColor Gray
+    Write-Host "   path are set the moment Maya boots Python. Just launch Maya." -ForegroundColor Gray
+    Write-Host "   PyPI / production installs stay opt-in (no override appended)." -ForegroundColor Gray
+    Write-Host "   Verify in Task Manager — a 'dcc-mcp-server.exe' child should" -ForegroundColor Gray
+    Write-Host "   appear under Maya within a second of plug-in init." -ForegroundColor Gray
+    Write-Host "   To test legacy in-process-only, run with DCC_MCP_MAYA_SIDECAR=0" -ForegroundColor Gray
+    Write-Host "   in the launching shell (the ``setdefault`` honours that)." -ForegroundColor Gray
+}
 
 if ($LaunchMaya) {
     $mayaExe = "C:\Program Files\Autodesk\Maya${MayaVersion}\bin\maya.exe"
