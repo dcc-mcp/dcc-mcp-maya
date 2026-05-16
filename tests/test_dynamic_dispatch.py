@@ -364,6 +364,12 @@ def test_executor_dispatcher_exception_surfaces_as_skill_error(monkeypatch):
         def submit_callable(self, *args, **kwargs):
             raise RuntimeError("dispatcher crashed")
 
+    # Simulate the production "MCP request on a tokio worker thread" path
+    # so the executor actually consults the dispatcher (calling
+    # ``submit_callable`` from Python's main thread would deadlock —
+    # see :func:`dcc_mcp_maya._executor.execute_in_process` doc).
+    monkeypatch.setattr(_executor, "_on_main_thread", lambda: False)
+
     fake_server = MagicMock()
     fake_server._maya_dispatcher = _Boom()
 

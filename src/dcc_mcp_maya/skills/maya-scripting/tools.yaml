@@ -22,17 +22,11 @@ tools:
         type: string
         description: Same as file_path.
 - name: execute_python
-  description: "Bare-exec Python in Maya \u2014 wrapper-free dispatch, persistent module-level\
-    \ namespace (`import x` survives across calls), AST-rewrite captures last expression's\
-    \ value when `result_type != NONE`. Concurrency-safe: every off-main-thread call\
-    \ is funneled through a single-writer FIFO queue (configurable depth via DCC_MCP_MAYA_EXEC_QUEUE_DEPTH,\
-    \ default 64) and marshaled to Maya's UI thread with executeInMainThreadWithResult.\
-    \ Bursty agents that exceed the queue depth get a clean QueueFullError envelope\
-    \ (back off + retry) instead of a Maya hang. The persistent namespace pre-binds\
-    \ `cmds` and `mel` so user code can call them without an explicit import. Aligned\
-    \ with PatrickPalmer/maya-mcp-server semantics. Prefer search_skills / dcc_capability_manifest\
-    \ \u2192 load_skill \u2192 typed tools when one fits. For long scripts, upload\
-    \ once via write_module then call with `import name; name.run()`."
+  description: "Bare-exec Python in Maya. Persistent globals (cmds / mel pre-bound).\
+    \ Off-main-thread calls are serialised through a bounded FIFO queue and marshaled\
+    \ to Maya's UI thread; QueueFullError on overflow. result_type \u2260 NONE captures\
+    \ the trailing expression. Prefer search_skills / load_skill \u2192 typed tools\
+    \ when one fits; upload long scripts via write_module then call `import name; name.run()`."
   execution: sync
   affinity: main
   annotations:
