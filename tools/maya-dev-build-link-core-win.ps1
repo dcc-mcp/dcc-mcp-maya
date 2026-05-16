@@ -166,11 +166,6 @@ try {
 }
 
 Copy-Item -Path (Join-Path $MayaRoot "maya\plugin\dcc_mcp_maya_plugin.py") -Destination (Join-Path $Target "plug-ins") -Force
-$SidecarPlugin = Join-Path $MayaRoot "maya\plugin\dcc_mcp_maya_sidecar_plugin.py"
-if (Test-Path $SidecarPlugin) {
-    Copy-Item -Path $SidecarPlugin -Destination (Join-Path $Target "plug-ins") -Force
-    Write-Host "   ✅ sidecar plug-in copied (load via Plug-in Manager when DCC_MCP_MAYA_SIDECAR=1)" -ForegroundColor Green
-}
 Copy-Item -Path (Join-Path $MayaRoot "maya\userSetup.py") -Destination (Join-Path $Target "scripts") -Force
 Write-Host "   ✅ plug-ins + scripts copied" -ForegroundColor Green
 
@@ -202,11 +197,11 @@ Write-Host "Docs: docs/guide/local-mcp-debug.md | examples/mcp/cursor-maya-strea
 if ($ServerBin) {
     Write-Host ""
     Write-Host "Sidecar mode (experimental, RFC #998):" -ForegroundColor Cyan
-    Write-Host "   1. set DCC_MCP_MAYA_SIDECAR=1   # before launching Maya" -ForegroundColor Gray
-    Write-Host "   2. In Plug-in Manager, load 'dcc_mcp_maya_sidecar_plugin'" -ForegroundColor Gray
-    Write-Host "      (DCC_MCP_SERVER_BIN is already wired by the .mod file)" -ForegroundColor Gray
-    Write-Host "   The sidecar spawns dcc-mcp-server.exe alongside Maya and PPID-watches Maya's PID;" -ForegroundColor Gray
-    Write-Host "   it survives C++ aborts so the gateway can emit host-died envelopes." -ForegroundColor Gray
+    Write-Host "   set DCC_MCP_MAYA_SIDECAR=1   # before launching Maya" -ForegroundColor Gray
+    Write-Host "   The single dcc_mcp_maya_plugin handles both the in-process MCP server" -ForegroundColor Gray
+    Write-Host "   and the sidecar spawn (DCC_MCP_SERVER_BIN is wired by the .mod file)." -ForegroundColor Gray
+    Write-Host "   The sidecar PPID-watches Maya's PID and survives C++ aborts," -ForegroundColor Gray
+    Write-Host "   so the gateway can emit host-died envelopes instead of transport errors." -ForegroundColor Gray
 }
 
 if ($LaunchMaya) {
