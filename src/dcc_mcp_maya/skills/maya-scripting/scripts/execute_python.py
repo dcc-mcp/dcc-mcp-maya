@@ -86,6 +86,34 @@ _PERSISTENT_NS: Dict[str, Any] = {"__name__": "__maya_mcp_exec__"}
 _VALID_RESULT_TYPES = frozenset({"NONE", "VALUE", "JSON", "REPR"})
 
 
+def _ensure_maya_aliases(namespace: Dict[str, Any]) -> None:
+    """Lazily inject the ``cmds`` / ``mel`` aliases users expect.
+
+    maya-mcp-server (our stability benchmark) executes against
+    ``globals()`` of a module that already does
+    ``import maya.cmds as cmds``. Users typing scripts in the Script
+    Editor write ``cmds.polyCube(...)`` without an explicit import.
+    Reproduce that ergonomic by pre-populating the persistent
+    namespace on first use. Imports are best-effort — when Maya is
+    unavailable (``mayapy``/tests with no mock) the aliases simply
+    stay absent and user code has to qualify ``maya.cmds`` itself.
+    """
+    if "cmds" not in namespace:
+        try:
+            import maya.cmds as _cmds  # noqa: PLC0415
+        except ImportError:
+            pass
+        else:
+            namespace["cmds"] = _cmds
+    if "mel" not in namespace:
+        try:
+            import maya.mel as _mel  # noqa: PLC0415
+        except ImportError:
+            pass
+        else:
+            namespace["mel"] = _mel
+
+
 def _exec_and_capture_last_expression(code: str, filename: str, namespace: Dict[str, Any]) -> Tuple[Any, bool]:
     """Exec ``code`` on ``namespace``; return ``(value, was_expression)``.
 
@@ -198,16 +226,33 @@ def _execute_bare(
     if inplace or _running_on_main_thread():
         return _execute_bare_inplace(code, filename, result_type, capture_output, namespace)
 
-    mu = _import_maya_utils()
-    if mu is None:
-        return _execute_bare_inplace(code, filename, result_type, capture_output, namespace)
+    # Hand off to the process-wide single-writer queue. The pump thread
+    # serialises every concurrent ``execute_python`` invocation through
+    # ``maya.utils.executeInMainThreadWithResult`` so:
+    #   * order is strict FIFO (independent of tokio scheduling),
+    #   * only one main-thread bridge call is in flight at a time
+    #     (no thrash on Maya's deferred queue under burst load),
+    #   * the queue has a bounded depth (configurable via
+    #     ``DCC_MCP_MAYA_EXEC_QUEUE_DEPTH``), so floods surface as a
+    #     clean ``QueueFullError`` envelope instead of stalling tokio
+    #     workers indefinitely.
+    from dcc_mcp_maya import _main_thread_queue  # noqa: PLC0415
 
     def _on_main() -> Dict[str, Any]:
         return _execute_bare_inplace(code, filename, result_type, capture_output, namespace)
 
+    future = _main_thread_queue.get_queue().submit(_on_main)
     try:
-        return mu.executeInMainThreadWithResult(_on_main)
-    except Exception as exc:  # noqa: BLE001 — relay the marshalling failure itself
+        return future.result()
+    except _main_thread_queue.QueueFullError as exc:
+        return {
+            "success": False,
+            "result": None,
+            "error": {"type": "QueueFullError", "message": str(exc), "traceback": ""},
+            "stdout": "",
+            "stderr": "",
+        }
+    except Exception as exc:  # noqa: BLE001 — relay marshalling / pump failure
         return {
             "success": False,
             "result": None,
@@ -284,15 +329,6 @@ def _execute_bare_inplace(
 def _running_on_main_thread() -> bool:
     """True when the current thread is Maya's UI / main thread."""
     return threading.current_thread() is _MAIN_THREAD
-
-
-def _import_maya_utils() -> Any:
-    """Return ``maya.utils`` or ``None`` when Maya is unavailable (mayapy/tests)."""
-    try:
-        import maya.utils as mu  # noqa: PLC0415
-    except ImportError:
-        return None
-    return mu
 
 
 def _resolve_script_file_path(params: Dict[str, Any]) -> Optional[str]:
@@ -402,6 +438,8 @@ def execute_python(**params: Any):
 
     capture_output = bool(params.get("capture_output", True))
     inplace = bool(params.get("inplace", False))
+
+    _ensure_maya_aliases(run_ns)
 
     envelope = _execute_bare(
         code=code,
