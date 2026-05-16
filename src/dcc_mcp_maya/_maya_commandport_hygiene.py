@@ -1,4 +1,9 @@
-"""commandPort security-warning suppression (issue #148).
+"""Maya commandPort hygiene — not MCP transport (issues #148, #217).
+
+We do **not** open commandPort for MCP or sidecar (those use HTTP and
+``qtserver://``). This module only defuses Maya's **existing** listeners
+(default ``:50007``, third-party ports) so stray probes do not block the
+UI thread or flood the Script Editor.
 
 Maya's legacy ``commandPort`` shows a modal "Allow / Deny / Allow All"
 dialog the first time it receives a payload from an unfamiliar source.

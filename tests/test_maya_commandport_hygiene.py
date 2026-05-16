@@ -1,9 +1,9 @@
-"""Unit tests for ``dcc_mcp_maya._commandport`` (issue #148).
+"""Unit tests for ``dcc_mcp_maya._maya_commandport_hygiene`` (issue #148).
 
 Mocks ``maya.cmds`` / ``maya.mel`` because these are not importable
 in the standard CI matrix (no Maya install). The corresponding
 real-Maya behaviour is exercised separately by the mayapy E2E test
-in ``tests/e2e/test_commandport_e2e.py``.
+in ``tests/e2e/test_maya_commandport_hygiene_e2e.py``.
 """
 
 # Import future modules
@@ -17,7 +17,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 # Import local modules
-from dcc_mcp_maya import _commandport
+from dcc_mcp_maya import _maya_commandport_hygiene as _commandport
 
 # ────────────────────────────────────────────────────────────────────────
 # _is_disabled_by_env
