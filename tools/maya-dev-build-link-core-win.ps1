@@ -93,6 +93,15 @@ if (-not $SkipBuild) {
         Write-Host "   maturin develop --features $DevFeatures ..." -ForegroundColor Gray
         & $Mayapy -m maturin develop --features $DevFeatures
         if ($LASTEXITCODE -ne 0) { throw "maturin develop failed" }
+
+        # Build the standalone dcc-mcp-server binary for sidecar mode (RFC #998).
+        # No mayapy involvement — this is a pure Rust binary. We reuse the same
+        # target/ directory the maturin develop step just populated so cargo
+        # finds most artefacts already compiled (link step only, ~5s on a warm
+        # build).
+        Write-Host "   cargo build --release -p dcc-mcp-server (sidecar binary) ..." -ForegroundColor Gray
+        & cargo build --release -p dcc-mcp-server
+        if ($LASTEXITCODE -ne 0) { throw "cargo build dcc-mcp-server failed" }
     } finally {
         Pop-Location
     }
@@ -104,6 +113,18 @@ if (-not $SkipBuild) {
     Write-Host "   ✅ dcc_mcp_core built under $corePkg" -ForegroundColor Green
 } else {
     Write-Host "   SkipBuild: not rebuilding core" -ForegroundColor Yellow
+}
+
+# Resolve the sidecar binary path produced by the build step above.
+# We resolve it AFTER -SkipBuild handling so re-link runs can still
+# wire the .mod file correctly when a prior build is reusable.
+$ServerBin = Join-Path $CoreRepo "target\release\dcc-mcp-server.exe"
+if (-not (Test-Path $ServerBin)) {
+    Write-Host "   ⚠️  dcc-mcp-server.exe not found at $ServerBin" -ForegroundColor Yellow
+    Write-Host "       Sidecar mode (DCC_MCP_MAYA_SIDECAR=1) will fall back to PATH lookup or fail." -ForegroundColor Yellow
+    $ServerBin = $null
+} else {
+    Write-Host "   ✅ dcc-mcp-server binary at $ServerBin" -ForegroundColor Green
 }
 
 Write-Host ""
@@ -145,6 +166,11 @@ try {
 }
 
 Copy-Item -Path (Join-Path $MayaRoot "maya\plugin\dcc_mcp_maya_plugin.py") -Destination (Join-Path $Target "plug-ins") -Force
+$SidecarPlugin = Join-Path $MayaRoot "maya\plugin\dcc_mcp_maya_sidecar_plugin.py"
+if (Test-Path $SidecarPlugin) {
+    Copy-Item -Path $SidecarPlugin -Destination (Join-Path $Target "plug-ins") -Force
+    Write-Host "   ✅ sidecar plug-in copied (load via Plug-in Manager when DCC_MCP_MAYA_SIDECAR=1)" -ForegroundColor Green
+}
 Copy-Item -Path (Join-Path $MayaRoot "maya\userSetup.py") -Destination (Join-Path $Target "scripts") -Force
 Write-Host "   ✅ plug-ins + scripts copied" -ForegroundColor Green
 
@@ -154,6 +180,12 @@ $ModContent = @(
     "MAYA_PLUG_IN_PATH+:=plug-ins",
     "MAYA_SCRIPT_PATH+:=scripts"
 )
+if ($ServerBin) {
+    # .mod files set environment variables via `KEY := value` (absolute assignment).
+    # Maya parses this on plugin scan, so the sidecar plug-in's
+    # `resolve_sidecar_binary()` finds the binary the moment it imports.
+    $ModContent += "DCC_MCP_SERVER_BIN := $ServerBin"
+}
 $ModFile = Join-Path $ModDir "dcc-mcp-maya.mod"
 $ModContent | Out-File -FilePath $ModFile -Encoding ASCII
 Write-Host "   ✅ $ModFile" -ForegroundColor Green
@@ -166,6 +198,16 @@ Write-Host "   http://127.0.0.1:8765/mcp"
 Write-Host "MCP via elected gateway (multi-instance, if enabled):" -ForegroundColor Cyan
 Write-Host "   http://127.0.0.1:9765/mcp"
 Write-Host "Docs: docs/guide/local-mcp-debug.md | examples/mcp/cursor-maya-streamable-http.json" -ForegroundColor Gray
+
+if ($ServerBin) {
+    Write-Host ""
+    Write-Host "Sidecar mode (experimental, RFC #998):" -ForegroundColor Cyan
+    Write-Host "   1. set DCC_MCP_MAYA_SIDECAR=1   # before launching Maya" -ForegroundColor Gray
+    Write-Host "   2. In Plug-in Manager, load 'dcc_mcp_maya_sidecar_plugin'" -ForegroundColor Gray
+    Write-Host "      (DCC_MCP_SERVER_BIN is already wired by the .mod file)" -ForegroundColor Gray
+    Write-Host "   The sidecar spawns dcc-mcp-server.exe alongside Maya and PPID-watches Maya's PID;" -ForegroundColor Gray
+    Write-Host "   it survives C++ aborts so the gateway can emit host-died envelopes." -ForegroundColor Gray
+}
 
 if ($LaunchMaya) {
     $mayaExe = "C:\Program Files\Autodesk\Maya${MayaVersion}\bin\maya.exe"
