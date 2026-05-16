@@ -177,9 +177,16 @@ $ModContent = @(
 )
 if ($ServerBin) {
     # .mod files set environment variables via `KEY := value` (absolute assignment).
-    # Maya parses this on plugin scan, so the sidecar plug-in's
-    # `resolve_sidecar_binary()` finds the binary the moment it imports.
+    # Maya parses these on module scan so the plug-in sees them the moment
+    # it imports — no need for the operator to set them in the shell.
     $ModContent += "DCC_MCP_SERVER_BIN := $ServerBin"
+
+    # Dev workflow opts into sidecar mode by default. The PyPI distribution
+    # for end-users does NOT ship this .mod file, so production installs
+    # remain opt-in (DCC_MCP_MAYA_SIDECAR must be set explicitly there).
+    # If you specifically want to test the legacy in-process-only path
+    # against a dev build, delete this line from the generated .mod file.
+    $ModContent += "DCC_MCP_MAYA_SIDECAR := 1"
 }
 $ModFile = Join-Path $ModDir "dcc-mcp-maya.mod"
 $ModContent | Out-File -FilePath $ModFile -Encoding ASCII
@@ -196,12 +203,14 @@ Write-Host "Docs: docs/guide/local-mcp-debug.md | examples/mcp/cursor-maya-strea
 
 if ($ServerBin) {
     Write-Host ""
-    Write-Host "Sidecar mode (experimental, RFC #998):" -ForegroundColor Cyan
-    Write-Host "   set DCC_MCP_MAYA_SIDECAR=1   # before launching Maya" -ForegroundColor Gray
-    Write-Host "   The single dcc_mcp_maya_plugin handles both the in-process MCP server" -ForegroundColor Gray
-    Write-Host "   and the sidecar spawn (DCC_MCP_SERVER_BIN is wired by the .mod file)." -ForegroundColor Gray
-    Write-Host "   The sidecar PPID-watches Maya's PID and survives C++ aborts," -ForegroundColor Gray
-    Write-Host "   so the gateway can emit host-died envelopes instead of transport errors." -ForegroundColor Gray
+    Write-Host "Sidecar mode (experimental, RFC #998) — AUTO-ENABLED for dev builds:" -ForegroundColor Cyan
+    Write-Host "   The generated .mod file sets DCC_MCP_MAYA_SIDECAR := 1 and" -ForegroundColor Gray
+    Write-Host "   DCC_MCP_SERVER_BIN, so launching Maya alone spawns the sidecar." -ForegroundColor Gray
+    Write-Host "   PyPI / production installs stay opt-in (no .mod file shipped)." -ForegroundColor Gray
+    Write-Host "   Verify in Task Manager — a 'dcc-mcp-server.exe' child should" -ForegroundColor Gray
+    Write-Host "   appear under Maya within a second of plug-in init." -ForegroundColor Gray
+    Write-Host "   To test legacy in-process-only, edit the .mod file and delete" -ForegroundColor Gray
+    Write-Host "   the DCC_MCP_MAYA_SIDECAR line, then relaunch Maya." -ForegroundColor Gray
 }
 
 if ($LaunchMaya) {
