@@ -66,11 +66,6 @@ from dcc_mcp_maya._resources import (
     MayaResourceBinder,
     install_resources,
 )
-from dcc_mcp_maya._safe_session import (
-    ENV_SAFE_SESSION,
-    mcp_safe_session,
-    suppressed_dialog_calls,
-)
 from dcc_mcp_maya._shutdown_safety import (
     ENV_ATEXIT_HOOK,
     ENV_DEFENSIVE_DEL,
@@ -232,10 +227,6 @@ __all__ = [
     "SCHEME_MAYA_PROJECT",
     "MayaResourceBinder",
     "install_resources",
-    # Safe-session firewall (modal-dialog deadlock prevention)
-    "ENV_SAFE_SESSION",
-    "mcp_safe_session",
-    "suppressed_dialog_calls",
     # Skills-first policy — optional refusal of arbitrary script tools
     "ENV_DISABLE_EXECUTE_PYTHON",
     "ENV_DISABLE_EXECUTE_MEL",
