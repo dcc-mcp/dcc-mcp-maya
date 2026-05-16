@@ -151,8 +151,7 @@ def _dispatch_inner(
         return _envelope(
             success=False,
             error="payload-malformed",
-            message="payload.args must be a JSON object (got "
-            f"{type(args).__name__})",
+            message=f"payload.args must be a JSON object (got {type(args).__name__})",
             request_id=str(parsed.get("request_id") or ""),
             action=action_name,
         )
@@ -249,8 +248,7 @@ def _resolve_script_path(server: Any, action_name: str) -> Optional[str]:
         actions = server.list_actions()
     except Exception as exc:  # noqa: BLE001
         logger.warning(
-            "sidecar dispatch: server.list_actions() raised — treating action "
-            "%r as unknown. cause: %s",
+            "sidecar dispatch: server.list_actions() raised — treating action %r as unknown. cause: %s",
             action_name,
             exc,
         )
