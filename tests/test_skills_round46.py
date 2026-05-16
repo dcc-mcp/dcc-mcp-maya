@@ -235,20 +235,31 @@ class TestExecuteInProcess:
         assert result["success"] is True
         assert result["message"] == "direct"
 
-    def test_routes_through_dispatcher_when_attached(self, tmp_skill):
-        """With a MayaUiDispatcher attached, submit_callable must be called."""
+    def test_routes_through_dispatcher_when_attached(self, tmp_skill, monkeypatch):
+        """With a MayaUiDispatcher attached + off main thread, submit_callable must be called.
+
+        The off-main-thread monkey-patch is required because pytest runs on
+        Python's main thread, and dispatching to ``submit_callable`` from
+        the main thread would deadlock waiting for itself. Production
+        always reaches this code path from a hyper / tokio worker thread.
+        """
         script = tmp_skill("def main(**kwargs):\n    return {'success': True, 'message': 'dispatched'}\n")
         from dcc_mcp_maya import _executor
 
+        monkeypatch.setattr(_executor, "_on_main_thread", lambda: False)
+
         server = _make_server(with_dispatcher=True)
         result = _executor.execute_in_process(server, str(script), {}, "test__action")
-        # Dispatcher was consulted
         server._maya_dispatcher.submit_callable.assert_called_once()
         assert result["success"] is True
 
-    def test_dispatcher_failure_returns_error(self, tmp_skill):
+    def test_dispatcher_failure_returns_error(self, tmp_skill, monkeypatch):
         """If the dispatcher returns success=False, _execute_in_process wraps it."""
         script = tmp_skill("def main(**kwargs):\n    return {}\n")
+        from dcc_mcp_maya import _executor
+
+        monkeypatch.setattr(_executor, "_on_main_thread", lambda: False)
+
         server = _make_server()
         dispatcher = MagicMock()
         dispatcher.submit_callable.return_value = {
@@ -256,8 +267,6 @@ class TestExecuteInProcess:
             "output": None,
             "error": "Interrupted",
         }
-        from dcc_mcp_maya import _executor
-
         server._maya_dispatcher = dispatcher
         result = _executor.execute_in_process(server, str(script), {}, "test__action")
         assert result["success"] is False
