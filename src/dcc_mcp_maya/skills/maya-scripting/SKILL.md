@@ -82,16 +82,23 @@ When the user wants **many similar steps** inside Maya (e.g. 10 spheres → 10 F
 
 - It is the **only** stage = `bootstrap` skill. The minimal-mode default
   loads it eagerly so an agent always has a reachable escape hatch.
-- Every dispatched job runs inside `dcc_mcp_maya._safe_session.mcp_safe_session`,
-  which **snoozes Maya's AutoSave** for the job's duration so an unsaved-scene
-  AutoSave prompt cannot block the UI thread mid-dispatch.
+- The plug-in **persistently disables Maya AutoSave** at load time so an
+  unsaved-scene AutoSave timer cannot pop a modal dialog and block the
+  dispatcher between jobs. Restored on plug-in unload. Opt out via
+  `DCC_MCP_MAYA_DISABLE_AUTOSAVE=0` if you need AutoSave to keep firing.
 - Dialog `cmds.*` entries (`confirmDialog`, `promptDialog`, `fileDialog`,
   `fileDialog2`, `layoutDialog`) are **not** monkey-patched. The previous
-  monkey-patch corrupted Maya's internal state on `cmds.file(new=True)`,
-  Arnold renderer switch, and other paths where the engine consumes the same
-  `cmds.*` entries internally (removed 2026-05-16). If a script genuinely
-  needs to spawn a dialog it spawns; rely on the server-side request timeout
-  to recover from a hung MCP-dispatched job rather than a global override.
+  wrapper corrupted Maya's internal state on `cmds.file(new=True)`,
+  Arnold renderer switch, and other paths where the engine consumes the
+  same `cmds.*` entries internally (removed 2026-05-16). If a script
+  genuinely needs to spawn a dialog it spawns; rely on the server-side
+  request timeout to recover from a hung MCP-dispatched job rather than
+  a global override.
+- The previous `mcp_safe_session()` context-manager wrapper has been
+  removed entirely. Dispatched jobs run with a bare `exec` against the
+  same `maya.cmds` surface a user types into the Script Editor — same
+  approach as PatrickPalmer/maya-mcp-server, which has been the stability
+  benchmark for this fix series.
 
 ## Dynamics / solver safety (host crashes)
 

@@ -22,12 +22,9 @@ Both invariants are dependency-free: the tests do not require Maya or
 
 from __future__ import annotations
 
-import os
 import re
-import sys
-import types
 from pathlib import Path
-from typing import Dict, Iterator, List
+from typing import Dict, List
 
 import pytest
 
@@ -313,182 +310,98 @@ def test_build_minimal_mode_for_stages_rejects_unknown() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Safe-session firewall
+# Safe-session firewall — REMOVED 2026-05-16 (regression guards below)
 # ---------------------------------------------------------------------------
+#
+# `dcc_mcp_maya._safe_session` no longer exists. Three sequential field
+# reports forced removal of every responsibility the module used to carry:
+#
+# 1. `cmds.confirmDialog` / `fileDialog2` monkey-patch crashed Maya on
+#    ``cmds.file(new=True)`` + Arnold renderer switch (Maya's C++ side
+#    consumed our stub `"dismiss"` value as a state-machine input).
+# 2. AutoSave per-job snooze had a between-jobs window where the
+#    timer fired and popped Maya's "must give a name" modal — moved
+#    to a session-wide persistent disable in
+#    `maya/plugin/dcc_mcp_maya_plugin.py::_disable_autosave_for_session`.
+# 3. With (1) and (2) gone, `mcp_safe_session` was a no-op
+#    context-manager wrapper around every dispatched job; removing it
+#    aligns the dispatch path with PatrickPalmer/maya-mcp-server,
+#    which never wrapped `cmds.*` calls and is stable on the same
+#    user scripts that crashed our adapter.
+#
+# These tests pin the removal so a future contributor cannot
+# accidentally reintroduce the wrapper.
 
 
-@pytest.fixture()
-def fake_maya_cmds() -> Iterator[types.SimpleNamespace]:
-    """Inject a tiny fake ``maya.cmds`` so ``mcp_safe_session`` engages.
+def test_safe_session_module_is_absent() -> None:
+    """``dcc_mcp_maya._safe_session`` must not exist as an import target.
 
-    The fake records every call to ``autoSave`` so we can assert the
-    safe-session wrapper disables AutoSave on entry and restores it on
-    exit. Dialog functions (``confirmDialog`` / ``promptDialog`` /
-    ``fileDialog`` / ``fileDialog2`` / ``layoutDialog``) are
-    intentionally NOT included on the fake — the safe-session wrapper
-    no longer monkey-patches them (RFC #998 follow-up 2026-05-16:
-    intercepting Maya's dialog ``cmds.*`` corrupted the engine's
-    internal state on common paths like ``cmds.file(new=True)`` and
-    Arnold renderer switch, so the patch was removed). Tests that
-    previously asserted "real confirmDialog must NEVER fire" are
-    replaced by AutoSave-only assertions below.
+    Pins the 2026-05-16 removal. If someone resurrects the module
+    (even as an empty shim that re-exports stale names), this test
+    fails first so they read the rationale block above.
     """
-    autosave_state: Dict[str, bool] = {"enabled": True}
-    autosave_calls: List[Dict[str, object]] = []
-
-    def auto_save(query: bool = False, enable: bool = False) -> bool:
-        autosave_calls.append({"query": query, "enable": enable})
-        if query:
-            return autosave_state["enabled"]
-        autosave_state["enabled"] = bool(enable)
-        return autosave_state["enabled"]
-
-    cmds = types.SimpleNamespace(
-        autoSave=auto_save,
-        # Auxiliary state for assertions.
-        _autosave_calls=autosave_calls,
-        _autosave_state=autosave_state,
-    )
-    fake_maya = types.ModuleType("maya")
-    fake_maya.cmds = cmds  # type: ignore[attr-defined]
-    sys.modules["maya"] = fake_maya
-    sys.modules["maya.cmds"] = cmds  # type: ignore[assignment]
-    try:
-        yield cmds
-    finally:
-        sys.modules.pop("maya.cmds", None)
-        sys.modules.pop("maya", None)
+    with pytest.raises(ImportError):
+        import dcc_mcp_maya._safe_session  # noqa: F401
 
 
-def test_safe_session_is_noop_without_maya() -> None:
-    """Without ``maya.cmds`` importable, the context is a transparent no-op."""
-    from dcc_mcp_maya._safe_session import mcp_safe_session, suppressed_dialog_calls
+def test_executor_runs_skill_without_safe_session_import() -> None:
+    """``run_skill_script`` must not pull in any safe-session symbol.
 
-    with mcp_safe_session():
-        assert suppressed_dialog_calls() == []
-
-
-def test_safe_session_is_noop_when_env_disables(monkeypatch: pytest.MonkeyPatch) -> None:
-    from dcc_mcp_maya._safe_session import (
-        ENV_SAFE_SESSION,
-        mcp_safe_session,
-        suppressed_dialog_calls,
-    )
-
-    monkeypatch.setenv(ENV_SAFE_SESSION, "0")
-    with mcp_safe_session():
-        # Even with the env opt-out, calling the helper must not crash.
-        assert suppressed_dialog_calls() == []
-
-
-def test_safe_session_disables_autosave_and_restores(fake_maya_cmds: types.SimpleNamespace) -> None:
-    from dcc_mcp_maya._safe_session import mcp_safe_session
-
-    assert fake_maya_cmds._autosave_state["enabled"] is True
-    with mcp_safe_session():
-        # AutoSave is paused for the block.
-        assert fake_maya_cmds._autosave_state["enabled"] is False
-    # And restored on exit.
-    assert fake_maya_cmds._autosave_state["enabled"] is True
-
-
-def test_safe_session_does_not_monkey_patch_dialog_cmds(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Dialog ``cmds.*`` entries must NOT be replaced for the duration of the block.
-
-    The previous implementation monkey-patched ``cmds.confirmDialog`` /
-    ``promptDialog`` / ``fileDialog`` / ``fileDialog2`` / ``layoutDialog``
-    to non-blocking stubs that returned a fixed ``"dismiss"`` value.
-    Maya's C++ side consults those same entry points internally
-    (``cmds.file(new=True)``, Arnold renderer switch, reference
-    machinery, …) and expects specific return values; the stub
-    return value crashed Maya on real-world scripts (RFC #998
-    follow-up 2026-05-16). The patch was removed — this regression
-    test pins the behaviour so it cannot accidentally come back.
+    Catches the regression where a refactor would re-add the
+    ``with mcp_safe_session():`` wrapping around the executor body.
+    AST-walks the executor module so the test ignores docstring /
+    comment mentions and only fires on real ``import`` statements
+    or ``Name`` references in code.
     """
-    sentinel_calls: List[str] = []
+    import ast
+    import inspect
 
-    def real_confirm_dialog(*args: object, **kwargs: object) -> str:
-        sentinel_calls.append("confirmDialog")
-        return "Yes"
+    from dcc_mcp_maya import _executor
 
-    def real_file_dialog2(*args: object, **kwargs: object) -> List[str]:
-        sentinel_calls.append("fileDialog2")
-        return ["/some/real/path.ma"]
+    tree = ast.parse(inspect.getsource(_executor))
 
-    cmds = types.SimpleNamespace(
-        autoSave=lambda **kw: True,
-        confirmDialog=real_confirm_dialog,
-        fileDialog2=real_file_dialog2,
+    bad_imports: List[str] = []
+    bad_names: List[str] = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ImportFrom):
+            module = node.module or ""
+            if module.endswith("_safe_session") or "_safe_session" in module.split("."):
+                bad_imports.append("from {} import {}".format(module, ", ".join(a.name for a in node.names)))
+            for alias in node.names:
+                if alias.name == "mcp_safe_session":
+                    bad_imports.append("from {} import mcp_safe_session".format(module))
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                if alias.name.endswith("_safe_session") or alias.name == "mcp_safe_session":
+                    bad_imports.append("import {}".format(alias.name))
+        if isinstance(node, ast.Name) and node.id == "mcp_safe_session":
+            bad_names.append("Name reference at line {}".format(node.lineno))
+        if isinstance(node, ast.Attribute) and node.attr == "mcp_safe_session":
+            bad_names.append("Attribute reference at line {}".format(node.lineno))
+
+    assert not bad_imports, (
+        "`_executor.py` must not import safe-session symbols — the module "
+        "was removed 2026-05-16. Offenders:\n  " + "\n  ".join(bad_imports)
     )
-    fake_maya = types.ModuleType("maya")
-    fake_maya.cmds = cmds  # type: ignore[attr-defined]
-    monkeypatch.setitem(sys.modules, "maya", fake_maya)
-    monkeypatch.setitem(sys.modules, "maya.cmds", cmds)  # type: ignore[arg-type]
-
-    from dcc_mcp_maya._safe_session import (
-        mcp_safe_session,
-        suppressed_dialog_calls,
+    assert not bad_names, (
+        "`_executor.py` must not call `mcp_safe_session(...)` — wrap-free "
+        "dispatch is the post-2026-05-16 contract. Offenders:\n  " + "\n  ".join(bad_names)
     )
 
-    with mcp_safe_session():
-        # Calling the dialog from inside the block must hit the REAL
-        # function (the sentinel above), not a stub. If a future
-        # contributor reintroduces the monkey-patch, this assertion
-        # fails and they get pointed at the safe-session docstring.
-        assert cmds.confirmDialog(title="Save?") == "Yes"
-        assert cmds.fileDialog2(title="Pick a file") == ["/some/real/path.ma"]
-        assert sentinel_calls == ["confirmDialog", "fileDialog2"]
-        # The audit accessor stays callable for source-compat but is
-        # always empty now — see :func:`suppressed_dialog_calls`.
-        assert suppressed_dialog_calls() == []
 
+def test_public_init_does_not_export_safe_session_symbols() -> None:
+    """``dcc_mcp_maya.__all__`` must not list ``mcp_safe_session`` / friends.
 
-def test_safe_session_is_reentrant(fake_maya_cmds: types.SimpleNamespace) -> None:
-    """Nested invocations refcount; only the outermost exit restores AutoSave."""
-    from dcc_mcp_maya._safe_session import mcp_safe_session
+    The previous public surface re-exported ``mcp_safe_session`` /
+    ``suppressed_dialog_calls`` / ``ENV_SAFE_SESSION``. All three are
+    gone; this test fails if a refactor accidentally re-exports any
+    of them (which would mean the symbol must still resolve, i.e.
+    the module came back).
+    """
+    import dcc_mcp_maya
 
-    with mcp_safe_session():
-        outer_disabled = fake_maya_cmds._autosave_state["enabled"]
-        with mcp_safe_session():
-            # AutoSave already paused; nested entry must not flip it back.
-            assert fake_maya_cmds._autosave_state["enabled"] is False
-        # After inner exit, still inside outer scope → AutoSave stays paused.
-        assert fake_maya_cmds._autosave_state["enabled"] is False
-        assert outer_disabled is False
-    # Only after the outer exit does AutoSave come back.
-    assert fake_maya_cmds._autosave_state["enabled"] is True
-
-
-def test_safe_session_restores_on_exception(fake_maya_cmds: types.SimpleNamespace) -> None:
-    from dcc_mcp_maya._safe_session import mcp_safe_session
-
-    class _Boom(RuntimeError):
-        pass
-
-    with pytest.raises(_Boom):
-        with mcp_safe_session():
-            assert fake_maya_cmds._autosave_state["enabled"] is False
-            raise _Boom("simulated skill failure")
-    # AutoSave restored even though the body raised. Dialog ``cmds.*``
-    # entries are no longer monkey-patched, so there is nothing to
-    # restore on that side; assert AutoSave only.
-    assert fake_maya_cmds._autosave_state["enabled"] is True
-
-
-# ---------------------------------------------------------------------------
-# Cleanup so the env var fixture above does not leak into other tests.
-# ---------------------------------------------------------------------------
-
-
-@pytest.fixture(autouse=True)
-def _reset_safe_session_env() -> Iterator[None]:
-    saved = os.environ.get("DCC_MCP_MAYA_SAFE_SESSION")
-    try:
-        yield
-    finally:
-        if saved is None:
-            os.environ.pop("DCC_MCP_MAYA_SAFE_SESSION", None)
-        else:
-            os.environ["DCC_MCP_MAYA_SAFE_SESSION"] = saved
+    public = getattr(dcc_mcp_maya, "__all__", ())
+    for forbidden in ("mcp_safe_session", "suppressed_dialog_calls", "ENV_SAFE_SESSION"):
+        assert forbidden not in public, (
+            f"{forbidden!r} must not appear in dcc_mcp_maya.__all__ — the safe-session module was removed 2026-05-16."
+        )
