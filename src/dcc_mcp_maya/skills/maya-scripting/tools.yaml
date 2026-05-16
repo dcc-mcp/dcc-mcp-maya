@@ -23,10 +23,11 @@ tools:
         description: Same as file_path.
 - name: execute_python
   description: >-
-    Last-resort arbitrary Python. Prefer search_skills / dcc_capability_manifest → load_skill → typed tools.
-    Use `code` for short snippets, `file_path` / `script_path` for host-readable `.py` files,
-    and `defer=true` for long jobs. Gateway REST: /v1/search + /v1/call. Captures Script Editor
-    / cmds.warning output. Inline code over 4096 chars spills to temp_scripts.
+    Bare-exec Python in Maya — wrapper-free dispatch, persistent module-level namespace
+    (`import x` survives across calls), AST-rewrite captures last expression's value when
+    `result_type != NONE`. Aligned with PatrickPalmer/maya-mcp-server semantics. Prefer
+    search_skills / dcc_capability_manifest → load_skill → typed tools when one fits.
+    For long scripts, upload once via write_module then call with `import name; name.run()`.
   execution: sync
   affinity: main
   annotations:
@@ -38,32 +39,73 @@ tools:
     properties:
       code:
         type: string
-        description: Inline Python (required when file_path is omitted). cmds pre-imported in the isolated namespace.
+        description: Inline Python (required when file_path is omitted).
       file_path:
         type: string
-        description: >-
-          Absolute path to a .py file executed in __main__ with __file__ / this_root (Maya-native).
-          Preferred for large scripts: use write_temp_file / write_temp_script on a path this Maya process can read.
-          Remote-gateway agents must not assume a path on their laptop is visible to Maya.
+        description: Absolute path to a .py file executed in __main__ with __file__ / this_root.
       script_path:
         type: string
         description: Same as file_path.
+      result_type:
+        type: string
+        enum: [NONE, VALUE, JSON, REPR]
+        default: NONE
+        description: How to capture the last expression's value. NONE discards.
       capture_output:
         type: boolean
-        description: When true, captured stdout is returned in `context.stdout`. Default
-          true.
         default: true
-      timeout_secs:
-        type: integer
-        description: Maximum execution time in seconds. Defaults
-          to no limit.
-        minimum: 1
-      defer:
+        description: Redirect sys.stdout / sys.stderr into the returned envelope.
+- name: write_module
+  description: >-
+    Inject a Python module into Maya's sys.modules from a source string. Same shape as
+    maya-mcp-server's write_module. Use this to upload long scripts ONCE then call
+    `execute_python(code='import name; name.run()')` many times — saves the agent
+    prompt budget on repeated dispatch.
+  execution: sync
+  affinity: main
+  annotations:
+    destructive_hint: true
+    read_only_hint: false
+  group: core
+  inputSchema:
+    type: object
+    required: [name, source]
+    properties:
+      name:
+        type: string
+        description: Dotted module name (each segment must be a valid Python identifier).
+      source:
+        type: string
+        description: Python source for the module body.
+      overwrite:
         type: boolean
-        description: When true, schedule code via Maya's deferred queue and return
-          a DeferredToolResult that the client polls. Use for long-running scripts
-          that would otherwise block the MCP request.
-        default: false
+        default: true
+        description: When true, re-exec the source against the existing module's __dict__.
+      version:
+        type: string
+        description: Optional opaque version stamped as __dcc_mcp_module_version__.
+- name: io
+  description: >-
+    Session-scope stdout / stderr capture lifecycle for Maya — single tool with `action`
+    selector (install / uninstall / get / clear / status). Lets agents accumulate output
+    across many execute_python calls without per-call capture overhead.
+  execution: sync
+  affinity: any
+  annotations:
+    read_only_hint: false
+    idempotent_hint: true
+  group: core
+  inputSchema:
+    type: object
+    required: [action]
+    properties:
+      action:
+        type: string
+        enum: [install, uninstall, get, clear, status]
+      drain:
+        type: boolean
+        default: true
+        description: For action=get — drain the buffer (default) or peek without consuming.
 - name: get_script_node
   description: Get, create, or delete a Maya scriptNode.
   execution: sync
