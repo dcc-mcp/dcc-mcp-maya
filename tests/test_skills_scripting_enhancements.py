@@ -23,6 +23,7 @@ from __future__ import annotations
 import os
 import sys
 from pathlib import Path
+from typing import Any, List
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -224,6 +225,97 @@ class TestExecutePythonBareExec:
         out_c = mod.execute_python(source="2 + 2", result_type="VALUE")
         for out in (out_a, out_b, out_c):
             assert out.get("success") is True
+
+
+class TestExecutePythonMainThreadMarshalling:
+    """When called off Maya's main thread, ``execute_python`` must marshal user code
+    onto the main thread via :func:`maya.utils.executeInMainThreadWithResult`.
+
+    This is the documented Maya primitive for cross-thread work; the user-
+    reported FBX-export crash on 2026-05-16 was traced to bare exec on
+    a tokio worker thread (``cmds.file(..., type="FBX export")`` / ``loadPlugin``
+    crashes Maya when off the UI thread). The implementation aligns with
+    PatrickPalmer/maya-mcp-server.
+    """
+
+    def test_inplace_true_skips_main_thread_routing(self):
+        """``inplace=True`` opts out — the caller has already dispatched."""
+        mod = load_skill_script("maya-scripting", "execute_python")
+        with patch.object(mod, "_running_on_main_thread", return_value=False):
+            fake_mu = MagicMock()
+            with patch.object(mod, "_import_maya_utils", return_value=fake_mu):
+                out = mod.execute_python(code="1 + 1", inplace=True, result_type="VALUE")
+        assert out.get("success") is True
+        # The deferred call MUST NOT have been used.
+        fake_mu.executeInMainThreadWithResult.assert_not_called()
+
+    def test_off_main_thread_routes_through_executeInMainThreadWithResult(self):
+        """Default path: off main thread + Maya available → marshal to main."""
+        mod = load_skill_script("maya-scripting", "execute_python")
+        called_with: List[Any] = []
+
+        def fake_run(fn):
+            called_with.append(fn)
+            return fn()
+
+        fake_mu = MagicMock()
+        fake_mu.executeInMainThreadWithResult.side_effect = fake_run
+
+        with patch.object(mod, "_running_on_main_thread", return_value=False), patch.object(
+            mod, "_import_maya_utils", return_value=fake_mu
+        ):
+            out = mod.execute_python(code="2 + 3", result_type="VALUE")
+
+        assert out.get("success") is True
+        fake_mu.executeInMainThreadWithResult.assert_called_once()
+        # The callable passed in must be a no-arg closure (the docs of
+        # executeInMainThreadWithResult require this shape — Maya's
+        # marshalling layer cannot serialise kwargs across threads).
+        passed = called_with[0]
+        assert callable(passed)
+        assert passed.__code__.co_argcount == 0
+
+    def test_already_on_main_thread_runs_inline(self):
+        """When already on main thread, the marshalling primitive must NOT fire."""
+        mod = load_skill_script("maya-scripting", "execute_python")
+        fake_mu = MagicMock()
+        with patch.object(mod, "_running_on_main_thread", return_value=True), patch.object(
+            mod, "_import_maya_utils", return_value=fake_mu
+        ):
+            out = mod.execute_python(code="3 + 4", result_type="VALUE")
+        assert out.get("success") is True
+        fake_mu.executeInMainThreadWithResult.assert_not_called()
+
+    def test_no_maya_falls_back_to_inplace(self):
+        """``mayapy`` / pytest: no main thread to defer to → run inline."""
+        mod = load_skill_script("maya-scripting", "execute_python")
+        with patch.object(mod, "_running_on_main_thread", return_value=False), patch.object(
+            mod, "_import_maya_utils", return_value=None
+        ):
+            out = mod.execute_python(code="5 + 6", result_type="VALUE")
+        assert out.get("success") is True
+
+    def test_main_thread_marshalling_failure_surfaces_in_envelope(self):
+        """If ``executeInMainThreadWithResult`` raises, the agent must see why."""
+        mod = load_skill_script("maya-scripting", "execute_python")
+        fake_mu = MagicMock()
+        fake_mu.executeInMainThreadWithResult.side_effect = RuntimeError("main thread is unavailable")
+
+        with patch.object(mod, "_running_on_main_thread", return_value=False), patch.object(
+            mod, "_import_maya_utils", return_value=fake_mu
+        ):
+            out = mod.execute_python(code="1+1", result_type="VALUE")
+
+        assert out.get("success") is False
+        msg = (out.get("message") or "").lower()
+        ctx_msg = ""
+        ctx = out.get("context") or {}
+        for key in ("stderr", "traceback", "message"):
+            value = ctx.get(key)
+            if isinstance(value, str):
+                ctx_msg += "\n" + value
+        joined = msg + "\n" + ctx_msg.lower()
+        assert "main thread" in joined or "executeinmainthread" in joined
 
 
 # ---------------------------------------------------------------------------

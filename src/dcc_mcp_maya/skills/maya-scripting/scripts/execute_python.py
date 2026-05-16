@@ -60,10 +60,23 @@ import contextlib
 import io
 import json
 import os
+import threading
 import traceback
 from typing import Any, Dict, Optional, Tuple
 
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
+
+# Maya's main thread is the only thread that can safely touch the scene
+# graph / call ``maya.cmds`` / load native plug-ins. The ``execute_python``
+# entry point is reached from a hyper (tokio) worker thread when an MCP
+# client hits ``POST /v1/call`` — running ``cmds.file(..., type="FBX export")``
+# or ``cmds.loadPlugin("fbxmaya")`` off the main thread is the canonical
+# way to crash Maya (verified in #248 with the user's batch FBX script).
+#
+# This module captures the main thread at import time so the runtime
+# can compare ``threading.current_thread()`` against it and route to
+# ``maya.utils.executeInMainThreadWithResult`` when needed.
+_MAIN_THREAD = threading.main_thread()
 
 # Persistent module-level namespace for cross-call state. Same idea as
 # maya-mcp-server's ``context = globals()`` — long-running sessions can
@@ -141,25 +154,88 @@ def _execute_bare(
     result_type: str,
     capture_output: bool,
     namespace: Dict[str, Any],
+    inplace: bool = False,
 ) -> Dict[str, Any]:
-    """Run ``code``; return the unified envelope dict.
+    """Route user code to Maya's main thread when needed, then run it.
 
-    Envelope shape::
+    The MCP entry point reaches ``execute_python`` from a hyper (tokio)
+    worker thread when a client hits ``POST /v1/call``. Running
+    ``cmds.file(..., type="FBX export")`` / ``cmds.loadPlugin(...)`` /
+    most scene-mutating ``cmds.*`` calls off the main thread crashes
+    Maya — verified against the user's batch FBX script in #248.
 
-        {
-            "success": bool,
-            "result": <captured value, optional>,
-            "error": {"type", "message", "traceback"} | None,
-            "stdout": str,
-            "stderr": str,
+    The fix mirrors what every well-behaved Maya plug-in does for
+    cross-thread work: wrap the call in
+    :func:`maya.utils.executeInMainThreadWithResult`. The wrapper:
+
+    * **Already on main thread** — runs inline (the deferred call would
+      deadlock itself).
+    * **No Maya available** — runs inline (``mayapy`` / pytest fallback,
+      no UI thread to defer to).
+    * **inplace=True** — caller has explicitly opted out (used by tests
+      and by callers that have already been promoted to main thread by
+      an outer dispatcher).
+    * **Otherwise** — marshals the bare-exec call onto Maya's main
+      thread via ``executeInMainThreadWithResult`` and waits for the
+      result. The caller (hyper worker) is blocked for the duration,
+      same as every ``cmds.file`` call would have been if dispatched
+      directly.
+
+    Why not ``executeDeferred``
+    ---------------------------
+
+    ``executeDeferred`` is fire-and-forget — schedules the call and
+    returns immediately. The MCP request is synchronous by definition,
+    so blocking the worker thread until the result is back is the
+    correct shape. The Maya main thread is otherwise idle inside the
+    UI event loop, so the marshalling round-trip is essentially free.
+
+    ``executeInMainThreadWithResult`` is the documented Maya primitive
+    for this and is what ``maya-mcp-server`` (PatrickPalmer / chadrik)
+    uses at the user-code boundary. Aligning with that reference is
+    the whole point of #248.
+    """
+    if inplace or _running_on_main_thread():
+        return _execute_bare_inplace(code, filename, result_type, capture_output, namespace)
+
+    mu = _import_maya_utils()
+    if mu is None:
+        return _execute_bare_inplace(code, filename, result_type, capture_output, namespace)
+
+    def _on_main() -> Dict[str, Any]:
+        return _execute_bare_inplace(code, filename, result_type, capture_output, namespace)
+
+    try:
+        return mu.executeInMainThreadWithResult(_on_main)
+    except Exception as exc:  # noqa: BLE001 — relay the marshalling failure itself
+        return {
+            "success": False,
+            "result": None,
+            "error": {
+                "type": "{0}.{1}".format(type(exc).__module__, type(exc).__name__),
+                "message": (
+                    "executeInMainThreadWithResult failed to marshal user code onto Maya's main thread: {0}".format(exc)
+                ),
+                "traceback": traceback.format_exc(),
+            },
+            "stdout": "",
+            "stderr": "",
         }
 
-    ``stdout`` / ``stderr`` are captured via
-    :func:`contextlib.redirect_stdout` / ``redirect_stderr`` only when
-    ``capture_output=True``. The redirects target pure-Python
-    ``io.StringIO`` buffers; they do not touch any Maya C++ surface
-    and so cannot corrupt the engine's internal state (the failure
-    mode that made us delete the legacy ``MayaOutputCapture`` hook).
+
+def _execute_bare_inplace(
+    code: str,
+    filename: str,
+    result_type: str,
+    capture_output: bool,
+    namespace: Dict[str, Any],
+) -> Dict[str, Any]:
+    """Run ``code`` on the **current** thread without any main-thread marshalling.
+
+    This is the inner-most execution primitive. The :func:`_execute_bare`
+    wrapper above decides which thread to run on. ``_execute_bare_inplace``
+    only knows how to ``exec`` against the given namespace and capture
+    output — it never touches Maya's threading machinery.
     """
     stdout_buf = io.StringIO() if capture_output else None
     stderr_buf = io.StringIO() if capture_output else None
@@ -203,6 +279,20 @@ def _execute_bare(
         "stdout": stdout_buf.getvalue() if stdout_buf is not None else "",
         "stderr": stderr_buf.getvalue() if stderr_buf is not None else "",
     }
+
+
+def _running_on_main_thread() -> bool:
+    """True when the current thread is Maya's UI / main thread."""
+    return threading.current_thread() is _MAIN_THREAD
+
+
+def _import_maya_utils() -> Any:
+    """Return ``maya.utils`` or ``None`` when Maya is unavailable (mayapy/tests)."""
+    try:
+        import maya.utils as mu  # noqa: PLC0415
+    except ImportError:
+        return None
+    return mu
 
 
 def _resolve_script_file_path(params: Dict[str, Any]) -> Optional[str]:
@@ -311,6 +401,7 @@ def execute_python(**params: Any):
         )
 
     capture_output = bool(params.get("capture_output", True))
+    inplace = bool(params.get("inplace", False))
 
     envelope = _execute_bare(
         code=code,
@@ -318,6 +409,7 @@ def execute_python(**params: Any):
         result_type=result_type,
         capture_output=capture_output,
         namespace=run_ns,
+        inplace=inplace,
     )
 
     if not envelope["success"]:
