@@ -203,6 +203,7 @@ _menu_name = "DccMcpMenu"
 _restart_lock = threading.Lock()  # prevent overlapping restart calls
 _shutdown_coordinator = None  # Issue #186 — safety-net composition root
 _sidecar_handle = None  # RFC #998 — opt-in dcc-mcp-server sidecar subprocess
+_original_autosave_enabled = None  # Maya AutoSave persistent snooze — see _disable_autosave_for_session
 
 
 # ── standalone detection ──────────────────────────────────────────────────────
@@ -464,6 +465,7 @@ def _start_async() -> None:
 def _post_start(cfg: dict) -> None:
     _print_startup_info(cfg)
     _install_shutdown_safety()
+    _disable_autosave_for_session()
     try:
         from dcc_mcp_maya._log_hygiene import prune_maya_logs  # noqa: PLC0415
 
@@ -480,6 +482,91 @@ def _post_start(cfg: dict) -> None:
         logger.debug("stale-instance scan skipped: %s", exc)
 
     _maybe_spawn_sidecar()
+
+
+def _disable_autosave_for_session() -> None:
+    """Persistently disable Maya AutoSave while the plug-in is loaded.
+
+    Reported 2026-05-16: with three Maya instances running through the
+    sidecar, AutoSave's periodic timer fires on the still-untitled
+    scene, Maya pops a modal "必须给出名称才能保存文件" dialog
+    asking for a filename, the dialog blocks the main thread, and
+    every MCP request piles up behind it. The user sees "all three
+    Mayas hung" even though the dispatcher and Qt server are healthy.
+
+    The fix is to disable AutoSave **for the entire MCP session**,
+    not just per-job. Per-job snooze in :mod:`_safe_session` leaves a
+    window between jobs where the timer can still fire; persistent
+    disable closes that window.
+
+    Trade-off: while the plug-in is loaded, AutoSave does not protect
+    the user from data loss on an unexpected Maya exit. This is
+    acceptable for sessions driven by MCP because:
+
+    * MCP-dispatched jobs are reproducible (the agent can re-issue
+      them) — AutoSave's value is mainly for interactive Maya use.
+    * Manual ``cmds.file(save=True)`` still works; only the timer
+      is suspended.
+    * The persistent disable is **reversible** — :func:`_stop_blocking`
+      restores the original state on plug-in unload.
+
+    The snapshot of the original ``enable`` flag is stored on the
+    module-level :data:`_original_autosave_enabled` so unload can
+    restore exactly what was running before the plug-in loaded.
+    Operators who depend on AutoSave can opt out via
+    ``DCC_MCP_MAYA_DISABLE_AUTOSAVE=0``.
+
+    Never raises — every step is wrapped so a missing AutoSave
+    feature (older Maya, headless mayapy without UI) cannot block
+    plug-in startup.
+    """
+    global _original_autosave_enabled
+
+    if os.environ.get("DCC_MCP_MAYA_DISABLE_AUTOSAVE", "1").strip().lower() in {"0", "false", "off", "no"}:
+        logger.info("dcc-mcp-maya: AutoSave persistent-disable opted out via env var")
+        return
+
+    try:
+        was_enabled = bool(cmds.autoSave(query=True, enable=True))
+    except Exception as exc:  # noqa: BLE001 — Maya may raise nondescript errors
+        logger.debug("AutoSave query failed: %s", exc)
+        return
+
+    _original_autosave_enabled = was_enabled
+    if not was_enabled:
+        logger.debug("AutoSave was already disabled; nothing to do")
+        return
+
+    try:
+        cmds.autoSave(enable=False)
+        logger.info(
+            "dcc-mcp-maya: AutoSave disabled for the duration of this session "
+            "(set DCC_MCP_MAYA_DISABLE_AUTOSAVE=0 to opt out)",
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("AutoSave disable failed; modal save-prompt may still appear: %s", exc)
+
+
+def _restore_autosave_for_session() -> None:
+    """Undo :func:`_disable_autosave_for_session` on plug-in unload.
+
+    Reads the snapshot captured at startup and flips AutoSave back to
+    whatever the user had before we touched it. Safe to call when no
+    snapshot exists (no-op).
+    """
+    global _original_autosave_enabled
+    if _original_autosave_enabled is None:
+        return
+    try:
+        cmds.autoSave(enable=bool(_original_autosave_enabled))
+        logger.debug(
+            "dcc-mcp-maya: AutoSave restored to enable=%s",
+            _original_autosave_enabled,
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("AutoSave restore failed: %s", exc)
+    finally:
+        _original_autosave_enabled = None
 
 
 def _maybe_spawn_sidecar() -> None:
@@ -664,6 +751,14 @@ def _stop_blocking() -> None:
         _handle = None
     except Exception as exc:
         logger.warning("Failed to stop MCP server: %s", exc)
+
+    # Restore AutoSave to whatever the user had before plug-in load —
+    # done after server tear-down so the very last MCP request still
+    # benefits from the persistent snooze.
+    try:
+        _restore_autosave_for_session()
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("AutoSave restore on shutdown raised: %s", exc)
 
 
 # ── shutdown safety nets (issue #186) ─────────────────────────────────────────
