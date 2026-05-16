@@ -611,6 +611,13 @@ def _maybe_spawn_sidecar() -> None:
         # docstring.
         return
 
+    if _sidecar_handle is not None:
+        logger.warning(
+            "dcc-mcp-maya: sidecar already running (pid=%s); stopping before respawn",
+            getattr(_sidecar_handle.proc, "pid", "?"),
+        )
+        _stop_sidecar_if_running()
+
     try:
         # Resolve the SAME FileRegistry directory the in-process MCP
         # server uses, so the sidecar joins the same registry view.
