@@ -55,6 +55,16 @@ tools:
         type: boolean
         default: true
         description: Redirect sys.stdout / sys.stderr into the returned envelope.
+      inplace:
+        type: boolean
+        default: false
+        description: >-
+          Skip the automatic main-thread marshalling. By default, when the MCP
+          handler runs off Maya's UI thread (hyper worker), user code is wrapped
+          in maya.utils.executeInMainThreadWithResult so cmds.file / loadPlugin
+          / scene-mutating cmds.* calls stay on the safe thread. Set inplace=true
+          to opt out — only do this when you have already dispatched onto the
+          main thread yourself or when the script touches no Maya state.
 - name: write_module
   description: >-
     Inject a Python module into Maya's sys.modules from a source string. Same shape as
