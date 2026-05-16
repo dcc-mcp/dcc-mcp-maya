@@ -246,6 +246,13 @@ def start_sidecar(
         cmd.extend(["--display-name", display_name])
     if adapter_version is not None:
         cmd.extend(["--adapter-version", adapter_version])
+    gateway_port_str = os.environ.get("DCC_MCP_GATEWAY_PORT", "9765").strip()
+    try:
+        gateway_port = int(gateway_port_str)
+    except ValueError:
+        gateway_port = 9765
+    if gateway_port > 0:
+        cmd.extend(["--gateway-port", str(gateway_port)])
     if extra_args:
         cmd.extend(extra_args)
 
