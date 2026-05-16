@@ -1,53 +1,52 @@
-"""Unit tests for scripting-skill enhancements shipped for issues #151 & #153.
+"""Unit tests for the maya-scripting skill — bare-exec dispatch path.
 
-The tests run without a live Maya session — ``maya.api.OpenMaya`` is mocked
-when needed so the safe-fallback path in
-:class:`dcc_mcp_maya._maya_output.MayaOutputCapture` is exercised.  E2E
-coverage that requires ``mayapy`` lives in ``tests/e2e/test_scripting_e2e.py``.
+After the RFC #998 follow-up fix series in PR #248 the dispatch path
+is intentionally wrapper-free: no ``mcp_safe_session``, no
+``ScriptExecutionCapture`` tee, no ``MayaOutputCapture`` callback
+bridge by default, no ``sys.settrace`` cancellation tracer. The tests
+here mirror that shape — they cover the bare-exec ``execute_python``,
+the new ``write_module`` upload-once / call-many surface, and the
+single-tool ``io`` action multiplexer.
+
+The legacy tests for spill / capture-merging / defer + cancellation
+have been removed alongside the wrappers they exercised.
+``MayaOutputCapture`` opt-in coverage stays in place because the
+helper itself is still shipped (default-off) for operators who
+explicitly opt in via env var.
+
+E2E coverage that requires ``mayapy`` lives in
+``tests/e2e/test_scripting_e2e.py``.
 """
 
-# Import future modules
 from __future__ import annotations
 
-# Import built-in modules
 import os
 import sys
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-# Import third-party modules
 import pytest
 import yaml
 
 from tests.conftest import load_skill_script
 
 # ---------------------------------------------------------------------------
-# MayaOutputCapture — safe no-op when Maya is unavailable
+# MayaOutputCapture — default no-op + opt-in via env var (RFC #998 da5f6184)
 # ---------------------------------------------------------------------------
 
 
 class TestMayaOutputCaptureFallback:
-    """Without ``maya.api.OpenMaya`` importable, the helper must degrade cleanly."""
+    """Default-off behaviour + env-var opt-in for the OpenMaya callback bridge."""
 
     def test_default_is_noop_without_opt_in(self):
-        """Default path: env var not set, no ``force`` — must NOT touch OpenMaya.
-
-        Pins the stability fix from RFC #998 follow-up 2026-05-16: the
-        ``MCommandMessage.addCommandOutputCallback`` bridge was found
-        to crash Maya on common scripts that left pending command-
-        output messages in the engine's idle queue. The capture now
-        defaults to a no-op; opt-in requires
-        ``DCC_MCP_MAYA_HOOK_MAYA_OUTPUT=1`` or ``force=True``.
-        """
+        """Default path: env var not set, no ``force`` — must NOT touch OpenMaya."""
         from dcc_mcp_maya._maya_output import MayaOutputCapture
 
         fake_module = MagicMock()
-        # Make sure neither the env var nor the force kwarg is set.
         with patch.dict("os.environ", {"DCC_MCP_MAYA_HOOK_MAYA_OUTPUT": ""}, clear=False):
             with patch("dcc_mcp_maya._maya_output._load_openmaya", return_value=fake_module):
                 with MayaOutputCapture() as cap:
                     pass
-        # OpenMaya must NOT have been touched in the default path.
         fake_module.MCommandMessage.addCommandOutputCallback.assert_not_called()
         assert cap.stdout == ""
         assert cap.stderr == ""
@@ -66,10 +65,9 @@ class TestMayaOutputCaptureFallback:
     def test_no_maya_returns_empty_buffers(self):
         from dcc_mcp_maya._maya_output import MayaOutputCapture
 
-        # Both module candidates unavailable — even with ``force=True``
-        # the context manager must enter and exit without raising.
         with patch.dict(
-            sys.modules, {"maya.api": None, "maya.api.OpenMaya": None, "maya": None, "maya.OpenMaya": None}
+            sys.modules,
+            {"maya.api": None, "maya.api.OpenMaya": None, "maya": None, "maya.OpenMaya": None},
         ):
             with MayaOutputCapture(force=True) as cap:
                 pass
@@ -77,197 +75,15 @@ class TestMayaOutputCaptureFallback:
         assert cap.stderr == ""
 
     def test_callback_registration_failure_is_swallowed(self):
-        """If MCommandMessage.addCommandOutputCallback raises, we continue."""
         from dcc_mcp_maya._maya_output import MayaOutputCapture
 
         fake_module = MagicMock()
-        fake_module.MCommandMessage.addCommandOutputCallback.side_effect = RuntimeError("callback not available")
-
+        fake_module.MCommandMessage.addCommandOutputCallback.side_effect = RuntimeError("nope")
         with patch("dcc_mcp_maya._maya_output._load_openmaya", return_value=fake_module):
             with MayaOutputCapture(force=True) as cap:
                 pass
-
         assert cap.stdout == ""
         assert cap.stderr == ""
-
-    def test_info_routed_to_stdout_error_to_stderr(self):
-        """Verify the callback classifies MCommandMessage output types correctly.
-
-        Uses ``force=True`` to bypass the env-var opt-in gate so the
-        callback registration path is still exercised by unit tests.
-        """
-        from dcc_mcp_maya._maya_output import (
-            _MSG_TYPE_ERROR,
-            _MSG_TYPE_INFO,
-            _MSG_TYPE_RESULT,
-            _MSG_TYPE_WARNING,
-            MayaOutputCapture,
-        )
-
-        captured_callback: dict = {}
-
-        fake_module = MagicMock()
-
-        def _fake_add(cb):
-            captured_callback["cb"] = cb
-            return "fake-callback-id"
-
-        fake_module.MCommandMessage.addCommandOutputCallback.side_effect = _fake_add
-
-        with patch("dcc_mcp_maya._maya_output._load_openmaya", return_value=fake_module):
-            with MayaOutputCapture(force=True) as cap:
-                cb = captured_callback["cb"]
-                cb("hello-info", _MSG_TYPE_INFO)
-                cb("a-result", _MSG_TYPE_RESULT)
-                cb("a-warning", _MSG_TYPE_WARNING)
-                cb("an-error", _MSG_TYPE_ERROR)
-
-        assert "hello-info" in cap.stdout
-        assert "a-result" in cap.stdout
-        assert "a-warning" in cap.stderr
-        assert "an-error" in cap.stderr
-        # Callback must be removed on __exit__.
-        fake_module.MMessage.removeCallback.assert_called_once_with("fake-callback-id")
-
-
-# ---------------------------------------------------------------------------
-# execute_python — deferred path cooperatively honours cancellation
-# ---------------------------------------------------------------------------
-
-
-class TestExecutePythonDeferCancellation:
-    """``defer=True`` wires the core cancellation token into poll + tracer."""
-
-    def test_poll_callback_raises_on_job_cancel(self):
-        """When the per-job cancel flag is set, the poll callback re-raises."""
-        mod = load_skill_script("maya-scripting", "execute_python")
-
-        # Import local modules
-        from dcc_mcp_core.cancellation import CancelledError
-
-        from dcc_mcp_maya.dispatcher.job import _current_job, _JobEntry
-
-        job = _JobEntry(
-            request_id="rid-cancel-test",
-            affinity="main",
-            task=lambda: None,
-        )
-        token = _current_job.set(job)
-        try:
-            # Build the poll callback directly without running the script:
-            # mod._run_deferred would immediately execute the code in the
-            # no-maya fallback path, masking the cancellation semantics we
-            # want to exercise.
-            deferred = mod._run_deferred(
-                code="# intentionally empty — no-op snippet",
-                capture_output=False,
-                timeout_secs=60.0,
-            )
-            # Simulate the client cancelling the request.
-            job.cancel()
-            with pytest.raises(CancelledError):
-                deferred.check_is_finished()
-        finally:
-            _current_job.reset(token)
-
-    def test_defer_without_maya_runs_inline(self):
-        """In plain pytest, ``_run_deferred`` falls back to inline execution."""
-        mod = load_skill_script("maya-scripting", "execute_python")
-
-        deferred = mod._run_deferred(
-            code="result = 2 + 3",
-            capture_output=False,
-            timeout_secs=10.0,
-        )
-        # Inline fallback populates the result *before* the DeferredToolResult
-        # is constructed, so the poll callback returns a completed envelope.
-        envelope = deferred.check_is_finished()
-        assert envelope is not None
-        assert envelope.get("success") is True
-
-
-# ---------------------------------------------------------------------------
-# tools.yaml contract
-# ---------------------------------------------------------------------------
-
-
-class TestToolsYamlContract:
-    """Schema-level guarantees for the ``execute_python`` tool declaration."""
-
-    def _load_tools(self) -> dict:
-        path = Path(__file__).parent.parent / "src" / "dcc_mcp_maya" / "skills" / "maya-scripting" / "tools.yaml"
-        with path.open("r", encoding="utf-8") as fh:
-            return yaml.safe_load(fh)
-
-    def test_execute_python_exposes_defer_in_schema(self):
-        """`defer` must be declared as a boolean input so clients can opt in."""
-        data = self._load_tools()
-        tool = next(t for t in data["tools"] if t["name"] == "execute_python")
-        props = tool.get("inputSchema", {}).get("properties", {})
-        assert "defer" in props, (
-            "execute_python must advertise the 'defer' parameter so MCP clients "
-            "can opt into the non-blocking execution path (issue #153)."
-        )
-        assert props["defer"].get("type") == "boolean"
-
-    def test_execute_python_description_mentions_defer(self):
-        data = self._load_tools()
-        tool = next(t for t in data["tools"] if t["name"] == "execute_python")
-        desc = tool["description"]
-        assert "defer" in desc.lower()
-
-    def test_execute_python_description_mentions_maya_stderr_capture(self):
-        """Description should advertise the MCommandMessage capture (issue #151)."""
-        data = self._load_tools()
-        tool = next(t for t in data["tools"] if t["name"] == "execute_python")
-        desc = tool["description"].lower()
-        # Accept either `cmds.warning` or `script editor` wording — both describe
-        # the native-channel capture we added.
-        assert "cmds.warning" in desc or "script editor" in desc
-
-    def test_execute_python_schema_has_file_path(self):
-        data = self._load_tools()
-        tool = next(t for t in data["tools"] if t["name"] == "execute_python")
-        props = tool.get("inputSchema", {}).get("properties", {})
-        assert "file_path" in props
-        assert "script_path" in props
-
-    def test_execute_mel_schema_has_file_path(self):
-        data = self._load_tools()
-        tool = next(t for t in data["tools"] if t["name"] == "execute_mel")
-        props = tool.get("inputSchema", {}).get("properties", {})
-        assert "file_path" in props
-
-    def test_execute_python_description_mentions_gateway_rest(self):
-        data = self._load_tools()
-        tool = next(t for t in data["tools"] if t["name"] == "execute_python")
-        desc = tool["description"].lower()
-        assert "/v1/" in desc or "v1/call" in desc
-
-    def test_execute_python_description_mentions_auto_spill(self):
-        data = self._load_tools()
-        tool = next(t for t in data["tools"] if t["name"] == "execute_python")
-        desc = tool["description"].lower()
-        assert "4096" in desc or "temp_scripts" in desc
-
-    def test_execute_python_still_declares_main_affinity(self):
-        """Even though `defer=True` is async, the tool still touches Maya."""
-        data = self._load_tools()
-        tool = next(t for t in data["tools"] if t["name"] == "execute_python")
-        assert tool["affinity"] == "main"
-
-    def test_execute_python_advertises_skills_first_escape_hatch(self):
-        data = self._load_tools()
-        tool = next(t for t in data["tools"] if t["name"] == "execute_python")
-        desc = tool["description"].lower()
-        assert "load_skill" in desc
-        assert "last-resort" in desc or "escape" in desc
-
-    def test_execute_python_has_destructive_annotation(self):
-        data = self._load_tools()
-        tool = next(t for t in data["tools"] if t["name"] == "execute_python")
-        ann = tool.get("annotations") or {}
-        assert ann.get("destructive_hint") is True
 
 
 # ---------------------------------------------------------------------------
@@ -292,12 +108,6 @@ class TestArbitraryScriptPolicyEnv:
         assert out.get("success") is False
         assert "policy" in (out.get("message") or "").lower()
 
-    def test_disable_execute_python_true_token(self):
-        mod = load_skill_script("maya-scripting", "execute_python")
-        with patch.dict(os.environ, {"DCC_MCP_MAYA_DISABLE_EXECUTE_PYTHON": "yes"}):
-            out = mod.execute_python(code="pass")
-        assert out.get("success") is False
-
     def test_disable_arbitrary_script_blocks_execute_python(self):
         mod = load_skill_script("maya-scripting", "execute_python")
         with patch.dict(os.environ, {"DCC_MCP_MAYA_DISABLE_ARBITRARY_SCRIPT": "on"}):
@@ -306,159 +116,426 @@ class TestArbitraryScriptPolicyEnv:
 
 
 # ---------------------------------------------------------------------------
-# execute_python inline — stdout capture merges Python + Maya channels
+# execute_python bare-exec semantics (no live Maya required)
+# ---------------------------------------------------------------------------
+
+
+class TestExecutePythonBareExec:
+    """Wrapper-free dispatch — same shape as PatrickPalmer/maya-mcp-server."""
+
+    def test_simple_print_captured_in_stdout(self):
+        mod = load_skill_script("maya-scripting", "execute_python")
+        out = mod.execute_python(code="print('hello-bare-exec')")
+        assert out.get("success") is True
+        ctx = out.get("context") or {}
+        assert "hello-bare-exec" in ctx.get("stdout", "")
+
+    def test_result_type_value_captures_last_expression(self):
+        mod = load_skill_script("maya-scripting", "execute_python")
+        out = mod.execute_python(code="1 + 2", result_type="VALUE")
+        assert out.get("success") is True
+        ctx = out.get("context") or {}
+        assert ctx.get("output") == "3"
+
+    def test_result_type_json_round_trips_through_json(self):
+        mod = load_skill_script("maya-scripting", "execute_python")
+        out = mod.execute_python(code="{'a': 1, 'b': [2, 3]}", result_type="JSON")
+        assert out.get("success") is True
+        ctx = out.get("context") or {}
+        # ``output`` is str(captured_value); the value itself is a dict
+        # round-tripped through json.dumps + json.loads.
+        assert "a" in ctx.get("output", "")
+        assert "1" in ctx.get("output", "")
+
+    def test_result_type_repr_uses_repr(self):
+        mod = load_skill_script("maya-scripting", "execute_python")
+        out = mod.execute_python(code="object()", result_type="REPR")
+        assert out.get("success") is True
+        ctx = out.get("context") or {}
+        assert ctx.get("output", "").startswith("<object object at ")
+
+    def test_result_type_none_returns_empty_output(self):
+        mod = load_skill_script("maya-scripting", "execute_python")
+        out = mod.execute_python(code="1 + 2", result_type="NONE")
+        assert out.get("success") is True
+        ctx = out.get("context") or {}
+        assert ctx.get("output") == ""
+
+    def test_result_type_value_on_non_expression_errors(self):
+        """Last statement is not a bare ``Expr`` → structured error."""
+        mod = load_skill_script("maya-scripting", "execute_python")
+        out = mod.execute_python(code="x = 1\ny = 2\nimport os", result_type="VALUE")
+        assert out.get("success") is False
+        msg = (out.get("message") or "").lower()
+        assert "expression" in msg or "execution failed" in msg
+
+    def test_persistent_namespace_survives_across_calls(self):
+        """An ``import`` from one call must be visible to the next."""
+        mod = load_skill_script("maya-scripting", "execute_python")
+        # First call: import a stdlib module.
+        out1 = mod.execute_python(code="import math\nmath.pi", result_type="VALUE")
+        assert out1.get("success") is True
+        # Second call: reference ``math`` without re-importing — should
+        # resolve via the persistent module namespace.
+        out2 = mod.execute_python(code="math.tau", result_type="VALUE")
+        assert out2.get("success") is True
+        ctx = out2.get("context") or {}
+        # ``math.tau`` is ~6.28… ; tolerate float repr precision.
+        assert ctx.get("output", "").startswith("6.28")
+
+    def test_traceback_surfaces_on_runtime_exception(self):
+        mod = load_skill_script("maya-scripting", "execute_python")
+        out = mod.execute_python(code="raise RuntimeError('boom-test')")
+        assert out.get("success") is False
+        ctx = out.get("context") or {}
+        stderr = ctx.get("stderr") or ""
+        assert "boom-test" in stderr or "boom-test" in (out.get("message") or "")
+        assert "Traceback" in stderr
+
+    def test_capture_output_false_does_not_redirect(self, capsys):
+        """``capture_output=False`` lets prints reach the host's real stdout."""
+        mod = load_skill_script("maya-scripting", "execute_python")
+        out = mod.execute_python(code="print('to-host-stdout')", capture_output=False)
+        assert out.get("success") is True
+        ctx = out.get("context") or {}
+        assert ctx.get("stdout", "") == ""
+        # The print fell through to the real stdout, which pytest's capsys
+        # captures during the test.
+        captured = capsys.readouterr()
+        assert "to-host-stdout" in captured.out
+
+    def test_empty_code_returns_error(self):
+        mod = load_skill_script("maya-scripting", "execute_python")
+        out = mod.execute_python(code="")
+        assert out.get("success") is False
+        assert "no python" in (out.get("message") or "").lower()
+
+    def test_invalid_result_type_returns_error(self):
+        mod = load_skill_script("maya-scripting", "execute_python")
+        out = mod.execute_python(code="1+1", result_type="BOGUS")
+        assert out.get("success") is False
+        assert "result_type" in (out.get("message") or "").lower()
+
+    def test_script_alias_source_is_accepted(self):
+        """Upstream ``normalize_script_execution_params`` accepts aliases."""
+        mod = load_skill_script("maya-scripting", "execute_python")
+        out_a = mod.execute_python(code="2 + 2", result_type="VALUE")
+        out_b = mod.execute_python(script="2 + 2", result_type="VALUE")
+        out_c = mod.execute_python(source="2 + 2", result_type="VALUE")
+        for out in (out_a, out_b, out_c):
+            assert out.get("success") is True
+
+
+# ---------------------------------------------------------------------------
+# execute_python file_path / script_path
 # ---------------------------------------------------------------------------
 
 
 class TestExecutePythonFilePath:
-    """file_path execution path (no live Maya required for I/O errors)."""
+    """``file_path`` execution path — no live Maya needed for I/O errors."""
 
     def test_missing_file_returns_error_envelope(self):
         mod = load_skill_script("maya-scripting", "execute_python")
-        out = mod.execute_python(file_path="/nonexistent/path/__no_such_mcp_script__.py")
+        out = mod.execute_python(file_path="/nonexistent/__no_such_mcp_script__.py")
         assert out.get("success") is False
         assert "not found" in (out.get("message") or "").lower()
 
-    def test_non_py_extension_returns_error(self):
+    def test_non_py_extension_returns_error(self, tmp_path: Path):
         mod = load_skill_script("maya-scripting", "execute_python")
-        import tempfile
+        bad = tmp_path / "not_a_py.txt"
+        bad.write_text("nope", encoding="utf-8")
+        out = mod.execute_python(file_path=str(bad))
+        assert out.get("success") is False
+        assert ".py" in (out.get("message") or "").lower() or "py" in (out.get("message") or "").lower()
 
-        with tempfile.NamedTemporaryFile(suffix=".txt", delete=False) as tmp:
-            path = tmp.name
-        try:
-            out = mod.execute_python(file_path=path)
-            assert out.get("success") is False
-            assert ".py" in (out.get("message") or "").lower() or "py" in (out.get("message") or "").lower()
-        finally:
-            os.unlink(path)
-
-    def test_script_path_alias_executes_py_file(self):
+    def test_script_path_alias_executes_py_file(self, tmp_path: Path):
         mod = load_skill_script("maya-scripting", "execute_python")
-        import tempfile
-
-        import __main__
-
-        with tempfile.NamedTemporaryFile("w", suffix=".py", delete=False, encoding="utf-8") as tmp:
-            tmp.write("result = 40 + 2\n")
-            path = tmp.name
-        try:
-            out = mod.execute_python(script_path=path)
-            assert out.get("success") is True
-            ctx = out.get("context") or {}
-            assert "42" in str(ctx.get("output", ""))
-            assert __main__.__dict__.get("result") == 42
-        finally:
-            __main__.__dict__.pop("result", None)
-            os.unlink(path)
-
-
-class TestExecutePythonInlineSpill:
-    """Long inline ``code`` is mirrored to the host before ``exec``."""
-
-    def test_long_inline_sets_host_spill_path(self, monkeypatch):
-        mod = load_skill_script("maya-scripting", "execute_python")
-        monkeypatch.setattr(mod, "INLINE_CODE_SPILL_THRESHOLD_CHARS", 32)
-        code = "#" * 80 + "\nresult = 99\n"
-        out = mod.execute_python(code=code, capture_output=False)
+        f = tmp_path / "demo.py"
+        f.write_text("print('from-file-script')\n", encoding="utf-8")
+        out = mod.execute_python(script_path=str(f))
         assert out.get("success") is True
         ctx = out.get("context") or {}
-        spill = ctx.get("host_spilled_inline_script_path")
-        assert spill and str(spill).endswith(".py")
-        assert os.path.isfile(spill)
-        assert ctx.get("host_spill_reason") == "inline_code_exceeded_threshold_chars"
-        assert "99" in str(ctx.get("output", ""))
-        try:
-            os.unlink(spill)
-        except OSError:
-            pass
-
-    def test_short_inline_skips_spill_when_under_threshold(self, monkeypatch):
-        mod = load_skill_script("maya-scripting", "execute_python")
-        monkeypatch.setattr(mod, "INLINE_CODE_SPILL_THRESHOLD_CHARS", 99999)
-        out = mod.execute_python(code="result = 1", capture_output=False)
-        assert out.get("success") is True
-        ctx = out.get("context") or {}
-        assert ctx.get("host_spilled_inline_script_path") is None
+        assert "from-file-script" in ctx.get("stdout", "")
 
 
-class TestInlineCaptureMerging:
-    """``_run_inline`` concatenates Python and Maya capture buffers."""
+# ---------------------------------------------------------------------------
+# write_module — upload-once / call-many pattern
+# ---------------------------------------------------------------------------
 
-    def test_print_goes_to_stdout(self):
-        mod = load_skill_script("maya-scripting", "execute_python")
-        # Ensure MayaOutputCapture no-ops (no Maya available).
-        envelope = mod._run_inline("print('hello-stdout')", capture_output=True)
-        assert envelope["success"] is True
-        ctx = envelope.get("context", {})
-        # stdout key must be populated; MayaOutputCapture is a no-op here.
-        assert "hello-stdout" in ctx.get("stdout", "")
 
-    def test_inline_timeout_returns_structured_error(self):
-        mod = load_skill_script("maya-scripting", "execute_python")
-        envelope = mod._run_inline("while True:\n    pass", capture_output=False, timeout_secs=0.01)
-        assert envelope["success"] is False
-        assert envelope["context"]["kind"] == "tool-timeout"
-        assert envelope["context"]["elapsed_secs"] >= 0.01
+class TestWriteModule:
+    """Inject a module into ``sys.modules`` from a source string."""
 
-    def test_localised_maya_error_gets_stable_code(self):
-        mod = load_skill_script("maya-scripting", "execute_python")
-        envelope = mod._run_inline(
-            "raise TypeError('必须为标志「allObjects」传递一个布尔参数')",
-            capture_output=False,
+    @pytest.fixture(autouse=True)
+    def _isolate(self):
+        # Avoid cross-test contamination of the synthesised module name.
+        for name in list(sys.modules):
+            if name.startswith("_mcp_test_writemodule"):
+                sys.modules.pop(name, None)
+        yield
+        for name in list(sys.modules):
+            if name.startswith("_mcp_test_writemodule"):
+                sys.modules.pop(name, None)
+
+    def test_synthesises_module_in_sys_modules(self):
+        mod = load_skill_script("maya-scripting", "write_module")
+        out = mod.write_module(
+            name="_mcp_test_writemodule_basic",
+            source="value = 42\n\ndef greet(): return 'hello'\n",
         )
-        assert envelope["success"] is False
-        assert envelope["error_code"] == "ARG_TYPE_MISMATCH"
-        assert envelope["canonical_message_en"] == "Maya command flag received a value of the wrong type."
-        assert envelope["context"]["error_code"] == "ARG_TYPE_MISMATCH"
-        assert envelope["context"]["canonical_message_en"] == "Maya command flag received a value of the wrong type."
+        assert out.get("success") is True
+        assert "_mcp_test_writemodule_basic" in sys.modules
+        installed = sys.modules["_mcp_test_writemodule_basic"]
+        assert installed.value == 42
+        assert installed.greet() == "hello"
 
-    def test_print_stdout_is_deduplicated_against_maya_mirror(self, monkeypatch):
-        class _MirroredMayaCapture:
-            stdout = "hello-once\n"
-            stderr = ""
+    def test_overwrite_true_refreshes_attributes_in_place(self):
+        mod = load_skill_script("maya-scripting", "write_module")
+        first = mod.write_module(name="_mcp_test_writemodule_over", source="value = 1\n")
+        assert first.get("success") is True
+        first_id = id(sys.modules["_mcp_test_writemodule_over"])
 
-            def __enter__(self):
-                return self
+        second = mod.write_module(name="_mcp_test_writemodule_over", source="value = 2\n", overwrite=True)
+        assert second.get("success") is True
+        # Same module object — identity preserved across rewrites.
+        assert id(sys.modules["_mcp_test_writemodule_over"]) == first_id
+        assert sys.modules["_mcp_test_writemodule_over"].value == 2
 
-            def __exit__(self, exc_type, exc, tb):
-                return None
+    def test_overwrite_false_skips_when_module_exists(self):
+        mod = load_skill_script("maya-scripting", "write_module")
+        first = mod.write_module(name="_mcp_test_writemodule_skip", source="value = 1\n")
+        assert first.get("success") is True
+        second = mod.write_module(name="_mcp_test_writemodule_skip", source="value = 999\n", overwrite=False)
+        assert second.get("success") is True
+        # Body NOT re-exec'd — value stays 1.
+        assert sys.modules["_mcp_test_writemodule_skip"].value == 1
 
-        monkeypatch.setattr("dcc_mcp_maya._maya_output.MayaOutputCapture", _MirroredMayaCapture)
-        mod = load_skill_script("maya-scripting", "execute_python")
-        envelope = mod._run_inline("print('hello-once')", capture_output=True)
+    def test_invalid_name_returns_error(self):
+        mod = load_skill_script("maya-scripting", "write_module")
+        for bad in ("", "1leading", "with-hyphen", "with space"):
+            out = mod.write_module(name=bad, source="pass\n")
+            assert out.get("success") is False, "should reject name={!r}".format(bad)
 
-        stdout = envelope["context"]["stdout"]
-        assert stdout.count("hello-once") == 1
+    def test_empty_source_returns_error(self):
+        mod = load_skill_script("maya-scripting", "write_module")
+        out = mod.write_module(name="_mcp_test_writemodule_empty", source="")
+        assert out.get("success") is False
 
-    def test_capture_cleanup_failure_does_not_mask_script_exception(self, monkeypatch):
-        class _FailingExitMayaCapture:
-            stdout = ""
-            stderr = ""
+    def test_syntax_error_in_source_returns_error_envelope(self):
+        mod = load_skill_script("maya-scripting", "write_module")
+        out = mod.write_module(name="_mcp_test_writemodule_syntax", source="def x(::\n")
+        assert out.get("success") is False
+        assert "syntaxerror" in (out.get("message") or "").lower()
+        # The broken source must NOT pollute sys.modules.
+        assert "_mcp_test_writemodule_syntax" not in sys.modules
 
-            def __enter__(self):
-                return self
+    def test_runtime_error_in_module_body_returns_error_envelope(self):
+        mod = load_skill_script("maya-scripting", "write_module")
+        out = mod.write_module(
+            name="_mcp_test_writemodule_runtime",
+            source="raise RuntimeError('module-init-failed')\n",
+        )
+        assert out.get("success") is False
+        # Error detail may live on `message` (top-level summary) or in the
+        # nested context — accept either; both surface the cause to the agent.
+        ctx = out.get("context") or {}
+        joined = "{0}\n{1}\n{2}".format(
+            out.get("message") or "",
+            ctx.get("message") or "",
+            ctx.get("traceback") or "",
+        )
+        assert "module-init-failed" in joined
 
-            def __exit__(self, exc_type, exc, tb):
-                raise RuntimeError("cleanup failed")
+    def test_disabled_by_env_var(self):
+        mod = load_skill_script("maya-scripting", "write_module")
+        with patch.dict(os.environ, {"DCC_MCP_MAYA_DISABLE_EXECUTE_PYTHON": "1"}):
+            out = mod.write_module(name="_mcp_test_writemodule_blocked", source="value = 1\n")
+        assert out.get("success") is False
+        assert "policy" in (out.get("message") or "").lower()
+        assert "_mcp_test_writemodule_blocked" not in sys.modules
 
-        monkeypatch.setattr("dcc_mcp_maya._maya_output.MayaOutputCapture", _FailingExitMayaCapture)
-        mod = load_skill_script("maya-scripting", "execute_python")
-        envelope = mod._run_inline("raise NameError('original failure')", capture_output=True)
 
-        assert envelope["success"] is False
-        assert envelope["context"]["error_type"] == "NameError"
-        assert "original failure" in envelope["error"]
+# ---------------------------------------------------------------------------
+# io — single-tool action multiplexer for stdout/stderr capture
+# ---------------------------------------------------------------------------
 
-    def test_merge_capture_helper(self):
-        mod = load_skill_script("maya-scripting", "execute_python")
-        # Both empty → empty
-        assert mod._merge_capture("", "") == ""
-        # Only one side populated
-        assert mod._merge_capture("a\n", "") == "a\n"
-        assert mod._merge_capture("", "b") == "b"
-        # Both populated, primary already ends with newline
-        assert mod._merge_capture("a\n", "b") == "a\nb"
-        # Both populated, primary missing newline
-        assert mod._merge_capture("a", "b") == "a\nb"
-        # Maya mirrors Python print through MCommandMessage with different whitespace.
-        assert mod._merge_capture("Maya: 2024\n", "Maya:\n \n2024\n\n") == "Maya: 2024\n"
+
+class TestIoAction:
+    """``io`` lifecycle: install / get / clear / uninstall / status."""
+
+    @pytest.fixture(autouse=True)
+    def _restore_streams(self):
+        original_out = sys.stdout
+        original_err = sys.stderr
+        # Force-uninstall in case a previous test left a tee in place.
+        mod = load_skill_script("maya-scripting", "io")
+        mod.io_action(action="uninstall")
+        yield
+        mod.io_action(action="uninstall")
+        sys.stdout = original_out
+        sys.stderr = original_err
+
+    def test_install_then_uninstall_round_trip(self):
+        mod = load_skill_script("maya-scripting", "io")
+        original_stdout = sys.stdout
+        installed = mod.io_action(action="install")
+        assert installed.get("success") is True
+        ctx = installed.get("context") or {}
+        assert ctx.get("installed") is True
+        # sys.stdout must be replaced.
+        assert sys.stdout is not original_stdout
+
+        uninstalled = mod.io_action(action="uninstall")
+        ctx = uninstalled.get("context") or {}
+        assert ctx.get("uninstalled") is True
+        # sys.stdout must be restored.
+        assert sys.stdout is original_stdout
+
+    def test_get_drains_buffer_by_default(self):
+        mod = load_skill_script("maya-scripting", "io")
+        mod.io_action(action="install")
+        print("captured-line-A")
+        first = mod.io_action(action="get")
+        assert "captured-line-A" in (first.get("context") or {}).get("stdout", "")
+        # After draining, the buffer should be empty.
+        second = mod.io_action(action="get")
+        assert (second.get("context") or {}).get("stdout") == ""
+
+    def test_get_peek_without_drain_preserves_buffer(self):
+        mod = load_skill_script("maya-scripting", "io")
+        mod.io_action(action="install")
+        print("captured-line-B")
+        peeked = mod.io_action(action="get", drain=False)
+        assert "captured-line-B" in (peeked.get("context") or {}).get("stdout", "")
+        # Buffer must NOT have been emptied.
+        peeked_again = mod.io_action(action="get")
+        assert "captured-line-B" in (peeked_again.get("context") or {}).get("stdout", "")
+
+    def test_clear_empties_buffers_without_uninstalling(self):
+        mod = load_skill_script("maya-scripting", "io")
+        mod.io_action(action="install")
+        print("captured-line-C")
+        cleared = mod.io_action(action="clear")
+        ctx = cleared.get("context") or {}
+        assert ctx.get("cleared") is True
+        assert ctx.get("installed") is True
+        # After clear, nothing buffered.
+        got = mod.io_action(action="get")
+        assert (got.get("context") or {}).get("stdout") == ""
+
+    def test_status_reports_install_state_and_bytes(self):
+        mod = load_skill_script("maya-scripting", "io")
+        status_off = mod.io_action(action="status")
+        assert (status_off.get("context") or {}).get("installed") is False
+
+        mod.io_action(action="install")
+        print("X" * 13)
+        status_on = mod.io_action(action="status")
+        ctx = status_on.get("context") or {}
+        assert ctx.get("installed") is True
+        assert ctx.get("stdout_bytes") >= 13
+
+    def test_install_is_idempotent(self):
+        mod = load_skill_script("maya-scripting", "io")
+        first = mod.io_action(action="install")
+        assert (first.get("context") or {}).get("installed") is True
+        second = mod.io_action(action="install")
+        ctx = second.get("context") or {}
+        assert ctx.get("reused") is True
+        assert ctx.get("installed") is False  # already there
+
+    def test_unknown_action_returns_error(self):
+        mod = load_skill_script("maya-scripting", "io")
+        out = mod.io_action(action="bogus")
+        assert out.get("success") is False
+
+    def test_action_required(self):
+        mod = load_skill_script("maya-scripting", "io")
+        out = mod.io_action()
+        assert out.get("success") is False
+
+
+# ---------------------------------------------------------------------------
+# tools.yaml — schema contract
+# ---------------------------------------------------------------------------
+
+
+class TestToolsYamlContract:
+    """Pin the public schema for the maya-scripting tools."""
+
+    def _load_tools(self) -> dict:
+        path = Path(__file__).parent.parent / "src" / "dcc_mcp_maya" / "skills" / "maya-scripting" / "tools.yaml"
+        return yaml.safe_load(path.read_text(encoding="utf-8"))
+
+    def test_execute_python_advertises_result_type_param(self):
+        data = self._load_tools()
+        tool = next(t for t in data["tools"] if t["name"] == "execute_python")
+        props = tool.get("inputSchema", {}).get("properties", {})
+        assert "result_type" in props, "execute_python must advertise the result_type selector"
+        assert props["result_type"].get("type") == "string"
+        assert set(props["result_type"].get("enum", [])) >= {"NONE", "VALUE", "JSON", "REPR"}
+
+    def test_execute_python_no_longer_advertises_defer(self):
+        """Regression guard: the deferred / settrace path was removed in #248."""
+        data = self._load_tools()
+        tool = next(t for t in data["tools"] if t["name"] == "execute_python")
+        props = tool.get("inputSchema", {}).get("properties", {})
+        assert "defer" not in props
+        assert "timeout_secs" not in props
+
+    def test_execute_python_schema_keeps_file_path(self):
+        data = self._load_tools()
+        tool = next(t for t in data["tools"] if t["name"] == "execute_python")
+        props = tool.get("inputSchema", {}).get("properties", {})
+        assert "file_path" in props
+        assert "script_path" in props
+
+    def test_execute_python_still_declares_main_affinity(self):
+        data = self._load_tools()
+        tool = next(t for t in data["tools"] if t["name"] == "execute_python")
+        assert tool["affinity"] == "main"
+
+    def test_execute_python_advertises_skills_first_escape_hatch(self):
+        data = self._load_tools()
+        tool = next(t for t in data["tools"] if t["name"] == "execute_python")
+        desc = tool["description"].lower()
+        assert "load_skill" in desc or "search_skills" in desc
+
+    def test_write_module_is_declared(self):
+        data = self._load_tools()
+        tool = next((t for t in data["tools"] if t["name"] == "write_module"), None)
+        assert tool is not None, "write_module must be declared in tools.yaml"
+        props = tool.get("inputSchema", {}).get("properties", {})
+        assert {"name", "source", "overwrite"} <= set(props.keys())
+        assert "name" in tool["inputSchema"].get("required", [])
+        assert "source" in tool["inputSchema"].get("required", [])
+
+    def test_io_is_declared_with_action_multiplexer(self):
+        data = self._load_tools()
+        tool = next((t for t in data["tools"] if t["name"] == "io"), None)
+        assert tool is not None, "io must be declared in tools.yaml"
+        props = tool.get("inputSchema", {}).get("properties", {})
+        assert "action" in props
+        assert set(props["action"].get("enum", [])) >= {"install", "uninstall", "get", "clear", "status"}
+        assert "action" in tool["inputSchema"].get("required", [])
+
+    def test_execute_mel_schema_has_file_path(self):
+        data = self._load_tools()
+        tool = next(t for t in data["tools"] if t["name"] == "execute_mel")
+        props = tool.get("inputSchema", {}).get("properties", {})
+        assert "file_path" in props
+
+
+# ---------------------------------------------------------------------------
+# Cleanup env-var fixture leak
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture(autouse=True)
+def _reset_safe_session_env():
+    saved = os.environ.get("DCC_MCP_MAYA_SAFE_SESSION")
+    yield
+    if saved is None:
+        os.environ.pop("DCC_MCP_MAYA_SAFE_SESSION", None)
+    else:
+        os.environ["DCC_MCP_MAYA_SAFE_SESSION"] = saved
