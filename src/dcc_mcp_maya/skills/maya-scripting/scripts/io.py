@@ -186,12 +186,41 @@ def _status_locked() -> dict:
     }
 
 
+def _drain_queue(params: dict) -> dict:
+    """Cancel queued (NOT in-flight) main-thread jobs.
+
+    Use case: Maya's main thread is wedged inside a long-running user
+    script and new ``execute_python`` requests are piling up behind it.
+    ``drain`` frees those queued callers with a structured
+    ``WedgeDetectedError`` envelope so MCP clients stop hanging while
+    Maya recovers (or gets restarted). The in-flight job is NOT
+    cancelled — Maya's main thread is cooperative, not pre-emptive, so
+    the bytes already on the UI thread keep running until they return
+    naturally or the user kills Maya.
+
+    Returns the same ``main_thread_queue`` snapshot ``status`` returns,
+    plus the count of jobs cancelled.
+    """
+    try:
+        from dcc_mcp_maya import _main_thread_queue  # noqa: PLC0415
+    except ImportError:
+        return {"available": False, "drained": 0}
+    q = _main_thread_queue.get_queue()
+    reason = str(params.get("reason") or "drain requested via io action=drain")
+    cancelled = q.drain_pending(reason=reason)
+    snapshot = q.status()
+    snapshot["available"] = True
+    snapshot["drained_now"] = cancelled
+    return snapshot
+
+
 _ACTIONS = {
     "install": lambda _params: _install_locked(),
     "uninstall": lambda _params: _uninstall_locked(),
     "get": lambda params: _get_locked(bool(params.get("drain", True))),
     "clear": lambda _params: _clear_locked(),
     "status": lambda _params: _status_locked(),
+    "drain": _drain_queue,
 }
 
 
