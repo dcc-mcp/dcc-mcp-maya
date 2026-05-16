@@ -21,7 +21,6 @@ can be exercised by pytest without ``maya.cmds`` being importable.
 from __future__ import annotations
 
 import socket
-from typing import Final
 
 __all__ = [
     "DEFAULT_COMMAND_PORT_HINT",
@@ -33,7 +32,13 @@ __all__ = [
 # (e.g. when scripting `telnet`-style tests against commandPort by hand).
 # Sidecar mode itself does NOT use this constant — it always asks the
 # OS for an ephemeral port to avoid clashing with other Maya sessions.
-DEFAULT_COMMAND_PORT_HINT: Final[int] = 6000
+#
+# Declared without ``typing.Final`` because Maya 2020 / 2022 ship Python
+# 3.7 and ``typing.Final`` only landed in 3.8 (``ImportError`` at plug-in
+# load time). Convention (UPPER_SNAKE_CASE) is the immutability marker
+# instead — see the Python 3.7 compatibility regression test in
+# ``tests/test_python_3_7_compat.py``.
+DEFAULT_COMMAND_PORT_HINT = 6000
 
 
 def allocate_free_port(host: str = "127.0.0.1") -> int:
