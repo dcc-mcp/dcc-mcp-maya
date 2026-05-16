@@ -145,6 +145,17 @@ from dcc_mcp_maya.dispatcher import (
 )
 from dcc_mcp_maya.host import MayaCallableDispatcher, MayaHost
 from dcc_mcp_maya.server import MayaMcpServer, MayaServerOptions, start_server, stop_server
+from dcc_mcp_maya.sidecar import (
+    ENV_SIDECAR_BINARY,
+    ENV_SIDECAR_MODE,
+    SidecarBinaryError,
+    SidecarHandle,
+    SidecarSpawnError,
+    is_sidecar_mode_enabled,
+    resolve_sidecar_binary,
+    start_sidecar,
+    stop_sidecar,
+)
 
 __all__ = [
     "__version__",
@@ -267,4 +278,14 @@ __all__ = [
     "write_process_sentinel",
     "sentinel_path",
     "orphan_sentinels",
+    # Out-of-process sidecar (RFC #998) — opt-in via DCC_MCP_MAYA_SIDECAR=1
+    "ENV_SIDECAR_BINARY",
+    "ENV_SIDECAR_MODE",
+    "SidecarBinaryError",
+    "SidecarHandle",
+    "SidecarSpawnError",
+    "is_sidecar_mode_enabled",
+    "resolve_sidecar_binary",
+    "start_sidecar",
+    "stop_sidecar",
 ]
