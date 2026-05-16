@@ -728,6 +728,27 @@ def _print_startup_info(cfg: dict) -> None:
             pass  # viewport HUD is cosmetic, never block startup
 
 
+def _stop_sidecar_if_running() -> None:
+    """Terminate the supervised sidecar subprocess and clear ``_sidecar_handle``.
+
+    Shared by plugin unload, menu Stop, and Restart MCP Server so we never
+    orphan a ``dcc-mcp-server sidecar`` child (and its FileRegistry row)
+    when the in-process HTTP server is torn down and respawned.
+    """
+    global _sidecar_handle
+
+    if _sidecar_handle is None:
+        return
+    try:
+        from dcc_mcp_maya.sidecar import stop_sidecar  # noqa: PLC0415
+
+        stop_sidecar(_sidecar_handle)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("dcc-mcp-maya: sidecar stop_sidecar raised: %s", exc)
+    finally:
+        _sidecar_handle = None
+
+
 def _stop_blocking() -> None:
     """Stop the server, blocking until fully shut down.
 
@@ -750,17 +771,9 @@ def _stop_blocking() -> None:
     is wrapped so the others still run, mirroring the resilience
     contract issue #126 added for the in-process path.
     """
-    global _handle, _host, _host_dispatcher, _sidecar_handle
+    global _handle, _host, _host_dispatcher
 
-    if _sidecar_handle is not None:
-        try:
-            from dcc_mcp_maya.sidecar import stop_sidecar  # noqa: PLC0415
-
-            stop_sidecar(_sidecar_handle)
-        except Exception as exc:  # noqa: BLE001
-            logger.warning("dcc-mcp-maya: sidecar stop_sidecar raised: %s", exc)
-        finally:
-            _sidecar_handle = None
+    _stop_sidecar_if_running()
 
     try:
         if _host is not None:
@@ -955,6 +968,12 @@ def _restart_deferred() -> None:
         return
 
     cmds.inViewMessage(amg="DCC MCP: restarting…", pos="topCenter", fade=True)
+
+    # Tear down the prior sidecar before stop_server/_start respawn a new one.
+    # Without this, Restart MCP Server orphans the old dcc-mcp-server sidecar
+    # process and its FileRegistry row (menu Stop/unload already call
+    # _stop_sidecar_if_running via _stop_blocking).
+    _stop_sidecar_if_running()
 
     try:
         _stop_host_on_main_thread()
