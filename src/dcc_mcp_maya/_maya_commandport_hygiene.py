@@ -1,4 +1,9 @@
-"""commandPort security-warning suppression (issue #148).
+"""Maya commandPort hygiene — not MCP transport (issues #148, #217).
+
+We do **not** open commandPort for MCP or sidecar (those use HTTP and
+``qtserver://``). This module only defuses Maya's **existing** listeners
+(default ``:50007``, third-party ports) so stray probes do not block the
+UI thread or flood the Script Editor.
 
 Maya's legacy ``commandPort`` shows a modal "Allow / Deny / Allow All"
 dialog the first time it receives a payload from an unfamiliar source.
@@ -16,9 +21,15 @@ This module exposes a single best-effort helper:
 
 * :func:`close_default_commandport` — closes Maya's default MEL commandPort
   on ``127.0.0.1:50007`` so HTTP probes cannot trigger a security dialog.
+* :func:`configure_commandport_hygiene` — calls
+  :func:`close_default_commandport` then :func:`suppress_security_warnings`
+  (preferred plug-in entry point).
 * :func:`suppress_security_warnings` — re-opens every currently-open
-  commandPort with ``-securityWarning false``, so the modal dialog
-  never appears.  Idempotent; never raises; never opens new ports.
+  commandPort with ``-securityWarning false``, **preserving each port's
+  ``sourceType``** (``python`` vs ``mel``).  Forcing every listener to
+  MEL turned Python smoke tests such as ``1+1;`` into Script Editor
+  syntax-error spam when another tool still dialed a Python commandPort.
+  Idempotent; never raises; never opens new ports.
 
 Set ``DCC_MCP_MAYA_CLOSE_DEFAULT_COMMANDPORT=0`` to keep the default port open.
 Set ``DCC_MCP_MAYA_DISABLE_COMMANDPORT_WARNING=0`` to opt out of warning suppression.
@@ -30,7 +41,7 @@ from __future__ import annotations
 # Import built-in modules
 import logging
 import os
-from typing import List
+from typing import List, Literal
 
 logger = logging.getLogger(__name__)
 
@@ -75,6 +86,30 @@ def _list_open_ports() -> List[str]:
         return [str(p) for p in raw if p]
     except TypeError:
         return []
+
+
+def _port_source_type(cmds: object, port: str) -> Literal["mel", "python"]:
+    """Return the ``sourceType`` of an open commandPort (default ``mel``)."""
+    try:
+        raw = cmds.commandPort(name=port, query=True, sourceType=True)  # type: ignore[union-attr]
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("commandPort sourceType query failed for %s: %s", port, exc)
+        return "mel"
+    if isinstance(raw, str):
+        lowered = raw.strip().lower()
+        if lowered in ("python", "mel"):
+            return lowered  # type: ignore[return-value]
+    return "mel"
+
+
+def configure_commandport_hygiene() -> None:
+    """Close the default MEL listener, then suppress security warnings.
+
+    Plug-in startup should call this once on the Maya main thread instead
+    of invoking the helpers separately.
+    """
+    close_default_commandport()
+    suppress_security_warnings()
 
 
 def close_default_commandport() -> int:
@@ -147,9 +182,16 @@ def suppress_security_warnings() -> int:
         try:
             # Closing then re-opening with -securityWarning false is the
             # only way to flip the flag on an existing port; Maya does
-            # not expose a runtime mutator for this attribute.
+            # not expose a runtime mutator for this attribute.  Preserve
+            # the original sourceType — re-opening as MEL breaks any
+            # Python listener still used by legacy MCP bridges.
+            source_type = _port_source_type(cmds, port)
             cmds.commandPort(name=port, close=True)
-            cmds.commandPort(name=port, securityWarning=False, sourceType="mel")
+            cmds.commandPort(
+                name=port,
+                securityWarning=False,
+                sourceType=source_type,
+            )
             fixed += 1
         except Exception as exc:  # noqa: BLE001
             logger.debug("Could not disable security warning on %s: %s", port, exc)
