@@ -59,6 +59,7 @@ from dcc_mcp_maya.sidecar._commandport import (
     allocate_free_port,
     build_host_rpc_uri,
 )
+from dcc_mcp_maya.sidecar._dispatcher import dispatch, dispatch_payload
 from dcc_mcp_maya.sidecar._resolver import (
     ENV_SIDECAR_BINARY,
     SidecarBinaryError,
@@ -82,6 +83,8 @@ __all__ = [
     "SidecarSpawnError",
     "allocate_free_port",
     "build_host_rpc_uri",
+    "dispatch",
+    "dispatch_payload",
     "is_sidecar_mode_enabled",
     "resolve_sidecar_binary",
     "start_sidecar",
