@@ -166,8 +166,44 @@ try {
 }
 
 Copy-Item -Path (Join-Path $MayaRoot "maya\plugin\dcc_mcp_maya_plugin.py") -Destination (Join-Path $Target "plug-ins") -Force
-Copy-Item -Path (Join-Path $MayaRoot "maya\userSetup.py") -Destination (Join-Path $Target "scripts") -Force
+$UserSetupDest = Join-Path $Target "scripts\userSetup.py"
+Copy-Item -Path (Join-Path $MayaRoot "maya\userSetup.py") -Destination $UserSetupDest -Force
 Write-Host "   ✅ plug-ins + scripts copied" -ForegroundColor Green
+
+# Dev-mode env-var defaults appended to userSetup.py (NOT to the .mod file).
+#
+# Why not the .mod file? Maya parses `.mod` files for module discovery and
+# only reliably supports `:=` / `+:=` / `+=` for **path-list** variables
+# (PYTHONPATH, MAYA_PLUG_IN_PATH, MAYA_SCRIPT_PATH). Plain env vars set via
+# `KEY := value` are honoured by some Maya versions but silently ignored by
+# others (verified Maya 2026: dcc-mcp-maya#244 — sidecar did not spawn even
+# though the line was in the .mod file).
+#
+# `userSetup.py` runs Python code during Maya init and is honoured by every
+# Maya version we target. Using ``os.environ.setdefault`` keeps any
+# shell-level override the operator set before launching Maya (e.g.
+# ``set DCC_MCP_MAYA_SIDECAR=0``).
+#
+# PyPI / production installs ship `maya/userSetup.py` unmodified — only
+# this dev script appends the block, keeping the production opt-in
+# contract intact.
+if ($ServerBin) {
+    $ServerBinEscaped = $ServerBin -replace '\\', '\\'
+    $DevBlock = @"
+
+
+# ── Dev-mode env defaults (appended by tools/maya-dev-build-link-core-win.ps1) ──
+# NOT present in PyPI installs. Auto-enables the sidecar workflow (RFC #998)
+# so a fresh ``vx just maya-dev-build-link-core-win`` run produces a Maya
+# session that immediately spawns ``dcc-mcp-server.exe`` alongside Maya.
+# Shell-level ``set DCC_MCP_MAYA_SIDECAR=0`` still wins via ``setdefault``.
+import os as _dcc_mcp_dev_os
+_dcc_mcp_dev_os.environ.setdefault("DCC_MCP_MAYA_SIDECAR", "1")
+_dcc_mcp_dev_os.environ.setdefault("DCC_MCP_SERVER_BIN", "$ServerBinEscaped")
+"@
+    Add-Content -Path $UserSetupDest -Value $DevBlock -Encoding UTF8
+    Write-Host "   ✅ dev-mode env defaults appended to userSetup.py" -ForegroundColor Green
+}
 
 $ModContent = @(
     "+ dcc-mcp-maya 0.0.0-dev $Target",
@@ -175,19 +211,6 @@ $ModContent = @(
     "MAYA_PLUG_IN_PATH+:=plug-ins",
     "MAYA_SCRIPT_PATH+:=scripts"
 )
-if ($ServerBin) {
-    # .mod files set environment variables via `KEY := value` (absolute assignment).
-    # Maya parses these on module scan so the plug-in sees them the moment
-    # it imports — no need for the operator to set them in the shell.
-    $ModContent += "DCC_MCP_SERVER_BIN := $ServerBin"
-
-    # Dev workflow opts into sidecar mode by default. The PyPI distribution
-    # for end-users does NOT ship this .mod file, so production installs
-    # remain opt-in (DCC_MCP_MAYA_SIDECAR must be set explicitly there).
-    # If you specifically want to test the legacy in-process-only path
-    # against a dev build, delete this line from the generated .mod file.
-    $ModContent += "DCC_MCP_MAYA_SIDECAR := 1"
-}
 $ModFile = Join-Path $ModDir "dcc-mcp-maya.mod"
 $ModContent | Out-File -FilePath $ModFile -Encoding ASCII
 Write-Host "   ✅ $ModFile" -ForegroundColor Green
@@ -204,13 +227,14 @@ Write-Host "Docs: docs/guide/local-mcp-debug.md | examples/mcp/cursor-maya-strea
 if ($ServerBin) {
     Write-Host ""
     Write-Host "Sidecar mode (experimental, RFC #998) — AUTO-ENABLED for dev builds:" -ForegroundColor Cyan
-    Write-Host "   The generated .mod file sets DCC_MCP_MAYA_SIDECAR := 1 and" -ForegroundColor Gray
-    Write-Host "   DCC_MCP_SERVER_BIN, so launching Maya alone spawns the sidecar." -ForegroundColor Gray
-    Write-Host "   PyPI / production installs stay opt-in (no .mod file shipped)." -ForegroundColor Gray
+    Write-Host "   The dev script appended ``os.environ.setdefault`` calls to the" -ForegroundColor Gray
+    Write-Host "   shipped userSetup.py so DCC_MCP_MAYA_SIDECAR=1 and the binary" -ForegroundColor Gray
+    Write-Host "   path are set the moment Maya boots Python. Just launch Maya." -ForegroundColor Gray
+    Write-Host "   PyPI / production installs stay opt-in (no override appended)." -ForegroundColor Gray
     Write-Host "   Verify in Task Manager — a 'dcc-mcp-server.exe' child should" -ForegroundColor Gray
     Write-Host "   appear under Maya within a second of plug-in init." -ForegroundColor Gray
-    Write-Host "   To test legacy in-process-only, edit the .mod file and delete" -ForegroundColor Gray
-    Write-Host "   the DCC_MCP_MAYA_SIDECAR line, then relaunch Maya." -ForegroundColor Gray
+    Write-Host "   To test legacy in-process-only, run with DCC_MCP_MAYA_SIDECAR=0" -ForegroundColor Gray
+    Write-Host "   in the launching shell (the ``setdefault`` honours that)." -ForegroundColor Gray
 }
 
 if ($LaunchMaya) {
