@@ -522,7 +522,7 @@ def _print_sidecar_info(handle) -> None:  # noqa: ANN001
         border,
         f"  Binary       : {handle.binary_path}",
         f"  PID          : {handle.proc.pid}",
-        f"  commandPort  : :{handle.command_port}",
+        f"  Qt server    : 127.0.0.1:{handle.qt_port}  ({handle.qt_binding})",
         f"  host-rpc URI : {handle.host_rpc_uri}",
         f"  watch-pid    : {handle.maya_pid} (Maya)",
         border,

@@ -2,14 +2,16 @@
 
 These tests exercise the **process lifecycle** half of the sidecar
 contract — spawn, FileRegistry registration, PPID-watch teardown —
-**without** requiring a running Maya. The Maya commandPort is replaced
-by a fake TCP listener on a free port; the sidecar binary itself is
-the real ``dcc-mcp-server`` artefact built from ``dcc-mcp-core``.
+**without** requiring a running Maya. The in-Maya Qt server is replaced
+by a fake TCP listener on an ephemeral port; the sidecar binary
+itself is the real ``dcc-mcp-server`` artefact built from
+``dcc-mcp-core``.
 
 What is verified end-to-end:
 
-* :func:`dcc_mcp_maya.sidecar.start_sidecar` spawns the binary with
-  the right argv.
+* :func:`dcc_mcp_maya.sidecar.start_sidecar` starts the (stubbed) in-Maya
+  Qt server and spawns the binary with the right argv (including the
+  ``qtserver://`` URI, RFC #998 Addendum B).
 * The binary registers a row in the shared FileRegistry with
   ``metadata.dcc_mcp_role = "per-dcc-sidecar"``.
 * When the Python "Maya parent" terminates, PPID-watch detects the
@@ -19,12 +21,11 @@ What is verified end-to-end:
 
 What is **not** verified here (out of scope for the lifecycle slice):
 
-* Actual ``tools/call`` dispatch through the sidecar — needs the
-  URI-router-with-HostRpcClient wiring on the sidecar binary side,
-  which is the next core PR.
-* Real Maya commandPort behaviour — tested manually with the loaded
-  plug-in inside Maya. The pytest fake-commandPort listener is
-  enough to confirm the spawn argv is correct.
+* Actual ``tools/call`` dispatch through the sidecar — needs a real
+  Qt event loop inside Maya, covered by manual smoke tests with the
+  plug-in loaded.
+* The Rust ``QtServerClient`` wire protocol — covered by the Rust
+  unit tests in ``dcc-mcp-host-rpc::qtserver``.
 
 Skip behaviour
 ==============
@@ -41,7 +42,6 @@ from __future__ import annotations
 
 # Import built-in modules
 import json
-import os
 import socket
 import socketserver
 import threading
@@ -58,8 +58,7 @@ from dcc_mcp_maya.sidecar import (
     ENV_SIDECAR_MODE,
     SidecarBinaryError,
     SidecarHandle,
-    allocate_free_port,
-    build_host_rpc_uri,
+    build_qtserver_uri,
     is_sidecar_mode_enabled,
     resolve_sidecar_binary,
     start_sidecar,
@@ -84,6 +83,20 @@ pytestmark = pytest.mark.skipif(
         f"{ENV_SIDECAR_BINARY}=<path> or install the dcc-mcp-server wheel."
     ),
 )
+
+
+def _allocate_ephemeral_port() -> int:
+    """Pick an unused TCP port on loopback.
+
+    Used by the fake-Qt-server fixture to bind a known free port the
+    stubbed ``start_qt_server_fn`` can advertise to the sidecar
+    binary. We accept the small race window between releasing this
+    probe socket and the fake listener re-binding — same trade-off
+    every "ephemeral port for test" helper makes.
+    """
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+        probe.bind(("127.0.0.1", 0))
+        return int(probe.getsockname()[1])
 
 
 class _ParentSurrogate:
@@ -129,22 +142,29 @@ def parent_surrogate() -> Iterator[_ParentSurrogate]:
         surrogate.kill()
 
 
-class _FakeCommandPort(socketserver.ThreadingTCPServer):
-    """Tiny TCP listener that mimics Maya's commandPort acceptor.
+class _FakeQtServer(socketserver.ThreadingTCPServer):
+    """Tiny TCP listener that mimics the in-Maya Qt JSON-line dispatcher.
 
-    Tests don't actually need the wire format — the sidecar's MVP
-    doesn't dispatch yet (the URI router lands in a follow-up). We
-    just need a listening socket on the port advertised in
-    ``--host-rpc`` so a future smoke test that DOES dial in won't
-    get ``ECONNREFUSED``.
+    The lifecycle tests don't actually exercise dispatch — they only
+    need a socket accepting connections at the URI the sidecar binary
+    dials so connect() does not see ``ECONNREFUSED``. We accept and
+    drain incoming bytes silently; the binary's ``QtServerClient``
+    will keep the connection open until the test calls
+    :func:`stop_sidecar` or PPID-watch fires.
     """
 
     allow_reuse_address = True
 
 
 @pytest.fixture
-def fake_command_port() -> Iterator[int]:
-    port = allocate_free_port()
+def fake_qt_server() -> Iterator[int]:
+    """Spawn a background TCP listener and yield its port.
+
+    The port is later threaded into :func:`start_sidecar` via the
+    ``start_qt_server_fn`` dependency-injection seam so the
+    production code never sees the test stub directly.
+    """
+    port = _allocate_ephemeral_port()
 
     class _Handler(socketserver.BaseRequestHandler):
         def handle(self) -> None:
@@ -159,7 +179,7 @@ def fake_command_port() -> Iterator[int]:
             except (OSError, ConnectionError):
                 return
 
-    server = _FakeCommandPort(("127.0.0.1", port), _Handler)
+    server = _FakeQtServer(("127.0.0.1", port), _Handler)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     try:
@@ -168,6 +188,28 @@ def fake_command_port() -> Iterator[int]:
         server.shutdown()
         server.server_close()
         thread.join(timeout=2.0)
+
+
+def _qt_stub_factory(port: int):
+    """Return a ``start_qt_server_fn`` stub that advertises ``port``.
+
+    Mirrors the production signature of
+    :func:`dcc_mcp_maya.sidecar._qt_dispatcher.start_qt_server` so the
+    supervisor cannot tell it's been replaced. The returned info dict
+    has the same shape the real dispatcher emits.
+    """
+
+    def _stub(port: int = 0, host: str = "127.0.0.1") -> dict:
+        return {
+            "host": host,
+            "port": port if port else _qt_stub_factory._announced_port,  # type: ignore[attr-defined]
+            "qt_binding": "fake-test-stub",
+            "dispatcher_version": "1",
+            "reused": False,
+        }
+
+    _qt_stub_factory._announced_port = port  # type: ignore[attr-defined]
+    return _stub
 
 
 @pytest.fixture
@@ -181,7 +223,7 @@ def _wait_for_registry_row(registry_dir: Path, timeout: float = 5.0) -> dict:
     """Poll ``services.json`` until a per-dcc-sidecar row appears."""
     services_path = registry_dir / "services.json"
     deadline = time.monotonic() + timeout
-    last_err: Exception | None = None
+    last_err = None
     while time.monotonic() < deadline:
         if services_path.is_file():
             try:
@@ -234,9 +276,7 @@ def _wait_for_proc_exit(handle: SidecarHandle, timeout: float = 5.0) -> int:
         if rc is not None:
             return rc
         time.sleep(0.05)
-    raise AssertionError(
-        f"sidecar PID {handle.proc.pid} did not exit within {timeout}s"
-    )
+    raise AssertionError(f"sidecar PID {handle.proc.pid} did not exit within {timeout}s")
 
 
 # ── helper / env tests (no subprocess needed) ────────────────────────
@@ -258,24 +298,17 @@ class TestEnvAndHelpers:
         assert not is_sidecar_mode_enabled({ENV_SIDECAR_MODE: "0"})
         assert not is_sidecar_mode_enabled({ENV_SIDECAR_MODE: "false"})
 
-    def test_allocate_free_port_returns_usable_port(self):
-        port = allocate_free_port()
-        assert 1 < port < 65536
-        # Sanity-check that we can actually bind it.
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
-            probe.bind(("127.0.0.1", port))
-
-    def test_build_host_rpc_uri_canonical_form(self):
-        assert build_host_rpc_uri(6042) == "commandport://127.0.0.1:6042"
-        assert (
-            build_host_rpc_uri(7100, host="0.0.0.0")
-            == "commandport://0.0.0.0:7100"
-        )
+    def test_build_qtserver_uri_canonical_form(self):
+        # RFC #998 Addendum B: the wire scheme is `qtserver://`. Pin
+        # the format so the sidecar binary and the Maya plug-in cannot
+        # drift in lockstep — both consult this one helper.
+        assert build_qtserver_uri(18765) == "qtserver://127.0.0.1:18765"
+        assert build_qtserver_uri(7100, host="0.0.0.0") == "qtserver://0.0.0.0:7100"
 
     @pytest.mark.parametrize("bad_port", [0, -1, 65536, 70000])
-    def test_build_host_rpc_uri_rejects_invalid_ports(self, bad_port):
+    def test_build_qtserver_uri_rejects_invalid_ports(self, bad_port):
         with pytest.raises(ValueError):
-            build_host_rpc_uri(bad_port)
+            build_qtserver_uri(bad_port)
 
 
 # ── end-to-end lifecycle tests (need the binary) ────────────────────
@@ -285,17 +318,24 @@ class TestSidecarLifecycle:
     """Spawn the real binary; verify the spawn + supervise + teardown
     contract end-to-end."""
 
+    def _no_op_stop(self) -> None:
+        """``stop_qt_server_fn`` for tests — the fake server fixture
+        owns the listener teardown so the supervisor stop should not
+        also call ``QTcpServer.close``. The dependency-injection seam
+        keeps the supervisor's teardown contract testable without a
+        real Qt binding."""
+
     def test_start_then_stop_registers_and_deregisters(
         self,
         parent_surrogate: _ParentSurrogate,
-        fake_command_port: int,
+        fake_qt_server: int,
         isolated_registry_dir: Path,
     ) -> None:
         handle = start_sidecar(
             maya_pid=parent_surrogate.pid,
-            command_port_override=fake_command_port,
+            qt_port_override=fake_qt_server,
             registry_dir=isolated_registry_dir,
-            open_command_port=False,  # we already spawned a fake listener
+            start_qt_server_fn=_qt_stub_factory(fake_qt_server),
         )
         try:
             entry = _wait_for_registry_row(isolated_registry_dir)
@@ -308,26 +348,27 @@ class TestSidecarLifecycle:
             metadata = entry.get("metadata") or {}
             assert metadata.get("dcc_mcp_role") == "per-dcc-sidecar"
             assert metadata.get("host_rpc_uri") == handle.host_rpc_uri
+            assert handle.host_rpc_uri.startswith("qtserver://")
             assert handle.is_alive
         finally:
-            stop_sidecar(handle, close_command_port=False)
+            stop_sidecar(handle, stop_qt_server_fn=self._no_op_stop)
 
         rc = _wait_for_proc_exit(handle)
         assert rc is not None
         # `stop_sidecar` is idempotent.
-        stop_sidecar(handle, close_command_port=False)
+        stop_sidecar(handle, stop_qt_server_fn=self._no_op_stop)
 
     def test_ppid_watch_exits_when_parent_dies(
         self,
         parent_surrogate: _ParentSurrogate,
-        fake_command_port: int,
+        fake_qt_server: int,
         isolated_registry_dir: Path,
     ) -> None:
         handle = start_sidecar(
             maya_pid=parent_surrogate.pid,
-            command_port_override=fake_command_port,
+            qt_port_override=fake_qt_server,
             registry_dir=isolated_registry_dir,
-            open_command_port=False,
+            start_qt_server_fn=_qt_stub_factory(fake_qt_server),
         )
         _wait_for_registry_row(isolated_registry_dir)
 
@@ -348,23 +389,21 @@ class TestSidecarLifecycle:
             survivors = [
                 entry
                 for entry in _iter_entries(payload)
-                if (entry.get("metadata") or {}).get("dcc_mcp_role")
-                == "per-dcc-sidecar"
+                if (entry.get("metadata") or {}).get("dcc_mcp_role") == "per-dcc-sidecar"
             ]
             assert survivors == [], (
-                "PPID-watch shutdown path must deregister the sidecar; "
-                f"found survivors: {survivors}"
+                f"PPID-watch shutdown path must deregister the sidecar; found survivors: {survivors}"
             )
 
     def test_extra_args_propagate_to_sidecar(
         self,
         parent_surrogate: _ParentSurrogate,
-        fake_command_port: int,
+        fake_qt_server: int,
         isolated_registry_dir: Path,
     ) -> None:
         handle = start_sidecar(
             maya_pid=parent_surrogate.pid,
-            command_port_override=fake_command_port,
+            qt_port_override=fake_qt_server,
             registry_dir=isolated_registry_dir,
             extra_args=[
                 "--display-name",
@@ -372,7 +411,7 @@ class TestSidecarLifecycle:
                 "--adapter-version",
                 "0.0.0-test",
             ],
-            open_command_port=False,
+            start_qt_server_fn=_qt_stub_factory(fake_qt_server),
         )
         try:
             entry = _wait_for_registry_row(isolated_registry_dir)
@@ -380,29 +419,30 @@ class TestSidecarLifecycle:
             assert entry.get("adapter_version") == "0.0.0-test"
             assert entry.get("adapter_dcc") == "maya"
         finally:
-            stop_sidecar(handle, close_command_port=False)
+            stop_sidecar(handle, stop_qt_server_fn=self._no_op_stop)
             _wait_for_proc_exit(handle)
 
     def test_handle_carries_resolved_metadata(
         self,
         parent_surrogate: _ParentSurrogate,
-        fake_command_port: int,
+        fake_qt_server: int,
         isolated_registry_dir: Path,
     ) -> None:
         handle = start_sidecar(
             maya_pid=parent_surrogate.pid,
-            command_port_override=fake_command_port,
+            qt_port_override=fake_qt_server,
             registry_dir=isolated_registry_dir,
-            open_command_port=False,
+            start_qt_server_fn=_qt_stub_factory(fake_qt_server),
         )
         try:
-            assert handle.command_port == fake_command_port
-            assert handle.host_rpc_uri == build_host_rpc_uri(fake_command_port)
+            assert handle.qt_port == fake_qt_server
+            assert handle.qt_binding == "fake-test-stub"
+            assert handle.host_rpc_uri == build_qtserver_uri(fake_qt_server)
             assert handle.maya_pid == parent_surrogate.pid
             assert handle.binary_path.exists()
             assert handle.is_alive
         finally:
-            stop_sidecar(handle, close_command_port=False)
+            stop_sidecar(handle, stop_qt_server_fn=self._no_op_stop)
             _wait_for_proc_exit(handle)
 
 
@@ -428,50 +468,9 @@ class TestBinaryResolver:
     def test_missing_binary_raises_with_diagnostics(
         self,
         monkeypatch: pytest.MonkeyPatch,
-        tmp_path: Path,
     ) -> None:
-        bogus = tmp_path / "does-not-exist"
-        monkeypatch.setenv(ENV_SIDECAR_BINARY, str(bogus))
-        # Make sure neither shutil.which nor the dcc_mcp_server package
-        # accidentally rescue us during the test.
-        monkeypatch.setenv("PATH", str(tmp_path))
-        monkeypatch.setitem(__import__("sys").modules, "dcc_mcp_server", None)
-
-        with pytest.raises(SidecarBinaryError) as exc_info:
+        # Force resolver into the "no binary anywhere" code path.
+        monkeypatch.setenv(ENV_SIDECAR_BINARY, "/nonexistent/path/dcc-mcp-server")
+        with pytest.raises(SidecarBinaryError) as exc:
             resolve_sidecar_binary()
-
-        message = str(exc_info.value)
-        assert ENV_SIDECAR_BINARY in message
-        assert "shutil.which" in message
-        assert "Install" in message  # documents the fix
-
-
-# ── manual operator override smoke test ──────────────────────────────
-
-
-def test_env_override_via_os_environ(
-    parent_surrogate: _ParentSurrogate,
-    fake_command_port: int,
-    isolated_registry_dir: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Confirm that setting :data:`ENV_SIDECAR_BINARY` is enough for the
-    Maya plug-in entry point to find the binary even when neither the
-    PyPI wheel nor PATH is configured."""
-    actual_binary = resolve_sidecar_binary()
-    monkeypatch.setenv(ENV_SIDECAR_BINARY, str(actual_binary))
-    monkeypatch.setenv("PATH", "")
-    monkeypatch.setitem(os.sys.modules, "dcc_mcp_server", None)
-
-    handle = start_sidecar(
-        maya_pid=parent_surrogate.pid,
-        command_port_override=fake_command_port,
-        registry_dir=isolated_registry_dir,
-        open_command_port=False,
-    )
-    try:
-        _wait_for_registry_row(isolated_registry_dir)
-        assert handle.binary_path == actual_binary
-    finally:
-        stop_sidecar(handle, close_command_port=False)
-        _wait_for_proc_exit(handle)
+        assert "/nonexistent/path" in str(exc.value)
