@@ -253,8 +253,18 @@ def test_executor_bypasses_dispatcher_for_any_affinity(any_affinity_script: str)
     assert dispatcher.calls == [], "dispatcher must NOT be invoked for affinity: any"
 
 
-def test_executor_routes_main_affinity_through_dispatcher(main_affinity_script: str):
-    """``affinity: main`` must go through the UI dispatcher."""
+def test_executor_routes_main_affinity_through_dispatcher(main_affinity_script: str, monkeypatch):
+    """``affinity: main`` must go through the UI dispatcher when off main thread.
+
+    The off-main-thread simulation is required because pytest runs on the
+    Python main thread; calling ``submit_callable`` from the main thread
+    would deadlock waiting for itself — guarded by the
+    ``_on_main_thread()`` short-circuit in ``execute_in_process``.
+    """
+    from dcc_mcp_maya import _executor as _executor_mod
+
+    monkeypatch.setattr(_executor_mod, "_on_main_thread", lambda: False)
+
     dispatcher = _RecordingDispatcher()
     server = _FakeServer(dispatcher)
 
@@ -273,9 +283,16 @@ def test_executor_falls_back_to_inline_without_dispatcher(main_affinity_script: 
     assert result == {"success": True, "message": "ok"}
 
 
-def test_executor_surfaces_dispatcher_exceptions_as_envelope(main_affinity_script: str):
+def test_executor_surfaces_dispatcher_exceptions_as_envelope(main_affinity_script: str, monkeypatch):
     """When the dispatcher raises, the caller sees a structured envelope,
     never an uncaught exception (keeps MCP response contract intact)."""
+    # Pretend we are on a tokio worker thread so the executor actually
+    # consults the dispatcher; otherwise ``_on_main_thread()=True`` would
+    # short-circuit to inline execution (the correct production guard
+    # against deadlocking ``submit_callable`` against itself).
+    from dcc_mcp_maya import _executor as _executor_mod
+
+    monkeypatch.setattr(_executor_mod, "_on_main_thread", lambda: False)
 
     class _BrokenDispatcher:
         def submit_callable(self, action_name, fn, *, affinity="main"):
