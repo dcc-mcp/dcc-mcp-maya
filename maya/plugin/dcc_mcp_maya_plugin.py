@@ -227,13 +227,38 @@ def maya_useNewAPI() -> None:
 
 
 def initializePlugin(plugin):
-    """Called by Maya when the plugin is loaded."""
+    """Called by Maya when the plugin is loaded.
+
+    Init flow split per execution mode:
+
+    * **Interactive Maya** — schedule the real startup work via
+      :func:`_start_async` so ``initializePlugin`` returns immediately
+      and Maya's main-thread boot continues. When the plug-in is set
+      to ``autoLoad=true``, ``initializePlugin`` fires during the
+      *early* GUI-init phase where the QApplication event loop is not
+      yet pumping and scriptJob registration is gated. Running the
+      synchronous startup path here would (and did, see the user
+      report 2026-05-16) pin Maya's main thread inside plug-in
+      init re-entrancy: HTTP-server bind, gateway-election thread
+      spawn, and — once sidecar mode lands — the QTcpServer.listen()
+      call all hit a partially-constructed Qt main-loop and stall.
+      ``_start_async`` defers the work behind every other pending
+      deferred task via ``cmds.evalDeferred(_, lowestPriority=True)``
+      so it lands once Maya is fully idle. See :func:`_start_async`
+      for the full design rationale and the history of failed worker-
+      thread variants.
+
+    * **Batch Maya / mayapy** — no event loop to wait for, so call
+      :func:`_start` directly. The synchronous path is correct here:
+      ``mayapy`` callers expect ``initializePlugin`` to return only
+      after the server is reachable so they can issue requests
+      immediately after the load.
+    """
     om.MFnPlugin(plugin, VENDOR, VERSION)
     try:
         if _is_interactive():
             _add_menu()
-        if _is_interactive():
-            _start()
+            _start_async()
         else:
             _start()
     except Exception as exc:
@@ -503,8 +528,7 @@ def _maybe_spawn_sidecar() -> None:
         _sidecar_handle = start_sidecar(adapter_version=VERSION)
     except SidecarSpawnError as exc:
         logger.error(
-            "dcc-mcp-maya: sidecar spawn failed; continuing in-process only. "
-            "Cause: %s",
+            "dcc-mcp-maya: sidecar spawn failed; continuing in-process only. Cause: %s",
             exc,
         )
         _sidecar_handle = None
