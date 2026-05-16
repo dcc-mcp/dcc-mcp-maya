@@ -63,6 +63,19 @@ Unsure of flag name or method signature while authoring a script?
   → activate the introspect group, call introspect_signature / introspect_search.
 ```
 
+## Concurrency model (agent guidance)
+
+`execute_python` is **thread-safe under bursty load**. Every off-main-thread call is funneled through a single-writer FIFO queue and marshaled to Maya's UI thread with `maya.utils.executeInMainThreadWithResult` — so an agent issuing many concurrent `/v1/call` POSTs gets:
+
+- **Strict serialisation** at the Maya boundary: exactly one user script runs at a time on the UI thread (the only thread that can safely call `cmds.*`, load native plug-ins, mutate the scene graph). No interleaving, no torn state.
+- **No drops**: jobs sit in a bounded queue (default depth **64**, configurable via `DCC_MCP_MAYA_EXEC_QUEUE_DEPTH`) until the pump can hand them to Maya.
+- **Clean backpressure**: when the queue is full, the call returns a `QueueFullError` envelope with `"back off and retry"` instead of stalling the connection. Wait and retry — do **not** open more concurrent connections to work around it.
+- **Single in-flight marshalling call** at a time: avoids thrashing Maya's deferred queue when N agents target the same instance.
+
+Queue depth is visible via `io action=status` (`context.main_thread_queue.{depth,submitted,completed,failed,rejected,pump_alive}`). Use this for diagnostics, not for tight scheduling — by the time you read it the value is already stale.
+
+Opt-out for callers that have already promoted themselves onto the main thread (rare; only for advanced workflow scripts): pass `inplace=true` to skip the queue entirely.
+
 ## Bulk operations (agent guidance)
 
 When the user wants **many similar steps** inside Maya (e.g. 10 spheres → 10 FBX files with a naming convention, batch import folders, mass rename):

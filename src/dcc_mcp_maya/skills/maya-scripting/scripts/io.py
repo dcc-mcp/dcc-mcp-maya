@@ -161,11 +161,28 @@ def _clear_locked() -> dict:
     return {"cleared": True, "installed": _STATE["installed"]}
 
 
+def _main_thread_queue_status() -> dict:
+    """Snapshot the Maya main-thread queue for diagnostics.
+
+    Imported lazily because the queue spawns a daemon pump thread on
+    first use; we do not want a plain ``status`` query to start the
+    pump prematurely.
+    """
+    try:
+        from dcc_mcp_maya import _main_thread_queue  # noqa: PLC0415
+    except ImportError:
+        return {"available": False}
+    snapshot = _main_thread_queue.get_queue().status()
+    snapshot["available"] = True
+    return snapshot
+
+
 def _status_locked() -> dict:
     return {
         "installed": _STATE["installed"],
         "stdout_bytes": len(_STATE["stdout_buf"].getvalue()),
         "stderr_bytes": len(_STATE["stderr_buf"].getvalue()),
+        "main_thread_queue": _main_thread_queue_status(),
     }
 
 

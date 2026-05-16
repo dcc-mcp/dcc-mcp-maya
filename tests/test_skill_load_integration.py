@@ -326,15 +326,22 @@ class TestExecutePythonScript:
 
         result = mod.execute_python(code="cmds.polyCube(name='unitTestCube')")
 
-        assert result["success"] is True
+        assert result["success"] is True, "envelope was {0}".format(result)
         fake_maya["cmds"].polyCube.assert_called_once_with(name="unitTestCube")
 
     def test_captures_result_variable(self, fake_maya):
+        """The new bare-exec contract surfaces the trailing expression
+        when ``result_type='VALUE'`` (matches PatrickPalmer/maya-mcp-server).
+
+        The legacy ``result = ...`` magic-variable convention is gone —
+        users assign and then leave a bare expression on the last line,
+        same as a Script Editor session.
+        """
         mod = _import_bundled("execute_python")
 
-        result = mod.execute_python(code="result = 7 * 6")
+        result = mod.execute_python(code="result = 7 * 6\nresult", result_type="VALUE")
 
-        assert result["success"] is True
+        assert result["success"] is True, "envelope was {0}".format(result)
         assert result["context"]["output"] == "42"
 
     def test_captures_stdout_when_requested(self, fake_maya):

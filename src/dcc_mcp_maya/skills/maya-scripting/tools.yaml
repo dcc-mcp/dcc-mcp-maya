@@ -1,8 +1,8 @@
 tools:
 - name: execute_mel
-  description: >-
-    Last-resort arbitrary MEL. Prefer search_skills → load_skill → typed tools. Inline MEL uses
-    `code`; studio `.mel` files use `file_path` / `script_path` and are sourced with forward slashes.
+  description: "Last-resort arbitrary MEL. Prefer search_skills \u2192 load_skill \u2192\
+    \ typed tools. Inline MEL uses `code`; studio `.mel` files use `file_path` / `script_path`\
+    \ and are sourced with forward slashes."
   execution: sync
   affinity: main
   annotations:
@@ -22,12 +22,17 @@ tools:
         type: string
         description: Same as file_path.
 - name: execute_python
-  description: >-
-    Bare-exec Python in Maya — wrapper-free dispatch, persistent module-level namespace
-    (`import x` survives across calls), AST-rewrite captures last expression's value when
-    `result_type != NONE`. Aligned with PatrickPalmer/maya-mcp-server semantics. Prefer
-    search_skills / dcc_capability_manifest → load_skill → typed tools when one fits.
-    For long scripts, upload once via write_module then call with `import name; name.run()`.
+  description: "Bare-exec Python in Maya \u2014 wrapper-free dispatch, persistent module-level\
+    \ namespace (`import x` survives across calls), AST-rewrite captures last expression's\
+    \ value when `result_type != NONE`. Concurrency-safe: every off-main-thread call\
+    \ is funneled through a single-writer FIFO queue (configurable depth via DCC_MCP_MAYA_EXEC_QUEUE_DEPTH,\
+    \ default 64) and marshaled to Maya's UI thread with executeInMainThreadWithResult.\
+    \ Bursty agents that exceed the queue depth get a clean QueueFullError envelope\
+    \ (back off + retry) instead of a Maya hang. The persistent namespace pre-binds\
+    \ `cmds` and `mel` so user code can call them without an explicit import. Aligned\
+    \ with PatrickPalmer/maya-mcp-server semantics. Prefer search_skills / dcc_capability_manifest\
+    \ \u2192 load_skill \u2192 typed tools when one fits. For long scripts, upload\
+    \ once via write_module then call with `import name; name.run()`."
   execution: sync
   affinity: main
   annotations:
@@ -42,13 +47,18 @@ tools:
         description: Inline Python (required when file_path is omitted).
       file_path:
         type: string
-        description: Absolute path to a .py file executed in __main__ with __file__ / this_root.
+        description: Absolute path to a .py file executed in __main__ with __file__
+          / this_root.
       script_path:
         type: string
         description: Same as file_path.
       result_type:
         type: string
-        enum: [NONE, VALUE, JSON, REPR]
+        enum:
+        - NONE
+        - VALUE
+        - JSON
+        - REPR
         default: NONE
         description: How to capture the last expression's value. NONE discards.
       capture_output:
@@ -58,19 +68,17 @@ tools:
       inplace:
         type: boolean
         default: false
-        description: >-
-          Skip the automatic main-thread marshalling. By default, when the MCP
-          handler runs off Maya's UI thread (hyper worker), user code is wrapped
-          in maya.utils.executeInMainThreadWithResult so cmds.file / loadPlugin
-          / scene-mutating cmds.* calls stay on the safe thread. Set inplace=true
-          to opt out — only do this when you have already dispatched onto the
-          main thread yourself or when the script touches no Maya state.
+        description: "Skip the automatic main-thread marshalling. By default, when the\
+          \ MCP handler runs off Maya's UI thread (hyper worker), user code is wrapped\
+          \ in maya.utils.executeInMainThreadWithResult so cmds.file / loadPlugin /\
+          \ scene-mutating cmds.* calls stay on the safe thread. Set inplace=true to\
+          \ opt out \u2014 only do this when you have already dispatched onto the main\
+          \ thread yourself or when the script touches no Maya state."
 - name: write_module
-  description: >-
-    Inject a Python module into Maya's sys.modules from a source string. Same shape as
-    maya-mcp-server's write_module. Use this to upload long scripts ONCE then call
-    `execute_python(code='import name; name.run()')` many times — saves the agent
-    prompt budget on repeated dispatch.
+  description: "Inject a Python module into Maya's sys.modules from a source string.\
+    \ Same shape as maya-mcp-server's write_module. Use this to upload long scripts\
+    \ ONCE then call `execute_python(code='import name; name.run()')` many times \u2014\
+    \ saves the agent prompt budget on repeated dispatch."
   execution: sync
   affinity: main
   annotations:
@@ -79,7 +87,9 @@ tools:
   group: core
   inputSchema:
     type: object
-    required: [name, source]
+    required:
+    - name
+    - source
     properties:
       name:
         type: string
@@ -95,27 +105,34 @@ tools:
         type: string
         description: Optional opaque version stamped as __dcc_mcp_module_version__.
 - name: io
-  description: >-
-    Session-scope stdout / stderr capture lifecycle for Maya — single tool with `action`
-    selector (install / uninstall / get / clear / status). Lets agents accumulate output
-    across many execute_python calls without per-call capture overhead.
+  description: "Session-scope stdout / stderr capture lifecycle for Maya \u2014 single\
+    \ tool with `action` selector (install / uninstall / get / clear / status). Lets\
+    \ agents accumulate output across many execute_python calls without per-call capture\
+    \ overhead."
   execution: sync
-  affinity: any
+  affinity: main
   annotations:
     read_only_hint: false
     idempotent_hint: true
   group: core
   inputSchema:
     type: object
-    required: [action]
+    required:
+    - action
     properties:
       action:
         type: string
-        enum: [install, uninstall, get, clear, status]
+        enum:
+        - install
+        - uninstall
+        - get
+        - clear
+        - status
       drain:
         type: boolean
         default: true
-        description: For action=get — drain the buffer (default) or peek without consuming.
+        description: "For action=get \u2014 drain the buffer (default) or peek without\
+          \ consuming."
 - name: get_script_node
   description: Get, create, or delete a Maya scriptNode.
   execution: sync
@@ -153,44 +170,44 @@ tools:
         default: 0
         description: 0=demand, 1=open/close, 2=ui create, 3=ui delete.
 - name: list_mel_procedures
+  description: List MEL procedures without modifying the Maya scene.
   execution: sync
   affinity: main
   annotations:
     read_only_hint: true
     idempotent_hint: true
   group: core
-  description: List MEL procedures without modifying the Maya scene.
 - name: introspect_list_module
-  execution: sync
-  affinity: any
-  annotations:
-    read_only_hint: true
-    idempotent_hint: true
-  group: introspect
   description: Introspect list module for agent-facing Maya scripting introspection.
-- name: introspect_signature
   execution: sync
   affinity: any
   annotations:
     read_only_hint: true
     idempotent_hint: true
   group: introspect
+- name: introspect_signature
   description: Introspect a Python callable signature for agent-facing Maya scripting
     introspection.
-- name: introspect_search
   execution: sync
   affinity: any
   annotations:
     read_only_hint: true
     idempotent_hint: true
   group: introspect
+- name: introspect_search
   description: Introspect Python introspection search results for agent-facing Maya
     scripting introspection.
+  execution: sync
+  affinity: any
+  annotations:
+    read_only_hint: true
+    idempotent_hint: true
+  group: introspect
 - name: introspect_eval
+  description: Introspect a Python introspection expression for agent-facing Maya scripting
+    introspection.
   execution: sync
   affinity: main
   annotations:
     read_only_hint: true
   group: introspect
-  description: Introspect a Python introspection expression for agent-facing Maya
-    scripting introspection.
