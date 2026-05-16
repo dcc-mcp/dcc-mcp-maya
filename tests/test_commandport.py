@@ -153,20 +153,37 @@ class TestSuppressSecurityWarnings:
     def test_calls_close_then_reopen_per_port(self, monkeypatch):
         monkeypatch.delenv(_commandport.ENV_DISABLE_WARNING, raising=False)
         fake_cmds = MagicMock()
+        fake_cmds.commandPort.side_effect = [
+            "mel",
+            None,
+            None,
+            "python",
+            None,
+            None,
+        ]
         fake_maya = MagicMock()
         fake_maya.cmds = fake_cmds
         with patch.object(_commandport, "_list_open_ports", return_value=["p1", "p2"]):
             with patch.dict(sys.modules, {"maya": fake_maya, "maya.cmds": fake_cmds}):
                 assert _commandport.suppress_security_warnings() == 2
-        # Each port: close then reopen with sw=False, sourceType="mel".
-        assert fake_cmds.commandPort.call_count == 4
-        # call.kwargs was added in Python 3.8; use tuple indexing for 3.7
-        # compatibility (``call[1]`` is always the kwargs dict).
+        # Each port: query sourceType, close, reopen preserving sourceType.
+        assert fake_cmds.commandPort.call_count == 6
         kwargs_seq = [c[1] for c in fake_cmds.commandPort.call_args_list]
-        assert kwargs_seq[0] == {"name": "p1", "close": True}
-        assert kwargs_seq[1] == {"name": "p1", "securityWarning": False, "sourceType": "mel"}
-        assert kwargs_seq[2] == {"name": "p2", "close": True}
-        assert kwargs_seq[3] == {"name": "p2", "securityWarning": False, "sourceType": "mel"}
+        assert kwargs_seq[0] == {"name": "p1", "query": True, "sourceType": True}
+        assert kwargs_seq[1] == {"name": "p1", "close": True}
+        assert kwargs_seq[2] == {"name": "p1", "securityWarning": False, "sourceType": "mel"}
+        assert kwargs_seq[3] == {"name": "p2", "query": True, "sourceType": True}
+        assert kwargs_seq[4] == {"name": "p2", "close": True}
+        assert kwargs_seq[5] == {"name": "p2", "securityWarning": False, "sourceType": "python"}
+
+    def test_configure_commandport_hygiene_runs_close_then_suppress(self, monkeypatch):
+        monkeypatch.delenv(_commandport.ENV_DISABLE_WARNING, raising=False)
+        monkeypatch.delenv(_commandport.ENV_CLOSE_DEFAULT, raising=False)
+        with patch.object(_commandport, "close_default_commandport", return_value=1) as close_fn:
+            with patch.object(_commandport, "suppress_security_warnings", return_value=2) as suppress_fn:
+                _commandport.configure_commandport_hygiene()
+        close_fn.assert_called_once_with()
+        suppress_fn.assert_called_once_with()
 
     def test_partial_failure_counts_only_successes(self, monkeypatch):
         monkeypatch.delenv(_commandport.ENV_DISABLE_WARNING, raising=False)
