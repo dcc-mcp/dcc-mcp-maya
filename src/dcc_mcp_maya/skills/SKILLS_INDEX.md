@@ -70,18 +70,27 @@ An agent can use these to:
 
 ## Cross-cutting safety nets
 
-Every dispatched job runs inside `dcc_mcp_maya._safe_session.mcp_safe_session`:
+Maya AutoSave is **persistently disabled** at plug-in load time, then
+restored on unload — see
+[`_disable_autosave_for_session`](../../../maya/plugin/dcc_mcp_maya_plugin.py).
+This neutralises the one dialog Maya pops *unprompted* during a long-
+running session (the unsaved-scene AutoSave save-prompt) and removes the
+between-jobs race window the older per-job AutoSave snooze suffered from.
+Opt out via `DCC_MCP_MAYA_DISABLE_AUTOSAVE=0`.
 
-* Maya AutoSave is paused for the job's duration. This neutralises the
-  one dialog Maya pops *unprompted* during a long-running job (the
-  unsaved-scene AutoSave save-prompt).
-* Dialog `cmds.*` entries (`confirmDialog` / `promptDialog` /
-  `fileDialog` / `fileDialog2` / `layoutDialog`) are **not** replaced.
-  Maya's engine consumes the same entries internally (`cmds.file(new=True)`,
-  Arnold renderer switch, reference machinery) and the previous stub
-  return value corrupted its state — see
-  [`dcc_mcp_maya/_safe_session.py`](../_safe_session.py) for the full
-  history of why the patch was removed (2026-05-16).
+The previous `dcc_mcp_maya._safe_session.mcp_safe_session` context
+manager has been **removed** (2026-05-16):
+
+* The `cmds.confirmDialog` / `promptDialog` / `fileDialog` /
+  `fileDialog2` / `layoutDialog` monkey-patch was crashing Maya
+  whenever its C++ engine consumed those same entries internally
+  (`cmds.file(new=True)`, Arnold renderer switch, reference machinery).
+* The per-job AutoSave snooze migrated to the persistent session-wide
+  disable above.
+* With both responsibilities gone, the wrapper was a no-op. Removing
+  it brings the dispatch path in line with PatrickPalmer/maya-mcp-server,
+  which never wrapped `cmds.*` calls and has been the stability
+  benchmark for this fix series.
 
 The mitigation for an MCP-dispatched job that genuinely opens a modal
 dialog is now a **server-side request timeout**: the gateway cancels
