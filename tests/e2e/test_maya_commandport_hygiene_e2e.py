@@ -1,4 +1,4 @@
-"""E2E tests for ``_commandport.suppress_security_warnings`` (issue #148).
+"""E2E tests for ``_maya_commandport_hygiene.suppress_security_warnings`` (issue #148).
 
 These exercise the helper against a real Maya standalone interpreter so we
 catch any drift in the ``commandPort -q -name`` / ``cmds.commandPort``
@@ -14,7 +14,7 @@ with the live Maya API:
 
 Run::
 
-    mayapy -m pytest tests/e2e/test_commandport_e2e.py -v
+    mayapy -m pytest tests/e2e/test_maya_commandport_hygiene_e2e.py -v
 """
 
 # Import future modules
@@ -37,7 +37,7 @@ except Exception:
     pass
 
 # Import local modules
-from dcc_mcp_maya import _commandport  # noqa: E402
+from dcc_mcp_maya import _maya_commandport_hygiene as _commandport  # noqa: E402
 from maya import cmds  # noqa: E402
 
 pytestmark = pytest.mark.e2e

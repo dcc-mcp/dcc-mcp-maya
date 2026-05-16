@@ -521,12 +521,32 @@ class MayaUiDispatcher:
         """
         import uuid
 
+        from dcc_mcp_core._server.inprocess_executor import timeout_hint_secs_to_ms
+
+        context = kwargs.pop("context", None)
+        timeout_hint_secs = kwargs.pop("timeout_hint_secs", None)
+        if timeout_hint_secs is None and context is not None:
+            timeout_hint_secs = getattr(context, "timeout_hint_secs", None)
+        action_name = kwargs.pop("action_name", "")
+        skill_name = kwargs.pop("skill_name", None)
+        execution = kwargs.pop("execution", "sync")
+        thread_affinity = kwargs.pop("thread_affinity", kwargs.pop("affinity", "main"))
+
+        timeout_ms = timeout_hint_secs_to_ms(
+            timeout_hint_secs,
+            action_name=action_name,
+            skill_name=skill_name,
+            thread_affinity=thread_affinity,
+            execution=execution,
+        )
+
         # Use submit_callable with affinity="main" and wait for the result.
         request_id = f"dispatch_{uuid.uuid4().hex}"
         result = self.submit_callable(
             request_id=request_id,
             task=lambda: func(*args, **kwargs),
             affinity="main",
+            timeout_ms=timeout_ms,
         )
 
         if not isinstance(result, dict):
