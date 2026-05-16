@@ -20,6 +20,12 @@ def get_session_info() -> dict:
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
+        # ``cmds.ls`` boolean flags (``dag``, ``dagObjects``, …) must run on
+        # Maya's UI thread.  The sidecar / inline HTTP executor path can invoke
+        # this script from a worker thread, where those flags raise
+        # ``TypeError: … boolean parameter``.  ``type=`` filters are safe
+        # off-thread; transform count is a stable proxy for scene size.
+        transforms = cmds.ls(type="transform") or []
         info = {
             "maya_version": cmds.about(version=True),
             "api_version": cmds.about(apiVersion=True),
@@ -28,7 +34,7 @@ def get_session_info() -> dict:
             "scene_modified": cmds.file(query=True, modified=True),
             "fps": cmds.currentUnit(query=True, time=True),
             "up_axis": cmds.upAxis(query=True, axis=True),
-            "object_count": len(cmds.ls(dag=True) or []),
+            "object_count": len(transforms),
         }
         return skill_success(
             "Maya session info", **info, prompt="Check the result with list_scene or use related actions to continue."
