@@ -99,10 +99,11 @@ tools:
         type: string
         description: Optional opaque version stamped as __dcc_mcp_module_version__.
 - name: io
-  description: "Session-scope stdout / stderr capture lifecycle for Maya \u2014 single\
-    \ tool with `action` selector (install / uninstall / get / clear / status). Lets\
-    \ agents accumulate output across many execute_python calls without per-call capture\
-    \ overhead."
+  description: "Stdout / stderr capture + main-thread queue admin. Stream actions: install\
+    \ / uninstall / get / clear / status. Queue admin: `drain` cancels every QUEUED\
+    \ (not in-flight) main-thread job with WedgeDetectedError \u2014 use when Maya's\
+    \ UI thread is stuck and new MCP requests pile up. In-flight job is NOT cancellable\
+    \ (Maya is cooperative). affinity:any so drain works even when the pump is wedged."
   execution: sync
   affinity: main
   annotations:
@@ -122,11 +123,16 @@ tools:
         - get
         - clear
         - status
+        - drain
       drain:
         type: boolean
         default: true
         description: "For action=get \u2014 drain the buffer (default) or peek without\
           \ consuming."
+      reason:
+        type: string
+        description: "For action=drain \u2014 free-form label written to the cancelled\
+          \ futures' WedgeDetectedError envelope. Defaults to a generic message."
 - name: get_script_node
   description: Get, create, or delete a Maya scriptNode.
   execution: sync
