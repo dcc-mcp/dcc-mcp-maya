@@ -29,15 +29,49 @@ from tests.conftest import load_skill_script
 class TestMayaOutputCaptureFallback:
     """Without ``maya.api.OpenMaya`` importable, the helper must degrade cleanly."""
 
+    def test_default_is_noop_without_opt_in(self):
+        """Default path: env var not set, no ``force`` — must NOT touch OpenMaya.
+
+        Pins the stability fix from RFC #998 follow-up 2026-05-16: the
+        ``MCommandMessage.addCommandOutputCallback`` bridge was found
+        to crash Maya on common scripts that left pending command-
+        output messages in the engine's idle queue. The capture now
+        defaults to a no-op; opt-in requires
+        ``DCC_MCP_MAYA_HOOK_MAYA_OUTPUT=1`` or ``force=True``.
+        """
+        from dcc_mcp_maya._maya_output import MayaOutputCapture
+
+        fake_module = MagicMock()
+        # Make sure neither the env var nor the force kwarg is set.
+        with patch.dict("os.environ", {"DCC_MCP_MAYA_HOOK_MAYA_OUTPUT": ""}, clear=False):
+            with patch("dcc_mcp_maya._maya_output._load_openmaya", return_value=fake_module):
+                with MayaOutputCapture() as cap:
+                    pass
+        # OpenMaya must NOT have been touched in the default path.
+        fake_module.MCommandMessage.addCommandOutputCallback.assert_not_called()
+        assert cap.stdout == ""
+        assert cap.stderr == ""
+
+    def test_opt_in_via_env_registers_callback(self):
+        """Setting ``DCC_MCP_MAYA_HOOK_MAYA_OUTPUT=1`` restores the OpenMaya bridge."""
+        from dcc_mcp_maya._maya_output import MayaOutputCapture
+
+        fake_module = MagicMock()
+        with patch.dict("os.environ", {"DCC_MCP_MAYA_HOOK_MAYA_OUTPUT": "1"}, clear=False):
+            with patch("dcc_mcp_maya._maya_output._load_openmaya", return_value=fake_module):
+                with MayaOutputCapture():
+                    pass
+        fake_module.MCommandMessage.addCommandOutputCallback.assert_called_once()
+
     def test_no_maya_returns_empty_buffers(self):
         from dcc_mcp_maya._maya_output import MayaOutputCapture
 
-        # Both module candidates unavailable — ensure the context manager
-        # still enters and exits without raising.
+        # Both module candidates unavailable — even with ``force=True``
+        # the context manager must enter and exit without raising.
         with patch.dict(
             sys.modules, {"maya.api": None, "maya.api.OpenMaya": None, "maya": None, "maya.OpenMaya": None}
         ):
-            with MayaOutputCapture() as cap:
+            with MayaOutputCapture(force=True) as cap:
                 pass
         assert cap.stdout == ""
         assert cap.stderr == ""
@@ -50,14 +84,18 @@ class TestMayaOutputCaptureFallback:
         fake_module.MCommandMessage.addCommandOutputCallback.side_effect = RuntimeError("callback not available")
 
         with patch("dcc_mcp_maya._maya_output._load_openmaya", return_value=fake_module):
-            with MayaOutputCapture() as cap:
+            with MayaOutputCapture(force=True) as cap:
                 pass
 
         assert cap.stdout == ""
         assert cap.stderr == ""
 
     def test_info_routed_to_stdout_error_to_stderr(self):
-        """Verify the callback classifies MCommandMessage output types correctly."""
+        """Verify the callback classifies MCommandMessage output types correctly.
+
+        Uses ``force=True`` to bypass the env-var opt-in gate so the
+        callback registration path is still exercised by unit tests.
+        """
         from dcc_mcp_maya._maya_output import (
             _MSG_TYPE_ERROR,
             _MSG_TYPE_INFO,
@@ -77,7 +115,7 @@ class TestMayaOutputCaptureFallback:
         fake_module.MCommandMessage.addCommandOutputCallback.side_effect = _fake_add
 
         with patch("dcc_mcp_maya._maya_output._load_openmaya", return_value=fake_module):
-            with MayaOutputCapture() as cap:
+            with MayaOutputCapture(force=True) as cap:
                 cb = captured_callback["cb"]
                 cb("hello-info", _MSG_TYPE_INFO)
                 cb("a-result", _MSG_TYPE_RESULT)
