@@ -612,7 +612,29 @@ def _maybe_spawn_sidecar() -> None:
         return
 
     try:
-        _sidecar_handle = start_sidecar(adapter_version=VERSION)
+        # Resolve the SAME FileRegistry directory the in-process MCP
+        # server uses, so the sidecar joins the same registry view.
+        # Without this, sidecar defaults to
+        # ``%TEMP%\dcc-mcp\registry\`` while ``GatewayRunner`` /
+        # ``DccServerBase`` default to ``%TEMP%\dcc-mcp-registry\`` —
+        # gateway election degenerates into split-brain (each side
+        # competes for ``9765`` against a registry that does not see
+        # the other side's sentinel). RFC #998 follow-up (2026-05-16
+        # three-Maya live session: 36 stale sidecar rows accumulated
+        # in the wrong directory, gateway port stayed dark).
+        import pathlib  # noqa: PLC0415
+        import tempfile  # noqa: PLC0415
+
+        registry_dir_env = os.environ.get("DCC_MCP_REGISTRY_DIR")
+        if registry_dir_env:
+            sidecar_registry_dir = pathlib.Path(registry_dir_env)
+        else:
+            sidecar_registry_dir = pathlib.Path(tempfile.gettempdir()) / "dcc-mcp-registry"
+
+        _sidecar_handle = start_sidecar(
+            adapter_version=VERSION,
+            registry_dir=sidecar_registry_dir,
+        )
     except SidecarSpawnError as exc:
         logger.error(
             "dcc-mcp-maya: sidecar spawn failed; continuing in-process only. Cause: %s",
