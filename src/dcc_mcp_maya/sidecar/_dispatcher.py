@@ -192,22 +192,31 @@ def _dispatch_inner(
             action=action_name,
         )
 
-    # ── execute the skill script on the current (main) thread ────
+    # ── execute via :func:`execute_in_process` so ``tools.yaml``
+    #   ``affinity`` is respected ────────────────────────────────
     #
-    # We pull `run_skill_script` lazily so this module stays importable
-    # from CI / pytest where the local _executor module's lazy
-    # `maya.cmds` import would fire eagerly.
+    # The old code called :func:`run_skill_script` directly, which
+    # always runs on the calling thread (the Qt main thread for
+    # qtserver:// transport).  That defeats ``affinity: any`` —
+    # those actions are safe to run off the main thread but were
+    # still blocking the UI.
     #
-    # ``run_skill_script`` already implements the full exception-to-
-    # envelope contract (catches every script-level exception, routes
-    # ``SystemExit`` through ``__mcp_result__``, wraps non-dict
-    # returns).  We do **not** wrap it in another try/except because
-    # the only thing that escapes is a programming error in our own
-    # dispatcher path — and that is caught by the outer safety net
-    # in :func:`dispatch` / :func:`dispatch_payload`.
-    from dcc_mcp_maya._executor import run_skill_script  # noqa: PLC0415
+    # :func:`execute_in_process` reads ``tools.yaml``, then:
+    #
+    # * ``affinity == "any"`` → run inline on the *current* thread.
+    #   For qtserver:// the current thread IS the Qt main thread,
+    #   so we additionally dispatch through the main-thread queue
+    #   only when we are NOT already on the main thread (HTTP worker
+    #   path).  For the qtserver:// path we intentionally stay
+    #   synchronous — the Qt event loop pumps between requests.
+    # * ``affinity == "main"`` (default) → use the dispatcher or
+    #   main-thread queue so the call always lands on the Maya UI
+    #   thread.
+    #
+    # We lazy-import to keep the module importable without Maya.
+    from dcc_mcp_maya._executor import execute_in_process  # noqa: PLC0415
 
-    result = run_skill_script(script_path, dict(args))
+    result = execute_in_process(server, script_path, dict(args), action_name)
     if not isinstance(result, Mapping):
         # Defensive: ``run_skill_script`` always returns a dict today,
         # but if a future refactor relaxes that contract we still want
