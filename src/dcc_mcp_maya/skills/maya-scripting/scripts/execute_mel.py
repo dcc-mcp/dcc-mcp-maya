@@ -5,6 +5,7 @@ from __future__ import annotations
 
 # Import built-in modules
 import os
+import re
 from typing import Any, Dict, Optional
 
 # Import local modules
@@ -28,6 +29,23 @@ def _mel_source_statement(path: str) -> str:
     if '"' in norm:
         norm = norm.replace('"', '\\"')
     return 'source "{}"'.format(norm)
+
+
+_PYTHON_SMOKE_RE = re.compile(r"^[\d\s+\-*/().]+;\s*$")
+
+
+def _looks_like_python_source(code: str) -> bool:
+    """Heuristic: inline source is almost certainly Python, not MEL."""
+    stripped = code.strip()
+    if not stripped:
+        return False
+    if stripped.startswith("from ") or " import " in stripped:
+        return True
+    if stripped.startswith(("def ", "class ", "async def ", "@")):
+        return True
+    if _PYTHON_SMOKE_RE.match(stripped):
+        return True
+    return False
 
 
 def _merge_capture(primary: str, extra: str) -> str:
@@ -152,6 +170,16 @@ def execute_mel(**params: Any) -> dict:
     code = normalized.code
     if not code.strip():
         return skill_error("No MEL code provided", "Provide non-empty source.")
+
+    if _looks_like_python_source(code):
+        return skill_error(
+            "Source looks like Python, not MEL",
+            code.strip()[:200],
+            possible_solutions=[
+                "Use maya_scripting__execute_python (or gateway call → execute_python) for Python.",
+                "MEL does not accept Python smoke tests such as `1+1;` — that pattern belongs in execute_python.",
+            ],
+        )
 
     try:
         import maya.mel as mel  # noqa: PLC0415
