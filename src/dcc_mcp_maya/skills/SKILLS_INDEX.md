@@ -72,13 +72,21 @@ An agent can use these to:
 
 Every dispatched job runs inside `dcc_mcp_maya._safe_session.mcp_safe_session`:
 
-* Maya AutoSave is paused for the job's duration.
-* `cmds.confirmDialog` / `promptDialog` / `fileDialog` / `fileDialog2` /
-  `layoutDialog` are replaced with non-blocking stubs that log the
-  intercepted call to `stderr` and return a defaulted value.
+* Maya AutoSave is paused for the job's duration. This neutralises the
+  one dialog Maya pops *unprompted* during a long-running job (the
+  unsaved-scene AutoSave save-prompt).
+* Dialog `cmds.*` entries (`confirmDialog` / `promptDialog` /
+  `fileDialog` / `fileDialog2` / `layoutDialog`) are **not** replaced.
+  Maya's engine consumes the same entries internally (`cmds.file(new=True)`,
+  Arnold renderer switch, reference machinery) and the previous stub
+  return value corrupted its state — see
+  [`dcc_mcp_maya/_safe_session.py`](../_safe_session.py) for the full
+  history of why the patch was removed (2026-05-16).
 
-This means an `execute_python` body that *would* have spawned a modal
-dialog can no longer deadlock the dispatcher. Set
+The mitigation for an MCP-dispatched job that genuinely opens a modal
+dialog is now a **server-side request timeout**: the gateway cancels
+the call after N seconds and surfaces `cancelled` to the agent, while
+the user dismisses the dialog inside Maya. Set
 `DCC_MCP_MAYA_SAFE_SESSION=0` to disable this for an interactive
 authoring session.
 
