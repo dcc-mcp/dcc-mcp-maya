@@ -116,6 +116,21 @@ class TestArbitraryScriptPolicyEnv:
         assert out.get("success") is False
 
 
+class TestExecuteMelPythonGuard:
+    """execute_mel must not feed obvious Python through mel.eval (Maya 2022 spam)."""
+
+    def test_rejects_python_smoke_expression(self):
+        mod = load_skill_script("maya-scripting", "execute_mel")
+        out = mod.execute_mel(code="1+1;")
+        assert out.get("success") is False
+        assert "python" in (out.get("message") or "").lower()
+
+    def test_rejects_python_import(self):
+        mod = load_skill_script("maya-scripting", "execute_mel")
+        out = mod.execute_mel(code="import maya.cmds as cmds")
+        assert out.get("success") is False
+
+
 # ---------------------------------------------------------------------------
 # execute_python bare-exec semantics (no live Maya required)
 # ---------------------------------------------------------------------------

@@ -382,11 +382,11 @@ def _start() -> None:
         # would otherwise freeze Maya's main thread when a stray client
         # (or the gateway probe) connects to the legacy commandPort.
         try:
-            from dcc_mcp_maya._commandport import suppress_security_warnings  # noqa: PLC0415
+            from dcc_mcp_maya._commandport import configure_commandport_hygiene  # noqa: PLC0415
 
-            suppress_security_warnings()
+            configure_commandport_hygiene()
         except Exception as exc:  # noqa: BLE001 — never block plugin load
-            logger.debug("commandPort warning suppression skipped: %s", exc)
+            logger.debug("commandPort hygiene skipped: %s", exc)
         cfg = _resolve_config()
         _host_dispatcher = BlockingDispatcher() if cmds.about(batch=True) else QueueDispatcher()
         _host = dcc_mcp_maya.MayaHost(_host_dispatcher)
