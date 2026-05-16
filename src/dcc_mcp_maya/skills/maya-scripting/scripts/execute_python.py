@@ -1,151 +1,211 @@
-"""Execute Python code inside Maya's interpreter.
+"""Bare-exec Python in Maya — same shape as PatrickPalmer/maya-mcp-server.
 
-Supports three execution shapes:
+The implementation is intentionally **wrapper-free**:
 
-* **Inline (default)** — ``exec()`` runs synchronously on the calling
-  thread with an isolated namespace (``maya.cmds`` pre-imported).  Output
-  is captured via both
-  :class:`~dcc_mcp_core.script_execution.ScriptExecutionCapture` and
-  :class:`~dcc_mcp_maya._maya_output.MayaOutputCapture` so ``print()``,
-  ``cmds.warning(...)``, ``cmds.error(...)`` and MEL ``print`` all reach
-  the MCP client (issue #151).  Very long inline ``code`` strings are
-  mirrored to a host-local temp file before ``exec`` (see
-  ``context.host_spilled_inline_script_path``); prefer explicit
-  ``file_path`` or typed skills when possible.
+* Persistent module-level ``globals()`` so a user's ``import x`` survives
+  across calls (the next call sees ``x`` already imported, no re-import
+  cost, no namespace surprises).
+* AST-rewrite of the last top-level expression for result capture — the
+  user does not need a ``result = ...`` convention, just leave a bare
+  expression as the final line. Python 3.7+ compatible (no
+  ``ast.unparse``).
+* **No** ``mcp_safe_session`` (deleted in #248).
+* **No** ``MayaOutputCapture`` (the C++ ``MCommandMessage`` callback bridge
+  crashed Maya on idle ticks; default no-op since #248 da5f6184. Opt
+  in via ``DCC_MCP_MAYA_HOOK_MAYA_OUTPUT=1`` if you really need it).
+* **No** ``sys.settrace`` cancellation tracer.
+* Standard ``contextlib.redirect_stdout`` / ``redirect_stderr`` for the
+  optional ``capture_output=True`` path — this is pure Python and
+  cannot corrupt Maya's internal state.
 
-* **File (``file_path`` / ``script_path``)** — reads a ``.py`` file and
-  runs it in ``__import__('__main__').__dict__`` with ``__file__`` and
-  ``this_root`` set, matching typical Maya shelf / pipeline script
-  expectations. The path must be readable **inside this Maya process**
-  (not only on a remote agent host talking to the gateway).
+Why this shape
+==============
 
-* **Deferred (``defer=True``)** — the snippet is scheduled via
-  ``maya.utils.executeDeferred`` and a
-  :class:`~dcc_mcp_core._server.DeferredToolResult` is returned so the
-  MCP request thread is freed immediately (issue #153).  A cooperative
-  ``sys.settrace`` interrupt checks the request-level cancellation token
-  between Python lines so long-running pure-Python loops can be aborted
-  when a client sends ``notifications/cancelled`` — no manual
-  :func:`check_maya_cancelled` call required.  Blocking C++ calls
-  (``cmds.file(open=...)``, ``cmds.render``, simulations) cannot be
-  preempted and will finish the current step before the cancel is
-  observed; callers should place
-  :func:`dcc_mcp_maya.check_maya_cancelled` inside their own loops for
-  finer control.
+We benchmark against PatrickPalmer/maya-mcp-server, which has been the
+stability reference throughout RFC #998's follow-up fix series. Every
+wrapper we previously added either crashed Maya in the field
+(``cmds.confirmDialog`` monkey-patch, ``MCommandMessage`` callback) or
+duplicated work the plug-in already does at session scope (AutoSave
+snooze → persistent disable at plug-in load). The simplest dispatch
+path that works is the one a user would type in the Script Editor —
+``exec(compile(code, ...), globals_dict)``.
+
+Public interface (kept stable)
+==============================
+
+``code`` / ``script`` / ``source``
+    Inline Python. The aliases match the upstream
+    ``normalize_script_execution_params`` contract from ``dcc-mcp-core``.
+
+``file_path`` / ``script_path``
+    Run a ``.py`` file with ``__file__`` / ``this_root`` set, like Maya's
+    Script Editor.
+
+``result_type``
+    ``NONE`` (default, discards) / ``VALUE`` / ``JSON`` / ``REPR``.
+    Selecting anything other than ``NONE`` requires the source to end
+    with a standalone expression statement — otherwise an error envelope
+    surfaces.
+
+``capture_output``
+    ``True`` (default) redirects ``sys.stdout`` / ``sys.stderr`` into the
+    returned envelope. ``False`` lets prints reach Maya's Script Editor
+    directly.
 """
 
-# Import future modules
 from __future__ import annotations
 
-# Import built-in modules
+import ast
+import contextlib
+import io
+import json
 import os
-import sys
-import threading
-import time
-from collections.abc import Mapping
-from typing import Any, Dict, Optional
+import traceback
+from typing import Any, Dict, Optional, Tuple
 
-# Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
-DEFAULT_EXECUTE_TIMEOUT_SECS = 60.0
+# Persistent module-level namespace for cross-call state. Same idea as
+# maya-mcp-server's ``context = globals()`` — long-running sessions can
+# ``import x`` once and rely on subsequent calls seeing the cached name.
+_PERSISTENT_NS: Dict[str, Any] = {"__name__": "__maya_mcp_exec__"}
 
-# Inline ``code`` longer than this is copied to a host-local file (see
-# :func:`dcc_mcp_core.script_execution.write_temp_script`) before ``exec`` so
-# large gateway payloads and JSON escaping issues align with the file-backed
-# execution path. Typed skills remain preferred over long inline scripts.
-INLINE_CODE_SPILL_THRESHOLD_CHARS = 4096
+_VALID_RESULT_TYPES = frozenset({"NONE", "VALUE", "JSON", "REPR"})
 
 
-def _persist_inline_spill_to_host_temp(code: str) -> str:
-    """Write *code* to ``~/.dcc-mcp-core/temp_scripts/`` and return the path.
+def _exec_and_capture_last_expression(code: str, filename: str, namespace: Dict[str, Any]) -> Tuple[Any, bool]:
+    """Exec ``code`` on ``namespace``; return ``(value, was_expression)``.
 
-    Prefer :func:`dcc_mcp_core.script_execution.write_temp_script` when the
-    installed ``dcc-mcp-core`` wheel exposes it; this fallback keeps Maya
-    adapters functional on slightly older core builds.
+    If the last AST node is an :class:`ast.Expr` statement, its value is
+    captured via ``compile(..., 'eval') + eval(...)`` after the rest of
+    the body is exec'd as a regular module. This avoids
+    ``ast.unparse`` (Python 3.9+) so the implementation is
+    Python 3.7-clean for Maya 2022.
+
+    Works for one statement or many; degrades to a bare ``exec`` for
+    bodies whose final statement is an assignment / control flow / def
+    (``was_expression=False`` in that case so callers know not to look
+    for a value).
     """
-    import tempfile
-    from pathlib import Path
+    tree = ast.parse(code, filename=filename, mode="exec")
+    if not tree.body:
+        return None, False
 
-    root_dir = Path.home() / ".dcc-mcp-core" / "temp_scripts"
-    root_dir.mkdir(parents=True, exist_ok=True)
-    fd, path = tempfile.mkstemp(suffix=".py", prefix="dcc_mcp_", dir=str(root_dir))
-    with os.fdopen(fd, "w", encoding="utf-8") as fp:
-        fp.write(code)
-    return path
+    last = tree.body[-1]
+    if isinstance(last, ast.Expr):
+        head_nodes = tree.body[:-1]
+        if head_nodes:
+            head_module = ast.Module(
+                body=head_nodes,
+                type_ignores=getattr(tree, "type_ignores", []),
+            )
+            exec(  # noqa: S102 — execute_python is the bare-exec entry point
+                compile(head_module, filename, "exec"),
+                namespace,
+            )
+        eval_code = compile(ast.Expression(body=last.value), filename, "eval")
+        value = eval(eval_code, namespace)  # noqa: S307
+        return value, True
+
+    exec(compile(tree, filename, "exec"), namespace)  # noqa: S102
+    return None, False
 
 
-try:
-    from dcc_mcp_core.script_execution import write_temp_script as _write_inline_spill_file
-except ImportError:  # pragma: no cover — older dcc-mcp-core without write_temp_script
-    _write_inline_spill_file = _persist_inline_spill_to_host_temp
+def _coerce_result(value: Any, result_type: str) -> Any:
+    """Apply the requested representation to a captured value.
 
-
-class ToolTimeoutError(TimeoutError):
-    """Raised when execute_python exceeds its cooperative timeout."""
-
-    def __init__(self, elapsed_secs: float) -> None:
-        super().__init__("execute_python timed out after {:.3f}s".format(elapsed_secs))
-        self.elapsed_secs = elapsed_secs
-
-
-def _normalize(params: Dict[str, Any]):
-    """Normalize ``code``/``script``/``source`` and ``timeout``/``timeout_secs``.
-
-    Wraps :func:`dcc_mcp_core.normalize_script_execution_params` so a
-    missing source returns a structured :func:`skill_error` instead of a
-    ``ValueError`` propagating up to the dispatcher.
+    ``NONE`` returns ``None`` (discard). ``VALUE`` passes through if the
+    object is JSON-serialisable, else falls back to ``repr`` so the
+    envelope is always JSON-safe. ``JSON`` round-trips through ``json``.
+    ``REPR`` returns ``repr(value)``.
     """
-    from dcc_mcp_core.script_execution import normalize_script_execution_params  # noqa: PLC0415
-
+    if result_type == "NONE":
+        return None
+    if result_type == "REPR":
+        return repr(value)
+    if result_type == "JSON":
+        try:
+            return json.loads(json.dumps(value, default=str))
+        except (TypeError, ValueError):
+            return repr(value)
     try:
-        return normalize_script_execution_params(params), None
-    except ValueError as exc:
-        return None, skill_error(
-            "No Python code provided",
-            str(exc),
-            possible_solutions=[
-                "Pass the source via the 'code' parameter.",
-                "Or pass file_path (or script_path) to a .py file for native __main__ execution.",
-            ],
-        )
-    except TypeError as exc:
-        return None, skill_error("Invalid script parameter", str(exc))
+        json.dumps(value)
+        return value
+    except (TypeError, ValueError):
+        return repr(value)
 
 
-def _merge_capture(primary: str, extra: str) -> str:
-    """Concatenate capture buffers while dropping Maya's mirrored stdout."""
-    if not extra:
-        return primary
-    if not primary:
-        return extra
-    primary_lines = [line.strip() for line in primary.splitlines() if line.strip()]
-    extra_lines = [line.strip() for line in extra.splitlines() if line.strip()]
-    if extra_lines and all(line in primary_lines for line in extra_lines):
-        return primary
-    if extra_lines and " ".join(extra_lines) in primary_lines:
-        return primary
-    if primary.endswith("\n"):
-        return primary + extra
-    return primary + "\n" + extra
+def _execute_bare(
+    code: str,
+    filename: str,
+    result_type: str,
+    capture_output: bool,
+    namespace: Dict[str, Any],
+) -> Dict[str, Any]:
+    """Run ``code``; return the unified envelope dict.
+
+    Envelope shape::
+
+        {
+            "success": bool,
+            "result": <captured value, optional>,
+            "error": {"type", "message", "traceback"} | None,
+            "stdout": str,
+            "stderr": str,
+        }
+
+    ``stdout`` / ``stderr`` are captured via
+    :func:`contextlib.redirect_stdout` / ``redirect_stderr`` only when
+    ``capture_output=True``. The redirects target pure-Python
+    ``io.StringIO`` buffers; they do not touch any Maya C++ surface
+    and so cannot corrupt the engine's internal state (the failure
+    mode that made us delete the legacy ``MayaOutputCapture`` hook).
+    """
+    stdout_buf = io.StringIO() if capture_output else None
+    stderr_buf = io.StringIO() if capture_output else None
+
+    error: Optional[Dict[str, str]] = None
+    result: Any = None
+
+    with contextlib.ExitStack() as stack:
+        if stdout_buf is not None:
+            stack.enter_context(contextlib.redirect_stdout(stdout_buf))
+        if stderr_buf is not None:
+            stack.enter_context(contextlib.redirect_stderr(stderr_buf))
+        try:
+            value, was_expression = _exec_and_capture_last_expression(code, filename, namespace)
+        except BaseException as exc:  # noqa: BLE001 — relay to client envelope
+            error = {
+                "type": "{0}.{1}".format(type(exc).__module__, type(exc).__name__),
+                "message": str(exc),
+                "traceback": traceback.format_exc(),
+            }
+        else:
+            if result_type != "NONE":
+                if not was_expression:
+                    error = {
+                        "type": "RuntimeError",
+                        "message": (
+                            "result_type={0!r} requested but the source does not "
+                            "end with a standalone expression. Drop the trailing "
+                            "assignment / control statement, or set "
+                            "result_type='NONE' to discard the return value.".format(result_type)
+                        ),
+                        "traceback": "",
+                    }
+                else:
+                    result = _coerce_result(value, result_type)
+
+    return {
+        "success": error is None,
+        "result": result,
+        "error": error,
+        "stdout": stdout_buf.getvalue() if stdout_buf is not None else "",
+        "stderr": stderr_buf.getvalue() if stderr_buf is not None else "",
+    }
 
 
-def _attach_spill_context(result: Dict[str, Any], spilled_path: Optional[str]) -> Dict[str, Any]:
-    """Annotate success envelopes when inline code was mirrored to disk on the Maya host."""
-    if not spilled_path or not result.get("success"):
-        return result
-    ctx = result.get("context")
-    if not isinstance(ctx, dict):
-        return result
-    if ctx.get("host_spilled_inline_script_path"):
-        return result
-    ctx["host_spilled_inline_script_path"] = spilled_path
-    ctx["host_spill_reason"] = "inline_code_exceeded_threshold_chars"
-    return result
-
-
-def _resolve_script_file_path(params: Mapping[str, Any]) -> Optional[str]:
-    """Return the first non-empty ``file_path`` / ``script_path`` string, if any."""
+def _resolve_script_file_path(params: Dict[str, Any]) -> Optional[str]:
     for key in ("file_path", "script_path"):
         raw = params.get(key)
         if raw is None:
@@ -156,358 +216,51 @@ def _resolve_script_file_path(params: Mapping[str, Any]) -> Optional[str]:
     return None
 
 
-def _parse_timeout_secs_param(params: Dict[str, Any]) -> Optional[float]:
-    """Parse ``timeout_secs`` from raw tool params (not via normalize_script_execution_params)."""
-    v = params.get("timeout_secs")
-    if v is None or isinstance(v, bool):
-        return None
-    if isinstance(v, (int, float)):
-        f = float(v)
-        return f if f > 0 else None
-    return None
-
-
-def _run_inline_impl(
-    code: str,
-    filename: str,
-    exec_globals: Dict[str, Any],
-    capture_output: bool,
-    cancel_event: Optional[threading.Event] = None,
-    timeout_secs: Optional[float] = None,
-) -> dict:
-    """Shared exec + capture path for inline and file-backed execution."""
-    from dcc_mcp_core.script_execution import ScriptExecutionCapture  # noqa: PLC0415
-
-    # Import local modules
-    from dcc_mcp_maya._maya_output import MayaOutputCapture  # noqa: PLC0415
-
-    py_capture = ScriptExecutionCapture(tee=True) if capture_output else None
-    maya_capture = MayaOutputCapture() if capture_output else None
-
-    trace_installed = False
-    previous_trace = None
-    started_at = time.monotonic()
-    deadline = started_at + timeout_secs if timeout_secs and timeout_secs > 0 else None
-
-    def _cancel_tracer(_frame: Any, event: str, _arg: Any):
-        if event == "line":
-            if deadline is not None and time.monotonic() >= deadline:
-                raise ToolTimeoutError(time.monotonic() - started_at)
-            if cancel_event is not None and cancel_event.is_set():
-                from dcc_mcp_core.cancellation import CancelledError  # noqa: PLC0415
-
-                raise CancelledError("execute_python cancelled by client")
-        return _cancel_tracer
-
-    exc_info: Optional[BaseException] = None
-    cleanup_error: Optional[BaseException] = None
-    try:
-        if py_capture is not None:
-            py_capture.__enter__()
-        if maya_capture is not None:
-            maya_capture.__enter__()
-
-        if cancel_event is not None or deadline is not None:
-            previous_trace = sys.gettrace()
-            sys.settrace(_cancel_tracer)
-            trace_installed = True
-
-        try:
-            exec(compile(code, filename, "exec"), exec_globals)  # noqa: S102
-        except BaseException as exc:  # noqa: BLE001 — relay traceback to client
-            exc_info = exc
-    finally:
-        if trace_installed:
-            sys.settrace(previous_trace)
-        for capture in (maya_capture, py_capture):
-            if capture is None:
-                continue
-            try:
-                capture.__exit__(None, None, None)
-            except BaseException as exc:  # noqa: BLE001
-                if cleanup_error is None:
-                    cleanup_error = exc
-        if exc_info is None and cleanup_error is not None:
-            exc_info = cleanup_error
-
-    py_stdout = py_capture.stdout if py_capture is not None else ""
-    py_stderr = py_capture.stderr if py_capture is not None else ""
-    maya_stdout = maya_capture.stdout if maya_capture is not None else ""
-    maya_stderr = maya_capture.stderr if maya_capture is not None else ""
-    stdout = _merge_capture(py_stdout, maya_stdout)
-    stderr = _merge_capture(py_stderr, maya_stderr)
-
-    if exc_info is not None:
-        if isinstance(exc_info, ToolTimeoutError):
-            return skill_error(
-                "Python execution timed out",
-                str(exc_info),
-                kind="tool-timeout",
-                elapsed_secs=exc_info.elapsed_secs,
-                stdout=stdout,
-                stderr=stderr,
-            )
-        try:
-            from dcc_mcp_maya.api import (  # noqa: PLC0415
-                canonical_maya_exception_message,
-                classify_maya_exception,
-            )
-
-            error_code = classify_maya_exception(exc_info)
-            canonical_message = canonical_maya_exception_message(exc_info)
-        except Exception:  # noqa: BLE001
-            error_code = "UNKNOWN"
-            canonical_message = "Unknown Maya error."
-        result = skill_exception(
-            exc_info,
-            message="Python execution failed",
-            stdout=stdout,
-            stderr=stderr,
-            error_code=error_code,
-            canonical_message_en=canonical_message,
-            error_type=type(exc_info).__name__,
-        )
-        result.setdefault("error_code", error_code)
-        result.setdefault("canonical_message_en", canonical_message)
-        result.setdefault("error_type", type(exc_info).__name__)
-        return result
-
-    raw = exec_globals.get("result")
-    return skill_success(
-        "Python executed successfully",
-        prompt="Python script finished. Check 'output' for any return value.",
-        output=str(raw) if raw is not None else "",
-        stdout=stdout,
-        stderr=stderr,
-    )
-
-
-def _run_inline(
-    code: str,
-    capture_output: bool,
-    cancel_event: Optional[threading.Event] = None,
-    timeout_secs: Optional[float] = None,
-    *,
-    exec_filename: str = "<maya-python>",
-) -> dict:
-    """Run *code* synchronously and return the structured envelope.
-
-    Uses :class:`dcc_mcp_core.script_execution.ScriptExecutionCapture`
-    plus :class:`dcc_mcp_maya._maya_output.MayaOutputCapture` (issue
-    #151) so ``print()``, ``cmds.warning(...)`` and MEL ``print``
-    statements all reach the client while the artist still sees output
-    in the Script Editor.
-
-    When *cancel_event* is provided a lightweight :func:`sys.settrace`
-    hook checks it between Python lines and raises
-    :class:`~dcc_mcp_core.cancellation.CancelledError` when set — this
-    is the cooperative preemption used by the deferred path (issue
-    #153).
-
-    *exec_filename* is passed to :func:`compile` for stack traces (may be a
-    host temp path when inline code was spilled to disk).
-    """
-    try:
-        import maya.cmds as cmds  # noqa: PLC0415
-    except ImportError:
-        cmds = None  # type: ignore[assignment]
-
-    exec_globals: Dict[str, Any] = {"cmds": cmds, "__name__": "__maya_exec__"}
-    return _run_inline_impl(
-        code,
-        exec_filename,
-        exec_globals,
-        capture_output,
-        cancel_event=cancel_event,
-        timeout_secs=timeout_secs,
-    )
-
-
-def _run_inline_file_path(
-    file_path: str,
-    capture_output: bool,
-    cancel_event: Optional[threading.Event] = None,
-    timeout_secs: Optional[float] = None,
-) -> dict:
-    """Run a ``.py`` file like Maya's Script Editor: ``__main__`` globals + ``__file__``."""
-    expanded = os.path.abspath(os.path.expanduser(str(file_path).strip()))
+def _load_script_file(file_arg: str) -> Tuple[str, str, Optional[Dict[str, Any]]]:
+    """Read a ``.py`` file from disk; return ``(code, filename, err)``."""
+    expanded = os.path.abspath(os.path.expanduser(str(file_arg).strip()))
     if not os.path.isfile(expanded):
-        return skill_error(
-            "Script file not found",
+        return (
+            "",
             expanded,
-            possible_solutions=["Check file_path is readable from the Maya process."],
+            skill_error(
+                "Script file not found",
+                expanded,
+                possible_solutions=["Check file_path is readable from the Maya process."],
+            ),
         )
     if not expanded.lower().endswith(".py"):
-        return skill_error(
-            "file_path must be a .py file",
+        return (
+            "",
             expanded,
-            possible_solutions=["Use execute_mel with file_path for .mel scripts."],
+            skill_error(
+                "file_path must be a .py file",
+                expanded,
+                possible_solutions=["Use execute_mel with file_path for .mel scripts."],
+            ),
         )
     try:
         with open(expanded, encoding="utf-8", errors="replace") as fh:
             body = fh.read()
     except OSError as exc:
-        return skill_error("Could not read script file", str(exc), path=expanded)
-
-    ns = __import__("__main__").__dict__
-    ns["this_root"] = os.path.dirname(expanded)
-    ns["__file__"] = expanded
-    try:
-        import maya.cmds as cmds  # noqa: PLC0415
-
-        if "cmds" not in ns or ns.get("cmds") is None:
-            ns["cmds"] = cmds
-    except ImportError:
-        if "cmds" not in ns:
-            ns["cmds"] = None
-
-    return _run_inline_impl(
-        body,
-        expanded,
-        ns,
-        capture_output,
-        cancel_event=cancel_event,
-        timeout_secs=timeout_secs,
-    )
-
-
-def _run_deferred(
-    code: str,
-    capture_output: bool,
-    timeout_secs: float,
-    *,
-    exec_filename: str = "<maya-python>",
-    spilled_path: Optional[str] = None,
-):
-    """Schedule *code* on Maya's idle queue and return a DeferredToolResult.
-
-    The MCP request returns immediately; the dispatcher polls
-    :attr:`DeferredToolResult.check_is_finished` until the script
-    completes (or ``timeout_secs`` elapses).
-
-    Cancellation (issue #153)
-    -------------------------
-    Two cooperative hooks keep the deferred job aligned with MCP
-    ``notifications/cancelled``:
-
-    1. The polling callback calls
-       :func:`~dcc_mcp_maya.check_maya_cancelled` on every invocation.
-       When cancelled, it sets ``cancel_event`` (so the worker can
-       notice) and re-raises :class:`CancelledError` — the core poll
-       loop then returns an error envelope to the client immediately,
-       freeing the request thread instead of waiting for the background
-       job to finish.
-    2. The worker runs under a :func:`sys.settrace` hook that checks
-       ``cancel_event`` between Python lines, raising
-       :class:`CancelledError` so pure-Python loops abort without the
-       caller having to embed manual ``check_maya_cancelled()`` calls.
-    """
-    from dcc_mcp_core._server import DeferredToolResult  # noqa: PLC0415
-
-    # Import local modules
-    from dcc_mcp_maya.dispatcher import check_maya_cancelled  # noqa: PLC0415
-
-    cancel_event = threading.Event()
-    state: Dict[str, Any] = {"done": False, "result": None}
-
-    def _runner() -> None:
-        envelope = _run_inline(
-            code,
-            capture_output,
-            cancel_event=cancel_event,
-            timeout_secs=timeout_secs,
-            exec_filename=exec_filename,
+        return (
+            "",
+            expanded,
+            skill_error("Could not read script file", str(exc), path=expanded),
         )
-        state["result"] = _attach_spill_context(envelope, spilled_path)
-        state["done"] = True
-
-    try:
-        import maya.cmds as cmds  # noqa: PLC0415
-        import maya.utils  # noqa: PLC0415
-
-        if cmds.about(batch=True):
-            _runner()
-        else:
-            maya.utils.executeDeferred(_runner)
-    except ImportError:
-        # mayapy / standalone — no executeDeferred queue; run inline.
-        _runner()
-
-    def _check_is_finished():
-        # Propagate MCP cancellation to the worker + the core poll loop.
-        try:
-            check_maya_cancelled()
-        except BaseException:  # noqa: BLE001 — flag worker + re-raise
-            cancel_event.set()
-            raise
-        return state["result"] if state["done"] else None
-
-    return DeferredToolResult(
-        check_is_finished=_check_is_finished,
-        timeout_secs=float(timeout_secs),
-        poll_interval_secs=0.1,
-    )
-
-
-def _run_deferred_file(file_path: str, capture_output: bool, timeout_secs: float):
-    """Like :func:`_run_deferred` but runs :func:`_run_inline_file_path` on the worker."""
-    from dcc_mcp_core._server import DeferredToolResult  # noqa: PLC0415
-
-    from dcc_mcp_maya.dispatcher import check_maya_cancelled  # noqa: PLC0415
-
-    cancel_event = threading.Event()
-    state: Dict[str, Any] = {"done": False, "result": None}
-
-    def _runner() -> None:
-        state["result"] = _run_inline_file_path(
-            file_path,
-            capture_output,
-            cancel_event=cancel_event,
-            timeout_secs=timeout_secs,
-        )
-        state["done"] = True
-
-    try:
-        import maya.cmds as cmds  # noqa: PLC0415
-        import maya.utils  # noqa: PLC0415
-
-        if cmds.about(batch=True):
-            _runner()
-        else:
-            maya.utils.executeDeferred(_runner)
-    except ImportError:
-        _runner()
-
-    def _check_is_finished():
-        try:
-            check_maya_cancelled()
-        except BaseException:  # noqa: BLE001
-            cancel_event.set()
-            raise
-        return state["result"] if state["done"] else None
-
-    return DeferredToolResult(
-        check_is_finished=_check_is_finished,
-        timeout_secs=float(timeout_secs),
-        poll_interval_secs=0.1,
-    )
+    return body, expanded, None
 
 
 def execute_python(**params: Any):
-    """Execute a Python snippet or a ``.py`` file inside Maya.
+    """Execute Python in Maya (bare exec, persistent namespace).
 
-    Inline source uses an isolated namespace with ``maya.cmds`` pre-imported.
-    When ``file_path`` (or ``script_path``) is set, the file is run like Maya's
-    Script Editor: ``exec`` uses ``__import__('__main__').__dict__`` with
-    ``__file__`` and ``this_root`` populated (studio shelf / pipeline scripts).
+    Drops every wrapper the previous revision shipped (``mcp_safe_session``,
+    ``ScriptExecutionCapture`` tee, ``MayaOutputCapture`` OpenMaya
+    callback bridge, ``sys.settrace`` cancellation tracer). The
+    dispatch path is now what a user would type in the Script Editor —
+    same as PatrickPalmer/maya-mcp-server, our stability benchmark.
 
-    Accepts inline source via ``code`` (preferred), ``script``, or ``source``
-    (issue #150 / dcc-mcp-core #591).  When ``capture_output=True``
-    (default) ``print()``, ``cmds.warning(...)`` and MEL ``print`` output
-    are all captured (issue #151).  When ``defer=True`` the script is
-    scheduled on Maya's idle queue and a :class:`DeferredToolResult` is
-    returned so long-running scripts no longer block the MCP request
-    thread, with cooperative cancellation wired in (issue #153).
+    See the module docstring for the parameter contract.
     """
     from dcc_mcp_maya._env import (  # noqa: PLC0415
         ENV_DISABLE_ARBITRARY_SCRIPT,
@@ -518,70 +271,77 @@ def execute_python(**params: Any):
     if resolve_execute_python_disabled():
         return skill_error(
             "execute_python is disabled by operator policy",
-            "Unset {} or {} to re-enable arbitrary Python execution.".format(
+            "Unset {0} or {1} to re-enable arbitrary Python execution.".format(
                 ENV_DISABLE_EXECUTE_PYTHON,
                 ENV_DISABLE_ARBITRARY_SCRIPT,
             ),
             possible_solutions=[
-                "Use search_skills(query=...) → load_skill('<skill>') → call the typed tool "
-                "from that skill's tools.yaml (validated inputSchema).",
-                "Use dcc_capability_manifest with {loaded_only: false} to pick a skill without inflating tools/list.",
-                "Gateway / non-MCP clients: POST http://<gateway>:<port>/v1/search, /v1/describe, "
-                "/v1/call (or /v1/call_batch) — do not assume the per-Maya /mcp URL is the only surface.",
-                "MCP-only hosts: search_tools → describe_tool → call_tool on the bounded slug surface.",
-                "Use introspect_* tools in maya-scripting when you only need API discovery.",
+                "Use search_skills / dcc_capability_manifest → load_skill → typed tool.",
+                "Use introspect_* tools when only API discovery is needed.",
             ],
         )
 
-    capture_output = bool(params.get("capture_output", True))
-    defer = bool(params.get("defer", False))
-
     file_arg = _resolve_script_file_path(params)
     if file_arg is not None:
-        from_file_timeout = _parse_timeout_secs_param(params)
-        effective_timeout = float(from_file_timeout or DEFAULT_EXECUTE_TIMEOUT_SECS)
-        if defer:
-            return _run_deferred_file(file_arg, capture_output, effective_timeout)
-        return _run_inline_file_path(file_arg, capture_output, timeout_secs=effective_timeout)
+        code, filename, err = _load_script_file(file_arg)
+        if err is not None:
+            return err
+        run_ns: Dict[str, Any] = __import__("__main__").__dict__
+        run_ns.setdefault("this_root", os.path.dirname(filename))
+        run_ns["__file__"] = filename
+    else:
+        code = params.get("code") or params.get("script") or params.get("source") or ""
+        if not str(code).strip():
+            return skill_error(
+                "No Python code provided",
+                "Provide non-empty source via `code` or `file_path`.",
+                possible_solutions=[
+                    "Inline: execute_python(code='cmds.polyCube()')",
+                    "From a file: execute_python(file_path='/abs/path/to/script.py')",
+                ],
+            )
+        filename = "<maya-mcp-exec>"
+        run_ns = _PERSISTENT_NS
 
-    normalized, err = _normalize(params)
-    if err is not None:
-        return err
-
-    code = normalized.code  # type: ignore[union-attr]
-    if not code.strip():
-        return skill_error("No Python code provided", "Provide non-empty source.")
-
-    timeout_secs = normalized.timeout_secs  # type: ignore[union-attr]
-
-    effective_timeout = float(timeout_secs or DEFAULT_EXECUTE_TIMEOUT_SECS)
-
-    exec_filename = "<maya-python>"
-    spilled_path: Optional[str] = None
-    if len(code) > INLINE_CODE_SPILL_THRESHOLD_CHARS:
-        spilled_path = _write_inline_spill_file(code)
-        exec_filename = spilled_path
-
-    if defer:
-        return _run_deferred(
-            code,
-            capture_output,
-            effective_timeout,
-            exec_filename=exec_filename,
-            spilled_path=spilled_path,
+    result_type = str(params.get("result_type", "NONE")).upper()
+    if result_type not in _VALID_RESULT_TYPES:
+        return skill_error(
+            "Invalid result_type",
+            "Allowed values: " + ", ".join(sorted(_VALID_RESULT_TYPES)),
         )
-    envelope = _run_inline(
-        code,
-        capture_output,
-        timeout_secs=effective_timeout,
-        exec_filename=exec_filename,
+
+    capture_output = bool(params.get("capture_output", True))
+
+    envelope = _execute_bare(
+        code=code,
+        filename=filename,
+        result_type=result_type,
+        capture_output=capture_output,
+        namespace=run_ns,
     )
-    return _attach_spill_context(envelope, spilled_path)
+
+    if not envelope["success"]:
+        err_info = envelope["error"] or {}
+        return skill_exception(
+            RuntimeError(err_info.get("message", "unknown")),
+            message="Python execution failed",
+            stdout=envelope["stdout"],
+            stderr=envelope["stderr"] + ("\n" + err_info.get("traceback", "") if err_info.get("traceback") else ""),
+            error_type=err_info.get("type", "RuntimeError"),
+        )
+
+    return skill_success(
+        "Python executed successfully",
+        prompt="Python script finished. Check 'output' for any return value.",
+        output=str(envelope["result"]) if envelope["result"] is not None else "",
+        stdout=envelope["stdout"],
+        stderr=envelope["stderr"],
+    )
 
 
 @skill_entry
 def main(**kwargs) -> dict:
-    """Entry point; delegates to :func:`execute_python`."""
+    """Skill entry — delegates to :func:`execute_python`."""
     return execute_python(**kwargs)
 
 
