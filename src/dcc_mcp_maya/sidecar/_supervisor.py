@@ -113,6 +113,8 @@ def start_sidecar(
     binary_override: Optional[Path] = None,
     command_port_override: Optional[int] = None,
     registry_dir: Optional[Path] = None,
+    display_name: Optional[str] = None,
+    adapter_version: Optional[str] = None,
     extra_args: Optional[list[str]] = None,
     extra_env: Optional[dict[str, str]] = None,
     open_command_port: bool = True,
@@ -132,9 +134,15 @@ def start_sidecar(
             :func:`allocate_free_port`.
         registry_dir: passed through to ``--registry-dir``. Defaults to
             the binary's own platform-specific location.
+        display_name: human-readable label written to the FileRegistry
+            row (``--display-name``). Useful when multiple Maya sessions
+            share a host and an agent needs to disambiguate.
+        adapter_version: ``dcc_mcp_maya`` package version stamped onto
+            the row (``--adapter-version``). The plug-in passes its own
+            ``VERSION`` here so gateway election can rank adapter
+            generations (see issue maya#137).
         extra_args: additional CLI args appended after the standard set.
-            Mainly useful for ``--display-name`` and
-            ``--adapter-version``.
+            For one-off flags that do not deserve a first-class kwarg.
         extra_env: environment overrides for the subprocess. Merged on
             top of :data:`os.environ` so the sidecar inherits Maya's
             existing ``DCC_MCP_*`` settings.
@@ -176,6 +184,10 @@ def start_sidecar(
     ]
     if registry_dir is not None:
         cmd.extend(["--registry-dir", str(registry_dir)])
+    if display_name is not None:
+        cmd.extend(["--display-name", display_name])
+    if adapter_version is not None:
+        cmd.extend(["--adapter-version", adapter_version])
     if extra_args:
         cmd.extend(extra_args)
 
