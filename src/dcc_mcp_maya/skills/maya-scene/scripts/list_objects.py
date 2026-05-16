@@ -24,10 +24,13 @@ def list_objects(object_type: Optional[str] = None, dag: bool = True) -> dict:
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        kwargs = {"dag": dag}
+        # Boolean ``ls`` flags require the Maya UI thread; see get_session_info.
         if object_type:
-            kwargs["type"] = object_type
-        objects = cmds.ls(**kwargs) or []
+            objects = cmds.ls(type=object_type) or []
+        elif dag:
+            objects = cmds.ls(type="transform") or []
+        else:
+            objects = cmds.ls() or []
         return skill_success(
             f"Found {len(objects)} objects",
             objects=objects,
