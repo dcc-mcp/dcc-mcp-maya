@@ -4,7 +4,7 @@ layout: home
 hero:
   name: dcc-mcp-maya
   text: AI-Powered Maya Automation
-  tagline: Embed a standards-compliant MCP server directly inside Maya — let AI agents control your 3D workflow.
+  tagline: Embed a standards-compliant MCP server directly inside Maya, with progressive typed tools and an optional sidecar runtime.
   image:
     src: /logo.svg
     alt: dcc-mcp-maya
@@ -21,17 +21,17 @@ features:
     title: MCP Protocol Native
     details: Implements the 2025-03-26 MCP Streamable HTTP spec — compatible with Claude Desktop, Cursor, OpenClaw and any MCP host.
   - icon: 🎬
-    title: 370+ MCP Tools
-    details: 64 built-in skill packages covering scene management, geometry, materials, animation, lighting, rendering, rigging, UV operations and more.
+    title: 160+ Typed Maya Tools
+    details: 23 Maya skill packages covering scene management, geometry, materials, animation, light rigs, rendering, rigging, UV operations, interchange and pipeline workflows.
   - icon: 📸
     title: Viewport Capture
     details: Capture any Maya viewport as a base64-encoded PNG with a single MCP call. Perfect for AI visual feedback loops.
   - icon: 🔌
-    title: Zero External Dependencies
-    details: No gateway process, no IPC bridge — the HTTP server runs embedded inside Maya's own Python interpreter.
+    title: In-Process by Default
+    details: The HTTP server runs embedded in Maya; plugin deployments can opt into the dcc-mcp-server sidecar when runtime isolation is useful.
   - icon: ⚡
-    title: Skills Architecture
-    details: Hot-reloadable skill packages. Ship your own skills via DCC_MCP_MAYA_SKILL_PATHS — no patch to the core required.
+    title: Progressive Skill Architecture
+    details: Start with a compact minimal tool surface, discover unloaded capabilities with dcc_capability_manifest, then load domain skills on demand.
   - icon: 🐍
     title: Maya 2020+ / Python 3.7+
     details: Tested across Maya's embedded Python 3.7+ runtimes, including Maya 2022 through 2026 module packages.
