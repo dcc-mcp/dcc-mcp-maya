@@ -106,9 +106,7 @@ class TestPayloadValidation:
         assert "JSON object" in envelope["message"]
 
     def test_missing_action_key_returns_payload_malformed(self):
-        envelope = json.loads(
-            dispatch_payload({"args": {}}, server_lookup=lambda: None)
-        )
+        envelope = json.loads(dispatch_payload({"args": {}}, server_lookup=lambda: None))
         assert envelope["success"] is False
         assert envelope["error"] == "payload-malformed"
 
@@ -134,17 +132,13 @@ class TestPayloadValidation:
         assert envelope["action"] == "ok"
 
     def test_string_payload_is_parsed_as_json(self):
-        envelope = json.loads(
-            dispatch_payload('{"action": "ok"}', server_lookup=lambda: None)
-        )
+        envelope = json.loads(dispatch_payload('{"action": "ok"}', server_lookup=lambda: None))
         # The server lookup returns None, so we expect the
         # `server-not-running` envelope — not a parse error.
         assert envelope["error"] == "server-not-running"
 
     def test_invalid_json_string_returns_payload_malformed(self):
-        envelope = json.loads(
-            dispatch_payload("{ not even close to json", server_lookup=lambda: None)
-        )
+        envelope = json.loads(dispatch_payload("{ not even close to json", server_lookup=lambda: None))
         assert envelope["error"] == "payload-malformed"
 
 
@@ -231,9 +225,7 @@ class TestDispatchExecution:
         assert envelope["success"] is True
         assert envelope["echoed"] == {"x": 1, "y": "hello"}
 
-    def test_skill_exception_returns_skill_exception_envelope(
-        self, skill_script_dir: Path
-    ):
+    def test_skill_exception_returns_skill_exception_envelope(self, skill_script_dir: Path):
         # ``run_skill_script`` catches the RuntimeError and wraps it
         # through ``dcc_mcp_core.skill.skill_exception``, producing a
         # ``success: False`` envelope that includes the formatted
@@ -262,9 +254,7 @@ class TestDispatchExecution:
         assert envelope["request_id"] == "r-fail"
         assert envelope["action"] == "exploder"
 
-    def test_non_dict_return_wrapped_as_success_message(
-        self, skill_script_dir: Path
-    ):
+    def test_non_dict_return_wrapped_as_success_message(self, skill_script_dir: Path):
         # ``run_skill_script`` already wraps non-dict returns into
         # ``{"success": True, "message": str(value)}`` — the
         # dispatcher passes that through and adds correlation IDs.
@@ -282,9 +272,7 @@ class TestDispatchExecution:
         assert envelope["request_id"] == "r-int"
         assert envelope["action"] == "primitive"
 
-    def test_skill_system_exit_is_silent_success(
-        self, skill_script_dir: Path
-    ):
+    def test_skill_system_exit_is_silent_success(self, skill_script_dir: Path):
         # ``run_skill_script`` intercepts ``SystemExit`` and returns
         # the script's ``__mcp_result__`` if present, else a default
         # ``{"success": True, "message": "Script executed"}``.  The
@@ -327,9 +315,7 @@ class TestWireFormatGuarantees:
             {"action": "multiliner", "args": {}, "request_id": "r-ml"},
             server_lookup=_server_lookup_returning(server),
         )
-        assert "\n" not in response, (
-            f"response must not contain literal LF; got: {response!r}"
-        )
+        assert "\n" not in response, f"response must not contain literal LF; got: {response!r}"
         # JSON-decoded value still has the escape preserved so the
         # gateway / MCP client sees the original newline.
         envelope = json.loads(response)
@@ -367,9 +353,7 @@ class TestWireFormatGuarantees:
         # Confirm the raw line is NOT pre-escaped to ASCII (`\u5df2`
         # would mean we lost ensure_ascii=False).  Either form is
         # technically valid JSON, but we choose the smaller wire form.
-        assert "已" in response, (
-            f"i18n chars should ship as UTF-8 on the wire, got: {response!r}"
-        )
+        assert "已" in response, f"i18n chars should ship as UTF-8 on the wire, got: {response!r}"
 
 
 # ── tests: top-level _sidecar shim ──────────────────────────────
@@ -390,9 +374,7 @@ class TestTopLevelShim:
     def test_dispatch_via_top_level_module(self):
         import dcc_mcp_maya._sidecar as wire_entry
 
-        envelope = json.loads(
-            wire_entry.dispatch({"action": "any", "args": {}, "request_id": "r"})
-        )
+        envelope = json.loads(wire_entry.dispatch({"action": "any", "args": {}, "request_id": "r"}))
         # Without a stub server in place we reach the
         # ``server-not-running`` branch — proves the shim is
         # forwarding to the real dispatcher.

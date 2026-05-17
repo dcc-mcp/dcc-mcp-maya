@@ -52,7 +52,12 @@ def resolve_sidecar_binary() -> Path:
         if candidate.is_file():
             logger.debug("sidecar binary resolved via %s=%s", ENV_SIDECAR_BINARY, candidate)
             return candidate
-        probed.append(f"{ENV_SIDECAR_BINARY}={override} (not a file)")
+        raise SidecarBinaryError(
+            "Could not locate the dcc-mcp-server binary. Explicit "
+            + ENV_SIDECAR_BINARY
+            + " override is not a file: "
+            + override
+        )
 
     try:
         from dcc_mcp_server import binary_path  # type: ignore[import-not-found]

@@ -200,7 +200,7 @@ class TestJobPersistence:
             req = urllib.request.Request(
                 url,
                 data=rpc,
-                headers={"Content-Type": "application/json"},
+                headers={"Content-Type": "application/json", "Accept": "application/json, text/event-stream"},
             )
             with urllib.request.urlopen(req, timeout=5) as resp:
                 body = json.loads(resp.read())
@@ -256,7 +256,7 @@ class TestGatewayJobRouting:
         req = urllib.request.Request(
             url,
             data=payload,
-            headers={"Content-Type": "application/json"},
+            headers={"Content-Type": "application/json", "Accept": "application/json, text/event-stream"},
         )
         with urllib.request.urlopen(req, timeout=10) as resp:
             return json.loads(resp.read())
