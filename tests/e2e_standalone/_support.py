@@ -90,7 +90,10 @@ def _mcp_post(url, body):
     req = urllib.request.Request(
         url,
         data=data,
-        headers={"Content-Type": "application/json", "Accept": "application/json"},
+        headers={
+            "Content-Type": "application/json",
+            "Accept": "application/json, text/event-stream",
+        },
         method="POST",
     )
     with urllib.request.urlopen(req, timeout=10) as resp:
