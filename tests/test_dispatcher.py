@@ -422,6 +422,43 @@ class TestMayaStandaloneDispatcher:
             pytest.skip("Python 3.7 Protocol runtime checks differ from typing_extensions")
         assert isinstance(d, BaseDccCallableDispatcher)
 
+    def test_dispatch_callable_serializes_across_instances(self):
+        from dcc_mcp_maya.dispatcher import MayaStandaloneDispatcher
+
+        first = MayaStandaloneDispatcher()
+        second = MayaStandaloneDispatcher()
+        entered = threading.Event()
+        release = threading.Event()
+        order = []
+
+        def slow_task():
+            order.append("first-enter")
+            entered.set()
+            release.wait(timeout=5)
+            order.append("first-exit")
+            return "first"
+
+        def fast_task():
+            order.append("second-enter")
+            return "second"
+
+        t = threading.Thread(target=lambda: first.dispatch_callable(slow_task))
+        t.start()
+        assert entered.wait(timeout=5)
+
+        result_holder = []
+        t2 = threading.Thread(target=lambda: result_holder.append(second.dispatch_callable(fast_task)))
+        t2.start()
+        time.sleep(0.05)
+        assert result_holder == []
+
+        release.set()
+        t.join(timeout=5)
+        t2.join(timeout=5)
+
+        assert result_holder == ["second"]
+        assert order == ["first-enter", "first-exit", "second-enter"]
+
     def test_supported(self):
         from dcc_mcp_maya.dispatcher import MayaStandaloneDispatcher
 
