@@ -54,7 +54,7 @@ jobs:
     name: Test (mayapy / Maya 2022 / Python 3.7)
     runs-on: ubuntu-latest
     container:
-      image: tahv/mayapy:2022
+      image: tahv/mayapy:2025
     env:
       DCC_MCP_ALLOW_AMBIENT_PYTHON: "1"
       DCC_MCP_DISABLE_FILE_LOGGING: "1"
