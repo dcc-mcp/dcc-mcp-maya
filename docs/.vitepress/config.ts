@@ -21,7 +21,7 @@ export default defineConfig({
       themeConfig: {
         nav: [
           { text: '指南', link: '/zh/guide/' },
-          { text: 'API 参考', link: '/zh/api/actions' },
+          { text: 'API 参考', link: '/zh/api/server' },
           { text: 'GitHub', link: 'https://github.com/loonghao/dcc-mcp-maya' },
         ],
         sidebar: {
@@ -39,7 +39,6 @@ export default defineConfig({
               text: '使用指南',
               items: [
                 { text: 'MCP Tools 指南', link: '/zh/guide/mcp-tools' },
-                { text: 'Action 完整列表', link: '/zh/guide/actions' },
                 { text: '截图与快照', link: '/zh/guide/snapshot' },
                 { text: '场景信息查询', link: '/zh/guide/scene' },
                 { text: 'MCP 资源', link: '/zh/guide/mcp-resources' },
@@ -55,8 +54,8 @@ export default defineConfig({
             {
               text: 'API 参考',
               items: [
-                { text: 'Action API', link: '/zh/api/actions' },
-                { text: 'MayaMcpServer', link: '/zh/api/adapter' },
+                { text: 'MayaMcpServer', link: '/zh/api/server' },
+                { text: 'Adapter API', link: '/zh/api/adapter' },
                 { text: '截图 API', link: '/zh/api/snapshot' },
                 { text: '场景信息 API', link: '/zh/api/scene' },
               ],
@@ -76,7 +75,7 @@ export default defineConfig({
 
     nav: [
       { text: 'Guide', link: '/guide/' },
-      { text: 'API Reference', link: '/api/actions' },
+      { text: 'API Reference', link: '/api/server' },
       { text: 'GitHub', link: 'https://github.com/loonghao/dcc-mcp-maya' },
     ],
 
@@ -95,7 +94,6 @@ export default defineConfig({
           text: 'Usage',
           items: [
             { text: 'MCP Tools Guide', link: '/guide/mcp-tools' },
-            { text: 'Action List', link: '/guide/actions' },
             { text: 'Viewport Snapshot', link: '/guide/snapshot' },
             { text: 'Scene Info', link: '/guide/scene' },
             { text: 'MCP Resources', link: '/guide/mcp-resources' },
@@ -111,8 +109,8 @@ export default defineConfig({
         {
           text: 'API Reference',
           items: [
-            { text: 'Action API', link: '/api/actions' },
-            { text: 'MayaMcpServer', link: '/api/adapter' },
+            { text: 'MayaMcpServer', link: '/api/server' },
+            { text: 'Adapter API', link: '/api/adapter' },
             { text: 'Snapshot API', link: '/api/snapshot' },
             { text: 'Scene API', link: '/api/scene' },
           ],
