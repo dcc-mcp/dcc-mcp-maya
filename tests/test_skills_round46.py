@@ -100,6 +100,7 @@ class TestExecutorRegistration:
 
         server = object.__new__(MayaMcpServer)
         server._dcc_name = "maya"
+        server._config = MagicMock(sandbox_policy=None)
         server._server = MagicMock()
         # Readiness binder created in ``__init__``; supply a stand-in
         # so ``attach_dispatcher`` can re-bind without crashing.
