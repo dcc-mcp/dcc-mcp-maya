@@ -44,6 +44,7 @@ from __future__ import annotations
 import json
 import socket
 import socketserver
+import sys
 import threading
 import time
 from pathlib import Path
@@ -364,6 +365,9 @@ class TestSidecarLifecycle:
         fake_qt_server: int,
         isolated_registry_dir: Path,
     ) -> None:
+        if sys.platform == "win32":
+            pytest.skip("PPID-watch lifecycle is covered on POSIX; Windows process handles need a separate probe")
+
         handle = start_sidecar(
             maya_pid=parent_surrogate.pid,
             qt_port_override=fake_qt_server,

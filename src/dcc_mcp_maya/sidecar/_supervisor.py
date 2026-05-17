@@ -164,6 +164,7 @@ def start_sidecar(
     extra_args: Optional[list] = None,
     extra_env: Optional[dict] = None,
     start_qt_server_fn=None,
+    stop_qt_server_fn=None,
 ) -> SidecarHandle:
     """Start the in-Maya Qt dispatcher and spawn the sidecar subprocess.
 
@@ -199,6 +200,8 @@ def start_sidecar(
             :func:`start_qt_server`. Tests pass a stub that returns a
             canned ``{"host", "port", "qt_binding"}`` dict so the
             supervisor can be exercised without a Qt runtime.
+        stop_qt_server_fn: companion teardown hook used if startup fails
+            after the Qt server has already been started.
 
     Returns:
         A :class:`SidecarHandle` referencing the spawned subprocess.
@@ -224,6 +227,7 @@ def start_sidecar(
     try:
         _register_dispatch_handler(start_qt_server_fn)
     except Exception as exc:  # noqa: BLE001 — narrow it to SidecarSpawnError
+        _stop_qt_server(stop_qt_server_fn)
         raise SidecarSpawnError(
             "failed to register `dispatch` handler on the in-Maya Qt server: {0}".format(exc)
         ) from exc
@@ -278,6 +282,7 @@ def start_sidecar(
             creationflags=_detached_process_flags(),
         )
     except OSError as exc:
+        _stop_qt_server(stop_qt_server_fn)
         raise SidecarSpawnError("failed to spawn dcc-mcp-server sidecar at {0}: {1}".format(binary, exc)) from exc
 
     return SidecarHandle(
