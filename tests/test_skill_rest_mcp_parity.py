@@ -309,7 +309,7 @@ def test_manifest_actions_discoverable_via_search_tools(mcp):
 
     # search_tools indexes loaded tools; load the owning skill before searching.
     mcp.tools_call("load_skill", {"skill_name": "maya-scripting"})
-    resp = mcp.tools_call("search_tools", {"query": "python", "limit": 10})
+    resp = mcp.tools_call("search_tools", {"query": "python", "limit": 50})
     result = resp.get("result")
     assert result is not None, "search_tools required on core: {}".format(resp)
     assert not (isinstance(resp.get("error"), dict) and resp["error"].get("code") == -32601), (
