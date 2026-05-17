@@ -155,6 +155,19 @@ def register_kmaya_exiting_hook(
         unavailable (non-Maya Python) or the registration failed.
     """
     try:
+        import maya.cmds as cmds  # noqa: PLC0415
+    except Exception:  # noqa: BLE001
+        cmds = None
+    if cmds is not None:
+        try:
+            if bool(cmds.about(batch=True)):
+                logger.debug("kMayaExiting: skipped in Maya batch/mayapy mode")
+                return None
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("kMayaExiting: cmds.about(batch=True) failed: %s", exc)
+            return None
+
+    try:
         # Lazy import — this module must be importable in plain Python
         # so unit tests can exercise the other safety nets without a
         # live Maya.
