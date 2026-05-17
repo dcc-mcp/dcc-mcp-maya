@@ -398,6 +398,30 @@ class TestMayaStandaloneDispatcher:
         assert result["success"] is False
         assert "division by zero" in result["error"]
 
+    def test_dispatch_callable_satisfies_core_protocol(self):
+        from dcc_mcp_maya.dispatcher import MayaStandaloneDispatcher
+
+        d = MayaStandaloneDispatcher()
+        result = d.dispatch_callable(
+            lambda value: {"value": value},
+            42,
+            affinity="main",
+            action_name="maya_primitives__create_sphere",
+            timeout_hint_secs=30,
+        )
+
+        assert result == {"value": 42}
+        assert hasattr(d, "dispatch_callable")
+        assert callable(d.dispatch_callable)
+
+        from dcc_mcp_core._server.inprocess_executor import (
+            BaseDccCallableDispatcher,
+        )
+
+        if sys.version_info < (3, 8):
+            pytest.skip("Python 3.7 Protocol runtime checks differ from typing_extensions")
+        assert isinstance(d, BaseDccCallableDispatcher)
+
     def test_supported(self):
         from dcc_mcp_maya.dispatcher import MayaStandaloneDispatcher
 
