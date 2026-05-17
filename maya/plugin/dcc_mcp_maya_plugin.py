@@ -69,17 +69,25 @@ Configuration
 ``DCC_MCP_PYTHON_INIT_SNIPPET``
     One-liner executed by each skill worker before running any tool script.
     Auto-set to ``import maya.standalone; maya.standalone.initialize(name='python')``.
+
+``DCC_MCP_MAYA_FAULTHANDLER``
+    Set to ``0`` to disable Python fatal-signal traceback logging. Crash logs
+    are written under ``DCC_MCP_LOG_DIR`` or the OS temp directory.
 """
 
 # Import future modules
 from __future__ import annotations
 
 # Import built-in modules
+import faulthandler
 import logging
 import os
+import signal
 import sys
+import tempfile
 import threading
 from pathlib import Path
+from typing import Optional
 
 import maya.api.OpenMaya as om  # Python API 2.0 — required for MFnPlugin on Maya 2020+
 import maya.cmds as cmds
@@ -90,6 +98,10 @@ VENDOR = "dcc-mcp"
 
 # Default gateway port — same as dcc-mcp-server binary default
 _DEFAULT_GATEWAY_PORT = 9765
+_faulthandler_file = None
+_faulthandler_path: Optional[Path] = None
+_faulthandler_enabled_by_plugin = False
+_faulthandler_registered_signal = None
 
 
 # ── ensure dcc_mcp_maya package is importable ────────────────────────────────
@@ -296,6 +308,10 @@ def uninitializePlugin(plugin):
             _stop_blocking()
         except Exception as exc:  # noqa: BLE001
             logger.warning("dcc-mcp-maya server stop error: %s", exc)
+        try:
+            _disable_faulthandler_for_plugin()
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("dcc-mcp-maya faulthandler teardown error: %s", exc)
         logger.info("dcc-mcp-maya plugin unloaded")
 
 
@@ -390,6 +406,7 @@ def _start() -> None:
         import dcc_mcp_maya  # noqa: PLC0415
 
         _export_worker_env()
+        _enable_faulthandler_for_plugin()
         # Issue #148 — defuse the modal commandPort security warning that
         # would otherwise freeze Maya's main thread when a stray client
         # (or the gateway probe) connects to the legacy commandPort.
@@ -494,6 +511,72 @@ def _post_start(cfg: dict) -> None:
         logger.debug("stale-instance scan skipped: %s", exc)
 
     _maybe_spawn_sidecar()
+
+
+def _faulthandler_opted_out() -> bool:
+    return os.environ.get("DCC_MCP_MAYA_FAULTHANDLER", "1").strip().lower() in {"0", "false", "off", "no"}
+
+
+def _faulthandler_log_dir() -> Path:
+    base = os.environ.get("DCC_MCP_LOG_DIR")
+    if base:
+        return Path(base)
+    return Path(tempfile.gettempdir()) / "dcc-mcp-maya"
+
+
+def _enable_faulthandler_for_plugin() -> None:
+    """Enable Python fatal-signal tracebacks for Maya crash post-mortems."""
+    global _faulthandler_enabled_by_plugin, _faulthandler_file, _faulthandler_path, _faulthandler_registered_signal
+
+    if _faulthandler_opted_out():
+        logger.info("dcc-mcp-maya: faulthandler disabled via DCC_MCP_MAYA_FAULTHANDLER=0")
+        return
+    if faulthandler.is_enabled():
+        logger.debug("dcc-mcp-maya: faulthandler already enabled; leaving existing handler in place")
+        return
+    try:
+        log_dir = _faulthandler_log_dir()
+        log_dir.mkdir(parents=True, exist_ok=True)
+        _faulthandler_path = log_dir / "maya-faulthandler-{}.log".format(os.getpid())
+        _faulthandler_file = open(str(_faulthandler_path), "a", buffering=1)
+        faulthandler.enable(file=_faulthandler_file, all_threads=True)
+        sigusr1 = getattr(signal, "SIGUSR1", None)
+        if sigusr1 is not None:
+            try:
+                faulthandler.register(sigusr1, file=_faulthandler_file, all_threads=True)
+                _faulthandler_registered_signal = sigusr1
+            except (RuntimeError, ValueError, OSError) as exc:
+                logger.debug("dcc-mcp-maya: SIGUSR1 faulthandler registration skipped: %s", exc)
+        _faulthandler_enabled_by_plugin = True
+        logger.info("dcc-mcp-maya: faulthandler crash log enabled at %s", _faulthandler_path)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("dcc-mcp-maya: faulthandler setup failed: %s", exc)
+
+
+def _disable_faulthandler_for_plugin() -> None:
+    """Undo faulthandler setup when this plugin installed it."""
+    global _faulthandler_enabled_by_plugin, _faulthandler_file, _faulthandler_path, _faulthandler_registered_signal
+
+    if not _faulthandler_enabled_by_plugin:
+        return
+    if _faulthandler_registered_signal is not None:
+        try:
+            faulthandler.unregister(_faulthandler_registered_signal)
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("dcc-mcp-maya: faulthandler signal unregister skipped: %s", exc)
+        _faulthandler_registered_signal = None
+    try:
+        faulthandler.disable()
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("dcc-mcp-maya: faulthandler disable skipped: %s", exc)
+    try:
+        if _faulthandler_file is not None:
+            _faulthandler_file.close()
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("dcc-mcp-maya: faulthandler log close skipped: %s", exc)
+    _faulthandler_file = None
+    _faulthandler_path = None
+    _faulthandler_enabled_by_plugin = False
 
 
 def _disable_autosave_for_session() -> None:

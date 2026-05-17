@@ -26,6 +26,14 @@ def _playblast_frame_range(frame: float) -> Tuple[int, int]:
     return (fnum, fnum)
 
 
+def _read_nonempty_png(path: str) -> bytes:
+    with open(path, "rb") as fh:
+        img_bytes = fh.read()
+    if not img_bytes:
+        raise ValueError("EMPTY_PLAYBLAST")
+    return img_bytes
+
+
 def playblast(
     width: int = 1920,
     height: int = 1080,
@@ -51,6 +59,7 @@ def playblast(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
+        img_path: Optional[str] = None
         if frame is None:
             frame = cmds.currentTime(query=True)
 
@@ -92,8 +101,7 @@ def playblast(
                 "Could not locate output PNG from playblast",
             )
 
-        with open(img_path, "rb") as fh:
-            img_bytes = fh.read()
+        img_bytes = _read_nonempty_png(img_path)
         os.unlink(img_path)
 
         img_b64 = base64.b64encode(img_bytes).decode("ascii")
@@ -102,6 +110,26 @@ def playblast(
             "Viewport captured at frame {} ({}×{})".format(f0, width, height),
             prompt="Image captured. For framing before capture, use capture_viewport with view_fit=True.",
             image=img_b64,
+            frame=frame,
+            width=width,
+            height=height,
+        )
+    except ValueError as exc:
+        if str(exc) != "EMPTY_PLAYBLAST":
+            raise
+        try:
+            if img_path and os.path.exists(img_path):
+                os.unlink(img_path)
+        except OSError:
+            pass
+        return skill_error(
+            "Playblast produced an empty image",
+            "Maya playblast wrote a 0-byte PNG",
+            possible_solutions=[
+                "Retry after ensuring a model panel exists.",
+                "Use capture_viewport with off_screen=True and view_fit=True for hidden or minimized Maya sessions.",
+            ],
+            error_code="EMPTY_PLAYBLAST",
             frame=frame,
             width=width,
             height=height,
