@@ -223,7 +223,7 @@ def _execute_bare(
     uses at the user-code boundary. Aligning with that reference is
     the whole point of #248.
     """
-    if inplace or _running_on_main_thread():
+    if inplace or _running_on_main_thread() or not _should_marshal_to_maya_main_thread():
         return _execute_bare_inplace(code, filename, result_type, capture_output, namespace)
 
     # Hand off to the process-wide single-writer queue. The pump thread
@@ -329,6 +329,31 @@ def _execute_bare_inplace(
 def _running_on_main_thread() -> bool:
     """True when the current thread is Maya's UI / main thread."""
     return threading.current_thread() is _MAIN_THREAD
+
+
+def _should_marshal_to_maya_main_thread() -> bool:
+    """Return true only when a live Maya UI thread bridge is available.
+
+    ``mayapy`` batch has Maya modules but no UI event loop to service
+    ``executeInMainThreadWithResult``.  In that environment the HTTP
+    worker thread is the only viable executor, so run inline instead of
+    queueing work that core will eventually cancel.
+    """
+    try:
+        import maya.cmds as cmds  # noqa: PLC0415
+    except Exception:  # noqa: BLE001
+        cmds = None
+    if cmds is not None:
+        try:
+            if bool(cmds.about(batch=True)):
+                return False
+        except Exception:  # noqa: BLE001
+            return False
+
+    from dcc_mcp_maya import _main_thread_queue  # noqa: PLC0415
+
+    utils = _main_thread_queue._import_maya_utils()  # noqa: SLF001
+    return utils is not None and hasattr(utils, "executeInMainThreadWithResult")
 
 
 def _resolve_script_file_path(params: Dict[str, Any]) -> Optional[str]:
