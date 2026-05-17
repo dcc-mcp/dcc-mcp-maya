@@ -23,13 +23,6 @@ metadata:
     search-hint: |-
       submit render job, distributed render, deadline queue, farm submission,
       validate scene for farm, render job spec, render job status
-    aliases:
-    - maya-deadline
-    side-effects:
-    - reads-scene
-    - reads-disk
-    - writes-disk
-    - calls-external-service
     depends:
     - maya-render
     tools: tools.yaml
