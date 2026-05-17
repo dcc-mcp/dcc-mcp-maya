@@ -382,6 +382,7 @@ All other skills appear as `__skill__<name>` stubs (default behavior). Call `loa
 | `DCC_MCP_MAYA_PROCESS_SENTINEL` | `1` | `0` = disable the crash-resilient sentinel file that lets sweepers detect `kill -9` / Task Manager exits (issue #186). |
 | `DCC_MCP_MAYA_DEFENSIVE_DEL` | `0` | `1` = enable the defensive `__del__` guard. Recommended only for `mayapy` / test fixtures — interactive Maya disables by default to avoid Tokio deadlocks (issue #186). |
 | `DCC_MCP_MAYA_RESOURCES` | `1` | `0` = disable Maya MCP resource publishing entirely (issue #187 / core 0.15.0). |
+| `DCC_MCP_MAYA_FAULTHANDLER` | `1` | `0` = disable plugin-installed Python fatal-signal traceback logging. Logs go under `DCC_MCP_LOG_DIR` or the OS temp directory. |
 | `DCC_MCP_GATEWAY_PORT` | `9765` | Multi-instance gateway election port. `0` = disable. |
 | `DCC_MCP_REGISTRY_DIR` | OS temp dir | Shared service-discovery registry directory. |
 | `DCC_MCP_MAYA_EXCLUDE_STUBS_FROM_TOOLS_LIST` | `0` | `1` = exclude ``__skill__*`` / ``__group__*`` stubs from ``tools/list`` (issue #174). Discovery still possible via capability manifest / ``/v1/search``. |
