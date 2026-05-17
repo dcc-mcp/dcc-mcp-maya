@@ -47,10 +47,12 @@ from __future__ import annotations
 
 # Import built-in modules
 import ast
+import io
 import os
 import sys
+import tokenize
 from pathlib import Path
-from typing import List
+from typing import List, TextIO
 
 # Import third-party modules
 import pytest
@@ -105,15 +107,24 @@ _SOURCES = _iter_package_sources()
 def _parse_as_python_3_7(src: str, *, filename: str = "<unknown>") -> ast.AST:
     """Parse source with the strongest Python 3.7 grammar check available.
 
-    CPython 3.8/3.9 accept ``feature_version`` as an integer minor
-    version, while 3.10+ accept the ``(major, minor)`` tuple form.  On
-    Python 3.7 itself the ambient parser is already the target grammar.
+    CPython 3.8/3.9 expose ``feature_version`` but do not reject every
+    3.8 grammar addition reliably (notably the walrus operator).  Keep
+    the parser check, and add a token-level guard for known 3.8 syntax
+    so these CI lanes still protect the Maya 2020/2022 Python 3.7 floor.
     """
+    _raise_on_python_3_8_only_tokens(src, filename=filename)
     if sys.version_info < (3, 8):
         return ast.parse(src, filename=filename)
     if sys.version_info < (3, 10):
         return ast.parse(src, filename=filename, feature_version=7)
     return ast.parse(src, filename=filename, feature_version=(3, 7))
+
+
+def _raise_on_python_3_8_only_tokens(src: str, *, filename: str) -> None:
+    reader: TextIO = io.StringIO(src)
+    for tok in tokenize.generate_tokens(reader.readline):
+        if tok.type == tokenize.OP and tok.string == ":=":
+            raise SyntaxError("walrus operator requires Python 3.8+", (filename, tok.start[0], tok.start[1], tok.line))
 
 
 def _rel(path: Path) -> str:

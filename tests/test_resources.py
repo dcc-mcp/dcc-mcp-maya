@@ -105,6 +105,9 @@ class TestProducersWithoutMaya:
         # imports explicitly instead of depending on the ambient interpreter.
         monkeypatch.setitem(sys.modules, "maya.cmds", None)
         monkeypatch.setitem(sys.modules, "maya.api.OpenMaya", None)
+        monkeypatch.setitem(sys.modules, "maya.api.OpenMayaAnim", None)
+        monkeypatch.setitem(sys.modules, "maya.api.OpenMayaUI", None)
+        monkeypatch.setitem(sys.modules, "maya.OpenMaya", None)
 
     def test_cmds_help_returns_unavailable_envelope(self) -> None:
         out = _maya_cmds_help_producer("maya-cmds://help/ls")
