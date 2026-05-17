@@ -69,8 +69,8 @@ class TestPluginStartupMode:
         plugin_module.initializePlugin(MagicMock())
 
         plugin_module._add_menu.assert_called_once_with()
-        plugin_module._start.assert_called_once_with()
-        plugin_module._start_async.assert_not_called()
+        plugin_module._start_async.assert_called_once_with()
+        plugin_module._start.assert_not_called()
 
     def test_batch_initialize_starts_synchronously(self, plugin_module, mock_maya_modules):
         mock_maya_modules.cmds.about.side_effect = lambda **kwargs: True if kwargs.get("batch") else "2025"
@@ -308,9 +308,7 @@ class TestRestartStopsSidecar:
     """Restart MCP Server must tear down the prior sidecar before respawning."""
 
     def test_stop_sidecar_if_running_clears_handle(self, plugin_module, monkeypatch):
-        sidecar_pkg = TestSidecarSharesRegistryWithInProcessServer()._arm_plugin(
-            plugin_module, monkeypatch
-        )
+        sidecar_pkg = TestSidecarSharesRegistryWithInProcessServer()._arm_plugin(plugin_module, monkeypatch)
         mock_handle = MagicMock()
         plugin_module._sidecar_handle = mock_handle
 
@@ -320,9 +318,7 @@ class TestRestartStopsSidecar:
         assert plugin_module._sidecar_handle is None
 
     def test_stop_sidecar_if_running_is_noop_when_absent(self, plugin_module, monkeypatch):
-        sidecar_pkg = TestSidecarSharesRegistryWithInProcessServer()._arm_plugin(
-            plugin_module, monkeypatch
-        )
+        sidecar_pkg = TestSidecarSharesRegistryWithInProcessServer()._arm_plugin(plugin_module, monkeypatch)
         sidecar_pkg.stop_sidecar = MagicMock(name="stop_sidecar")
         plugin_module._sidecar_handle = None
 
@@ -330,12 +326,8 @@ class TestRestartStopsSidecar:
 
         sidecar_pkg.stop_sidecar.assert_not_called()
 
-    def test_restart_deferred_stops_sidecar_before_respawn(
-        self, plugin_module, monkeypatch, mock_maya_modules
-    ):
-        sidecar_pkg = TestSidecarSharesRegistryWithInProcessServer()._arm_plugin(
-            plugin_module, monkeypatch
-        )
+    def test_restart_deferred_stops_sidecar_before_respawn(self, plugin_module, monkeypatch, mock_maya_modules):
+        sidecar_pkg = TestSidecarSharesRegistryWithInProcessServer()._arm_plugin(plugin_module, monkeypatch)
         mock_handle = MagicMock()
         plugin_module._sidecar_handle = mock_handle
         plugin_module._stop_host_on_main_thread = MagicMock()

@@ -227,9 +227,7 @@ class TestWedgeDetectionAndDrain:
             # is unambiguous regardless of monotonic-clock granularity.
             time.sleep(0.35)
             wedged_snapshot = q.status()
-            assert wedged_snapshot["wedged"] is True, (
-                "should be flagged wedged, got {0!r}".format(wedged_snapshot)
-            )
+            assert wedged_snapshot["wedged"] is True, "should be flagged wedged, got {0!r}".format(wedged_snapshot)
             assert wedged_snapshot["in_flight_secs"] is not None
             assert wedged_snapshot["in_flight_secs"] >= 0.1
 
