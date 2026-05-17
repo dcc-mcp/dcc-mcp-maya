@@ -23,11 +23,6 @@ metadata:
     search-hint: |-
       node connection, attribute link, DG topology, construction history,
       list connections, transfer attributes, smooth subdivide
-    aliases:
-    - maya-dg
-    side-effects:
-    - reads-scene
-    - writes-scene
     depends: []
     tools: tools.yaml
 ---

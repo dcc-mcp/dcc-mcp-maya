@@ -24,11 +24,6 @@ metadata:
     search-hint: |-
       assemble environment, large scene, assembly definition, assembly reference,
       LOD switch, representation swap, GPU cache representation
-    aliases:
-    - maya-assembly
-    side-effects:
-    - reads-scene
-    - writes-scene
     depends: []
     tools: tools.yaml
     groups: groups.yaml

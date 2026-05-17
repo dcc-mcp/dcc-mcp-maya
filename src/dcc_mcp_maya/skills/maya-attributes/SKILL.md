@@ -22,11 +22,6 @@ metadata:
     search-hint: |-
       get attribute, set attribute, add custom attribute, lock unlock attribute,
       list attributes, attribute value
-    aliases:
-    - maya-attrs
-    side-effects:
-    - reads-scene
-    - writes-scene
     depends: []
     tools: tools.yaml
 ---

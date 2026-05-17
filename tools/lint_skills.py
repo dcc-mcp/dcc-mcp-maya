@@ -48,6 +48,23 @@ VALID_DCC_VALUES: Set[str] = {
 # For this project all skills must target maya
 PROJECT_DCC = "maya"
 
+# Keep this list in sync with the gateway/core parser version used by CI.
+VALID_DCC_MCP_KEYS: Set[str] = {
+    "dcc",
+    "depends",
+    "external-deps",
+    "groups",
+    "introspection",
+    "layer",
+    "recipes",
+    "search-hint",
+    "stage",
+    "tags",
+    "tools",
+    "version",
+    "workflows",
+}
+
 CONFLICT_MARKER_RE = re.compile(r"^(<{7}|={7}|>{7})", re.MULTILINE)
 CONFLICT_FULL_RE = re.compile(
     r"<<<<<<< HEAD\n(.*?)=======\n(.*?)>>>>>>> origin/main\n",
@@ -281,6 +298,34 @@ def _extract_dcc_mcp_field(fm: dict, key: str, default=None):
     return default
 
 
+def check_dcc_mcp_metadata_keys(skill_dir: Path, skill_name: str, fm: dict) -> List[LintIssue]:
+    issues: List[LintIssue] = []
+    file_path = str(skill_dir / "SKILL.md")
+    metadata = fm.get("metadata") or {}
+    if not isinstance(metadata, dict):
+        return issues
+
+    keys: Set[str] = set()
+    for key in metadata:
+        if isinstance(key, str) and key.startswith("dcc-mcp."):
+            keys.add(key[len("dcc-mcp.") :])
+    nested = metadata.get("dcc-mcp")
+    if isinstance(nested, dict):
+        keys.update(str(key) for key in nested)
+
+    for key in sorted(keys - VALID_DCC_MCP_KEYS):
+        issues.append(
+            LintIssue(
+                skill=skill_name,
+                file=file_path,
+                severity="WARNING",
+                rule="UNKNOWN_DCC_MCP_METADATA",
+                message=f"metadata.dcc-mcp.{key} is not accepted by the CI gateway/core parser",
+            )
+        )
+    return issues
+
+
 def check_dcc_field(skill_dir: Path, skill_name: str, fm: dict) -> List[LintIssue]:
     issues: List[LintIssue] = []
     file_path = str(skill_dir / "SKILL.md")
@@ -507,10 +552,7 @@ def check_depends_exist(
 
 
 def _references_metadata_ok(fm: dict) -> bool:
-    """True when references/ content is wired for agent read tools (recipes, introspection, or skill-reference-docs)."""
-    srd = _extract_dcc_mcp_field(fm, "skill-reference-docs")
-    if srd:
-        return True
+    """True when references/ content is wired for agent read tools."""
     recipes = _extract_dcc_mcp_field(fm, "recipes")
     if isinstance(recipes, str) and recipes.strip().startswith("references"):
         return True
@@ -536,8 +578,8 @@ def check_references_dir_wiring(skill_dir: Path, skill_name: str, fm: dict) -> L
             severity="WARNING",
             rule="REF_DIR_UNWIRED",
             message=(
-                "references/ exists — add metadata.dcc-mcp.skill-reference-docs (glob list), "
-                "or point recipes/introspection under references/ "
+                "references/ exists — point metadata.dcc-mcp.recipes or "
+                "metadata.dcc-mcp.introspection under references/ "
                 "(see docs/guide/skill-maintenance.md in dcc-mcp-core)"
             ),
         )
@@ -711,6 +753,7 @@ def lint_skill(
         return issues, info
 
     issues += check_name_field(skill_dir, skill_name, fm)
+    issues += check_dcc_mcp_metadata_keys(skill_dir, skill_name, fm)
     issues += check_dcc_field(skill_dir, skill_name, fm)
     issues += check_version_field(skill_dir, skill_name, fm)
     issues += check_description_field(skill_dir, skill_name, fm)
