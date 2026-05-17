@@ -7,15 +7,16 @@ on:
     branches: [main]
 
 jobs:
+  # Python 3.8+ with stock CPython (abi3 dcc-mcp-core wheels). Maya 2022 / py3.7
+  # is covered by test-mayapy-py37 below — not setup-python 3.7.
   test:
     name: Test (Python ${{ matrix.python-version }} / ${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        # 3.7 uses core cp37 wheels; 3.8+ uses abi3-py38 wheels (dcc-mcp-core>=0.17.4).
         os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: ["3.7", "3.8", "3.9", "3.10", "3.11", "3.12"]
+        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
 
     steps:
       - uses: actions/checkout@v6
@@ -31,7 +32,14 @@ jobs:
           pip install -e ".[dev]"
 
       - name: Run tests
-        run: pytest tests/ -v --tb=short --cov=dcc_mcp_maya --cov-report=xml --cov-report=term
+        env:
+          DCC_MCP_ALLOW_AMBIENT_PYTHON: "1"
+        run: >
+          pytest tests/
+          --ignore=tests/e2e
+          --ignore=tests/e2e_standalone
+          -v --tb=short
+          --cov=dcc_mcp_maya --cov-report=xml --cov-report=term
 
       - name: Upload coverage to Codecov
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
@@ -40,6 +48,64 @@ jobs:
           files: ./coverage.xml
           fail_ci_if_error: false
           token: ${{ secrets.CODECOV_TOKEN }}
+
+  # Maya 2022 ships Python 3.7 — exercise the real mayapy interpreter + cp37 core wheel.
+  test-mayapy-py37:
+    name: Test (mayapy / Maya 2022 / Python 3.7)
+    runs-on: ubuntu-latest
+    container:
+      image: tahv/mayapy:2022
+    env:
+      DCC_MCP_ALLOW_AMBIENT_PYTHON: "1"
+      DCC_MCP_DISABLE_FILE_LOGGING: "1"
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Verify mayapy (Python 3.7)
+        run: |
+          mayapy -c "
+          import sys
+          assert sys.version_info[:2] == (3, 7), sys.version
+          import maya.standalone
+          maya.standalone.initialize()
+          from maya import cmds
+          print('Maya', cmds.about(version=True), 'Python', sys.version.split()[0])
+          "
+
+      - name: Install dependencies into mayapy
+        run: |
+          pip install --quiet certifi
+          export SSL_CERT_FILE="$(python -c 'import certifi; print(certifi.where())')"
+          mayapy -m pip install --upgrade pip
+          mayapy -m pip install -e ".[dev]"
+
+      - name: Run tests (mayapy)
+        run: |
+          mayapy -c "
+          import maya.standalone
+          maya.standalone.initialize()
+
+          import os
+          import subprocess
+          import sys
+
+          env = dict(os.environ)
+          env.setdefault('DCC_MCP_ALLOW_AMBIENT_PYTHON', '1')
+          env.setdefault('DCC_MCP_DISABLE_FILE_LOGGING', '1')
+
+          result = subprocess.run(
+              [
+                  sys.executable, '-m', 'pytest', 'tests/',
+                  '--ignore=tests/e2e',
+                  '--ignore=tests/e2e_standalone',
+                  '-v', '--tb=short',
+                  '--cov=dcc_mcp_maya', '--cov-report=term',
+              ],
+              env=env,
+          )
+          raise SystemExit(result.returncode)
+          "
 
   lint:
     name: Lint
