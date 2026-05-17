@@ -118,9 +118,12 @@ def fake_open_maya() -> Any:
         "maya": MagicMock(),
         "maya.api": MagicMock(),
         "maya.api.OpenMaya": fake,
+        "maya.cmds": MagicMock(),
     }
     modules["maya"].api = modules["maya.api"]
     modules["maya.api"].OpenMaya = fake
+    modules["maya"].cmds = modules["maya.cmds"]
+    modules["maya.cmds"].about.return_value = False
     with patch.dict(sys.modules, modules):
         yield fake
 
@@ -153,7 +156,7 @@ class TestKMayaExitingHook:
         """Non-Maya Python must degrade gracefully."""
         # Block the import explicitly so this remains the non-Maya path
         # even when the test suite is running under mayapy.
-        with patch.dict(sys.modules, {"maya.api.OpenMaya": None}):
+        with patch.dict(sys.modules, {"maya.cmds": None, "maya.api.OpenMaya": None}):
             assert register_kmaya_exiting_hook(lambda: None) is None
 
     def test_unregister_success(self, fake_open_maya: Any) -> None:
