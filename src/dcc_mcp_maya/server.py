@@ -251,6 +251,9 @@ class MayaMcpServer(DccServerBase):
             timeout_secs=self._readiness_timeout_secs,
         )
 
+        if host_dispatcher is None:
+            host_dispatcher = self._default_standalone_dispatcher()
+
         if host_dispatcher is not None:
             self.attach_dispatcher(host_dispatcher)
         else:
@@ -298,6 +301,30 @@ class MayaMcpServer(DccServerBase):
         self._resources: Optional[_resources.MayaResourceBinder] = None
 
     # ── Lifecycle additions ────────────────────────────────────────────
+
+    @staticmethod
+    def _default_standalone_dispatcher() -> Optional[Any]:
+        """Use the batch dispatcher automatically inside real mayapy.
+
+        Plain Python and unit tests keep the historical inline path.  Real
+        mayapy exposes ``maya.cmds`` and reports ``about(batch=True)``; in
+        that environment we still need one serialized gateway into Maya APIs.
+        """
+        try:
+            import maya.cmds as cmds  # noqa: PLC0415
+        except Exception:  # noqa: BLE001
+            return None
+        try:
+            is_batch = bool(cmds.about(batch=True))
+        except Exception:  # noqa: BLE001
+            return None
+        if not is_batch:
+            return None
+        try:
+            from dcc_mcp_maya.dispatcher import MayaStandaloneDispatcher  # noqa: PLC0415
+        except Exception:  # noqa: BLE001
+            return None
+        return MayaStandaloneDispatcher()
 
     def attach_dispatcher(self, dispatcher: Any) -> None:
         """Attach the Maya host dispatcher before skills are registered."""
