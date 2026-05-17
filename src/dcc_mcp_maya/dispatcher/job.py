@@ -1,8 +1,4 @@
-"""Maya dispatcher job model — re-exports core :class:`HostUiJobEntry`.
-
-The canonical implementation lives in ``dcc_mcp_core._server.host_ui_dispatcher``
-so Blender, Houdini, and other adapters share one job/cancel protocol.
-"""
+"""Maya dispatcher job model — re-exports core :class:`HostUiJobEntry`."""
 
 from __future__ import annotations
 
