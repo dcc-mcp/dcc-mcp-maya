@@ -462,6 +462,7 @@ tools:
 | `DCC_MCP_MAYA_PROCESS_SENTINEL` | `1` | per-process | `0`=disable the crash-resilient sentinel file used by sweepers (issue #186). |
 | `DCC_MCP_MAYA_DEFENSIVE_DEL` | `0` | per-process | `1`=enable defensive `__del__` guard. Off in interactive Maya (Tokio deadlock risk); recommended for `mayapy` / test fixtures (issue #186). |
 | `DCC_MCP_MAYA_RESOURCES` | `1` | per-process | `0`=disable Maya MCP resource publishing (`scene://current` snapshot + `maya-cmds://` / `maya-api://` / `maya-project://` producers).  Issue #187 / core 0.15.0. |
+| `DCC_MCP_MAYA_FAULTHANDLER` | `1` | per-process | `0`=disable plugin-installed Python fatal-signal traceback logging. Logs are written under `DCC_MCP_LOG_DIR` or the OS temp directory. |
 | `DCC_MCP_GATEWAY_PORT` | `9765` | per-host | Gateway election port. `0`=disable gateway mode. |
 | `DCC_MCP_REGISTRY_DIR` | OS temp dir | per-user | Shared FileRegistry directory. |
 | `DCC_MCP_PYTHON_EXECUTABLE` | `sys.executable` | per-process | Python interpreter for skill worker subprocesses. |
