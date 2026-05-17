@@ -345,6 +345,7 @@ class TestShutdownCoordinator:
         monkeypatch.delenv(ENV_ATEXIT_HOOK, raising=False)
         monkeypatch.delenv(ENV_PROCESS_SENTINEL, raising=False)
         monkeypatch.delenv(ENV_DEFENSIVE_DEL, raising=False)
+        monkeypatch.setitem(sys.modules, "maya.api.OpenMaya", None)
 
         calls: List[str] = []
         coord = ShutdownCoordinator()

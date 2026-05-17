@@ -244,6 +244,7 @@ class TestSidecarSharesRegistryWithInProcessServer:
         """Stub ``dcc_mcp_maya.sidecar`` so ``_maybe_spawn_sidecar`` resolves
         and calls our mock ``start_sidecar``."""
 
+        plugin_module._sidecar_handle = None
         sidecar_pkg = types.ModuleType("dcc_mcp_maya.sidecar")
         sidecar_pkg.SidecarSpawnError = type("SidecarSpawnError", (Exception,), {})
         sidecar_pkg.is_sidecar_mode_enabled = lambda: True
