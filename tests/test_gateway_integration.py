@@ -47,85 +47,48 @@ class TestGatewayPortConfig:
     """McpHttpConfig.gateway_port is set when gateway_port > 0."""
 
     def test_gateway_port_set_on_config(self):
-        with patch.dict(sys.modules, _make_maya_mock()):
-            srv_mod = _import_server()
-            mock_config = MagicMock()
-            mock_server = MagicMock()
-            with patch("dcc_mcp_core.McpHttpConfig", return_value=mock_config):
-                with patch("dcc_mcp_core.create_skill_server", return_value=mock_server):
-                    srv_mod.MayaMcpServer(port=0, gateway_port=9765)
+        srv_mod = _import_server()
+        options = srv_mod.MayaServerOptions(port=0, gateway_port=9765).to_core_options()
 
-        assert mock_config.gateway_port == 9765
+        assert options.gateway.port == 9765
 
     def test_dcc_type_set_to_maya_when_gateway_enabled(self):
-        with patch.dict(sys.modules, _make_maya_mock()):
-            srv_mod = _import_server()
-            mock_config = MagicMock()
-            mock_server = MagicMock()
-            with patch("dcc_mcp_core.McpHttpConfig", return_value=mock_config):
-                with patch("dcc_mcp_core.create_skill_server", return_value=mock_server):
-                    srv_mod.MayaMcpServer(port=0, gateway_port=9765)
+        srv_mod = _import_server()
+        options = srv_mod.MayaServerOptions(port=0, gateway_port=9765).to_core_options()
 
-        assert mock_config.dcc_type == "maya"
+        assert options.dcc_name == "maya"
 
     def test_gateway_port_zero_does_not_set_config(self):
-        """gateway_port=0 must NOT touch McpHttpConfig.gateway_port."""
-        with patch.dict(sys.modules, _make_maya_mock()):
-            srv_mod = _import_server()
-            mock_config = MagicMock()
-            mock_server = MagicMock()
-            with patch("dcc_mcp_core.McpHttpConfig", return_value=mock_config):
-                with patch("dcc_mcp_core.create_skill_server", return_value=mock_server):
-                    srv_mod.MayaMcpServer(port=0, gateway_port=0)
+        """gateway_port=0 disables gateway binding in the core options."""
+        srv_mod = _import_server()
+        options = srv_mod.MayaServerOptions(port=0, gateway_port=0).to_core_options()
 
-        calls = [str(c) for c in mock_config.mock_calls if "gateway_port" in str(c)]
-        assert not calls
+        assert options.gateway.port == 0
 
     def test_dcc_version_set_when_provided(self):
-        with patch.dict(sys.modules, _make_maya_mock()):
-            srv_mod = _import_server()
-            mock_config = MagicMock()
-            mock_server = MagicMock()
-            with patch("dcc_mcp_core.McpHttpConfig", return_value=mock_config):
-                with patch("dcc_mcp_core.create_skill_server", return_value=mock_server):
-                    srv_mod.MayaMcpServer(port=0, gateway_port=9765, dcc_version="2025")
+        srv_mod = _import_server()
+        options = srv_mod.MayaServerOptions(port=0, gateway_port=9765, dcc_version="2025").to_core_options()
 
-        assert mock_config.dcc_version == "2025"
+        assert options.gateway.dcc_version == "2025"
 
     def test_scene_set_when_provided(self):
-        with patch.dict(sys.modules, _make_maya_mock()):
-            srv_mod = _import_server()
-            mock_config = MagicMock()
-            mock_server = MagicMock()
-            with patch("dcc_mcp_core.McpHttpConfig", return_value=mock_config):
-                with patch("dcc_mcp_core.create_skill_server", return_value=mock_server):
-                    srv_mod.MayaMcpServer(port=0, gateway_port=9765, scene="/proj/shot.ma")
+        srv_mod = _import_server()
+        options = srv_mod.MayaServerOptions(port=0, gateway_port=9765, scene="/proj/shot.ma").to_core_options()
 
-        assert mock_config.scene == "/proj/shot.ma"
+        assert options.gateway.scene == "/proj/shot.ma"
 
     def test_registry_dir_set_when_provided(self):
-        with patch.dict(sys.modules, _make_maya_mock()):
-            srv_mod = _import_server()
-            mock_config = MagicMock()
-            mock_server = MagicMock()
-            with patch("dcc_mcp_core.McpHttpConfig", return_value=mock_config):
-                with patch("dcc_mcp_core.create_skill_server", return_value=mock_server):
-                    srv_mod.MayaMcpServer(port=0, gateway_port=9765, registry_dir="/tmp/reg")
+        srv_mod = _import_server()
+        options = srv_mod.MayaServerOptions(port=0, gateway_port=9765, registry_dir="/tmp/reg").to_core_options()
 
-        assert mock_config.registry_dir == "/tmp/reg"
+        assert options.gateway.registry_dir == "/tmp/reg"
 
     def test_dcc_version_not_set_when_none(self):
-        """dcc_version=None must NOT set config.dcc_version."""
-        with patch.dict(sys.modules, _make_maya_mock()):
-            srv_mod = _import_server()
-            mock_config = MagicMock()
-            mock_server = MagicMock()
-            with patch("dcc_mcp_core.McpHttpConfig", return_value=mock_config):
-                with patch("dcc_mcp_core.create_skill_server", return_value=mock_server):
-                    srv_mod.MayaMcpServer(port=0, gateway_port=9765)
+        """dcc_version=None remains absent from the gateway metadata."""
+        srv_mod = _import_server()
+        options = srv_mod.MayaServerOptions(port=0, gateway_port=9765).to_core_options()
 
-        calls = [str(c) for c in mock_config.mock_calls]
-        assert not any("dcc_version" in c for c in calls)
+        assert options.gateway.dcc_version is None
 
 
 # ── Environment variable fallback ─────────────────────────────────────────────
@@ -133,57 +96,36 @@ class TestGatewayPortConfig:
 
 class TestGatewayEnvVars:
     def test_env_var_gateway_port_used_when_param_is_none(self):
-        with patch.dict(sys.modules, _make_maya_mock()):
-            srv_mod = _import_server()
-            mock_config = MagicMock()
-            mock_server = MagicMock()
-            env = {"DCC_MCP_GATEWAY_PORT": "9765"}
-            with patch.dict("os.environ", env, clear=False):
-                with patch("dcc_mcp_core.McpHttpConfig", return_value=mock_config):
-                    with patch("dcc_mcp_core.create_skill_server", return_value=mock_server):
-                        srv_mod.MayaMcpServer(port=0)  # no explicit gateway_port
+        srv_mod = _import_server()
+        env = {"DCC_MCP_GATEWAY_PORT": "9765"}
+        with patch.dict("os.environ", env, clear=False):
+            options = srv_mod.MayaServerOptions(port=0).to_core_options()
 
-        assert mock_config.gateway_port == 9765
+        assert options.gateway.port == 9765
 
     def test_explicit_param_overrides_env_var(self):
-        with patch.dict(sys.modules, _make_maya_mock()):
-            srv_mod = _import_server()
-            mock_config = MagicMock()
-            mock_server = MagicMock()
-            env = {"DCC_MCP_GATEWAY_PORT": "8888"}
-            with patch.dict("os.environ", env, clear=False):
-                with patch("dcc_mcp_core.McpHttpConfig", return_value=mock_config):
-                    with patch("dcc_mcp_core.create_skill_server", return_value=mock_server):
-                        srv_mod.MayaMcpServer(port=0, gateway_port=9765)  # explicit wins
+        srv_mod = _import_server()
+        env = {"DCC_MCP_GATEWAY_PORT": "8888"}
+        with patch.dict("os.environ", env, clear=False):
+            options = srv_mod.MayaServerOptions(port=0, gateway_port=9765).to_core_options()
 
-        assert mock_config.gateway_port == 9765
+        assert options.gateway.port == 9765
 
     def test_env_var_zero_disables_gateway(self):
-        with patch.dict(sys.modules, _make_maya_mock()):
-            srv_mod = _import_server()
-            mock_config = MagicMock()
-            mock_server = MagicMock()
-            env = {"DCC_MCP_GATEWAY_PORT": "0"}
-            with patch.dict("os.environ", env, clear=False):
-                with patch("dcc_mcp_core.McpHttpConfig", return_value=mock_config):
-                    with patch("dcc_mcp_core.create_skill_server", return_value=mock_server):
-                        srv_mod.MayaMcpServer(port=0)
+        srv_mod = _import_server()
+        env = {"DCC_MCP_GATEWAY_PORT": "0"}
+        with patch.dict("os.environ", env, clear=False):
+            options = srv_mod.MayaServerOptions(port=0).to_core_options()
 
-        calls = [str(c) for c in mock_config.mock_calls if "gateway_port" in str(c)]
-        assert not calls  # setter never called
+        assert options.gateway.port == 0
 
     def test_registry_dir_env_var_used_when_param_is_none(self):
-        with patch.dict(sys.modules, _make_maya_mock()):
-            srv_mod = _import_server()
-            mock_config = MagicMock()
-            mock_server = MagicMock()
-            env = {"DCC_MCP_GATEWAY_PORT": "9765", "DCC_MCP_REGISTRY_DIR": "/tmp/myreg"}
-            with patch.dict("os.environ", env, clear=False):
-                with patch("dcc_mcp_core.McpHttpConfig", return_value=mock_config):
-                    with patch("dcc_mcp_core.create_skill_server", return_value=mock_server):
-                        srv_mod.MayaMcpServer(port=0)
+        srv_mod = _import_server()
+        env = {"DCC_MCP_GATEWAY_PORT": "9765", "DCC_MCP_REGISTRY_DIR": "/tmp/myreg"}
+        with patch.dict("os.environ", env, clear=False):
+            options = srv_mod.MayaServerOptions(port=0).to_core_options()
 
-        assert mock_config.registry_dir == "/tmp/myreg"
+        assert options.gateway.registry_dir == "/tmp/myreg"
 
 
 # ── is_gateway / gateway_url properties ───────────────────────────────────────
