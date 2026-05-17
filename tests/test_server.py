@@ -212,6 +212,7 @@ class TestMayaMcpServerApi:
         srv_mod = _import_server()
         server = object.__new__(srv_mod.MayaMcpServer)
         server._dcc_name = "maya"
+        server._config = MagicMock(sandbox_policy=None)
         server._server = MagicMock()
         # Readiness binder is created in ``__init__``; bypassing it
         # means we must supply a stand-in so ``attach_dispatcher`` can
