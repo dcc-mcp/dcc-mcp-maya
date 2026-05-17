@@ -129,6 +129,17 @@ tools:
     destructive_hint: true
     idempotent_hint: true
   group: scene-management
+  inputSchema:
+    type: object
+    properties:
+      force:
+        type: boolean
+        default: false
+        description: Discard unsaved changes without prompting.
+      safe_dirty_check:
+        type: boolean
+        default: true
+        description: Return a structured error on dirty scenes instead of allowing a Maya save prompt.
 - name: open_scene
   description: Open a Maya scene file from disk
   execution: async
@@ -138,6 +149,22 @@ tools:
     destructive_hint: true
     idempotent_hint: true
   group: scene-management
+  inputSchema:
+    type: object
+    required:
+    - file_path
+    properties:
+      file_path:
+        type: string
+        description: Absolute or workspace-relative .ma/.mb file to open.
+      force:
+        type: boolean
+        default: false
+        description: Discard unsaved changes without prompting.
+      safe_dirty_check:
+        type: boolean
+        default: true
+        description: Return a structured error on dirty scenes instead of allowing a Maya save prompt.
 - name: parent_object
   execution: sync
   affinity: main
