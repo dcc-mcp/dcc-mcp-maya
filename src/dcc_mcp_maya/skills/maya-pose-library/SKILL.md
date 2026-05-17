@@ -21,13 +21,6 @@ metadata:
     search-hint: |-
       save pose, load pose, mirror pose, character pose preset, pose library,
       pose JSON, reuse pose
-    aliases:
-    - maya-poses
-    side-effects:
-    - reads-scene
-    - writes-scene
-    - reads-disk
-    - writes-disk
     depends: []
     tools: tools.yaml
     groups: groups.yaml
