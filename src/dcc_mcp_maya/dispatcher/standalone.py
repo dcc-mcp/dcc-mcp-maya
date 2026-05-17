@@ -82,6 +82,27 @@ class MayaStandaloneDispatcher:
                     "error": str(exc),
                 }
 
+    def dispatch_callable(self, func: Callable[..., Any], *args: Any, **kwargs: Any) -> Any:
+        """Run *func* through the core callable-dispatcher protocol.
+
+        Core 0.17.x routes in-process skill scripts through
+        ``BaseDccCallableDispatcher.dispatch_callable``.  Standalone Maya
+        has no UI pump to marshal onto, but it still needs the same
+        serialization guarantee as ``submit_callable`` because Maya's
+        process-global API is not safe to enter concurrently from HTTP
+        worker threads.
+        """
+        kwargs.pop("context", None)
+        kwargs.pop("action_name", None)
+        kwargs.pop("skill_name", None)
+        kwargs.pop("execution", None)
+        kwargs.pop("thread_affinity", None)
+        kwargs.pop("affinity", None)
+        kwargs.pop("timeout_hint_secs", None)
+        kwargs.pop("timeout_ms", None)
+        with self._lock:
+            return func(*args, **kwargs)
+
     def submit_async_callable(
         self,
         request_id: str,
