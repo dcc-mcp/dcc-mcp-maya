@@ -245,17 +245,11 @@ class TestSidecarSharesRegistryWithInProcessServer:
         and calls our mock ``start_sidecar``."""
 
         plugin_module._sidecar_handle = None
-        sidecar_pkg = types.ModuleType("dcc_mcp_maya.sidecar")
-        sidecar_pkg.SidecarSpawnError = type("SidecarSpawnError", (Exception,), {})
-        sidecar_pkg.is_sidecar_mode_enabled = lambda: True
-        sidecar_pkg.start_sidecar = MagicMock(name="start_sidecar", return_value=MagicMock())
-        sidecar_pkg.stop_sidecar = MagicMock(name="stop_sidecar")
+        import dcc_mcp_maya.sidecar as sidecar_pkg
 
-        dcc_mcp_maya = types.ModuleType("dcc_mcp_maya")
-        dcc_mcp_maya.sidecar = sidecar_pkg
-
-        monkeypatch.setitem(sys.modules, "dcc_mcp_maya", dcc_mcp_maya)
-        monkeypatch.setitem(sys.modules, "dcc_mcp_maya.sidecar", sidecar_pkg)
+        monkeypatch.setattr(sidecar_pkg, "is_sidecar_mode_enabled", lambda: True)
+        monkeypatch.setattr(sidecar_pkg, "start_sidecar", MagicMock(name="start_sidecar", return_value=MagicMock()))
+        monkeypatch.setattr(sidecar_pkg, "stop_sidecar", MagicMock(name="stop_sidecar"))
 
         # Stub the banner so we don't print to stdout during tests.
         plugin_module._print_sidecar_info = MagicMock()
