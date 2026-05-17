@@ -17,6 +17,8 @@ from typing import Any, Callable, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
+_STANDALONE_MAYA_LOCK = threading.RLock()
+
 
 class MayaStandaloneDispatcher:
     """Dispatcher for ``mayapy`` / batch-render contexts.
@@ -32,8 +34,10 @@ class MayaStandaloneDispatcher:
 
     def __init__(self) -> None:
         # Even without a UI event loop, Maya's Python API is process-global
-        # and not safe to enter concurrently from HTTP worker threads.
-        self._lock = threading.RLock()
+        # and not safe to enter concurrently from HTTP worker threads.  The
+        # lock is intentionally shared by every dispatcher instance in this
+        # process because multi-server standalone runs still share one Maya.
+        self._lock = _STANDALONE_MAYA_LOCK
 
     def submit(
         self,
