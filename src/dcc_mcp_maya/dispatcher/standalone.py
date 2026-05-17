@@ -12,6 +12,7 @@ from __future__ import annotations
 
 # Import built-in modules
 import logging
+import threading
 from typing import Any, Callable, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
@@ -28,6 +29,11 @@ class MayaStandaloneDispatcher:
     - ``Render.exe`` contexts
     - ``maya -batch`` mode
     """
+
+    def __init__(self) -> None:
+        # Even without a UI event loop, Maya's Python API is process-global
+        # and not safe to enter concurrently from HTTP worker threads.
+        self._lock = threading.RLock()
 
     def submit(
         self,
@@ -57,23 +63,24 @@ class MayaStandaloneDispatcher:
         timeout_ms: Optional[int] = None,
     ) -> Dict[str, Any]:
         """Execute a callable synchronously."""
-        try:
-            output = task()
-            return {
-                "request_id": request_id,
-                "affinity": affinity,
-                "success": True,
-                "output": output,
-                "error": None,
-            }
-        except Exception as exc:
-            return {
-                "request_id": request_id,
-                "affinity": affinity,
-                "success": False,
-                "output": None,
-                "error": str(exc),
-            }
+        with self._lock:
+            try:
+                output = task()
+                return {
+                    "request_id": request_id,
+                    "affinity": affinity,
+                    "success": True,
+                    "output": output,
+                    "error": None,
+                }
+            except Exception as exc:
+                return {
+                    "request_id": request_id,
+                    "affinity": affinity,
+                    "success": False,
+                    "output": None,
+                    "error": str(exc),
+                }
 
     def submit_async_callable(
         self,
