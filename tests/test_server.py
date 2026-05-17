@@ -122,7 +122,7 @@ def _mcp_post_json(url, body):
     req = urllib.request.Request(
         url,
         data=data,
-        headers={"Content-Type": "application/json", "Accept": "application/json"},
+        headers={"Content-Type": "application/json", "Accept": "application/json, text/event-stream"},
         method="POST",
     )
     with urllib.request.urlopen(req, timeout=5) as resp:
@@ -400,7 +400,7 @@ class TestMayaMcpServerHttp:
         req = urllib.request.Request(
             url,
             data=data,
-            headers={"Content-Type": "application/json", "Accept": "application/json"},
+            headers={"Content-Type": "application/json", "Accept": "application/json, text/event-stream"},
             method="POST",
         )
         with urllib.request.urlopen(req, timeout=5) as resp:
