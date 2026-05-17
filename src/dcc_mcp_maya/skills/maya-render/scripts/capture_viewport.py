@@ -45,6 +45,15 @@ def _apply_view_fit(cmds) -> bool:
         return False
 
 
+def _read_nonempty_png(path: str) -> bytes:
+    """Read a playblast PNG and fail when Maya produced an empty file."""
+    with open(path, "rb") as fh:
+        img_bytes = fh.read()
+    if not img_bytes:
+        raise ValueError("EMPTY_PLAYBLAST")
+    return img_bytes
+
+
 def capture_viewport(
     width: int = 1920,
     height: int = 1080,
@@ -83,6 +92,7 @@ def capture_viewport(
 
     try:
         tmp_path: Optional[str] = None
+        img_path: Optional[str] = None
         if frame is None:
             frame = cmds.currentTime(query=True)
 
@@ -99,6 +109,8 @@ def capture_viewport(
         # produce a black frame or raise (issue #152).
         if off_screen is None:
             off_screen = bool(cmds.about(batch=True)) or _no_visible_panel(cmds)
+            if view_fit and not view_fit_applied:
+                off_screen = True
 
         # playblast writes  <prefix>.<frame_padded>.png
         with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
@@ -123,8 +135,7 @@ def capture_viewport(
         padded = "{}.{}.png".format(prefix, str(f0).zfill(4))
         img_path = padded if os.path.exists(padded) else prefix + ".png"
 
-        with open(img_path, "rb") as fh:
-            img_bytes = fh.read()
+        img_bytes = _read_nonempty_png(img_path)
         os.unlink(img_path)
 
         encoded = base64.b64encode(img_bytes).decode("ascii")
@@ -138,6 +149,31 @@ def capture_viewport(
             view_fit=bool(view_fit),
             view_fit_applied=view_fit_applied,
             prompt="Use capture_viewport with view_fit=True instead of execute_python viewFit(all=True).",
+        )
+    except ValueError as exc:
+        if str(exc) != "EMPTY_PLAYBLAST":
+            raise
+        for candidate in (tmp_path, img_path):
+            try:
+                if candidate and os.path.exists(candidate):
+                    os.unlink(candidate)
+            except OSError:
+                pass
+        return skill_error(
+            "Viewport capture produced an empty image",
+            "Maya playblast wrote a 0-byte PNG",
+            possible_solutions=[
+                "Pass off_screen=True if Maya is minimized or running in batch mode.",
+                "Ensure a model panel is visible before capturing.",
+                "Retry after using view_fit=True so the camera frames scene content.",
+            ],
+            error_code="EMPTY_PLAYBLAST",
+            width=width,
+            height=height,
+            frame=frame,
+            off_screen=bool(off_screen),
+            view_fit=bool(view_fit),
+            view_fit_applied=view_fit_applied,
         )
     except Exception as exc:
         if tmp_path is not None:

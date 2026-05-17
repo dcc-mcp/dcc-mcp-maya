@@ -101,6 +101,7 @@ The server starts automatically when the plugin loads.
 | `DCC_MCP_DEFAULT_TOOLS` | _(none)_ | Comma-separated skill names to load at startup (overrides minimal default) |
 | `DCC_MCP_MAYA_EXCLUDE_STUBS_FROM_TOOLS_LIST` | `0` | `1` hides `__skill__*` / `__group__*` stubs from large `tools/list` syncs; use `dcc_capability_manifest` for discovery |
 | `DCC_MCP_MAYA_SIDECAR` | `0` | `1` starts the optional `dcc-mcp-server sidecar` process from the Maya plugin |
+| `DCC_MCP_MAYA_FAULTHANDLER` | `1` | `0` disables Python fatal-signal traceback logging from the Maya plugin |
 | `DCC_MCP_MAYA_DISABLE_EXECUTE_PYTHON` | `0` | `1` / `true` / `yes` / `on` — refuse `execute_python` (skills-first enforcement) |
 | `DCC_MCP_MAYA_DISABLE_EXECUTE_MEL` | `0` | Same tokens — refuse `execute_mel` only |
 | `DCC_MCP_MAYA_DISABLE_ARBITRARY_SCRIPT` | `0` | Same tokens — refuse both `execute_python` and `execute_mel` |

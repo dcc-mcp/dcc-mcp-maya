@@ -20,6 +20,28 @@ class TestSceneActions:
         result = mod.new_scene(force=True)
         assert result["success"] is True
 
+    def test_new_scene_dirty_default_returns_error(self):
+        cmds.polyCube(name="dirtyBeforeNew")
+        mod = _load_script("maya-scene", "new_scene")
+        result = mod.new_scene()
+        assert result["success"] is False
+        assert result["context"]["scene_modified"] is True
+        assert cmds.objExists("dirtyBeforeNew")
+
+    def test_open_scene_dirty_default_returns_error(self, tmp_path):
+        save_mod = _load_script("maya-scene", "save_scene")
+        open_mod = _load_script("maya-scene", "open_scene")
+        source = tmp_path / "source.ma"
+
+        cmds.polyCube(name="savedCube")
+        assert save_mod.save_scene(file_path=str(source), file_type="mayaAscii")["success"] is True
+        cmds.polyCube(name="dirtyBeforeOpen")
+
+        result = open_mod.open_scene(file_path=str(source))
+        assert result["success"] is False
+        assert result["context"]["scene_modified"] is True
+        assert cmds.objExists("dirtyBeforeOpen")
+
     def test_list_objects_empty_scene(self):
         mod = _load_script("maya-scene", "list_objects")
         result = mod.list_objects()
