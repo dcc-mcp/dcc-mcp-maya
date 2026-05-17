@@ -6,7 +6,6 @@ Hosts :class:`MayaUiDispatcher`, built on core :class:`~dcc_mcp_core.HostUiDispa
 from __future__ import annotations
 
 import logging
-import time
 from typing import Any, Callable, Tuple
 
 from dcc_mcp_core import HostUiDispatcherBase
