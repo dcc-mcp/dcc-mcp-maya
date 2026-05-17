@@ -2,7 +2,7 @@
 
 Maya plugin for the [DCC Model Context Protocol](https://github.com/loonghao/dcc-mcp-core) (MCP) ecosystem.
 
-Embeds a standards-compliant **MCP Streamable HTTP server** (2025-03-26 spec) directly inside Maya — no external gateway or separate IPC process required.
+Embeds a standards-compliant **MCP Streamable HTTP server** (2025-03-26 spec) directly inside Maya. The default path is fully in-process; plugin users can also opt into the Rust `dcc-mcp-server` sidecar when they want the HTTP runtime isolated from Maya's UI thread.
 
 [![CI](https://github.com/loonghao/dcc-mcp-maya/actions/workflows/ci.yml/badge.svg)](https://github.com/loonghao/dcc-mcp-maya/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/loonghao/dcc-mcp-maya/graph/badge.svg)](https://codecov.io/gh/loonghao/dcc-mcp-maya)
@@ -20,9 +20,15 @@ Embeds a standards-compliant **MCP Streamable HTTP server** (2025-03-26 spec) di
 │  handle = dcc_mcp_maya.start_server(port=8765)          │
 │                                                          │
 │  ┌─────────────────────────────────────────────────┐   │
-│  │  McpHttpServer  (dcc-mcp-core / Rust/axum)      │   │
-│  │  POST /mcp  ──►  ToolRegistry                   │   │
+│  │  DccServerBase + McpHttpServer                  │   │
+│  │  POST /mcp  ──►  ToolRegistry / tools/call      │   │
 │  │  GET  /mcp  ──►  SSE stream                     │   │
+│  │  /v1/*       ─►  readiness, search, resources   │   │
+│  └──────────────────────┬──────────────────────────┘   │
+│                         │ HostExecutionBridge          │
+│  ┌──────────────────────▼──────────────────────────┐   │
+│  │  MayaHost / dispatcher / skill executor         │   │
+│  │  main-thread Maya calls + affinity:any fast path │   │
 │  └─────────────────────────────────────────────────┘   │
 └─────────────────────────────┬───────────────────────────┘
                                │  http://127.0.0.1:8765/mcp
@@ -30,6 +36,8 @@ Embeds a standards-compliant **MCP Streamable HTTP server** (2025-03-26 spec) di
 │  MCP Host  (Claude Desktop / OpenClaw / Cursor / …)      │
 └─────────────────────────────────────────────────────────┘
 ```
+
+Optional sidecar mode keeps the same public MCP surface but runs the `dcc-mcp-server sidecar` process beside Maya. It connects back through the Qt event-loop dispatcher and is gated by `DCC_MCP_MAYA_SIDECAR=1`.
 
 ## Installation
 
@@ -76,6 +84,8 @@ The server starts automatically when the plugin loads.
 | `DCC_MCP_SKILL_PATHS` | _(none)_ | Global fallback skill directories for all DCC adapters |
 | `DCC_MCP_MINIMAL` | `1` | `0` = full mode; `1` = minimal mode |
 | `DCC_MCP_DEFAULT_TOOLS` | _(none)_ | Comma-separated skill names to load at startup (overrides minimal default) |
+| `DCC_MCP_MAYA_EXCLUDE_STUBS_FROM_TOOLS_LIST` | `0` | `1` hides `__skill__*` / `__group__*` stubs from large `tools/list` syncs; use `dcc_capability_manifest` for discovery |
+| `DCC_MCP_MAYA_SIDECAR` | `0` | `1` starts the optional `dcc-mcp-server sidecar` process from the Maya plugin |
 | `DCC_MCP_MAYA_DISABLE_EXECUTE_PYTHON` | `0` | `1` / `true` / `yes` / `on` — refuse `execute_python` (skills-first enforcement) |
 | `DCC_MCP_MAYA_DISABLE_EXECUTE_MEL` | `0` | Same tokens — refuse `execute_mel` only |
 | `DCC_MCP_MAYA_DISABLE_ARBITRARY_SCRIPT` | `0` | Same tokens — refuse both `execute_python` and `execute_mel` |
@@ -171,11 +181,24 @@ runtime data** from the running Maya process:
 The `DCC_MCP_IPC_ADDRESS` environment variable is set automatically so skill
 subprocesses can connect back without any manual configuration.
 
-## Available MCP Tools
+## Available Maya Tools
 
-`dcc-mcp-maya` ships **12 built-in skill packages** and **73+ Maya MCP tools**.
+`dcc-mcp-maya` ships **23 built-in Maya skill packages** and **160+ typed Maya tool declarations**.
 In the default minimal mode, only the core tools above are active at startup;
-the rest are progressively loaded via `load_skill`.
+the rest are discovered through `dcc_capability_manifest`, `search_skills`, or
+`search_tools`, then progressively loaded via `load_skill`.
+
+The table below is the maintained inventory map; see
+[`src/dcc_mcp_maya/skills/SKILLS_INDEX.md`](src/dcc_mcp_maya/skills/SKILLS_INDEX.md)
+for task-to-skill routing examples.
+
+| Stage | Purpose | Skills |
+|-------|---------|--------|
+| `bootstrap` | Escape hatch for cases where no typed skill fits | `maya-scripting` |
+| `scene` | Scene lifecycle, DAG, attributes, node graph, viewport display | `maya-scene`, `maya-scene-assembly`, `maya-display`, `maya-attributes`, `maya-node-graph` |
+| `authoring` | Create and edit meshes, UVs, materials, rigs, animation, light rigs | `maya-primitives`, `maya-mesh-ops`, `maya-uv-ops`, `maya-materials`, `maya-material-library`, `maya-texture-bake`, `maya-rigging`, `maya-animation`, `maya-pose-library`, `maya-expressions`, `maya-light-rig` |
+| `interchange` | Geometry and scene I/O | `maya-geometry`, `maya-export-preset` |
+| `pipeline` | Project, publish, shot export, render, render farm | `maya-pipeline`, `maya-shot-export`, `maya-render`, `maya-render-farm` |
 
 The sections below are representative categories, not an exhaustive inventory.
 
@@ -228,7 +251,7 @@ The sections below are representative categories, not an exhaustive inventory.
 | Tool | Description |
 |------|-------------|
 | `set_render_settings` | Set resolution, frame range, renderer |
-| `capture_viewport` | Capture viewport as base64-encoded PNG |
+| `playblast` | Capture viewport output |
 | `get_scene_render_stats` | Query render-facing scene statistics |
 
 ### Geometry Interchange
@@ -259,6 +282,19 @@ Error on a wrapped tool?
 and safety hints; use `execute_python` / `execute_mel` only when no skill covers
 the workflow or when collapsing N round-trips into one in-process script is
 worth the trade-off.
+
+### Built-In Control Plane
+
+`register_builtin_actions()` also wires the non-Maya surfaces that agents and
+operators use to keep large sessions efficient:
+
+| Surface | Purpose |
+|---------|---------|
+| `dcc_capability_manifest` | Compact index of loaded and unloaded Maya actions without full `inputSchema` payloads |
+| `project.save/load/resume/status` | Persist and rehydrate the scene working set under `<scene_dir>/.dcc-mcp/project.json` |
+| MCP resources | `scene://current`, `maya-cmds://help/<command>`, `maya-cmds://flags/<command>`, `maya-api://signatures/<class>`, `maya-project://current` |
+| Readiness | `/v1/readyz` reports `process`, `dispatcher`, and `dcc` readiness before orchestration routes work to Maya |
+| Recipes and skill references | `recipes__*` / `skill_refs__*` expose bundled skill docs without loading every skill |
 
 ## Authoring Skills (`execution` + `affinity`)
 
@@ -372,7 +408,7 @@ Add to `claude_desktop_config.json`:
 ## Requirements
 
 - Maya 2020+ (Python 3.7+)
-- [`dcc-mcp-core`](https://github.com/loonghao/dcc-mcp-core) ≥ 0.15.7
+- [`dcc-mcp-core`](https://github.com/loonghao/dcc-mcp-core) ≥ 0.17.6
 
 ## Cooperative Cancellation in Skill Scripts
 
@@ -416,54 +452,6 @@ UI thread.
 dispatcher attached via `server.attach_dispatcher(...)`, so threads blocked
 inside `submit_callable` unblock within the normal `event.wait()` poll
 instead of hanging when Maya restarts mid-job (issue #89).
-
-## Authoring Skills: Execution & Affinity
-
-Every tool declared in a `tools.yaml` file must tell the MCP gateway **how** it
-should be dispatched.  This is what lets the gateway return an async `job_id`
-instead of blocking, and what prevents main-thread-affine tools from running
-on a worker thread and crashing Maya.
-
-Each entry in `tools.yaml` supports three dispatch fields:
-
-```yaml
-tools:
-  - name: render_frames
-    execution: async          # long-running — spawn as a Job
-    affinity: main            # cmds.render touches scene state
-    timeout_hint_secs: 600    # required when execution: async
-  - name: get_scene_info
-    execution: sync
-    affinity: main            # cmds.ls is main-thread-only
-  - name: list_render_presets
-    execution: sync
-    affinity: any             # pure filesystem read — worker-thread safe
-```
-
-Rules of thumb:
-
-| Property | Guidance |
-|---|---|
-| `execution: async` | Use for anything that typically runs > 2s (render, bake, simulation, large I/O). Must declare `timeout_hint_secs`. |
-| `execution: sync` | Use for fast queries, attribute edits, and small creations. |
-| `affinity: main` | **Default**. Anything that calls `maya.cmds` or `OpenMaya`. |
-| `affinity: any`  | Pure Python / filesystem only — never touches Maya state. |
-
-Two helpers keep the annotations consistent across the 12 bundled skills:
-
-```bash
-# Annotate every bundled tools.yaml from the SKILL_DEFAULTS table.
-python tools/annotate_skill_affinity.py
-
-# CI enforcement — fails if any tool is missing affinity/execution
-# or if an async tool is missing timeout_hint_secs.
-python tools/lint_skill_affinity.py
-```
-
-Third-party skill authors should run `tools/lint_skill_affinity.py` against
-their own skill packages before publishing.  See issue
-[#84](https://github.com/loonghao/dcc-mcp-maya/issues/84) for the full
-categorisation matrix.
 
 ## Deployment Guides
 

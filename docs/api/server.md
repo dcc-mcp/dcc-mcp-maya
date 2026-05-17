@@ -19,6 +19,15 @@ dcc_mcp_maya.start_server(
     scene: Optional[str] = None,
     enable_hot_reload: bool = False,
     enable_gateway_failover: bool = True,
+    metrics_enabled: Optional[bool] = None,
+    job_storage_path: Optional[str] = None,
+    job_recovery: Optional[str] = None,
+    dcc_pid: Optional[int] = None,
+    dcc_window_title: Optional[str] = None,
+    dcc_window_handle: Optional[int] = None,
+    enable_workflows: Optional[bool] = None,
+    host_dispatcher: Optional[Any] = None,
+    readiness_timeout_secs: Optional[int] = None,
 ) -> McpServerHandle
 ```
 
@@ -42,6 +51,12 @@ Start (or return the already-running) module-level singleton server.
 | `metrics_enabled` | `bool \| None` | `None` | Enable Prometheus `/metrics` endpoint. `None` reads `DCC_MCP_MAYA_METRICS=1`. |
 | `job_storage_path` | `str \| None` | `None` | SQLite job persistence DB path. `None` reads `DCC_MCP_MAYA_JOB_STORAGE`, else defaults to `<data_dir>/jobs.db`. Set `""` to disable. |
 | `job_recovery` | `str \| None` | `None` | Interrupted job recovery: `"drop"` (default) or `"requeue"`. `None` reads `DCC_MCP_MAYA_JOB_RECOVERY`. |
+| `dcc_pid` | `int \| None` | `None` | PID advertised to the registry and gateway diagnostics. |
+| `dcc_window_title` | `str \| None` | `None` | Window title advertised to discovery surfaces. |
+| `dcc_window_handle` | `int \| None` | `None` | Native window handle advertised to discovery surfaces. |
+| `enable_workflows` | `bool \| None` | `None` | Enable core workflow tools (`workflows.run/resume/list_runs`). |
+| `host_dispatcher` | `Any \| None` | `None` | Maya host dispatcher used by the core dispatcher bridge. |
+| `readiness_timeout_secs` | `int \| None` | `None` | Advisory timeout value published with runtime readiness state. |
 
 **Returns:** `McpServerHandle` with `.mcp_url()`, `.port`, `.shutdown()`.
 
@@ -94,6 +109,12 @@ MayaMcpServer(
     metrics_enabled: Optional[bool] = None,
     job_storage_path: Optional[str] = None,
     job_recovery: Optional[str] = None,
+    dcc_pid: Optional[int] = None,
+    dcc_window_title: Optional[str] = None,
+    dcc_window_handle: Optional[int] = None,
+    enable_workflows: Optional[bool] = None,
+    host_dispatcher: Optional[Any] = None,
+    readiness_timeout_secs: Optional[int] = None,
 )
 ```
 
@@ -110,9 +131,7 @@ server.register_builtin_actions(
 
 Discover built-in Maya skills and register diagnostics. Returns `self` for fluent chaining.
 
-Uses the dcc-mcp-core SkillCatalog API:
-1. `server.discover(...)` — scans for `SKILL.md` files and indexes skills
-2. `load_skill` MCP tooling can then materialize a specific skill on demand
+Registration runs in phases: core built-ins, recipe tools, skill reference docs, strict skill scan, capability manifest, project tools, and MCP resources. `load_skill` MCP tooling can then materialize a specific skill on demand.
 
 #### `start`
 
@@ -182,5 +201,9 @@ Returned by `server.start()` and `start_server()`.
 | `DCC_MCP_MAYA_JOB_STORAGE` | `<data_dir>/jobs.db` | SQLite job persistence database path |
 | `DCC_MCP_MAYA_JOB_RECOVERY` | `drop` | `requeue` to resume idempotent interrupted jobs on startup |
 | `DCC_MCP_MAYA_ENABLE_GATEWAY_FAILOVER` | `1` | Enable automatic gateway failover election |
+| `DCC_MCP_MAYA_ENABLE_WORKFLOWS` | `0` | Enable core workflow tools |
+| `DCC_MCP_MAYA_READINESS_TIMEOUT_SECS` | — | Advisory timeout value for readiness consumers |
+| `DCC_MCP_MAYA_EXCLUDE_STUBS_FROM_TOOLS_LIST` | `0` | Hide unloaded skill/group stubs from `tools/list` |
+| `DCC_MCP_MAYA_SIDECAR` | `0` | Start the optional `dcc-mcp-server sidecar` from the Maya plugin |
 | `DCC_MCP_GATEWAY_PORT` | `9765` in plugin mode | Gateway competition port; `0` disables gateway mode |
 | `DCC_MCP_REGISTRY_DIR` | OS temp dir | Shared registry directory for service discovery |

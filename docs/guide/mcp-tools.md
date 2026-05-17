@@ -4,7 +4,9 @@ This guide is for users who want to control Maya using natural language through 
 
 ## How It Works
 
-Once the `dcc-mcp-maya` server is running inside Maya, your AI assistant gains access to **370+ Maya tools across 64 built-in skill packages**. Just describe what you want in plain English.
+Once the `dcc-mcp-maya` server is running inside Maya, your AI assistant can discover **23 Maya skill packages** and load **160+ typed Maya tools** on demand. Just describe what you want in plain English; the assistant should search capabilities, load the matching skill, then call the typed tool.
+
+Default startup is intentionally small. If a tool appears missing, ask the assistant to call `dcc_capability_manifest` or `search_skills`, then `load_skill("<skill-name>")`.
 
 ## Scene Operations
 
@@ -87,23 +89,22 @@ Use `maya_scene__find_by_pattern` for wildcard name searches. It defaults to `ty
 "Export animation curves from character_ctrl to /exports/walk_cycle.anim"
 ```
 
-## Lighting
+## Light Rigs
 
 ```
-"Add a directional light pointing down"
-"Create a point light at position (5, 10, 5) with intensity 2"
-"Make the directional light warmer (orange-ish)"
-"List all lights in the scene"
-"Turn off shadows on light1"
+"Create a three-point light rig around the asset"
+"Create an HDRI dome light from /textures/studio.hdr"
+"List the light rigs in this scene"
+"Lower the key light intensity"
 ```
 
-## Cameras
+## Scene Assembly
 
 ```
-"Create a camera at position (10, 5, 10) looking at the origin"
-"Set the focal length of camera1 to 85mm"
-"Switch the viewport to the render camera"
-"List all cameras in the scene"
+"Create an assembly definition for this prop"
+"Add a GPU cache representation to the assembly"
+"Create an assembly reference in the layout scene"
+"List all assemblies"
 ```
 
 ## Render and Capture
@@ -117,6 +118,14 @@ Use `maya_scene__find_by_pattern` for wildcard name searches. It defaults to `ty
 ```
 
 ## Advanced Workflows
+
+### Skill Routing
+
+```
+"Find the best skill for exporting selected meshes to FBX, load it, then export"
+"Show me the capability manifest for unloaded render and farm tools"
+"Load maya-material-library and save this shader network as a preset"
+```
 
 ### Full Asset Creation
 

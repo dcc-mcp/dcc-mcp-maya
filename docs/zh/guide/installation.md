@@ -2,9 +2,9 @@
 
 ## 系统要求
 
-- **Maya**：2020、2022、2023、2024 或 2025
+- **Maya**：2020+（模块包覆盖 Maya 2022 至 2026）
 - **Python**：3.7 – 3.12（Maya 内嵌）
-- **dcc-mcp-core**：≥ 0.15.7（作为依赖自动安装）
+- **dcc-mcp-core**：≥ 0.17.6（作为依赖自动安装）
 
 ## 方式一 — pip 安装到 mayapy
 
@@ -43,6 +43,8 @@ mayapy -c "import dcc_mcp_maya; print(dcc_mcp_maya.__version__)"
 
 插件初始化期间，`dcc-mcp-maya` 还会关闭 Maya 旧式 MEL commandPort（`127.0.0.1:50007`）。MCP 服务器不会使用该端口，关闭它可以避免误发的 HTTP 探测触发 Maya 安全警告弹窗。如果工作室仍依赖旧式 commandPort，可在加载插件前设置 `DCC_MCP_MAYA_CLOSE_DEFAULT_COMMANDPORT=0` 选择保留。
 
+插件默认仍使用嵌入式进程内 MCP server。若需要在 Maya 旁边运行可选 Rust sidecar，请在加载插件前设置 `DCC_MCP_MAYA_SIDECAR=1`。Sidecar 模式使用 Maya 内部 Qt event-loop dispatcher，不需要打开旧式 commandPort。
+
 ## 方式三 — mayapy bootstrap
 
 对于 headless E2E 或服务化运行，可以用自带的 bootstrap 启动 Maya：
@@ -51,7 +53,7 @@ mayapy -c "import dcc_mcp_maya; print(dcc_mcp_maya.__version__)"
 mayapy maya_bootstrap.py
 ```
 
-该 bootstrap 在 batch 模式下创建核心 `BlockingDispatcher`，通过 core host bridge 对外暴露 `/mcp` 和 per-DCC REST skill API `/v1/*`。
+该 bootstrap 在 batch 模式下创建 Maya host dispatcher，通过 core host bridge 对外暴露 `/mcp` 和 per-DCC REST skill API `/v1/*`。
 
 Maya 许可证是 CI 中的前置条件。将此命令放到自托管 runner 或有 Maya 许可证的环境中执行。
 
