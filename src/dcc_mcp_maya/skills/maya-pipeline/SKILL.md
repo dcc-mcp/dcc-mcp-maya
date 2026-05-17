@@ -23,13 +23,6 @@ metadata:
     search-hint: |-
       asset publish, production pipeline, metadata tagging, project workspace,
       versioned publish, set project, tag asset, get asset metadata
-    aliases:
-    - maya-publish
-    side-effects:
-    - reads-scene
-    - writes-scene
-    - reads-disk
-    - writes-disk
     depends:
     - maya-geometry
     tools: tools.yaml

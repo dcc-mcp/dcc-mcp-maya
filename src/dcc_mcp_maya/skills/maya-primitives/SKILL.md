@@ -25,12 +25,6 @@ metadata:
       create sphere cube cylinder plane, set transform, get transform, rename,
       delete object, primitive geometry, basic shape, polySphere polyCube,
       batch primitives, random transforms, many cubes procedural
-    aliases:
-    - maya-primitive
-    - maya-shapes
-    side-effects:
-    - reads-scene
-    - writes-scene
     depends: []
     tools: tools.yaml
     groups: groups.yaml

@@ -22,13 +22,6 @@ metadata:
     search-hint: |-
       reuse material, material preset, shader library, share material,
       load preset, save preset, JSON shader
-    aliases:
-    - maya-mat-lib
-    side-effects:
-    - reads-scene
-    - writes-scene
-    - reads-disk
-    - writes-disk
     depends: []
     tools: tools.yaml
     groups: groups.yaml

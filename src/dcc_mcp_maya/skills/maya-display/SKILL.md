@@ -21,11 +21,6 @@ metadata:
     search-hint: |-
       viewport visibility, display layer, show hide, layer assign,
       hide group, isolate selection
-    aliases:
-    - maya-display-layers
-    side-effects:
-    - reads-scene
-    - writes-scene
     depends: []
     tools: tools.yaml
     groups: groups.yaml

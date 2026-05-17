@@ -326,6 +326,20 @@ class TestCheckDependsExist:
         assert any(i.rule == "MISSING_DEPENDS" for i in issues)
 
 
+class TestCheckDccMcpMetadataKeys:
+    def test_known_nested_keys(self, tmp_path):
+        skill_dir = make_skill_dir(tmp_path, "maya-test", CLEAN_FRONTMATTER)
+        fm = {"metadata": {"dcc-mcp": {"dcc": "maya", "tools": "tools.yaml", "recipes": "references/RECIPES.md"}}}
+        issues = lint_skills.check_dcc_mcp_metadata_keys(skill_dir, "maya-test", fm)
+        assert issues == []
+
+    def test_unknown_nested_key_warns(self, tmp_path):
+        skill_dir = make_skill_dir(tmp_path, "maya-test", CLEAN_FRONTMATTER)
+        fm = {"metadata": {"dcc-mcp": {"aliases": ["maya-old-name"]}}}
+        issues = lint_skills.check_dcc_mcp_metadata_keys(skill_dir, "maya-test", fm)
+        assert any(i.rule == "UNKNOWN_DCC_MCP_METADATA" for i in issues)
+
+
 # ---------------------------------------------------------------------------
 # check_duplicate_action_names (cross-skill)
 # ---------------------------------------------------------------------------

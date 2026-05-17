@@ -23,11 +23,6 @@ metadata:
     search-hint: |-
       lighting template, three point rig, key fill rim, HDRI dome,
       studio setup, environment light
-    aliases:
-    - maya-lighting-rig
-    side-effects:
-    - reads-scene
-    - writes-scene
     depends: []
     tools: tools.yaml
     groups: groups.yaml

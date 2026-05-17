@@ -23,12 +23,6 @@ metadata:
     search-hint: |-
       final output, preview render, playblast, viewport capture, render globals,
       set render settings, image format, frame range render
-    aliases:
-    - maya-render-settings
-    side-effects:
-    - reads-scene
-    - writes-scene
-    - writes-disk
     depends: []
     tools: tools.yaml
     groups: groups.yaml

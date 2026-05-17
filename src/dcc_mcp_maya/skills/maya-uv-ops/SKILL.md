@@ -21,11 +21,6 @@ metadata:
     search-hint: |-
       layout UVs, unfold UV, texture coordinates, UV projection, automatic UV,
       planar projection, UV set, normalize UV
-    aliases:
-    - maya-uv
-    side-effects:
-    - reads-scene
-    - writes-scene
     depends: []
     tools: tools.yaml
     groups: groups.yaml
