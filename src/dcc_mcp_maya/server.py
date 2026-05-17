@@ -67,6 +67,31 @@ DEFAULT_SERVER_VERSION = __version__
 _BUILTIN_SKILLS_DIR = Path(__file__).resolve().parent / "skills"
 
 
+def _logger_has_closed_stream(target_logger: logging.Logger) -> bool:
+    """Return true when a handler in the propagation chain cannot write."""
+    current: Optional[logging.Logger] = target_logger
+    while current is not None:
+        for handler in current.handlers:
+            stream = getattr(handler, "stream", None)
+            if stream is not None and getattr(stream, "closed", False):
+                return True
+        if not current.propagate:
+            break
+        current = current.parent
+    return False
+
+
+def _log_dispatcher_shutdown(dcc_name: str, signalled: Any) -> None:
+    """Best-effort dispatcher shutdown log for late interpreter teardown."""
+    if _logger_has_closed_stream(logger):
+        return
+    logger.info(
+        "[%s] dispatcher.shutdown signalled %s job(s)",
+        dcc_name,
+        0 if signalled is None else signalled,
+    )
+
+
 @dataclass
 class MayaServerOptions:
     """Maya adapter options collapsed for the core 0.15.9 server contract."""
@@ -384,11 +409,7 @@ class MayaMcpServer(DccServerBase):
                         signalled = shutdown("Interrupted")
                     except TypeError:
                         signalled = shutdown()
-                    logger.info(
-                        "[%s] dispatcher.shutdown signalled %s job(s)",
-                        self._dcc_name,
-                        signalled,
-                    )
+                    _log_dispatcher_shutdown(self._dcc_name, signalled)
             except Exception as exc:  # noqa: BLE001
                 logger.warning(
                     "[%s] Error draining Maya dispatcher during stop(): %s",

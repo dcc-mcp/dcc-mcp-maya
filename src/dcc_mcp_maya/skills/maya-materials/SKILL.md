@@ -23,11 +23,6 @@ metadata:
     search-hint: |-
       assign shader, basic material, surface shader, lambert blinn,
       create material, shading group, shadingEngine, sets surfaceShader
-    aliases:
-    - maya-shading
-    side-effects:
-    - reads-scene
-    - writes-scene
     depends: []
     tools: tools.yaml
     groups: groups.yaml

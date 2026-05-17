@@ -23,11 +23,6 @@ metadata:
     search-hint: |-
       standardize export, export preset, FBX preset, Alembic preset,
       load export config, save export config, share export settings
-    aliases:
-    - maya-export-presets
-    side-effects:
-    - reads-disk
-    - writes-disk
     depends: []
     tools: tools.yaml
 ---

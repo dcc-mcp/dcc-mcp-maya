@@ -50,9 +50,10 @@ Full rationale: repo root `AGENTS.md` § *Bulk import, export, and naming*; exam
 | Create a three-point light rig and tweak intensity | `maya-light-rig` |
 | Snapshot the viewport | `maya-render` (`playblast`) |
 
-## Side-effect taxonomy
+## Side-Effect Taxonomy
 
-Each SKILL.md declares `metadata.dcc-mcp.side-effects` with one or more of:
+Tool-level `tools.yaml` entries declare execution and thread affinity. Treat
+the operation descriptions and tags as the source of truth for side effects:
 
 - `reads-scene` — calls `maya.cmds` queries; safe.
 - `writes-scene` — mutates DAG / DG state; should run on the main thread.
@@ -62,7 +63,7 @@ Each SKILL.md declares `metadata.dcc-mcp.side-effects` with one or more of:
 - `executes-arbitrary-code` — `maya-scripting` only.
 - `heavy-cpu` — long-running; set realistic `timeout_hint_secs`.
 
-An agent can use these to:
+An agent can use these signals to:
 
 * warn the user before destructive operations,
 * batch read-only queries,
@@ -99,9 +100,9 @@ the user dismisses the dialog inside Maya. Set
 `DCC_MCP_MAYA_SAFE_SESSION=0` to disable this for an interactive
 authoring session.
 
-## Aliases
+## Discovery Terms
 
-Each skill carries a `metadata.dcc-mcp.aliases` list so that future
-renames are non-breaking. For example, `maya-geometry` already advertises
-`maya-interchange`, `maya-io`, `maya-fbx` — searches for any of these
-should match.
+Skill discovery terms live in `metadata.dcc-mcp.search-hint` and `tags`, using
+only metadata keys accepted by the current gateway/core parser. For example,
+`maya-geometry` includes `maya-interchange`, `maya-io`, and `maya-fbx` in its
+search hint so legacy names still match without emitting unknown-key warnings.
