@@ -2,9 +2,9 @@
 
 ## Requirements
 
-- **Maya**: 2020, 2022, 2023, 2024, or 2025
+- **Maya**: 2020+ (tested with Maya 2022 through 2026 module packages)
 - **Python**: 3.7 – 3.12 (embedded in Maya)
-- **dcc-mcp-core**: ≥ 0.15.7 (auto-installed as dependency)
+- **dcc-mcp-core**: ≥ 0.17.6 (auto-installed as dependency)
 
 ## Method 1 — pip into mayapy
 
@@ -43,6 +43,11 @@ The plugin starts the server automatically on load. By default it uses an OS-ass
 
 During plugin initialization, `dcc-mcp-maya` also closes Maya's legacy MEL commandPort on `127.0.0.1:50007`. The MCP server never uses that port, and closing it prevents accidental HTTP probes from opening Maya's security warning dialog. Studios that still depend on the legacy commandPort can opt out with `DCC_MCP_MAYA_CLOSE_DEFAULT_COMMANDPORT=0` before loading the plugin.
 
+The default plugin runtime is still the embedded in-process MCP server. To run
+the optional Rust sidecar beside Maya, set `DCC_MCP_MAYA_SIDECAR=1` before
+loading the plugin. Sidecar mode uses the in-Maya Qt event-loop dispatcher and
+does not require opening Maya's legacy commandPort.
+
 ## Method 3 — mayapy bootstrap
 
 For headless E2E or service-style runs, start Maya through the bundled bootstrap:
@@ -51,7 +56,7 @@ For headless E2E or service-style runs, start Maya through the bundled bootstrap
 mayapy maya_bootstrap.py
 ```
 
-The bootstrap creates a core `BlockingDispatcher` in batch mode, exposes MCP at `/mcp`, and exposes the per-DCC REST skill API at `/v1/*` through the core host bridge.
+The bootstrap creates a Maya host dispatcher in batch mode, exposes MCP at `/mcp`, and exposes the per-DCC REST skill API at `/v1/*` through the core host bridge.
 
 Maya licensing is required for CI. Gate this command behind a self-hosted runner or a licensed Maya environment.
 

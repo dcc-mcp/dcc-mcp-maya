@@ -2,7 +2,7 @@
 
 **dcc-mcp-maya** 是 [DCC-MCP](https://github.com/loonghao/dcc-mcp-core) 生态系统的 Maya 专属集成层。
 
-它将符合标准的 **MCP Streamable HTTP 服务器**（2025-03-26 规范）直接嵌入 Maya 中运行 — 无需任何外部网关或独立的 IPC 进程。
+它将符合标准的 **MCP Streamable HTTP 服务器**（2025-03-26 规范）直接嵌入 Maya。默认运行时在 Maya 进程内执行；插件部署也可以按需启用 Rust `dcc-mcp-server` sidecar，以隔离 HTTP 运行时与 Maya UI 线程。
 
 ## 适用人群
 
@@ -22,9 +22,14 @@
 │  handle = dcc_mcp_maya.start_server(port=8765)          │
 │                                                          │
 │  ┌─────────────────────────────────────────────────┐   │
-│  │  McpHttpServer  (dcc-mcp-core)                  │   │
-│  │  POST /mcp  ──►  ToolRegistry                   │   │
+│  │  DccServerBase + McpHttpServer                  │   │
+│  │  POST /mcp  ──►  ToolRegistry / tools/call      │   │
 │  │  GET  /mcp  ──►  SSE 流                         │   │
+│  │  /v1/*       ─►  readiness, search, resources   │   │
+│  └──────────────────────┬──────────────────────────┘   │
+│                         │ HostExecutionBridge          │
+│  ┌──────────────────────▼──────────────────────────┐   │
+│  │  MayaHost / dispatcher / skill executor         │   │
 │  └─────────────────────────────────────────────────┘   │
 └─────────────────────────────┬───────────────────────────┘
                                │  http://127.0.0.1:8765/mcp
@@ -56,6 +61,16 @@ maya-scene/
 #       maya_primitives__create_sphere
 ```
 
+### 渐进式加载
+
+本包内置 23 个 Maya Skill 包。Minimal mode 启动时只加载核心 bootstrap 与 scene 工具；未加载的 Skill 仍可通过 `dcc_capability_manifest`、`search_skills` 或 `search_tools` 发现。
+
+只有任务需要某个领域能力时再加载对应 Skill：
+
+```python
+load_skill("maya-primitives")
+```
+
 ### Skill 搜索路径
 
 按优先级从高到低解析：
@@ -69,6 +84,6 @@ maya-scene/
 ## 下一步
 
 - [快速开始](./getting-started) — 5 分钟让 Maya 与 Claude Desktop 联通
-- [Action 完整列表](./actions) — 所有内置 MCP 工具的完整目录
+- [MCP Tools 指南](./mcp-tools) — 面向用户的示例与 Skill 路由建议
 - [高级用法](./advanced) — 自定义 Skill、主线程调度、`defer=True` 长任务执行
 - [单机多实例部署](./multi-instance) — 在同一台工作站上运行多个 Maya 实例
