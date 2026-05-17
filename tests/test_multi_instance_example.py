@@ -24,8 +24,22 @@ def user_setup():
     spec = importlib.util.spec_from_file_location("_mi_user_setup_example", EXAMPLE)
     assert spec and spec.loader, f"failed to build spec for {EXAMPLE}"
     module = importlib.util.module_from_spec(spec)
+    saved_maya = sys.modules.get("maya")
+    saved_maya_utils = sys.modules.get("maya.utils")
     sys.modules[spec.name] = module
-    spec.loader.exec_module(module)
+    sys.modules["maya"] = None
+    sys.modules["maya.utils"] = None
+    try:
+        spec.loader.exec_module(module)
+    finally:
+        if saved_maya is None:
+            sys.modules.pop("maya", None)
+        else:
+            sys.modules["maya"] = saved_maya
+        if saved_maya_utils is None:
+            sys.modules.pop("maya.utils", None)
+        else:
+            sys.modules["maya.utils"] = saved_maya_utils
     try:
         yield module
     finally:
