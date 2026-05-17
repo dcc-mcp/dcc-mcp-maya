@@ -213,7 +213,10 @@ jobs:
           for attempt in range(5):
               try:
                   req = urllib.request.Request(url, data=body,
-                      headers={'Content-Type': 'application/json'}, method='POST')
+                      headers={
+                          'Content-Type': 'application/json',
+                          'Accept': 'application/json, text/event-stream',
+                      }, method='POST')
                   with urllib.request.urlopen(req, timeout=5) as r:
                       d = json.loads(r.read())
                       assert d['result']['serverInfo']['name'] == 'maya-mcp', d

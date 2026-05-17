@@ -290,7 +290,7 @@ class TestExecutePythonMainThreadMarshalling:
         try:
             with patch.object(_main_thread_queue, "_import_maya_utils", return_value=fake_mu), patch.object(
                 mod, "_running_on_main_thread", return_value=False
-            ):
+            ), patch.object(mod, "_should_marshal_to_maya_main_thread", return_value=True):
                 out = mod.execute_python(code="2 + 3", result_type="VALUE")
 
             assert out.get("success") is True
@@ -380,7 +380,9 @@ class TestExecutePythonMainThreadMarshalling:
 
         try:
             with patch.object(_main_thread_queue, "_import_maya_utils", return_value=fake_mu):
-                with patch.object(mod, "_running_on_main_thread", return_value=False):
+                with patch.object(mod, "_running_on_main_thread", return_value=False), patch.object(
+                    mod, "_should_marshal_to_maya_main_thread", return_value=True
+                ):
                     barrier = _threading.Barrier(20)
                     results: List[Any] = [None] * 20
 

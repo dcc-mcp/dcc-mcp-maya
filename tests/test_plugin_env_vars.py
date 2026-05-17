@@ -264,7 +264,7 @@ class TestSidecarSharesRegistryWithInProcessServer:
         plugin_module._maybe_spawn_sidecar()
 
         sidecar_pkg.start_sidecar.assert_called_once()
-        kwargs = sidecar_pkg.start_sidecar.call_args.kwargs
+        _, kwargs = sidecar_pkg.start_sidecar.call_args
         assert "registry_dir" in kwargs, "start_sidecar must receive registry_dir to keep registries unified"
         assert str(kwargs["registry_dir"]) == str(custom_dir)
 
@@ -288,7 +288,7 @@ class TestSidecarSharesRegistryWithInProcessServer:
         sidecar_pkg = self._arm_plugin(plugin_module, monkeypatch)
         plugin_module._maybe_spawn_sidecar()
 
-        kwargs = sidecar_pkg.start_sidecar.call_args.kwargs
+        _, kwargs = sidecar_pkg.start_sidecar.call_args
         chosen = Path(kwargs["registry_dir"])
         expected = tmp_path / "dcc-mcp-registry"
         assert chosen == expected, (
