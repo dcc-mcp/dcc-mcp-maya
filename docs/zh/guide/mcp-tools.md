@@ -4,7 +4,9 @@
 
 ## 工作原理
 
-`dcc-mcp-maya` 服务器在 Maya 内运行后，你的 AI 助手就能使用 **370+ Maya 工具和 64 个内置 Skill 包**。只需用普通话描述你的需求即可。
+`dcc-mcp-maya` 服务器在 Maya 内运行后，你的 AI 助手可以发现 **23 个 Maya Skill 包**，并按需加载 **160+ 个 typed Maya 工具**。只需用普通话描述你的需求即可；助手应先搜索能力、加载匹配 Skill，再调用带 schema 的 typed tool。
+
+默认启动工具面很小。如果某个工具看起来不存在，请让助手先调用 `dcc_capability_manifest` 或 `search_skills`，再调用 `load_skill("<skill-name>")`。
 
 ## 场景操作
 
@@ -84,23 +86,22 @@
 "将 character_ctrl 的动画曲线导出到 /exports/walk_cycle.anim"
 ```
 
-## 灯光
+## 灯光 Rig
 
 ```
-"添加一盏向下照射的平行光"
-"在位置 (5, 10, 5) 创建一盏强度为 2 的点光源"
-"将平行光调得暖一些（偏橙色）"
-"列出场景中的所有灯光"
-"关闭 light1 的阴影"
+"围绕资产创建一个三点布光 rig"
+"使用 /textures/studio.hdr 创建 HDRI dome"
+"列出当前场景中的灯光 rig"
+"降低 key light 的强度"
 ```
 
-## 摄像机
+## 场景装配
 
 ```
-"在位置 (10, 5, 10) 创建一个朝向原点的摄像机"
-"将 camera1 的焦距设为 85mm"
-"将视口切换到渲染摄像机"
-"列出场景中的所有摄像机"
+"为这个道具创建 assembly definition"
+"给 assembly 添加 GPU cache representation"
+"在 layout 场景中创建 assembly reference"
+"列出所有 assemblies"
 ```
 
 ## 渲染与截图
@@ -114,6 +115,14 @@
 ```
 
 ## 进阶工作流
+
+### Skill 路由
+
+```
+"找到最适合导出所选 mesh 到 FBX 的 skill，加载它，然后导出"
+"显示未加载的 render 和 farm 工具 capability manifest"
+"加载 maya-material-library，并把这个 shader network 保存为 preset"
+```
 
 ### 完整资产创建
 

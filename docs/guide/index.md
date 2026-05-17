@@ -2,7 +2,7 @@
 
 **dcc-mcp-maya** is the Maya-specific integration layer for the [DCC-MCP](https://github.com/loonghao/dcc-mcp-core) ecosystem.
 
-It embeds a standards-compliant **MCP Streamable HTTP server** (2025-03-26 spec) directly inside Maya — no external gateway or separate IPC process required.
+It embeds a standards-compliant **MCP Streamable HTTP server** (2025-03-26 spec) directly inside Maya. The default runtime is in-process, and plugin deployments can opt into the Rust `dcc-mcp-server` sidecar for runtime isolation.
 
 ## Who Is This For?
 
@@ -22,9 +22,14 @@ It embeds a standards-compliant **MCP Streamable HTTP server** (2025-03-26 spec)
 │  handle = dcc_mcp_maya.start_server(port=8765)          │
 │                                                          │
 │  ┌─────────────────────────────────────────────────┐   │
-│  │  McpHttpServer  (dcc-mcp-core)                  │   │
-│  │  POST /mcp  ──►  ToolRegistry                   │   │
+│  │  DccServerBase + McpHttpServer                  │   │
+│  │  POST /mcp  ──►  ToolRegistry / tools/call      │   │
 │  │  GET  /mcp  ──►  SSE stream                     │   │
+│  │  /v1/*       ─►  readiness, search, resources   │   │
+│  └──────────────────────┬──────────────────────────┘   │
+│                         │ HostExecutionBridge          │
+│  ┌──────────────────────▼──────────────────────────┐   │
+│  │  MayaHost / dispatcher / skill executor         │   │
 │  └─────────────────────────────────────────────────┘   │
 └─────────────────────────────┬───────────────────────────┘
                                │  http://127.0.0.1:8765/mcp
@@ -58,6 +63,18 @@ Actions follow the convention:
 #       maya_primitives__create_sphere
 ```
 
+### Progressive Loading
+
+The package ships 23 Maya skill packages. Minimal mode loads only the core
+bootstrap and scene tools, while unloaded skills remain discoverable through
+`dcc_capability_manifest`, `search_skills`, or `search_tools`.
+
+Load a domain skill only when the task needs it:
+
+```python
+load_skill("maya-primitives")
+```
+
 ### Skill Search Path
 
 Paths are resolved in order (highest priority first):
@@ -72,6 +89,6 @@ Paths are resolved in order (highest priority first):
 
 - [Quick Start](./getting-started) — get Maya talking to Claude Desktop in 5 minutes
 - [Local MCP + debug](./local-mcp-debug) — Cursor MCP URL, debugpy attach, gateway vs direct port
-- [Action List](./actions) — full catalogue of built-in MCP tools
+- [MCP Tools Guide](./mcp-tools) — user-facing examples and skill routing guidance
 - [Advanced Usage](./advanced) — custom skills, main-thread scheduling, `defer=True` long-running scripts
 - [Multi-instance Deployment](./multi-instance) — run multiple Maya instances on a single workstation
