@@ -48,6 +48,7 @@ from __future__ import annotations
 # Import built-in modules
 import ast
 import os
+import sys
 from pathlib import Path
 from typing import List
 
@@ -101,6 +102,20 @@ def _iter_package_sources() -> List[Path]:
 _SOURCES = _iter_package_sources()
 
 
+def _parse_as_python_3_7(src: str, *, filename: str = "<unknown>") -> ast.AST:
+    """Parse source with the strongest Python 3.7 grammar check available.
+
+    CPython 3.8/3.9 accept ``feature_version`` as an integer minor
+    version, while 3.10+ accept the ``(major, minor)`` tuple form.  On
+    Python 3.7 itself the ambient parser is already the target grammar.
+    """
+    if sys.version_info < (3, 8):
+        return ast.parse(src, filename=filename)
+    if sys.version_info < (3, 10):
+        return ast.parse(src, filename=filename, feature_version=7)
+    return ast.parse(src, filename=filename, feature_version=(3, 7))
+
+
 def _rel(path: Path) -> str:
     try:
         return str(path.relative_to(PACKAGE_ROOT.parent.parent))
@@ -121,7 +136,7 @@ def test_python_3_7_guard_catches_walrus() -> None:
     """
     walrus_src = "(n := 1)\n"
     with pytest.raises(SyntaxError):
-        ast.parse(walrus_src, feature_version=(3, 7))
+        _parse_as_python_3_7(walrus_src)
 
 
 def test_package_root_is_non_empty() -> None:
@@ -155,7 +170,7 @@ def test_source_parses_under_python_3_7_feature_version(path: Path) -> None:
     """
     src = path.read_text(encoding="utf-8")
     try:
-        ast.parse(src, filename=str(path), feature_version=(3, 7))
+        _parse_as_python_3_7(src, filename=str(path))
     except SyntaxError as exc:
         pytest.fail(f"{_rel(path)} contains Python 3.8+ syntax that would break on Maya 2020/2022 (Python 3.7): {exc}")
 

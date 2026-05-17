@@ -85,7 +85,7 @@ def _load_script(skill_name: str, script_name: str):
     return mod
 
 
-def _mcp_post(url, body):
+def _mcp_post(url, body, timeout=60):
     data = json.dumps(body).encode()
     req = urllib.request.Request(
         url,
@@ -96,7 +96,7 @@ def _mcp_post(url, body):
         },
         method="POST",
     )
-    with urllib.request.urlopen(req, timeout=10) as resp:
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
         return resp.status, json.loads(resp.read())
 
 
