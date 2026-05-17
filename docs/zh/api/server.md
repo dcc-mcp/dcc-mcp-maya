@@ -19,6 +19,15 @@ dcc_mcp_maya.start_server(
     scene: Optional[str] = None,
     enable_hot_reload: bool = False,
     enable_gateway_failover: bool = True,
+    metrics_enabled: Optional[bool] = None,
+    job_storage_path: Optional[str] = None,
+    job_recovery: Optional[str] = None,
+    dcc_pid: Optional[int] = None,
+    dcc_window_title: Optional[str] = None,
+    dcc_window_handle: Optional[int] = None,
+    enable_workflows: Optional[bool] = None,
+    host_dispatcher: Optional[Any] = None,
+    readiness_timeout_secs: Optional[int] = None,
 ) -> McpServerHandle
 ```
 
@@ -39,6 +48,15 @@ dcc_mcp_maya.start_server(
 | `scene` | `str \| None` | `None` | 上报到发现注册表中的当前场景路径。 |
 | `enable_hot_reload` | `bool` | `False` | 启用 Skill 热重载。 |
 | `enable_gateway_failover` | `bool` | `True` | 网关失效时允许非网关实例自动晋升。 |
+| `metrics_enabled` | `bool \| None` | `None` | 启用 Prometheus `/metrics`。 |
+| `job_storage_path` | `str \| None` | `None` | SQLite job 持久化数据库路径。 |
+| `job_recovery` | `str \| None` | `None` | 中断 job 恢复策略：`"drop"` 或 `"requeue"`。 |
+| `dcc_pid` | `int \| None` | `None` | 上报给注册表和 gateway 诊断的 PID。 |
+| `dcc_window_title` | `str \| None` | `None` | 上报给发现面的窗口标题。 |
+| `dcc_window_handle` | `int \| None` | `None` | 上报给发现面的原生窗口句柄。 |
+| `enable_workflows` | `bool \| None` | `None` | 启用 core workflow tools。 |
+| `host_dispatcher` | `Any \| None` | `None` | core dispatcher bridge 使用的 Maya host dispatcher。 |
+| `readiness_timeout_secs` | `int \| None` | `None` | 发布给 readiness 消费方的建议超时时间。 |
 
 **返回：** `McpServerHandle`，含 `.mcp_url()`、`.port`、`.shutdown()`。
 
@@ -88,6 +106,15 @@ MayaMcpServer(
     dcc_version: Optional[str] = None,
     scene: Optional[str] = None,
     enable_gateway_failover: bool = True,
+    metrics_enabled: Optional[bool] = None,
+    job_storage_path: Optional[str] = None,
+    job_recovery: Optional[str] = None,
+    dcc_pid: Optional[int] = None,
+    dcc_window_title: Optional[str] = None,
+    dcc_window_handle: Optional[int] = None,
+    enable_workflows: Optional[bool] = None,
+    host_dispatcher: Optional[Any] = None,
+    readiness_timeout_secs: Optional[int] = None,
 )
 ```
 
@@ -104,9 +131,7 @@ server.register_builtin_actions(
 
 发现内置 Maya 技能并注册诊断能力。返回 `self` 支持链式调用。
 
-使用 dcc-mcp-core SkillCatalog API：
-1. `server.discover(...)` — 扫描 `SKILL.md` 并建立技能索引
-2. 之后可通过 `load_skill` MCP 工具按需实体化某个技能
+注册过程按阶段执行：core built-ins、recipes tools、skill reference docs、strict skill scan、capability manifest、project tools 和 MCP resources。之后可通过 `load_skill` MCP 工具按需实体化某个技能。
 
 #### `start`
 
@@ -159,6 +184,13 @@ server.stop()
 | `DCC_MCP_MAYA_SKILL_PATHS` | — | Maya 专用技能目录（`;` 分隔）|
 | `DCC_MCP_SKILL_PATHS` | — | 全局备用技能目录 |
 | `DCC_MCP_MAYA_HOT_RELOAD` | `0` | 设为 `1` 时启用 Skill 热重载 |
+| `DCC_MCP_MAYA_METRICS` | `0` | 设为 `1` 时启用 Prometheus `/metrics` |
+| `DCC_MCP_MAYA_JOB_STORAGE` | `<data_dir>/jobs.db` | SQLite job 持久化数据库路径 |
+| `DCC_MCP_MAYA_JOB_RECOVERY` | `drop` | `requeue` 表示启动后恢复幂等的中断 job |
 | `DCC_MCP_MAYA_ENABLE_GATEWAY_FAILOVER` | `1` | 启用自动网关故障转移选举 |
+| `DCC_MCP_MAYA_ENABLE_WORKFLOWS` | `0` | 启用 core workflow tools |
+| `DCC_MCP_MAYA_READINESS_TIMEOUT_SECS` | — | readiness 消费方使用的建议超时时间 |
+| `DCC_MCP_MAYA_EXCLUDE_STUBS_FROM_TOOLS_LIST` | `0` | 从 `tools/list` 隐藏未加载 skill/group stub |
+| `DCC_MCP_MAYA_SIDECAR` | `0` | 从 Maya 插件启动可选 `dcc-mcp-server sidecar` |
 | `DCC_MCP_GATEWAY_PORT` | 插件模式下为 `9765` | 网关竞争端口；设为 `0` 可禁用 |
 | `DCC_MCP_REGISTRY_DIR` | 操作系统临时目录 | 用于服务发现的共享注册目录 |
