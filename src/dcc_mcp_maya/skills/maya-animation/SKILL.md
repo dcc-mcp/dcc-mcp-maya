@@ -23,11 +23,6 @@ metadata:
     search-hint: |-
       animate motion, keyframe, set key, timeline range, animation curve,
       curve tangent, bake constraint, bake simulation, anim file import export
-    aliases:
-    - maya-anim
-    side-effects:
-    - reads-scene
-    - writes-scene
     depends: []
     tools: tools.yaml
     groups: groups.yaml

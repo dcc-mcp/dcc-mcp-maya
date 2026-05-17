@@ -26,12 +26,6 @@ metadata:
     search-hint: |-
       edit mesh, modify polygons, bevel edge, extrude face, bridge, combine,
       separate, cleanup, boolean, subdivide, smooth topology
-    aliases:
-    - maya-mesh
-    - maya-poly-edit
-    side-effects:
-    - reads-scene
-    - writes-scene
     depends: []
     tools: tools.yaml
     groups: groups.yaml

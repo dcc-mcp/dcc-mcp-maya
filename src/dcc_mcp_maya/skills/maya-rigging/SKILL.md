@@ -23,11 +23,6 @@ metadata:
     search-hint: |-
       build character rig, skeleton setup, IK chain, skin bind, blendshape,
       control curve, deformer, joint hierarchy, weight paint
-    aliases:
-    - maya-rig
-    side-effects:
-    - reads-scene
-    - writes-scene
     depends: []
     tools: tools.yaml
     groups: groups.yaml

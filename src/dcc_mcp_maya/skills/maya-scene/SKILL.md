@@ -22,12 +22,6 @@ metadata:
     search-hint: |-
       manage scene file, open save scene, hierarchy query, selection,
       camera list, frame rate, locator, group parent, freeze pivot, bounding box
-    aliases:
-    - maya-scene-mgmt
-    side-effects:
-    - reads-scene
-    - writes-scene
-    - writes-disk
     depends: []
     tools: tools.yaml
     groups: groups.yaml

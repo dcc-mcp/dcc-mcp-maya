@@ -21,11 +21,6 @@ metadata:
     search-hint: |-
       procedural animation, expression node, drive attribute, expression node,
       expression-driven motion, drive translateX with sin
-    aliases:
-    - maya-expr
-    side-effects:
-    - reads-scene
-    - writes-scene
     depends: []
     tools: tools.yaml
     groups: groups.yaml
