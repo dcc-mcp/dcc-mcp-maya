@@ -13,9 +13,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Main matrix: Python 3.8–3.12 (dcc-mcp-core 0.17.3+ abi3 wheels require cp38+).
+        # 3.7 uses core cp37 wheels; 3.8+ uses abi3-py38 wheels (dcc-mcp-core>=0.17.4).
         os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+        python-version: ["3.7", "3.8", "3.9", "3.10", "3.11", "3.12"]
 
     steps:
       - uses: actions/checkout@v6
