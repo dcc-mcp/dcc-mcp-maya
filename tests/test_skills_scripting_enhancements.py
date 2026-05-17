@@ -434,7 +434,9 @@ class TestExecutePythonMainThreadMarshalling:
             fake_queue.submit.return_value = full_future
 
             with patch.object(_main_thread_queue, "get_queue", return_value=fake_queue):
-                with patch.object(mod, "_running_on_main_thread", return_value=False):
+                with patch.object(mod, "_running_on_main_thread", return_value=False), patch.object(
+                    mod, "_should_marshal_to_maya_main_thread", return_value=True
+                ):
                     out = mod.execute_python(code="1+1", inplace=False)
 
             assert out.get("success") is False
