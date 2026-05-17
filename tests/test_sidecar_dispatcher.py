@@ -16,19 +16,15 @@ from __future__ import annotations
 
 # Import built-in modules
 import json
-import os
-import sys
-import tempfile
 import textwrap
 from pathlib import Path
-from typing import Any, Callable, Iterator, Mapping, Optional
+from typing import Any, Callable, Optional
 
 # Import third-party modules
 import pytest
 
 # Import local modules
-from dcc_mcp_maya.sidecar._dispatcher import dispatch, dispatch_payload
-
+from dcc_mcp_maya.sidecar._dispatcher import dispatch_payload
 
 # ── server stubs ─────────────────────────────────────────────────
 
@@ -387,7 +383,6 @@ class TestTopLevelShim:
 
     def test_underscored_sidecar_module_is_importable(self):
         import dcc_mcp_maya._sidecar as wire_entry
-
         from dcc_mcp_maya.sidecar import dispatch as canonical_dispatch
 
         assert wire_entry.dispatch is canonical_dispatch
