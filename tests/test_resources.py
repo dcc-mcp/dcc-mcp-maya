@@ -21,6 +21,7 @@ Covers:
 from __future__ import annotations
 
 import json
+import sys
 import time
 from typing import Any, Callable, Dict, List
 from unittest.mock import MagicMock
@@ -96,6 +97,14 @@ class TestParsePathUri:
 
 class TestProducersWithoutMaya:
     """Outside Maya every producer must return a JSON envelope, never raise."""
+
+    @pytest.fixture(autouse=True)
+    def _hide_maya_modules(self, monkeypatch: Any) -> None:
+        # These tests assert the non-Maya degradation path.  In mayapy CI,
+        # the real Maya modules are importable, so block just the producer
+        # imports explicitly instead of depending on the ambient interpreter.
+        monkeypatch.setitem(sys.modules, "maya.cmds", None)
+        monkeypatch.setitem(sys.modules, "maya.api.OpenMaya", None)
 
     def test_cmds_help_returns_unavailable_envelope(self) -> None:
         out = _maya_cmds_help_producer("maya-cmds://help/ls")

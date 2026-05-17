@@ -151,8 +151,10 @@ class TestKMayaExitingHook:
 
     def test_register_returns_none_when_openmaya_missing(self) -> None:
         """Non-Maya Python must degrade gracefully."""
-        # sys.modules has no ``maya.api.OpenMaya`` in this fixture-less test.
-        assert register_kmaya_exiting_hook(lambda: None) is None
+        # Block the import explicitly so this remains the non-Maya path
+        # even when the test suite is running under mayapy.
+        with patch.dict(sys.modules, {"maya.api.OpenMaya": None}):
+            assert register_kmaya_exiting_hook(lambda: None) is None
 
     def test_unregister_success(self, fake_open_maya: Any) -> None:
         cb_id = register_kmaya_exiting_hook(lambda: None)
