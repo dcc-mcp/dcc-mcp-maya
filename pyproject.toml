@@ -30,7 +30,8 @@ dependencies = [
     # 0.15.9 is the Python 3.7-capable core floor used by Maya 2020+/2022.
     # It includes cursor-paginated tools/list plus the latest HostExecutionBridge,
     # readiness, resources, gateway CapabilityIndex, and logging contracts.
-    "dcc-mcp-core>=0.15.9,<1.0.0",
+    # HostUiDispatcherBase + tools/list stub policy (core #1026, >=0.17.3).
+    "dcc-mcp-core>=0.17.3,<1.0.0",
 ]
 
 [project.optional-dependencies]
