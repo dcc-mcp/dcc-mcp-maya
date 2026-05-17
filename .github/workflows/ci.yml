@@ -75,8 +75,8 @@ jobs:
 
       - name: Install dependencies into mayapy
         run: |
-          pip install --quiet certifi
-          export SSL_CERT_FILE="$(python -c 'import certifi; print(certifi.where())')"
+          mayapy -m pip install --quiet certifi
+          export SSL_CERT_FILE="$(mayapy -c 'import certifi; print(certifi.where())')"
           mayapy -m pip install --upgrade pip
           mayapy -m pip install -e ".[dev]"
 

@@ -27,9 +27,10 @@ classifiers = [
 ]
 
 dependencies = [
-    # 0.17.4+: HostUiDispatcherBase py37 syntax, tools/list stub policy, lint gate.
+    # 0.17.6+: HostUiDispatcherBase py37 syntax, tools/list stub policy, lint gate,
+    # and Python 3.7 install support for Maya 2022.
     # abi3 (cp38+) on 3.8+; separate cp37 wheels on Python 3.7 (Maya 2022).
-    "dcc-mcp-core>=0.17.4,<1.0.0",
+    "dcc-mcp-core>=0.17.6,<1.0.0",
 ]
 
 [project.optional-dependencies]
@@ -40,12 +41,15 @@ dev = [
     "pytest-timeout>=2.1.0",
     "pytest-xdist>=3.0",
     "requests>=2.28.0",
-    "dcc-mcp-server>=0.17.4",  # sidecar HTTP transport tests (optional at runtime if missing)
+    "dcc-mcp-server>=0.17.6",  # sidecar HTTP transport tests (py3 wheels support Python 3.7+)
     "ruff>=0.8.0",
     "hatchling",
     "build",
     "tomli; python_version < '3.11'",  # tomllib backport for Python < 3.11
     "pyyaml>=5.0",  # YAML parsing for SKILL.md test validation
+]
+sidecar = [
+    "dcc-mcp-server>=0.17.6",
 ]
 
 [project.urls]

@@ -41,7 +41,7 @@ from __future__ import annotations
 # Import built-in modules
 import logging
 import os
-from typing import List, Literal
+from typing import List
 
 logger = logging.getLogger(__name__)
 
@@ -88,7 +88,7 @@ def _list_open_ports() -> List[str]:
         return []
 
 
-def _port_source_type(cmds: object, port: str) -> Literal["mel", "python"]:
+def _port_source_type(cmds: object, port: str) -> str:
     """Return the ``sourceType`` of an open commandPort (default ``mel``)."""
     try:
         raw = cmds.commandPort(name=port, query=True, sourceType=True)  # type: ignore[union-attr]
@@ -98,7 +98,7 @@ def _port_source_type(cmds: object, port: str) -> Literal["mel", "python"]:
     if isinstance(raw, str):
         lowered = raw.strip().lower()
         if lowered in ("python", "mel"):
-            return lowered  # type: ignore[return-value]
+            return lowered
     return "mel"
 
 
