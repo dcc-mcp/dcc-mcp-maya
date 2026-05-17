@@ -4,7 +4,9 @@
 from __future__ import annotations
 
 # Import built-in modules
+import io
 import json
+import logging
 import sys
 import urllib.request
 from unittest.mock import MagicMock, patch
@@ -45,6 +47,30 @@ def _import_server():
             del sys.modules[mod]
     srv = importlib.import_module("dcc_mcp_maya.server")
     return srv
+
+
+def test_dispatcher_shutdown_log_normalizes_missing_count(caplog):
+    srv_mod = _import_server()
+
+    with caplog.at_level(logging.INFO, logger=srv_mod.logger.name):
+        srv_mod._log_dispatcher_shutdown("maya", None)
+
+    assert "dispatcher.shutdown signalled 0 job(s)" in caplog.text
+
+
+def test_dispatcher_shutdown_log_skips_closed_stream(capsys):
+    srv_mod = _import_server()
+    stream = io.StringIO()
+    handler = logging.StreamHandler(stream)
+    srv_mod.logger.addHandler(handler)
+    try:
+        stream.close()
+
+        srv_mod._log_dispatcher_shutdown("maya", None)
+
+        assert capsys.readouterr().err == ""
+    finally:
+        srv_mod.logger.removeHandler(handler)
 
 
 def _core_supports_nested_dcc_mcp_metadata():

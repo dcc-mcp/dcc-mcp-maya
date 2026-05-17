@@ -25,20 +25,11 @@ metadata:
       last resort after load_skill, no-matching-tool, bulk loop in maya,
       MEL Python escape hatch, inspect api, cmds help, signature,
       flag list, introspect only
-    aliases:
-    - maya-script
-    - maya-fallthrough
-    side-effects:
-    - executes-arbitrary-code
-    - reads-scene
-    - writes-scene
     depends: []
     tools: tools.yaml
     groups: groups.yaml
     recipes: references/RECIPES.md
     introspection: references/INTROSPECTION.md
-    skill-reference-docs:
-      - "references/*.md"
 ---
 # maya-scripting (Bootstrap stage)
 
