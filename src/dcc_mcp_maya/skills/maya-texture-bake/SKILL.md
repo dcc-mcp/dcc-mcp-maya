@@ -23,13 +23,6 @@ metadata:
     search-hint: |-
       bake texture map, AO normal, ambient occlusion, high to low res,
       static map, transfer maps, bake lighting
-    aliases:
-    - maya-bake
-    side-effects:
-    - reads-scene
-    - writes-scene
-    - writes-disk
-    - heavy-cpu
     depends: []
     tools: tools.yaml
     groups: groups.yaml

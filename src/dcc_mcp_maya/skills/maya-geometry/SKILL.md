@@ -27,27 +27,17 @@ metadata:
       export FBX, import FBX, export OBJ, file_exists, geometry round trip,
       scene interchange, FBXExport options, bake animation FBX. Use
       maya-scene save_scene for .ma/.mb scene saves.
-    aliases:
-    - maya-interchange
-    - maya-io
-    - maya-fbx
-    side-effects:
-    - reads-scene
-    - reads-disk
-    - writes-disk
-    - calls-fbx-plugin
     depends: []
     tools: tools.yaml
     groups: groups.yaml
-    skill-reference-docs:
-      - "references/*.md"
+    recipes: references/IO_CHECKLIST.md
 ---
 # maya-geometry (Interchange stage)
 
 Geometry interchange. Despite the legacy name `maya-geometry`, the
 responsibility is **interchange**, not modelling or native scene-file
-persistence — see the alias list in the frontmatter (`maya-interchange`,
-`maya-io`, `maya-fbx`).
+persistence. Search hints include `maya-interchange`, `maya-io`, and
+`maya-fbx` for legacy discovery paths.
 
 ## Why this stage exists
 

@@ -25,13 +25,6 @@ metadata:
     search-hint: |-
       shot export, package shot, export frame range, editorial delivery,
       shot camera FBX, shot Alembic, shot info
-    aliases:
-    - maya-shot-io
-    side-effects:
-    - reads-scene
-    - reads-disk
-    - writes-disk
-    - calls-fbx-plugin
     depends:
     - maya-geometry
     tools: tools.yaml
