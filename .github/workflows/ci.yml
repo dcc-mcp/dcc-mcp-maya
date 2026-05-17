@@ -13,16 +13,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Main matrix: modern OS + Python 3.8-3.12; Python 3.7 uses explicit runners below
+        # Main matrix: Python 3.8–3.12 (dcc-mcp-core 0.17.3+ abi3 wheels require cp38+).
         os: [ubuntu-latest, windows-latest, macos-latest]
         python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
-        include:
-          # Python 3.7 requires Ubuntu 22.04 (ubuntu-latest is 24.04 which dropped 3.7)
-          - os: ubuntu-22.04
-            python-version: "3.7"
-          # Python 3.7 on Windows is still available
-          - os: windows-latest
-            python-version: "3.7"
 
     steps:
       - uses: actions/checkout@v6
