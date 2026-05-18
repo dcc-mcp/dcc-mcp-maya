@@ -4,7 +4,7 @@
 
 - **Maya**: 2020+ (tested with Maya 2022 through 2026 module packages)
 - **Python**: 3.7 – 3.12 (embedded in Maya)
-- **dcc-mcp-core**: ≥ 0.17.6 (auto-installed as dependency)
+- **dcc-mcp-core**: ≥ 0.17.8 (auto-installed as dependency)
 
 ## Method 1 — pip into mayapy
 

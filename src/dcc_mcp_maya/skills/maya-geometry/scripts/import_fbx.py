@@ -142,11 +142,12 @@ def import_fbx(  # noqa: PLR0913 — public skill contract
         before = cmds.ls(long=True) or []
 
         import_kwargs: Dict[str, Any] = {
-            "i": True,  # noqa: invariant alias for `import=True`
+            "i": True,  # invariant alias for `import=True`
             "type": "FBX",
             "ignoreVersion": True,
             "options": "fbx",
             "preserveReferences": True,
+            "prompt": False,
         }
         if namespace:
             import_kwargs["namespace"] = namespace
