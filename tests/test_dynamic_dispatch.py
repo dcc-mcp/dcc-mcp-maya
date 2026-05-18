@@ -240,9 +240,9 @@ def test_load_skill_then_dynamic_call_enforces_thread_affinity(server_with_dispa
 
     This is the #164 + #242 end-to-end proof: unloaded → load_skill →
     dynamic call still resolves the loaded backend tool, and
-    ``enforce_thread_affinity`` blocks a main-affinity tool before it can
-    run on the HTTP worker when the core DeferredExecutor is absent in
-    this headless test harness.
+    core's affinity-derived enforcement blocks a main-affinity tool
+    before it can run on the HTTP worker when the core DeferredExecutor
+    is absent in this headless test harness.
     """
     server, handle, dispatcher = server_with_dispatcher
     mcp_url = handle.mcp_url()
@@ -266,7 +266,7 @@ def test_load_skill_then_dynamic_call_enforces_thread_affinity(server_with_dispa
 
     # Now call a main-affinity tool from a loaded skill. In this
     # headless test server the core runtime has no DeferredExecutor, so
-    # enforce_thread_affinity must reject the call before any Python
+    # affinity enforcement must reject the call before any Python
     # handler can touch Maya from the HTTP worker thread.
     server.load_skill("maya-scripting")  # idempotent — handlers still fresh
     call_res = _mcp_post(

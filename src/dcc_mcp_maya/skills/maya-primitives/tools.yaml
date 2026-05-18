@@ -3,7 +3,6 @@ tools:
   description: Create a polygon sphere.
   execution: sync
   affinity: main
-  enforce_thread_affinity: true
   group: modeling
   inputSchema:
     type: object
@@ -20,7 +19,6 @@ tools:
   description: Create a polygon cube.
   execution: sync
   affinity: main
-  enforce_thread_affinity: true
   group: modeling
   inputSchema:
     type: object
@@ -43,7 +41,6 @@ tools:
   description: Create a polygon cylinder.
   execution: sync
   affinity: main
-  enforce_thread_affinity: true
   group: modeling
   inputSchema:
     type: object
@@ -66,7 +63,6 @@ tools:
   description: Create a polygon plane.
   execution: sync
   affinity: main
-  enforce_thread_affinity: true
   group: modeling
   inputSchema:
     type: object
@@ -93,7 +89,6 @@ tools:
   description: Delete one or more objects from the Maya scene.
   execution: sync
   affinity: main
-  enforce_thread_affinity: true
   annotations:
     destructive_hint: true
     idempotent_hint: true
@@ -116,7 +111,6 @@ tools:
   description: Get translate / rotate / scale of an object.
   execution: sync
   affinity: main
-  enforce_thread_affinity: true
   annotations:
     read_only_hint: true
     idempotent_hint: true
@@ -136,7 +130,6 @@ tools:
   description: Rename an object in the scene.
   execution: sync
   affinity: main
-  enforce_thread_affinity: true
   annotations:
     idempotent_hint: true
   group: modeling
@@ -154,7 +147,6 @@ tools:
   description: Set translate / rotate / scale on an object. Pass only the channels you want to change.
   execution: sync
   affinity: main
-  enforce_thread_affinity: true
   annotations:
     idempotent_hint: true
   group: modeling
