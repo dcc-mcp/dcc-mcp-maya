@@ -135,11 +135,7 @@ def test_lint_script_rejects_redundant_enforcement(tmp_path: Path):
     bad_skill = tmp_path / "bad-skill"
     bad_skill.mkdir()
     (bad_skill / "tools.yaml").write_text(
-        "tools:\n"
-        "- name: create_locator\n"
-        "  execution: sync\n"
-        "  affinity: main\n"
-        "  enforce_thread_affinity: true\n",
+        "tools:\n- name: create_locator\n  execution: sync\n  affinity: main\n  enforce_thread_affinity: true\n",
         encoding="utf-8",
     )
 
