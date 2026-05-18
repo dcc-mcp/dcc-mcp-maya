@@ -27,6 +27,14 @@ def _playblast_frame_range(frame: float) -> Tuple[int, int]:
     return (fnum, fnum)
 
 
+def _unlink_if_exists(path: Optional[str]) -> None:
+    if path and os.path.exists(path):
+        try:
+            os.unlink(path)
+        except OSError:
+            pass
+
+
 def _apply_view_fit(cmds) -> bool:
     """Fit the scene in the active model panel (correct ``allObjects`` flag)."""
     try:
@@ -93,6 +101,7 @@ def capture_viewport(
     try:
         tmp_path: Optional[str] = None
         img_path: Optional[str] = None
+        f0: Optional[int] = None
         if frame is None:
             frame = cmds.currentTime(query=True)
 
@@ -109,8 +118,8 @@ def capture_viewport(
         # produce a black frame or raise (issue #152).
         if off_screen is None:
             off_screen = bool(cmds.about(batch=True)) or _no_visible_panel(cmds)
-            if view_fit and not view_fit_applied:
-                off_screen = True
+        if view_fit and not view_fit_applied:
+            off_screen = True
 
         # playblast writes  <prefix>.<frame_padded>.png
         with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
@@ -136,7 +145,9 @@ def capture_viewport(
         img_path = padded if os.path.exists(padded) else prefix + ".png"
 
         img_bytes = _read_nonempty_png(img_path)
-        os.unlink(img_path)
+        _unlink_if_exists(img_path)
+        if tmp_path != img_path:
+            _unlink_if_exists(tmp_path)
 
         encoded = base64.b64encode(img_bytes).decode("ascii")
         return skill_success(
@@ -148,6 +159,7 @@ def capture_viewport(
             off_screen=bool(off_screen),
             view_fit=bool(view_fit),
             view_fit_applied=view_fit_applied,
+            off_screen_forced_by_view_fit_failure=bool(view_fit and not view_fit_applied),
             prompt="Use capture_viewport with view_fit=True instead of execute_python viewFit(all=True).",
         )
     except ValueError as exc:
@@ -174,13 +186,16 @@ def capture_viewport(
             off_screen=bool(off_screen),
             view_fit=bool(view_fit),
             view_fit_applied=view_fit_applied,
+            off_screen_forced_by_view_fit_failure=bool(view_fit and not view_fit_applied),
         )
     except Exception as exc:
+        _unlink_if_exists(tmp_path)
         if tmp_path is not None:
-            try:
-                os.unlink(tmp_path)
-            except OSError:
-                pass
+            prefix = tmp_path[:-4]
+            _unlink_if_exists(prefix + ".png")
+            if f0 is not None:
+                _unlink_if_exists("{}.{}.png".format(prefix, str(f0).zfill(4)))
+                _unlink_if_exists("{}.{}.png".format(prefix, f0))
         return skill_exception(
             exc,
             message="Failed to capture viewport",
