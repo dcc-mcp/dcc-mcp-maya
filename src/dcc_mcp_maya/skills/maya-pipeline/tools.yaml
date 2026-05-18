@@ -2,6 +2,7 @@ tools:
 - name: get_asset_metadata
   execution: sync
   affinity: main
+  enforce_thread_affinity: true
   annotations:
     read_only_hint: true
     idempotent_hint: true
@@ -10,11 +11,13 @@ tools:
 - name: publish_asset
   execution: sync
   affinity: main
+  enforce_thread_affinity: true
   group: scene-management
   description: Publish an asset in the current Maya scene.
 - name: set_project
   execution: sync
   affinity: main
+  enforce_thread_affinity: true
   annotations:
     idempotent_hint: true
   group: scene-management
@@ -22,5 +25,6 @@ tools:
 - name: tag_asset_metadata
   execution: sync
   affinity: main
+  enforce_thread_affinity: true
   group: scene-management
   description: Tag asset metadata in the current Maya scene.

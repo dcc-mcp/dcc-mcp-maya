@@ -79,6 +79,24 @@ def main(**kwargs):
 | 函数名 = 文件名（无扩展名）| 自动注册依赖此约定 |
 | 模块文档字符串 = MCP 工具描述 | 显示给 AI 的工具列表中 |
 
+### 工具清单线程亲和性
+
+每个 `tools.yaml` action 都必须显式声明线程契约：
+
+```yaml
+- name: create_locator_grid
+  execution: sync
+  affinity: main
+  enforce_thread_affinity: true
+```
+
+任何导入 `maya.cmds` 或接触场景状态的工具都应使用 `affinity: main`。只有
+纯 Python 或纯文件系统辅助工具，并且完全不接触 Maya 时，才使用
+`affinity: any`。`enforce_thread_affinity: true` 让上游 dispatcher 在路由
+错误时返回结构化线程亲和性错误，而不是让 worker thread 直接调用 Maya。不要再
+额外添加 `thread_affinity`；上游 core 已经把 `affinity` 作为兼容的线程亲和性
+字段处理。
+
 ## 注册技能包
 
 ### 方式 1 — 环境变量

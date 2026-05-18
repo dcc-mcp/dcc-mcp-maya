@@ -218,7 +218,7 @@ _host_dispatcher = None
 _menu_name = "DccMcpMenu"
 _restart_lock = threading.Lock()  # prevent overlapping restart calls
 _shutdown_coordinator = None  # Issue #186 — safety-net composition root
-_sidecar_handle = None  # RFC #998 — opt-in dcc-mcp-server sidecar subprocess
+_sidecar_handle = None  # RFC #998 — default-on dcc-mcp-server sidecar subprocess
 _original_autosave_enabled = None  # Maya AutoSave persistent snooze — see _disable_autosave_for_session
 _crash_reporter_suppressed_by_plugin = False
 _crash_reporter_previous_option_var = None
@@ -764,12 +764,11 @@ def _maybe_spawn_sidecar() -> None:
     cooperative Maya shutdowns so the gateway can emit structured
     ``host-died`` envelopes instead of transport-error cascades.
 
-    Activation is gated by :data:`dcc_mcp_maya.sidecar.ENV_SIDECAR_MODE`
-    (``DCC_MCP_MAYA_SIDECAR=1``) and is **opt-in by default** — every
-    existing user sees identical behaviour to today. When the env var
-    is set but the binary cannot be resolved, the failure is logged
-    structurally and the in-process server keeps running; sidecar
-    spawn never blocks plug-in init.
+    Activation is enabled by default and can be disabled with
+    :data:`dcc_mcp_maya.sidecar.ENV_SIDECAR_MODE`
+    (``DCC_MCP_MAYA_SIDECAR=0``). When the binary cannot be resolved,
+    the failure is logged structurally and the in-process server keeps
+    running; sidecar spawn never blocks plug-in init.
 
     The handle is parked on module-level state so
     :func:`_stop_blocking` can tear it down ahead of the in-process
@@ -784,12 +783,12 @@ def _maybe_spawn_sidecar() -> None:
         )
     except ImportError:
         # Package unavailable (older dcc-mcp-maya wheel) — silent no-op.
-        # Sidecar is opt-in; logging here would be noise on every Maya
-        # boot for users who do not care about the feature.
+        # The in-process server remains available when the sidecar package
+        # is missing, so plug-in startup should not grow noisy here.
         return
 
     if not is_sidecar_mode_enabled():
-        # Opt-in feature disabled. Stay silent — no script-editor
+        # Feature explicitly disabled. Stay silent — no script-editor
         # output, no debug log. Users who want signal can grep their
         # log file for "DCC_MCP_MAYA_SIDECAR" or read the plug-in
         # docstring.

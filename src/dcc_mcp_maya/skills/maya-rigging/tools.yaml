@@ -2,6 +2,7 @@ tools:
 - name: assign_deformer
   execution: sync
   affinity: main
+  enforce_thread_affinity: true
   annotations:
     idempotent_hint: true
   group: rigging
@@ -9,36 +10,43 @@ tools:
 - name: blend_shape_add_target
   execution: sync
   affinity: main
+  enforce_thread_affinity: true
   group: rigging
   description: Blend shape add target in the current Maya scene.
 - name: create_blend_shape
   execution: sync
   affinity: main
+  enforce_thread_affinity: true
   group: rigging
   description: Create a blend shape in the current Maya scene.
 - name: create_curve
   execution: sync
   affinity: main
+  enforce_thread_affinity: true
   group: rigging
   description: Create a curve in the current Maya scene.
 - name: create_ik_handle
   execution: sync
   affinity: main
+  enforce_thread_affinity: true
   group: rigging
   description: Create an IK handle in the current Maya scene.
 - name: create_joint
   execution: sync
   affinity: main
+  enforce_thread_affinity: true
   group: rigging
   description: Create a joint in the current Maya scene.
 - name: mirror_joints
   execution: sync
   affinity: main
+  enforce_thread_affinity: true
   group: rigging
   description: Mirror joints in the current Maya scene.
 - name: set_driven_key
   execution: sync
   affinity: main
+  enforce_thread_affinity: true
   annotations:
     idempotent_hint: true
   group: rigging
@@ -46,6 +54,7 @@ tools:
 - name: set_ik_fk_blend
   execution: sync
   affinity: main
+  enforce_thread_affinity: true
   annotations:
     idempotent_hint: true
   group: rigging
@@ -53,6 +62,7 @@ tools:
 - name: set_joint_limit
   execution: sync
   affinity: main
+  enforce_thread_affinity: true
   annotations:
     idempotent_hint: true
   group: rigging
@@ -60,6 +70,7 @@ tools:
 - name: set_joint_orient
   execution: sync
   affinity: main
+  enforce_thread_affinity: true
   annotations:
     idempotent_hint: true
   group: rigging
@@ -67,5 +78,6 @@ tools:
 - name: skin_cluster_bind
   execution: sync
   affinity: main
+  enforce_thread_affinity: true
   group: rigging
   description: Skin cluster bind in the current Maya scene.

@@ -43,7 +43,7 @@ mayapy -c "import dcc_mcp_maya; print(dcc_mcp_maya.__version__)"
 
 插件初始化期间，`dcc-mcp-maya` 还会关闭 Maya 旧式 MEL commandPort（`127.0.0.1:50007`）。MCP 服务器不会使用该端口，关闭它可以避免误发的 HTTP 探测触发 Maya 安全警告弹窗。如果工作室仍依赖旧式 commandPort，可在加载插件前设置 `DCC_MCP_MAYA_CLOSE_DEFAULT_COMMANDPORT=0` 选择保留。
 
-插件默认仍使用嵌入式进程内 MCP server。若需要在 Maya 旁边运行可选 Rust sidecar，请在加载插件前设置 `DCC_MCP_MAYA_SIDECAR=1`。Sidecar 模式使用 Maya 内部 Qt event-loop dispatcher，不需要打开旧式 commandPort。
+插件默认会在 Maya 旁边启动 Rust sidecar，同时保留进程内 MCP server 作为 host bridge。如需回到旧的进程内 gateway 路径，请在加载插件前设置 `DCC_MCP_MAYA_SIDECAR=0`。Sidecar 模式使用 Maya 内部 Qt event-loop dispatcher，不需要打开旧式 commandPort。
 
 ## 方式三 — mayapy bootstrap
 

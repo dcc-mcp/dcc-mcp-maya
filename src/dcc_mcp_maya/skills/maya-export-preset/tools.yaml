@@ -2,6 +2,7 @@ tools:
 - name: delete_export_preset
   execution: sync
   affinity: main
+  enforce_thread_affinity: true
   annotations:
     destructive_hint: true
     idempotent_hint: true
@@ -9,6 +10,7 @@ tools:
 - name: list_export_presets
   execution: sync
   affinity: main
+  enforce_thread_affinity: true
   annotations:
     read_only_hint: true
     idempotent_hint: true
@@ -16,8 +18,10 @@ tools:
 - name: load_export_preset
   execution: sync
   affinity: main
+  enforce_thread_affinity: true
   description: Load an export preset in the current Maya scene.
 - name: save_export_preset
   execution: sync
   affinity: main
+  enforce_thread_affinity: true
   description: Save an export preset in the current Maya scene.
