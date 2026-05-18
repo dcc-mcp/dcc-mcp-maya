@@ -2,7 +2,6 @@ tools:
 - name: export_camera
   execution: async
   affinity: main
-  enforce_thread_affinity: true
   timeout_hint_secs: 300
   annotations:
     read_only_hint: true
@@ -14,7 +13,6 @@ tools:
 - name: export_shot_alembic
   execution: async
   affinity: main
-  enforce_thread_affinity: true
   timeout_hint_secs: 300
   annotations:
     read_only_hint: true
@@ -26,7 +24,6 @@ tools:
 - name: export_shot_fbx
   execution: async
   affinity: main
-  enforce_thread_affinity: true
   timeout_hint_secs: 300
   annotations:
     read_only_hint: true
@@ -40,7 +37,6 @@ tools:
 - name: get_shot_info
   execution: sync
   affinity: main
-  enforce_thread_affinity: true
   annotations:
     read_only_hint: true
     idempotent_hint: true

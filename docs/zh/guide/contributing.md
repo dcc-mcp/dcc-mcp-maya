@@ -87,15 +87,14 @@ def main(**kwargs):
 - name: create_locator_grid
   execution: sync
   affinity: main
-  enforce_thread_affinity: true
 ```
 
 任何导入 `maya.cmds` 或接触场景状态的工具都应使用 `affinity: main`。只有
 纯 Python 或纯文件系统辅助工具，并且完全不接触 Maya 时，才使用
-`affinity: any`。`enforce_thread_affinity: true` 让上游 dispatcher 在路由
-错误时返回结构化线程亲和性错误，而不是让 worker thread 直接调用 Maya。不要再
-额外添加 `thread_affinity`；上游 core 已经把 `affinity` 作为兼容的线程亲和性
-字段处理。
+`affinity: any`。上游 core 已经把 `affinity` 作为线程亲和性契约，并在该字段
+存在时自动开启结构化线程亲和性校验。普通技能清单不要再额外添加
+`thread_affinity` 或 `enforce_thread_affinity`；显式覆盖只留给 adapter 运行时
+兼容路径使用。
 
 ## 注册技能包
 
