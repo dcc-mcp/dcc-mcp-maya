@@ -2,13 +2,11 @@ tools:
 - name: create_expression
   execution: sync
   affinity: main
-  enforce_thread_affinity: true
   group: animation
   description: Create a Maya expression in the current Maya scene.
 - name: delete_expression
   execution: sync
   affinity: main
-  enforce_thread_affinity: true
   annotations:
     destructive_hint: true
     idempotent_hint: true
@@ -17,13 +15,11 @@ tools:
 - name: edit_expression
   execution: sync
   affinity: main
-  enforce_thread_affinity: true
   group: animation
   description: Edit a Maya expression in the current Maya scene.
 - name: list_expressions
   execution: sync
   affinity: main
-  enforce_thread_affinity: true
   annotations:
     read_only_hint: true
     idempotent_hint: true

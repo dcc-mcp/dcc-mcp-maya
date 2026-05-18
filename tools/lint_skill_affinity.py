@@ -2,7 +2,9 @@
 """CI lint for ``execution``/``affinity`` in bundled ``tools.yaml`` files.
 
 Fails (exit 1) when any bundled tool is missing ``affinity`` or when an
-``execution: async`` tool is missing ``timeout_hint_secs``.  See issue #84
+``execution: async`` tool is missing ``timeout_hint_secs``.  Also rejects
+redundant per-tool ``enforce_thread_affinity`` because core now defaults
+enforcement on whenever an affinity contract is declared.  See issue #84
 for the acceptance criteria.
 
 Designed as a companion to :mod:`tools.annotate_skill_affinity` — the
@@ -53,6 +55,19 @@ def lint_file(path: Path) -> List[Tuple[str, str]]:
         elif affinity not in VALID_AFFINITY:
             problems.append(
                 ("INVALID_AFFINITY", f"{path}: tool '{name}' affinity={affinity!r} not in {sorted(VALID_AFFINITY)}")
+            )
+
+        if "thread_affinity" in tool:
+            problems.append(
+                ("DUPLICATE_AFFINITY_ALIAS", f"{path}: tool '{name}' must use affinity, not thread_affinity")
+            )
+
+        if "enforce_thread_affinity" in tool:
+            problems.append(
+                (
+                    "REDUNDANT_AFFINITY_ENFORCEMENT",
+                    f"{path}: tool '{name}' relies on core's affinity default; remove enforce_thread_affinity",
+                )
             )
 
         execution = tool.get("execution")
