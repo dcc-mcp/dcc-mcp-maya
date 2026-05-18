@@ -229,6 +229,8 @@ class TestSidecarHttpApi:
 
     def test_sidecar_mcp_initialize(self, sidecar_mcp_url):
         url, _, _, _, _ = sidecar_mcp_url
+        assert "0.0.0.0" not in url
+        assert "[::]" not in url
         init = mcp_post(
             url,
             {
