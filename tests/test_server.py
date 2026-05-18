@@ -315,11 +315,26 @@ class TestMayaMcpServerApi:
         assert created_dir is not None
         assert not created_dir.exists()
 
-    def test_affinity_compat_bundle_enables_enforcement_for_current_core(self):
+    def test_affinity_compat_bundle_skipped_when_core_defaults_enforcement(self, monkeypatch):
+        """Bundled source YAML is used directly once core owns affinity enforcement."""
+        srv_mod = _import_server()
+        monkeypatch.setattr(srv_mod, "_core_defaults_affinity_enforcement", lambda: True)
+
+        server = srv_mod.MayaMcpServer(port=0, enable_gateway_failover=False, gateway_port=0)
+        server._host_dispatcher = object()
+        try:
+            compat_dir = server._affinity_enforcement_compat_skills_dir()
+            assert compat_dir is None
+            assert server._standalone_skill_dir is None
+        finally:
+            server.stop()
+
+    def test_affinity_compat_bundle_enables_enforcement_for_older_core(self, monkeypatch):
         """Bundled source YAML stays compact while older core gets explicit enforcement."""
         import yaml
 
         srv_mod = _import_server()
+        monkeypatch.setattr(srv_mod, "_core_defaults_affinity_enforcement", lambda: False)
         server = srv_mod.MayaMcpServer(port=0, enable_gateway_failover=False, gateway_port=0)
         server._host_dispatcher = object()
         try:
