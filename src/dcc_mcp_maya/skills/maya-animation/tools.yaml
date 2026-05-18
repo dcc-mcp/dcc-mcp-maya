@@ -2,17 +2,20 @@ tools:
 - name: bake_constraints
   execution: sync
   affinity: main
+  enforce_thread_affinity: true
   group: animation
   description: Bake constraints in the current Maya scene.
 - name: bake_simulation
   description: Bake simulation / constraints to keyframes on objects
   execution: sync
   affinity: main
+  enforce_thread_affinity: true
   group: animation
 - name: delete_keyframes
   description: Delete keyframes from an object within an optional frame range
   execution: sync
   affinity: main
+  enforce_thread_affinity: true
   annotations:
     destructive_hint: true
     idempotent_hint: true
@@ -20,6 +23,7 @@ tools:
 - name: export_animation_curves
   execution: sync
   affinity: main
+  enforce_thread_affinity: true
   annotations:
     read_only_hint: true
     idempotent_hint: true
@@ -32,6 +36,7 @@ tools:
   description: Get the current frame number
   execution: sync
   affinity: main
+  enforce_thread_affinity: true
   annotations:
     read_only_hint: true
     idempotent_hint: true
@@ -39,6 +44,7 @@ tools:
 - name: get_frame_range
   execution: sync
   affinity: main
+  enforce_thread_affinity: true
   annotations:
     read_only_hint: true
     idempotent_hint: true
@@ -48,6 +54,7 @@ tools:
   description: Get all keyframe times for an object / attribute
   execution: sync
   affinity: main
+  enforce_thread_affinity: true
   annotations:
     read_only_hint: true
     idempotent_hint: true
@@ -55,6 +62,7 @@ tools:
 - name: import_animation_curves
   execution: sync
   affinity: main
+  enforce_thread_affinity: true
   group: animation
   description: >-
     Import animation curves from a file on disk into the Maya scene. Source path
@@ -63,6 +71,7 @@ tools:
 - name: list_animation_curves
   execution: sync
   affinity: main
+  enforce_thread_affinity: true
   annotations:
     read_only_hint: true
     idempotent_hint: true
@@ -71,6 +80,7 @@ tools:
 - name: query_scene_time_info
   execution: sync
   affinity: main
+  enforce_thread_affinity: true
   annotations:
     read_only_hint: true
     idempotent_hint: true
@@ -79,6 +89,7 @@ tools:
 - name: set_animation_curve_tangent
   execution: sync
   affinity: main
+  enforce_thread_affinity: true
   annotations:
     idempotent_hint: true
   group: animation
@@ -87,6 +98,7 @@ tools:
   description: Set the current frame number
   execution: sync
   affinity: main
+  enforce_thread_affinity: true
   annotations:
     idempotent_hint: true
   group: animation
@@ -94,6 +106,7 @@ tools:
   description: Set a keyframe on an object at the given time
   execution: sync
   affinity: main
+  enforce_thread_affinity: true
   annotations:
     idempotent_hint: true
   group: animation
@@ -101,6 +114,7 @@ tools:
   description: Set the playback and animation timeline range
   execution: sync
   affinity: main
+  enforce_thread_affinity: true
   annotations:
     idempotent_hint: true
   group: animation

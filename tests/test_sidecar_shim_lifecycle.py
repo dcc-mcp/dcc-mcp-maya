@@ -292,11 +292,14 @@ class TestEnvAndHelpers:
         assert is_sidecar_mode_enabled({ENV_SIDECAR_MODE: "yes"})
         assert is_sidecar_mode_enabled({ENV_SIDECAR_MODE: "on"})
 
-    def test_is_sidecar_mode_enabled_default_false(self):
-        assert not is_sidecar_mode_enabled({})
-        assert not is_sidecar_mode_enabled({ENV_SIDECAR_MODE: ""})
+    def test_is_sidecar_mode_enabled_default_true(self):
+        assert is_sidecar_mode_enabled({})
+        assert is_sidecar_mode_enabled({ENV_SIDECAR_MODE: ""})
+
+    def test_is_sidecar_mode_enabled_respects_opt_out_values(self):
         assert not is_sidecar_mode_enabled({ENV_SIDECAR_MODE: "0"})
         assert not is_sidecar_mode_enabled({ENV_SIDECAR_MODE: "false"})
+        assert not is_sidecar_mode_enabled({ENV_SIDECAR_MODE: "off"})
 
     def test_build_qtserver_uri_canonical_form(self):
         # RFC #998 Addendum B: the wire scheme is `qtserver://`. Pin

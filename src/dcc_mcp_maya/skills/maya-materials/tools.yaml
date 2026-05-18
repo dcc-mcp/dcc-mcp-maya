@@ -2,6 +2,7 @@ tools:
 - name: assign_material
   execution: sync
   affinity: main
+  enforce_thread_affinity: true
   annotations:
     idempotent_hint: true
   group: shading-lighting
@@ -9,11 +10,13 @@ tools:
 - name: create_material
   execution: sync
   affinity: main
+  enforce_thread_affinity: true
   group: shading-lighting
   description: Create a material in the current Maya scene.
 - name: get_material_connections
   execution: sync
   affinity: main
+  enforce_thread_affinity: true
   annotations:
     read_only_hint: true
     idempotent_hint: true
@@ -22,6 +25,7 @@ tools:
 - name: get_shader_assignment
   execution: sync
   affinity: main
+  enforce_thread_affinity: true
   annotations:
     read_only_hint: true
     idempotent_hint: true
@@ -30,6 +34,7 @@ tools:
 - name: list_materials
   execution: sync
   affinity: main
+  enforce_thread_affinity: true
   annotations:
     read_only_hint: true
     idempotent_hint: true
@@ -38,6 +43,7 @@ tools:
 - name: list_shading_groups
   execution: sync
   affinity: main
+  enforce_thread_affinity: true
   annotations:
     read_only_hint: true
     idempotent_hint: true
@@ -46,6 +52,7 @@ tools:
 - name: reset_to_default_material
   execution: sync
   affinity: main
+  enforce_thread_affinity: true
   annotations:
     idempotent_hint: true
   group: shading-lighting
@@ -53,6 +60,7 @@ tools:
 - name: set_material_attribute
   execution: sync
   affinity: main
+  enforce_thread_affinity: true
   annotations:
     idempotent_hint: true
   group: shading-lighting

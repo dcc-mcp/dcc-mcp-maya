@@ -44,9 +44,10 @@ The plugin starts the server automatically on load. By default it uses an OS-ass
 During plugin initialization, `dcc-mcp-maya` also closes Maya's legacy MEL commandPort on `127.0.0.1:50007`. The MCP server never uses that port, and closing it prevents accidental HTTP probes from opening Maya's security warning dialog. Studios that still depend on the legacy commandPort can opt out with `DCC_MCP_MAYA_CLOSE_DEFAULT_COMMANDPORT=0` before loading the plugin.
 
 The default plugin runtime is still the embedded in-process MCP server. To run
-the optional Rust sidecar beside Maya, set `DCC_MCP_MAYA_SIDECAR=1` before
-loading the plugin. Sidecar mode uses the in-Maya Qt event-loop dispatcher and
-does not require opening Maya's legacy commandPort.
+the Rust sidecar beside Maya by default. Set `DCC_MCP_MAYA_SIDECAR=0` before
+loading the plugin to return to the legacy in-process gateway path. Sidecar
+mode uses the in-Maya Qt event-loop dispatcher and does not require opening
+Maya's legacy commandPort.
 
 ## Method 3 — mayapy bootstrap
 

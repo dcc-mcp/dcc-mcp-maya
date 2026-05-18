@@ -5,6 +5,7 @@ tools:
     \ and are sourced with forward slashes."
   execution: sync
   affinity: main
+  enforce_thread_affinity: true
   annotations:
     destructive_hint: true
     read_only_hint: false
@@ -29,6 +30,7 @@ tools:
     \ when one fits; upload long scripts via write_module then call `import name; name.run()`."
   execution: sync
   affinity: main
+  enforce_thread_affinity: true
   annotations:
     destructive_hint: true
     read_only_hint: false
@@ -75,6 +77,7 @@ tools:
     \ saves the agent prompt budget on repeated dispatch."
   execution: sync
   affinity: main
+  enforce_thread_affinity: true
   annotations:
     destructive_hint: true
     read_only_hint: false
@@ -106,6 +109,7 @@ tools:
     \ (Maya is cooperative). affinity:any so drain works even when the pump is wedged."
   execution: sync
   affinity: main
+  enforce_thread_affinity: true
   annotations:
     read_only_hint: false
     idempotent_hint: true
@@ -137,6 +141,7 @@ tools:
   description: Get, create, or delete a Maya scriptNode.
   execution: sync
   affinity: main
+  enforce_thread_affinity: true
   annotations:
     read_only_hint: true
     idempotent_hint: true
@@ -173,6 +178,7 @@ tools:
   description: List MEL procedures without modifying the Maya scene.
   execution: sync
   affinity: main
+  enforce_thread_affinity: true
   annotations:
     read_only_hint: true
     idempotent_hint: true
@@ -181,6 +187,7 @@ tools:
   description: Introspect list module for agent-facing Maya scripting introspection.
   execution: sync
   affinity: any
+  enforce_thread_affinity: true
   annotations:
     read_only_hint: true
     idempotent_hint: true
@@ -190,6 +197,7 @@ tools:
     introspection.
   execution: sync
   affinity: any
+  enforce_thread_affinity: true
   annotations:
     read_only_hint: true
     idempotent_hint: true
@@ -199,6 +207,7 @@ tools:
     scripting introspection.
   execution: sync
   affinity: any
+  enforce_thread_affinity: true
   annotations:
     read_only_hint: true
     idempotent_hint: true
@@ -208,6 +217,7 @@ tools:
     introspection.
   execution: sync
   affinity: main
+  enforce_thread_affinity: true
   annotations:
     read_only_hint: true
   group: introspect
