@@ -73,6 +73,10 @@ Configuration
 ``DCC_MCP_MAYA_FAULTHANDLER``
     Set to ``0`` to disable Python fatal-signal traceback logging. Crash logs
     are written under ``DCC_MCP_LOG_DIR`` or the OS temp directory.
+
+``DCC_MCP_MAYA_SUPPRESS_CRASH_REPORTER``
+    Set to ``1`` to suppress Maya crash-reporter/CER dialogs for unattended
+    MCP automation sessions. Disabled by default for interactive artists.
 """
 
 # Import future modules
@@ -216,6 +220,10 @@ _restart_lock = threading.Lock()  # prevent overlapping restart calls
 _shutdown_coordinator = None  # Issue #186 — safety-net composition root
 _sidecar_handle = None  # RFC #998 — opt-in dcc-mcp-server sidecar subprocess
 _original_autosave_enabled = None  # Maya AutoSave persistent snooze — see _disable_autosave_for_session
+_crash_reporter_suppressed_by_plugin = False
+_crash_reporter_previous_option_var = None
+_crash_reporter_had_option_var = False
+_crash_reporter_env_keys_set_by_plugin = set()
 
 
 # ── standalone detection ──────────────────────────────────────────────────────
@@ -227,6 +235,82 @@ def _is_interactive() -> bool:
         return not cmds.about(batch=True)
     except Exception:
         return False
+
+
+# ── crash-reporter suppression (issue #241) ─────────────────────────────────
+
+
+_CRASH_REPORTER_ENV = "DCC_MCP_MAYA_SUPPRESS_CRASH_REPORTER"
+_CRASH_REPORTER_OPTION_VAR = "CrashReporterEnabled"
+_CRASH_REPORTER_ENV_DEFAULTS = {
+    "MAYA_DISABLE_CIP": "1",
+    "MAYA_DISABLE_CER": "1",
+    "MAYA_DISABLE_CLIC_IPM": "1",
+}
+
+
+def _env_truthy(name: str) -> bool:
+    return os.environ.get(name, "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _enable_crash_reporter_suppression_for_plugin() -> None:
+    """Opt-in suppression for Maya's Qt/CER crash reporter dialogs.
+
+    This is deliberately not the default: artists may want Maya's recovery
+    dialog in an interactive session. Automation users can opt in with
+    ``DCC_MCP_MAYA_SUPPRESS_CRASH_REPORTER=1`` to avoid unattended jobs being
+    wedged behind a modal reporter window.
+    """
+    global _crash_reporter_had_option_var
+    global _crash_reporter_previous_option_var
+    global _crash_reporter_suppressed_by_plugin
+
+    if not _env_truthy(_CRASH_REPORTER_ENV):
+        return
+    if _crash_reporter_suppressed_by_plugin:
+        return
+
+    for key, value in _CRASH_REPORTER_ENV_DEFAULTS.items():
+        if key not in os.environ:
+            os.environ[key] = value
+            _crash_reporter_env_keys_set_by_plugin.add(key)
+
+    try:
+        _crash_reporter_had_option_var = bool(cmds.optionVar(exists=_CRASH_REPORTER_OPTION_VAR))
+        if _crash_reporter_had_option_var:
+            _crash_reporter_previous_option_var = cmds.optionVar(query=_CRASH_REPORTER_OPTION_VAR)
+        cmds.optionVar(intValue=(_CRASH_REPORTER_OPTION_VAR, 0))
+        logger.info("dcc-mcp-maya: Maya crash reporter suppression enabled")
+    except Exception as exc:  # noqa: BLE001 — never block plugin load
+        logger.warning("dcc-mcp-maya: crash reporter suppression setup skipped: %s", exc)
+    _crash_reporter_suppressed_by_plugin = True
+
+
+def _disable_crash_reporter_suppression_for_plugin() -> None:
+    """Undo the opt-in crash-reporter suppression this plugin applied."""
+    global _crash_reporter_had_option_var
+    global _crash_reporter_previous_option_var
+    global _crash_reporter_suppressed_by_plugin
+
+    if not _crash_reporter_suppressed_by_plugin:
+        return
+
+    for key in list(_crash_reporter_env_keys_set_by_plugin):
+        if os.environ.get(key) == _CRASH_REPORTER_ENV_DEFAULTS[key]:
+            os.environ.pop(key, None)
+        _crash_reporter_env_keys_set_by_plugin.discard(key)
+
+    try:
+        if _crash_reporter_had_option_var:
+            cmds.optionVar(intValue=(_CRASH_REPORTER_OPTION_VAR, int(_crash_reporter_previous_option_var)))
+        else:
+            cmds.optionVar(remove=_CRASH_REPORTER_OPTION_VAR)
+    except Exception as exc:  # noqa: BLE001 — best-effort cleanup only
+        logger.debug("dcc-mcp-maya: crash reporter suppression restore skipped: %s", exc)
+
+    _crash_reporter_previous_option_var = None
+    _crash_reporter_had_option_var = False
+    _crash_reporter_suppressed_by_plugin = False
 
 
 # ── plugin API version declaration ──────────────────────────────────────────
@@ -269,6 +353,7 @@ def initializePlugin(plugin):
     """
     om.MFnPlugin(plugin, VENDOR, VERSION)
     try:
+        _enable_crash_reporter_suppression_for_plugin()
         if _is_interactive():
             _add_menu()
             _start_async()
@@ -312,6 +397,10 @@ def uninitializePlugin(plugin):
             _disable_faulthandler_for_plugin()
         except Exception as exc:  # noqa: BLE001
             logger.warning("dcc-mcp-maya faulthandler teardown error: %s", exc)
+        try:
+            _disable_crash_reporter_suppression_for_plugin()
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("dcc-mcp-maya crash reporter suppression teardown error: %s", exc)
         logger.info("dcc-mcp-maya plugin unloaded")
 
 

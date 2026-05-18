@@ -83,6 +83,69 @@ class TestPluginStartupMode:
         plugin_module._start_async.assert_not_called()
 
 
+class TestCrashReporterSuppression:
+    def test_crash_reporter_suppression_is_opt_in(self, plugin_module, monkeypatch, mock_maya_modules):
+        monkeypatch.delenv("DCC_MCP_MAYA_SUPPRESS_CRASH_REPORTER", raising=False)
+        for key in ("MAYA_DISABLE_CIP", "MAYA_DISABLE_CER", "MAYA_DISABLE_CLIC_IPM"):
+            monkeypatch.delenv(key, raising=False)
+
+        plugin_module._enable_crash_reporter_suppression_for_plugin()
+
+        mock_maya_modules.cmds.optionVar.assert_not_called()
+        assert "MAYA_DISABLE_CIP" not in os.environ
+        assert "MAYA_DISABLE_CER" not in os.environ
+        assert "MAYA_DISABLE_CLIC_IPM" not in os.environ
+
+    def test_crash_reporter_suppression_sets_option_var_and_env(self, plugin_module, monkeypatch, mock_maya_modules):
+        monkeypatch.setenv("DCC_MCP_MAYA_SUPPRESS_CRASH_REPORTER", "1")
+        for key in ("MAYA_DISABLE_CIP", "MAYA_DISABLE_CER", "MAYA_DISABLE_CLIC_IPM"):
+            monkeypatch.delenv(key, raising=False)
+
+        calls = []
+
+        def _option_var(**kwargs):
+            calls.append(kwargs)
+            if "exists" in kwargs:
+                return True
+            if "query" in kwargs:
+                return 1
+            return None
+
+        mock_maya_modules.cmds.optionVar.side_effect = _option_var
+
+        plugin_module._enable_crash_reporter_suppression_for_plugin()
+
+        assert os.environ["MAYA_DISABLE_CIP"] == "1"
+        assert os.environ["MAYA_DISABLE_CER"] == "1"
+        assert os.environ["MAYA_DISABLE_CLIC_IPM"] == "1"
+        assert {"intValue": ("CrashReporterEnabled", 0)} in calls
+
+        plugin_module._disable_crash_reporter_suppression_for_plugin()
+
+        assert {"intValue": ("CrashReporterEnabled", 1)} in calls
+        assert "MAYA_DISABLE_CIP" not in os.environ
+        assert "MAYA_DISABLE_CER" not in os.environ
+        assert "MAYA_DISABLE_CLIC_IPM" not in os.environ
+
+    def test_crash_reporter_restore_removes_missing_option_var(self, plugin_module, monkeypatch, mock_maya_modules):
+        monkeypatch.setenv("DCC_MCP_MAYA_SUPPRESS_CRASH_REPORTER", "1")
+        calls = []
+
+        def _option_var(**kwargs):
+            calls.append(kwargs)
+            if "exists" in kwargs:
+                return False
+            return None
+
+        mock_maya_modules.cmds.optionVar.side_effect = _option_var
+
+        plugin_module._enable_crash_reporter_suppression_for_plugin()
+        plugin_module._disable_crash_reporter_suppression_for_plugin()
+
+        assert {"intValue": ("CrashReporterEnabled", 0)} in calls
+        assert {"remove": "CrashReporterEnabled"} in calls
+
+
 class TestStartAsyncSchedulesFinalisation:
     """Regression: ``_start_async`` must defer the synchronous ``_start``
     path to Maya's main-thread post-boot idle moment via
