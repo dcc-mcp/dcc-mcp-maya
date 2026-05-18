@@ -10,6 +10,7 @@ import subprocess
 import sys
 import threading
 import time
+import urllib.parse
 import urllib.request
 from pathlib import Path
 from typing import Any, Callable, Dict, Iterator, Optional
@@ -135,12 +136,33 @@ def mcp_url_from_registry_entry(entry: Dict[str, Any]) -> str:
     metadata = entry.get("metadata") or {}
     url = metadata.get("mcp_url")
     if isinstance(url, str) and url:
-        return url
+        return _dialable_loopback_mcp_url(url)
     host = entry.get("host") or "127.0.0.1"
     port = entry.get("port")
     if port is not None:
-        return "http://{}:{}/mcp".format(host, port)
+        return _dialable_loopback_mcp_url("http://{}:{}/mcp".format(host, port))
     raise AssertionError("registry entry has no mcp_url: {}".format(entry))
+
+
+def _dialable_loopback_mcp_url(url: str) -> str:
+    """Return a client-dialable loopback URL for registry-advertised MCP endpoints.
+
+    Some sidecar binaries publish the bind address they listened on. Wildcard
+    addresses such as ``0.0.0.0`` or ``[::]`` are valid binds but invalid
+    destinations on macOS (``Errno 49``). Tests should connect to loopback
+    while still exercising the registry path.
+    """
+    parsed = urllib.parse.urlsplit(url)
+    host = parsed.hostname or "127.0.0.1"
+    if host in {"0.0.0.0", "::", ""}:
+        host = "127.0.0.1"
+    netloc = host
+    if ":" in host and not host.startswith("["):
+        netloc = "[{}]".format(host)
+    if parsed.port is not None:
+        netloc = "{}:{}".format(netloc, parsed.port)
+    path = parsed.path or "/mcp"
+    return urllib.parse.urlunsplit((parsed.scheme or "http", netloc, path, parsed.query, parsed.fragment))
 
 
 def _iter_registry_entries(payload: object) -> Iterator[Dict[str, Any]]:
