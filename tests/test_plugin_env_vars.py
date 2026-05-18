@@ -336,7 +336,7 @@ class TestSidecarSharesRegistryWithInProcessServer:
         monkeypatch.delenv("DCC_MCP_MAYA_SIDECAR", raising=False)
         monkeypatch.setenv("DCC_MCP_GATEWAY_PORT", "9765")
         cfg = plugin_module._resolve_config()
-        assert cfg.get("gateway_port") is None or cfg.get("gateway_port") == 0
+        assert cfg.get("gateway_port") == 0
 
     def test_sidecar_opt_out_preserves_in_process_gateway_port(self, plugin_module, monkeypatch):
         """Operators can return to the legacy in-process gateway with an explicit opt-out."""
@@ -367,6 +367,25 @@ class TestSidecarSharesRegistryWithInProcessServer:
             f"({tmp_path / 'dcc-mcp' / 'registry'}) is the wrong path and "
             f"splits the registry."
         )
+
+    def test_sidecar_banner_omits_internal_rfc_marker(self, plugin_module, monkeypatch, capsys):
+        monkeypatch.setattr(plugin_module, "_is_interactive", lambda: False)
+        handle = MagicMock(
+            binary_path="C:/tools/dcc-mcp-server.exe",
+            qt_port=53123,
+            qt_binding="PySide6",
+            host_rpc_uri="qtserver://127.0.0.1:53123",
+            maya_pid=1234,
+        )
+        handle.proc.pid = 5678
+
+        plugin_module._print_sidecar_info(handle)
+
+        output = capsys.readouterr().out
+        assert "SIDECAR ACTIVE" not in output
+        assert "RFC #998" not in output
+        assert f"dcc-mcp-maya v{plugin_module.VERSION}" in output
+        assert "PID          : 5678" in output
 
 
 class TestRestartStopsSidecar:
