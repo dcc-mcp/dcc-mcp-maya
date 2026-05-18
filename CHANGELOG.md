@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.3.1](https://github.com/loonghao/dcc-mcp-maya/compare/v0.3.0...v0.3.1) (2026-05-18)
+
+
+### Bug Fixes
+
+* harden maya small failure paths ([972a01f](https://github.com/loonghao/dcc-mcp-maya/commit/972a01fdd9a93dfad3241bbe66897cc37ff79920))
+* quiet maya ci metadata warnings ([7ee7b66](https://github.com/loonghao/dcc-mcp-maya/commit/7ee7b663847dc64aa4a3e317e5c08eb549c81303))
+
+
+### Documentation
+
+* add README status badges ([4deb7b9](https://github.com/loonghao/dcc-mcp-maya/commit/4deb7b90aa8e08bae7798f6e1ce5ce1f3ac6c1d9))
+* update architecture documentation ([d243669](https://github.com/loonghao/dcc-mcp-maya/commit/d243669a11f8677e622ddca306873327d9927852))
+
 ## [0.3.0](https://github.com/loonghao/dcc-mcp-maya/compare/v0.2.29...v0.3.0) (2026-05-17)
 
 
