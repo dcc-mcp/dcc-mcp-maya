@@ -2,13 +2,11 @@ tools:
 - name: add_attribute
   execution: sync
   affinity: main
-  enforce_thread_affinity: true
   group: attributes
   description: Add a node attribute in the current Maya scene.
 - name: delete_attribute
   execution: sync
   affinity: main
-  enforce_thread_affinity: true
   group: attributes
   annotations:
     destructive_hint: true
@@ -17,7 +15,6 @@ tools:
 - name: get_attribute
   execution: sync
   affinity: main
-  enforce_thread_affinity: true
   group: attributes
   annotations:
     read_only_hint: true
@@ -26,7 +23,6 @@ tools:
 - name: list_attributes
   execution: sync
   affinity: main
-  enforce_thread_affinity: true
   group: attributes
   annotations:
     read_only_hint: true
@@ -35,7 +31,6 @@ tools:
 - name: set_attribute
   execution: sync
   affinity: main
-  enforce_thread_affinity: true
   group: attributes
   annotations:
     idempotent_hint: true
