@@ -3,6 +3,7 @@ tools:
   description: Delete a material preset in the current Maya scene.
   execution: sync
   affinity: main
+  enforce_thread_affinity: true
   annotations:
     destructive_hint: true
     idempotent_hint: true
@@ -12,6 +13,7 @@ tools:
     without touching the Maya scene.
   execution: sync
   affinity: main
+  enforce_thread_affinity: true
   annotations:
     read_only_hint: true
     idempotent_hint: true
@@ -28,9 +30,11 @@ tools:
   description: Load a material in the current Maya scene.
   execution: sync
   affinity: main
+  enforce_thread_affinity: true
   group: shading-lighting
 - name: save_material
   description: Save a material in the current Maya scene.
   execution: sync
   affinity: main
+  enforce_thread_affinity: true
   group: shading-lighting

@@ -36,11 +36,11 @@ Qt binding) but the Maya plug-in does not use it.
 
 ## Activation
 
-Sidecar mode is **opt-in** and **does not replace** the in-process MCP
-HTTP server. Operators enable it by setting
-``DCC_MCP_MAYA_SIDECAR=1`` before launching Maya. The default plug-in
+Sidecar mode is enabled by default and does not replace the in-process
+MCP HTTP server. Operators can disable it by setting
+``DCC_MCP_MAYA_SIDECAR=0`` before launching Maya. The default plug-in
 (``dcc_mcp_maya_plugin``) reads the env var inside ``_post_start`` and
-spawns the supervisor automatically when set.
+spawns the supervisor automatically unless disabled.
 
 ## Public surface
 

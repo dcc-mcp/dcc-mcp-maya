@@ -191,6 +191,6 @@ server.stop()
 | `DCC_MCP_MAYA_ENABLE_WORKFLOWS` | `0` | 启用 core workflow tools |
 | `DCC_MCP_MAYA_READINESS_TIMEOUT_SECS` | — | readiness 消费方使用的建议超时时间 |
 | `DCC_MCP_MAYA_EXCLUDE_STUBS_FROM_TOOLS_LIST` | `0` | 从 `tools/list` 隐藏未加载 skill/group stub |
-| `DCC_MCP_MAYA_SIDECAR` | `0` | 从 Maya 插件启动可选 `dcc-mcp-server sidecar` |
+| `DCC_MCP_MAYA_SIDECAR` | `1` | 设为 `0` 可禁用 Maya 插件默认启动的 `dcc-mcp-server sidecar` |
 | `DCC_MCP_GATEWAY_PORT` | 插件模式下为 `9765` | 网关竞争端口；设为 `0` 可禁用 |
 | `DCC_MCP_REGISTRY_DIR` | 操作系统临时目录 | 用于服务发现的共享注册目录 |

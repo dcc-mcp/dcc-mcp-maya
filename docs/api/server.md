@@ -204,6 +204,6 @@ Returned by `server.start()` and `start_server()`.
 | `DCC_MCP_MAYA_ENABLE_WORKFLOWS` | `0` | Enable core workflow tools |
 | `DCC_MCP_MAYA_READINESS_TIMEOUT_SECS` | — | Advisory timeout value for readiness consumers |
 | `DCC_MCP_MAYA_EXCLUDE_STUBS_FROM_TOOLS_LIST` | `0` | Hide unloaded skill/group stubs from `tools/list` |
-| `DCC_MCP_MAYA_SIDECAR` | `0` | Start the optional `dcc-mcp-server sidecar` from the Maya plugin |
+| `DCC_MCP_MAYA_SIDECAR` | `1` | Set `0` to disable the default `dcc-mcp-server sidecar` from the Maya plugin |
 | `DCC_MCP_GATEWAY_PORT` | `9765` in plugin mode | Gateway competition port; `0` disables gateway mode |
 | `DCC_MCP_REGISTRY_DIR` | OS temp dir | Shared registry directory for service discovery |

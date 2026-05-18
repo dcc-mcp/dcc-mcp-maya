@@ -2,11 +2,13 @@ tools:
 - name: create_display_layer
   execution: sync
   affinity: main
+  enforce_thread_affinity: true
   group: scene-management
   description: Create a display layer in the current Maya scene.
 - name: delete_display_layer
   execution: sync
   affinity: main
+  enforce_thread_affinity: true
   annotations:
     destructive_hint: true
     idempotent_hint: true
@@ -15,6 +17,7 @@ tools:
 - name: list_display_layers
   execution: sync
   affinity: main
+  enforce_thread_affinity: true
   annotations:
     read_only_hint: true
     idempotent_hint: true
@@ -23,6 +26,7 @@ tools:
 - name: set_display_layer
   execution: sync
   affinity: main
+  enforce_thread_affinity: true
   annotations:
     idempotent_hint: true
   group: scene-management

@@ -2,6 +2,7 @@ tools:
 - name: apply_symmetry
   execution: sync
   affinity: main
+  enforce_thread_affinity: true
   group: node_graph
   annotations:
     idempotent_hint: true
@@ -9,11 +10,13 @@ tools:
 - name: connect_attr
   execution: sync
   affinity: main
+  enforce_thread_affinity: true
   group: node_graph
   description: Connect node attributes in the current Maya scene.
 - name: delete_history
   execution: sync
   affinity: main
+  enforce_thread_affinity: true
   group: node_graph
   annotations:
     destructive_hint: true
@@ -22,11 +25,13 @@ tools:
 - name: disconnect_attr
   execution: sync
   affinity: main
+  enforce_thread_affinity: true
   group: node_graph
   description: Disconnect node attributes in the current Maya scene.
 - name: get_dag_path
   execution: sync
   affinity: main
+  enforce_thread_affinity: true
   group: node_graph
   annotations:
     read_only_hint: true
@@ -35,6 +40,7 @@ tools:
 - name: list_connections
   execution: sync
   affinity: main
+  enforce_thread_affinity: true
   group: node_graph
   annotations:
     read_only_hint: true
@@ -43,6 +49,7 @@ tools:
 - name: list_history
   execution: sync
   affinity: main
+  enforce_thread_affinity: true
   group: node_graph
   annotations:
     read_only_hint: true
@@ -51,10 +58,12 @@ tools:
 - name: smooth_mesh
   execution: sync
   affinity: main
+  enforce_thread_affinity: true
   group: node_graph
   description: Apply node-history mesh smoothing by creating/updating construction history. Use maya-mesh-ops for polygon topology edits or mesh cleanup.
 - name: transfer_attributes
   execution: sync
   affinity: main
+  enforce_thread_affinity: true
   group: node_graph
   description: Transfer attributes on a node in the current Maya scene.

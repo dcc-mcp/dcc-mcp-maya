@@ -231,17 +231,18 @@ def test_dynamic_call_to_unloaded_skill_returns_hint(server_with_dispatcher):
 
 
 # ---------------------------------------------------------------------------
-# Test 2 — load_skill + dynamic call routes through the dispatcher
+# Test 2 — load_skill + dynamic call enforces thread affinity
 # ---------------------------------------------------------------------------
 
 
-def test_load_skill_then_dynamic_call_uses_dispatcher(server_with_dispatcher):
-    """After ``load_skill``, a dynamic tools/call must reach our dispatcher.
+def test_load_skill_then_dynamic_call_enforces_thread_affinity(server_with_dispatcher):
+    """After ``load_skill``, unsafe dynamic calls must fail before execution.
 
-    This is the #164 end-to-end proof: unloaded → load_skill → dynamic
-    call → main-affinity dispatcher run, all without an intermediate
-    ``mayapy`` subprocess.  The recording dispatcher asserts that the
-    affinity tag survives the path.
+    This is the #164 + #242 end-to-end proof: unloaded → load_skill →
+    dynamic call still resolves the loaded backend tool, and
+    ``enforce_thread_affinity`` blocks a main-affinity tool before it can
+    run on the HTTP worker when the core DeferredExecutor is absent in
+    this headless test harness.
     """
     server, handle, dispatcher = server_with_dispatcher
     mcp_url = handle.mcp_url()
@@ -263,9 +264,10 @@ def test_load_skill_then_dynamic_call_uses_dispatcher(server_with_dispatcher):
     )
     assert load_res.get("result") is not None, "load_skill failed: {}".format(load_res)
 
-    # Now call a tool from that skill.  The scripting tool is the
-    # safest choice in a headless env because it does not import maya.cmds
-    # at handler registration time.
+    # Now call a main-affinity tool from a loaded skill. In this
+    # headless test server the core runtime has no DeferredExecutor, so
+    # enforce_thread_affinity must reject the call before any Python
+    # handler can touch Maya from the HTTP worker thread.
     server.load_skill("maya-scripting")  # idempotent — handlers still fresh
     call_res = _mcp_post(
         mcp_url,
@@ -280,22 +282,12 @@ def test_load_skill_then_dynamic_call_uses_dispatcher(server_with_dispatcher):
         },
         session_id=session,
     )
-    # We do not assert on the tool's content envelope because the script
-    # may emit a no-op (we have no maya.cmds).  What we assert is that
-    # the dynamic dispatch path reached our dispatcher carrying the
-    # correct action identity.
-    assert dispatcher.calls, "no dispatcher calls recorded for dynamic skill invocation"
-    # At least one call must tag the correct action — proving the
-    # ``tool_slug`` → ``backend_tool`` mapping resolved through to the
-    # adapter dispatcher (issue #164 core contract).
-    action_hits = [
-        c
-        for c in dispatcher.calls
-        if c.get("extra", {}).get("action_name") == "maya_scripting__execute_python"
-        or c.get("request_id") == "maya_scripting__execute_python"
-    ]
-    assert action_hits, "dispatcher never saw maya_scripting__execute_python; saw {}".format(dispatcher.calls)
-    _ = call_res  # pytest sees the response was received at all
+    result = call_res.get("result") or {}
+    assert result.get("isError") is True, "expected affinity violation: {}".format(call_res)
+    text = _extract_text(result)
+    assert "THREAD_AFFINITY_VIOLATION" in text
+    assert "maya_scripting__execute_python" in text
+    assert dispatcher.calls == []
 
 
 # ---------------------------------------------------------------------------

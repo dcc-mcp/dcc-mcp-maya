@@ -24,6 +24,9 @@ from __future__ import annotations
 # Import built-in modules
 import logging
 import os
+import shutil
+import sys
+import tempfile
 import threading
 from dataclasses import dataclass
 from pathlib import Path
@@ -264,6 +267,7 @@ class MayaMcpServer(DccServerBase):
         # for direct host callables and in-process skill scripts.
         self._maya_dispatcher: Any = None
         self._host_dispatcher: Any = None
+        self._standalone_skill_dir: Optional[Path] = None
         self._execution_bridge: HostExecutionBridge
 
         # ── Runtime readiness binder (issue #184) ──────────────────────
@@ -332,18 +336,24 @@ class MayaMcpServer(DccServerBase):
         """Use the batch dispatcher automatically inside real mayapy.
 
         Plain Python and unit tests keep the historical inline path.  Real
-        mayapy exposes ``maya.cmds`` and reports ``about(batch=True)``; in
-        that environment we still need one serialized gateway into Maya APIs.
+        mayapy exposes ``maya.cmds`` but does not consistently report
+        ``about(batch=True)`` after ``maya.standalone.initialize()``. It may
+        also report Autodesk's internal ``python-bin`` as ``sys.executable``,
+        so we recognise the loaded ``maya.standalone`` module too. In that
+        environment we still need one serialized gateway into Maya APIs.
         """
         try:
             import maya.cmds as cmds  # noqa: PLC0415
         except Exception:  # noqa: BLE001
             return None
+        executable = Path(sys.executable or "").name.lower()
         try:
             is_batch = bool(cmds.about(batch=True))
         except Exception:  # noqa: BLE001
-            return None
-        if not is_batch:
+            is_batch = False
+        is_mayapy = executable in {"mayapy", "mayapy.exe"}
+        is_standalone_module_loaded = "maya.standalone" in sys.modules
+        if not (is_batch or is_mayapy or is_standalone_module_loaded):
             return None
         try:
             from dcc_mcp_maya.dispatcher import MayaStandaloneDispatcher  # noqa: PLC0415
@@ -426,6 +436,10 @@ class MayaMcpServer(DccServerBase):
                 logger.debug("[%s] resources.unbind failed: %s", self._dcc_name, exc)
 
         super().stop()
+        if self._standalone_skill_dir is not None:
+            cleanup_dir = self._standalone_skill_dir.parent
+            shutil.rmtree(cleanup_dir, ignore_errors=True)
+            self._standalone_skill_dir = None
 
     # ── Skill loading + executor wiring ────────────────────────────────
 
@@ -456,11 +470,50 @@ class MayaMcpServer(DccServerBase):
         return self
 
     def _register_core_builtin_actions(self, context: _registration.RegistrationContext) -> None:
-        super().register_builtin_actions(
-            extra_skill_paths=context.extra_skill_paths,
-            include_bundled=context.include_bundled,
-            minimal_mode=self._build_minimal_mode_config(context.minimal),
+        original_skills_dir = self._builtin_skills_dir
+        compat_skills_dir = self._standalone_affinity_compat_skills_dir()
+        if compat_skills_dir is not None:
+            self._builtin_skills_dir = compat_skills_dir
+        try:
+            super().register_builtin_actions(
+                extra_skill_paths=context.extra_skill_paths,
+                include_bundled=context.include_bundled,
+                minimal_mode=self._build_minimal_mode_config(context.minimal),
+            )
+        finally:
+            self._builtin_skills_dir = original_skills_dir
+
+    def _standalone_affinity_compat_skills_dir(self) -> Optional[Path]:
+        dispatcher = getattr(self, "_host_dispatcher", None)
+        if type(dispatcher).__name__ not in {"MayaStandaloneDispatcher", "PyStandaloneDispatcher"}:
+            return None
+        existing = getattr(self, "_standalone_skill_dir", None)
+        if existing is not None:
+            return existing
+
+        import yaml  # noqa: PLC0415
+
+        target_root = Path(tempfile.mkdtemp(prefix="dcc-mcp-maya-standalone-skills-"))
+        target = target_root / "skills"
+        shutil.copytree(_BUILTIN_SKILLS_DIR, target)
+        for tools_yaml in target.glob("*/tools.yaml"):
+            data = yaml.safe_load(tools_yaml.read_text(encoding="utf-8")) or {}
+            tools = data.get("tools")
+            if not isinstance(tools, list):
+                continue
+            changed = False
+            for tool in tools:
+                if isinstance(tool, dict) and tool.pop("enforce_thread_affinity", None) is not None:
+                    changed = True
+            if changed:
+                tools_yaml.write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8")
+        self._standalone_skill_dir = target
+        logger.info(
+            "[%s] standalone affinity compatibility enabled for skill discovery: %s",
+            self._dcc_name,
+            target,
         )
+        return target
 
     def _register_recipes_tools(self, context: _registration.RegistrationContext) -> None:
         """Register ``recipes__*`` tools so ``metadata.dcc-mcp.recipes`` files are agent-readable."""

@@ -2,7 +2,7 @@
 
 Maya plugin for the [DCC Model Context Protocol](https://github.com/loonghao/dcc-mcp-core) (MCP) ecosystem.
 
-Embeds a standards-compliant **MCP Streamable HTTP server** (2025-03-26 spec) directly inside Maya. The default path is fully in-process; plugin users can also opt into the Rust `dcc-mcp-server` sidecar when they want the HTTP runtime isolated from Maya's UI thread.
+Embeds a standards-compliant **MCP Streamable HTTP server** (2025-03-26 spec) directly inside Maya. The Maya plugin starts the Rust `dcc-mcp-server` sidecar by default so the HTTP runtime stays isolated from Maya's UI thread, while the in-process server remains available as the host bridge.
 
 [![CI](https://github.com/loonghao/dcc-mcp-maya/actions/workflows/ci.yml/badge.svg)](https://github.com/loonghao/dcc-mcp-maya/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/loonghao/dcc-mcp-maya/graph/badge.svg)](https://codecov.io/gh/loonghao/dcc-mcp-maya)
@@ -52,7 +52,7 @@ Embeds a standards-compliant **MCP Streamable HTTP server** (2025-03-26 spec) di
 └─────────────────────────────────────────────────────────┘
 ```
 
-Optional sidecar mode keeps the same public MCP surface but runs the `dcc-mcp-server sidecar` process beside Maya. It connects back through the Qt event-loop dispatcher and is gated by `DCC_MCP_MAYA_SIDECAR=1`.
+Sidecar mode keeps the same public MCP surface but runs the `dcc-mcp-server sidecar` process beside Maya by default. It connects back through the Qt event-loop dispatcher; set `DCC_MCP_MAYA_SIDECAR=0` to return to the legacy in-process gateway path.
 
 ## Installation
 
@@ -100,7 +100,7 @@ The server starts automatically when the plugin loads.
 | `DCC_MCP_MINIMAL` | `1` | `0` = full mode; `1` = minimal mode |
 | `DCC_MCP_DEFAULT_TOOLS` | _(none)_ | Comma-separated skill names to load at startup (overrides minimal default) |
 | `DCC_MCP_MAYA_EXCLUDE_STUBS_FROM_TOOLS_LIST` | `0` | `1` hides `__skill__*` / `__group__*` stubs from large `tools/list` syncs; use `dcc_capability_manifest` for discovery |
-| `DCC_MCP_MAYA_SIDECAR` | `0` | `1` starts the optional `dcc-mcp-server sidecar` process from the Maya plugin |
+| `DCC_MCP_MAYA_SIDECAR` | `1` | `0` disables the default `dcc-mcp-server sidecar` process from the Maya plugin |
 | `DCC_MCP_MAYA_FAULTHANDLER` | `1` | `0` disables Python fatal-signal traceback logging from the Maya plugin |
 | `DCC_MCP_MAYA_SUPPRESS_CRASH_REPORTER` | `0` | `1` suppresses Maya crash-reporter/CER dialogs during plugin startup for unattended automation |
 | `DCC_MCP_MAYA_DISABLE_EXECUTE_PYTHON` | `0` | `1` / `true` / `yes` / `on` — refuse `execute_python` (skills-first enforcement) |

@@ -2,6 +2,7 @@ tools:
 - name: list_poses
   execution: sync
   affinity: main
+  enforce_thread_affinity: true
   annotations:
     read_only_hint: true
     idempotent_hint: true
@@ -10,15 +11,18 @@ tools:
 - name: load_pose
   execution: sync
   affinity: main
+  enforce_thread_affinity: true
   group: animation
   description: Load a pose in the current Maya scene.
 - name: mirror_pose
   execution: sync
   affinity: main
+  enforce_thread_affinity: true
   group: animation
   description: Mirror a pose in the current Maya scene.
 - name: save_pose
   execution: sync
   affinity: main
+  enforce_thread_affinity: true
   group: animation
   description: Save a pose in the current Maya scene.

@@ -88,6 +88,24 @@ def main(**kwargs):
 | Function name = file stem | Auto-registration relies on this convention |
 | Module docstring = MCP tool description | Shown to the AI in the tool list |
 
+### Tool Manifest Thread Affinity
+
+Every `tools.yaml` action must make its thread contract explicit:
+
+```yaml
+- name: create_locator_grid
+  execution: sync
+  affinity: main
+  enforce_thread_affinity: true
+```
+
+Use `affinity: main` for anything that imports `maya.cmds` or touches scene
+state. Use `affinity: any` only for pure Python or filesystem helpers that
+never touch Maya. `enforce_thread_affinity: true` lets the upstream dispatcher
+reject mis-routed calls with a structured thread-affinity error instead of
+allowing a worker thread to touch Maya. Do not also add `thread_affinity`;
+upstream core already treats `affinity` as the compatible thread-affinity field.
+
 ## Registering Your Skill
 
 ### Option 1 — Environment variable
