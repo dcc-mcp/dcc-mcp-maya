@@ -2,19 +2,16 @@ tools:
 - name: copy_uvs
   execution: sync
   affinity: main
-  enforce_thread_affinity: true
   group: modeling
   description: Copy UVs in the current Maya scene.
 - name: create_uv_set
   execution: sync
   affinity: main
-  enforce_thread_affinity: true
   group: modeling
   description: Create a UV set in the current Maya scene.
 - name: delete_uv_set
   execution: sync
   affinity: main
-  enforce_thread_affinity: true
   annotations:
     destructive_hint: true
     idempotent_hint: true
@@ -23,7 +20,6 @@ tools:
 - name: get_uv_info
   execution: sync
   affinity: main
-  enforce_thread_affinity: true
   annotations:
     read_only_hint: true
     idempotent_hint: true
@@ -32,7 +28,6 @@ tools:
 - name: get_uv_shell_info
   execution: sync
   affinity: main
-  enforce_thread_affinity: true
   annotations:
     read_only_hint: true
     idempotent_hint: true
@@ -41,18 +36,15 @@ tools:
 - name: normalize_uvs
   execution: sync
   affinity: main
-  enforce_thread_affinity: true
   group: modeling
   description: Normalize UVs in the current Maya scene.
 - name: project_uvs
   execution: sync
   affinity: main
-  enforce_thread_affinity: true
   group: modeling
   description: Project UVs in the current Maya scene.
 - name: unfold_uvs
   execution: sync
   affinity: main
-  enforce_thread_affinity: true
   group: modeling
   description: Unfold UVs in the current Maya scene.

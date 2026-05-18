@@ -2,31 +2,26 @@ tools:
 - name: center_pivot
   execution: sync
   affinity: main
-  enforce_thread_affinity: true
   group: scene-management
   description: Center pivot in the current Maya scene.
 - name: create_locator
   execution: sync
   affinity: main
-  enforce_thread_affinity: true
   group: scene-management
   description: Create a locator in the current Maya scene.
 - name: duplicate_object
   execution: sync
   affinity: main
-  enforce_thread_affinity: true
   group: scene-management
   description: Duplicate an object in the current Maya scene.
 - name: freeze_transforms
   execution: sync
   affinity: main
-  enforce_thread_affinity: true
   group: scene-management
   description: Freeze transforms in the current Maya scene.
 - name: get_bounding_box
   execution: sync
   affinity: main
-  enforce_thread_affinity: true
   annotations:
     read_only_hint: true
     idempotent_hint: true
@@ -36,7 +31,6 @@ tools:
   description: Return a hierarchical DAG description of the current scene
   execution: sync
   affinity: main
-  enforce_thread_affinity: true
   annotations:
     read_only_hint: true
     idempotent_hint: true
@@ -46,7 +40,6 @@ tools:
     so object searches exclude shapes and animation curves.
   execution: sync
   affinity: main
-  enforce_thread_affinity: true
   group: scene-management
   annotations:
     read_only_hint: true
@@ -70,7 +63,6 @@ tools:
   description: Return the current Maya selection
   execution: sync
   affinity: main
-  enforce_thread_affinity: true
   annotations:
     read_only_hint: true
     idempotent_hint: true
@@ -79,7 +71,6 @@ tools:
   description: Return Maya version, scene path, and basic session statistics
   execution: sync
   affinity: main
-  enforce_thread_affinity: true
   annotations:
     read_only_hint: true
     idempotent_hint: true
@@ -88,7 +79,6 @@ tools:
   description: Group a list of objects under a new transform node.
   execution: sync
   affinity: main
-  enforce_thread_affinity: true
   inputSchema:
     type: object
     required:
@@ -110,7 +100,6 @@ tools:
 - name: list_cameras
   execution: sync
   affinity: main
-  enforce_thread_affinity: true
   annotations:
     read_only_hint: true
     idempotent_hint: true
@@ -122,7 +111,6 @@ tools:
     nodes.
   execution: sync
   affinity: main
-  enforce_thread_affinity: true
   annotations:
     read_only_hint: true
     idempotent_hint: true
@@ -130,14 +118,12 @@ tools:
 - name: lock_object
   execution: sync
   affinity: main
-  enforce_thread_affinity: true
   group: scene-management
   description: Lock an object in the current Maya scene.
 - name: new_scene
   description: Create a new empty Maya scene
   execution: async
   affinity: main
-  enforce_thread_affinity: true
   timeout_hint_secs: 60
   annotations:
     destructive_hint: true
@@ -158,7 +144,6 @@ tools:
   description: Open a Maya scene file from disk
   execution: async
   affinity: main
-  enforce_thread_affinity: true
   timeout_hint_secs: 300
   annotations:
     destructive_hint: true
@@ -183,7 +168,6 @@ tools:
 - name: parent_object
   execution: sync
   affinity: main
-  enforce_thread_affinity: true
   group: scene-management
   description: Parent an object in the current Maya scene.
 - name: save_scene
@@ -194,7 +178,6 @@ tools:
     maya_geometry__export_obj for interchange files.
   execution: async
   affinity: main
-  enforce_thread_affinity: true
   timeout_hint_secs: 120
   group: scene-management
   inputSchema:
@@ -212,13 +195,11 @@ tools:
 - name: select_by_type
   execution: sync
   affinity: main
-  enforce_thread_affinity: true
   group: scene-management
   description: Select by type in the current Maya scene.
 - name: set_frame_rate
   execution: sync
   affinity: main
-  enforce_thread_affinity: true
   annotations:
     idempotent_hint: true
   group: scene-management
@@ -227,14 +208,12 @@ tools:
   description: Set the active Maya selection
   execution: sync
   affinity: main
-  enforce_thread_affinity: true
   annotations:
     idempotent_hint: true
   group: scene-management
 - name: set_visibility
   execution: sync
   affinity: main
-  enforce_thread_affinity: true
   annotations:
     idempotent_hint: true
   group: scene-management
