@@ -74,7 +74,7 @@ def import_file(
                 required_plugins=required_plugins,
             )
 
-        kwargs = {"i": True}  # type: dict
+        kwargs = {"i": True, "prompt": False}  # type: dict
         if namespace:
             kwargs["namespace"] = namespace
         if merge_namespaces:

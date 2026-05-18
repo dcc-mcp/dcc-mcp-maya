@@ -30,6 +30,15 @@ def save_scene(file_path: Optional[str] = None, file_type: str = "mayaBinary") -
             return skill_error("Invalid file_type", "file_type must be mayaAscii or mayaBinary")
         if file_path:
             cmds.file(rename=file_path)
+        elif not cmds.file(query=True, sceneName=True):
+            return skill_error(
+                "Missing file_path",
+                "Pass file_path when saving an unnamed scene so Maya does not open a Save As prompt.",
+                possible_solutions=[
+                    "Pass file_path with a .ma or .mb destination.",
+                    "Save the scene interactively once before calling save_scene without file_path.",
+                ],
+            )
         saved = cmds.file(save=True, type=file_type)
         return skill_success(
             f"Scene saved to {saved}",
