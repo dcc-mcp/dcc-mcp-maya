@@ -100,7 +100,7 @@ from dcc_mcp_maya.server import MayaMcpServer
 MayaMcpServer(
     port: int = 8765,
     server_name: str = "maya-mcp",
-    server_version: str = "0.3.2",  # x-release-please-version
+    server_version: str = "0.3.3",  # x-release-please-version
     gateway_port: Optional[int] = None,
     registry_dir: Optional[str] = None,
     dcc_version: Optional[str] = None,
