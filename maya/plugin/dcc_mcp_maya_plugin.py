@@ -436,7 +436,7 @@ def _resolve_config():
     out = {
         "port": port,
         "server_name": server_name,
-        "gateway_port": gateway_port if gateway_port > 0 else None,
+        "gateway_port": gateway_port if gateway_port > 0 else 0,
         "registry_dir": registry_dir,
         "dcc_version": dcc_version,
     }
@@ -841,7 +841,7 @@ def _print_sidecar_info(handle) -> None:  # noqa: ANN001
     border = "=" * 60
     lines = [
         border,
-        f"  dcc-mcp-maya v{VERSION}  |  SIDECAR ACTIVE (RFC #998)",
+        f"  dcc-mcp-maya v{VERSION}",
         border,
         f"  Binary       : {handle.binary_path}",
         f"  PID          : {handle.proc.pid}",
