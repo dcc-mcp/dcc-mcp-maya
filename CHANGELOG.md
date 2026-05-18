@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.3.3](https://github.com/loonghao/dcc-mcp-maya/compare/v0.3.2...v0.3.3) (2026-05-18)
+
+
+### Features
+
+* wire maya sidecar remote gateway ([3c377d5](https://github.com/loonghao/dcc-mcp-maya/commit/3c377d5ceac189f29338814a4d23b8b9e87695f5))
+
+
+### Bug Fixes
+
+* disable in-process gateway for maya sidecar ([59693dd](https://github.com/loonghao/dcc-mcp-maya/commit/59693dd28c1e2bd5ac18799fc00775cce0d11d00))
+* harden maya file prompt paths ([6f1dc4f](https://github.com/loonghao/dcc-mcp-maya/commit/6f1dc4fc399c531cf8036a50f0f1fdcfa38bc9ff))
+
 ## [0.3.2](https://github.com/loonghao/dcc-mcp-maya/compare/v0.3.1...v0.3.2) (2026-05-18)
 
 
