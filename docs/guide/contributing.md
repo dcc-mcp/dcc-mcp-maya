@@ -96,15 +96,15 @@ Every `tools.yaml` action must make its thread contract explicit:
 - name: create_locator_grid
   execution: sync
   affinity: main
-  enforce_thread_affinity: true
 ```
 
 Use `affinity: main` for anything that imports `maya.cmds` or touches scene
 state. Use `affinity: any` only for pure Python or filesystem helpers that
-never touch Maya. `enforce_thread_affinity: true` lets the upstream dispatcher
-reject mis-routed calls with a structured thread-affinity error instead of
-allowing a worker thread to touch Maya. Do not also add `thread_affinity`;
-upstream core already treats `affinity` as the compatible thread-affinity field.
+never touch Maya. Upstream core treats `affinity` as the thread-affinity
+contract and enables structured thread-affinity enforcement automatically when
+the field is present. Do not also add `thread_affinity` or
+`enforce_thread_affinity` in normal skill manifests; explicit enforcement
+overrides are reserved for adapter runtime compatibility shims.
 
 ## Registering Your Skill
 
