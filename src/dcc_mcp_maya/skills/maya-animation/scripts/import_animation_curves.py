@@ -44,6 +44,7 @@ def import_animation_curves(
             "ignoreVersion": True,
             "mergeNamespacesOnClash": merge,
             "force": True,
+            "prompt": False,
         }  # type: Dict
 
         cmds.file(file_path, **import_kwargs)
