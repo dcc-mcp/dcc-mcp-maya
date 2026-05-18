@@ -34,6 +34,14 @@ def _read_nonempty_png(path: str) -> bytes:
     return img_bytes
 
 
+def _unlink_if_exists(path: Optional[str]) -> None:
+    if path and os.path.exists(path):
+        try:
+            os.unlink(path)
+        except OSError:
+            pass
+
+
 def playblast(
     width: int = 1920,
     height: int = 1080,
@@ -56,6 +64,8 @@ def playblast(
         ``context.frame``.
     """
 
+    tmp_base: Optional[str] = None
+    f0: Optional[int] = None
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
@@ -102,7 +112,10 @@ def playblast(
             )
 
         img_bytes = _read_nonempty_png(img_path)
-        os.unlink(img_path)
+        _unlink_if_exists(img_path)
+        tmp_png = "{}.png".format(tmp_base)
+        if tmp_png != img_path:
+            _unlink_if_exists(tmp_png)
 
         img_b64 = base64.b64encode(img_bytes).decode("ascii")
 
@@ -117,11 +130,12 @@ def playblast(
     except ValueError as exc:
         if str(exc) != "EMPTY_PLAYBLAST":
             raise
-        try:
-            if img_path and os.path.exists(img_path):
-                os.unlink(img_path)
-        except OSError:
-            pass
+        _unlink_if_exists(img_path)
+        if tmp_base is not None:
+            _unlink_if_exists("{}.png".format(tmp_base))
+            if f0 is not None:
+                _unlink_if_exists("{}.{:04d}.png".format(tmp_base, f0))
+                _unlink_if_exists("{}.{}.png".format(tmp_base, f0))
         return skill_error(
             "Playblast produced an empty image",
             "Maya playblast wrote a 0-byte PNG",
@@ -137,6 +151,11 @@ def playblast(
     except ImportError:
         return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
+        if tmp_base is not None:
+            _unlink_if_exists("{}.png".format(tmp_base))
+            if f0 is not None:
+                _unlink_if_exists("{}.{:04d}.png".format(tmp_base, f0))
+                _unlink_if_exists("{}.{}.png".format(tmp_base, f0))
         return skill_exception(exc, message="Playblast failed")
 
 
