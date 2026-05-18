@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.3.2](https://github.com/loonghao/dcc-mcp-maya/compare/v0.3.1...v0.3.2) (2026-05-18)
+
+
+### Bug Fixes
+
+* enforce maya affinity and default sidecar ([4caaac8](https://github.com/loonghao/dcc-mcp-maya/commit/4caaac86b7940a6e81d0b2cc8933c78ff6642f75))
+* optimize maya affinity compatibility ([fc2e574](https://github.com/loonghao/dcc-mcp-maya/commit/fc2e574482c9b65362492d622273363d227f204c))
+* simplify maya affinity manifests ([5b7c78f](https://github.com/loonghao/dcc-mcp-maya/commit/5b7c78f7043170de1f15c416a2f9aa6ce7dce17f))
+* suppress Maya crash reporter when opted in ([e91cbb4](https://github.com/loonghao/dcc-mcp-maya/commit/e91cbb47d480d597d7b6385124f3beec8483c3d2))
+
 ## [0.3.1](https://github.com/loonghao/dcc-mcp-maya/compare/v0.3.0...v0.3.1) (2026-05-18)
 
 
