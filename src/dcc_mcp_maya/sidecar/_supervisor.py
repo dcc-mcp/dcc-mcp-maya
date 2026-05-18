@@ -63,11 +63,16 @@ from dcc_mcp_maya.sidecar._resolver import (
 )
 
 __all__ = [
+    "DEFAULT_GATEWAY_REMOTE_HOST",
+    "DEFAULT_GATEWAY_REMOTE_PORT",
+    "ENV_GATEWAY_REMOTE_HOST",
+    "ENV_GATEWAY_REMOTE_PORT",
     "ENV_SIDECAR_MODE",
     "SidecarHandle",
     "SidecarSpawnError",
     "build_qtserver_uri",
     "is_sidecar_mode_enabled",
+    "resolve_gateway_remote_options",
     "start_sidecar",
     "stop_sidecar",
 ]
@@ -75,6 +80,10 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 ENV_SIDECAR_MODE = "DCC_MCP_MAYA_SIDECAR"
+ENV_GATEWAY_REMOTE_HOST = "DCC_MCP_GATEWAY_REMOTE_HOST"
+ENV_GATEWAY_REMOTE_PORT = "DCC_MCP_GATEWAY_REMOTE_PORT"
+DEFAULT_GATEWAY_REMOTE_HOST = "0.0.0.0"
+DEFAULT_GATEWAY_REMOTE_PORT = 59765
 _TRUTHY_VALUES = frozenset({"1", "true", "yes", "on"})
 _FALSEY_VALUES = frozenset({"0", "false", "no", "off"})
 
@@ -158,6 +167,30 @@ def is_sidecar_mode_enabled(env: Optional[dict] = None) -> bool:
     # Unknown values preserve the default-on behaviour; only explicit
     # falsey tokens opt out.
     return True
+
+
+def resolve_gateway_remote_options(env: Optional[dict] = None) -> tuple[str, int]:
+    """Resolve LAN gateway listener options for the sidecar process.
+
+    The elected gateway still competes on the local loopback port
+    (``DCC_MCP_GATEWAY_PORT``, default 9765).  Newer ``dcc-mcp-server``
+    sidecars can additionally bind a LAN-facing listener for company
+    network clients; older binaries simply ignore these env vars.
+    """
+
+    source = os.environ if env is None else env
+    host = str(source.get(ENV_GATEWAY_REMOTE_HOST, DEFAULT_GATEWAY_REMOTE_HOST)).strip()
+    if not host:
+        host = DEFAULT_GATEWAY_REMOTE_HOST
+
+    raw_port = str(source.get(ENV_GATEWAY_REMOTE_PORT, str(DEFAULT_GATEWAY_REMOTE_PORT))).strip()
+    try:
+        port = int(raw_port)
+    except ValueError:
+        port = DEFAULT_GATEWAY_REMOTE_PORT
+    if port < 0:
+        port = DEFAULT_GATEWAY_REMOTE_PORT
+    return host, port
 
 
 def start_sidecar(
@@ -271,6 +304,9 @@ def start_sidecar(
     spawn_env = os.environ.copy()
     if extra_env:
         spawn_env.update(extra_env)
+    gateway_remote_host, gateway_remote_port = resolve_gateway_remote_options(spawn_env)
+    spawn_env[ENV_GATEWAY_REMOTE_HOST] = gateway_remote_host
+    spawn_env[ENV_GATEWAY_REMOTE_PORT] = str(gateway_remote_port)
 
     logger.info(
         "dcc-mcp-maya: spawning sidecar %s (qt_port=%d, watch_pid=%d, qt_binding=%s)",
