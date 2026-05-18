@@ -370,6 +370,9 @@ class TestSidecarSharesRegistryWithInProcessServer:
 
     def test_sidecar_banner_omits_internal_rfc_marker(self, plugin_module, monkeypatch, capsys):
         monkeypatch.setattr(plugin_module, "_is_interactive", lambda: False)
+        monkeypatch.setenv("DCC_MCP_GATEWAY_PORT", "9765")
+        monkeypatch.setenv("DCC_MCP_GATEWAY_REMOTE_PORT", "59765")
+        monkeypatch.setattr(plugin_module, "_gateway_remote_display_host", lambda _host: "192.168.1.20")
         handle = MagicMock(
             binary_path="C:/tools/dcc-mcp-server.exe",
             qt_port=53123,
@@ -386,6 +389,19 @@ class TestSidecarSharesRegistryWithInProcessServer:
         assert "RFC #998" not in output
         assert f"dcc-mcp-maya v{plugin_module.VERSION}" in output
         assert "PID          : 5678" in output
+        assert "Gateway local: http://127.0.0.1:9765/mcp  (if elected)" in output
+        assert "Gateway LAN  : http://192.168.1.20:59765/mcp  (if elected)" in output
+
+    def test_sidecar_remote_gateway_options_default_and_disable(self, monkeypatch):
+        from dcc_mcp_maya.sidecar import resolve_gateway_remote_options
+
+        monkeypatch.delenv("DCC_MCP_GATEWAY_REMOTE_HOST", raising=False)
+        monkeypatch.delenv("DCC_MCP_GATEWAY_REMOTE_PORT", raising=False)
+        assert resolve_gateway_remote_options() == ("0.0.0.0", 59765)
+
+        monkeypatch.setenv("DCC_MCP_GATEWAY_REMOTE_HOST", "192.168.2.10")
+        monkeypatch.setenv("DCC_MCP_GATEWAY_REMOTE_PORT", "0")
+        assert resolve_gateway_remote_options() == ("192.168.2.10", 0)
 
 
 class TestRestartStopsSidecar:
