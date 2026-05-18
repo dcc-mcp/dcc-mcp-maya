@@ -68,44 +68,6 @@ DEFAULT_SERVER_VERSION = __version__
 
 #: Built-in skills directory shipped with this package.
 _BUILTIN_SKILLS_DIR = Path(__file__).resolve().parent / "skills"
-_CORE_AFFINITY_DEFAULT_ENFORCEMENT: Optional[bool] = None
-
-
-def _core_defaults_affinity_enforcement() -> bool:
-    """Return true when core enforces explicit affinity declarations by default."""
-    global _CORE_AFFINITY_DEFAULT_ENFORCEMENT
-    if _CORE_AFFINITY_DEFAULT_ENFORCEMENT is not None:
-        return _CORE_AFFINITY_DEFAULT_ENFORCEMENT
-
-    try:
-        from dcc_mcp_core import parse_skill_md  # noqa: PLC0415
-
-        with tempfile.TemporaryDirectory(prefix="dcc-mcp-maya-affinity-probe-") as root:
-            skill_dir = Path(root) / "probe"
-            skill_dir.mkdir()
-            (skill_dir / "SKILL.md").write_text(
-                "---\n"
-                "name: affinity-probe\n"
-                "description: affinity probe\n"
-                "metadata:\n"
-                "  dcc-mcp:\n"
-                "    tools: tools.yaml\n"
-                "---\n"
-                "# Affinity probe\n",
-                encoding="utf-8",
-            )
-            (skill_dir / "tools.yaml").write_text(
-                "tools:\n- name: probe\n  execution: sync\n  affinity: main\n",
-                encoding="utf-8",
-            )
-            metadata = parse_skill_md(str(skill_dir))
-            tools = getattr(metadata, "tools", None) or []
-            _CORE_AFFINITY_DEFAULT_ENFORCEMENT = bool(tools and getattr(tools[0], "enforce_thread_affinity", False))
-    except Exception as exc:  # noqa: BLE001
-        logger.debug("[maya] core affinity-default probe failed: %s", exc)
-        _CORE_AFFINITY_DEFAULT_ENFORCEMENT = False
-
-    return _CORE_AFFINITY_DEFAULT_ENFORCEMENT
 
 
 def _logger_has_closed_stream(target_logger: logging.Logger) -> bool:
@@ -524,7 +486,7 @@ class MayaMcpServer(DccServerBase):
     def _affinity_enforcement_compat_skills_dir(self) -> Optional[Path]:
         dispatcher = getattr(self, "_host_dispatcher", None)
         standalone_mode = type(dispatcher).__name__ in {"MayaStandaloneDispatcher", "PyStandaloneDispatcher"}
-        if not standalone_mode and _core_defaults_affinity_enforcement():
+        if not standalone_mode:
             return None
 
         existing = getattr(self, "_standalone_skill_dir", None)

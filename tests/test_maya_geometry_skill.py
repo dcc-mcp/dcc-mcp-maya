@@ -40,6 +40,20 @@ def test_import_file_loads_required_plugin_before_import(tmp_path):
     assert result["context"]["loaded_plugins"] == ["AbcImport"]
 
 
+def test_import_file_disables_maya_import_prompts(tmp_path):
+    path = tmp_path / "scene.ma"
+    path.write_text("// maya ascii")
+    cmds = MagicMock()
+    cmds.ls.return_value = ["pCube1"]
+
+    result = load_and_call("maya-geometry/scripts/import_file.py", cmds, "main", file_path=str(path))
+
+    assert result["success"] is True, result
+    _args, kwargs = cmds.file.call_args
+    assert kwargs["i"] is True
+    assert kwargs["prompt"] is False
+
+
 def test_import_file_skips_plugin_load_for_native_maya_file(tmp_path):
     path = tmp_path / "scene.ma"
     path.write_text("// maya ascii")
@@ -180,6 +194,29 @@ def test_import_fbx_returns_new_node_names(tmp_path):
     assert ctx["namespace"] == "ns"
     cmds.loadPlugin.assert_not_called()  # plugin already loaded
     cmds.file.assert_called_once()
+
+
+def test_import_fbx_disables_maya_import_prompts(tmp_path):
+    fbx_path = tmp_path / "in.fbx"
+    fbx_path.write_bytes(b"FBX-bytes")
+    cmds = MagicMock()
+    mel = MagicMock()
+    cmds.pluginInfo.return_value = True
+    cmds.ls.side_effect = [[], ["|imported_grp"]]
+    cmds.objectType.return_value = "transform"
+
+    result = load_and_call_with_mel(
+        "maya-geometry/scripts/import_fbx.py",
+        cmds,
+        mel,
+        "main",
+        path=str(fbx_path),
+    )
+
+    assert result["success"] is True, result
+    _args, kwargs = cmds.file.call_args
+    assert kwargs["i"] is True
+    assert kwargs["prompt"] is False
 
 
 def test_import_fbx_rejects_missing_path(tmp_path):
