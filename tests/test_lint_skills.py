@@ -442,20 +442,20 @@ class TestBundledToolsYamlContract:
         owners = [skill for skill, _path, tool in self._bundled_tools() if tool.get("name") == "create_sphere"]
         assert owners == ["maya-primitives"]
 
-    def test_affinity_declarations_enable_thread_affinity_enforcement(self):
-        missing = []
+    def test_affinity_declarations_use_core_default_enforcement(self):
+        redundant_enforcement = []
         duplicate_aliases = []
         for skill, _path, tool in self._bundled_tools():
             affinity = tool.get("affinity")
             if affinity not in {"main", "any"}:
                 continue
             label = "{}:{}".format(skill, tool.get("name"))
-            if tool.get("enforce_thread_affinity") is not True:
-                missing.append(label)
+            if "enforce_thread_affinity" in tool:
+                redundant_enforcement.append(label)
             if "thread_affinity" in tool:
                 duplicate_aliases.append(label)
 
-        assert missing == []
+        assert redundant_enforcement == []
         assert duplicate_aliases == []
 
 

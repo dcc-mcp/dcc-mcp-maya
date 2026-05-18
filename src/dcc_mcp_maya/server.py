@@ -471,7 +471,7 @@ class MayaMcpServer(DccServerBase):
 
     def _register_core_builtin_actions(self, context: _registration.RegistrationContext) -> None:
         original_skills_dir = self._builtin_skills_dir
-        compat_skills_dir = self._standalone_affinity_compat_skills_dir()
+        compat_skills_dir = self._affinity_enforcement_compat_skills_dir()
         if compat_skills_dir is not None:
             self._builtin_skills_dir = compat_skills_dir
         try:
@@ -483,10 +483,9 @@ class MayaMcpServer(DccServerBase):
         finally:
             self._builtin_skills_dir = original_skills_dir
 
-    def _standalone_affinity_compat_skills_dir(self) -> Optional[Path]:
+    def _affinity_enforcement_compat_skills_dir(self) -> Optional[Path]:
         dispatcher = getattr(self, "_host_dispatcher", None)
-        if type(dispatcher).__name__ not in {"MayaStandaloneDispatcher", "PyStandaloneDispatcher"}:
-            return None
+        standalone_mode = type(dispatcher).__name__ in {"MayaStandaloneDispatcher", "PyStandaloneDispatcher"}
         existing = getattr(self, "_standalone_skill_dir", None)
         if existing is not None:
             return existing
@@ -503,14 +502,19 @@ class MayaMcpServer(DccServerBase):
                 continue
             changed = False
             for tool in tools:
-                if isinstance(tool, dict) and tool.pop("enforce_thread_affinity", None) is not None:
+                if not isinstance(tool, dict):
+                    continue
+                desired = False if standalone_mode else True
+                if tool.get("affinity") in {"main", "any"} and tool.get("enforce_thread_affinity") is not desired:
+                    tool["enforce_thread_affinity"] = desired
                     changed = True
             if changed:
                 tools_yaml.write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8")
         self._standalone_skill_dir = target
         logger.info(
-            "[%s] standalone affinity compatibility enabled for skill discovery: %s",
+            "[%s] affinity compatibility enabled for skill discovery (standalone=%s): %s",
             self._dcc_name,
+            standalone_mode,
             target,
         )
         return target

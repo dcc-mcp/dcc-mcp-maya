@@ -42,6 +42,20 @@ def test_every_tool_declares_affinity_and_execution():
     assert not missing, "Tools missing affinity/execution:\n  " + "\n  ".join(missing)
 
 
+def test_every_tool_uses_core_default_affinity_enforcement():
+    """Bundled tools rely on core's affinity-declared enforcement default."""
+    redundant: list[str] = []
+    for path in _tools_yaml_paths():
+        data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+        for tool in data.get("tools", []) or []:
+            name = tool.get("name", "<unnamed>")
+            if "enforce_thread_affinity" in tool:
+                redundant.append(f"{path.parent.name}:{name} (redundant enforce_thread_affinity)")
+            if "thread_affinity" in tool:
+                redundant.append(f"{path.parent.name}:{name} (duplicate thread_affinity alias)")
+    assert not redundant, "Tools should rely on core affinity defaults:\n  " + "\n  ".join(redundant)
+
+
 def test_async_tools_have_timeout_hint():
     """Every async tool must declare a positive ``timeout_hint_secs``."""
     bad: list[str] = []
@@ -114,6 +128,28 @@ def test_lint_script_rejects_async_without_timeout(tmp_path: Path):
     )
     assert result.returncode == 1
     assert "MISSING_TIMEOUT_HINT" in result.stdout
+
+
+def test_lint_script_rejects_redundant_enforcement(tmp_path: Path):
+    """Core derives enforcement from ``affinity``; manifests should stay compact."""
+    bad_skill = tmp_path / "bad-skill"
+    bad_skill.mkdir()
+    (bad_skill / "tools.yaml").write_text(
+        "tools:\n"
+        "- name: create_locator\n"
+        "  execution: sync\n"
+        "  affinity: main\n"
+        "  enforce_thread_affinity: true\n",
+        encoding="utf-8",
+    )
+
+    result = subprocess.run(
+        [sys.executable, str(LINT_SCRIPT), "--skills-root", str(tmp_path)],
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 1
+    assert "REDUNDANT_AFFINITY_ENFORCEMENT" in result.stdout
 
 
 @pytest.mark.skipif(not ANNOTATE_SCRIPT.exists(), reason="annotator script not present")

@@ -295,7 +295,7 @@ class TestMayaMcpServerApi:
         assert dispatcher is not None
         assert type(dispatcher).__name__ == "MayaStandaloneDispatcher"
 
-    def test_standalone_affinity_compat_bundle_removes_enforcement(self):
+    def test_standalone_affinity_compat_bundle_disables_enforcement(self):
         """mayapy direct HTTP uses a manifest copy without core enforcement."""
         import yaml
 
@@ -303,11 +303,31 @@ class TestMayaMcpServerApi:
         server = srv_mod.MayaMcpServer(port=0, enable_gateway_failover=False, gateway_port=0)
         server._host_dispatcher = type("MayaStandaloneDispatcher", (), {})()
         try:
-            compat_dir = server._standalone_affinity_compat_skills_dir()
+            compat_dir = server._affinity_enforcement_compat_skills_dir()
             assert compat_dir is not None
             tools_yaml = compat_dir / "maya-primitives" / "tools.yaml"
             data = yaml.safe_load(tools_yaml.read_text(encoding="utf-8")) or {}
-            assert all("enforce_thread_affinity" not in tool for tool in data["tools"])
+            assert all(tool.get("enforce_thread_affinity") is False for tool in data["tools"])
+        finally:
+            created_dir = server._standalone_skill_dir
+            server.stop()
+
+        assert created_dir is not None
+        assert not created_dir.exists()
+
+    def test_affinity_compat_bundle_enables_enforcement_for_current_core(self):
+        """Bundled source YAML stays compact while older core gets explicit enforcement."""
+        import yaml
+
+        srv_mod = _import_server()
+        server = srv_mod.MayaMcpServer(port=0, enable_gateway_failover=False, gateway_port=0)
+        server._host_dispatcher = object()
+        try:
+            compat_dir = server._affinity_enforcement_compat_skills_dir()
+            assert compat_dir is not None
+            tools_yaml = compat_dir / "maya-primitives" / "tools.yaml"
+            data = yaml.safe_load(tools_yaml.read_text(encoding="utf-8")) or {}
+            assert all(tool.get("enforce_thread_affinity") is True for tool in data["tools"])
         finally:
             created_dir = server._standalone_skill_dir
             server.stop()
