@@ -315,10 +315,9 @@ class TestMayaMcpServerApi:
         assert created_dir is not None
         assert not created_dir.exists()
 
-    def test_affinity_compat_bundle_skipped_when_core_defaults_enforcement(self, monkeypatch):
+    def test_affinity_compat_bundle_skipped_for_host_dispatcher(self):
         """Bundled source YAML is used directly once core owns affinity enforcement."""
         srv_mod = _import_server()
-        monkeypatch.setattr(srv_mod, "_core_defaults_affinity_enforcement", lambda: True)
 
         server = srv_mod.MayaMcpServer(port=0, enable_gateway_failover=False, gateway_port=0)
         server._host_dispatcher = object()
@@ -328,27 +327,6 @@ class TestMayaMcpServerApi:
             assert server._standalone_skill_dir is None
         finally:
             server.stop()
-
-    def test_affinity_compat_bundle_enables_enforcement_for_older_core(self, monkeypatch):
-        """Bundled source YAML stays compact while older core gets explicit enforcement."""
-        import yaml
-
-        srv_mod = _import_server()
-        monkeypatch.setattr(srv_mod, "_core_defaults_affinity_enforcement", lambda: False)
-        server = srv_mod.MayaMcpServer(port=0, enable_gateway_failover=False, gateway_port=0)
-        server._host_dispatcher = object()
-        try:
-            compat_dir = server._affinity_enforcement_compat_skills_dir()
-            assert compat_dir is not None
-            tools_yaml = compat_dir / "maya-primitives" / "tools.yaml"
-            data = yaml.safe_load(tools_yaml.read_text(encoding="utf-8")) or {}
-            assert all(tool.get("enforce_thread_affinity") is True for tool in data["tools"])
-        finally:
-            created_dir = server._standalone_skill_dir
-            server.stop()
-
-        assert created_dir is not None
-        assert not created_dir.exists()
 
 
 # ── Issue #138: strict skill scan opt-in ──────────────────────────────────────
