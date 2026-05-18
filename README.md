@@ -54,6 +54,8 @@ Embeds a standards-compliant **MCP Streamable HTTP server** (2025-03-26 spec) di
 
 Sidecar mode keeps the same public MCP surface but runs the `dcc-mcp-server sidecar` process beside Maya by default. It connects back through the Qt event-loop dispatcher; set `DCC_MCP_MAYA_SIDECAR=0` to return to the legacy in-process gateway path.
 
+By default, local MCP clients connect to `http://127.0.0.1:9765/mcp`. Newer sidecar binaries also expose a LAN listener from the elected gateway at `http://<this-machine-lan-ip>:59765/mcp`; gateway election still happens only on the local `127.0.0.1:9765` port, so multiple Maya sessions do not race to publish separate remote entrypoints. If the LAN port is occupied, the sidecar degrades to the local gateway without blocking Maya startup.
+
 ## Installation
 
 ### Into Maya's Python
@@ -101,6 +103,8 @@ The server starts automatically when the plugin loads.
 | `DCC_MCP_DEFAULT_TOOLS` | _(none)_ | Comma-separated skill names to load at startup (overrides minimal default) |
 | `DCC_MCP_MAYA_EXCLUDE_STUBS_FROM_TOOLS_LIST` | `0` | `1` hides `__skill__*` / `__group__*` stubs from large `tools/list` syncs; use `dcc_capability_manifest` for discovery |
 | `DCC_MCP_MAYA_SIDECAR` | `1` | `0` disables the default `dcc-mcp-server sidecar` process from the Maya plugin |
+| `DCC_MCP_GATEWAY_REMOTE_PORT` | `59765` | LAN gateway listener port exposed by the elected sidecar gateway; `0` disables the remote listener |
+| `DCC_MCP_GATEWAY_REMOTE_HOST` | `0.0.0.0` | Bind address for the LAN gateway listener |
 | `DCC_MCP_MAYA_FAULTHANDLER` | `1` | `0` disables Python fatal-signal traceback logging from the Maya plugin |
 | `DCC_MCP_MAYA_SUPPRESS_CRASH_REPORTER` | `0` | `1` suppresses Maya crash-reporter/CER dialogs during plugin startup for unattended automation |
 | `DCC_MCP_MAYA_DISABLE_EXECUTE_PYTHON` | `0` | `1` / `true` / `yes` / `on` — refuse `execute_python` (skills-first enforcement) |
