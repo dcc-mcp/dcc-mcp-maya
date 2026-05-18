@@ -206,4 +206,6 @@ Returned by `server.start()` and `start_server()`.
 | `DCC_MCP_MAYA_EXCLUDE_STUBS_FROM_TOOLS_LIST` | `0` | Hide unloaded skill/group stubs from `tools/list` |
 | `DCC_MCP_MAYA_SIDECAR` | `1` | Set `0` to disable the default `dcc-mcp-server sidecar` from the Maya plugin |
 | `DCC_MCP_GATEWAY_PORT` | `9765` in plugin mode | Gateway competition port; `0` disables gateway mode |
+| `DCC_MCP_GATEWAY_REMOTE_PORT` | `59765` in sidecar mode | LAN gateway listener port opened by the elected sidecar gateway; `0` disables remote access |
+| `DCC_MCP_GATEWAY_REMOTE_HOST` | `0.0.0.0` | Bind address for the LAN gateway listener |
 | `DCC_MCP_REGISTRY_DIR` | OS temp dir | Shared registry directory for service discovery |
