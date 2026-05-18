@@ -8,6 +8,7 @@ import io
 import json
 import logging
 import sys
+import types
 import urllib.request
 from unittest.mock import MagicMock, patch
 
@@ -268,6 +269,51 @@ class TestMayaMcpServerApi:
         assert mock_register.call_count == 1
         assert server._execution_bridge.dispatcher is None
         assert server._maya_dispatcher is None
+
+    def test_default_standalone_dispatcher_detects_mayapy_executable(self, monkeypatch):
+        """mayapy may report ``about(batch=True) == False`` after standalone init."""
+        srv_mod = _import_server()
+        maya_mod = types.ModuleType("maya")
+        maya_mod.__path__ = []
+        cmds_mod = types.ModuleType("maya.cmds")
+        standalone_mod = types.ModuleType("maya.standalone")
+        cmds_mod.about = MagicMock(return_value=False)
+        maya_mod.cmds = cmds_mod
+        maya_mod.standalone = standalone_mod
+
+        monkeypatch.setattr(sys, "executable", "/usr/autodesk/maya2022/bin/python-bin")
+        with patch.dict(
+            sys.modules,
+            {
+                "maya": maya_mod,
+                "maya.cmds": cmds_mod,
+                "maya.standalone": standalone_mod,
+            },
+        ):
+            dispatcher = srv_mod.MayaMcpServer._default_standalone_dispatcher()
+
+        assert dispatcher is not None
+        assert type(dispatcher).__name__ == "MayaStandaloneDispatcher"
+
+    def test_standalone_affinity_compat_bundle_removes_enforcement(self):
+        """mayapy direct HTTP uses a manifest copy without core enforcement."""
+        import yaml
+
+        srv_mod = _import_server()
+        server = srv_mod.MayaMcpServer(port=0, enable_gateway_failover=False, gateway_port=0)
+        server._host_dispatcher = type("MayaStandaloneDispatcher", (), {})()
+        try:
+            compat_dir = server._standalone_affinity_compat_skills_dir()
+            assert compat_dir is not None
+            tools_yaml = compat_dir / "maya-primitives" / "tools.yaml"
+            data = yaml.safe_load(tools_yaml.read_text(encoding="utf-8")) or {}
+            assert all("enforce_thread_affinity" not in tool for tool in data["tools"])
+        finally:
+            created_dir = server._standalone_skill_dir
+            server.stop()
+
+        assert created_dir is not None
+        assert not created_dir.exists()
 
 
 # ── Issue #138: strict skill scan opt-in ──────────────────────────────────────

@@ -2,23 +2,27 @@ tools:
 - name: add_assembly_representation
   execution: sync
   affinity: main
+  enforce_thread_affinity: true
   group: scene-management
   description: Add an assembly representation in the current Maya scene.
 - name: create_assembly_definition
   execution: async
   affinity: main
+  enforce_thread_affinity: true
   timeout_hint_secs: 120
   group: scene-management
   description: Create an assembly definition in the current Maya scene.
 - name: create_assembly_reference
   execution: async
   affinity: main
+  enforce_thread_affinity: true
   timeout_hint_secs: 120
   group: scene-management
   description: Create an assembly reference in the current Maya scene.
 - name: list_assemblies
   execution: sync
   affinity: main
+  enforce_thread_affinity: true
   annotations:
     read_only_hint: true
     idempotent_hint: true
