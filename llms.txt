@@ -25,7 +25,7 @@ handle = dcc_mcp_maya.start_server(port=8765)
 handle.shutdown()
 ```
 
-Plugin mode: copy `maya/plugin/dcc_mcp_maya_plugin.py` to `MAYA_PLUG_IN_PATH` and load it. Server auto-starts.
+Plugin mode: copy `maya/plugin/dcc_mcp_maya_plugin.py` to `MAYA_PLUG_IN_PATH` and load it. Server auto-starts. Sidecar mode exposes the elected gateway locally at `http://127.0.0.1:9765/mcp`; newer core sidecars also bind a LAN listener at `http://<this-machine-lan-ip>:59765/mcp` unless `DCC_MCP_GATEWAY_REMOTE_PORT=0`.
 
 ---
 
