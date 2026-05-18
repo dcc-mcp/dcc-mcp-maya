@@ -464,6 +464,8 @@ tools:
 | `DCC_MCP_MAYA_RESOURCES` | `1` | per-process | `0`=disable Maya MCP resource publishing (`scene://current` snapshot + `maya-cmds://` / `maya-api://` / `maya-project://` producers).  Issue #187 / core 0.15.0. |
 | `DCC_MCP_MAYA_FAULTHANDLER` | `1` | per-process | `0`=disable plugin-installed Python fatal-signal traceback logging. Logs are written under `DCC_MCP_LOG_DIR` or the OS temp directory. |
 | `DCC_MCP_GATEWAY_PORT` | `9765` | per-host | Gateway election port. `0`=disable gateway mode. |
+| `DCC_MCP_GATEWAY_REMOTE_PORT` | `59765` | per-host | LAN gateway listener port opened only by the elected sidecar gateway. `0`=disable remote listener; local gateway remains on `127.0.0.1:9765`. |
+| `DCC_MCP_GATEWAY_REMOTE_HOST` | `0.0.0.0` | per-host | LAN gateway listener bind address. Use a specific interface IP to narrow exposure. |
 | `DCC_MCP_REGISTRY_DIR` | OS temp dir | per-user | Shared FileRegistry directory. |
 | `DCC_MCP_PYTHON_EXECUTABLE` | `sys.executable` | per-process | Python interpreter for skill worker subprocesses. |
 | `DCC_MCP_PYTHON_INIT_SNIPPET` | `import maya.standalone; maya.standalone.initialize(name='python')` | per-process | One-liner run by workers before tool scripts. |

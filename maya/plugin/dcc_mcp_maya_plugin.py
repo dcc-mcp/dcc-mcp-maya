@@ -34,6 +34,16 @@ Connect your MCP client (Claude Desktop, etc.) to the **single gateway endpoint*
 
     http://127.0.0.1:9765/mcp
 
+Newer sidecar binaries also expose the elected gateway on the local network by
+default::
+
+    http://<this-machine-lan-ip>:59765/mcp
+
+Remote listener election still follows the local gateway winner on
+``127.0.0.1:9765``. Set ``DCC_MCP_GATEWAY_REMOTE_PORT=0`` to disable the LAN
+listener, or ``DCC_MCP_GATEWAY_REMOTE_HOST`` / ``DCC_MCP_GATEWAY_REMOTE_PORT``
+to choose a different bind address.
+
 The gateway exposes a bounded dynamic surface (``search_tools`` / ``describe_tool`` /
 ``call_tool``) and MCP ``resources/read`` on ``gateway://instances`` for instance
 discovery (see ``gateway://docs/agent-workflows``). Legacy ``list_dcc_instances`` /
@@ -52,6 +62,12 @@ Configuration
 
 ``DCC_MCP_GATEWAY_PORT``
     Gateway competition port.  Default ``9765``.  Set to ``0`` to disable.
+
+``DCC_MCP_GATEWAY_REMOTE_PORT``
+    LAN gateway listener port. Default ``59765``. Set to ``0`` to disable.
+
+``DCC_MCP_GATEWAY_REMOTE_HOST``
+    LAN gateway listener bind address. Default ``0.0.0.0``.
 
 ``DCC_MCP_REGISTRY_DIR``
     Directory for the shared ``FileRegistry`` JSON.  Defaults to OS temp dir.
@@ -87,6 +103,7 @@ import faulthandler
 import logging
 import os
 import signal
+import socket
 import sys
 import tempfile
 import threading
@@ -838,6 +855,20 @@ def _maybe_spawn_sidecar() -> None:
 
 def _print_sidecar_info(handle) -> None:  # noqa: ANN001
     """Append a sidecar banner to the script editor / viewport HUD."""
+    gateway_port = _resolve_gateway_port_for_display()
+    gateway_lines = []
+    if gateway_port > 0:
+        gateway_lines.append(f"  Gateway local: http://127.0.0.1:{gateway_port}/mcp  (if elected)")
+        try:
+            from dcc_mcp_maya.sidecar import resolve_gateway_remote_options  # noqa: PLC0415
+
+            remote_host, remote_port = resolve_gateway_remote_options()
+        except Exception:  # noqa: BLE001
+            remote_host, remote_port = "0.0.0.0", 59765
+        if remote_port > 0:
+            display_host = _gateway_remote_display_host(remote_host)
+            gateway_lines.append(f"  Gateway LAN  : http://{display_host}:{remote_port}/mcp  (if elected)")
+
     border = "=" * 60
     lines = [
         border,
@@ -848,6 +879,7 @@ def _print_sidecar_info(handle) -> None:  # noqa: ANN001
         f"  Qt server    : 127.0.0.1:{handle.qt_port}  ({handle.qt_binding})",
         f"  host-rpc URI : {handle.host_rpc_uri}",
         f"  watch-pid    : {handle.maya_pid} (Maya)",
+        *gateway_lines,
         border,
     ]
     print("\n".join(lines))  # noqa: T201 — intentional console output
@@ -862,6 +894,35 @@ def _print_sidecar_info(handle) -> None:  # noqa: ANN001
             )
         except Exception:  # noqa: BLE001 — viewport HUD is cosmetic
             pass
+
+
+def _resolve_gateway_port_for_display() -> int:
+    raw = os.environ.get("DCC_MCP_GATEWAY_PORT", str(_DEFAULT_GATEWAY_PORT))
+    try:
+        port = int(raw)
+    except ValueError:
+        port = _DEFAULT_GATEWAY_PORT
+    return port if port > 0 else 0
+
+
+def _gateway_remote_display_host(bind_host: str) -> str:
+    if bind_host not in {"", "0.0.0.0", "::"}:
+        return bind_host
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+            sock.connect(("8.8.8.8", 80))
+            host = sock.getsockname()[0]
+            if host and not host.startswith("127."):
+                return host
+    except OSError:
+        pass
+    try:
+        host = socket.gethostbyname(socket.gethostname())
+        if host and not host.startswith("127."):
+            return host
+    except OSError:
+        pass
+    return "<LAN-IP>"
 
 
 def _print_startup_info(cfg: dict) -> None:

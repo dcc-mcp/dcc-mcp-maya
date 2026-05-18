@@ -71,16 +71,25 @@ from dcc_mcp_maya.sidecar._resolver import (
     resolve_sidecar_binary,
 )
 from dcc_mcp_maya.sidecar._supervisor import (
+    DEFAULT_GATEWAY_REMOTE_HOST,
+    DEFAULT_GATEWAY_REMOTE_PORT,
+    ENV_GATEWAY_REMOTE_HOST,
+    ENV_GATEWAY_REMOTE_PORT,
     ENV_SIDECAR_MODE,
     SidecarHandle,
     SidecarSpawnError,
     build_qtserver_uri,
     is_sidecar_mode_enabled,
+    resolve_gateway_remote_options,
     start_sidecar,
     stop_sidecar,
 )
 
 __all__ = [
+    "DEFAULT_GATEWAY_REMOTE_HOST",
+    "DEFAULT_GATEWAY_REMOTE_PORT",
+    "ENV_GATEWAY_REMOTE_HOST",
+    "ENV_GATEWAY_REMOTE_PORT",
     "ENV_SIDECAR_BINARY",
     "ENV_SIDECAR_MODE",
     "SidecarBinaryError",
@@ -91,6 +100,7 @@ __all__ = [
     "dispatch_payload",
     "is_sidecar_mode_enabled",
     "resolve_sidecar_binary",
+    "resolve_gateway_remote_options",
     "start_sidecar",
     "stop_sidecar",
 ]
