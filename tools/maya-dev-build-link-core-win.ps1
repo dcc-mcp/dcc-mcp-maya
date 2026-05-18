@@ -121,7 +121,7 @@ if (-not $SkipBuild) {
 $ServerBin = Join-Path $CoreRepo "target\release\dcc-mcp-server.exe"
 if (-not (Test-Path $ServerBin)) {
     Write-Host "   ⚠️  dcc-mcp-server.exe not found at $ServerBin" -ForegroundColor Yellow
-    Write-Host "       Sidecar mode (DCC_MCP_MAYA_SIDECAR=1) will fall back to PATH lookup or fail." -ForegroundColor Yellow
+    Write-Host "       Default sidecar mode will fall back to PATH lookup or fail." -ForegroundColor Yellow
     $ServerBin = $null
 } else {
     Write-Host "   ✅ dcc-mcp-server binary at $ServerBin" -ForegroundColor Green
@@ -185,20 +185,17 @@ Write-Host "   ✅ plug-ins + scripts copied" -ForegroundColor Green
 # ``set DCC_MCP_MAYA_SIDECAR=0``).
 #
 # PyPI / production installs ship `maya/userSetup.py` unmodified — only
-# this dev script appends the block, keeping the production opt-in
-# contract intact.
+# this dev script appends the local binary path for live core builds.
 if ($ServerBin) {
     $ServerBinEscaped = $ServerBin -replace '\\', '\\'
     $DevBlock = @"
 
 
 # ── Dev-mode env defaults (appended by tools/maya-dev-build-link-core-win.ps1) ──
-# NOT present in PyPI installs. Auto-enables the sidecar workflow (RFC #998)
-# so a fresh ``vx just maya-dev-build-link-core-win`` run produces a Maya
-# session that immediately spawns ``dcc-mcp-server.exe`` alongside Maya.
-# Shell-level ``set DCC_MCP_MAYA_SIDECAR=0`` still wins via ``setdefault``.
+# NOT present in PyPI installs. Pins the sidecar binary path (RFC #998)
+# so a fresh ``vx just maya-dev-build-link-core-win`` run uses the live
+# core build when the default sidecar starts alongside Maya.
 import os as _dcc_mcp_dev_os
-_dcc_mcp_dev_os.environ.setdefault("DCC_MCP_MAYA_SIDECAR", "1")
 _dcc_mcp_dev_os.environ.setdefault("DCC_MCP_SERVER_BIN", "$ServerBinEscaped")
 "@
     Add-Content -Path $UserSetupDest -Value $DevBlock -Encoding UTF8
@@ -226,11 +223,10 @@ Write-Host "Docs: docs/guide/local-mcp-debug.md | examples/mcp/cursor-maya-strea
 
 if ($ServerBin) {
     Write-Host ""
-    Write-Host "Sidecar mode (experimental, RFC #998) — AUTO-ENABLED for dev builds:" -ForegroundColor Cyan
+    Write-Host "Sidecar mode (experimental, RFC #998) — enabled by default:" -ForegroundColor Cyan
     Write-Host "   The dev script appended ``os.environ.setdefault`` calls to the" -ForegroundColor Gray
-    Write-Host "   shipped userSetup.py so DCC_MCP_MAYA_SIDECAR=1 and the binary" -ForegroundColor Gray
-    Write-Host "   path are set the moment Maya boots Python. Just launch Maya." -ForegroundColor Gray
-    Write-Host "   PyPI / production installs stay opt-in (no override appended)." -ForegroundColor Gray
+    Write-Host "   shipped userSetup.py so the live sidecar binary path is set" -ForegroundColor Gray
+    Write-Host "   the moment Maya boots Python. Just launch Maya." -ForegroundColor Gray
     Write-Host "   Verify in Task Manager — a 'dcc-mcp-server.exe' child should" -ForegroundColor Gray
     Write-Host "   appear under Maya within a second of plug-in init." -ForegroundColor Gray
     Write-Host "   To test legacy in-process-only, run with DCC_MCP_MAYA_SIDECAR=0" -ForegroundColor Gray

@@ -269,7 +269,7 @@ __all__ = [
     "write_process_sentinel",
     "sentinel_path",
     "orphan_sentinels",
-    # Out-of-process sidecar (RFC #998) — opt-in via DCC_MCP_MAYA_SIDECAR=1
+    # Out-of-process sidecar (RFC #998) — default-on; opt out with DCC_MCP_MAYA_SIDECAR=0
     "ENV_SIDECAR_BINARY",
     "ENV_SIDECAR_MODE",
     "SidecarBinaryError",

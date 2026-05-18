@@ -76,6 +76,7 @@ logger = logging.getLogger(__name__)
 
 ENV_SIDECAR_MODE = "DCC_MCP_MAYA_SIDECAR"
 _TRUTHY_VALUES = frozenset({"1", "true", "yes", "on"})
+_FALSEY_VALUES = frozenset({"0", "false", "no", "off"})
 
 # Grace period before SIGKILL on shutdown. 5 s matches the sidecar
 # binary's own ``--shutdown-timeout-secs`` default; cap at the same
@@ -141,15 +142,22 @@ def build_qtserver_uri(port: int, host: str = "127.0.0.1") -> str:
 
 
 def is_sidecar_mode_enabled(env: Optional[dict] = None) -> bool:
-    """Return ``True`` when sidecar mode is opted-in via the env var.
+    """Return ``True`` unless sidecar mode is explicitly disabled.
 
     Args:
         env: optional environment-variable mapping to consult. Defaults
             to :data:`os.environ`. Exposed for tests so the gate can be
             exercised without mutating the live process environment.
     """
-    raw = (env if env is not None else os.environ).get(ENV_SIDECAR_MODE, "")
-    return raw.strip().lower() in _TRUTHY_VALUES
+    raw = (env if env is not None else os.environ).get(ENV_SIDECAR_MODE)
+    if raw is None or not raw.strip():
+        return True
+    normalized = raw.strip().lower()
+    if normalized in _FALSEY_VALUES:
+        return False
+    # Unknown values preserve the default-on behaviour; only explicit
+    # falsey tokens opt out.
+    return True
 
 
 def start_sidecar(
