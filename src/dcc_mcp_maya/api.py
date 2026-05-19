@@ -808,6 +808,89 @@ def bounding_box_from_node(cmds: Any, node_name: str) -> Dict[str, Any]:
     }
 
 
+def created_node_name(result: Any) -> str:
+    """Return the transform node name from a typical ``maya.cmds`` create result.
+
+    Most polygon creation commands return ``[transform, shape]`` while a few
+    commands return a bare string. Centralising that normalisation gives skills
+    one PyMEL-like choke point instead of repeating ``result[0]`` everywhere.
+    """
+    if isinstance(result, (list, tuple)):
+        if not result:
+            raise ValueError("Maya command returned an empty result")
+        return str(result[0])
+    if result is None:
+        raise ValueError("Maya command returned None")
+    return str(result)
+
+
+def node_long_name(cmds: Any, node_name: str) -> str:
+    """Resolve *node_name* to a stable long DAG path when Maya can provide one."""
+    matches = cmds.ls(node_name, long=True) or []
+    return str(matches[0]) if matches else str(node_name)
+
+
+def node_shape_names(cmds: Any, node_name: str) -> List[str]:
+    """Return full-path shape children for *node_name*, falling back to ``[]``."""
+    try:
+        return [str(name) for name in (cmds.listRelatives(node_name, shapes=True, fullPath=True) or [])]
+    except Exception:  # noqa: BLE001 - shape lookup must not break result envelopes
+        logger.debug("Could not list shapes for %s", node_name, exc_info=True)
+        return []
+
+
+def summarize_node(cmds: Any, node_name: str) -> Dict[str, Any]:
+    """Build a stable, JSON-safe summary for a Maya DAG node.
+
+    This mirrors the useful part of PyMEL's object wrapper idea: callers keep a
+    compact node identity packet (short name, long path, type, shapes, optional
+    transform/bounds) instead of relying on a transient raw ``maya.cmds`` return
+    list. Optional fields degrade gracefully because many tests and batch
+    contexts expose only a partial ``cmds`` surface.
+    """
+    long_name = node_long_name(cmds, node_name)
+    short_name = long_name.rsplit("|", 1)[-1] if "|" in long_name else str(node_name)
+
+    summary: Dict[str, Any] = {
+        "name": short_name,
+        "long_name": long_name,
+        "object_name": short_name,
+        "shape_names": node_shape_names(cmds, long_name),
+    }
+    try:
+        summary["object_type"] = cmds.objectType(long_name)
+    except Exception:  # noqa: BLE001
+        logger.debug("Could not read object type for %s", long_name, exc_info=True)
+    try:
+        summary["transform"] = object_transform_from_node(cmds, long_name)
+    except Exception:  # noqa: BLE001
+        logger.debug("Could not read transform for %s", long_name, exc_info=True)
+    try:
+        summary["bounding_box"] = bounding_box_from_node(cmds, long_name)
+    except Exception:  # noqa: BLE001
+        logger.debug("Could not read bounding box for %s", long_name, exc_info=True)
+    return summary
+
+
+def created_object_context(cmds: Any, result: Any, requested_name: Optional[str] = None) -> Dict[str, Any]:
+    """Return a standard context dict for a newly-created Maya object.
+
+    ``requested_name`` is applied via ``cmds.rename`` before summarising the
+    node. The returned dict preserves the legacy ``object_name`` key while also
+    adding a richer ``node`` payload for agents that need long paths or shape
+    names.
+    """
+    node_name = created_node_name(result)
+    if requested_name:
+        node_name = str(cmds.rename(node_name, requested_name))
+    summary = summarize_node(cmds, node_name)
+    return {
+        "object_name": summary.get("object_name", node_name),
+        "long_name": summary.get("long_name", node_name),
+        "node": summary,
+    }
+
+
 # ---------------------------------------------------------------------------
 # Convenience re-exports so callers only need one import
 # ---------------------------------------------------------------------------
@@ -965,6 +1048,11 @@ __all__ = [
     "scene_object_from_node",
     "object_transform_from_node",
     "bounding_box_from_node",
+    "created_node_name",
+    "node_long_name",
+    "node_shape_names",
+    "summarize_node",
+    "created_object_context",
     # DCC capabilities
     "maya_capabilities",
 ]
