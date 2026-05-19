@@ -779,6 +779,33 @@ class TestToolsYamlContract:
         assert "file_path" in props
 
 
+def test_execute_python_blocks_dirty_new_scene_prompt(monkeypatch):
+    mod = load_skill_script("maya-scripting", "execute_python")
+
+    class _Cmds:
+        def __init__(self):
+            self.calls = []
+
+        def file(self, *args, **kwargs):
+            self.calls.append((args, dict(kwargs)))
+            if kwargs.get("query") and kwargs.get("modified"):
+                return True
+            if kwargs.get("new") and not kwargs.get("force"):
+                raise AssertionError("modal save prompt would have opened")
+            return "ok"
+
+    cmds = _Cmds()
+    monkeypatch.setattr(mod, "_should_marshal_to_maya_main_thread", lambda: False)
+    monkeypatch.setitem(mod._PERSISTENT_NS, "cmds", cmds)
+
+    result = mod.execute_python(code="cmds.file(new=True)", capture_output=False)
+
+    assert result["success"] is False
+    assert result["message"] == "cmds.file prompt blocked"
+    assert "force=True" in result["error"]
+    assert cmds.calls == [((), {"query": True, "modified": True})]
+
+
 # ---------------------------------------------------------------------------
 # Cleanup env-var fixture leak
 # ---------------------------------------------------------------------------
