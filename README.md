@@ -130,6 +130,8 @@ For plugin-side sidecar mode, install the sidecar extra when your environment do
 mayapy -m pip install "dcc-mcp-maya[sidecar]"
 ```
 
+The sidecar extra installs `dcc-mcp-server` on Python 3.8+. Maya 2022 uses Python 3.7; in that environment either run without sidecar (`DCC_MCP_MAYA_SIDECAR=0`) or provide the binary explicitly with `DCC_MCP_SERVER_BIN`.
+
 ### Maya Plugin
 
 1. Put `maya/plugin/dcc_mcp_maya_plugin.py` on `MAYA_PLUG_IN_PATH`.
@@ -276,7 +278,7 @@ Windows symlinks require Developer Mode or an elevated shell. If symlinks are un
 - Autodesk Maya 2020+
 - Python 3.7+
 - `dcc-mcp-core>=0.17.9,<1.0.0`
-- Optional sidecar binary: `dcc-mcp-server>=0.17.9`
+- Optional sidecar binary: `dcc-mcp-server>=0.17.9` on Python 3.8+, or `DCC_MCP_SERVER_BIN` pointing to a compatible binary
 
 ## License
 
