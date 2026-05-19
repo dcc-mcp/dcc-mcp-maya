@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.3.4](https://github.com/loonghao/dcc-mcp-maya/compare/v0.3.3...v0.3.4) (2026-05-19)
+
+
+### Features
+
+* normalize maya node contexts ([1cd033b](https://github.com/loonghao/dcc-mcp-maya/commit/1cd033b49d1724436b23d2f80e467b2bd94899de))
+
+
+### Bug Fixes
+
+* align maya with core 0.17.9 ([82d8ff2](https://github.com/loonghao/dcc-mcp-maya/commit/82d8ff2141a87bdaed8b692525bd7d089cca6786))
+* guard cmds file prompts ([4f1d5d0](https://github.com/loonghao/dcc-mcp-maya/commit/4f1d5d0e4d5748cb7f7fe220ff600cd20b43a695))
+
+
+### Documentation
+
+* mirror testing strategy in zh ([20578d5](https://github.com/loonghao/dcc-mcp-maya/commit/20578d5b0c2caeca7b844b5c98dc7b4f87105bc2))
+* refresh readme architecture ([a3f46ba](https://github.com/loonghao/dcc-mcp-maya/commit/a3f46ba631b5a3d334a0117dff67a7b1c68f3116))
+
 ## [0.3.3](https://github.com/loonghao/dcc-mcp-maya/compare/v0.3.2...v0.3.3) (2026-05-18)
 
 
