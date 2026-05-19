@@ -26,15 +26,18 @@ sessions).
 
 Gateway mode (default ON)
 -------------------------
-By default the plugin joins the auto-gateway on port ``9765``.  The first Maya
-instance to start becomes the **gateway**; subsequent instances register as plain
-DCC instances.  Both expose their own full MCP tool set.
+By default the plugin starts a per-Maya ``dcc-mcp-server sidecar``. The sidecar
+ensures a standalone machine-wide gateway is running on port ``9765`` and then
+registers this Maya instance as a backend. Every Maya sidecar gets an explicit
+``--display-name`` and ``--instance-id``; the gateway gets a machine-level
+``--gateway-name`` (default ``dcc-mcp-gateway@<hostname>``) so admin and CLI
+debug views can distinguish the gateway from Maya sessions.
 
 Connect your MCP client (Claude Desktop, etc.) to the **single gateway endpoint**::
 
     http://127.0.0.1:9765/mcp
 
-Newer sidecar binaries also expose the elected gateway on the local network by
+Newer sidecar binaries also expose the standalone gateway on the local network by
 default::
 
     http://<this-machine-lan-ip>:59765/mcp
@@ -61,7 +64,11 @@ Configuration
     Name advertised in the MCP ``initialize`` response.  Default: ``"maya-mcp"``.
 
 ``DCC_MCP_GATEWAY_PORT``
-    Gateway competition port.  Default ``9765``.  Set to ``0`` to disable.
+    Standalone gateway port.  Default ``9765``.  Set to ``0`` to disable.
+
+``DCC_MCP_GATEWAY_NAME``
+    Optional human-readable gateway label.  Defaults to
+    ``dcc-mcp-gateway@<hostname>`` in sidecar mode.
 
 ``DCC_MCP_GATEWAY_REMOTE_PORT``
     LAN gateway listener port. Default ``59765``. Set to ``0`` to disable.
@@ -434,9 +441,9 @@ def _resolve_config():
     except ValueError:
         gateway_port = _DEFAULT_GATEWAY_PORT
 
-    # Sidecar mode runs gateway election in the out-of-process
-    # ``dcc-mcp-server sidecar`` binary (immune to Maya main-thread
-    # starvation). Keep the in-process server as a plain instance only.
+    # Sidecar mode keeps gateway ownership outside Maya (immune to Maya
+    # main-thread starvation). Keep the in-process server as a plain
+    # instance only.
     try:
         from dcc_mcp_maya.sidecar import is_sidecar_mode_enabled  # noqa: PLC0415
 
@@ -824,6 +831,9 @@ def _maybe_spawn_sidecar() -> None:
         # plugin no longer needs to mirror core's path resolution here.
         _sidecar_handle = start_sidecar(
             adapter_version=VERSION,
+            display_name=_resolve_sidecar_display_name(),
+            gateway_name=_resolve_gateway_name(),
+            instance_id=_resolve_instance_id(),
         )
     except SidecarSpawnError as exc:
         logger.error(
@@ -1054,6 +1064,31 @@ def _resolve_instance_id() -> str:
     except Exception as exc:  # noqa: BLE001
         logger.debug("instance id lookup failed: %s", exc)
     return "unknown"
+
+
+def _resolve_sidecar_display_name() -> str:
+    """Return a stable human-readable label for this Maya sidecar."""
+    try:
+        version = str(cmds.about(version=True)).strip() or "unknown"
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("Maya version lookup for sidecar display name failed: %s", exc)
+        version = "unknown"
+    return "Maya {0} pid {1}".format(version, os.getpid())
+
+
+def _resolve_gateway_name() -> str:
+    """Return the machine-level gateway label passed to dcc-mcp-server."""
+    raw = os.environ.get("DCC_MCP_GATEWAY_NAME")
+    if raw and raw.strip():
+        return raw.strip()
+    try:
+        hostname = socket.gethostname().strip()
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("hostname lookup for gateway name failed: %s", exc)
+        hostname = "localhost"
+    if not hostname:
+        hostname = "localhost"
+    return "dcc-mcp-gateway@{0}".format(hostname)
 
 
 def _install_shutdown_safety() -> None:
