@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.3.6](https://github.com/loonghao/dcc-mcp-maya/compare/v0.3.5...v0.3.6) (2026-05-19)
+
+
+### Features
+
+* add agent setup skill ([8fca6e1](https://github.com/loonghao/dcc-mcp-maya/commit/8fca6e1b75e26b355d30982c9c6c6170575f9916))
+
+
+### Documentation
+
+* mention agent setup in quick start ([b468fee](https://github.com/loonghao/dcc-mcp-maya/commit/b468fee25494f90d5f7ce67e01ab5bcf3de82e85))
+* use github links for agent setup ([54d4f13](https://github.com/loonghao/dcc-mcp-maya/commit/54d4f13a676261f6791875088927fbc524d5779e))
+
 ## [0.3.5](https://github.com/loonghao/dcc-mcp-maya/compare/v0.3.4...v0.3.5) (2026-05-19)
 
 
