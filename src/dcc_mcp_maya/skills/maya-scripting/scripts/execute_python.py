@@ -1,6 +1,6 @@
 """Bare-exec Python in Maya — same shape as PatrickPalmer/maya-mcp-server.
 
-The implementation is intentionally **wrapper-free**:
+The implementation keeps the bare-exec shape:
 
 * Persistent module-level ``globals()`` so a user's ``import x`` survives
   across calls (the next call sees ``x`` already imported, no re-import
@@ -9,7 +9,9 @@ The implementation is intentionally **wrapper-free**:
   user does not need a ``result = ...`` convention, just leave a bare
   expression as the final line. Python 3.7+ compatible (no
   ``ast.unparse``).
-* **No** ``mcp_safe_session`` (deleted in #248).
+* **No** broad ``mcp_safe_session`` dialog monkey-patch (deleted in #248).
+  Only ``cmds.file`` is guarded during execution so dirty-scene file
+  operations fail fast instead of opening modal prompts.
 * **No** ``MayaOutputCapture`` (the C++ ``MCommandMessage`` callback bridge
   crashed Maya on idle ticks; default no-op since #248 da5f6184. Opt
   in via ``DCC_MCP_MAYA_HOOK_MAYA_OUTPUT=1`` if you really need it).
@@ -27,8 +29,9 @@ wrapper we previously added either crashed Maya in the field
 (``cmds.confirmDialog`` monkey-patch, ``MCommandMessage`` callback) or
 duplicated work the plug-in already does at session scope (AutoSave
 snooze → persistent disable at plug-in load). The simplest dispatch
-path that works is the one a user would type in the Script Editor —
-``exec(compile(code, ...), globals_dict)``.
+path that works is the one a user would type in the Script Editor:
+``exec(compile(code, ...), globals_dict)`` plus a narrow ``cmds.file``
+prompt guard around the execution window.
 
 Public interface (kept stable)
 ==============================
@@ -65,6 +68,8 @@ import traceback
 from typing import Any, Dict, Optional, Tuple
 
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
+
+from dcc_mcp_maya._cmds_file_guard import MayaFilePromptBlockedError, guard_cmds_file
 
 # Maya's main thread is the only thread that can safely touch the scene
 # graph / call ``maya.cmds`` / load native plug-ins. The ``execute_python``
@@ -289,6 +294,7 @@ def _execute_bare_inplace(
     result: Any = None
 
     with contextlib.ExitStack() as stack:
+        stack.enter_context(guard_cmds_file(namespace.get("cmds")))
         if stdout_buf is not None:
             stack.enter_context(contextlib.redirect_stdout(stdout_buf))
         if stderr_buf is not None:
@@ -405,11 +411,12 @@ def _load_script_file(file_arg: str) -> Tuple[str, str, Optional[Dict[str, Any]]
 def execute_python(**params: Any):
     """Execute Python in Maya (bare exec, persistent namespace).
 
-    Drops every wrapper the previous revision shipped (``mcp_safe_session``,
-    ``ScriptExecutionCapture`` tee, ``MayaOutputCapture`` OpenMaya
-    callback bridge, ``sys.settrace`` cancellation tracer). The
-    dispatch path is now what a user would type in the Script Editor —
-    same as PatrickPalmer/maya-mcp-server, our stability benchmark.
+    Drops every broad wrapper the previous revision shipped
+    (``mcp_safe_session``, ``ScriptExecutionCapture`` tee,
+    ``MayaOutputCapture`` OpenMaya callback bridge, ``sys.settrace``
+    cancellation tracer). The dispatch path is still what a user would type in
+    the Script Editor, with a narrow ``cmds.file`` prompt guard around the exec
+    window.
 
     See the module docstring for the parameter contract.
     """
@@ -477,6 +484,19 @@ def execute_python(**params: Any):
 
     if not envelope["success"]:
         err_info = envelope["error"] or {}
+        if str(err_info.get("type", "")).endswith("MayaFilePromptBlockedError"):
+            return skill_error(
+                "cmds.file prompt blocked",
+                err_info.get("message", "cmds.file would have opened a modal prompt"),
+                possible_solutions=[
+                    "Save the current scene first.",
+                    "Pass force=True when discarding unsaved changes is intentional.",
+                    "Rename the scene before calling cmds.file(save=True).",
+                ],
+                stdout=envelope["stdout"],
+                stderr=envelope["stderr"],
+                error_type=MayaFilePromptBlockedError.__name__,
+            )
         return skill_exception(
             RuntimeError(err_info.get("message", "unknown")),
             message="Python execution failed",
