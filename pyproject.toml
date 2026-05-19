@@ -28,9 +28,9 @@ classifiers = [
 
 dependencies = [
     # 0.17.9+: hardened gateway initialization, remote gateway listener,
-    # instance-scoped unloaded capabilities, and Python 3.7-compatible
-    # dcc-mcp-server binary wheels for Maya 2022 sidecar installs.
-    # abi3 (cp38+) on 3.8+; separate cp37 wheels on Python 3.7 (Maya 2022).
+    # and instance-scoped unloaded capabilities. The Rust sidecar binary is
+    # optional below because Python 3.7 / Maya 2022 test environments must be
+    # able to install the adapter even when no dcc-mcp-server wheel is present.
     "dcc-mcp-core>=0.17.9,<1.0.0",
 ]
 
@@ -42,7 +42,7 @@ dev = [
     "pytest-timeout>=2.1.0",
     "pytest-xdist>=3.0",
     "requests>=2.28.0",
-    "dcc-mcp-server>=0.17.9",
+    "dcc-mcp-server>=0.17.9; python_version >= '3.8'",
     "ruff>=0.8.0",
     "hatchling",
     "build",
@@ -50,7 +50,7 @@ dev = [
     "pyyaml>=5.0",  # YAML parsing for SKILL.md test validation
 ]
 sidecar = [
-    "dcc-mcp-server>=0.17.9",
+    "dcc-mcp-server>=0.17.9; python_version >= '3.8'",
 ]
 
 [project.urls]
