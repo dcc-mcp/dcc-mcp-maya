@@ -73,6 +73,7 @@ from dcc_mcp_maya.sidecar._resolver import (
 from dcc_mcp_maya.sidecar._supervisor import (
     DEFAULT_GATEWAY_REMOTE_HOST,
     DEFAULT_GATEWAY_REMOTE_PORT,
+    ENV_GATEWAY_NAME,
     ENV_GATEWAY_REMOTE_HOST,
     ENV_GATEWAY_REMOTE_PORT,
     ENV_SIDECAR_MODE,
@@ -88,6 +89,7 @@ from dcc_mcp_maya.sidecar._supervisor import (
 __all__ = [
     "DEFAULT_GATEWAY_REMOTE_HOST",
     "DEFAULT_GATEWAY_REMOTE_PORT",
+    "ENV_GATEWAY_NAME",
     "ENV_GATEWAY_REMOTE_HOST",
     "ENV_GATEWAY_REMOTE_PORT",
     "ENV_SIDECAR_BINARY",

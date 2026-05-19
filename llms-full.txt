@@ -14,7 +14,7 @@ Embeds a standards-compliant MCP Streamable HTTP server (2025-03-26 spec) direct
 - **Repository:** https://github.com/loonghao/dcc-mcp-maya
 - **Python:** >=3.7
 - **Maya:** 2020+
-- **Core dependency:** `dcc-mcp-core>=0.17.15,<1.0.0`
+- **Core dependency:** `dcc-mcp-core>=0.17.16,<1.0.0`
 - **Entry point:** `dcc_mcp.adapters` → `maya = "dcc_mcp_maya:MayaMcpServer"`
 
 ---
@@ -71,7 +71,7 @@ MayaMcpServer(
 | `port` | `int` | `8765` | TCP port. Use `0` for OS-assigned. |
 | `server_name` | `str` | `"maya-mcp"` | Name in MCP `initialize` response. |
 | `server_version` | `str` | `"0.3.4"` | Version reported in `initialize`. | <!-- x-release-please-version -->
-| `gateway_port` | `int \| None` | `None` | First-wins gateway election port. `None` reads `DCC_MCP_GATEWAY_PORT`; `0` disables. |
+| `gateway_port` | `int \| None` | `None` | Multi-instance gateway port. `None` reads `DCC_MCP_GATEWAY_PORT`; `0` disables. |
 | `registry_dir` | `str \| None` | `None` | Shared `FileRegistry` directory for service discovery. |
 | `dcc_version` | `str \| None` | `None` | Maya version string advertised to the registry. |
 | `scene` | `str \| None` | `None` | Current scene path advertised to the registry. |
@@ -464,7 +464,8 @@ tools:
 | `DCC_MCP_MAYA_RESOURCES` | `1` | per-process | `0`=disable Maya MCP resource publishing (`scene://current` snapshot + `maya-cmds://` / `maya-api://` / `maya-project://` producers).  Issue #187 / core 0.15.0. |
 | `DCC_MCP_MAYA_FAULTHANDLER` | `1` | per-process | `0`=disable plugin-installed Python fatal-signal traceback logging. Logs are written under `DCC_MCP_LOG_DIR` or the OS temp directory. |
 | `DCC_MCP_GATEWAY_PORT` | `9765` | per-host | Gateway election port. `0`=disable gateway mode. |
-| `DCC_MCP_GATEWAY_REMOTE_PORT` | `59765` | per-host | LAN gateway listener port opened only by the elected sidecar gateway. `0`=disable remote listener; local gateway remains on `127.0.0.1:9765`. |
+| `DCC_MCP_GATEWAY_NAME` | `dcc-mcp-gateway@<hostname>` | per-host | Human-readable standalone gateway label surfaced in admin, health, and CLI diagnostics. |
+| `DCC_MCP_GATEWAY_REMOTE_PORT` | `59765` | per-host | LAN gateway listener port opened by the standalone gateway. `0`=disable remote listener; local gateway remains on `127.0.0.1:9765`. |
 | `DCC_MCP_GATEWAY_REMOTE_HOST` | `0.0.0.0` | per-host | LAN gateway listener bind address. Use a specific interface IP to narrow exposure. |
 | `DCC_MCP_REGISTRY_DIR` | OS temp dir | per-user | Shared FileRegistry directory. |
 | `DCC_MCP_PYTHON_EXECUTABLE` | `sys.executable` | per-process | Python interpreter for skill worker subprocesses. |
@@ -506,7 +507,9 @@ PORT_RANGE = range(8765, 8776)
 # DCC_MCP_MAYA_DCC_PID=os.getpid(), then auto-starts server.
 ```
 
-Gateway exposes meta-tools: `list_dcc_instances`, `connect_to_dcc`, `get_dcc_instance`.
+Gateway discovery uses `search_tools` / `describe_tool` / `call_tool` plus
+`resources/read uri="gateway://instances"`; current gateways do not advertise
+legacy `list_dcc_instances` / `connect_to_dcc` meta-tools.
 
 ---
 
