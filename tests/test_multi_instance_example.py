@@ -68,7 +68,12 @@ def test_pick_free_port_skips_busy_port(user_setup):
             pytest.skip("cannot bind an ephemeral port on this host")
         taken_port = busy.getsockname()[1]
         # Feed a two-element candidate list: [taken, free-in-range]
-        free_candidate = next(p for p in user_setup.PORT_RANGE if p != taken_port)
+        free_candidate = next(
+            (p for p in user_setup.PORT_RANGE if p != taken_port and user_setup._port_is_free(p)),
+            None,
+        )
+        if free_candidate is None:
+            pytest.skip("reserved multi-instance port range is busy on this host")
         chosen = user_setup.pick_free_port([taken_port, free_candidate])
         assert chosen == free_candidate
 
