@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import os
 import sys
+import types
 from pathlib import Path
 from typing import Any, List
 from unittest.mock import MagicMock, patch
@@ -804,6 +805,55 @@ def test_execute_python_blocks_dirty_new_scene_prompt(monkeypatch):
     assert result["message"] == "cmds.file prompt blocked"
     assert "force=True" in result["error"]
     assert cmds.calls == [((), {"query": True, "modified": True})]
+
+
+def test_execute_python_injects_node_summary_helpers(monkeypatch):
+    mod = load_skill_script("maya-scripting", "execute_python")
+
+    class _Cmds:
+        def polyCube(self):
+            return ["pCube1", "polyCube1"]
+
+        def rename(self, old, new):
+            assert old == "pCube1"
+            return new
+
+        def ls(self, name, long=False):  # noqa: A002 - mirrors maya.cmds flag name
+            return ["|{}".format(name)] if long and not str(name).startswith("|") else [name]
+
+        def listRelatives(self, name, shapes=False, fullPath=False):  # noqa: N803
+            if shapes and fullPath:
+                return ["{}Shape".format(name)]
+            return []
+
+        def objectType(self, _name):
+            return "transform"
+
+        def getAttr(self, attr):
+            if attr.endswith(".translate"):
+                return [(0, 1, 2)]
+            if attr.endswith(".rotate"):
+                return [(0, 0, 0)]
+            if attr.endswith(".scale"):
+                return [(1, 1, 1)]
+            raise RuntimeError(attr)
+
+        def exactWorldBoundingBox(self, _name):  # noqa: N802
+            return [-1, -1, -1, 1, 1, 1]
+
+    monkeypatch.setattr(mod, "_PERSISTENT_NS", {"__name__": "__maya_mcp_exec__"})
+    monkeypatch.setattr(mod, "_should_marshal_to_maya_main_thread", lambda: False)
+
+    with patch.dict("sys.modules", {"maya": types.ModuleType("maya"), "maya.cmds": _Cmds()}):
+        result = mod.execute_python(
+            code="maya_created_object_context(cmds.polyCube(), 'execCube')",
+            result_type="JSON",
+            capture_output=False,
+        )
+
+    assert result["success"] is True
+    assert "'object_name': 'execCube'" in result["context"]["output"]
+    assert "'long_name': '|execCube'" in result["context"]["output"]
 
 
 # ---------------------------------------------------------------------------
