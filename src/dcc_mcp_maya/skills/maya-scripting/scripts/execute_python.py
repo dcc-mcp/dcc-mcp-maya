@@ -92,7 +92,7 @@ _VALID_RESULT_TYPES = frozenset({"NONE", "VALUE", "JSON", "REPR"})
 
 
 def _ensure_maya_aliases(namespace: Dict[str, Any]) -> None:
-    """Lazily inject the ``cmds`` / ``mel`` aliases users expect.
+    """Lazily inject the ``cmds`` / ``mel`` aliases and node helpers users expect.
 
     maya-mcp-server (our stability benchmark) executes against
     ``globals()`` of a module that already does
@@ -117,6 +117,28 @@ def _ensure_maya_aliases(namespace: Dict[str, Any]) -> None:
             pass
         else:
             namespace["mel"] = _mel
+
+    def _require_cmds_alias() -> Any:
+        cmds = namespace.get("cmds")
+        if cmds is None:
+            raise RuntimeError("maya.cmds is not available in this execution namespace")
+        return cmds
+
+    if "maya_node_summary" not in namespace:
+        from dcc_mcp_maya.api import summarize_node  # noqa: PLC0415
+
+        def _maya_node_summary(node_name: str) -> Dict[str, Any]:
+            return summarize_node(_require_cmds_alias(), node_name)
+
+        namespace["maya_node_summary"] = _maya_node_summary
+
+    if "maya_created_object_context" not in namespace:
+        from dcc_mcp_maya.api import created_object_context  # noqa: PLC0415
+
+        def _maya_created_object_context(result: Any, requested_name: Optional[str] = None) -> Dict[str, Any]:
+            return created_object_context(_require_cmds_alias(), result, requested_name)
+
+        namespace["maya_created_object_context"] = _maya_created_object_context
 
 
 def _exec_and_capture_last_expression(code: str, filename: str, namespace: Dict[str, Any]) -> Tuple[Any, bool]:

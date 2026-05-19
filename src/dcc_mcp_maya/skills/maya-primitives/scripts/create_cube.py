@@ -7,7 +7,9 @@ from __future__ import annotations
 from typing import Optional
 
 # Import local modules
-from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
+from dcc_mcp_core.skill import skill_entry
+
+from dcc_mcp_maya.api import created_object_context, maya_error, maya_from_exception, maya_success
 
 
 def create_cube(
@@ -31,22 +33,17 @@ def create_cube(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        result = cmds.polyCube(width=width, height=height, depth=depth)
-        obj = result[0]
-        if name:
-            obj = cmds.rename(obj, name)
-        return skill_success(
-            f"Created cube: {obj}",
-            object_name=obj,
-            width=width,
-            height=height,
-            depth=depth,
+        context = created_object_context(cmds, cmds.polyCube(width=width, height=height, depth=depth), name)
+        context.update(width=width, height=height, depth=depth)
+        return maya_success(
+            "Created cube: {}".format(context["object_name"]),
             prompt="Use set_transform to position or assign_material to shade.",
+            **context,
         )
     except ImportError:
-        return skill_error("Maya not available", "maya.cmds could not be imported")
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return skill_exception(exc, message="Failed to create cube")
+        return maya_from_exception(exc, message="Failed to create cube")
 
 
 @skill_entry
