@@ -34,6 +34,17 @@ The Maya plugin starts a Rust `dcc-mcp-server` sidecar by default, so HTTP and g
 
 ## Quick Start
 
+Agent-assisted setup is available if you want an AI agent to install the
+Maya-side dependencies, write MCP host config, and walk you through loading the
+plugin:
+
+```text
+Help me install dcc-mcp-maya using loonghao/dcc-mcp-maya/install.md.
+```
+
+The agent should follow [`install.md`](install.md), which delegates the setup
+workflow to [`skills/dcc-mcp-maya-setup`](skills/dcc-mcp-maya-setup/).
+
 Install into Maya's Python:
 
 ```bash
