@@ -36,7 +36,49 @@ from tests._transport_support import (
     rest_post_json,
     sidecar_binary_available,
     wait_for_sidecar_registry_row,
+    wait_for_tcp_url,
 )
+
+
+def test_sidecar_registry_wait_filters_by_host_rpc_uri(tmp_path):
+    registry = tmp_path / "registry"
+    registry.mkdir()
+    stale_uri = "qtserver://127.0.0.1:1"
+    expected_uri = "qtserver://127.0.0.1:2"
+    (registry / "services.json").write_text(
+        json.dumps(
+            {
+                "services": [
+                    {
+                        "dcc_type": "maya",
+                        "host": "127.0.0.1",
+                        "port": 1,
+                        "metadata": {
+                            "dcc_mcp_role": "per-dcc-sidecar",
+                            "host_rpc_uri": stale_uri,
+                            "mcp_url": "http://127.0.0.1:1/mcp",
+                        },
+                    },
+                    {
+                        "dcc_type": "maya",
+                        "host": "127.0.0.1",
+                        "port": 2,
+                        "metadata": {
+                            "dcc_mcp_role": "per-dcc-sidecar",
+                            "host_rpc_uri": expected_uri,
+                            "mcp_url": "http://0.0.0.0:2/mcp",
+                        },
+                    },
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    entry = wait_for_sidecar_registry_row(registry, host_rpc_uri=expected_uri)
+
+    assert (entry.get("metadata") or {}).get("host_rpc_uri") == expected_uri
+    assert mcp_url_from_registry_entry(entry) == "http://127.0.0.1:2/mcp"
 
 
 def _qualified_action_name(skill: str, stem: str) -> str:
@@ -209,9 +251,9 @@ def sidecar_mcp_url(echo_maya_server, tmp_path):
             stop_qt_server_fn=qt_stub.stop,
             extra_env={"DCC_MCP_GATEWAY_PORT": "0"},
         )
-        entry = wait_for_sidecar_registry_row(registry_dir)
+        entry = wait_for_sidecar_registry_row(registry_dir, host_rpc_uri=handle.host_rpc_uri)
         url = mcp_url_from_registry_entry(entry)
-        time.sleep(0.1)
+        wait_for_tcp_url(url)
         yield url, action, handle, surrogate, qt_stub
     finally:
         surrogate.kill()
