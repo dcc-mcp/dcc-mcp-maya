@@ -133,6 +133,17 @@ class _ParentSurrogate:
             self.proc.wait(timeout=5)
 
 
+@pytest.fixture(autouse=True)
+def disable_gateway_for_lifecycle_tests(monkeypatch) -> None:
+    """Keep lifecycle tests focused on the per-DCC sidecar row.
+
+    dcc-mcp-server 0.17.16 sidecars auto-ensure the standalone gateway
+    by default. These tests use a fake Qt backend and an isolated
+    registry, so they opt out of gateway launch explicitly.
+    """
+    monkeypatch.setenv("DCC_MCP_GATEWAY_PORT", "0")
+
+
 @pytest.fixture
 def parent_surrogate() -> Iterator[_ParentSurrogate]:
     surrogate = _ParentSurrogate()
