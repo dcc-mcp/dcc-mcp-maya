@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.5](https://github.com/loonghao/dcc-mcp-maya/compare/v0.3.4...v0.3.5) (2026-05-19)
+
+
+### Features
+
+* label standalone gateway sidecars ([3b1d03e](https://github.com/loonghao/dcc-mcp-maya/commit/3b1d03e3b190eb6281bc7c5a92a439fc3573e3f1))
+
 ## [0.3.4](https://github.com/loonghao/dcc-mcp-maya/compare/v0.3.3...v0.3.4) (2026-05-19)
 
 
