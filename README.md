@@ -39,11 +39,13 @@ Maya-side dependencies, write MCP host config, and walk you through loading the
 plugin:
 
 ```text
-Help me install dcc-mcp-maya using loonghao/dcc-mcp-maya/install.md.
+Help me install dcc-mcp-maya using https://github.com/loonghao/dcc-mcp-maya/blob/main/install.md.
 ```
 
-The agent should follow [`install.md`](install.md), which delegates the setup
-workflow to [`skills/dcc-mcp-maya-setup`](skills/dcc-mcp-maya-setup/).
+The agent should follow
+[`install.md`](https://github.com/loonghao/dcc-mcp-maya/blob/main/install.md),
+which delegates the setup workflow to
+[`skills/dcc-mcp-maya-setup`](https://github.com/loonghao/dcc-mcp-maya/tree/main/skills/dcc-mcp-maya-setup).
 
 Install into Maya's Python:
 
