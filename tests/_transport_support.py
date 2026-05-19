@@ -118,18 +118,59 @@ def rest_post_json(base_url: str, endpoint: str, payload: Dict[str, Any]) -> Dic
         return json.loads(resp.read() or b"{}")
 
 
-def wait_for_sidecar_registry_row(registry_dir: Path, timeout: float = 8.0) -> Dict[str, Any]:
+def wait_for_sidecar_registry_row(
+    registry_dir: Path,
+    timeout: float = 8.0,
+    *,
+    host_rpc_uri: Optional[str] = None,
+) -> Dict[str, Any]:
     services_path = registry_dir / "services.json"
     deadline = time.monotonic() + timeout
+    last_err = None
     while time.monotonic() < deadline:
         if services_path.is_file():
-            payload = json.loads(services_path.read_text(encoding="utf-8"))
-            for entry in _iter_registry_entries(payload):
-                metadata = entry.get("metadata") or {}
-                if metadata.get("dcc_mcp_role") == "per-dcc-sidecar":
+            try:
+                payload = json.loads(services_path.read_text(encoding="utf-8"))
+            except json.JSONDecodeError as exc:
+                last_err = exc
+            else:
+                for entry in _iter_registry_entries(payload):
+                    metadata = entry.get("metadata") or {}
+                    if metadata.get("dcc_mcp_role") != "per-dcc-sidecar":
+                        continue
+                    if host_rpc_uri is not None and metadata.get("host_rpc_uri") != host_rpc_uri:
+                        continue
                     return entry
         time.sleep(0.05)
-    raise AssertionError("per-dcc-sidecar FileRegistry row never appeared in {}".format(services_path))
+    raise AssertionError(
+        "per-dcc-sidecar FileRegistry row never appeared in {}. host_rpc_uri={!r}. "
+        "Last JSON error: {!r}. Final contents: {}".format(
+            services_path,
+            host_rpc_uri,
+            last_err,
+            services_path.read_text(encoding="utf-8") if services_path.is_file() else "<missing>",
+        )
+    )
+
+
+def wait_for_tcp_url(url: str, timeout: float = 8.0) -> str:
+    """Block until the URL's host/port accepts TCP connections."""
+    parsed = urllib.parse.urlsplit(url)
+    host = parsed.hostname or "127.0.0.1"
+    port = parsed.port
+    if port is None:
+        raise AssertionError("URL has no explicit port: {}".format(url))
+
+    deadline = time.monotonic() + timeout
+    last_err = None
+    while time.monotonic() < deadline:
+        try:
+            with socket.create_connection((host, port), timeout=0.5):
+                return url
+        except OSError as exc:
+            last_err = exc
+            time.sleep(0.05)
+    raise AssertionError("TCP endpoint {} did not become reachable: {!r}".format(url, last_err))
 
 
 def mcp_url_from_registry_entry(entry: Dict[str, Any]) -> str:
@@ -240,9 +281,11 @@ class QtJsonLineStubServer:
                         if reply:
                             self.request.sendall((reply + "\n").encode("utf-8"))
 
-        self._httpd = socketserver.ThreadingTCPServer(("127.0.0.1", self._port), _Handler)
-        self._httpd.daemon_threads = True
-        self._httpd.allow_reuse_address = True
+        class _Server(socketserver.ThreadingTCPServer):
+            allow_reuse_address = True
+            daemon_threads = True
+
+        self._httpd = _Server(("127.0.0.1", self._port), _Handler)
         self._thread = threading.Thread(target=self._httpd.serve_forever, daemon=True)
         self._thread.start()
 
