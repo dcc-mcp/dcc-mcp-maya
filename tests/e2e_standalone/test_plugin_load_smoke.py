@@ -25,11 +25,24 @@ def _plugin_path() -> Path:
     return Path(__file__).parents[2] / "maya" / "plugin" / "dcc_mcp_maya_plugin.py"
 
 
+def _initialize_maya_standalone() -> None:
+    maya_standalone = pytest.importorskip(
+        "maya.standalone",
+        reason="maya.standalone not available — run under mayapy",
+    )
+    try:
+        maya_standalone.initialize(name="python")
+    except Exception:
+        pass
+
+
 def test_plugin_load_via_cmds_loadplugin(monkeypatch):
+    _initialize_maya_standalone()
     from maya import cmds
 
     monkeypatch.setenv("DCC_MCP_MAYA_PORT", "0")
     monkeypatch.setenv("DCC_MCP_GATEWAY_PORT", "0")
+    monkeypatch.setenv("DCC_MCP_MAYA_SIDECAR", "0")
     plugin_path = _plugin_path()
 
     if cmds.pluginInfo("dcc_mcp_maya_plugin", query=True, loaded=True):
@@ -44,6 +57,7 @@ def test_plugin_load_via_cmds_loadplugin(monkeypatch):
 
 
 def test_interactive_initialize_path_has_no_async_thread_error(monkeypatch, capsys):
+    _initialize_maya_standalone()
     import importlib.util
 
     plugin_path = _plugin_path()
@@ -53,6 +67,7 @@ def test_interactive_initialize_path_has_no_async_thread_error(monkeypatch, caps
 
     monkeypatch.setenv("DCC_MCP_MAYA_PORT", "0")
     monkeypatch.setenv("DCC_MCP_GATEWAY_PORT", "0")
+    monkeypatch.setenv("DCC_MCP_MAYA_SIDECAR", "0")
     monkeypatch.setattr(plugin, "_is_interactive", lambda: True)
     monkeypatch.setattr(plugin, "_add_menu", lambda: None)
 
