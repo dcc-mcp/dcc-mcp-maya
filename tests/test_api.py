@@ -15,13 +15,18 @@ from dcc_mcp_maya.api import (
     MissingParamError,
     canonical_maya_exception_message,
     classify_maya_exception,
+    created_node_name,
+    created_object_context,
     is_maya_available,
     maya_error,
     maya_from_exception,
     maya_success,
     missing_param_error,
+    node_long_name,
+    node_shape_names,
     require_main_thread,
     require_param,
+    summarize_node,
     validate_node_exists,
     validate_node_type,
     with_maya,
@@ -49,6 +54,68 @@ def test_maya_success_with_context():
 def test_maya_success_with_prompt():
     result = maya_success("ok", prompt="use delete to undo")
     assert result["prompt"] == "use delete to undo"
+
+
+class _FakeCmdsForNodeSummary:
+    def __init__(self):
+        self.renamed = []
+
+    def ls(self, name, long=False):  # noqa: A002 - mirrors maya.cmds flag name
+        return ["|grp|{}".format(name)] if long and not str(name).startswith("|") else [name]
+
+    def listRelatives(self, name, shapes=False, fullPath=False):  # noqa: N803
+        if shapes and fullPath:
+            return ["{}Shape".format(name)]
+        return []
+
+    def objectType(self, _name):
+        return "transform"
+
+    def getAttr(self, attr):
+        if attr.endswith(".translate"):
+            return [(1, 2, 3)]
+        if attr.endswith(".rotate"):
+            return [(4, 5, 6)]
+        if attr.endswith(".scale"):
+            return [(1, 1, 1)]
+        raise RuntimeError(attr)
+
+    def exactWorldBoundingBox(self, _name):  # noqa: N802
+        return [0, 0, 0, 2, 4, 6]
+
+    def rename(self, old, new):
+        self.renamed.append((old, new))
+        return new
+
+
+def test_created_node_name_normalizes_common_cmds_returns():
+    assert created_node_name(["pCube1", "polyCube1"]) == "pCube1"
+    assert created_node_name("pCube1") == "pCube1"
+    with pytest.raises(ValueError):
+        created_node_name([])
+
+
+def test_summarize_node_returns_stable_identity_packet():
+    cmds = _FakeCmdsForNodeSummary()
+    summary = summarize_node(cmds, "pCube1")
+
+    assert node_long_name(cmds, "pCube1") == "|grp|pCube1"
+    assert node_shape_names(cmds, "|grp|pCube1") == ["|grp|pCube1Shape"]
+    assert summary["object_name"] == "pCube1"
+    assert summary["long_name"] == "|grp|pCube1"
+    assert summary["shape_names"] == ["|grp|pCube1Shape"]
+    assert summary["transform"]["translate"] == [1.0, 2.0, 3.0]
+    assert summary["bounding_box"]["center"] == [1.0, 2.0, 3.0]
+
+
+def test_created_object_context_renames_then_summarizes():
+    cmds = _FakeCmdsForNodeSummary()
+    context = created_object_context(cmds, ["pCube1", "polyCube1"], requested_name="heroCube")
+
+    assert cmds.renamed == [("pCube1", "heroCube")]
+    assert context["object_name"] == "heroCube"
+    assert context["long_name"] == "|grp|heroCube"
+    assert context["node"]["shape_names"] == ["|grp|heroCubeShape"]
 
 
 # ---------------------------------------------------------------------------
@@ -274,6 +341,11 @@ def test_public_api_reexport():
         "MissingParamError",
         "validate_node_exists",
         "validate_node_type",
+        "created_node_name",
+        "node_long_name",
+        "node_shape_names",
+        "summarize_node",
+        "created_object_context",
     ]:
         assert hasattr(dcc_mcp_maya, name), "dcc_mcp_maya.{} missing".format(name)
 
