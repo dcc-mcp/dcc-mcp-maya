@@ -81,6 +81,11 @@ When the user wants **many similar steps** inside Maya (e.g. 10 spheres → 10 F
    to **25** *distinct* tool steps; for homogeneous bulk I/O, still collapse
    to **one** backend script when possible (see repo `examples/workflows/maya_bulk_rbd_fbx.md`).
 5. **Long loops**: import `check_maya_cancelled` from `dcc_mcp_maya` and poll inside the loop so cancellation does not wedge the session.
+6. For creation loops, prefer the injected helpers
+   `maya_created_object_context(cmds.polyCube(), "name")` and
+   `maya_node_summary("name")` over keeping raw `maya.cmds` return lists.
+   They preserve `object_name` while adding long DAG paths, shape names,
+   transform, and bounding-box data when Maya exposes it.
 
 ## Why this skill is special
 

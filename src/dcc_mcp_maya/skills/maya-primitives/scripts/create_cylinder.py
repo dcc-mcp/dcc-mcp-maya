@@ -7,7 +7,9 @@ from __future__ import annotations
 from typing import Optional
 
 # Import local modules
-from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
+from dcc_mcp_core.skill import skill_entry
+
+from dcc_mcp_maya.api import created_object_context, maya_error, maya_from_exception, maya_success
 
 
 def create_cylinder(
@@ -29,21 +31,19 @@ def create_cylinder(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        result = cmds.polyCylinder(radius=radius, height=height, subdivisionsAxis=20)
-        obj = result[0]
-        if name:
-            obj = cmds.rename(obj, name)
-        return skill_success(
-            f"Created cylinder: {obj}",
-            object_name=obj,
-            radius=radius,
-            height=height,
+        context = created_object_context(
+            cmds, cmds.polyCylinder(radius=radius, height=height, subdivisionsAxis=20), name
+        )
+        context.update(radius=radius, height=height)
+        return maya_success(
+            "Created cylinder: {}".format(context["object_name"]),
             prompt="Use set_transform to position or assign_material to shade.",
+            **context,
         )
     except ImportError:
-        return skill_error("Maya not available", "maya.cmds could not be imported")
+        return maya_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return skill_exception(exc, message="Failed to create cylinder")
+        return maya_from_exception(exc, message="Failed to create cylinder")
 
 
 @skill_entry
