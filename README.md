@@ -22,7 +22,7 @@ Embeds a standards-compliant **MCP Streamable HTTP server** (2025-03-26 spec) di
 [![Platform](https://img.shields.io/pypi/format/dcc-mcp-maya?label=distribution)](https://pypi.org/project/dcc-mcp-maya/#files)
 [![Maya](https://img.shields.io/badge/Maya-2020%2B-37A5CC)](https://www.autodesk.com/products/maya/overview)
 [![MCP](https://img.shields.io/badge/MCP-Streamable%20HTTP-6f42c1)](https://modelcontextprotocol.io/)
-[![dcc-mcp-core](https://img.shields.io/badge/dcc--mcp--core-%3E%3D0.17.8-blue)](https://github.com/loonghao/dcc-mcp-core)
+[![dcc-mcp-core](https://img.shields.io/badge/dcc--mcp--core-%3E%3D0.17.9-blue)](https://github.com/loonghao/dcc-mcp-core)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 ## Architecture
@@ -429,7 +429,7 @@ Add to `claude_desktop_config.json`:
 ## Requirements
 
 - Maya 2020+ (Python 3.7+)
-- [`dcc-mcp-core`](https://github.com/loonghao/dcc-mcp-core) ≥ 0.17.8
+- [`dcc-mcp-core`](https://github.com/loonghao/dcc-mcp-core) ≥ 0.17.9
 
 ## Cooperative Cancellation in Skill Scripts
 
