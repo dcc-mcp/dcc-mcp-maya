@@ -14,7 +14,7 @@ from dcc_mcp_maya.server import MayaMcpServer
 MayaMcpServer(
     port: int = 8765,
     server_name: str = "maya-mcp",
-    server_version: str = "0.3.3",  # x-release-please-version
+    server_version: str = "0.3.4",  # x-release-please-version
     gateway_port: Optional[int] = None,
     registry_dir: Optional[str] = None,
     dcc_version: Optional[str] = None,
@@ -30,7 +30,7 @@ MayaMcpServer(
 |-----------|------|---------|-------------|
 | `port` | int | `8765` | TCP port. Use `0` for a random available port. |
 | `server_name` | str | `"maya-mcp"` | Name shown in MCP `initialize` response |
-| `server_version` | str | `"0.3.3"` | Version shown in MCP `initialize` response | <!-- x-release-please-version -->
+| `server_version` | str | `"0.3.4"` | Version shown in MCP `initialize` response | <!-- x-release-please-version -->
 | `gateway_port` | int \| None | `None` | Gateway election port for multi-instance discovery |
 | `registry_dir` | str \| None | `None` | Shared registry directory for discovery metadata |
 | `dcc_version` | str \| None | `None` | Maya version reported to the registry |
