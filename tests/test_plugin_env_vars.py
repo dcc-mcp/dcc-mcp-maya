@@ -284,23 +284,12 @@ class TestStartAsyncSchedulesFinalisation:
         plugin_module._start.assert_called_once_with()
 
 
-class TestSidecarSharesRegistryWithInProcessServer:
-    """Regression: ``_maybe_spawn_sidecar`` MUST pass ``registry_dir`` to
-    ``start_sidecar`` so the sidecar joins the same FileRegistry as the
-    in-process MCP server.
+class TestSidecarUsesCoreRegistryDefaults:
+    """The plugin delegates FileRegistry path resolution to core/server.
 
-    The previous default behaviour split-brained the registry:
-
-    * ``dcc-mcp-server sidecar`` (Rust crate ``dcc-mcp-server::sidecar``)
-      defaulted to ``%TEMP%\\dcc-mcp\\registry\\``.
-    * ``DccServerBase`` / ``GatewayRunner`` defaulted to
-      ``%TEMP%\\dcc-mcp-registry\\``.
-
-    Two registries that never see each other -> gateway election cannot
-    arbitrate across in-process and sidecar candidates -> 9765 stays
-    dark. RFC #998 follow-up (2026-05-16 three-Maya live session: 36
-    stale sidecar rows accumulated in the wrong dir, gateway port had
-    no listener despite all processes alive).
+    dcc-mcp-server >= 0.17.9 aligns the sidecar default registry directory
+    with GatewayRunner and honours ``DCC_MCP_REGISTRY_DIR`` directly. Keeping
+    another copy of that path logic in the Maya plugin risks future drift.
     """
 
     def _arm_plugin(self, plugin_module, monkeypatch):
@@ -318,8 +307,8 @@ class TestSidecarSharesRegistryWithInProcessServer:
         plugin_module._print_sidecar_info = MagicMock()
         return sidecar_pkg
 
-    def test_sidecar_inherits_DCC_MCP_REGISTRY_DIR_env(self, plugin_module, monkeypatch, tmp_path):
-        """When ``DCC_MCP_REGISTRY_DIR`` is set the sidecar must use it."""
+    def test_sidecar_does_not_reimplement_registry_env_resolution(self, plugin_module, monkeypatch, tmp_path):
+        """When ``DCC_MCP_REGISTRY_DIR`` is set, the sidecar binary reads it."""
         custom_dir = tmp_path / "custom-registry"
         monkeypatch.setenv("DCC_MCP_REGISTRY_DIR", str(custom_dir))
 
@@ -328,8 +317,7 @@ class TestSidecarSharesRegistryWithInProcessServer:
 
         sidecar_pkg.start_sidecar.assert_called_once()
         _, kwargs = sidecar_pkg.start_sidecar.call_args
-        assert "registry_dir" in kwargs, "start_sidecar must receive registry_dir to keep registries unified"
-        assert str(kwargs["registry_dir"]) == str(custom_dir)
+        assert "registry_dir" not in kwargs
 
     def test_sidecar_default_disables_in_process_gateway_port(self, plugin_module, monkeypatch):
         """Gateway election must run in the sidecar binary by default."""
@@ -345,28 +333,15 @@ class TestSidecarSharesRegistryWithInProcessServer:
         cfg = plugin_module._resolve_config()
         assert cfg.get("gateway_port") == 9765
 
-    def test_sidecar_defaults_to_maya_gateway_registry_path(self, plugin_module, monkeypatch, tmp_path):
-        """When ``DCC_MCP_REGISTRY_DIR`` is unset, the sidecar must default
-        to the SAME path the in-process ``GatewayRunner`` uses, namely
-        ``<tempdir>/dcc-mcp-registry``. NOT ``<tempdir>/dcc-mcp/registry``
-        (the Rust sidecar binary's own default, which would split-brain
-        the registry)."""
-        # Pin tempdir to a known location so we can assert the path shape.
-        monkeypatch.setattr("tempfile.gettempdir", lambda: str(tmp_path))
+    def test_sidecar_uses_core_default_registry_path(self, plugin_module, monkeypatch):
+        """When unset, dcc-mcp-server >= 0.17.9 owns the default path."""
         monkeypatch.delenv("DCC_MCP_REGISTRY_DIR", raising=False)
 
         sidecar_pkg = self._arm_plugin(plugin_module, monkeypatch)
         plugin_module._maybe_spawn_sidecar()
 
         _, kwargs = sidecar_pkg.start_sidecar.call_args
-        chosen = Path(kwargs["registry_dir"])
-        expected = tmp_path / "dcc-mcp-registry"
-        assert chosen == expected, (
-            f"sidecar registry_dir must be {expected} (matches GatewayRunner "
-            f"default), got {chosen}. The Rust sidecar binary's default "
-            f"({tmp_path / 'dcc-mcp' / 'registry'}) is the wrong path and "
-            f"splits the registry."
-        )
+        assert "registry_dir" not in kwargs
 
     def test_sidecar_banner_omits_internal_rfc_marker(self, plugin_module, monkeypatch, capsys):
         monkeypatch.setattr(plugin_module, "_is_interactive", lambda: False)
@@ -408,7 +383,7 @@ class TestRestartStopsSidecar:
     """Restart MCP Server must tear down the prior sidecar before respawning."""
 
     def test_stop_sidecar_if_running_clears_handle(self, plugin_module, monkeypatch):
-        sidecar_pkg = TestSidecarSharesRegistryWithInProcessServer()._arm_plugin(plugin_module, monkeypatch)
+        sidecar_pkg = TestSidecarUsesCoreRegistryDefaults()._arm_plugin(plugin_module, monkeypatch)
         mock_handle = MagicMock()
         plugin_module._sidecar_handle = mock_handle
 
@@ -418,7 +393,7 @@ class TestRestartStopsSidecar:
         assert plugin_module._sidecar_handle is None
 
     def test_stop_sidecar_if_running_is_noop_when_absent(self, plugin_module, monkeypatch):
-        sidecar_pkg = TestSidecarSharesRegistryWithInProcessServer()._arm_plugin(plugin_module, monkeypatch)
+        sidecar_pkg = TestSidecarUsesCoreRegistryDefaults()._arm_plugin(plugin_module, monkeypatch)
         sidecar_pkg.stop_sidecar = MagicMock(name="stop_sidecar")
         plugin_module._sidecar_handle = None
 
@@ -427,7 +402,7 @@ class TestRestartStopsSidecar:
         sidecar_pkg.stop_sidecar.assert_not_called()
 
     def test_restart_deferred_stops_sidecar_before_respawn(self, plugin_module, monkeypatch, mock_maya_modules):
-        sidecar_pkg = TestSidecarSharesRegistryWithInProcessServer()._arm_plugin(plugin_module, monkeypatch)
+        sidecar_pkg = TestSidecarUsesCoreRegistryDefaults()._arm_plugin(plugin_module, monkeypatch)
         mock_handle = MagicMock()
         plugin_module._sidecar_handle = mock_handle
         plugin_module._stop_host_on_main_thread = MagicMock()
