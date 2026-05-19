@@ -12,6 +12,36 @@ from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_
 from dcc_mcp_maya.api import validate_node_exists
 
 
+def _validate_vector3(name: str, value: Optional[List[float]]) -> Optional[dict]:
+    if value is None:
+        return None
+    if not isinstance(value, list) or len(value) != 3:
+        return skill_error(
+            "Invalid transform vector: {}".format(name),
+            "{} must be a list of exactly 3 numeric values".format(name),
+            possible_solutions=[
+                "Pass {}=[x, y, z].".format(name),
+                "Omit {} when you do not want to change it.".format(name),
+            ],
+            parameter=name,
+            value=value,
+        )
+    try:
+        for item in value:
+            float(item)
+    except (TypeError, ValueError):
+        return skill_error(
+            "Invalid transform vector: {}".format(name),
+            "{} values must be numeric".format(name),
+            possible_solutions=[
+                "Use ints or floats, for example {}=[1.0, 2.0, 3.0].".format(name),
+            ],
+            parameter=name,
+            value=value,
+        )
+    return None
+
+
 def set_transform(
     object_name: str,
     translate: Optional[List[float]] = None,
@@ -37,14 +67,23 @@ def set_transform(
         if err:
             return err
 
+        for param_name, value in (
+            ("translate", translate),
+            ("rotate", rotate),
+            ("scale", scale),
+        ):
+            vector_error = _validate_vector3(param_name, value)
+            if vector_error:
+                return vector_error
+
         applied: dict = {}
-        if translate is not None and len(translate) == 3:
+        if translate is not None:
             cmds.setAttr(f"{object_name}.translate", *translate, type="double3")
             applied["translate"] = translate
-        if rotate is not None and len(rotate) == 3:
+        if rotate is not None:
             cmds.setAttr(f"{object_name}.rotate", *rotate, type="double3")
             applied["rotate"] = rotate
-        if scale is not None and len(scale) == 3:
+        if scale is not None:
             cmds.setAttr(f"{object_name}.scale", *scale, type="double3")
             applied["scale"] = scale
 
