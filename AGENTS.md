@@ -37,6 +37,7 @@ Or load the Maya plugin (`dcc_mcp_maya_plugin.py`) and the server starts automat
 - **docs/guide/getting-started.md** — Step-by-step for first-time users.
 - **docs/guide/local-mcp-debug.md** — Cursor / Claude MCP HTTP URL, **debugpy** attach, gateway vs direct port.
 - **examples/mcp/** — Copy-paste MCP JSON (`cursor-maya-streamable-http.json`).
+- **install.md** + **skills/dcc-mcp-maya-setup/** — Agent-facing setup entry: install `mayapy` pip dependencies, generate MCP config snippets, guide Maya plugin loading, and run a first smoke prompt.
 - **docs/guide/installation.md** — Plugin mode, `userSetup.py`, multi-Maya setup.
 - **docs/guide/multi-instance.md** — Run multiple Maya sessions behind one gateway.
 - **docs/guide/mcp-tools.md** — Representative tool inventory (scene, geometry, material, animation, render).
