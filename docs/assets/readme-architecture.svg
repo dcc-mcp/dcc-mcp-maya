@@ -1,0 +1,95 @@
+<svg width="1120" height="650" viewBox="0 0 1120 650" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">dcc-mcp-maya architecture</title>
+  <desc id="desc">MCP clients connect to a local or LAN gateway, which routes through the dcc-mcp-server sidecar and Maya Qt dispatcher into the in-process Maya bridge, skill tools, resources, readiness, and project state.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1120" y2="650" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#F7FAFC"/>
+      <stop offset="0.56" stop-color="#EEF6F8"/>
+      <stop offset="1" stop-color="#F5F3FF"/>
+    </linearGradient>
+    <linearGradient id="maya" x1="150" y1="190" x2="940" y2="590" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#E6FFFB"/>
+      <stop offset="1" stop-color="#EFF6FF"/>
+    </linearGradient>
+    <linearGradient id="sidecar" x1="385" y1="76" x2="840" y2="190" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#EEF2FF"/>
+      <stop offset="1" stop-color="#E0F2FE"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-15%" width="120%" height="130%" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#0F172A" flood-opacity="0.12"/>
+    </filter>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M2 2L10 6L2 10" stroke="#2563EB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+    <style>
+      .title { font: 700 24px Inter, Segoe UI, Arial, sans-serif; fill: #0F172A; }
+      .label { font: 700 16px Inter, Segoe UI, Arial, sans-serif; fill: #111827; }
+      .small { font: 500 13px Inter, Segoe UI, Arial, sans-serif; fill: #475569; }
+      .tiny { font: 600 11px Inter, Segoe UI, Arial, sans-serif; fill: #64748B; letter-spacing: .04em; }
+      .code { font: 600 13px Consolas, Menlo, monospace; fill: #1E3A8A; }
+      .box { fill: #FFFFFF; stroke: #CBD5E1; stroke-width: 1.4; rx: 18; filter: url(#shadow); }
+      .soft { fill: #F8FAFC; stroke: #CBD5E1; stroke-width: 1.2; rx: 14; }
+      .line { stroke: #2563EB; stroke-width: 2.2; marker-end: url(#arrow); }
+      .muted-line { stroke: #94A3B8; stroke-width: 1.7; stroke-dasharray: 6 6; marker-end: url(#arrow); }
+    </style>
+  </defs>
+
+  <rect width="1120" height="650" rx="28" fill="url(#bg)"/>
+  <text x="52" y="58" class="title">dcc-mcp-maya runtime architecture</text>
+  <text x="52" y="84" class="small">Default plugin mode isolates HTTP in a Rust sidecar while Maya work stays on Maya-safe dispatch paths.</text>
+
+  <rect x="52" y="126" width="232" height="118" class="box"/>
+  <text x="76" y="160" class="tiny">MCP HOSTS</text>
+  <text x="76" y="190" class="label">Claude, Cursor, agents</text>
+  <text x="76" y="216" class="code">POST /mcp</text>
+  <text x="76" y="236" class="code">/v1/search /v1/call</text>
+
+  <rect x="392" y="116" width="338" height="138" fill="url(#sidecar)" stroke="#A5B4FC" stroke-width="1.5" rx="22" filter="url(#shadow)"/>
+  <text x="420" y="150" class="tiny">DEFAULT PLUGIN PATH</text>
+  <text x="420" y="180" class="label">dcc-mcp-server sidecar</text>
+  <text x="420" y="207" class="small">Streamable HTTP, REST gateway, local election</text>
+  <text x="420" y="231" class="code">127.0.0.1:9765  |  LAN :59765</text>
+
+  <rect x="820" y="126" width="236" height="118" class="box"/>
+  <text x="844" y="160" class="tiny">DIRECT PYTHON MODE</text>
+  <text x="844" y="190" class="label">start_server(...)</text>
+  <text x="844" y="216" class="small">Embedded Streamable HTTP</text>
+  <text x="844" y="236" class="code">127.0.0.1:8765/mcp</text>
+
+  <rect x="126" y="302" width="868" height="286" fill="url(#maya)" stroke="#7DD3FC" stroke-width="1.6" rx="28" filter="url(#shadow)"/>
+  <text x="160" y="340" class="tiny">AUTODESK MAYA PROCESS</text>
+  <text x="160" y="372" class="label">In-process Maya bridge</text>
+  <text x="160" y="398" class="small">HostExecutionBridge keeps Maya API calls on the right thread; affinity:any tools bypass the UI queue.</text>
+
+  <rect x="166" y="434" width="198" height="98" class="soft"/>
+  <text x="190" y="464" class="label">Qt dispatcher</text>
+  <text x="190" y="490" class="small">main-thread safe calls</text>
+  <text x="190" y="512" class="small">cancellation checkpoints</text>
+
+  <rect x="412" y="434" width="256" height="98" class="soft"/>
+  <text x="436" y="464" class="label">Progressive skills</text>
+  <text x="436" y="490" class="small">23 skill packages, 164 tools</text>
+  <text x="436" y="512" class="small">minimal boot, load on demand</text>
+
+  <rect x="716" y="434" width="230" height="98" class="soft"/>
+  <text x="740" y="464" class="label">Control plane</text>
+  <text x="740" y="490" class="small">resources, readiness, project state</text>
+  <text x="740" y="512" class="small">capability manifest, metrics</text>
+
+  <rect x="412" y="570" width="256" height="46" fill="#FFFFFF" stroke="#BAE6FD" stroke-width="1.2" rx="14"/>
+  <text x="448" y="599" class="label">maya.cmds / OpenMaya / scene</text>
+
+  <path d="M284 185H382" class="line"/>
+  <path d="M730 185H810" class="muted-line"/>
+  <path d="M560 254V292" class="line"/>
+  <path d="M512 302L330 426" class="line"/>
+  <path d="M560 302V424" class="line"/>
+  <path d="M620 302L812 426" class="line"/>
+  <path d="M540 532V560" class="line"/>
+  <path d="M938 244V292" class="muted-line"/>
+
+  <rect x="52" y="518" width="250" height="70" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="1.2" rx="18"/>
+  <text x="76" y="548" class="tiny">OPERATOR GUARANTEES</text>
+  <text x="76" y="572" class="small">No commandPort requirement, crash cleanup,</text>
+  <text x="76" y="592" class="small">modal-dialog firewall, sidecar fallback.</text>
+</svg>
