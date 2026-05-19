@@ -27,10 +27,11 @@ classifiers = [
 ]
 
 dependencies = [
-    # 0.17.8+: core-owned default affinity enforcement for explicit declarations,
-    # plus Python 3.7 install support for Maya 2022.
+    # 0.17.9+: hardened gateway initialization, remote gateway listener,
+    # instance-scoped unloaded capabilities, and Python 3.7-compatible
+    # dcc-mcp-server binary wheels for Maya 2022 sidecar installs.
     # abi3 (cp38+) on 3.8+; separate cp37 wheels on Python 3.7 (Maya 2022).
-    "dcc-mcp-core>=0.17.8,<1.0.0",
+    "dcc-mcp-core>=0.17.9,<1.0.0",
 ]
 
 [project.optional-dependencies]
@@ -41,9 +42,7 @@ dev = [
     "pytest-timeout>=2.1.0",
     "pytest-xdist>=3.0",
     "requests>=2.28.0",
-    # Sidecar server 0.17.8 is py3-none, but current PyPI metadata excludes
-    # Python 3.7; Maya 2022 tests use the in-process adapter path.
-    "dcc-mcp-server>=0.17.8; python_version >= '3.8'",
+    "dcc-mcp-server>=0.17.9",
     "ruff>=0.8.0",
     "hatchling",
     "build",
@@ -51,7 +50,7 @@ dev = [
     "pyyaml>=5.0",  # YAML parsing for SKILL.md test validation
 ]
 sidecar = [
-    "dcc-mcp-server>=0.17.8; python_version >= '3.8'",
+    "dcc-mcp-server>=0.17.9",
 ]
 
 [project.urls]
