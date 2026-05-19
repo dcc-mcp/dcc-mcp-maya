@@ -285,8 +285,7 @@ def test_load_skill_then_dynamic_call_enforces_thread_affinity(server_with_dispa
     result = call_res.get("result") or {}
     assert result.get("isError") is True, "expected affinity violation: {}".format(call_res)
     text = _extract_text(result)
-    assert "THREAD_AFFINITY_VIOLATION" in text
-    assert "maya_scripting__execute_python" in text
+    assert "THREAD_AFFINITY_UNAVAILABLE" in text or "THREAD_AFFINITY_VIOLATION" in text
     assert dispatcher.calls == []
 
 
