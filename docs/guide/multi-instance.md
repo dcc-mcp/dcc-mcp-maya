@@ -18,19 +18,21 @@ For cross-machine HA deployments, see
    `os.getpid()` — is almost always what you want; the only time you
    override it is when wrapping Maya with a launcher that proxies the
    real PID.
-2. **Every instance reuses the same `FileRegistry` directory.** The
-   first process to bind `DCC_MCP_GATEWAY_PORT` wins the gateway
-   election; the others register as regular backends.  Running two
-   instances under *different* `DCC_MCP_REGISTRY_DIR` values makes them
+2. **Every instance reuses the same `FileRegistry` directory.** In
+   sidecar mode, the first Maya sidecar that notices the gateway is
+   missing starts the standalone machine-wide gateway. All Maya
+   processes then register as regular backends. Running two instances
+   under *different* `DCC_MCP_REGISTRY_DIR` values makes them
    invisible to each other — only do this intentionally (e.g. per-user
    isolation).
 3. **`DCC_MCP_MINIMAL` is per-process.** One instance can run in
    minimal mode (just `maya-scripting` + `maya-scene`) while another
    runs full mode — the gateway reports each backend's active skill
    set independently.
-4. **Gateway election is first-wins.** If the elected Maya crashes, the
-   next election re-runs within a known SLA (see core #303 invariants);
-   tools from surviving backends stay reachable throughout.
+4. **The gateway is independent of any one Maya process.** If a Maya
+   process exits, its sidecar exits and the gateway prunes that backend;
+   the gateway itself stays up for other Maya, Blender, Photoshop, or
+   future DCC sessions on the same workstation.
 
 ## Launching N Instances
 
@@ -72,7 +74,8 @@ The full, commented source is in
 | Variable | Scope | Default | Purpose |
 |---|---|---|---|
 | `DCC_MCP_MAYA_PORT` | per-process | `0` (OS-assigned) | HTTP port for this Maya's MCP server |
-| `DCC_MCP_GATEWAY_PORT` | per-host | unset (no gateway) | Port the elected gateway listens on |
+| `DCC_MCP_GATEWAY_PORT` | per-host | unset (no gateway) | Port the standalone gateway listens on |
+| `DCC_MCP_GATEWAY_NAME` | per-host | `dcc-mcp-gateway@<hostname>` | Label shown in admin and CLI gateway diagnostics |
 | `DCC_MCP_REGISTRY_DIR` | per-user | platform default | Shared registry every backend writes to |
 | `DCC_MCP_MINIMAL` | per-process | `1` | Minimal mode loads only `maya-scripting` + `maya-scene` |
 | `DCC_MCP_DEFAULT_TOOLS` | per-process | unset | Comma-separated list overriding minimal skill set |
@@ -94,16 +97,16 @@ account, or they'll form separate registry islands.
 │  Maya 2025.2 (batch)    port=8767   dcc_pid=9012   minimal=1  │
 │                              │                                 │
 │                              ▼                                 │
-│  shared FileRegistry ──► gateway :9765 (elected by :8765)     │
+│  shared FileRegistry ──► standalone gateway :9765             │
 └────────────────────────────────┬───────────────────────────────┘
                                  │
                                  ▼
                           MCP clients
 ```
 
-Every backend writes its `(port, pid, dcc_version, skill_list)` into the
-shared registry.  The gateway keeps the routing table current and
-exposes a unified `tools/list` that flags which backend owns which tool.
+Every backend writes its `(port, pid, dcc_version, skill_list, display_name)`
+into the shared registry.  The gateway keeps the routing table current and
+exposes a unified discovery surface that flags which backend owns which tool.
 
 ## Troubleshooting
 
@@ -116,11 +119,10 @@ inspect the live entries.
 
 ### "My instance never becomes the gateway"
 
-Gateway election is strictly first-to-bind.  If another Maya already
-owns `DCC_MCP_GATEWAY_PORT`, yours will register as a backend — that
-is the intended behaviour.  To force a specific instance to become the
-gateway, launch it first, or temporarily set a unique port
-(`DCC_MCP_GATEWAY_PORT=9766`) to form a secondary routing domain.
+In sidecar mode, Maya instances do not become the gateway. They ensure
+the standalone gateway is running, then register as backends. If you
+need a separate routing domain, set a unique `DCC_MCP_GATEWAY_PORT`
+and matching `DCC_MCP_REGISTRY_DIR` for that launcher.
 
 ### "Stale entries after Maya crash"
 

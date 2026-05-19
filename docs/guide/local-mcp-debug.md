@@ -8,7 +8,7 @@ Use this after a **dev link** (`just maya-dev-build-link-core-win` / `just maya-
 2. Load **`dcc_mcp_maya`** in **Windows → Settings/Preferences → Plug-in Manager** (auto-load if you want it every session).
 3. Confirm the server URL in the Script Editor / stdout (default **`http://127.0.0.1:8765/mcp`** unless `DCC_MCP_MAYA_PORT` is set).
 
-**Multi-instance / gateway:** if the plugin registered an elected gateway, the aggregated MCP URL is often **`http://127.0.0.1:9765/mcp`**. Point your MCP client at the URL that matches how you run (direct Maya vs gateway).
+**Multi-instance / gateway:** in plugin sidecar mode, the aggregated MCP URL is usually **`http://127.0.0.1:9765/mcp`**. Point your MCP client at the URL that matches how you run (direct Maya vs gateway).
 
 ## 2. Connect Cursor (Streamable HTTP MCP)
 
