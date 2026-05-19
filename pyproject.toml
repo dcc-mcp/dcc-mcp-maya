@@ -27,11 +27,12 @@ classifiers = [
 ]
 
 dependencies = [
-    # 0.17.15+: REST /v1/call dispatch through the host bridge,
+    # 0.17.16+: standalone gateway identity and sidecar diagnostics,
+    # plus REST /v1/call dispatch through the host bridge.
     # hardened async host-busy handling, fixed manylinux/server wheels,
     # and release assets required by the CLI smoke checks.
     # abi3 (cp38+) on 3.8+; separate cp37 wheels on Python 3.7 (Maya 2022).
-    "dcc-mcp-core>=0.17.15,<1.0.0",
+    "dcc-mcp-core>=0.17.16,<1.0.0",
 ]
 
 [project.optional-dependencies]
@@ -42,7 +43,7 @@ dev = [
     "pytest-timeout>=2.1.0",
     "pytest-xdist>=3.0",
     "requests>=2.28.0",
-    "dcc-mcp-server>=0.17.15",
+    "dcc-mcp-server>=0.17.16",
     "ruff>=0.8.0",
     "hatchling",
     "build",
@@ -50,7 +51,7 @@ dev = [
     "pyyaml>=5.0",  # YAML parsing for SKILL.md test validation
 ]
 sidecar = [
-    "dcc-mcp-server>=0.17.15",
+    "dcc-mcp-server>=0.17.16",
 ]
 
 [project.urls]

@@ -12,7 +12,7 @@
 **Repo:** https://github.com/loonghao/dcc-mcp-maya
 **Python:** >=3.7
 **Maya:** 2020+
-**Core dep:** `dcc-mcp-core>=0.17.15,<1.0.0`
+**Core dep:** `dcc-mcp-core>=0.17.16,<1.0.0`
 
 ---
 
@@ -25,7 +25,7 @@ handle = dcc_mcp_maya.start_server(port=8765)
 handle.shutdown()
 ```
 
-Plugin mode: copy `maya/plugin/dcc_mcp_maya_plugin.py` to `MAYA_PLUG_IN_PATH` and load it. Server auto-starts. Sidecar mode exposes the elected gateway locally at `http://127.0.0.1:9765/mcp`; newer core sidecars also bind a LAN listener at `http://<this-machine-lan-ip>:59765/mcp` unless `DCC_MCP_GATEWAY_REMOTE_PORT=0`.
+Plugin mode: copy `maya/plugin/dcc_mcp_maya_plugin.py` to `MAYA_PLUG_IN_PATH` and load it. Server auto-starts. Sidecar mode ensures the standalone gateway locally at `http://127.0.0.1:9765/mcp`; newer core sidecars also bind a LAN listener at `http://<this-machine-lan-ip>:59765/mcp` unless `DCC_MCP_GATEWAY_REMOTE_PORT=0`. The plugin forwards `--display-name`, `--instance-id`, and `--gateway-name` so admin/CLI diagnostics can tell Maya sessions and gateway ownership apart.
 
 ---
 
@@ -189,6 +189,7 @@ Tool naming: `{skill_name.replace("-","_")}__{script_stem}` (e.g. `maya_scene__n
 | `DCC_MCP_MAYA_JOB_STORAGE` | `<data_dir>/jobs.db` | SQLite persistence path |
 | `DCC_MCP_MAYA_JOB_RECOVERY` | `drop` | `requeue`=resume idempotent jobs |
 | `DCC_MCP_GATEWAY_PORT` | `9765` | Multi-instance gateway port (`0`=off) |
+| `DCC_MCP_GATEWAY_NAME` | `dcc-mcp-gateway@<hostname>` | Human-readable standalone gateway label |
 | `DCC_MCP_REGISTRY_DIR` | OS temp | Shared discovery registry |
 | `DCC_MCP_MAYA_HOT_RELOAD` | `0` | `1`=watch skills for disk changes |
 | `DCC_MCP_MAYA_DISABLE_EXECUTE_PYTHON` | `0` | `1`/`true`/`yes`/`on` — refuse `execute_python` (skills-first enforcement) |

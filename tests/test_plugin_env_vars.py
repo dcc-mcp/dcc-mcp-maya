@@ -287,7 +287,7 @@ class TestStartAsyncSchedulesFinalisation:
 class TestSidecarUsesCoreRegistryDefaults:
     """The plugin delegates FileRegistry path resolution to core/server.
 
-    dcc-mcp-server >= 0.17.15 aligns the sidecar default registry directory
+    dcc-mcp-server >= 0.17.16 aligns the sidecar default registry directory
     with GatewayRunner and honours ``DCC_MCP_REGISTRY_DIR`` directly. Keeping
     another copy of that path logic in the Maya plugin risks future drift.
     """
@@ -334,7 +334,7 @@ class TestSidecarUsesCoreRegistryDefaults:
         assert cfg.get("gateway_port") == 9765
 
     def test_sidecar_uses_core_default_registry_path(self, plugin_module, monkeypatch):
-        """When unset, dcc-mcp-server >= 0.17.15 owns the default path."""
+        """When unset, dcc-mcp-server >= 0.17.16 owns the default path."""
         monkeypatch.delenv("DCC_MCP_REGISTRY_DIR", raising=False)
 
         sidecar_pkg = self._arm_plugin(plugin_module, monkeypatch)
@@ -342,6 +342,22 @@ class TestSidecarUsesCoreRegistryDefaults:
 
         _, kwargs = sidecar_pkg.start_sidecar.call_args
         assert "registry_dir" not in kwargs
+
+    def test_sidecar_passes_debug_identity_to_binary(self, plugin_module, monkeypatch):
+        """Maya should label both the per-DCC sidecar and standalone gateway."""
+        monkeypatch.setattr(plugin_module, "_resolve_instance_id", lambda: "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee")
+        monkeypatch.setattr(plugin_module, "_resolve_sidecar_display_name", lambda: "Maya 2025 pid 1234")
+        monkeypatch.setattr(plugin_module, "_resolve_gateway_name", lambda: "dcc-mcp-gateway@workstation-01")
+
+        sidecar_pkg = self._arm_plugin(plugin_module, monkeypatch)
+        plugin_module._maybe_spawn_sidecar()
+
+        sidecar_pkg.start_sidecar.assert_called_once()
+        _, kwargs = sidecar_pkg.start_sidecar.call_args
+        assert kwargs["adapter_version"] == plugin_module.VERSION
+        assert kwargs["display_name"] == "Maya 2025 pid 1234"
+        assert kwargs["gateway_name"] == "dcc-mcp-gateway@workstation-01"
+        assert kwargs["instance_id"] == "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee"
 
     def test_sidecar_banner_omits_internal_rfc_marker(self, plugin_module, monkeypatch, capsys):
         monkeypatch.setattr(plugin_module, "_is_interactive", lambda: False)

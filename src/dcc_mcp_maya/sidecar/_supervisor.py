@@ -65,6 +65,7 @@ from dcc_mcp_maya.sidecar._resolver import (
 __all__ = [
     "DEFAULT_GATEWAY_REMOTE_HOST",
     "DEFAULT_GATEWAY_REMOTE_PORT",
+    "ENV_GATEWAY_NAME",
     "ENV_GATEWAY_REMOTE_HOST",
     "ENV_GATEWAY_REMOTE_PORT",
     "ENV_SIDECAR_MODE",
@@ -80,6 +81,7 @@ __all__ = [
 logger = logging.getLogger(__name__)
 
 ENV_SIDECAR_MODE = "DCC_MCP_MAYA_SIDECAR"
+ENV_GATEWAY_NAME = "DCC_MCP_GATEWAY_NAME"
 ENV_GATEWAY_REMOTE_HOST = "DCC_MCP_GATEWAY_REMOTE_HOST"
 ENV_GATEWAY_REMOTE_PORT = "DCC_MCP_GATEWAY_REMOTE_PORT"
 DEFAULT_GATEWAY_REMOTE_HOST = "0.0.0.0"
@@ -172,10 +174,10 @@ def is_sidecar_mode_enabled(env: Optional[dict] = None) -> bool:
 def resolve_gateway_remote_options(env: Optional[dict] = None) -> tuple[str, int]:
     """Resolve LAN gateway listener options for the sidecar process.
 
-    The elected gateway still competes on the local loopback port
-    (``DCC_MCP_GATEWAY_PORT``, default 9765).  Newer ``dcc-mcp-server``
-    sidecars can additionally bind a LAN-facing listener for company
-    network clients; older binaries simply ignore these env vars.
+    The standalone gateway listens on the local loopback port
+    (``DCC_MCP_GATEWAY_PORT``, default 9765). Newer ``dcc-mcp-server``
+    sidecars ensure that process is running and can additionally ask it
+    to bind a LAN-facing listener for company network clients.
     """
 
     source = os.environ if env is None else env
@@ -200,8 +202,10 @@ def start_sidecar(
     binary_override: Optional[Path] = None,
     qt_port_override: Optional[int] = None,
     registry_dir: Optional[Path] = None,
+    instance_id: Optional[str] = None,
     display_name: Optional[str] = None,
     adapter_version: Optional[str] = None,
+    gateway_name: Optional[str] = None,
     extra_args: Optional[list] = None,
     extra_env: Optional[dict] = None,
     start_qt_server_fn=None,
@@ -223,13 +227,20 @@ def start_sidecar(
             Tests use a known port to drive deterministic assertions.
         registry_dir: passed through to ``--registry-dir``. Defaults to
             the binary's own platform-specific location.
+        instance_id: stable UUID forwarded to ``--instance-id`` so the
+            sidecar row can be correlated with the in-process Maya
+            server and shutdown sentinel.
         display_name: human-readable label written to the FileRegistry
             row (``--display-name``). Useful when multiple Maya sessions
             share a host and an agent needs to disambiguate.
         adapter_version: ``dcc_mcp_maya`` package version stamped onto
             the row (``--adapter-version``). The plug-in passes its own
-            ``VERSION`` here so gateway election can rank adapter
-            generations (see issue maya#137).
+            ``VERSION`` here so gateway and admin diagnostics can report
+            adapter generations.
+        gateway_name: machine-level gateway label forwarded to
+            ``--gateway-name``. Keep this stable per workstation; do
+            not derive it from a scene because the standalone gateway
+            may outlive the Maya instance that launched it.
         extra_args: additional CLI args appended after the standard set.
             For one-off flags that do not deserve a first-class kwarg.
         extra_env: environment overrides for the subprocess. Merged on
@@ -287,10 +298,14 @@ def start_sidecar(
     ]
     if registry_dir is not None:
         cmd.extend(["--registry-dir", str(registry_dir)])
+    if instance_id is not None:
+        cmd.extend(["--instance-id", str(instance_id)])
     if display_name is not None:
         cmd.extend(["--display-name", display_name])
     if adapter_version is not None:
         cmd.extend(["--adapter-version", adapter_version])
+    if gateway_name is not None:
+        cmd.extend(["--gateway-name", gateway_name])
     gateway_port_str = os.environ.get("DCC_MCP_GATEWAY_PORT", "9765").strip()
     try:
         gateway_port = int(gateway_port_str)
