@@ -193,6 +193,7 @@ server.stop()
 | `DCC_MCP_MAYA_EXCLUDE_STUBS_FROM_TOOLS_LIST` | `0` | 从 `tools/list` 隐藏未加载 skill/group stub |
 | `DCC_MCP_MAYA_SIDECAR` | `1` | 设为 `0` 可禁用 Maya 插件默认启动的 `dcc-mcp-server sidecar` |
 | `DCC_MCP_GATEWAY_PORT` | 插件模式下为 `9765` | 网关竞争端口；设为 `0` 可禁用 |
-| `DCC_MCP_GATEWAY_REMOTE_PORT` | sidecar 模式下为 `59765` | 由选举胜出的 sidecar gateway 打开的局域网入口；设为 `0` 可关闭远程访问 |
+| `DCC_MCP_GATEWAY_NAME` | sidecar 模式下为 `dcc-mcp-gateway@<hostname>` | admin、health 和 CLI 诊断中展示的独立 gateway 名称 |
+| `DCC_MCP_GATEWAY_REMOTE_PORT` | sidecar 模式下为 `59765` | 由独立 gateway 打开的局域网入口；设为 `0` 可关闭远程访问 |
 | `DCC_MCP_GATEWAY_REMOTE_HOST` | `0.0.0.0` | 局域网 gateway listener 的绑定地址 |
 | `DCC_MCP_REGISTRY_DIR` | 操作系统临时目录 | 用于服务发现的共享注册目录 |

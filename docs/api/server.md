@@ -42,7 +42,7 @@ Start (or return the already-running) module-level singleton server.
 | `register_builtins` | `bool` | `True` | Discover built-in skills during startup; concrete toolsets load on demand. |
 | `extra_skill_paths` | `List[str]` | `None` | Additional directories to scan for `SKILL.md` files. |
 | `include_bundled` | `bool` | `True` | Include bundled `dcc-mcp-core` skills during discovery. |
-| `gateway_port` | `int \| None` | `None` | Port used for multi-instance gateway election. |
+| `gateway_port` | `int \| None` | `None` | Port used for the multi-instance gateway. |
 | `registry_dir` | `str \| None` | `None` | Shared registry directory for service discovery metadata. |
 | `dcc_version` | `str \| None` | `None` | Maya version reported to the discovery registry. |
 | `scene` | `str \| None` | `None` | Current scene path reported to the discovery registry. |
@@ -205,7 +205,8 @@ Returned by `server.start()` and `start_server()`.
 | `DCC_MCP_MAYA_READINESS_TIMEOUT_SECS` | — | Advisory timeout value for readiness consumers |
 | `DCC_MCP_MAYA_EXCLUDE_STUBS_FROM_TOOLS_LIST` | `0` | Hide unloaded skill/group stubs from `tools/list` |
 | `DCC_MCP_MAYA_SIDECAR` | `1` | Set `0` to disable the default `dcc-mcp-server sidecar` from the Maya plugin |
-| `DCC_MCP_GATEWAY_PORT` | `9765` in plugin mode | Gateway competition port; `0` disables gateway mode |
-| `DCC_MCP_GATEWAY_REMOTE_PORT` | `59765` in sidecar mode | LAN gateway listener port opened by the elected sidecar gateway; `0` disables remote access |
+| `DCC_MCP_GATEWAY_PORT` | `9765` in plugin mode | Standalone gateway port; `0` disables gateway mode |
+| `DCC_MCP_GATEWAY_NAME` | `dcc-mcp-gateway@<hostname>` in sidecar mode | Human-readable standalone gateway label surfaced in admin, health, and CLI diagnostics |
+| `DCC_MCP_GATEWAY_REMOTE_PORT` | `59765` in sidecar mode | LAN gateway listener port opened by the standalone gateway; `0` disables remote access |
 | `DCC_MCP_GATEWAY_REMOTE_HOST` | `0.0.0.0` | Bind address for the LAN gateway listener |
 | `DCC_MCP_REGISTRY_DIR` | OS temp dir | Shared registry directory for service discovery |

@@ -19,7 +19,7 @@ The Maya plugin starts a Rust `dcc-mcp-server` sidecar by default, so HTTP and g
 [![Python](https://img.shields.io/pypi/pyversions/dcc-mcp-maya?label=Python)](https://pypi.org/project/dcc-mcp-maya/)
 [![Maya](https://img.shields.io/badge/Maya-2020%2B-37A5CC)](https://www.autodesk.com/products/maya/overview)
 [![MCP](https://img.shields.io/badge/MCP-Streamable%20HTTP-6f42c1)](https://modelcontextprotocol.io/)
-[![dcc-mcp-core](https://img.shields.io/badge/dcc--mcp--core-%3E%3D0.17.15-blue)](https://github.com/loonghao/dcc-mcp-core)
+[![dcc-mcp-core](https://img.shields.io/badge/dcc--mcp--core-%3E%3D0.17.16-blue)](https://github.com/loonghao/dcc-mcp-core)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 ## Why Use It
@@ -49,7 +49,7 @@ handle = dcc_mcp_maya.start_server(port=8765)
 print(handle.mcp_url())  # http://127.0.0.1:8765/mcp
 ```
 
-Or load the Maya plugin from `maya/plugin/dcc_mcp_maya_plugin.py`. Plugin mode starts automatically and defaults to the sidecar gateway:
+Or load the Maya plugin from `maya/plugin/dcc_mcp_maya_plugin.py`. Plugin mode starts automatically and defaults to the standalone sidecar-managed gateway:
 
 ```json
 {
@@ -71,12 +71,12 @@ If you start the Python server manually with `start_server(port=8765)`, point yo
 
 The default plugin path is:
 
-1. MCP host connects to the elected gateway at `http://127.0.0.1:9765/mcp`.
-2. `dcc-mcp-server sidecar` owns the HTTP runtime and gateway election.
+1. MCP host connects to the standalone gateway at `http://127.0.0.1:9765/mcp`.
+2. Each Maya plugin starts a per-DCC `dcc-mcp-server sidecar`; the sidecar ensures the machine-wide gateway is running and registers this Maya as a backend.
 3. The sidecar calls back into Maya through the Qt event-loop dispatcher.
 4. `MayaMcpServer` routes work to typed skills, resources, project tools, readiness, metrics, and the Maya API.
 
-Set `DCC_MCP_MAYA_SIDECAR=0` before loading the plugin to use the legacy in-process gateway path. Newer sidecar binaries also expose the elected gateway on the LAN at `http://<this-machine-lan-ip>:59765/mcp`; set `DCC_MCP_GATEWAY_REMOTE_PORT=0` to disable that listener.
+Set `DCC_MCP_MAYA_SIDECAR=0` before loading the plugin to use the legacy in-process gateway path. Newer sidecar binaries also expose the standalone gateway on the LAN at `http://<this-machine-lan-ip>:59765/mcp`; set `DCC_MCP_GATEWAY_REMOTE_PORT=0` to disable that listener. Maya passes explicit sidecar labels (`Maya <version> pid <pid>`), stable `instance_id`, and a machine-level gateway name (`DCC_MCP_GATEWAY_NAME` or `dcc-mcp-gateway@<hostname>`) so `/admin`, `/health`, and CLI `list` can separate gateway ownership from Maya sessions.
 
 ## Tool Surface
 
@@ -146,7 +146,7 @@ Useful plugin defaults:
 
 | Mode | URL |
 |---|---|
-| Plugin sidecar gateway | `http://127.0.0.1:9765/mcp` |
+| Plugin standalone gateway | `http://127.0.0.1:9765/mcp` |
 | Optional LAN gateway | `http://<this-machine-lan-ip>:59765/mcp` |
 | Direct `start_server(port=8765)` | `http://127.0.0.1:8765/mcp` |
 
@@ -163,7 +163,8 @@ Useful plugin defaults:
 | `DCC_MCP_MAYA_EXCLUDE_STUBS_FROM_TOOLS_LIST` | `0` | Hide `__skill__*` / `__group__*` stubs from large `tools/list` syncs. |
 | `DCC_MCP_MAYA_SIDECAR` | `1` | `0` disables the default plugin sidecar process. |
 | `DCC_MCP_SERVER_BIN` | auto | Override the `dcc-mcp-server` binary path. |
-| `DCC_MCP_GATEWAY_PORT` | `9765` plugin | Local gateway election port; `0` disables gateway mode. |
+| `DCC_MCP_GATEWAY_PORT` | `9765` plugin | Local standalone gateway port; `0` disables gateway mode. |
+| `DCC_MCP_GATEWAY_NAME` | `dcc-mcp-gateway@<hostname>` sidecar | Human-readable gateway label shown in admin and CLI diagnostics. |
 | `DCC_MCP_GATEWAY_REMOTE_PORT` | `59765` sidecar | LAN gateway listener port; `0` disables remote access. |
 | `DCC_MCP_GATEWAY_REMOTE_HOST` | `0.0.0.0` | Bind address for the LAN gateway listener. |
 | `DCC_MCP_REGISTRY_DIR` | OS temp dir | Shared FileRegistry directory for service discovery. |
@@ -275,8 +276,8 @@ Windows symlinks require Developer Mode or an elevated shell. If symlinks are un
 
 - Autodesk Maya 2020+
 - Python 3.7+
-- `dcc-mcp-core>=0.17.15,<1.0.0`
-- Optional sidecar binary: `dcc-mcp-server>=0.17.15`
+- `dcc-mcp-core>=0.17.16,<1.0.0`
+- Optional sidecar binary: `dcc-mcp-server>=0.17.16`
 
 ## License
 
