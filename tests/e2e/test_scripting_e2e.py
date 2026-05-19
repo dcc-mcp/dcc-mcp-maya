@@ -64,12 +64,13 @@ class TestScriptingE2E:
         assert cmds.objExists("melE2ESphere")
 
     def test_execute_mel_syntax_error_returns_result(self):
-        """Invalid MEL returns a result dict (success or failure, not crash)."""
+        """Invalid MEL returns a structured failure, not just "some dict"."""
         mod = _load("maya-scripting", "execute_mel")
         result = mod.execute_mel(code="this_is_invalid_mel_xyz!!!;")
         assert isinstance(result, dict)
-        # Should be failure, not a Python exception
-        assert "success" in result
+        assert result["success"] is False
+        assert result["message"] == "MEL execution failed"
+        assert result["error"]
 
     def test_execute_python_creates_node(self):
         mod = _load("maya-scripting", "execute_python")
@@ -79,11 +80,18 @@ class TestScriptingE2E:
 
     def test_execute_python_captures_result(self):
         mod = _load("maya-scripting", "execute_python")
-        result = mod.execute_python(code="result = 1 + 2")
+        result = mod.execute_python(code="result = 1 + 2\nresult", result_type="VALUE")
         assert result["success"] is True
-        # result variable should be captured in context
         ctx = result.get("context", {})
-        assert ctx.get("result") == 3 or ctx.get("output") is not None
+        assert ctx.get("output") == "3"
+
+    def test_execute_python_blocks_dirty_new_scene_prompt(self):
+        cmds.polyCube(name="dirtyPromptCube")
+        mod = _load("maya-scripting", "execute_python")
+        result = mod.execute_python(code="cmds.file(new=True)", capture_output=False)
+        assert result["success"] is False
+        assert result["message"] == "cmds.file prompt blocked"
+        assert "force=True" in result["error"]
 
     def test_list_mel_procedures(self):
         mod = _load("maya-scripting", "list_mel_procedures")
