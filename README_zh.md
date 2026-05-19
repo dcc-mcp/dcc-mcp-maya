@@ -55,12 +55,13 @@ mayapy -m pip install dcc-mcp-maya
 Maya 插件管理器里启用插件，可以直接对 agent 说：
 
 ```text
-帮我参考 loonghao/dcc-mcp-maya/install.md 去安装
+帮我参考 https://github.com/loonghao/dcc-mcp-maya/blob/main/install.md 去安装
 ```
 
-Agent 应先阅读 [`install.md`](install.md)，再按
-[`skills/dcc-mcp-maya-setup`](skills/dcc-mcp-maya-setup/) 中的 setup skill
-完成安装、MCP 配置和 smoke prompt 测试。
+Agent 应先阅读
+[`install.md`](https://github.com/loonghao/dcc-mcp-maya/blob/main/install.md)，再按
+[`skills/dcc-mcp-maya-setup`](https://github.com/loonghao/dcc-mcp-maya/tree/main/skills/dcc-mcp-maya-setup)
+中的 setup skill 完成安装、MCP 配置和 smoke prompt 测试。
 
 ### 选项 A — 从 Python 脚本面板
 
