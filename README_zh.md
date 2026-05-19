@@ -51,6 +51,17 @@ mayapy -m pip install dcc-mcp-maya
 
 ## 快速开始
 
+如果希望 AI agent 帮你安装 Maya 侧依赖、生成 MCP 配置，并引导你在
+Maya 插件管理器里启用插件，可以直接对 agent 说：
+
+```text
+帮我参考 loonghao/dcc-mcp-maya/install.md 去安装
+```
+
+Agent 应先阅读 [`install.md`](install.md)，再按
+[`skills/dcc-mcp-maya-setup`](skills/dcc-mcp-maya-setup/) 中的 setup skill
+完成安装、MCP 配置和 smoke prompt 测试。
+
 ### 选项 A — 从 Python 脚本面板
 
 ```python
