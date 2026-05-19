@@ -94,15 +94,16 @@ When the user wants **many similar steps** inside Maya (e.g. 10 spheres → 10 F
   `fileDialog2`, `layoutDialog`) are **not** monkey-patched. The previous
   wrapper corrupted Maya's internal state on `cmds.file(new=True)`,
   Arnold renderer switch, and other paths where the engine consumes the
-  same `cmds.*` entries internally (removed 2026-05-16). If a script
-  genuinely needs to spawn a dialog it spawns; rely on the server-side
-  request timeout to recover from a hung MCP-dispatched job rather than
-  a global override.
+  same `cmds.*` entries internally (removed 2026-05-16).
+- `cmds.file` itself is guarded during MCP execution. Dirty-scene
+  `new/open/save` calls that would open a modal prompt return a structured
+  error instead; import/reference calls get `prompt=False` when the caller did
+  not choose a prompt policy. Pass `force=True` only when discarding unsaved
+  changes is intentional.
 - The previous `mcp_safe_session()` context-manager wrapper has been
   removed entirely. Dispatched jobs run with a bare `exec` against the
-  same `maya.cmds` surface a user types into the Script Editor — same
-  approach as PatrickPalmer/maya-mcp-server, which has been the stability
-  benchmark for this fix series.
+  same `maya.cmds` surface a user types into the Script Editor, with only the
+  narrow `cmds.file` prompt guard described above.
 
 ## Dynamics / solver safety (host crashes)
 

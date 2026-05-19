@@ -55,6 +55,7 @@ from dcc_mcp_core.skill import skill_error, skill_exception
 
 # Import local modules
 from dcc_mcp_maya import _affinity
+from dcc_mcp_maya._cmds_file_guard import guard_cmds_file
 
 logger = logging.getLogger(__name__)
 
@@ -94,22 +95,16 @@ def is_busy() -> bool:
 def run_skill_script(script_path: str, params: Dict[str, Any]) -> Dict[str, Any]:
     """Run a skill script and mark the in-process executor busy.
 
-    Previous revisions wrapped every dispatched job in
-    ``mcp_safe_session`` to neutralise Maya's modal dialogs
-    (AutoSave save-prompt, ``confirmDialog``, ``fileDialog2``). That
-    helper has been retired (RFC #998 follow-up 2026-05-16) because
-    intercepting Maya's ``cmds.*`` dialog surface crashed the engine
-    on common scripts (``cmds.file(new=True)``, Arnold renderer
-    switch). The plug-in now disables Maya's AutoSave timer
-    persistently for the duration of the session at load time
-    (see :func:`maya.plugin.dcc_mcp_maya_plugin._disable_autosave_for_session`),
-    which closes the modal-AutoSave dispatch gap without monkey-
-    patching anything the engine consults internally. The
-    ``cmds.*`` dialog surface is left alone — same approach as
-    PatrickPalmer/maya-mcp-server.
+    Previous revisions wrapped every dispatched job in ``mcp_safe_session`` and
+    patched broad dialog APIs. That helper was retired because intercepting
+    Maya's whole ``cmds.*`` dialog surface crashed the engine on common scripts.
+    The remaining high-frequency prompt source is ``cmds.file``; the executor
+    now wraps only that callable for the duration of the job so dirty-scene
+    ``new/open/save`` calls fail fast instead of opening a modal prompt.
     """
     with _busy_scope():
-        return _run_skill_script_untracked(script_path, params)
+        with guard_cmds_file():
+            return _run_skill_script_untracked(script_path, params)
 
 
 def _run_skill_script_untracked(script_path: str, params: Dict[str, Any]) -> Dict[str, Any]:
