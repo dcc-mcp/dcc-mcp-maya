@@ -107,6 +107,34 @@ jobs:
           raise SystemExit(result.returncode)
           "
 
+      - name: Run Maya plugin load smoke
+        run: |
+          mayapy -c "
+          import maya.standalone
+          maya.standalone.initialize(name='python')
+
+          import os
+          import subprocess
+          import sys
+
+          env = dict(os.environ)
+          env.setdefault('DCC_MCP_ALLOW_AMBIENT_PYTHON', '1')
+          env.setdefault('DCC_MCP_DISABLE_FILE_LOGGING', '1')
+          env.setdefault('DCC_MCP_GATEWAY_PORT', '0')
+          env.setdefault('DCC_MCP_MAYA_SIDECAR', '0')
+
+          result = subprocess.run(
+              [
+                  sys.executable, '-m', 'pytest',
+                  'tests/e2e_standalone/test_plugin_load_smoke.py',
+                  '-m', 'e2e',
+                  '-v', '--tb=short',
+              ],
+              env=env,
+          )
+          raise SystemExit(result.returncode)
+          "
+
   lint:
     name: Lint
     runs-on: ubuntu-latest
