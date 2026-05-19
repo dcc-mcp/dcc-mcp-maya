@@ -287,7 +287,7 @@ class TestStartAsyncSchedulesFinalisation:
 class TestSidecarUsesCoreRegistryDefaults:
     """The plugin delegates FileRegistry path resolution to core/server.
 
-    dcc-mcp-server >= 0.17.9 aligns the sidecar default registry directory
+    dcc-mcp-server >= 0.17.15 aligns the sidecar default registry directory
     with GatewayRunner and honours ``DCC_MCP_REGISTRY_DIR`` directly. Keeping
     another copy of that path logic in the Maya plugin risks future drift.
     """
@@ -334,7 +334,7 @@ class TestSidecarUsesCoreRegistryDefaults:
         assert cfg.get("gateway_port") == 9765
 
     def test_sidecar_uses_core_default_registry_path(self, plugin_module, monkeypatch):
-        """When unset, dcc-mcp-server >= 0.17.9 owns the default path."""
+        """When unset, dcc-mcp-server >= 0.17.15 owns the default path."""
         monkeypatch.delenv("DCC_MCP_REGISTRY_DIR", raising=False)
 
         sidecar_pkg = self._arm_plugin(plugin_module, monkeypatch)
