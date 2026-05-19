@@ -122,6 +122,8 @@ class TestPrimitivesSkillsE2E:
         result = mod.create_sphere(name="e2eSphere", radius=3.0)
         assert result["success"] is True
         assert cmds.objExists("e2eSphere")
+        assert result["context"]["node"]["long_name"].endswith("|e2eSphere")
+        assert result["context"]["node"]["shape_names"]
 
     def test_create_cube_exists_in_scene(self):
         mod = _load("maya-primitives", "create_cube")
@@ -149,6 +151,21 @@ class TestPrimitivesSkillsE2E:
         assert result["success"] is True
         tx = cmds.getAttr("xfSphere.translateX")
         assert abs(tx - 2.0) < 1e-4
+
+    def test_set_transform_rejects_invalid_vector(self):
+        cmds.polySphere(name="badXformSphere")
+        mod = _load("maya-primitives", "set_transform")
+        result = mod.set_transform(object_name="badXformSphere", translate=[1.0, 2.0])
+        assert result["success"] is False
+        assert result["message"] == "Invalid transform vector: translate"
+        assert result["context"]["possible_solutions"]
+
+    def test_get_transform_missing_object_returns_error(self):
+        mod = _load("maya-primitives", "get_transform")
+        result = mod.get_transform(object_name="missingE2EObject")
+        assert result["success"] is False
+        assert result["message"] == "Node not found: missingE2EObject"
+        assert result["context"]["possible_solutions"]
 
     def test_get_transform(self):
         cmds.polySphere(name="gtSphere")

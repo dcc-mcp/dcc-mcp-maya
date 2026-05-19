@@ -329,6 +329,29 @@ class TestScriptingHttpE2E:
         # Envelope either surfaces success=true or a structured dict string.
         assert "success" in text.lower() or "httpInlineCube" in text
 
+    def test_execute_python_dirty_file_prompt_failure_over_http(self):
+        """Dirty-scene ``cmds.file(new=True)`` fails as a structured envelope over HTTP."""
+        tool = self._resolve_execute_python_tool_name()
+        dirty = self._call(
+            tool,
+            {"code": "cmds.polyCube(n='httpDirtyPromptCube')"},
+            request_id=1004,
+        )
+        dirty_text = dirty["result"]["content"][0].get("text", "")
+        if "EXECUTION_FAILED" in dirty_text:
+            pytest.skip("in-process executor unavailable in this mayapy image: {!r}".format(dirty_text[:200]))
+
+        body = self._call(
+            tool,
+            {"code": "cmds.file(new=True)", "capture_output": False},
+            request_id=1005,
+        )
+        text = body["result"]["content"][0].get("text", "")
+        if "EXECUTION_FAILED" in text:
+            pytest.skip("in-process executor unavailable in this mayapy image: {!r}".format(text[:200]))
+        assert "cmds.file prompt blocked" in text
+        assert "force=True" in text
+
     def test_execute_python_captures_cmds_warning_over_http(self):
         """Issue #151 — ``cmds.warning(...)`` must surface in the HTTP payload.
 
