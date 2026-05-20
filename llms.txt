@@ -192,6 +192,7 @@ Tool naming: `{skill_name.replace("-","_")}__{script_stem}` (e.g. `maya_scene__n
 | `DCC_MCP_GATEWAY_NAME` | `dcc-mcp-gateway@<hostname>` | Human-readable standalone gateway label |
 | `DCC_MCP_REGISTRY_DIR` | OS temp | Shared discovery registry |
 | `DCC_MCP_MAYA_HOT_RELOAD` | `0` | `1`=watch skills for disk changes |
+| `DCC_MCP_MAYA_DEV_ROOTS` | — | Optional path-list of trusted roots for `maya-dev` project attachment |
 | `DCC_MCP_MAYA_DISABLE_EXECUTE_PYTHON` | `0` | `1`/`true`/`yes`/`on` — refuse `execute_python` (skills-first enforcement) |
 | `DCC_MCP_MAYA_DISABLE_EXECUTE_MEL` | `0` | Same tokens — refuse `execute_mel` only |
 | `DCC_MCP_MAYA_DISABLE_ARBITRARY_SCRIPT` | `0` | Same tokens — refuse **both** `execute_python` and `execute_mel` |
@@ -206,7 +207,7 @@ Tool naming: `{skill_name.replace("-","_")}__{script_stem}` (e.g. `maya_scene__n
 | `src/dcc_mcp_maya/dispatcher/` | Thread-affinity dispatchers + cancellation (directory module) |
 | `src/dcc_mcp_maya/api.py` | Skill authoring helpers (18 symbols) |
 | `src/dcc_mcp_maya/plugin.py` | Maya plugin entry point |
-| `src/dcc_mcp_maya/skills/` | 23 built-in skill packages (160+ typed tool declarations) |
+| `src/dcc_mcp_maya/skills/` | 24 built-in skill packages (172 typed tool declarations) |
 | `docs/` | VitePress docs (EN + ZH) |
 | `README.md` | Human overview |
 | `AGENTS.md` | Progressive disclosure map |

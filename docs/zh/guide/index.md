@@ -63,7 +63,7 @@ maya-scene/
 
 ### 渐进式加载
 
-本包内置 23 个 Maya Skill 包。Minimal mode 启动时只加载核心 bootstrap 与 scene 工具；未加载的 Skill 仍可通过 `dcc_capability_manifest`、`search_skills` 或 `search_tools` 发现。
+本包内置 24 个 Maya Skill 包。Minimal mode 启动时只加载核心 bootstrap 与 scene 工具；未加载的 Skill 仍可通过 `dcc_capability_manifest`、`search_skills` 或 `search_tools` 发现。
 
 只有任务需要某个领域能力时再加载对应 Skill：
 
