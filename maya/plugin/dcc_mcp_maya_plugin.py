@@ -778,7 +778,7 @@ def _restore_autosave_for_session() -> None:
 
 
 def _maybe_spawn_sidecar() -> None:
-    """Spawn the ``dcc-mcp-server sidecar`` subprocess when opted-in.
+    """Spawn the default ``dcc-mcp-server sidecar`` subprocess.
 
     Sidecar mode is the **strategic** direction for crash-isolated
     actions (RFC #998 — Maya / Blender / Houdini C++ aborts and
