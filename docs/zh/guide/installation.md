@@ -75,6 +75,9 @@ mayapy maya_bootstrap.py
 
 Maya 许可证是 CI 中的前置条件。将此命令放到自托管 runner 或有 Maya 许可证的环境中执行。
 
+更多 MCP host 配置、自定义 bootstrap 代码和 standalone-safe custom skill 示例见
+[Standalone mayapy 服务](./standalone.md)。
+
 ## 方式四 — userSetup.py（自动启动）
 
 如需每次 Maya 启动时自动开启 MCP，推荐复制或 source 仓库自带的
