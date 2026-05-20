@@ -419,12 +419,13 @@ tools:
 
 ---
 
-## Built-in Skills (12 Packages)
+## Built-in Skills (24 Packages)
 
 **Core pipeline skills:**
 - `maya-scene` — scene info, new scene, open/save scene, selection, session info
 - `maya-scripting` — execute_python, execute_mel
 - `maya-export-preset` — export preset management
+- `maya-dev` — live project attach, hot reload, debugpy, and UI capture for tool development
 - `maya-light-rig` — lighting rig creation and management
 - `maya-material-library` — material library and assignment
 - `maya-pipeline` — pipeline integration utilities
@@ -445,6 +446,7 @@ tools:
 | `DCC_MCP_MAYA_SERVER_NAME` | `maya-mcp` | per-process | Name in MCP `initialize`. |
 | `DCC_MCP_MAYA_SKILL_PATHS` | — | per-process | Extra skill dirs (`;` Win, `:` Unix). |
 | `DCC_MCP_SKILL_PATHS` | — | global fallback | Global skill dirs for all DCC adapters. |
+| `DCC_MCP_MAYA_DEV_ROOTS` | — | per-process | Optional path-list of trusted roots for `maya-dev` project attachment. |
 | `DCC_MCP_MINIMAL` | `1` | per-process | `0`=full mode; `1`=minimal mode. |
 | `DCC_MCP_DEFAULT_TOOLS` | — | per-process | Comma-separated skill names overriding minimal mode. |
 | `DCC_MCP_MAYA_METRICS` | `0` | per-process | `1`=enable Prometheus `/metrics`. |
@@ -537,7 +539,7 @@ legacy `list_dcc_instances` / `connect_to_dcc` meta-tools.
 | `src/dcc_mcp_maya/dispatcher/` | Thread-affinity dispatchers + cancellation (directory module) |
 | `src/dcc_mcp_maya/api.py` | 18 skill-authoring helpers |
 | `src/dcc_mcp_maya/capabilities.py` | DCC capability declarations |
-| `src/dcc_mcp_maya/skills/` | 23 built-in skill packages, 160+ typed tool declarations |
+| `src/dcc_mcp_maya/skills/` | 24 built-in skill packages, 172 typed tool declarations |
 | `docs/` | VitePress site (EN + ZH) |
 | `tests/` | pytest suite |
 | `maya/plugin/dcc_mcp_maya_plugin.py` | Maya plugin file for `MAYA_PLUG_IN_PATH` |

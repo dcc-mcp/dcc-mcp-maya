@@ -4,7 +4,7 @@ This guide is for users who want to control Maya using natural language through 
 
 ## How It Works
 
-Once the `dcc-mcp-maya` server is running inside Maya, your AI assistant can discover **23 Maya skill packages** and load **160+ typed Maya tools** on demand. Just describe what you want in plain English; the assistant should search capabilities, load the matching skill, then call the typed tool.
+Once the `dcc-mcp-maya` server is running inside Maya, your AI assistant can discover **24 Maya skill packages** and load **170+ typed Maya tools** on demand. Just describe what you want in plain English; the assistant should search capabilities, load the matching skill, then call the typed tool.
 
 Default startup is intentionally small. If a tool appears missing, ask the assistant to call `dcc_capability_manifest` or `search_skills`, then `load_skill("<skill-name>")`.
 
