@@ -1,0 +1,15 @@
+tools:
+  - name: create_report_cube
+    description: Create a cube and return a small headless scene report.
+    execution: sync
+    affinity: main
+    inputSchema:
+      type: object
+      properties:
+        name:
+          type: string
+          default: standalone_report_cube
+        size:
+          type: number
+          minimum: 0.001
+          default: 1.0
