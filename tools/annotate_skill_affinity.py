@@ -69,6 +69,7 @@ SKILL_DEFAULTS: Dict[str, ExecAffinity] = {
     # async if they know the script is long-running.
     "maya-scripting": ("sync", "main", None),
     # Pure filesystem readers: worker-thread safe
+    "maya-dev": ("sync", "main", None),
     "maya-pipeline": ("sync", "main", None),
     "maya-material-library": ("sync", "main", None),
     # Everything else: sync + main (touches maya.cmds)
@@ -195,6 +196,9 @@ TOOL_OVERRIDES: Dict[Tuple[str, str], ExecAffinity] = {
     ("maya-texture-bake", "set_color_management"): ("sync", "main", None),
     # maya-shot-export meta
     ("maya-shot-export", "get_shot_info"): ("sync", "main", None),
+    # maya-dev diagnostics
+    ("maya-dev", "capture_ui"): ("async", "main", 60),
+    ("maya-dev", "run_check"): ("async", "main", 300),
     # maya-scripting introspect tools: list/signature/search are worker-safe (no DAG access)
     ("maya-scripting", "introspect_list_module"): ("sync", "any", None),
     ("maya-scripting", "introspect_signature"): ("sync", "any", None),

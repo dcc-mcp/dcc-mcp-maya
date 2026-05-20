@@ -1,0 +1,12 @@
+groups:
+- name: development
+  description: Live Maya development helpers for project reload, execution, debugging, and UI evidence
+  default_active: false
+  tools:
+  - attach_project
+  - reload_modules
+  - run_entrypoint
+  - run_script
+  - start_debugpy
+  - capture_ui
+  - run_check
