@@ -266,11 +266,7 @@ def reload_modules(
         return skill_error("Invalid reload mode", "mode must be 'purge' or 'reload'.", mode=mode)
 
     prefixes = _normalize_prefixes(package_prefixes) or project.package_prefixes
-    matches = [
-        name
-        for name, module in list(sys.modules.items())
-        if _matches_module(name, module, project, prefixes)
-    ]
+    matches = [name for name, module in list(sys.modules.items()) if _matches_module(name, module, project, prefixes)]
     matches = sorted(set(matches), key=lambda item: (item.count("."), item))
     errors: List[Dict[str, str]] = []
     changed: List[str] = []
@@ -315,7 +311,9 @@ def _parse_target(target: Optional[str], module: Optional[str], callable_name: O
 
 def _resolve_callable(module_name: str, callable_name: str) -> Tuple[Optional[Any], Optional[Dict[str, Any]]]:
     if not module_name:
-        return None, skill_error("No module provided", "Pass target='package.module:function' or module='package.module'.")
+        return None, skill_error(
+            "No module provided", "Pass target='package.module:function' or module='package.module'."
+        )
     if not callable_name:
         callable_name = "main"
     try:
@@ -472,7 +470,9 @@ def run_entrypoint(
 
 def _resolve_script_path(script_path: str, project: DevProject) -> Tuple[Optional[str], Optional[Dict[str, Any]]]:
     if not script_path:
-        return None, skill_error("No script path provided", "Pass script_path as a project-relative or absolute .py path.")
+        return None, skill_error(
+            "No script path provided", "Pass script_path as a project-relative or absolute .py path."
+        )
     path = script_path
     if not os.path.isabs(path):
         path = os.path.join(project.root, path)
@@ -641,9 +641,13 @@ def _qt_modules() -> Tuple[Optional[Any], Optional[Any], Optional[Any], Optional
 def _maya_main_window() -> Tuple[Optional[Any], Optional[Any], Optional[Dict[str, Any]]]:
     qt_widgets, _qt_core, shiboken, qt_name = _qt_modules()
     if qt_widgets is None or shiboken is None:
-        return None, None, skill_error(
-            "Qt bindings are not available",
-            "Maya UI capture requires PySide/PySide2/PySide6 and shiboken.",
+        return (
+            None,
+            None,
+            skill_error(
+                "Qt bindings are not available",
+                "Maya UI capture requires PySide/PySide2/PySide6 and shiboken.",
+            ),
         )
     try:
         import maya.OpenMayaUI as omui  # noqa: PLC0415
