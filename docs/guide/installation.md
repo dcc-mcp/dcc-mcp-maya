@@ -45,7 +45,7 @@ This is the recommended GUI path. Copy the plugin file to a directory on
 
 The plugin starts the server automatically on load. By default it uses an OS-assigned instance port and participates in the gateway on port `9765`.
 
-With sidecar mode enabled, local MCP clients use `http://127.0.0.1:9765/mcp`. Newer sidecar binaries ensure a standalone gateway and can expose it on the LAN at `http://<this-machine-lan-ip>:59765/mcp`. Set `DCC_MCP_GATEWAY_REMOTE_PORT=0` to disable the LAN listener, or override `DCC_MCP_GATEWAY_NAME`, `DCC_MCP_GATEWAY_REMOTE_HOST`, and `DCC_MCP_GATEWAY_REMOTE_PORT` before loading the plugin.
+In default sidecar mode, local MCP clients use `http://127.0.0.1:9765/mcp`. Newer sidecar binaries ensure a standalone gateway and can expose it on the LAN at `http://<this-machine-lan-ip>:59765/mcp`. Set `DCC_MCP_GATEWAY_REMOTE_PORT=0` to disable the LAN listener, or override `DCC_MCP_GATEWAY_NAME`, `DCC_MCP_GATEWAY_REMOTE_HOST`, and `DCC_MCP_GATEWAY_REMOTE_PORT` before loading the plugin.
 
 During plugin initialization, `dcc-mcp-maya` also closes Maya's legacy MEL commandPort on `127.0.0.1:50007`. The MCP server never uses that port, and closing it prevents accidental HTTP probes from opening Maya's security warning dialog. Studios that still depend on the legacy commandPort can opt out with `DCC_MCP_MAYA_CLOSE_DEFAULT_COMMANDPORT=0` before loading the plugin.
 
