@@ -6,9 +6,10 @@
 
 1. 启动 Maya（或从仓库运行 `just maya-dev-debug-win`）。
 2. 在 **Windows → Settings/Preferences → Plug-in Manager** 中加载 **`dcc_mcp_maya`**（需要时可设为自动加载）。
-3. 在脚本编辑器 / 标准输出中确认服务 URL（默认 **`http://127.0.0.1:8765/mcp`**，除非设置了 `DCC_MCP_MAYA_PORT`）。
+3. 在脚本编辑器 / 标准输出中确认 gateway URL（插件 sidecar 模式通常是 **`http://127.0.0.1:9765/mcp`**）。
 
-**多实例 / 网关：** 若插件注册了选举出的网关，聚合后的 MCP URL 常为 **`http://127.0.0.1:9765/mcp`**。请按实际运行方式（直连 Maya 还是走网关）在 MCP 客户端中填写对应 URL。
+只有在你明确使用 `start_server(port=8765)` 启动直连 Python server 时，才使用
+**`http://127.0.0.1:8765/mcp`**。
 
 ## 2. 连接 Cursor（Streamable HTTP MCP）
 
@@ -21,7 +22,7 @@
 {
   "mcpServers": {
     "maya-local": {
-      "url": "http://127.0.0.1:8765/mcp"
+      "url": "http://127.0.0.1:9765/mcp"
     }
   }
 }
@@ -40,7 +41,7 @@
 {
   "mcpServers": {
     "maya": {
-      "url": "http://127.0.0.1:8765/mcp"
+      "url": "http://127.0.0.1:9765/mcp"
     }
   }
 }
