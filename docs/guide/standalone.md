@@ -43,7 +43,7 @@ Useful environment variables:
 | `DCC_MCP_MAYA_SKILL_PATHS` | none | Extra skill roots for custom standalone-safe skills. |
 
 There is also a runnable example at
-[`examples/standalone/run_maya_mcp.py`](../../examples/standalone/run_maya_mcp.py):
+[`examples/standalone/run_maya_mcp.py`](https://github.com/loonghao/dcc-mcp-maya/blob/main/examples/standalone/run_maya_mcp.py):
 
 ```bash
 mayapy examples/standalone/run_maya_mcp.py
@@ -139,15 +139,15 @@ mayapy examples/standalone/run_maya_mcp.py
 ```
 
 The repo includes a complete example skill at
-[`examples/standalone/custom-skills/standalone-scene-report`](../../examples/standalone/custom-skills/standalone-scene-report).
+[`examples/standalone/custom-skills/standalone-scene-report`](https://github.com/loonghao/dcc-mcp-maya/tree/main/examples/standalone/custom-skills/standalone-scene-report).
 
 ## Existing Examples
 
-- [`maya_bootstrap.py`](../../maya_bootstrap.py) starts the packaged standalone
+- [`maya_bootstrap.py`](https://github.com/loonghao/dcc-mcp-maya/blob/main/maya_bootstrap.py) starts the packaged standalone
   service.
-- [`examples/standalone/run_maya_mcp.py`](../../examples/standalone/run_maya_mcp.py)
+- [`examples/standalone/run_maya_mcp.py`](https://github.com/loonghao/dcc-mcp-maya/blob/main/examples/standalone/run_maya_mcp.py)
   is a copy-paste service script.
-- [`examples/standalone/custom-skills/standalone-scene-report`](../../examples/standalone/custom-skills/standalone-scene-report)
+- [`examples/standalone/custom-skills/standalone-scene-report`](https://github.com/loonghao/dcc-mcp-maya/tree/main/examples/standalone/custom-skills/standalone-scene-report)
   shows a headless-safe custom skill.
 - `tests/e2e_standalone/` contains real `mayapy` E2E coverage for built-in
   tools and MCP protocol calls.

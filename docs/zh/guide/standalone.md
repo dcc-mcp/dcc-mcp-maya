@@ -42,7 +42,7 @@ MCP host 配置这个 direct URL：
 | `DCC_MCP_MAYA_SKILL_PATHS` | 未设置 | 自定义 standalone-safe skill 根目录。 |
 
 仓库里也提供了可运行示例：
-[`examples/standalone/run_maya_mcp.py`](../../../examples/standalone/run_maya_mcp.py)
+[`examples/standalone/run_maya_mcp.py`](https://github.com/loonghao/dcc-mcp-maya/blob/main/examples/standalone/run_maya_mcp.py)
 
 ```bash
 mayapy examples/standalone/run_maya_mcp.py
@@ -136,15 +136,15 @@ mayapy examples/standalone/run_maya_mcp.py
 ```
 
 完整示例 skill 在
-[`examples/standalone/custom-skills/standalone-scene-report`](../../../examples/standalone/custom-skills/standalone-scene-report)。
+[`examples/standalone/custom-skills/standalone-scene-report`](https://github.com/loonghao/dcc-mcp-maya/tree/main/examples/standalone/custom-skills/standalone-scene-report)。
 
 ## 现有例子
 
-- [`maya_bootstrap.py`](../../../maya_bootstrap.py) 启动打包好的 standalone
+- [`maya_bootstrap.py`](https://github.com/loonghao/dcc-mcp-maya/blob/main/maya_bootstrap.py) 启动打包好的 standalone
   服务。
-- [`examples/standalone/run_maya_mcp.py`](../../../examples/standalone/run_maya_mcp.py)
+- [`examples/standalone/run_maya_mcp.py`](https://github.com/loonghao/dcc-mcp-maya/blob/main/examples/standalone/run_maya_mcp.py)
   是可复制的服务脚本。
-- [`examples/standalone/custom-skills/standalone-scene-report`](../../../examples/standalone/custom-skills/standalone-scene-report)
+- [`examples/standalone/custom-skills/standalone-scene-report`](https://github.com/loonghao/dcc-mcp-maya/tree/main/examples/standalone/custom-skills/standalone-scene-report)
   展示 headless-safe custom skill。
 - `tests/e2e_standalone/` 包含真实 `mayapy` 下的内置工具和 MCP 协议 E2E 覆盖。
 
