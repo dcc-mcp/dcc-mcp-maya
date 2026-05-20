@@ -798,9 +798,11 @@ def start_debugpy(
             ],
         )
 
-    debug_log_dir = _display_path(log_dir or os.environ.get(ENV_DEBUGPY_LOG_DIR, "").strip()) if (
-        log_dir or os.environ.get(ENV_DEBUGPY_LOG_DIR, "").strip()
-    ) else None
+    debug_log_dir = (
+        _display_path(log_dir or os.environ.get(ENV_DEBUGPY_LOG_DIR, "").strip())
+        if (log_dir or os.environ.get(ENV_DEBUGPY_LOG_DIR, "").strip())
+        else None
+    )
     debug_python = _resolve_debug_python(python_executable, bool(configure_python))
     mappings = _normalize_path_mappings(path_mappings)
     try:
@@ -1129,6 +1131,7 @@ def _store_ui_ref(widget: Any) -> str:
         try:
             stored = weakref.ref(widget)
         except TypeError:
+
             def stored(widget=widget):
                 return widget
 
@@ -1428,24 +1431,34 @@ def _select_one_widget(
         return None, None, found
     matches = found.get("context", {}).get("matches", [])
     if not matches:
-        return None, None, skill_error(
-            "UI control not found",
-            "No control matched the supplied locator.",
-            error_code=UiErrorCode.NOT_FOUND,
+        return (
+            None,
+            None,
+            skill_error(
+                "UI control not found",
+                "No control matched the supplied locator.",
+                error_code=UiErrorCode.NOT_FOUND,
+            ),
         )
     if len(matches) > 1 or found.get("context", {}).get("match_count", 0) > 1:
-        return None, None, skill_error(
-            "UI locator is ambiguous",
-            "The supplied locator matched more than one control; pass control_id from ui_find.",
-            error_code="ambiguous_control",
-            matches=matches,
+        return (
+            None,
+            None,
+            skill_error(
+                "UI locator is ambiguous",
+                "The supplied locator matched more than one control; pass control_id from ui_find.",
+                error_code="ambiguous_control",
+                matches=matches,
+            ),
         )
     ref = matches[0]
     widget, error = _resolve_ui_ref(ref["id"])
     return widget, ref["id"], error
 
 
-def _invoke_widget_action(widget: Any, action: str, text_value: Optional[str], checked: Optional[bool], option: Optional[str]) -> None:
+def _invoke_widget_action(
+    widget: Any, action: str, text_value: Optional[str], checked: Optional[bool], option: Optional[str]
+) -> None:
     action = (action or "").strip().lower()
     if action == UiActionKind.CLICK:
         click = getattr(widget, "click", None)
