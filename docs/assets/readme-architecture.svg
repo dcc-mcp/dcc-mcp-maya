@@ -68,7 +68,7 @@
 
   <rect x="412" y="434" width="256" height="98" class="soft"/>
   <text x="436" y="464" class="label">Progressive skills</text>
-  <text x="436" y="490" class="small">24 skill packages, 172 tools</text>
+  <text x="436" y="490" class="small">24 skill packages, 177 tools</text>
   <text x="436" y="512" class="small">minimal boot, load on demand</text>
 
   <rect x="716" y="434" width="230" height="98" class="soft"/>

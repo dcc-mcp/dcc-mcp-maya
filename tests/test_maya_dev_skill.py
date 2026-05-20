@@ -142,6 +142,34 @@ class _FakeLineEdit(_FakeWidget):
         self._text = value
 
 
+class _FakeComboBox(_FakeWidget):
+    def __init__(self, object_name: str, options: list[str], current_index: int = 0) -> None:
+        super().__init__(object_name=object_name, text=options[current_index] if options else "")
+        self._options = options
+        self._current_index = current_index
+
+    def findText(self, value: str) -> int:
+        try:
+            return self._options.index(value)
+        except ValueError:
+            return -1
+
+    def setCurrentIndex(self, index: int) -> None:
+        if 0 <= index < len(self._options):
+            self._current_index = index
+            self._text = self._options[index]
+
+    def setCurrentText(self, value: str) -> None:
+        index = self.findText(value)
+        if index >= 0:
+            self.setCurrentIndex(index)
+
+    def currentText(self) -> str:
+        if 0 <= self._current_index < len(self._options):
+            return self._options[self._current_index]
+        return ""
+
+
 def _fake_ui_tree():
     save = _FakeButton("saveButton", "Save")
     name = _FakeLineEdit("nameEdit", "Old")
@@ -398,7 +426,7 @@ def test_ui_snapshot_find_and_action_with_fake_qt() -> None:
         found = _dev_session.ui_find(label="save")
         control_id = found["context"]["matches"][0]["id"]
         clicked = _dev_session.ui_action(action="click", control_id=control_id)
-        edited = _dev_session.ui_action(action="set_text", object_name="nameEdit", value="New")
+        edited = _dev_session.ui_action(action="set_text", object_name="nameEdit", text="New")
 
     assert snapshot["success"] is True
     assert snapshot["context"]["snapshot"]["node_count"] == 3
@@ -409,6 +437,24 @@ def test_ui_snapshot_find_and_action_with_fake_qt() -> None:
     assert edited["success"] is True
     assert name.text() == "New"
     assert edited["context"]["control"]["object_name"] == "nameEdit"
+
+
+def test_ui_action_select_option_validates_missing_options() -> None:
+    from dcc_mcp_maya import _dev_session
+
+    _dev_session.reset_for_tests()
+    combo = _FakeComboBox("modeCombo", ["Draft", "Final"])
+    root = _FakeWidget("mainWindow", title="Maya", children=[combo])
+    with patch.object(_dev_session, "_maya_main_window", return_value=(root, _FakeWidget, None)):
+        selected = _dev_session.ui_action(action="select_option", object_name="modeCombo", option="Final")
+        missing = _dev_session.ui_action(action="select_option", object_name="modeCombo", option="Missing")
+
+    assert selected["success"] is True
+    assert combo.currentText() == "Final"
+    assert missing["success"] is False
+    assert missing["context"]["error_code"] == "unsupported_action"
+    assert "not found" in missing["error"].lower()
+    assert combo.currentText() == "Final"
 
 
 def test_ui_action_requires_unique_locator() -> None:

@@ -26,7 +26,7 @@ The Maya plugin starts a Rust `dcc-mcp-server` sidecar by default, so HTTP and g
 
 | What you get | Why it matters |
 |---|---|
-| **172 typed Maya tools** across 24 bundled skill packages | Agents can call validated tools for scene, mesh, material, animation, render, export, pipeline work, and live tool-development diagnostics. |
+| **177 typed Maya tools** across 24 bundled skill packages | Agents can call validated tools for scene, mesh, material, animation, render, export, pipeline work, and live tool-development diagnostics. |
 | **Progressive loading** | Maya boots with a compact tool surface; agents discover unloaded capabilities and load only what they need. |
 | **Sidecar isolation by default** | HTTP/gateway runtime is out of Maya's UI thread, with a Qt dispatcher bridge back into Maya. |
 | **Multi-instance gateway** | Run several Maya sessions behind one local MCP URL, with optional LAN gateway exposure. |
