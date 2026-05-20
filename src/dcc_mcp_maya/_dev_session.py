@@ -9,28 +9,53 @@ from __future__ import annotations
 
 import base64
 import contextlib
+import difflib
 import importlib
 import io
 import json
 import os
 import runpy
+import socket
 import sys
 import tempfile
 import threading
 import time
 import traceback
+import weakref
 from dataclasses import dataclass, field
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
+from dcc_mcp_core.adapter_contracts import (
+    DebugPathMapping,
+    DebugSessionDescriptor,
+    DebugSessionStatus,
+    UiActionKind,
+    UiActionResult,
+    UiBounds,
+    UiControlNode,
+    UiErrorCode,
+    UiSnapshot,
+)
 from dcc_mcp_core.skill import skill_error, skill_exception, skill_success
 
 ENV_DEV_ROOTS = "DCC_MCP_MAYA_DEV_ROOTS"
+ENV_DEBUGPY_LOG_DIR = "DCC_MCP_MAYA_DEBUGPY_LOG_DIR"
+ENV_DEV_ARTIFACT_DIR = "DCC_MCP_MAYA_DEV_ARTIFACT_DIR"
+DEFAULT_ARTIFACT_THRESHOLD = 4096
 
 _LOCK = threading.RLock()
 _DEBUGPY_STATE: Dict[str, Any] = {
     "listening": False,
     "host": None,
     "port": None,
+    "log_dir": None,
+    "python_executable": None,
+    "path_mappings": [],
+}
+_UI_STATE: Dict[str, Any] = {
+    "session_id": "maya-ui-1",
+    "refs": {},
+    "seq": 0,
 }
 
 
@@ -560,7 +585,198 @@ def run_script(
         sys.argv = old_argv
 
 
-def start_debugpy(host: str = "127.0.0.1", port: int = 5678, wait_for_client: bool = False) -> Dict[str, Any]:
+def _path_uri(path: str) -> str:
+    return "file:///" + os.path.abspath(path).replace("\\", "/").lstrip("/")
+
+
+def _artifact_dir() -> str:
+    raw = os.environ.get(ENV_DEV_ARTIFACT_DIR, "").strip()
+    root = raw or os.path.join(tempfile.gettempdir(), "dcc-mcp-maya-dev-artifacts")
+    root = _display_path(root)
+    os.makedirs(root, exist_ok=True)
+    return root
+
+
+def _write_text_artifact(kind: str, text: str) -> Dict[str, Any]:
+    safe_kind = "".join(ch if ch.isalnum() or ch in ("-", "_") else "-" for ch in kind) or "text"
+    filename = "{}-{}-{}.txt".format(int(time.time() * 1000), threading.get_ident(), safe_kind)
+    path = os.path.join(_artifact_dir(), filename)
+    with open(path, "w", encoding="utf-8", errors="replace") as fh:
+        fh.write(text)
+    return {
+        "kind": safe_kind,
+        "uri": _path_uri(path),
+        "path": path,
+        "mime": "text/plain",
+        "bytes": len(text.encode("utf-8", errors="replace")),
+    }
+
+
+def _externalize_text_fields(ctx: Dict[str, Any], fields: Sequence[str], threshold: int) -> List[Dict[str, Any]]:
+    if threshold <= 0:
+        threshold = 1
+    artifacts: List[Dict[str, Any]] = []
+    for field_name in fields:
+        value = ctx.get(field_name)
+        if isinstance(value, str) and value and len(value) >= threshold:
+            artifacts.append(_write_text_artifact(field_name, value))
+    return artifacts
+
+
+def _runtime_name() -> str:
+    try:
+        import maya.cmds as cmds  # noqa: PLC0415
+
+        version = cmds.about(version=True)
+        return "Maya {}".format(version)
+    except Exception:
+        return "Python {}".format(sys.version.split()[0])
+
+
+def _resolve_debug_python(python_executable: Optional[str], configure_python: bool) -> Optional[str]:
+    if not configure_python:
+        return None
+    raw = python_executable or sys.executable
+    if not raw:
+        return None
+    try:
+        from dcc_mcp_core import correct_python_executable, is_gui_executable  # noqa: PLC0415
+
+        if is_gui_executable(raw):
+            fixed = correct_python_executable(raw)
+            if fixed:
+                return str(fixed)
+    except Exception:
+        pass
+    return _display_path(raw)
+
+
+def _normalize_path_mappings(value: Any = None) -> List[DebugPathMapping]:
+    mappings: List[DebugPathMapping] = []
+    raw_items = value if isinstance(value, list) else []
+    for item in raw_items:
+        if not isinstance(item, dict):
+            continue
+        local = item.get("local_root") or item.get("localRoot") or item.get("local")
+        remote = item.get("remote_root") or item.get("remoteRoot") or item.get("remote")
+        if local and remote:
+            mappings.append(DebugPathMapping(local_root=_display_path(str(local)), remote_root=str(remote)))
+
+    with _LOCK:
+        project_names = [_STATE.get("active")] + sorted((_STATE.get("projects") or {}).keys())
+        seen = {(m.local_root, m.remote_root) for m in mappings}
+        for name in project_names:
+            if not name:
+                continue
+            project = (_STATE.get("projects") or {}).get(name)
+            if project is None:
+                continue
+            pair = (project.root, project.root)
+            if pair not in seen:
+                mappings.append(DebugPathMapping(local_root=project.root, remote_root=project.root))
+                seen.add(pair)
+    return mappings
+
+
+def _debug_descriptor(
+    host: Optional[str],
+    port: Optional[int],
+    connected: bool,
+    log_dir: Optional[str],
+    python_executable: Optional[str],
+    path_mappings: List[DebugPathMapping],
+    status: Optional[str] = None,
+    setup_instructions: Optional[str] = None,
+) -> Dict[str, Any]:
+    if status is None:
+        status = DebugSessionStatus.CLIENT_CONNECTED if connected else DebugSessionStatus.LISTENING
+    descriptor = DebugSessionDescriptor(
+        debugger_kind="debugpy",
+        status=status,
+        host=host,
+        port=port,
+        runtime=_runtime_name(),
+        process_id=os.getpid(),
+        path_mappings=path_mappings,
+        log_uri=_path_uri(log_dir) if log_dir else None,
+        setup_instructions=setup_instructions,
+        metadata={
+            "python_executable": python_executable,
+            "client_connected": connected,
+        },
+    )
+    return descriptor.to_dict()
+
+
+def _debugpy_status(message: str = "debugpy status", reused: bool = False) -> Dict[str, Any]:
+    try:
+        import debugpy  # noqa: PLC0415
+
+        connected = bool(getattr(debugpy, "is_client_connected", lambda: False)())
+    except ImportError:
+        connected = False
+    with _LOCK:
+        path_mappings = list(_DEBUGPY_STATE.get("path_mappings") or [])
+        host = _DEBUGPY_STATE.get("host")
+        port = _DEBUGPY_STATE.get("port")
+        log_dir = _DEBUGPY_STATE.get("log_dir")
+        python_executable = _DEBUGPY_STATE.get("python_executable")
+        listening = bool(_DEBUGPY_STATE.get("listening"))
+    return skill_success(
+        message,
+        listening=listening,
+        host=host,
+        port=port,
+        client_connected=connected,
+        reused=bool(reused),
+        path_mappings=[m.to_dict() for m in path_mappings],
+        debug_session=_debug_descriptor(
+            host=host,
+            port=port,
+            connected=connected,
+            log_dir=log_dir,
+            python_executable=python_executable,
+            path_mappings=path_mappings,
+            status=DebugSessionStatus.CLIENT_CONNECTED if connected else DebugSessionStatus.LISTENING,
+        ),
+    )
+
+
+def _debugpy_error(
+    message: str,
+    error: str,
+    error_code: str,
+    possible_solutions: Optional[List[str]] = None,
+    **context: Any,
+) -> Dict[str, Any]:
+    descriptor = DebugSessionDescriptor.unavailable("debugpy", error).to_dict()
+    return skill_error(
+        message,
+        error,
+        possible_solutions=possible_solutions,
+        error_code=error_code,
+        debug_session=descriptor,
+        **context,
+    )
+
+
+def _port_is_busy(host: str, port: int) -> bool:
+    try:
+        with socket.create_connection((host, port), timeout=0.2):
+            return True
+    except OSError:
+        return False
+
+
+def start_debugpy(
+    host: str = "127.0.0.1",
+    port: int = 5678,
+    wait_for_client: bool = False,
+    configure_python: bool = True,
+    python_executable: Optional[str] = None,
+    log_dir: Optional[str] = None,
+    path_mappings: Any = None,
+) -> Dict[str, Any]:
     """Start debugpy in the Maya process so an IDE can attach."""
 
     host = str(host or "127.0.0.1")
@@ -572,52 +788,106 @@ def start_debugpy(host: str = "127.0.0.1", port: int = 5678, wait_for_client: bo
     try:
         import debugpy  # noqa: PLC0415
     except ImportError:
-        return skill_error(
-            "debugpy is not installed in this Maya Python environment",
-            "Install debugpy into the Python interpreter used by Maya.",
+        return _debugpy_error(
+            "debugpy is not installed; install it to unlock IDE attach debugging for this Maya session",
+            "debugpy is optional, but enables stronger breakpoint debugging from Cursor or VS Code.",
+            "debugpy_missing",
             possible_solutions=[
                 "Run mayapy -m pip install debugpy for the Maya version you are debugging.",
                 "Restart Maya after installing debugpy, then call start_debugpy again.",
             ],
         )
 
+    debug_log_dir = _display_path(log_dir or os.environ.get(ENV_DEBUGPY_LOG_DIR, "").strip()) if (
+        log_dir or os.environ.get(ENV_DEBUGPY_LOG_DIR, "").strip()
+    ) else None
+    debug_python = _resolve_debug_python(python_executable, bool(configure_python))
+    mappings = _normalize_path_mappings(path_mappings)
     try:
+        if debug_log_dir:
+            os.makedirs(debug_log_dir, exist_ok=True)
+            log_to = getattr(debugpy, "log_to", None)
+            if callable(log_to):
+                log_to(debug_log_dir)
+        if debug_python:
+            configure = getattr(debugpy, "configure", None)
+            if callable(configure):
+                configure(python=debug_python)
         debugpy.listen((host, port))
         if wait_for_client:
             debugpy.wait_for_client()
         connected = bool(getattr(debugpy, "is_client_connected", lambda: False)())
     except RuntimeError as exc:
         message = str(exc).lower()
-        if "already" not in message:
-            return skill_exception(exc, message="Failed to start debugpy")
-        connected = bool(getattr(debugpy, "is_client_connected", lambda: False)())
+        if "address already" in message or "in use" in message or "10048" in message or _port_is_busy(host, port):
+            return _debugpy_error(
+                "debugpy port is already in use",
+                str(exc),
+                "port_in_use",
+                possible_solutions=["Choose a different port or stop the process currently using it."],
+                host=host,
+                port=port,
+            )
+        if "already" in message:
+            return _debugpy_error(
+                "debugpy is already listening",
+                str(exc),
+                "debugger_already_listening",
+                host=host,
+                port=port,
+            )
+        return _debugpy_error(
+            "Failed to start debugpy",
+            str(exc),
+            "debugpy_start_failed",
+            host=host,
+            port=port,
+        )
+    except OSError as exc:
+        if _port_is_busy(host, port):
+            return _debugpy_error(
+                "debugpy port is already in use",
+                str(exc),
+                "port_in_use",
+                possible_solutions=["Choose a different port or stop the process currently using it."],
+                host=host,
+                port=port,
+            )
+        return skill_exception(exc, message="Failed to start debugpy")
+    except Exception as exc:  # noqa: BLE001
+        return skill_exception(exc, message="Failed to start debugpy")
 
     with _LOCK:
-        _DEBUGPY_STATE.update({"listening": True, "host": host, "port": port})
+        _DEBUGPY_STATE.update(
+            {
+                "listening": True,
+                "host": host,
+                "port": port,
+                "log_dir": debug_log_dir,
+                "python_executable": debug_python,
+                "path_mappings": mappings,
+            }
+        )
 
     return skill_success(
         "debugpy listening on {}:{}".format(host, port),
+        listening=True,
         host=host,
         port=port,
         client_connected=connected,
         wait_for_client=bool(wait_for_client),
-    )
-
-
-def _debugpy_status(message: str = "debugpy status", reused: bool = False) -> Dict[str, Any]:
-    try:
-        import debugpy  # noqa: PLC0415
-
-        connected = bool(getattr(debugpy, "is_client_connected", lambda: False)())
-    except ImportError:
-        connected = False
-    return skill_success(
-        message,
-        listening=bool(_DEBUGPY_STATE.get("listening")),
-        host=_DEBUGPY_STATE.get("host"),
-        port=_DEBUGPY_STATE.get("port"),
-        client_connected=connected,
-        reused=bool(reused),
+        configured_python_executable=debug_python,
+        log_dir=debug_log_dir,
+        log_uri=_path_uri(debug_log_dir) if debug_log_dir else None,
+        path_mappings=[m.to_dict() for m in mappings],
+        debug_session=_debug_descriptor(
+            host=host,
+            port=port,
+            connected=connected,
+            log_dir=debug_log_dir,
+            python_executable=debug_python,
+            path_mappings=mappings,
+        ),
     )
 
 
@@ -681,6 +951,630 @@ def _find_widget(root: Any, widget_type: Any, object_name: Optional[str]) -> Any
     return None
 
 
+def _widget_text(widget: Any) -> Optional[str]:
+    for name in ("text", "windowTitle", "title", "placeholderText", "accessibleName"):
+        attr = getattr(widget, name, None)
+        if not callable(attr):
+            continue
+        try:
+            value = attr()
+        except Exception:
+            continue
+        if value is not None and str(value):
+            return str(value)
+    return None
+
+
+def _widget_tooltip(widget: Any) -> Optional[str]:
+    attr = getattr(widget, "toolTip", None)
+    if callable(attr):
+        try:
+            value = attr()
+            return str(value) if value else None
+        except Exception:
+            return None
+    return None
+
+
+def _widget_object_name(widget: Any) -> Optional[str]:
+    attr = getattr(widget, "objectName", None)
+    if callable(attr):
+        try:
+            value = attr()
+            return str(value) if value else None
+        except Exception:
+            return None
+    return None
+
+
+def _widget_visible(widget: Any) -> bool:
+    attr = getattr(widget, "isVisible", None)
+    if callable(attr):
+        try:
+            return bool(attr())
+        except Exception:
+            return True
+    return True
+
+
+def _widget_enabled(widget: Any) -> bool:
+    attr = getattr(widget, "isEnabled", None)
+    if callable(attr):
+        try:
+            return bool(attr())
+        except Exception:
+            return True
+    return True
+
+
+def _widget_checked(widget: Any) -> Optional[bool]:
+    attr = getattr(widget, "isChecked", None)
+    if callable(attr):
+        try:
+            return bool(attr())
+        except Exception:
+            return None
+    return None
+
+
+def _widget_value(widget: Any) -> Optional[str]:
+    for name in ("currentText", "value", "plainText", "toPlainText"):
+        attr = getattr(widget, name, None)
+        if callable(attr):
+            try:
+                value = attr()
+            except Exception:
+                continue
+            if value is not None and str(value):
+                return str(value)
+    return None
+
+
+def _widget_bounds(widget: Any) -> Optional[UiBounds]:
+    rect = None
+    for name in ("geometry", "rect"):
+        attr = getattr(widget, name, None)
+        if callable(attr):
+            try:
+                rect = attr()
+                break
+            except Exception:
+                continue
+    if rect is None:
+        return None
+
+    def _num(obj: Any, attr_name: str) -> float:
+        attr = getattr(obj, attr_name, None)
+        if callable(attr):
+            return float(attr())
+        if attr is not None:
+            return float(attr)
+        return 0.0
+
+    return UiBounds(
+        x=_num(rect, "x"),
+        y=_num(rect, "y"),
+        width=_num(rect, "width"),
+        height=_num(rect, "height"),
+    )
+
+
+def _widget_role(widget: Any) -> str:
+    name = type(widget).__name__.lower()
+    if "pushbutton" in name or name.endswith("button"):
+        return "button"
+    if "lineedit" in name or "textedit" in name or "plaintextedit" in name:
+        return "textbox"
+    if "checkbox" in name:
+        return "checkbox"
+    if "radiobutton" in name:
+        return "radio"
+    if "combobox" in name:
+        return "combobox"
+    if "label" in name:
+        return "label"
+    if "menu" in name:
+        return "menu"
+    is_window = getattr(widget, "isWindow", None)
+    if callable(is_window):
+        try:
+            if is_window():
+                return "window"
+        except Exception:
+            pass
+    return "widget"
+
+
+def _widget_children(widget: Any, widget_type: Any) -> List[Any]:
+    raw: List[Any] = []
+    children = getattr(widget, "children", None)
+    if callable(children):
+        try:
+            raw = list(children())
+        except Exception:
+            raw = []
+    elif hasattr(widget, "_children"):
+        raw = list(getattr(widget, "_children"))
+    if widget_type is None:
+        return raw
+    return [child for child in raw if isinstance(child, widget_type)]
+
+
+def _widget_find_all(root: Any, widget_type: Any, include_root: bool = True) -> List[Any]:
+    found = [root] if include_root else []
+    find_children = getattr(root, "findChildren", None)
+    if callable(find_children) and widget_type is not None:
+        try:
+            for child in find_children(widget_type):
+                if child not in found:
+                    found.append(child)
+            return found
+        except Exception:
+            pass
+    stack = list(_widget_children(root, widget_type))
+    while stack:
+        child = stack.pop(0)
+        if child not in found:
+            found.append(child)
+            stack.extend(_widget_children(child, widget_type))
+    return found
+
+
+def _store_ui_ref(widget: Any) -> str:
+    with _LOCK:
+        _UI_STATE["seq"] = int(_UI_STATE.get("seq") or 0) + 1
+        seq = int(_UI_STATE["seq"])
+        object_name = _widget_object_name(widget)
+        ref_id = "{}:{}:{}".format(_UI_STATE["session_id"], object_name or type(widget).__name__, seq)
+        try:
+            stored = weakref.ref(widget)
+        except TypeError:
+            def stored(widget=widget):
+                return widget
+
+        _UI_STATE.setdefault("refs", {})[ref_id] = stored
+        return ref_id
+
+
+def _resolve_ui_ref(control_id: str) -> Tuple[Optional[Any], Optional[Dict[str, Any]]]:
+    with _LOCK:
+        stored = (_UI_STATE.get("refs") or {}).get(control_id)
+    if stored is None:
+        return None, skill_error(
+            "UI control not found",
+            "No control with id {!r}; call ui_snapshot or ui_find again.".format(control_id),
+            error_code=UiErrorCode.NOT_FOUND,
+            control_id=control_id,
+        )
+    widget = stored()
+    if widget is None:
+        return None, skill_error(
+            "UI control is stale",
+            "The referenced Qt widget no longer exists; refresh the UI snapshot.",
+            error_code=UiErrorCode.STALE_CONTROL,
+            action_result=UiActionResult.stale(control_id).to_dict(),
+            control_id=control_id,
+        )
+    try:
+        _qt_widgets, _qt_core, shiboken, _qt_name = _qt_modules()
+        is_valid = getattr(shiboken, "isValid", None) if shiboken is not None else None
+        if callable(is_valid) and not is_valid(widget):
+            return None, skill_error(
+                "UI control is stale",
+                "The referenced Qt widget has been deleted; refresh the UI snapshot.",
+                error_code=UiErrorCode.STALE_CONTROL,
+                action_result=UiActionResult.stale(control_id).to_dict(),
+                control_id=control_id,
+            )
+    except Exception:
+        pass
+    return widget, None
+
+
+def _ui_ref(widget: Any, control_id: Optional[str] = None) -> Dict[str, Any]:
+    ref_id = control_id or _store_ui_ref(widget)
+    bounds = _widget_bounds(widget)
+    return {
+        "id": ref_id,
+        "object_name": _widget_object_name(widget),
+        "class": type(widget).__name__,
+        "role": _widget_role(widget),
+        "label": _widget_text(widget),
+        "text": _widget_text(widget),
+        "tooltip": _widget_tooltip(widget),
+        "visible": _widget_visible(widget),
+        "enabled": _widget_enabled(widget),
+        "bounds": bounds.to_dict() if bounds else None,
+        "value": _widget_value(widget),
+        "checked": _widget_checked(widget),
+        "stale": False,
+    }
+
+
+def _ui_node(
+    widget: Any,
+    widget_type: Any,
+    max_depth: int,
+    max_nodes: int,
+    include_invisible: bool,
+) -> Tuple[UiControlNode, int, bool]:
+    count = 1
+    truncated = False
+    ref_id = _store_ui_ref(widget)
+    bounds = _widget_bounds(widget)
+    node = UiControlNode(
+        id=ref_id,
+        role=_widget_role(widget),
+        label=_widget_text(widget),
+        text=_widget_text(widget),
+        object_name=_widget_object_name(widget),
+        tooltip=_widget_tooltip(widget),
+        enabled=_widget_enabled(widget),
+        visible=_widget_visible(widget),
+        bounds=bounds,
+        value=_widget_value(widget),
+        checked=_widget_checked(widget),
+        metadata={"class": type(widget).__name__},
+    )
+    if max_depth <= 0 or count >= max_nodes:
+        return node, count, bool(max_depth <= 0)
+
+    for child in _widget_children(widget, widget_type):
+        if not include_invisible and not _widget_visible(child):
+            continue
+        if count >= max_nodes:
+            truncated = True
+            break
+        child_node, child_count, child_truncated = _ui_node(
+            child,
+            widget_type=widget_type,
+            max_depth=max_depth - 1,
+            max_nodes=max_nodes - count,
+            include_invisible=include_invisible,
+        )
+        node.children.append(child_node)
+        count += child_count
+        truncated = truncated or child_truncated
+    return node, count, truncated
+
+
+def ui_snapshot(
+    object_name: Optional[str] = None,
+    max_depth: int = 4,
+    max_nodes: int = 200,
+    include_invisible: bool = False,
+) -> Dict[str, Any]:
+    """Return a bounded normalized Qt widget tree."""
+
+    root, widget_type, error = _maya_main_window()
+    if error is not None:
+        return error
+    assert root is not None
+    assert widget_type is not None
+
+    widget = _find_widget(root, widget_type, object_name)
+    if widget is None:
+        return skill_error(
+            "Qt widget not found",
+            "No Maya widget matched object_name={!r}.".format(object_name),
+            error_code=UiErrorCode.NOT_FOUND,
+            object_name=object_name,
+        )
+    max_depth = max(0, int(max_depth))
+    max_nodes = max(1, int(max_nodes))
+    root_node, node_count, truncated = _ui_node(widget, widget_type, max_depth, max_nodes, bool(include_invisible))
+    with _LOCK:
+        session_id = str(_UI_STATE["session_id"])
+    snapshot = UiSnapshot(
+        root=root_node,
+        session_id=session_id,
+        truncated=truncated,
+        node_count=node_count,
+        metadata={
+            "object_name": object_name,
+            "max_depth": max_depth,
+            "max_nodes": max_nodes,
+        },
+    )
+    return skill_success(
+        "Maya UI snapshot captured",
+        snapshot=snapshot.to_dict(),
+        node_count=node_count,
+        truncated=truncated,
+    )
+
+
+def _matches_text(actual: Optional[str], expected: Optional[str], fuzzy: bool) -> bool:
+    if not expected:
+        return True
+    if actual is None:
+        return False
+    actual_l = actual.lower()
+    expected_l = str(expected).lower()
+    if expected_l in actual_l:
+        return True
+    if not fuzzy:
+        return False
+    return difflib.SequenceMatcher(None, actual_l, expected_l).ratio() >= 0.72
+
+
+def _match_widget(
+    widget: Any,
+    query: Optional[str],
+    object_name: Optional[str],
+    role: Optional[str],
+    label: Optional[str],
+    text: Optional[str],
+    window_title: Optional[str],
+    tooltip: Optional[str],
+    fuzzy: bool,
+) -> bool:
+    if object_name and _widget_object_name(widget) != object_name:
+        return False
+    if role and _widget_role(widget) != str(role).lower():
+        return False
+    if label and not _matches_text(_widget_text(widget), label, fuzzy):
+        return False
+    if text and not _matches_text(_widget_text(widget), text, fuzzy):
+        return False
+    if window_title:
+        title_attr = getattr(widget, "windowTitle", None)
+        try:
+            title_value = title_attr() if callable(title_attr) else None
+        except Exception:
+            title_value = None
+        if not _matches_text(str(title_value) if title_value else None, window_title, fuzzy):
+            return False
+    if tooltip and not _matches_text(_widget_tooltip(widget), tooltip, fuzzy):
+        return False
+    if query:
+        haystack = " ".join(
+            part
+            for part in (
+                _widget_object_name(widget),
+                _widget_text(widget),
+                _widget_tooltip(widget),
+                type(widget).__name__,
+                _widget_role(widget),
+            )
+            if part
+        )
+        if not _matches_text(haystack, query, fuzzy):
+            return False
+    return True
+
+
+def ui_find(
+    query: Optional[str] = None,
+    object_name: Optional[str] = None,
+    role: Optional[str] = None,
+    label: Optional[str] = None,
+    text: Optional[str] = None,
+    window_title: Optional[str] = None,
+    tooltip: Optional[str] = None,
+    limit: int = 20,
+    include_invisible: bool = False,
+    fuzzy: bool = True,
+) -> Dict[str, Any]:
+    """Find Qt widgets by semantic locators."""
+
+    if not any([query, object_name, role, label, text, window_title, tooltip]):
+        return skill_error(
+            "No UI locator provided",
+            "Pass at least one of query, object_name, role, label, text, window_title, or tooltip.",
+        )
+    root, widget_type, error = _maya_main_window()
+    if error is not None:
+        return error
+    assert root is not None
+    assert widget_type is not None
+
+    limit = max(1, int(limit or 20))
+    matches: List[Dict[str, Any]] = []
+    for widget in _widget_find_all(root, widget_type):
+        if not include_invisible and not _widget_visible(widget):
+            continue
+        if _match_widget(widget, query, object_name, role, label, text, window_title, tooltip, bool(fuzzy)):
+            matches.append(_ui_ref(widget))
+
+    shown = matches[:limit]
+    omitted = max(0, len(matches) - len(shown))
+    message = "Found {} matching UI control(s)".format(len(matches))
+    return skill_success(
+        message,
+        matches=shown,
+        match_count=len(matches),
+        omitted_match_count=omitted,
+        truncated=omitted > 0,
+    )
+
+
+def _focus_id() -> Optional[str]:
+    try:
+        qt_widgets, _qt_core, _shiboken, _qt_name = _qt_modules()
+        app = getattr(qt_widgets, "QApplication", None)
+        focus_widget = app.focusWidget() if app is not None and callable(getattr(app, "focusWidget", None)) else None
+        if focus_widget is not None:
+            return _store_ui_ref(focus_widget)
+    except Exception:
+        return None
+    return None
+
+
+def _select_one_widget(
+    control_id: Optional[str],
+    query: Optional[str],
+    object_name: Optional[str],
+    role: Optional[str],
+    label: Optional[str],
+    text: Optional[str],
+    window_title: Optional[str],
+    tooltip: Optional[str],
+) -> Tuple[Optional[Any], Optional[str], Optional[Dict[str, Any]]]:
+    if control_id:
+        widget, error = _resolve_ui_ref(control_id)
+        return widget, control_id, error
+    found = ui_find(
+        query=query,
+        object_name=object_name,
+        role=role,
+        label=label,
+        text=text,
+        window_title=window_title,
+        tooltip=tooltip,
+        limit=2,
+    )
+    if not found.get("success"):
+        return None, None, found
+    matches = found.get("context", {}).get("matches", [])
+    if not matches:
+        return None, None, skill_error(
+            "UI control not found",
+            "No control matched the supplied locator.",
+            error_code=UiErrorCode.NOT_FOUND,
+        )
+    if len(matches) > 1 or found.get("context", {}).get("match_count", 0) > 1:
+        return None, None, skill_error(
+            "UI locator is ambiguous",
+            "The supplied locator matched more than one control; pass control_id from ui_find.",
+            error_code="ambiguous_control",
+            matches=matches,
+        )
+    ref = matches[0]
+    widget, error = _resolve_ui_ref(ref["id"])
+    return widget, ref["id"], error
+
+
+def _invoke_widget_action(widget: Any, action: str, text_value: Optional[str], checked: Optional[bool], option: Optional[str]) -> None:
+    action = (action or "").strip().lower()
+    if action == UiActionKind.CLICK:
+        click = getattr(widget, "click", None)
+        if callable(click):
+            click()
+            return
+        raise RuntimeError("Widget does not expose click()")
+    if action == UiActionKind.FOCUS:
+        focus = getattr(widget, "setFocus", None)
+        if callable(focus):
+            focus()
+            return
+        raise RuntimeError("Widget does not expose setFocus()")
+    if action == UiActionKind.SET_TEXT:
+        value = "" if text_value is None else str(text_value)
+        for name in ("setText", "setPlainText"):
+            setter = getattr(widget, name, None)
+            if callable(setter):
+                setter(value)
+                return
+        raise RuntimeError("Widget does not expose a text setter")
+    if action == UiActionKind.TOGGLE:
+        toggle = getattr(widget, "toggle", None)
+        if callable(toggle):
+            toggle()
+            return
+        click = getattr(widget, "click", None)
+        if callable(click):
+            click()
+            return
+        raise RuntimeError("Widget does not expose toggle() or click()")
+    if action == UiActionKind.SET_CHECKED:
+        setter = getattr(widget, "setChecked", None)
+        if callable(setter):
+            setter(bool(checked))
+            return
+        raise RuntimeError("Widget does not expose setChecked()")
+    if action == UiActionKind.SELECT_OPTION:
+        target = "" if option is None else str(option)
+        set_current_text = getattr(widget, "setCurrentText", None)
+        if callable(set_current_text):
+            set_current_text(target)
+            return
+        find_text = getattr(widget, "findText", None)
+        set_index = getattr(widget, "setCurrentIndex", None)
+        if callable(find_text) and callable(set_index):
+            index = find_text(target)
+            if index < 0:
+                raise RuntimeError("Option {!r} not found".format(target))
+            set_index(index)
+            return
+        raise RuntimeError("Widget does not expose combo-box selection APIs")
+    raise RuntimeError("Unsupported UI action {!r}".format(action))
+
+
+def ui_action(
+    action: str,
+    control_id: Optional[str] = None,
+    query: Optional[str] = None,
+    object_name: Optional[str] = None,
+    role: Optional[str] = None,
+    label: Optional[str] = None,
+    text: Optional[str] = None,
+    window_title: Optional[str] = None,
+    tooltip: Optional[str] = None,
+    value: Optional[str] = None,
+    checked: Optional[bool] = None,
+    option: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Perform a bounded action on a unique Qt control."""
+
+    widget, resolved_id, error = _select_one_widget(control_id, query, object_name, role, label, text, window_title, tooltip)
+    if error is not None:
+        return error
+    assert widget is not None
+    assert resolved_id is not None
+
+    if not _widget_visible(widget):
+        return skill_error(
+            "UI control is not visible",
+            "The matched control is hidden; refresh the snapshot or choose another locator.",
+            error_code="not_visible",
+            control=_ui_ref(widget, resolved_id),
+        )
+    if not _widget_enabled(widget):
+        return skill_error(
+            "UI control is disabled",
+            "The matched control is disabled and cannot be acted on.",
+            error_code="disabled",
+            control=_ui_ref(widget, resolved_id),
+        )
+
+    before_focus = _focus_id()
+    before = _ui_ref(widget, resolved_id)
+    try:
+        _invoke_widget_action(widget, action, value if value is not None else text, checked, option)
+    except Exception as exc:  # noqa: BLE001
+        result = UiActionResult(
+            success=False,
+            control_id=resolved_id,
+            error_code=UiErrorCode.UNSUPPORTED_ACTION,
+            message=str(exc),
+            before_focus_id=before_focus,
+        )
+        return skill_error(
+            "UI action failed",
+            str(exc),
+            error_code=result.error_code,
+            action_result=result.to_dict(),
+            control=before,
+        )
+    after_focus = _focus_id()
+    after = _ui_ref(widget, resolved_id)
+    result = UiActionResult(
+        success=True,
+        control_id=resolved_id,
+        before_focus_id=before_focus,
+        after_focus_id=after_focus,
+        metadata={"action": action},
+    )
+    return skill_success(
+        "UI action completed",
+        action_result=result.to_dict(),
+        control=after,
+        before=before,
+        after=after,
+    )
+
+
 def capture_ui(object_name: Optional[str] = None) -> Dict[str, Any]:
     """Capture the Maya main window or a named Qt widget as base64 PNG."""
 
@@ -737,6 +1631,130 @@ def capture_ui(object_name: Optional[str] = None) -> Dict[str, Any]:
                 pass
 
 
+def _node_ref_from_name(node: str) -> Optional[Dict[str, Any]]:
+    import maya.cmds as cmds  # noqa: PLC0415
+
+    if not node or not cmds.objExists(node):
+        return None
+    long_names = cmds.ls(node, long=True) or []
+    long_name = str(long_names[0]) if long_names else str(node)
+    short_name = long_name.split("|")[-1]
+    uuids = cmds.ls(long_name, uuid=True) or []
+    node_type = cmds.nodeType(long_name) if cmds.objExists(long_name) else None
+    return {
+        "kind": "maya_node",
+        "id": str(uuids[0]) if uuids else long_name,
+        "uuid": str(uuids[0]) if uuids else None,
+        "long_name": long_name,
+        "short_name": short_name,
+        "type": node_type,
+        "exists": True,
+        "stale": False,
+        "metadata": {
+            "scene_path": _current_scene_path(),
+        },
+    }
+
+
+def _current_scene_path() -> Optional[str]:
+    try:
+        import maya.cmds as cmds  # noqa: PLC0415
+
+        path = cmds.file(query=True, sceneName=True)
+        return str(path) if path else None
+    except Exception:
+        return None
+
+
+def _find_node_by_uuid(uuid_value: str) -> Optional[str]:
+    import maya.cmds as cmds  # noqa: PLC0415
+
+    if not uuid_value:
+        return None
+    try:
+        direct = cmds.ls(uuid_value, long=True) or []
+        for node in direct:
+            uuids = cmds.ls(node, uuid=True) or []
+            if uuids and str(uuids[0]) == uuid_value:
+                return str(node)
+    except Exception:
+        pass
+    try:
+        nodes = cmds.ls(long=True) or []
+        uuids = cmds.ls(nodes, uuid=True) or []
+        for node, node_uuid in zip(nodes, uuids):
+            if str(node_uuid) == uuid_value:
+                return str(node)
+    except Exception:
+        return None
+    return None
+
+
+def make_node_ref(node: str) -> Dict[str, Any]:
+    """Return a stable reference payload for a Maya node."""
+
+    try:
+        ref = _node_ref_from_name(node)
+    except Exception as exc:  # noqa: BLE001
+        return skill_exception(exc, message="Failed to build Maya node reference")
+    if ref is None:
+        return skill_error(
+            "Maya node not found",
+            "No node named {!r} exists in the current scene.".format(node),
+            node=node,
+            stale=True,
+        )
+    return skill_success("Maya node reference created", node_ref=ref)
+
+
+def resolve_node_ref(
+    ref: Optional[Dict[str, Any]] = None,
+    uuid: Optional[str] = None,
+    long_name: Optional[str] = None,
+    short_name: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Resolve a previously returned Maya node reference."""
+
+    payload = ref if isinstance(ref, dict) else {}
+    uuid_value = uuid or payload.get("uuid") or payload.get("id")
+    long_value = long_name or payload.get("long_name")
+    short_value = short_name or payload.get("short_name")
+    try:
+        candidate = _find_node_by_uuid(str(uuid_value)) if uuid_value else None
+        if candidate is None and long_value:
+            import maya.cmds as cmds  # noqa: PLC0415
+
+            if cmds.objExists(str(long_value)):
+                candidate = str(long_value)
+        if candidate is None and short_value:
+            import maya.cmds as cmds  # noqa: PLC0415
+
+            matches = cmds.ls(str(short_value), long=True) or []
+            if len(matches) == 1:
+                candidate = str(matches[0])
+        if candidate is None:
+            stale_ref = dict(payload)
+            stale_ref.update(
+                {
+                    "kind": "maya_node",
+                    "exists": False,
+                    "stale": True,
+                    "uuid": uuid_value,
+                    "long_name": long_value,
+                    "short_name": short_value,
+                }
+            )
+            return skill_error(
+                "Maya node reference is stale",
+                "The referenced node could not be resolved by UUID, long name, or short name.",
+                node_ref=stale_ref,
+            )
+        resolved = _node_ref_from_name(candidate)
+    except Exception as exc:  # noqa: BLE001
+        return skill_exception(exc, message="Failed to resolve Maya node reference")
+    return skill_success("Maya node reference resolved", node_ref=resolved)
+
+
 def run_check(
     target: Optional[str] = None,
     module: Optional[str] = None,
@@ -748,6 +1766,7 @@ def run_check(
     reload_mode: str = "purge",
     capture_ui_image: bool = False,
     ui_object_name: Optional[str] = None,
+    artifact_threshold: int = DEFAULT_ARTIFACT_THRESHOLD,
 ) -> Dict[str, Any]:
     """Reload project code, run an entrypoint, and optionally capture Maya UI."""
 
@@ -763,6 +1782,19 @@ def run_check(
         capture_output=True,
     )
     run_context = run_result.get("context", {})
+    run_artifacts = _externalize_text_fields(
+        run_context,
+        fields=("stdout", "stderr", "traceback"),
+        threshold=int(artifact_threshold or DEFAULT_ARTIFACT_THRESHOLD),
+    )
+    run_summary = {
+        "target": run_context.get("target"),
+        "elapsed_secs": run_context.get("elapsed_secs"),
+        "stdout_chars": len(run_context.get("stdout") or ""),
+        "stderr_chars": len(run_context.get("stderr") or ""),
+        "has_traceback": bool(run_context.get("traceback")),
+        "artifact_count": len(run_artifacts),
+    }
     ui_context: Optional[Dict[str, Any]] = None
     ui_success: Optional[bool] = None
     if capture_ui_image:
@@ -772,6 +1804,8 @@ def run_check(
 
     ctx = {
         "run": run_context,
+        "run_summary": run_summary,
+        "artifacts": run_artifacts,
         "run_success": bool(run_result.get("success")),
     }
     if ui_context is not None:
@@ -797,4 +1831,15 @@ def reset_for_tests() -> None:
     with _LOCK:
         _STATE["active"] = None
         _STATE["projects"] = {}
-        _DEBUGPY_STATE.update({"listening": False, "host": None, "port": None})
+        _DEBUGPY_STATE.update(
+            {
+                "listening": False,
+                "host": None,
+                "port": None,
+                "log_dir": None,
+                "python_executable": None,
+                "path_mappings": [],
+            }
+        )
+        _UI_STATE["refs"] = {}
+        _UI_STATE["seq"] = 0
