@@ -1,0 +1,235 @@
+tools:
+- name: attach_project
+  description: Attach a local Maya tool project to the live Maya Python session by adding
+    its root (and optional src/ directory) to sys.path. Use this once before run_entrypoint/run_script.
+    Set DCC_MCP_MAYA_DEV_ROOTS to restrict trusted roots in studio deployments.
+  execution: sync
+  affinity: main
+  annotations:
+    read_only_hint: false
+    idempotent_hint: true
+  group: development
+  inputSchema:
+    type: object
+    required:
+    - project_root
+    properties:
+      project_root:
+        type: string
+        description: Absolute path to the Python/Maya tool project root.
+      name:
+        type: string
+        description: Optional session label; defaults to the directory name.
+      package_prefixes:
+        description: Package/module prefixes to hot-reload, e.g. ["my_tool"].
+        oneOf:
+        - type: string
+        - type: array
+          items:
+            type: string
+      include_src:
+        type: boolean
+        default: true
+        description: Also add project_root/src to sys.path when it exists.
+      make_active:
+        type: boolean
+        default: true
+        description: Make this project the default target for later dev tools.
+- name: reload_modules
+  description: Purge or reload modules that belong to the attached development project.
+    Default mode=purge removes matching modules from sys.modules so the next import
+    sees edited files, which is usually safer than importlib.reload in long-lived Maya
+    sessions.
+  execution: sync
+  affinity: main
+  annotations:
+    read_only_hint: false
+    idempotent_hint: true
+  group: development
+  inputSchema:
+    type: object
+    properties:
+      project_name:
+        type: string
+        description: Attached project label; defaults to the active project.
+      package_prefixes:
+        description: Override package/module prefixes for this reload.
+        oneOf:
+        - type: string
+        - type: array
+          items:
+            type: string
+      mode:
+        type: string
+        enum:
+        - purge
+        - reload
+        default: purge
+        description: purge removes modules from sys.modules; reload calls importlib.reload.
+- name: run_entrypoint
+  description: Run a callable from the attached development project inside Maya, with
+    stdout/stderr/traceback captured into the result envelope. Use target="package.module:function"
+    or module + callable.
+  execution: sync
+  affinity: main
+  annotations:
+    read_only_hint: false
+  group: development
+  inputSchema:
+    type: object
+    properties:
+      target:
+        type: string
+        description: Shorthand "package.module:function". Overrides module/callable
+          when supplied.
+      module:
+        type: string
+        description: Python module to import when target is not supplied.
+      callable:
+        type: string
+        default: main
+        description: Callable attribute path inside module.
+      args:
+        type: array
+        description: Positional JSON arguments.
+      kwargs:
+        type: object
+        description: Keyword JSON arguments.
+      project_name:
+        type: string
+        description: Attached project label; defaults to the active project.
+      reload_before:
+        type: boolean
+        default: true
+      reload_mode:
+        type: string
+        enum:
+        - purge
+        - reload
+        default: purge
+      capture_output:
+        type: boolean
+        default: true
+      chdir_project:
+        type: boolean
+        default: true
+- name: run_script
+  description: Run a project-local .py script with sys.argv, cwd, stdout/stderr, traceback,
+    and elapsed time captured. The script must live under the attached project root.
+  execution: sync
+  affinity: main
+  annotations:
+    read_only_hint: false
+  group: development
+  inputSchema:
+    type: object
+    required:
+    - script_path
+    properties:
+      script_path:
+        type: string
+        description: Project-relative or absolute path to a .py file under the attached
+          root.
+      argv:
+        description: Arguments exposed through sys.argv[1:].
+        oneOf:
+        - type: string
+        - type: array
+          items:
+            type: string
+      project_name:
+        type: string
+      reload_before:
+        type: boolean
+        default: true
+      reload_mode:
+        type: string
+        enum:
+        - purge
+        - reload
+        default: purge
+      capture_output:
+        type: boolean
+        default: true
+      chdir_project:
+        type: boolean
+        default: true
+- name: start_debugpy
+  description: Start a debugpy listener inside the Maya process so Cursor or VS Code
+    can attach breakpoints before MCP-triggered project code runs.
+  execution: sync
+  affinity: main
+  annotations:
+    read_only_hint: false
+    idempotent_hint: true
+  group: development
+  inputSchema:
+    type: object
+    properties:
+      host:
+        type: string
+        default: 127.0.0.1
+      port:
+        type: integer
+        minimum: 1
+        maximum: 65535
+        default: 5678
+      wait_for_client:
+        type: boolean
+        default: false
+        description: Block until an IDE attaches. Usually keep false for agent workflows.
+- name: capture_ui
+  description: Capture the Maya main window or a named Qt widget as a base64 PNG. Use
+    this for debugging custom tool windows and dock controls; use maya-render capture_viewport
+    for viewport imagery.
+  execution: async
+  affinity: main
+  timeout_hint_secs: 60
+  group: development
+  inputSchema:
+    type: object
+    properties:
+      object_name:
+        type: string
+        description: Optional Qt objectName or windowTitle to capture instead of the
+          whole main window.
+- name: run_check
+  description: 'Development convenience wrapper: reload project modules, run an entrypoint,
+    capture stdout/stderr/traceback, and optionally capture a Maya UI screenshot. Use
+    after editing project code to verify behavior inside the live Maya session.'
+  execution: async
+  affinity: main
+  timeout_hint_secs: 300
+  group: development
+  inputSchema:
+    type: object
+    properties:
+      target:
+        type: string
+        description: Shorthand "package.module:function".
+      module:
+        type: string
+      callable:
+        type: string
+        default: main
+      args:
+        type: array
+      kwargs:
+        type: object
+      project_name:
+        type: string
+      reload_before:
+        type: boolean
+        default: true
+      reload_mode:
+        type: string
+        enum:
+        - purge
+        - reload
+        default: purge
+      capture_ui_image:
+        type: boolean
+        default: false
+      ui_object_name:
+        type: string
+        description: Optional Qt objectName/windowTitle when capture_ui_image=true.

@@ -65,7 +65,7 @@ Actions follow the convention:
 
 ### Progressive Loading
 
-The package ships 23 Maya skill packages. Minimal mode loads only the core
+The package ships 24 Maya skill packages. Minimal mode loads only the core
 bootstrap and scene tools, while unloaded skills remain discoverable through
 `dcc_capability_manifest`, `search_skills`, or `search_tools`.
 

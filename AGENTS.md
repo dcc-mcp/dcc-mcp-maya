@@ -7,7 +7,7 @@
 
 ## 30-Second Summary
 
-`dcc-mcp-maya` embeds a standards-compliant MCP Streamable HTTP server directly inside Autodesk Maya. It exposes 164 Maya operations as MCP tools that any AI agent (Claude, Cursor, Gemini, etc.) can call over HTTP — no external gateway, no subprocess bridge.
+`dcc-mcp-maya` embeds a standards-compliant MCP Streamable HTTP server directly inside Autodesk Maya. It exposes 172 Maya operations as MCP tools that any AI agent (Claude, Cursor, Gemini, etc.) can call over HTTP — no external gateway, no subprocess bridge.
 
 **Current version:** 0.3.6 <!-- x-release-please-version -->
 **Core dependency:** `dcc-mcp-core>=0.15.9,<1.0.0`
@@ -108,7 +108,7 @@ is checked against disk by tests so the human-readable inventory cannot drift.
 | `scene`       | Scene file lifecycle, DAG, attributes, node graph, viewport display. | partial (`maya-scene` only) | `maya-scene`, `maya-scene-assembly`, `maya-display`, `maya-attributes`, `maya-node-graph` |
 | `authoring`   | Create / edit content (mesh, UV, mat, rig, anim, light).             | no                        | `maya-primitives`, `maya-mesh-ops`, `maya-uv-ops`, `maya-materials`, `maya-material-library`, `maya-texture-bake`, `maya-rigging`, `maya-animation`, `maya-pose-library`, `maya-expressions`, `maya-light-rig` |
 | `interchange` | Geometry / scene I/O across DCCs (FBX, OBJ, presets, save).          | no                        | `maya-geometry`, `maya-export-preset` |
-| `pipeline`    | Production: project, publish, shot export, render, render farm.       | no                        | `maya-pipeline`, `maya-shot-export`, `maya-render`, `maya-render-farm` |
+| `pipeline`    | Production: project, publish, shot export, render, render farm, development diagnostics. | no                        | `maya-dev`, `maya-pipeline`, `maya-shot-export`, `maya-render`, `maya-render-farm` |
 
 Helpers in `_skill_loader.py`:
 
@@ -408,7 +408,7 @@ A: Poll `check_maya_cancelled()` inside the loop. It raises `CancelledError` whe
 A: Same API — `dcc_mcp_maya.start_server(port=0)`. In batch mode the `MayaStandaloneDispatcher` runs jobs on the calling thread directly.
 
 **Q: Where are the built-in skills?**  
-A: `src/dcc_mcp_maya/skills/` (23 packages, 161 scripts, 164 tool declarations). Each package contains `SKILL.md`, `tools.yaml`, optional `groups.yaml`, and `scripts/*.py`.
+A: `src/dcc_mcp_maya/skills/` (24 packages, 169 scripts, 172 tool declarations). Each package contains `SKILL.md`, `tools.yaml`, optional `groups.yaml`, and `scripts/*.py`.
 
 **Q: How do I force agents to stop using ``execute_python``?**  
 A: Set ``DCC_MCP_MAYA_DISABLE_EXECUTE_PYTHON=1`` (Python only) or ``DCC_MCP_MAYA_DISABLE_ARBITRARY_SCRIPT=1`` (Python + MEL). Callers get a structured error that points to ``load_skill`` + typed tools.

@@ -26,7 +26,7 @@ The Maya plugin starts a Rust `dcc-mcp-server` sidecar by default, so HTTP and g
 
 | What you get | Why it matters |
 |---|---|
-| **164 typed Maya tools** across 23 bundled skill packages | Agents can call validated tools for scene, mesh, material, animation, render, export, and pipeline work. |
+| **172 typed Maya tools** across 24 bundled skill packages | Agents can call validated tools for scene, mesh, material, animation, render, export, pipeline work, and live tool-development diagnostics. |
 | **Progressive loading** | Maya boots with a compact tool surface; agents discover unloaded capabilities and load only what they need. |
 | **Sidecar isolation by default** | HTTP/gateway runtime is out of Maya's UI thread, with a Qt dispatcher bridge back into Maya. |
 | **Multi-instance gateway** | Run several Maya sessions behind one local MCP URL, with optional LAN gateway exposure. |
@@ -122,7 +122,7 @@ Default startup is intentionally small: `maya-scripting` and the core `maya-scen
 | `scene` | Scene lifecycle, DAG, attributes, node graph, viewport display | `maya-scene`, `maya-scene-assembly`, `maya-display`, `maya-attributes`, `maya-node-graph` |
 | `authoring` | Meshes, UVs, materials, rigs, animation, expressions, lighting | `maya-primitives`, `maya-mesh-ops`, `maya-uv-ops`, `maya-materials`, `maya-material-library`, `maya-texture-bake`, `maya-rigging`, `maya-animation`, `maya-pose-library`, `maya-expressions`, `maya-light-rig` |
 | `interchange` | Geometry and scene I/O | `maya-geometry`, `maya-export-preset` |
-| `pipeline` | Project, publish, shot export, render, render farm | `maya-pipeline`, `maya-shot-export`, `maya-render`, `maya-render-farm` |
+| `pipeline` | Project, publish, shot export, render, render farm, development diagnostics | `maya-dev`, `maya-pipeline`, `maya-shot-export`, `maya-render`, `maya-render-farm` |
 
 Typical agent flow:
 
@@ -149,6 +149,7 @@ See [`src/dcc_mcp_maya/skills/SKILLS_INDEX.md`](src/dcc_mcp_maya/skills/SKILLS_I
 | Shutdown hardening | Maya exiting hook, `atexit`, process sentinel, and optional defensive finalizer reduce stale registry rows. |
 | Safe sessions | MCP-dispatched Maya jobs suppress blocking modal dialogs and snooze AutoSave unless opted out. |
 | Metrics | Optional Prometheus `/metrics` endpoint via `DCC_MCP_MAYA_METRICS=1`. |
+| Dev workflow | `maya-dev` can attach a local Python tool project, hot-reload modules, run entrypoints/scripts, start debugpy, and capture Maya UI evidence. |
 
 ## Installation
 
@@ -219,6 +220,7 @@ Useful plugin defaults:
 | `DCC_MCP_MAYA_JOB_STORAGE` | `<data_dir>/jobs.db` | SQLite job persistence path; set `""` to disable. |
 | `DCC_MCP_MAYA_JOB_RECOVERY` | `drop` | `requeue` resumes idempotent interrupted jobs. |
 | `DCC_MCP_MAYA_HOT_RELOAD` | `0` | `1` watches skills for disk changes. |
+| `DCC_MCP_MAYA_DEV_ROOTS` | none | Optional path-list of trusted roots that `maya-dev` projects must live under. |
 | `DCC_MCP_MAYA_FAULTHANDLER` | `1` | `0` disables fatal-signal traceback logging from the Maya plugin. |
 | `DCC_MCP_MAYA_SUPPRESS_CRASH_REPORTER` | `0` | `1` suppresses Maya crash reporter dialogs during unattended startup. |
 | `DCC_MCP_MAYA_DISABLE_AUTOSAVE` | `1` | `0` opts out of the plugin's AutoSave suppression during MCP jobs. |
