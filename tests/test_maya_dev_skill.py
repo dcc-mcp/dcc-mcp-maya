@@ -8,6 +8,7 @@ degradation when Qt/Maya is absent.
 
 from __future__ import annotations
 
+import builtins
 import importlib
 import sys
 import types
@@ -41,6 +42,111 @@ def _cleanup_demo_modules() -> None:
     for name in list(sys.modules):
         if name == "demo_tool" or name.startswith("demo_tool."):
             sys.modules.pop(name, None)
+
+
+class _Rect:
+    def __init__(self, x: int = 0, y: int = 0, width: int = 100, height: int = 24) -> None:
+        self._x = x
+        self._y = y
+        self._width = width
+        self._height = height
+
+    def x(self) -> int:
+        return self._x
+
+    def y(self) -> int:
+        return self._y
+
+    def width(self) -> int:
+        return self._width
+
+    def height(self) -> int:
+        return self._height
+
+
+class _FakeWidget:
+    def __init__(
+        self,
+        object_name: str = "",
+        text: str = "",
+        title: str = "",
+        tooltip: str = "",
+        children: list["_FakeWidget"] | None = None,
+    ) -> None:
+        self._object_name = object_name
+        self._text = text
+        self._title = title
+        self._tooltip = tooltip
+        self._children = children or []
+        self._visible = True
+        self._enabled = True
+        self._focused = False
+
+    def objectName(self) -> str:
+        return self._object_name
+
+    def text(self) -> str:
+        return self._text
+
+    def windowTitle(self) -> str:
+        return self._title
+
+    def toolTip(self) -> str:
+        return self._tooltip
+
+    def isVisible(self) -> bool:
+        return self._visible
+
+    def isEnabled(self) -> bool:
+        return self._enabled
+
+    def isWindow(self) -> bool:
+        return bool(self._title)
+
+    def geometry(self) -> _Rect:
+        return _Rect()
+
+    def children(self) -> list["_FakeWidget"]:
+        return list(self._children)
+
+    def findChildren(self, _widget_type):
+        found = []
+        stack = list(self._children)
+        while stack:
+            child = stack.pop(0)
+            found.append(child)
+            stack.extend(child.children())
+        return found
+
+    def findChild(self, _widget_type, object_name: str):
+        for child in self.findChildren(_widget_type):
+            if child.objectName() == object_name:
+                return child
+        return None
+
+    def setFocus(self) -> None:
+        self._focused = True
+
+
+class _FakeButton(_FakeWidget):
+    def __init__(self, object_name: str, text: str) -> None:
+        super().__init__(object_name=object_name, text=text)
+        self.clicked = 0
+
+    def click(self) -> None:
+        self.clicked += 1
+
+
+class _FakeLineEdit(_FakeWidget):
+    def setText(self, value: str) -> None:
+        self._text = value
+
+
+def _fake_ui_tree():
+    save = _FakeButton("saveButton", "Save")
+    name = _FakeLineEdit("nameEdit", "Old")
+    root = _FakeWidget("mainWindow", title="Maya", children=[save, name])
+    return root, save, name
 
 
 def test_attach_project_adds_root_and_src_to_sys_path(tmp_path: Path, monkeypatch) -> None:
@@ -201,6 +307,78 @@ def test_start_debugpy_uses_existing_listener_state(monkeypatch) -> None:
     assert calls == [("127.0.0.1", 5679)]
 
 
+def test_start_debugpy_reports_optional_missing_debugpy(monkeypatch) -> None:
+    from dcc_mcp_maya import _dev_session
+
+    _dev_session.reset_for_tests()
+    real_import = builtins.__import__
+
+    def _import(name, *args, **kwargs):
+        if name == "debugpy":
+            raise ImportError("debugpy intentionally unavailable")
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", _import)
+    out = _dev_session.start_debugpy(port=5682)
+
+    assert out["success"] is False
+    assert out["context"]["error_code"] == "debugpy_missing"
+    assert "optional" in out["context"]["debug_session"]["setup_instructions"]
+    assert "stronger breakpoint debugging" in out["error"]
+
+
+def test_start_debugpy_returns_core_metadata_and_logging(tmp_path: Path) -> None:
+    from dcc_mcp_maya import _dev_session
+
+    _dev_session.reset_for_tests()
+    fake = types.ModuleType("debugpy")
+    calls = {"listen": [], "configure": [], "log_to": []}
+    fake.listen = lambda address: calls["listen"].append(address)
+    fake.wait_for_client = lambda: None
+    fake.is_client_connected = lambda: False
+    fake.configure = lambda **kwargs: calls["configure"].append(kwargs)
+    fake.log_to = lambda path: calls["log_to"].append(path)
+
+    log_dir = tmp_path / "debugpy-logs"
+    with patch.dict(sys.modules, {"debugpy": fake}):
+        out = _dev_session.start_debugpy(
+            port=5680,
+            python_executable=str(tmp_path / "mayapy.exe"),
+            log_dir=str(log_dir),
+            path_mappings=[{"local_root": str(tmp_path), "remote_root": str(tmp_path)}],
+        )
+
+    assert out["success"] is True
+    ctx = out["context"]
+    assert ctx["listening"] is True
+    assert ctx["debug_session"]["debugger_kind"] == "debugpy"
+    assert ctx["debug_session"]["status"] == "listening"
+    assert ctx["debug_session"]["path_mappings"][0]["local_root"] == str(tmp_path)
+    assert calls["listen"] == [("127.0.0.1", 5680)]
+    assert calls["configure"] == [{"python": str(tmp_path / "mayapy.exe")}]
+    assert calls["log_to"] == [str(log_dir)]
+
+
+def test_start_debugpy_classifies_port_in_use() -> None:
+    from dcc_mcp_maya import _dev_session
+
+    _dev_session.reset_for_tests()
+    fake = types.ModuleType("debugpy")
+
+    def _listen(_address):
+        raise RuntimeError("Address already in use")
+
+    fake.listen = _listen
+    fake.configure = lambda **_kwargs: None
+    fake.is_client_connected = lambda: False
+
+    with patch.dict(sys.modules, {"debugpy": fake}):
+        out = _dev_session.start_debugpy(port=5681)
+
+    assert out["success"] is False
+    assert out["context"]["error_code"] == "port_in_use"
+
+
 def test_capture_ui_degrades_without_qt() -> None:
     from dcc_mcp_maya import _dev_session
 
@@ -208,6 +386,76 @@ def test_capture_ui_degrades_without_qt() -> None:
         out = _dev_session.capture_ui()
     assert out["success"] is False
     assert "qt" in out["message"].lower()
+
+
+def test_ui_snapshot_find_and_action_with_fake_qt() -> None:
+    from dcc_mcp_maya import _dev_session
+
+    _dev_session.reset_for_tests()
+    root, save, name = _fake_ui_tree()
+    with patch.object(_dev_session, "_maya_main_window", return_value=(root, _FakeWidget, None)):
+        snapshot = _dev_session.ui_snapshot(max_depth=3)
+        found = _dev_session.ui_find(label="save")
+        control_id = found["context"]["matches"][0]["id"]
+        clicked = _dev_session.ui_action(action="click", control_id=control_id)
+        edited = _dev_session.ui_action(action="set_text", object_name="nameEdit", value="New")
+
+    assert snapshot["success"] is True
+    assert snapshot["context"]["snapshot"]["node_count"] == 3
+    assert found["success"] is True
+    assert found["context"]["match_count"] == 1
+    assert clicked["success"] is True
+    assert save.clicked == 1
+    assert edited["success"] is True
+    assert name.text() == "New"
+    assert edited["context"]["control"]["object_name"] == "nameEdit"
+
+
+def test_ui_action_requires_unique_locator() -> None:
+    from dcc_mcp_maya import _dev_session
+
+    _dev_session.reset_for_tests()
+    root = _FakeWidget(
+        "mainWindow",
+        title="Maya",
+        children=[_FakeButton("saveOne", "Save"), _FakeButton("saveTwo", "Save")],
+    )
+    with patch.object(_dev_session, "_maya_main_window", return_value=(root, _FakeWidget, None)):
+        out = _dev_session.ui_action(action="click", label="Save")
+
+    assert out["success"] is False
+    assert out["context"]["error_code"] == "ambiguous_control"
+
+
+def test_run_check_writes_artifact_refs_for_large_output(tmp_path: Path) -> None:
+    from dcc_mcp_maya import _dev_session
+
+    _dev_session.reset_for_tests()
+    old_sys_path = sys.path[:]
+    _cleanup_demo_modules()
+    _write_demo_package(tmp_path)
+    (tmp_path / "demo_tool" / "runner.py").write_text(
+        "def main():\n"
+        "    print('x' * 20)\n"
+        "    return 'ok'\n",
+        encoding="utf-8",
+    )
+
+    try:
+        with patch.dict("os.environ", {"DCC_MCP_MAYA_DEV_ARTIFACT_DIR": str(tmp_path / "artifacts")}):
+            _dev_session.attach_project(str(tmp_path), package_prefixes=["demo_tool"])
+            out = _dev_session.run_check(target="demo_tool.runner:main", artifact_threshold=4)
+    finally:
+        sys.path[:] = old_sys_path
+        _cleanup_demo_modules()
+        _dev_session.reset_for_tests()
+
+    assert out["success"] is True
+    artifacts = out["context"]["artifacts"]
+    assert artifacts
+    assert artifacts[0]["kind"] == "stdout"
+    assert Path(artifacts[0]["path"]).exists()
+    assert out["context"]["run_summary"]["artifact_count"] == 1
 
 
 def test_maya_dev_scripts_delegate_to_shared_session(tmp_path: Path) -> None:
@@ -244,9 +492,17 @@ def test_maya_dev_tools_yaml_contract() -> None:
         "run_script",
         "start_debugpy",
         "capture_ui",
+        "ui_snapshot",
+        "ui_find",
+        "ui_action",
+        "make_node_ref",
+        "resolve_node_ref",
         "run_check",
     }
     assert set(tools) == expected
     assert tools["capture_ui"]["execution"] == "async"
+    assert tools["ui_snapshot"]["annotations"]["read_only_hint"] is True
+    assert tools["ui_action"]["affinity"] == "main"
+    assert tools["make_node_ref"]["annotations"]["read_only_hint"] is True
     assert tools["run_check"]["timeout_hint_secs"] == 300
     assert tools["run_entrypoint"]["affinity"] == "main"

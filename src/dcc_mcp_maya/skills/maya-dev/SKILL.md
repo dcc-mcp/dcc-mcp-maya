@@ -4,7 +4,7 @@ description: |-
   Pipeline stage — development workflow helpers for authoring Maya tools inside
   a live Maya session. Use to attach a local Python project, hot-reload its
   modules, run entrypoints or scripts, start debugpy, and capture Maya UI
-  evidence while iterating with an agent. Not for general scene editing: use
+  evidence, automate Qt controls, and return stable refs while iterating with an agent. Not for general scene editing: use
   domain skills first.
 license: MIT
 allowed-tools: Bash Read
@@ -47,6 +47,8 @@ wants to restrict which local projects can be attached.
 - `reload_modules` — Purge or reload modules belonging to the attached project
 - `run_entrypoint` — Import and call a Python entrypoint from the project
 - `run_script` — Run a project-local `.py` script with captured output
-- `start_debugpy` — Start a debugpy listener in the Maya process
+- `start_debugpy` — Start a debugpy listener in the Maya process with attach metadata
 - `capture_ui` — Capture the Maya main window or a named Qt widget as PNG
-- `run_check` — Reload, run an entrypoint, capture diagnostics, optionally grab UI
+- `ui_snapshot` / `ui_find` / `ui_action` — Inspect and operate Maya Qt UI controls
+- `make_node_ref` / `resolve_node_ref` — Build and resolve stable Maya node references
+- `run_check` — Reload, run an entrypoint, capture diagnostics/artifacts, optionally grab UI

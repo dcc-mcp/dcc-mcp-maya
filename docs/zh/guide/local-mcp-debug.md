@@ -49,7 +49,8 @@
 
 ## 4. Python 调试（debugpy + Cursor / VS Code）
 
-Maya 内嵌 CPython；可在与 Maya 版本匹配的解释器环境中安装 **debugpy** 并附加调试。
+Maya 内嵌 CPython；**debugpy** 是用于 IDE 断点调试的可选增强能力。
+不安装时 `maya-dev` 的其它工具仍可使用，`maya_dev__start_debugpy` 会返回 `debugpy_missing` 并提示安装方式。
 
 1. 向该 Maya 环境安装 **debugpy**（一次性）：
 
@@ -57,15 +58,29 @@ Maya 内嵌 CPython；可在与 Maya 版本匹配的解释器环境中安装 **d
    "C:\Program Files\Autodesk\Maya2025\bin\mayapy.exe" -m pip install debugpy
    ```
 
-2. 在 **Maya 脚本编辑器**（Python）中于启动后执行一次（端口可自定）：
+2. 加载 `maya-dev` skill，并通过 MCP 启动监听器：
 
-   ```python
-   import debugpy
-   debugpy.listen(("127.0.0.1", 5678))
-   print("[dcc-mcp-maya] debugpy listening on 127.0.0.1:5678 — attach from IDE, then trigger your code")
+   ```json
+   {
+     "tool": "load_skill",
+     "arguments": {"skill_name": "maya-dev"}
+   }
    ```
 
-   可选调用 `debugpy.wait_for_client()` 阻塞直到调试器连接（多数 MCP 驱动流程不必）。
+   ```json
+   {
+     "tool": "maya_dev__start_debugpy",
+     "arguments": {
+       "host": "127.0.0.1",
+       "port": 5678,
+       "configure_python": true,
+       "log_dir": "C:/temp/maya-debugpy"
+     }
+   }
+   ```
+
+   返回结果包含 `debug_session` 元数据、`client_connected`、`log_uri`，以及已 attach project 的建议 `path_mappings`。
+   只有在你明确希望 Maya 阻塞等待 IDE 附加时才设置 `wait_for_client=true`。
 
 3. 在 **Cursor / VS Code** 中使用 **Run and Debug → Python: Remote Attach**，主机 `127.0.0.1`、端口 `5678`。
 
@@ -79,7 +94,9 @@ Maya 内嵌 CPython；可在与 Maya 版本匹配的解释器环境中安装 **d
 |------|------|
 | MCP 404 / 连接被拒绝 | 插件是否加载？端口是否正确（`8765` 与 `9765`）？ |
 | 看不到工具 | 极简模式：先调用 `load_skill("…")`（见 AGENTS.md）。 |
-| 断点不命中 | 代码路径须在 Maya 内执行；确认已附加到正确的 Maya 进程。 |
+| `debugpy_missing` | 可选：将 debugpy 安装到对应的 `mayapy`，然后重启 Maya，即可获得更强的 IDE attach 调试能力。 |
+| `port_in_use` | 换一个端口，或停止已经占用该端口的进程。 |
+| 断点不命中 | 代码路径须在 Maya 内执行；确认通过 `maya_dev__start_debugpy` 附加到了正确的 Maya 进程。 |
 
 ## 相关
 
