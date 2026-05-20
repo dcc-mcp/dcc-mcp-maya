@@ -395,7 +395,7 @@ class TestMain:
 class TestAssembleLive:
     def test_resolve_core_version_from_real_pypi(self):
         version = assemble_mod.resolve_core_version(PROJECT_ROOT)
-        assert assemble_mod._version_gte(version, "0.15.7")
+        assert assemble_mod._version_gte(version, "0.17.19")
 
     def test_download_win64_wheels_from_pypi(self, tmp_path):
         version = assemble_mod.resolve_core_version(PROJECT_ROOT)
