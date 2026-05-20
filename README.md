@@ -47,22 +47,19 @@ The agent should follow
 which delegates the setup workflow to
 [`skills/dcc-mcp-maya-setup`](https://github.com/loonghao/dcc-mcp-maya/tree/main/skills/dcc-mcp-maya-setup).
 
-Install into Maya's Python:
+Install into Maya's Python. Include the `sidecar` extra unless your studio
+already ships the `dcc-mcp-server` binary:
 
 ```bash
-mayapy -m pip install dcc-mcp-maya
+mayapy -m pip install "dcc-mcp-maya[sidecar]"
 ```
 
-Start directly from Maya's Script Editor or a `mayapy` script:
+Load the Maya plugin from `maya/plugin/dcc_mcp_maya_plugin.py` with
+**Window > Settings/Preferences > Plug-in Manager**. The plugin starts the
+Maya bridge, starts or joins the local gateway, and installs the Qt dispatcher
+needed by `affinity: main` tools.
 
-```python
-import dcc_mcp_maya
-
-handle = dcc_mcp_maya.start_server(port=8765)
-print(handle.mcp_url())  # http://127.0.0.1:8765/mcp
-```
-
-Or load the Maya plugin from `maya/plugin/dcc_mcp_maya_plugin.py`. Plugin mode starts automatically and defaults to the standalone sidecar-managed gateway:
+Configure your MCP host to the gateway URL:
 
 ```json
 {
@@ -74,7 +71,31 @@ Or load the Maya plugin from `maya/plugin/dcc_mcp_maya_plugin.py`. Plugin mode s
 }
 ```
 
-If you start the Python server manually with `start_server(port=8765)`, point your MCP host at `http://127.0.0.1:8765/mcp` instead.
+Smoke test from your MCP host:
+
+```text
+Search for Maya tools, load the maya-primitives skill, and create a cube.
+```
+
+For auto-start, copy or source the bundled `maya/userSetup.py`. It defers
+plugin loading until Maya is idle and uses the same gateway path as the
+Plug-in Manager.
+
+Direct `start_server(port=8765)` is mainly for debugging and `mayapy` scripts.
+In Maya GUI, pass a UI dispatcher explicitly:
+
+```python
+from dcc_mcp_maya.dispatcher import MayaUiDispatcher, MayaUiPump
+import dcc_mcp_maya
+
+dispatcher = MayaUiDispatcher()
+MayaUiPump(dispatcher).install()
+handle = dcc_mcp_maya.start_server(port=8765, host_dispatcher=dispatcher)
+print(handle.mcp_url())  # http://127.0.0.1:8765/mcp
+```
+
+If you start the Python server manually this way, point your MCP host at
+`http://127.0.0.1:8765/mcp` instead.
 
 ## Architecture
 
@@ -134,25 +155,33 @@ See [`src/dcc_mcp_maya/skills/SKILLS_INDEX.md`](src/dcc_mcp_maya/skills/SKILLS_I
 ### PyPI
 
 ```bash
-mayapy -m pip install dcc-mcp-maya
+mayapy -m pip install "dcc-mcp-maya[sidecar]"
 ```
 
-For plugin-side sidecar mode, install the sidecar extra when your environment does not already provide `dcc-mcp-server`:
+If your environment already provides `dcc-mcp-server`, the base package is
+enough:
 
 ```bash
-mayapy -m pip install "dcc-mcp-maya[sidecar]"
+mayapy -m pip install dcc-mcp-maya
 ```
 
 ### Maya Plugin
 
 1. Put `maya/plugin/dcc_mcp_maya_plugin.py` on `MAYA_PLUG_IN_PATH`.
 2. Load it from **Window > Settings/Preferences > Plug-in Manager**.
-3. Or load it from `userSetup.py`:
+3. Point your MCP host at `http://127.0.0.1:9765/mcp`.
+
+For auto-start, copy or source the bundled `maya/userSetup.py`. If you maintain
+your own `userSetup.py`, load the plugin after Maya is idle:
 
 ```python
 import maya.cmds as cmds
+import maya.utils
 
-cmds.loadPlugin("dcc_mcp_maya_plugin")
+maya.utils.executeDeferred(
+    lambda: cmds.loadPlugin("dcc_mcp_maya_plugin", quiet=True),
+    lowestPriority=True,
+)
 ```
 
 Useful plugin defaults:
