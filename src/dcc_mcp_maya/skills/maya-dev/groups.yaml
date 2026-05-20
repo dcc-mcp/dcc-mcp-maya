@@ -9,4 +9,9 @@ groups:
   - run_script
   - start_debugpy
   - capture_ui
+  - ui_snapshot
+  - ui_find
+  - ui_action
+  - make_node_ref
+  - resolve_node_ref
   - run_check

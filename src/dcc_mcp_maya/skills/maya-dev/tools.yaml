@@ -1,5 +1,6 @@
 tools:
 - name: attach_project
+  source_file: scripts/attach_project.py
   description: Attach a local Maya tool project to the live Maya Python session by adding
     its root (and optional src/ directory) to sys.path. Use this once before run_entrypoint/run_script.
     Set DCC_MCP_MAYA_DEV_ROOTS to restrict trusted roots in studio deployments.
@@ -11,8 +12,7 @@ tools:
   group: development
   inputSchema:
     type: object
-    required:
-    - project_root
+    required: [project_root]
     properties:
       project_root:
         type: string
@@ -36,6 +36,7 @@ tools:
         default: true
         description: Make this project the default target for later dev tools.
 - name: reload_modules
+  source_file: scripts/reload_modules.py
   description: Purge or reload modules that belong to the attached development project.
     Default mode=purge removes matching modules from sys.modules so the next import
     sees edited files, which is usually safer than importlib.reload in long-lived Maya
@@ -61,12 +62,11 @@ tools:
             type: string
       mode:
         type: string
-        enum:
-        - purge
-        - reload
+        enum: [purge, reload]
         default: purge
         description: purge removes modules from sys.modules; reload calls importlib.reload.
 - name: run_entrypoint
+  source_file: scripts/run_entrypoint.py
   description: Run a callable from the attached development project inside Maya, with
     stdout/stderr/traceback captured into the result envelope. Use target="package.module:function"
     or module + callable.
@@ -103,9 +103,7 @@ tools:
         default: true
       reload_mode:
         type: string
-        enum:
-        - purge
-        - reload
+        enum: [purge, reload]
         default: purge
       capture_output:
         type: boolean
@@ -114,6 +112,7 @@ tools:
         type: boolean
         default: true
 - name: run_script
+  source_file: scripts/run_script.py
   description: Run a project-local .py script with sys.argv, cwd, stdout/stderr, traceback,
     and elapsed time captured. The script must live under the attached project root.
   execution: sync
@@ -123,8 +122,7 @@ tools:
   group: development
   inputSchema:
     type: object
-    required:
-    - script_path
+    required: [script_path]
     properties:
       script_path:
         type: string
@@ -144,9 +142,7 @@ tools:
         default: true
       reload_mode:
         type: string
-        enum:
-        - purge
-        - reload
+        enum: [purge, reload]
         default: purge
       capture_output:
         type: boolean
@@ -155,8 +151,12 @@ tools:
         type: boolean
         default: true
 - name: start_debugpy
-  description: Start a debugpy listener inside the Maya process so Cursor or VS Code
-    can attach breakpoints before MCP-triggered project code runs.
+  source_file: scripts/start_debugpy.py
+  description: Try to start an optional debugpy listener inside the Maya process so
+    Cursor or VS Code can attach breakpoints before MCP-triggered project code runs.
+    If debugpy is absent, returns debugpy_missing with install guidance. Returns
+    core-compatible debug-session metadata, suggested path mappings, and optional
+    debugpy log location.
   execution: sync
   affinity: main
   annotations:
@@ -178,13 +178,37 @@ tools:
         type: boolean
         default: false
         description: Block until an IDE attaches. Usually keep false for agent workflows.
+      configure_python:
+        type: boolean
+        default: true
+        description: Configure debugpy's Python executable from the Maya runtime when possible.
+      python_executable:
+        type: string
+        description: Optional explicit Python/mayapy executable for debugpy.configure(python=...).
+      log_dir:
+        type: string
+        description: Optional directory passed to debugpy.log_to; defaults to DCC_MCP_MAYA_DEBUGPY_LOG_DIR.
+      path_mappings:
+        type: array
+        description: Optional IDE path mapping hints.
+        items:
+          type: object
+          properties:
+            local_root:
+              type: string
+            remote_root:
+              type: string
 - name: capture_ui
+  source_file: scripts/capture_ui.py
   description: Capture the Maya main window or a named Qt widget as a base64 PNG. Use
     this for debugging custom tool windows and dock controls; use maya-render capture_viewport
     for viewport imagery.
   execution: async
   affinity: main
   timeout_hint_secs: 60
+  annotations:
+    read_only_hint: true
+    idempotent_hint: false
   group: development
   inputSchema:
     type: object
@@ -193,13 +217,165 @@ tools:
         type: string
         description: Optional Qt objectName or windowTitle to capture instead of the
           whole main window.
+- name: ui_snapshot
+  source_file: scripts/ui_snapshot.py
+  description: Return a bounded tree of visible Maya Qt widgets using the core UI automation
+    contract. Use before ui_find/ui_action when an agent needs UI structure.
+  execution: sync
+  affinity: main
+  annotations:
+    read_only_hint: true
+    idempotent_hint: true
+  group: development
+  inputSchema:
+    type: object
+    properties:
+      object_name:
+        type: string
+        description: Optional Qt objectName/windowTitle to use as the snapshot root.
+      max_depth:
+        type: integer
+        minimum: 0
+        default: 4
+      max_nodes:
+        type: integer
+        minimum: 1
+        default: 200
+      include_invisible:
+        type: boolean
+        default: false
+- name: ui_find
+  source_file: scripts/ui_find.py
+  description: Find Maya Qt widgets by objectName, role/class, text, window title,
+    tooltip, or fuzzy label. Returns stable session-scoped UiRef IDs for ui_action.
+  execution: sync
+  affinity: main
+  annotations:
+    read_only_hint: true
+    idempotent_hint: true
+  group: development
+  inputSchema:
+    type: object
+    properties:
+      query:
+        type: string
+      object_name:
+        type: string
+      role:
+        type: string
+      label:
+        type: string
+      text:
+        type: string
+      window_title:
+        type: string
+      tooltip:
+        type: string
+      limit:
+        type: integer
+        minimum: 1
+        default: 20
+      include_invisible:
+        type: boolean
+        default: false
+      fuzzy:
+        type: boolean
+        default: true
+- name: ui_action
+  source_file: scripts/ui_action.py
+  description: Perform a bounded action on a unique Maya Qt control. Prefer passing
+    control_id from ui_find/ui_snapshot; locator fields are accepted only when they
+    resolve to exactly one enabled visible control.
+  execution: sync
+  affinity: main
+  annotations:
+    read_only_hint: false
+    idempotent_hint: false
+  group: development
+  inputSchema:
+    type: object
+    required: [action]
+    properties:
+      action:
+        type: string
+        enum: [click, set_text, toggle, set_checked, select_option, focus]
+      control_id:
+        type: string
+      query:
+        type: string
+      object_name:
+        type: string
+      role:
+        type: string
+      label:
+        type: string
+      text:
+        type: string
+        description: Locator text, or value for set_text when value is omitted.
+      window_title:
+        type: string
+      tooltip:
+        type: string
+      value:
+        type: string
+        description: New text for set_text.
+      checked:
+        type: boolean
+        description: Desired state for set_checked.
+      option:
+        type: string
+        description: Option label for select_option.
+- name: make_node_ref
+  source_file: scripts/make_node_ref.py
+  description: Return a stable JSON reference for a Maya node including long name,
+    short name, type, UUID when available, existence, stale status, and scene metadata.
+  execution: sync
+  affinity: main
+  annotations:
+    read_only_hint: true
+    idempotent_hint: true
+  group: development
+  inputSchema:
+    type: object
+    required: [node]
+    properties:
+      node:
+        type: string
+        description: Maya node name, long DAG path, or unique short name.
+- name: resolve_node_ref
+  source_file: scripts/resolve_node_ref.py
+  description: Resolve a previously returned Maya node reference by UUID, long name,
+    or short name and report a structured stale-reference error if it no longer exists.
+  execution: sync
+  affinity: main
+  annotations:
+    read_only_hint: true
+    idempotent_hint: true
+  group: development
+  inputSchema:
+    type: object
+    properties:
+      ref:
+        type: object
+        description: NodeRef returned by make_node_ref or another Maya tool.
+      uuid:
+        type: string
+      long_name:
+        type: string
+      short_name:
+        type: string
 - name: run_check
+  source_file: scripts/run_check.py
   description: 'Development convenience wrapper: reload project modules, run an entrypoint,
-    capture stdout/stderr/traceback, and optionally capture a Maya UI screenshot. Use
-    after editing project code to verify behavior inside the live Maya session.'
+    capture stdout/stderr/traceback, optionally capture a Maya UI screenshot, and return
+    artifact refs for large diagnostics. Use after editing project code to verify behavior
+    inside the live Maya session.'
   execution: async
   affinity: main
   timeout_hint_secs: 300
+  annotations:
+    read_only_hint: false
+    idempotent_hint: false
   group: development
   inputSchema:
     type: object
@@ -223,9 +399,7 @@ tools:
         default: true
       reload_mode:
         type: string
-        enum:
-        - purge
-        - reload
+        enum: [purge, reload]
         default: purge
       capture_ui_image:
         type: boolean
@@ -233,3 +407,8 @@ tools:
       ui_object_name:
         type: string
         description: Optional Qt objectName/windowTitle when capture_ui_image=true.
+      artifact_threshold:
+        type: integer
+        minimum: 1
+        default: 4096
+        description: Inline text length at which run_check also writes a text artifact reference.
