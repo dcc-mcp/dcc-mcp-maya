@@ -539,7 +539,7 @@ legacy `list_dcc_instances` / `connect_to_dcc` meta-tools.
 | `src/dcc_mcp_maya/dispatcher/` | Thread-affinity dispatchers + cancellation (directory module) |
 | `src/dcc_mcp_maya/api.py` | 18 skill-authoring helpers |
 | `src/dcc_mcp_maya/capabilities.py` | DCC capability declarations |
-| `src/dcc_mcp_maya/skills/` | 24 built-in skill packages, 172 typed tool declarations |
+| `src/dcc_mcp_maya/skills/` | 24 built-in skill packages, 177 typed tool declarations |
 | `docs/` | VitePress site (EN + ZH) |
 | `tests/` | pytest suite |
 | `maya/plugin/dcc_mcp_maya_plugin.py` | Maya plugin file for `MAYA_PLUG_IN_PATH` |
