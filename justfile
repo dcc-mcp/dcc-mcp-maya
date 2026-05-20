@@ -63,8 +63,14 @@ default:
     python tools/lint_skills.py --error-only
     echo "✅ SKILL.md lint passed"
 
+# Build VitePress docs and fail on dead links
+@lint-docs:
+    echo "🔍 Building docs and checking links..."
+    npm --prefix docs run build
+    echo "✅ Docs build passed"
+
 # Run all lint checks
-lint-all: lint lint-skills
+lint-all: lint lint-skills lint-docs
     echo "✅ All lint checks passed"
 
 # Pre-commit gate: auto-fix, format, annotate, lint, quick tests.
@@ -80,6 +86,7 @@ lint-all: lint lint-skills
     echo "🔍 Running all lint checks..."
     python -m ruff check src/ tests/
     python tools/lint_skills.py --error-only
+    npm --prefix docs run build
     echo "🧪 Running quick tests..."
     python -m pytest tests/ -x -q --ignore=tests/test_e2e_maya_standalone.py
     echo "✅ prek passed — safe to commit"
