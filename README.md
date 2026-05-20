@@ -319,7 +319,7 @@ Windows symlinks require Developer Mode or an elevated shell. If symlinks are un
 - Autodesk Maya 2020+
 - Python 3.7+
 - `dcc-mcp-core>=0.17.16,<1.0.0`
-- Optional sidecar binary: `dcc-mcp-server>=0.17.16`
+- Standard sidecar binary for plugin mode: `dcc-mcp-server>=0.17.16`
 
 ## License
 

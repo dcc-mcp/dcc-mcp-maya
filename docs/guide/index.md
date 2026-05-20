@@ -2,7 +2,7 @@
 
 **dcc-mcp-maya** is the Maya-specific integration layer for the [DCC-MCP](https://github.com/loonghao/dcc-mcp-core) ecosystem.
 
-It embeds a standards-compliant **MCP Streamable HTTP server** (2025-03-26 spec) directly inside Maya. The default runtime is in-process, and plugin deployments can opt into the Rust `dcc-mcp-server` sidecar for runtime isolation.
+It makes Maya available through a standards-compliant **MCP Streamable HTTP** surface. Plugin deployments use the Rust `dcc-mcp-server` sidecar as the standard runtime: HTTP and gateway work stay outside Maya, while scene operations are dispatched back through the Maya-safe Qt bridge.
 
 ## Who Is This For?
 
