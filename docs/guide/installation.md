@@ -79,6 +79,9 @@ The bootstrap creates a Maya host dispatcher in batch mode, exposes MCP at `/mcp
 
 Maya licensing is required for CI. Gate this command behind a self-hosted runner or a licensed Maya environment.
 
+See [Standalone mayapy Services](./standalone.md) for MCP host configuration,
+custom bootstrap code, and standalone-safe custom skill examples.
+
 ## Method 4 — userSetup.py (Auto-start)
 
 To start MCP every time Maya opens, prefer copying or sourcing the bundled
