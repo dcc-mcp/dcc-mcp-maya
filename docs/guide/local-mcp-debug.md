@@ -49,7 +49,8 @@ Add to `claude_desktop_config.json` (see the repository root `CLAUDE.md`):
 
 ## 4. Python debugging (debugpy + Cursor / VS Code)
 
-Maya embeds CPython; you can attach **debugpy** from the same interpreter family as your Maya version.
+Maya embeds CPython; **debugpy** is an optional enhancement for IDE breakpoint debugging.
+The rest of `maya-dev` works without it, and `maya_dev__start_debugpy` reports `debugpy_missing` with setup guidance when it is absent.
 
 1. Install **debugpy** into that Maya’s environment (once):
 
@@ -57,15 +58,29 @@ Maya embeds CPython; you can attach **debugpy** from the same interpreter family
    "C:\Program Files\Autodesk\Maya2025\bin\mayapy.exe" -m pip install debugpy
    ```
 
-2. In **Maya Script Editor** (Python), run once after startup (pick a free port):
+2. Load the `maya-dev` skill and start the listener from MCP:
 
-   ```python
-   import debugpy
-   debugpy.listen(("127.0.0.1", 5678))
-   print("[dcc-mcp-maya] debugpy listening on 127.0.0.1:5678 — attach from IDE, then trigger your code")
+   ```json
+   {
+     "tool": "load_skill",
+     "arguments": {"skill_name": "maya-dev"}
+   }
    ```
 
-   Optionally call `debugpy.wait_for_client()` to block until the debugger attaches (not usually needed for MCP-driven flows).
+   ```json
+   {
+     "tool": "maya_dev__start_debugpy",
+     "arguments": {
+       "host": "127.0.0.1",
+       "port": 5678,
+       "configure_python": true,
+       "log_dir": "C:/temp/maya-debugpy"
+     }
+   }
+   ```
+
+   The result includes `debug_session` metadata, `client_connected`, `log_uri`, and suggested `path_mappings` for attached projects.
+   Use `wait_for_client=true` only when you deliberately want Maya to block until the IDE attaches.
 
 3. In **Cursor / VS Code**, use **Run and Debug → Python: Remote Attach** with host `127.0.0.1` and port `5678`.
 
@@ -79,7 +94,9 @@ Maya embeds CPython; you can attach **debugpy** from the same interpreter family
 |-------|--------|
 | MCP 404 / connection refused | Plugin loaded? Correct port (`8765` vs `9765`)? |
 | Tools missing | Minimal mode: call `load_skill("…")` first (see AGENTS.md). |
-| Breakpoints never hit | Code path must run in Maya; use `debugpy` on the Maya process you attached to. |
+| `debugpy_missing` | Optional: install debugpy into the matching `mayapy`, then restart Maya to unlock stronger IDE attach debugging. |
+| `port_in_use` | Pick another port or stop the process already listening there. |
+| Breakpoints never hit | Code path must run in Maya; use `maya_dev__start_debugpy` on the Maya process you attached to. |
 
 ## Related
 
