@@ -4,7 +4,7 @@
 
 ## 工作原理
 
-`dcc-mcp-maya` 服务器在 Maya 内运行后，你的 AI 助手可以发现 **23 个 Maya Skill 包**，并按需加载 **160+ 个 typed Maya 工具**。只需用普通话描述你的需求即可；助手应先搜索能力、加载匹配 Skill，再调用带 schema 的 typed tool。
+`dcc-mcp-maya` 服务器在 Maya 内运行后，你的 AI 助手可以发现 **24 个 Maya Skill 包**，并按需加载 **170+ 个 typed Maya 工具**。只需用普通话描述你的需求即可；助手应先搜索能力、加载匹配 Skill，再调用带 schema 的 typed tool。
 
 默认启动工具面很小。如果某个工具看起来不存在，请让助手先调用 `dcc_capability_manifest` 或 `search_skills`，再调用 `load_skill("<skill-name>")`。
 
