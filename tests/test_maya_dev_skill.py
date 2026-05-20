@@ -481,9 +481,7 @@ def test_run_check_writes_artifact_refs_for_large_output(tmp_path: Path) -> None
     _cleanup_demo_modules()
     _write_demo_package(tmp_path)
     (tmp_path / "demo_tool" / "runner.py").write_text(
-        "def main():\n"
-        "    print('x' * 20)\n"
-        "    return 'ok'\n",
+        "def main():\n    print('x' * 20)\n    return 'ok'\n",
         encoding="utf-8",
     )
 
