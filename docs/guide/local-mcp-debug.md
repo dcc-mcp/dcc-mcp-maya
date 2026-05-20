@@ -6,9 +6,10 @@ Use this after a **dev link** (`just maya-dev-build-link-core-win` / `just maya-
 
 1. Launch Maya (or `just maya-dev-debug-win` from the repo).
 2. Load **`dcc_mcp_maya`** in **Windows → Settings/Preferences → Plug-in Manager** (auto-load if you want it every session).
-3. Confirm the server URL in the Script Editor / stdout (default **`http://127.0.0.1:8765/mcp`** unless `DCC_MCP_MAYA_PORT` is set).
+3. Confirm the gateway URL in the Script Editor / stdout (usually **`http://127.0.0.1:9765/mcp`** in plugin sidecar mode).
 
-**Multi-instance / gateway:** in plugin sidecar mode, the aggregated MCP URL is usually **`http://127.0.0.1:9765/mcp`**. Point your MCP client at the URL that matches how you run (direct Maya vs gateway).
+Use **`http://127.0.0.1:8765/mcp`** only when you deliberately start a direct
+Python server with `start_server(port=8765)`.
 
 ## 2. Connect Cursor (Streamable HTTP MCP)
 
@@ -21,7 +22,7 @@ Copy the JSON fragment from [`examples/mcp/cursor-maya-streamable-http.json`](..
 {
   "mcpServers": {
     "maya-local": {
-      "url": "http://127.0.0.1:8765/mcp"
+      "url": "http://127.0.0.1:9765/mcp"
     }
   }
 }
@@ -40,7 +41,7 @@ Add to `claude_desktop_config.json` (see the repository root `CLAUDE.md`):
 {
   "mcpServers": {
     "maya": {
-      "url": "http://127.0.0.1:8765/mcp"
+      "url": "http://127.0.0.1:9765/mcp"
     }
   }
 }
