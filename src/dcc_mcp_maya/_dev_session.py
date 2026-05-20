@@ -1485,17 +1485,27 @@ def _invoke_widget_action(widget: Any, action: str, text_value: Optional[str], c
         raise RuntimeError("Widget does not expose setChecked()")
     if action == UiActionKind.SELECT_OPTION:
         target = "" if option is None else str(option)
-        set_current_text = getattr(widget, "setCurrentText", None)
-        if callable(set_current_text):
-            set_current_text(target)
-            return
         find_text = getattr(widget, "findText", None)
         set_index = getattr(widget, "setCurrentIndex", None)
-        if callable(find_text) and callable(set_index):
+        set_current_text = getattr(widget, "setCurrentText", None)
+        current_text = getattr(widget, "currentText", None)
+        if callable(find_text):
             index = find_text(target)
             if index < 0:
                 raise RuntimeError("Option {!r} not found".format(target))
-            set_index(index)
+            if callable(set_index):
+                set_index(index)
+            elif callable(set_current_text):
+                set_current_text(target)
+            else:
+                raise RuntimeError("Widget does not expose combo-box selection APIs")
+            if callable(current_text) and str(current_text()) != target:
+                raise RuntimeError("Option {!r} was not selected".format(target))
+            return
+        if callable(set_current_text):
+            set_current_text(target)
+            if callable(current_text) and str(current_text()) != target:
+                raise RuntimeError("Option {!r} was not selected".format(target))
             return
         raise RuntimeError("Widget does not expose combo-box selection APIs")
     raise RuntimeError("Unsupported UI action {!r}".format(action))
@@ -1517,7 +1527,21 @@ def ui_action(
 ) -> Dict[str, Any]:
     """Perform a bounded action on a unique Qt control."""
 
-    widget, resolved_id, error = _select_one_widget(control_id, query, object_name, role, label, text, window_title, tooltip)
+    normalized_action = (action or "").strip().lower()
+    text_is_set_value = normalized_action == UiActionKind.SET_TEXT and value is None and text is not None
+    locator_text = None if text_is_set_value else text
+    action_text_value = value if value is not None else text if normalized_action == UiActionKind.SET_TEXT else None
+
+    widget, resolved_id, error = _select_one_widget(
+        control_id,
+        query,
+        object_name,
+        role,
+        label,
+        locator_text,
+        window_title,
+        tooltip,
+    )
     if error is not None:
         return error
     assert widget is not None
@@ -1541,7 +1565,7 @@ def ui_action(
     before_focus = _focus_id()
     before = _ui_ref(widget, resolved_id)
     try:
-        _invoke_widget_action(widget, action, value if value is not None else text, checked, option)
+        _invoke_widget_action(widget, normalized_action, action_text_value, checked, option)
     except Exception as exc:  # noqa: BLE001
         result = UiActionResult(
             success=False,
