@@ -361,7 +361,7 @@ _maya-modules-dir := if os() == "windows" {
 # 1) Build core wheel (same machine / same Python ABI as your Maya, e.g. cp311 for Maya 2025):
 #      cd ../dcc-mcp-core && vx just build
 # 2) From this repo:
-#      just maya-local-mod-win ABI3_WHEEL=G:/PycharmProjects/github/dcc-mcp-core/dist/dcc_mcp_core-0.15.9-cp311-cp311-win_amd64.whl
+#      just maya-local-mod-win ABI3_WHEEL=G:/PycharmProjects/github/dcc-mcp-core/dist/dcc_mcp_core-0.17.19-cp311-cp311-win_amd64.whl
 # Maya 2022 (cp37): also pass a cp37 wheel:
 #      just maya-local-mod-win2022 ABI3_WHEEL=...cp38-abi3...whl CP37_WHEEL=...cp37-cp37m...whl
 @maya-local-mod-win ABI3_WHEEL:
