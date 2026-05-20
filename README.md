@@ -278,6 +278,7 @@ def render_frames(frames):
 
 - [Getting started](docs/guide/getting-started.md)
 - [Installation](docs/guide/installation.md)
+- [Standalone mayapy services](docs/guide/standalone.md)
 - [Local MCP + debug](docs/guide/local-mcp-debug.md)
 - [Multi-instance deployment](docs/guide/multi-instance.md)
 - [MCP resources](docs/guide/mcp-resources.md)
