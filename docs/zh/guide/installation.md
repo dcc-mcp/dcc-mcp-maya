@@ -45,7 +45,7 @@ mayapy -c "import dcc_mcp_maya; print(dcc_mcp_maya.__version__)"
 
 插件加载后会自动启动服务器。默认情况下实例端口由操作系统分配，并接入 `9765` 端口上的网关。
 
-启用 sidecar 模式时，本机 MCP 客户端使用 `http://127.0.0.1:9765/mcp`。新版 sidecar binary 还会由选举胜出的 gateway 在局域网暴露 `http://<这台机器的局域网IP>:59765/mcp`。如需关闭局域网入口，可在加载插件前设置 `DCC_MCP_GATEWAY_REMOTE_PORT=0`；如需改绑定地址或端口，设置 `DCC_MCP_GATEWAY_REMOTE_HOST` / `DCC_MCP_GATEWAY_REMOTE_PORT`。
+默认 sidecar 模式下，本机 MCP 客户端使用 `http://127.0.0.1:9765/mcp`。新版 sidecar binary 还会由选举胜出的 gateway 在局域网暴露 `http://<这台机器的局域网IP>:59765/mcp`。如需关闭局域网入口，可在加载插件前设置 `DCC_MCP_GATEWAY_REMOTE_PORT=0`；如需改绑定地址或端口，设置 `DCC_MCP_GATEWAY_REMOTE_HOST` / `DCC_MCP_GATEWAY_REMOTE_PORT`。
 
 插件初始化期间，`dcc-mcp-maya` 还会关闭 Maya 旧式 MEL commandPort（`127.0.0.1:50007`）。MCP 服务器不会使用该端口，关闭它可以避免误发的 HTTP 探测触发 Maya 安全警告弹窗。如果工作室仍依赖旧式 commandPort，可在加载插件前设置 `DCC_MCP_MAYA_CLOSE_DEFAULT_COMMANDPORT=0` 选择保留。
 
