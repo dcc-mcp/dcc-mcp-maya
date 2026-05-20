@@ -18,8 +18,8 @@ It embeds a standards-compliant **MCP Streamable HTTP server** (2025-03-26 spec)
 ┌─────────────────────────────────────────────────────────┐
 │  Maya (embedded Python)                                  │
 │                                                          │
-│  import dcc_mcp_maya                                    │
-│  handle = dcc_mcp_maya.start_server(port=8765)          │
+│  dcc_mcp_maya_plugin.py                                 │
+│  Qt dispatcher + sidecar bridge                         │
 │                                                          │
 │  ┌─────────────────────────────────────────────────┐   │
 │  │  DccServerBase + McpHttpServer                  │   │
@@ -32,7 +32,7 @@ It embeds a standards-compliant **MCP Streamable HTTP server** (2025-03-26 spec)
 │  │  MayaHost / dispatcher / skill executor         │   │
 │  └─────────────────────────────────────────────────┘   │
 └─────────────────────────────┬───────────────────────────┘
-                               │  http://127.0.0.1:8765/mcp
+                               │  http://127.0.0.1:9765/mcp
 ┌─────────────────────────────▼───────────────────────────┐
 │  MCP Host  (Claude Desktop / OpenClaw / Cursor / …)      │
 └─────────────────────────────────────────────────────────┘
