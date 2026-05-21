@@ -12,6 +12,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from dcc_mcp_maya import _recovery_dialog
 from dcc_mcp_maya.context_snapshot import (
     MayaContextSnapshotProvider,
     collect_gateway_metadata,
@@ -21,6 +22,13 @@ from dcc_mcp_maya.context_snapshot import (
 # ---------------------------------------------------------------------------
 # Fake ``cmds`` factory
 # ---------------------------------------------------------------------------
+
+
+@pytest.fixture(autouse=True)
+def _reset_recovery_dialog_state():
+    _recovery_dialog.reset_for_tests()
+    yield
+    _recovery_dialog.reset_for_tests()
 
 
 def _fake_cmds(**overrides):
@@ -120,6 +128,25 @@ def test_provider_returns_fresh_dict_each_call():
     # Mutating one must not affect the other.
     snap1["selection"].append("extra")
     assert snap2["selection"] == ["a"]
+
+
+def test_provider_includes_recovery_dialog_status_when_present():
+    widget = type(
+        "Widget",
+        (),
+        {
+            "windowTitle": lambda self: "Maya has stopped working",
+            "isVisible": lambda self: True,
+        },
+    )()
+    _recovery_dialog.scan_recovery_dialog(qt_widgets=[widget], auto_dismiss=False)
+
+    provider = MayaContextSnapshotProvider(cmds_provider=lambda: _fake_cmds())
+    snap = provider()
+
+    assert snap["maya_recovered"] is True
+    assert snap["maya_status"] == "recovery_dialog_detected"
+    assert snap["maya_recovery_dialog"]["title"] == "Maya has stopped working"
 
 
 # ---------------------------------------------------------------------------

@@ -56,6 +56,12 @@ from dcc_mcp_maya._readiness import (
     install_readiness,
     resolve_readiness_timeout_secs,
 )
+from dcc_mcp_maya._recovery_dialog import (
+    ENV_AUTO_DISMISS_CRASH_DIALOG,
+    clear_recovery_status,
+    current_recovery_status,
+    scan_recovery_dialog,
+)
 from dcc_mcp_maya._resources import (
     DEFAULT_SCENE_EVENTS,
     DEFAULT_SCENE_THROTTLE_SECS,
@@ -268,6 +274,11 @@ __all__ = [
     "ReadinessBinder",
     "install_readiness",
     "resolve_readiness_timeout_secs",
+    # Qt-level recovery dialog detector (issue #241)
+    "ENV_AUTO_DISMISS_CRASH_DIALOG",
+    "scan_recovery_dialog",
+    "current_recovery_status",
+    "clear_recovery_status",
     # Shutdown safety nets (issue #186)
     "ENV_KMAYA_EXITING_HOOK",
     "ENV_ATEXIT_HOOK",

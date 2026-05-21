@@ -384,6 +384,7 @@ All other skills appear as `__skill__<name>` stubs (default behavior). Call `loa
 | `DCC_MCP_MAYA_DEFENSIVE_DEL` | `0` | `1` = enable the defensive `__del__` guard. Recommended only for `mayapy` / test fixtures — interactive Maya disables by default to avoid Tokio deadlocks (issue #186). |
 | `DCC_MCP_MAYA_RESOURCES` | `1` | `0` = disable Maya MCP resource publishing entirely (issue #187 / core 0.15.0). |
 | `DCC_MCP_MAYA_FAULTHANDLER` | `1` | `0` = disable plugin-installed Python fatal-signal traceback logging. Logs go under `DCC_MCP_LOG_DIR` or the OS temp directory. |
+| `DCC_MCP_MAYA_AUTO_DISMISS_CRASH_DIALOG` | `0` | `1` = auto-dismiss detected Maya Qt recovery dialogs after main-thread tool calls and surface `maya_recovered` in results / `scene://current`. |
 | `DCC_MCP_GATEWAY_PORT` | `9765` | Multi-instance gateway election port. `0` = disable. |
 | `DCC_MCP_REGISTRY_DIR` | OS temp dir | Shared service-discovery registry directory. |
 | `DCC_MCP_MAYA_EXCLUDE_STUBS_FROM_TOOLS_LIST` | `0` | `1` = exclude ``__skill__*`` / ``__group__*`` stubs from ``tools/list`` (issue #174). Discovery still possible via capability manifest / ``/v1/search``. |
@@ -446,6 +447,7 @@ Bugs that only reproduce through the **gateway REST** surface (`/v1/search`, `/v
 | `src/dcc_mcp_maya/_stale_cleanup.py` | Stale FileRegistry detection + warning (issue #126) |
 | `src/dcc_mcp_maya/_project_tools.py` | `register_project_tools` integration — `project.save/load/resume/status` MCP tools (issue #576 / core 0.14.21) |
 | `src/dcc_mcp_maya/_readiness.py` | Three-state readiness probe (`process` / `dispatcher` / `dcc`) — honest `/v1/readyz` signal during Maya boot (issue #184) |
+| `src/dcc_mcp_maya/_recovery_dialog.py` | Qt-level Maya recovery dialog detector — optional auto-dismiss + `maya_recovered` status in results/context (issue #241) |
 | `src/dcc_mcp_maya/_resources.py` | `MayaResourceBinder` — `scene://current` snapshot + `maya-cmds://` / `maya-api://` / `maya-project://` producers (issue #187 / core 0.15.0) |
 | `src/dcc_mcp_maya/_shutdown_safety.py` | Non-cooperative shutdown safety nets — `kMayaExiting` hook, `atexit` fallback, crash-resilient process sentinel, defensive `__del__` (issue #186) |
 | `src/dcc_mcp_maya/dispatcher/` | Thread-affinity dispatchers + cancellation (directory module) |

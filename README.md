@@ -223,6 +223,7 @@ Useful plugin defaults:
 | `DCC_MCP_MAYA_DEV_ROOTS` | none | Optional path-list of trusted roots that `maya-dev` projects must live under. |
 | `DCC_MCP_MAYA_FAULTHANDLER` | `1` | `0` disables fatal-signal traceback logging from the Maya plugin. |
 | `DCC_MCP_MAYA_SUPPRESS_CRASH_REPORTER` | `0` | `1` suppresses Maya crash reporter dialogs during unattended startup. |
+| `DCC_MCP_MAYA_AUTO_DISMISS_CRASH_DIALOG` | `0` | `1` auto-dismisses detected Maya Qt recovery dialogs after main-thread tool calls and surfaces `maya_recovered` in results/context. |
 | `DCC_MCP_MAYA_DISABLE_AUTOSAVE` | `1` | `0` opts out of the plugin's AutoSave suppression during MCP jobs. |
 | `DCC_MCP_MAYA_SAFE_SESSION` | `1` | `0` disables the modal-dialog firewall around MCP-dispatched jobs. |
 | `DCC_MCP_MAYA_DISABLE_EXECUTE_PYTHON` | `0` | Refuse `execute_python`. |
