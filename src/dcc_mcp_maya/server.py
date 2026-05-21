@@ -267,6 +267,7 @@ class MayaMcpServer(DccServerBase):
         # for direct host callables and in-process skill scripts.
         self._maya_dispatcher: Any = None
         self._host_dispatcher: Any = None
+        self._auto_ui_pump: Any = None
         self._standalone_skill_dir: Optional[Path] = None
         self._execution_bridge: HostExecutionBridge
 
@@ -281,7 +282,7 @@ class MayaMcpServer(DccServerBase):
         )
 
         if host_dispatcher is None:
-            host_dispatcher = self._default_standalone_dispatcher()
+            host_dispatcher = self._default_host_dispatcher()
 
         if host_dispatcher is not None:
             self.attach_dispatcher(host_dispatcher)
@@ -330,6 +331,42 @@ class MayaMcpServer(DccServerBase):
         self._resources: Optional[_resources.MayaResourceBinder] = None
 
     # ── Lifecycle additions ────────────────────────────────────────────
+
+    def _default_host_dispatcher(self) -> Optional[Any]:
+        """Create the implicit Maya dispatcher for direct ``start_server()`` calls.
+
+        Batch / mayapy use the standalone dispatcher. Interactive Maya needs a
+        UI dispatcher plus an idle pump so ``affinity: main`` tools marshal to
+        the main thread even when callers do not pass ``host_dispatcher``.
+        """
+        standalone = self._default_standalone_dispatcher()
+        if standalone is not None:
+            return standalone
+
+        try:
+            import maya.cmds as cmds  # noqa: PLC0415
+
+            is_batch = bool(cmds.about(batch=True))
+        except Exception:  # noqa: BLE001
+            return None
+
+        if is_batch:
+            return None
+
+        try:
+            from dcc_mcp_maya.dispatcher import MayaUiDispatcher, MayaUiPump  # noqa: PLC0415
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("[%s] Could not create Maya UI dispatcher: %s", self._dcc_name, exc)
+            return None
+
+        dispatcher = MayaUiDispatcher()
+        pump = MayaUiPump(dispatcher)
+        self._auto_ui_pump = pump
+        try:
+            pump.install()
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("[%s] Maya UI pump install failed: %s", self._dcc_name, exc)
+        return dispatcher
 
     @staticmethod
     def _default_standalone_dispatcher() -> Optional[Any]:
@@ -426,6 +463,17 @@ class MayaMcpServer(DccServerBase):
                     self._dcc_name,
                     exc,
                 )
+
+        pump = getattr(self, "_auto_ui_pump", None)
+        if pump is not None:
+            try:
+                uninstall = getattr(pump, "uninstall", None)
+                if callable(uninstall):
+                    uninstall()
+            except Exception as exc:  # noqa: BLE001
+                logger.debug("[%s] Error uninstalling Maya UI pump during stop(): %s", self._dcc_name, exc)
+            finally:
+                self._auto_ui_pump = None
 
         # Detach scriptJobs and pending throttle timers before the inner
         # Rust server tears down (issue #187).

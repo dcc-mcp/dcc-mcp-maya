@@ -295,6 +295,35 @@ class TestMayaMcpServerApi:
         assert dispatcher is not None
         assert type(dispatcher).__name__ == "MayaStandaloneDispatcher"
 
+    def test_constructor_installs_ui_dispatcher_for_gui_start_server(self):
+        """Direct GUI ``start_server()`` needs a main-thread dispatcher by default."""
+        srv_mod = _import_server()
+        maya_mod = types.ModuleType("maya")
+        maya_mod.__path__ = []
+        cmds_mod = types.ModuleType("maya.cmds")
+        cmds_mod.about = MagicMock(return_value=False)
+        cmds_mod.scriptJob = MagicMock(return_value=42)
+        maya_mod.cmds = cmds_mod
+
+        with patch.dict(
+            sys.modules,
+            {
+                "maya": maya_mod,
+                "maya.cmds": cmds_mod,
+            },
+        ):
+            server = srv_mod.MayaMcpServer(port=0, enable_gateway_failover=False, gateway_port=0)
+            try:
+                assert type(server._maya_dispatcher).__name__ == "MayaUiDispatcher"
+                assert server._auto_ui_pump is not None
+                assert server._auto_ui_pump.is_installed is True
+            finally:
+                server.stop()
+
+        assert server._auto_ui_pump is None
+        install_calls = [call for call in cmds_mod.scriptJob.call_args_list if "event" in call.kwargs]
+        assert install_calls
+
     def test_standalone_affinity_compat_bundle_disables_enforcement(self):
         """mayapy direct HTTP uses a manifest copy without core enforcement."""
         import yaml
