@@ -110,7 +110,9 @@ from dcc_mcp_maya.api import (
     maya_warning,
     missing_param_error,
     node_long_name,
+    node_ref_from_name,
     node_shape_names,
+    node_uuid,
     object_transform_from_node,
     require_any_param,
     require_cmds,
@@ -210,6 +212,8 @@ __all__ = [
     "created_node_name",
     "node_long_name",
     "node_shape_names",
+    "node_uuid",
+    "node_ref_from_name",
     "summarize_node",
     "created_object_context",
     # DCC capabilities
