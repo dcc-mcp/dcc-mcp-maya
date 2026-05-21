@@ -1,5 +1,30 @@
 # Changelog
 
+## [0.3.7](https://github.com/loonghao/dcc-mcp-maya/compare/v0.3.6...v0.3.7) (2026-05-21)
+
+
+### Features
+
+* add maya dev artifacts and node refs ([58662fe](https://github.com/loonghao/dcc-mcp-maya/commit/58662fe6e2cebb1d0ef05e6caf5c638cfb58cf6d))
+* add maya dev assistant skill ([b6db806](https://github.com/loonghao/dcc-mcp-maya/commit/b6db806de0ab0b09f29fe1b81152afffd97643f4))
+* finalize maya-dev tooling ([aaba1f2](https://github.com/loonghao/dcc-mcp-maya/commit/aaba1f2c88fab6de080108430a61565877a0a230))
+
+
+### Bug Fixes
+
+* address maya-dev review feedback ([b5d540c](https://github.com/loonghao/dcc-mcp-maya/commit/b5d540c730e3d32cd738b4800de40207496814f5))
+* auto-install GUI dispatcher for start_server ([744301b](https://github.com/loonghao/dcc-mcp-maya/commit/744301b826caa73a2205b877e6f6a96deb117f09))
+* stabilize dispatcher CI coverage ([cb76377](https://github.com/loonghao/dcc-mcp-maya/commit/cb763774386df978d379db0856f9213c363ed7e6))
+* surface maya recovery dialogs ([0c38ee6](https://github.com/loonghao/dcc-mcp-maya/commit/0c38ee688386ea7372c5520b5e3bf0a44f89fe31))
+
+
+### Documentation
+
+* add local docs link check ([0171503](https://github.com/loonghao/dcc-mcp-maya/commit/0171503fd08f667d1278a01956bb4859904f1c54))
+* add standalone mayapy guide ([04bbeee](https://github.com/loonghao/dcc-mcp-maya/commit/04bbeee27e04470bc40edf0b702b1d3eb4c1b79c))
+* clarify sidecar as default runtime ([1570be2](https://github.com/loonghao/dcc-mcp-maya/commit/1570be27b38c853b324f5dd1022eae8cd468906b))
+* improve Maya install guide ([75cd78a](https://github.com/loonghao/dcc-mcp-maya/commit/75cd78ad284ddb3d1277101efb8cb420e3d5f13a))
+
 ## [0.3.6](https://github.com/loonghao/dcc-mcp-maya/compare/v0.3.5...v0.3.6) (2026-05-19)
 
 
