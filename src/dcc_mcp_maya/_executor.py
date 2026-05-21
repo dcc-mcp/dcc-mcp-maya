@@ -54,7 +54,7 @@ from typing import Any, Dict, Iterator
 from dcc_mcp_core.skill import skill_error, skill_exception
 
 # Import local modules
-from dcc_mcp_maya import _affinity
+from dcc_mcp_maya import _affinity, _recovery_dialog
 from dcc_mcp_maya._cmds_file_guard import guard_cmds_file
 
 logger = logging.getLogger(__name__)
@@ -105,6 +105,11 @@ def run_skill_script(script_path: str, params: Dict[str, Any]) -> Dict[str, Any]
     with _busy_scope():
         with guard_cmds_file():
             return _run_skill_script_untracked(script_path, params)
+
+
+def _run_main_affinity_skill_script(script_path: str, params: Dict[str, Any]) -> Dict[str, Any]:
+    """Run a main-thread skill and poll Qt recovery dialogs before returning."""
+    return _recovery_dialog.poll_and_annotate_result(run_skill_script(script_path, params))
 
 
 def _run_skill_script_untracked(script_path: str, params: Dict[str, Any]) -> Dict[str, Any]:
@@ -207,7 +212,7 @@ def _run_via_main_thread_queue(script_path: str, params: Dict[str, Any], action_
     # pump thread on first ``submit``).
     from dcc_mcp_maya import _main_thread_queue  # noqa: PLC0415
 
-    fut = _main_thread_queue.get_queue().submit(lambda: run_skill_script(script_path, params))
+    fut = _main_thread_queue.get_queue().submit(lambda: _run_main_affinity_skill_script(script_path, params))
     try:
         return fut.result()
     except _main_thread_queue.QueueFullError as exc:
@@ -268,7 +273,7 @@ def execute_in_process(
     #    queue would deadlock waiting for ourselves. This is the common
     #    case in mayapy / pytest where the HTTP worker IS the main thread.
     if _on_main_thread():
-        return run_skill_script(script_path, params)
+        return _run_main_affinity_skill_script(script_path, params)
 
     # 3. Preferred path: dispatcher (cancellation token, job context).
     dispatcher = getattr(server_obj, "_maya_dispatcher", None)
@@ -279,7 +284,7 @@ def execute_in_process(
         try:
             result = dispatcher.submit_callable(
                 action_name,
-                lambda: run_skill_script(script_path, params),
+                lambda: _run_main_affinity_skill_script(script_path, params),
                 affinity="main",
             )
         except BaseException as exc:  # noqa: BLE001 — relay everything
