@@ -31,6 +31,7 @@ from dcc_mcp_core.adapter_contracts import (
     DebugSessionStatus,
     UiActionKind,
     UiActionResult,
+    UiArtifactRef,
     UiBounds,
     UiControlNode,
     UiErrorCode,
@@ -597,19 +598,39 @@ def _artifact_dir() -> str:
     return root
 
 
-def _write_text_artifact(kind: str, text: str) -> Dict[str, Any]:
+def _artifact_path(kind: str, suffix: str) -> Tuple[str, str]:
     safe_kind = "".join(ch if ch.isalnum() or ch in ("-", "_") else "-" for ch in kind) or "text"
-    filename = "{}-{}-{}.txt".format(int(time.time() * 1000), threading.get_ident(), safe_kind)
+    filename = "{}-{}-{}{}".format(int(time.time() * 1000), threading.get_ident(), safe_kind, suffix)
     path = os.path.join(_artifact_dir(), filename)
+    return safe_kind, path
+
+
+def _artifact_payload(kind: str, path: str, mime: str, byte_count: int) -> Dict[str, Any]:
+    ref = UiArtifactRef(uri=_path_uri(path), mime=mime).to_dict()
+    ref.update(
+        {
+            "kind": kind,
+            "path": path,
+            "bytes": int(byte_count),
+        }
+    )
+    return ref
+
+
+def _write_text_artifact(kind: str, text: str) -> Dict[str, Any]:
+    safe_kind, path = _artifact_path(kind, ".txt")
     with open(path, "w", encoding="utf-8", errors="replace") as fh:
         fh.write(text)
-    return {
-        "kind": safe_kind,
-        "uri": _path_uri(path),
-        "path": path,
-        "mime": "text/plain",
-        "bytes": len(text.encode("utf-8", errors="replace")),
-    }
+    return _artifact_payload(safe_kind, path, "text/plain", len(text.encode("utf-8", errors="replace")))
+
+
+def _ui_artifact_refs(artifacts: Sequence[Dict[str, Any]]) -> List[UiArtifactRef]:
+    refs: List[UiArtifactRef] = []
+    for artifact in artifacts:
+        uri = artifact.get("uri")
+        if uri:
+            refs.append(UiArtifactRef(uri=str(uri), mime=artifact.get("mime")))
+    return refs
 
 
 def _externalize_text_fields(ctx: Dict[str, Any], fields: Sequence[str], threshold: int) -> List[Dict[str, Any]]:
@@ -1524,6 +1545,37 @@ def _invoke_widget_action(
     raise RuntimeError("Unsupported UI action {!r}".format(action))
 
 
+def _capture_widget_png_artifact(widget: Any, kind: str) -> Optional[Dict[str, Any]]:
+    grab = getattr(widget, "grab", None)
+    if not callable(grab):
+        return None
+    pixmap = grab()
+    is_null = getattr(pixmap, "isNull", None)
+    if callable(is_null) and is_null():
+        return None
+
+    safe_kind, path = _artifact_path(kind, ".png")
+    save = getattr(pixmap, "save", None)
+    if not callable(save) or not save(path, "PNG"):
+        _remove_artifact_file(path)
+        return None
+    try:
+        byte_count = os.path.getsize(path)
+    except OSError:
+        byte_count = 0
+    if byte_count <= 0:
+        _remove_artifact_file(path)
+        return None
+    return _artifact_payload(safe_kind, path, "image/png", byte_count)
+
+
+def _remove_artifact_file(path: str) -> None:
+    try:
+        os.unlink(path)
+    except OSError:
+        pass
+
+
 def ui_action(
     action: str,
     control_id: Optional[str] = None,
@@ -1537,6 +1589,7 @@ def ui_action(
     value: Optional[str] = None,
     checked: Optional[bool] = None,
     option: Optional[str] = None,
+    capture_screenshots: bool = False,
 ) -> Dict[str, Any]:
     """Perform a bounded action on a unique Qt control."""
 
@@ -1577,15 +1630,25 @@ def ui_action(
 
     before_focus = _focus_id()
     before = _ui_ref(widget, resolved_id)
+    artifacts: List[Dict[str, Any]] = []
+    if capture_screenshots:
+        before_artifact = _capture_widget_png_artifact(widget, "ui-action-before")
+        if before_artifact is not None:
+            artifacts.append(before_artifact)
     try:
         _invoke_widget_action(widget, normalized_action, action_text_value, checked, option)
     except Exception as exc:  # noqa: BLE001
+        if capture_screenshots:
+            after_artifact = _capture_widget_png_artifact(widget, "ui-action-after-error")
+            if after_artifact is not None:
+                artifacts.append(after_artifact)
         result = UiActionResult(
             success=False,
             control_id=resolved_id,
             error_code=UiErrorCode.UNSUPPORTED_ACTION,
             message=str(exc),
             before_focus_id=before_focus,
+            artifacts=_ui_artifact_refs(artifacts),
         )
         return skill_error(
             "UI action failed",
@@ -1593,14 +1656,20 @@ def ui_action(
             error_code=result.error_code,
             action_result=result.to_dict(),
             control=before,
+            artifacts=artifacts,
         )
     after_focus = _focus_id()
     after = _ui_ref(widget, resolved_id)
+    if capture_screenshots:
+        after_artifact = _capture_widget_png_artifact(widget, "ui-action-after")
+        if after_artifact is not None:
+            artifacts.append(after_artifact)
     result = UiActionResult(
         success=True,
         control_id=resolved_id,
         before_focus_id=before_focus,
         after_focus_id=after_focus,
+        artifacts=_ui_artifact_refs(artifacts),
         metadata={"action": action},
     )
     return skill_success(
@@ -1609,6 +1678,7 @@ def ui_action(
         control=after,
         before=before,
         after=after,
+        artifacts=artifacts,
     )
 
 

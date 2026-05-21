@@ -49,6 +49,6 @@ wants to restrict which local projects can be attached.
 - `run_script` — Run a project-local `.py` script with captured output
 - `start_debugpy` — Start a debugpy listener in the Maya process with attach metadata
 - `capture_ui` — Capture the Maya main window or a named Qt widget as PNG
-- `ui_snapshot` / `ui_find` / `ui_action` — Inspect and operate Maya Qt UI controls
+- `ui_snapshot` / `ui_find` / `ui_action` — Inspect and operate Maya Qt UI controls, with optional action evidence artifacts
 - `make_node_ref` / `resolve_node_ref` — Build and resolve stable Maya node references
 - `run_check` — Reload, run an entrypoint, capture diagnostics/artifacts, optionally grab UI
