@@ -119,6 +119,7 @@ class MayaContextSnapshotProvider:
 
         cmds = self._safe_cmds()
         if cmds is None:
+            _attach_recovery_status(snapshot)
             return snapshot
 
         snapshot["available"] = True
@@ -171,6 +172,7 @@ class MayaContextSnapshotProvider:
         if display:
             snapshot["display_name"] = display
 
+        _attach_recovery_status(snapshot)
         return snapshot
 
     # ------------------------------------------------------------ internals
@@ -262,6 +264,16 @@ def _safe_call(cmds: Any, name: str, *args: Any, **kwargs: Any) -> Any:
     except Exception as exc:  # noqa: BLE001 — Maya raises RuntimeError often
         logger.debug("MayaContextSnapshot: cmds.%s raised %s", name, exc)
         return None
+
+
+def _attach_recovery_status(snapshot: Dict[str, Any]) -> None:
+    """Merge the latest Qt recovery-dialog status into a snapshot if present."""
+    try:
+        from dcc_mcp_maya import _recovery_dialog  # noqa: PLC0415
+
+        snapshot.update(_recovery_dialog.current_context_fields())
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("MayaContextSnapshotProvider: recovery status unavailable: %s", exc)
 
 
 def _derive_display_name(scene: Optional[str], version: Optional[str]) -> Optional[str]:
