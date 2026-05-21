@@ -81,6 +81,45 @@ def test_sidecar_registry_wait_filters_by_host_rpc_uri(tmp_path):
     assert mcp_url_from_registry_entry(entry) == "http://127.0.0.1:2/mcp"
 
 
+def test_sidecar_registry_wait_ignores_initial_port_zero_row(tmp_path):
+    registry = tmp_path / "registry"
+    registry.mkdir()
+    expected_uri = "qtserver://127.0.0.1:2"
+    (registry / "services.json").write_text(
+        json.dumps(
+            {
+                "services": [
+                    {
+                        "dcc_type": "maya",
+                        "host": "127.0.0.1",
+                        "port": 0,
+                        "metadata": {
+                            "dcc_mcp_role": "per-dcc-sidecar",
+                            "host_rpc_uri": expected_uri,
+                            "mcp_url": "http://127.0.0.1:0/mcp",
+                        },
+                    },
+                    {
+                        "dcc_type": "maya",
+                        "host": "127.0.0.1",
+                        "port": 3,
+                        "metadata": {
+                            "dcc_mcp_role": "per-dcc-sidecar",
+                            "host_rpc_uri": expected_uri,
+                            "mcp_url": "http://127.0.0.1:3/mcp",
+                        },
+                    },
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    entry = wait_for_sidecar_registry_row(registry, host_rpc_uri=expected_uri)
+
+    assert mcp_url_from_registry_entry(entry) == "http://127.0.0.1:3/mcp"
+
+
 def _qualified_action_name(skill: str, stem: str) -> str:
     return "{}__{}".format(skill.replace("-", "_"), stem)
 

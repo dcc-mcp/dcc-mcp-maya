@@ -140,6 +140,8 @@ def wait_for_sidecar_registry_row(
                         continue
                     if host_rpc_uri is not None and metadata.get("host_rpc_uri") != host_rpc_uri:
                         continue
+                    if not _entry_has_dialable_mcp_port(entry):
+                        continue
                     return entry
         time.sleep(0.05)
     raise AssertionError(
@@ -183,6 +185,15 @@ def mcp_url_from_registry_entry(entry: Dict[str, Any]) -> str:
     if port is not None:
         return _dialable_loopback_mcp_url("http://{}:{}/mcp".format(host, port))
     raise AssertionError("registry entry has no mcp_url: {}".format(entry))
+
+
+def _entry_has_dialable_mcp_port(entry: Dict[str, Any]) -> bool:
+    try:
+        url = mcp_url_from_registry_entry(entry)
+    except AssertionError:
+        return False
+    parsed = urllib.parse.urlsplit(url)
+    return parsed.port not in (None, 0)
 
 
 def _dialable_loopback_mcp_url(url: str) -> str:
