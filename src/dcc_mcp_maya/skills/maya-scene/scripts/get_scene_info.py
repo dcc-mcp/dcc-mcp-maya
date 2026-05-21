@@ -6,7 +6,7 @@ from __future__ import annotations
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
-from dcc_mcp_maya.api import object_transform_from_node, scene_object_from_node
+from dcc_mcp_maya.api import node_ref_from_name, object_transform_from_node, scene_object_from_node
 
 
 def get_scene_info(include_transforms: bool = True) -> dict:
@@ -37,6 +37,7 @@ def get_scene_info(include_transforms: bool = True) -> dict:
         nodes = []
         for long_name in transforms:
             node = scene_object_from_node(cmds, long_name)
+            node["node_ref"] = node_ref_from_name(cmds, long_name)
             node["children"] = cmds.listRelatives(long_name, children=True, fullPath=True) or []
             if include_transforms:
                 try:

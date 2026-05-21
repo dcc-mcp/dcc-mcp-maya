@@ -64,6 +64,15 @@ class _Rect:
         return self._height
 
 
+class _FakePixmap:
+    def isNull(self) -> bool:  # noqa: N802
+        return False
+
+    def save(self, path: str, _format: str) -> bool:
+        Path(path).write_bytes(b"fake-png")
+        return True
+
+
 class _FakeWidget:
     def __init__(
         self,
@@ -105,6 +114,9 @@ class _FakeWidget:
 
     def geometry(self) -> _Rect:
         return _Rect()
+
+    def grab(self) -> _FakePixmap:
+        return _FakePixmap()
 
     def children(self) -> list["_FakeWidget"]:
         return list(self._children)
@@ -471,6 +483,30 @@ def test_ui_action_requires_unique_locator() -> None:
 
     assert out["success"] is False
     assert out["context"]["error_code"] == "ambiguous_control"
+
+
+def test_ui_action_can_capture_artifact_evidence(tmp_path: Path) -> None:
+    from dcc_mcp_maya import _dev_session
+
+    _dev_session.reset_for_tests()
+    root, _save, name = _fake_ui_tree()
+    with patch.dict("os.environ", {"DCC_MCP_MAYA_DEV_ARTIFACT_DIR": str(tmp_path / "artifacts")}):
+        with patch.object(_dev_session, "_maya_main_window", return_value=(root, _FakeWidget, None)):
+            out = _dev_session.ui_action(
+                action="set_text",
+                object_name="nameEdit",
+                text="New",
+                capture_screenshots=True,
+            )
+
+    assert out["success"] is True
+    assert name.text() == "New"
+    artifacts = out["context"]["artifacts"]
+    assert [artifact["kind"] for artifact in artifacts] == ["ui-action-before", "ui-action-after"]
+    assert all(artifact["mime"] == "image/png" for artifact in artifacts)
+    assert all(Path(artifact["path"]).exists() for artifact in artifacts)
+    action_artifacts = out["context"]["action_result"]["artifacts"]
+    assert [artifact["uri"] for artifact in action_artifacts] == [artifact["uri"] for artifact in artifacts]
 
 
 def test_run_check_writes_artifact_refs_for_large_output(tmp_path: Path) -> None:

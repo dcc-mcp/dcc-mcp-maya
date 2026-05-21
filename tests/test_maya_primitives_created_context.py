@@ -24,7 +24,10 @@ class _PrimitiveCmds:
     def rename(self, _old, new):
         return new
 
-    def ls(self, name, long=False):  # noqa: A002 - mirrors maya.cmds flag name
+    def ls(self, name, long=False, uuid=False):  # noqa: A002 - mirrors maya.cmds flag name
+        if uuid:
+            short = str(name).rsplit("|", 1)[-1]
+            return ["uuid-{}".format(short)]
         return ["|{}".format(name)] if long and not str(name).startswith("|") else [name]
 
     def listRelatives(self, name, shapes=False, fullPath=False):  # noqa: N803
@@ -34,6 +37,17 @@ class _PrimitiveCmds:
 
     def objectType(self, _name):  # noqa: N802
         return "transform"
+
+    def nodeType(self, _name):  # noqa: N802
+        return "transform"
+
+    def objExists(self, _name):  # noqa: N802
+        return True
+
+    def file(self, query=False, sceneName=False):  # noqa: N803
+        if query and sceneName:
+            return "C:/show/primitive.ma"
+        return ""
 
     def getAttr(self, attr):  # noqa: N802
         if attr.endswith(".translate"):
@@ -67,3 +81,6 @@ def test_primitive_create_tools_return_rich_node_context():
             assert context["long_name"] == "|{}".format(kwargs["name"])
             assert context["node"]["shape_names"] == ["|{}Shape".format(kwargs["name"])]
             assert context["node"]["transform"]["scale"] == [1.0, 1.0, 1.0]
+            assert context["node_ref"]["uuid"] == "uuid-{}".format(kwargs["name"])
+            assert context["node_ref"]["exists"] is True
+            assert context["node_ref"]["stale"] is False
