@@ -12,7 +12,7 @@
 **Repo:** https://github.com/loonghao/dcc-mcp-maya
 **Python:** >=3.7
 **Maya:** 2020+
-**Core dep:** `dcc-mcp-core>=0.17.19,<1.0.0`
+**Core dep:** `dcc-mcp-core>=0.17.20,<1.0.0`
 
 ---
 
@@ -127,6 +127,12 @@ Runtime readiness wiring (issue #184, requires `dcc-mcp-core>=0.15.0`; API lande
 * Opt-in advisory timeout: `DCC_MCP_MAYA_READINESS_TIMEOUT_SECS=<positive int>` — consumed by orchestrators, never auto-fails the probe.
 * Maya public symbols: `ReadinessBinder`, `install_readiness`, `resolve_readiness_timeout_secs`, `ENV_READINESS_TIMEOUT_SECS`.  Core public symbols used here: `dcc_mcp_core.ReadinessProbe` (with `set_dispatcher_ready` / `set_dcc_ready` / `report` / `is_ready` / `fully_ready`).
 
+Qt recovery dialog detection (issue #241):
+
+* `dcc_mcp_maya._recovery_dialog.scan_recovery_dialog()` polls Maya Qt top-level windows for C++ crash-recovery dialogs (`"Maya has stopped working"`, `"已停止工作"`, recovery-file titles). It is called automatically after `affinity: main` skill actions return, on the main-thread callable path.
+* If `DCC_MCP_MAYA_AUTO_DISMISS_CRASH_DIALOG=1`, matching dialogs are dismissed best-effort via OK / Close / Reopen buttons or dialog `accept()` / `close()`.
+* Tool result contexts and `scene://current` snapshots include `maya_recovered`, `maya_status`, and `maya_recovery_dialog` once a dialog is detected. Public symbols: `ENV_AUTO_DISMISS_CRASH_DIALOG`, `scan_recovery_dialog`, `current_recovery_status`, `clear_recovery_status`.
+
 Shutdown safety nets (issue #186):
 
 * `dcc_mcp_maya._shutdown_safety.ShutdownCoordinator` — composes four independent safety nets so non-cooperative Maya exits stop leaking `FileRegistry` rows: `MSceneMessage.kMayaExiting` hook, `atexit` fallback, crash-resilient process sentinel (OS drops on `kill -9`), opt-in defensive `__del__` guard.  Auto-installed from the Maya plugin's `initializePlugin` after `_start()`; torn down in `uninitializePlugin`.
@@ -193,6 +199,7 @@ Tool naming: `{skill_name.replace("-","_")}__{script_stem}` (e.g. `maya_scene__n
 | `DCC_MCP_REGISTRY_DIR` | OS temp | Shared discovery registry |
 | `DCC_MCP_MAYA_HOT_RELOAD` | `0` | `1`=watch skills for disk changes |
 | `DCC_MCP_MAYA_DEV_ROOTS` | — | Optional path-list of trusted roots for `maya-dev` project attachment |
+| `DCC_MCP_MAYA_AUTO_DISMISS_CRASH_DIALOG` | `0` | `1`=best-effort dismiss detected Maya Qt recovery dialogs after `affinity: main` tool calls |
 | `DCC_MCP_MAYA_DISABLE_EXECUTE_PYTHON` | `0` | `1`/`true`/`yes`/`on` — refuse `execute_python` (skills-first enforcement) |
 | `DCC_MCP_MAYA_DISABLE_EXECUTE_MEL` | `0` | Same tokens — refuse `execute_mel` only |
 | `DCC_MCP_MAYA_DISABLE_ARBITRARY_SCRIPT` | `0` | Same tokens — refuse **both** `execute_python` and `execute_mel` |
@@ -206,6 +213,7 @@ Tool naming: `{skill_name.replace("-","_")}__{script_stem}` (e.g. `maya_scene__n
 | `src/dcc_mcp_maya/server.py` | `MayaMcpServer`, builtin skill discovery, metrics, jobs |
 | `src/dcc_mcp_maya/dispatcher/` | Thread-affinity dispatchers + cancellation (directory module) |
 | `src/dcc_mcp_maya/api.py` | Skill authoring helpers (18 symbols) |
+| `src/dcc_mcp_maya/_recovery_dialog.py` | Qt-level crash/recovery dialog detector + status surfacing |
 | `src/dcc_mcp_maya/plugin.py` | Maya plugin entry point |
 | `src/dcc_mcp_maya/skills/` | 24 built-in skill packages (177 typed tool declarations) |
 | `docs/` | VitePress docs (EN + ZH) |
