@@ -306,7 +306,12 @@ def start_sidecar(
         cmd.extend(["--adapter-version", adapter_version])
     if gateway_name is not None:
         cmd.extend(["--gateway-name", gateway_name])
-    gateway_port_str = os.environ.get("DCC_MCP_GATEWAY_PORT", "9765").strip()
+
+    spawn_env = os.environ.copy()
+    if extra_env:
+        spawn_env.update(extra_env)
+
+    gateway_port_str = str(spawn_env.get("DCC_MCP_GATEWAY_PORT", "9765")).strip()
     try:
         gateway_port = int(gateway_port_str)
     except ValueError:
@@ -316,9 +321,6 @@ def start_sidecar(
     if extra_args:
         cmd.extend(extra_args)
 
-    spawn_env = os.environ.copy()
-    if extra_env:
-        spawn_env.update(extra_env)
     gateway_remote_host, gateway_remote_port = resolve_gateway_remote_options(spawn_env)
     spawn_env[ENV_GATEWAY_REMOTE_HOST] = gateway_remote_host
     spawn_env[ENV_GATEWAY_REMOTE_PORT] = str(gateway_remote_port)
