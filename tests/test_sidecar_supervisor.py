@@ -61,3 +61,30 @@ def test_start_sidecar_forwards_identity_flags(monkeypatch):
         "--gateway-port",
         "9765",
     ]
+
+
+def test_start_sidecar_honors_extra_env_gateway_port_zero(monkeypatch):
+    captured = {}
+
+    def fake_popen(cmd, **kwargs):
+        captured["cmd"] = list(cmd)
+        captured["kwargs"] = dict(kwargs)
+        return _FakeProc()
+
+    monkeypatch.setattr("subprocess.Popen", fake_popen)
+    monkeypatch.setenv("DCC_MCP_GATEWAY_PORT", "9765")
+
+    start_sidecar(
+        maya_pid=1234,
+        binary_override=Path("dcc-mcp-server"),
+        qt_port_override=45555,
+        start_qt_server_fn=lambda port: {
+            "host": "127.0.0.1",
+            "port": port,
+            "qt_binding": "fake-test-stub",
+        },
+        extra_env={"DCC_MCP_GATEWAY_PORT": "0"},
+    )
+
+    assert "--gateway-port" not in captured["cmd"]
+    assert captured["kwargs"]["env"]["DCC_MCP_GATEWAY_PORT"] == "0"

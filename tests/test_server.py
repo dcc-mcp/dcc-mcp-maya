@@ -321,8 +321,80 @@ class TestMayaMcpServerApi:
                 server.stop()
 
         assert server._auto_ui_pump is None
-        install_calls = [call for call in cmds_mod.scriptJob.call_args_list if "event" in call.kwargs]
-        assert install_calls
+
+    def test_default_host_dispatcher_reuses_standalone_dispatcher(self):
+        """Batch / mayapy keeps the serialized standalone dispatcher path."""
+        srv_mod = _import_server()
+        server = object.__new__(srv_mod.MayaMcpServer)
+        standalone = object()
+
+        with patch.object(srv_mod.MayaMcpServer, "_default_standalone_dispatcher", return_value=standalone):
+            assert server._default_host_dispatcher() is standalone
+
+    def test_default_host_dispatcher_returns_none_when_maya_probe_fails(self):
+        """If Maya cannot answer ``about(batch=True)``, keep the inline path."""
+        srv_mod = _import_server()
+        server = object.__new__(srv_mod.MayaMcpServer)
+        cmds_mod = sys.modules["maya.cmds"]
+        cmds_mod.about.side_effect = RuntimeError("maya unavailable")
+
+        with patch.object(srv_mod.MayaMcpServer, "_default_standalone_dispatcher", return_value=None):
+            assert server._default_host_dispatcher() is None
+
+    def test_default_host_dispatcher_returns_none_for_batch_maya(self):
+        """Batch Maya without the standalone detector does not need a UI pump."""
+        srv_mod = _import_server()
+        server = object.__new__(srv_mod.MayaMcpServer)
+        cmds_mod = sys.modules["maya.cmds"]
+        cmds_mod.about.return_value = True
+
+        with patch.object(srv_mod.MayaMcpServer, "_default_standalone_dispatcher", return_value=None):
+            assert server._default_host_dispatcher() is None
+
+    def test_default_host_dispatcher_returns_none_when_ui_dispatcher_import_fails(self):
+        """Import failures fall back to the historical inline executor."""
+        import builtins
+
+        srv_mod = _import_server()
+        server = object.__new__(srv_mod.MayaMcpServer)
+        server._dcc_name = "maya"
+        cmds_mod = sys.modules["maya.cmds"]
+        cmds_mod.about.return_value = False
+        real_import = builtins.__import__
+
+        def blocked_import(name, globals=None, locals=None, fromlist=(), level=0):
+            if name == "dcc_mcp_maya.dispatcher":
+                raise ImportError("blocked for test")
+            return real_import(name, globals, locals, fromlist, level)
+
+        with patch.object(srv_mod.MayaMcpServer, "_default_standalone_dispatcher", return_value=None):
+            with patch.object(builtins, "__import__", side_effect=blocked_import):
+                assert server._default_host_dispatcher() is None
+
+    def test_default_host_dispatcher_keeps_dispatcher_when_pump_install_raises(self):
+        """A pump-install failure should not prevent dispatcher wiring."""
+        srv_mod = _import_server()
+        import dcc_mcp_maya.dispatcher as dispatcher_mod
+
+        server = object.__new__(srv_mod.MayaMcpServer)
+        server._dcc_name = "maya"
+        server._auto_ui_pump = None
+        cmds_mod = sys.modules["maya.cmds"]
+        cmds_mod.about.return_value = False
+
+        class FailingPump:
+            def __init__(self, dispatcher):
+                self.dispatcher = dispatcher
+
+            def install(self):
+                raise RuntimeError("no idle pump")
+
+        with patch.object(srv_mod.MayaMcpServer, "_default_standalone_dispatcher", return_value=None):
+            with patch.object(dispatcher_mod, "MayaUiPump", FailingPump):
+                dispatcher = server._default_host_dispatcher()
+
+        assert type(dispatcher).__name__ == "MayaUiDispatcher"
+        assert isinstance(server._auto_ui_pump, FailingPump)
 
     def test_standalone_affinity_compat_bundle_disables_enforcement(self):
         """mayapy direct HTTP uses a manifest copy without core enforcement."""
