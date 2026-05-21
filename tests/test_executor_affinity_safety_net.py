@@ -43,7 +43,9 @@ from dcc_mcp_maya import _affinity, _executor, _main_thread_queue
 @pytest.fixture(autouse=True)
 def _reset_queue_singleton():
     _main_thread_queue.reset_for_tests()
+    _executor._recovery_dialog.reset_for_tests()
     yield
+    _executor._recovery_dialog.reset_for_tests()
     _main_thread_queue.reset_for_tests()
 
 
@@ -80,6 +82,19 @@ class TestAffinityAnyAlwaysInline:
         dispatcher.submit_callable.assert_not_called()
         # And must NOT touch the queue either.
         assert _main_thread_queue.get_queue().status()["submitted"] == 0
+
+    def test_skips_recovery_dialog_poll(self, fake_script, monkeypatch):
+        monkeypatch.setattr(_affinity, "resolve_affinity", lambda _p: "any")
+        monkeypatch.setattr(_executor, "_on_main_thread", lambda: False)
+
+        def fail_poll(_result):
+            raise AssertionError("affinity:any must not poll Qt dialogs")
+
+        monkeypatch.setattr(_executor._recovery_dialog, "poll_and_annotate_result", fail_poll)
+
+        out = _executor.execute_in_process(MagicMock(spec=[]), fake_script, {}, "fake__main")
+
+        assert out["success"] is True
 
 
 class TestAffinityMainOnMainThreadInline:
@@ -125,6 +140,35 @@ class TestAffinityMainOffMainWithDispatcher:
         assert captured["request_id"] == "fake__main"
         # Safety-net queue must NOT have been touched when dispatcher is healthy.
         assert _main_thread_queue.get_queue().status()["submitted"] == 0
+
+    def test_dispatcher_path_polls_recovery_dialog_inside_callable(self, fake_script, monkeypatch):
+        monkeypatch.setattr(_affinity, "resolve_affinity", lambda _p: "main")
+        monkeypatch.setattr(_executor, "_on_main_thread", lambda: False)
+
+        calls = []
+
+        def fake_poll(result):
+            calls.append(result)
+            out = dict(result)
+            context = dict(out.get("context") or {})
+            context["maya_status"] = "recovery_dialog_detected"
+            out["context"] = context
+            return out
+
+        def fake_submit_callable(_request_id: str, task, affinity: str = "main", **_kw):
+            assert affinity == "main"
+            return {"success": True, "output": task()}
+
+        monkeypatch.setattr(_executor._recovery_dialog, "poll_and_annotate_result", fake_poll)
+        dispatcher = MagicMock()
+        dispatcher.submit_callable = fake_submit_callable
+        server = MagicMock(_maya_dispatcher=dispatcher)
+
+        out = _executor.execute_in_process(server, fake_script, {}, "fake__main")
+
+        assert len(calls) == 1
+        assert out["success"] is True
+        assert out["context"]["maya_status"] == "recovery_dialog_detected"
 
     def test_dispatcher_exception_becomes_structured_envelope(self, fake_script, monkeypatch):
         monkeypatch.setattr(_affinity, "resolve_affinity", lambda _p: "main")
