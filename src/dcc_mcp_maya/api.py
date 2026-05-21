@@ -839,6 +839,80 @@ def node_shape_names(cmds: Any, node_name: str) -> List[str]:
         return []
 
 
+def node_uuid(cmds: Any, node_name: str) -> Optional[str]:
+    """Return Maya's UUID for *node_name* when available."""
+    try:
+        uuids = cmds.ls(node_name, uuid=True) or []
+    except Exception:  # noqa: BLE001 - old mocks / host modes may not expose uuid lookup
+        logger.debug("Could not read UUID for %s", node_name, exc_info=True)
+        return None
+    if not isinstance(uuids, (list, tuple)) or not uuids:
+        return None
+    value = str(uuids[0])
+    if value == str(node_name) or value.startswith("|"):
+        return None
+    return value
+
+
+def _node_type(cmds: Any, node_name: str) -> Optional[str]:
+    for method_name in ("nodeType", "objectType"):
+        method = getattr(cmds, method_name, None)
+        if callable(method):
+            try:
+                return str(method(node_name))
+            except Exception:  # noqa: BLE001
+                logger.debug("Could not read node type for %s via %s", node_name, method_name, exc_info=True)
+    return None
+
+
+def _node_exists(cmds: Any, node_name: str) -> bool:
+    exists = getattr(cmds, "objExists", None)
+    if callable(exists):
+        try:
+            return bool(exists(node_name))
+        except Exception:  # noqa: BLE001
+            logger.debug("Could not read existence for %s", node_name, exc_info=True)
+    return True
+
+
+def _current_scene_path(cmds: Any) -> Optional[str]:
+    file_cmd = getattr(cmds, "file", None)
+    if not callable(file_cmd):
+        return None
+    try:
+        path = file_cmd(query=True, sceneName=True)
+    except Exception:  # noqa: BLE001
+        logger.debug("Could not read current scene path", exc_info=True)
+        return None
+    return str(path) if path else None
+
+
+def node_ref_from_name(cmds: Any, node_name: str) -> Dict[str, Any]:
+    """Build a stable JSON NodeRef for a Maya node.
+
+    The payload is intentionally plain JSON and PyMEL-free.  UUID is preferred
+    for identity when Maya exposes it; long DAG path remains the fallback so
+    agents can still resolve or display the reference in stripped-down test and
+    batch contexts.
+    """
+    long_name = node_long_name(cmds, node_name)
+    short_name = long_name.rsplit("|", 1)[-1] if "|" in long_name else str(node_name)
+    uuid_value = node_uuid(cmds, long_name)
+    exists = _node_exists(cmds, long_name)
+    node_type = _node_type(cmds, long_name)
+    return {
+        "kind": "maya_node",
+        "id": uuid_value or long_name,
+        "uuid": uuid_value,
+        "long_name": long_name,
+        "short_name": short_name,
+        "type": node_type,
+        "exists": exists,
+        "stale": not exists,
+        "metadata": build_context_dict(scene_path=_current_scene_path(cmds)),
+    }
+
+
 def summarize_node(cmds: Any, node_name: str) -> Dict[str, Any]:
     """Build a stable, JSON-safe summary for a Maya DAG node.
 
@@ -850,17 +924,20 @@ def summarize_node(cmds: Any, node_name: str) -> Dict[str, Any]:
     """
     long_name = node_long_name(cmds, node_name)
     short_name = long_name.rsplit("|", 1)[-1] if "|" in long_name else str(node_name)
+    node_ref = node_ref_from_name(cmds, long_name)
 
     summary: Dict[str, Any] = {
         "name": short_name,
         "long_name": long_name,
         "object_name": short_name,
         "shape_names": node_shape_names(cmds, long_name),
+        "uuid": node_ref.get("uuid"),
+        "exists": bool(node_ref.get("exists")),
+        "stale": bool(node_ref.get("stale")),
+        "node_ref": node_ref,
     }
-    try:
-        summary["object_type"] = cmds.objectType(long_name)
-    except Exception:  # noqa: BLE001
-        logger.debug("Could not read object type for %s", long_name, exc_info=True)
+    if node_ref.get("type"):
+        summary["object_type"] = node_ref["type"]
     try:
         summary["transform"] = object_transform_from_node(cmds, long_name)
     except Exception:  # noqa: BLE001
@@ -888,6 +965,7 @@ def created_object_context(cmds: Any, result: Any, requested_name: Optional[str]
         "object_name": summary.get("object_name", node_name),
         "long_name": summary.get("long_name", node_name),
         "node": summary,
+        "node_ref": summary.get("node_ref"),
     }
 
 
@@ -1051,6 +1129,8 @@ __all__ = [
     "created_node_name",
     "node_long_name",
     "node_shape_names",
+    "node_uuid",
+    "node_ref_from_name",
     "summarize_node",
     "created_object_context",
     # DCC capabilities

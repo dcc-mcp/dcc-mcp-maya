@@ -23,7 +23,9 @@ from dcc_mcp_maya.api import (
     maya_success,
     missing_param_error,
     node_long_name,
+    node_ref_from_name,
     node_shape_names,
+    node_uuid,
     require_main_thread,
     require_param,
     summarize_node,
@@ -60,7 +62,10 @@ class _FakeCmdsForNodeSummary:
     def __init__(self):
         self.renamed = []
 
-    def ls(self, name, long=False):  # noqa: A002 - mirrors maya.cmds flag name
+    def ls(self, name, long=False, uuid=False):  # noqa: A002 - mirrors maya.cmds flag name
+        if uuid:
+            short = str(name).rsplit("|", 1)[-1]
+            return ["uuid-{}".format(short)]
         return ["|grp|{}".format(name)] if long and not str(name).startswith("|") else [name]
 
     def listRelatives(self, name, shapes=False, fullPath=False):  # noqa: N803
@@ -70,6 +75,17 @@ class _FakeCmdsForNodeSummary:
 
     def objectType(self, _name):
         return "transform"
+
+    def nodeType(self, _name):  # noqa: N802
+        return "transform"
+
+    def objExists(self, _name):  # noqa: N802
+        return True
+
+    def file(self, query=False, sceneName=False):  # noqa: N803
+        if query and sceneName:
+            return "C:/show/shot.ma"
+        return ""
 
     def getAttr(self, attr):
         if attr.endswith(".translate"):
@@ -104,6 +120,11 @@ def test_summarize_node_returns_stable_identity_packet():
     assert summary["object_name"] == "pCube1"
     assert summary["long_name"] == "|grp|pCube1"
     assert summary["shape_names"] == ["|grp|pCube1Shape"]
+    assert summary["uuid"] == "uuid-pCube1"
+    assert summary["exists"] is True
+    assert summary["stale"] is False
+    assert summary["node_ref"]["id"] == "uuid-pCube1"
+    assert summary["node_ref"]["metadata"]["scene_path"] == "C:/show/shot.ma"
     assert summary["transform"]["translate"] == [1.0, 2.0, 3.0]
     assert summary["bounding_box"]["center"] == [1.0, 2.0, 3.0]
 
@@ -116,6 +137,25 @@ def test_created_object_context_renames_then_summarizes():
     assert context["object_name"] == "heroCube"
     assert context["long_name"] == "|grp|heroCube"
     assert context["node"]["shape_names"] == ["|grp|heroCubeShape"]
+    assert context["node_ref"]["uuid"] == "uuid-heroCube"
+
+
+def test_node_ref_from_name_returns_plain_json_reference():
+    cmds = _FakeCmdsForNodeSummary()
+    ref = node_ref_from_name(cmds, "pCube1")
+
+    assert node_uuid(cmds, "|grp|pCube1") == "uuid-pCube1"
+    assert ref == {
+        "kind": "maya_node",
+        "id": "uuid-pCube1",
+        "uuid": "uuid-pCube1",
+        "long_name": "|grp|pCube1",
+        "short_name": "pCube1",
+        "type": "transform",
+        "exists": True,
+        "stale": False,
+        "metadata": {"scene_path": "C:/show/shot.ma"},
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -344,6 +384,8 @@ def test_public_api_reexport():
         "created_node_name",
         "node_long_name",
         "node_shape_names",
+        "node_uuid",
+        "node_ref_from_name",
         "summarize_node",
         "created_object_context",
     ]:

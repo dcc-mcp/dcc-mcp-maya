@@ -325,6 +325,10 @@ tools:
       option:
         type: string
         description: Option label for select_option.
+      capture_screenshots:
+        type: boolean
+        default: false
+        description: Capture before/after PNG artifact refs for action evidence.
 - name: make_node_ref
   source_file: scripts/make_node_ref.py
   description: Return a stable JSON reference for a Maya node including long name,
