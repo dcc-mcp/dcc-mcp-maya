@@ -404,6 +404,7 @@ class MayaResourceBinder:
         self.bound_server: Any = None
         self.handle: Any = None
         self.registered_producers: List[str] = []
+        self.session_event_uri: Optional[str] = None
         self.scene_event_ids: List[int] = []
         self.scene_publish_count: int = 0
 
@@ -444,6 +445,7 @@ class MayaResourceBinder:
         self._register_producer(SCHEME_MAYA_CMDS, _maya_cmds_help_producer)
         self._register_producer(SCHEME_MAYA_API, _maya_api_signatures_producer)
         self._register_producer(SCHEME_MAYA_PROJECT, _maya_project_current_producer)
+        self._register_session_event_buffer(server)
 
         # Initial scene snapshot --------------------------------------
         if self.snapshot_provider is not None:
@@ -527,6 +529,22 @@ class MayaResourceBinder:
             logger.debug("resources: register_producer(%s) raised: %s", scheme, exc)
             return
         self.registered_producers.append(scheme)
+
+    def _register_session_event_buffer(self, server: Any) -> None:
+        """Register maya-dev's bounded runtime event buffer when core supports it."""
+        if self.handle is None:
+            return
+        try:
+            from dcc_mcp_maya import _dev_session  # noqa: PLC0415
+
+            instance_id = getattr(server, "instance_id", None) or "maya-dev"
+            status = _dev_session.register_session_event_buffer(self.handle, instance_id=str(instance_id))
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("resources: register_session_event_buffer raised: %s", exc)
+            return
+        uri = status.get("resource_uri") if isinstance(status, dict) else None
+        if uri:
+            self.session_event_uri = str(uri)
 
     def _is_executor_busy(self) -> bool:
         if self.busy_checker is None:
