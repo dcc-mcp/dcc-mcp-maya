@@ -10,7 +10,7 @@ tools:
     read_only_hint: false
     idempotent_hint: true
   group: development
-  inputSchema:
+  input_schema:
     type: object
     required: [project_root]
     properties:
@@ -47,7 +47,7 @@ tools:
     read_only_hint: false
     idempotent_hint: true
   group: development
-  inputSchema:
+  input_schema:
     type: object
     properties:
       project_name:
@@ -75,7 +75,7 @@ tools:
   annotations:
     read_only_hint: false
   group: development
-  inputSchema:
+  input_schema:
     type: object
     properties:
       target:
@@ -120,7 +120,7 @@ tools:
   annotations:
     read_only_hint: false
   group: development
-  inputSchema:
+  input_schema:
     type: object
     required: [script_path]
     properties:
@@ -163,7 +163,7 @@ tools:
     read_only_hint: false
     idempotent_hint: true
   group: development
-  inputSchema:
+  input_schema:
     type: object
     properties:
       host:
@@ -210,7 +210,7 @@ tools:
     read_only_hint: true
     idempotent_hint: false
   group: development
-  inputSchema:
+  input_schema:
     type: object
     properties:
       object_name:
@@ -227,7 +227,7 @@ tools:
     read_only_hint: true
     idempotent_hint: true
   group: development
-  inputSchema:
+  input_schema:
     type: object
     properties:
       object_name:
@@ -254,7 +254,7 @@ tools:
     read_only_hint: true
     idempotent_hint: true
   group: development
-  inputSchema:
+  input_schema:
     type: object
     properties:
       query:
@@ -292,7 +292,7 @@ tools:
     read_only_hint: false
     idempotent_hint: false
   group: development
-  inputSchema:
+  input_schema:
     type: object
     required: [action]
     properties:
@@ -339,7 +339,7 @@ tools:
     read_only_hint: true
     idempotent_hint: true
   group: development
-  inputSchema:
+  input_schema:
     type: object
     required: [node]
     properties:
@@ -356,7 +356,7 @@ tools:
     read_only_hint: true
     idempotent_hint: true
   group: development
-  inputSchema:
+  input_schema:
     type: object
     properties:
       ref:
@@ -382,7 +382,7 @@ tools:
     read_only_hint: false
     idempotent_hint: false
   group: development
-  inputSchema:
+  input_schema:
     type: object
     properties:
       target:
