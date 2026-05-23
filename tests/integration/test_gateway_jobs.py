@@ -1,4 +1,4 @@
-"""Integration tests: jobs.get_status + cancel through the gateway (issue #86).
+"""Integration tests: jobs_get_status + cancel through the gateway (issue #86).
 
 These tests verify the end-to-end async-job lifecycle described in issue #86,
 using ``MayaStandaloneDispatcher``-backed ``MayaMcpServer`` instances so that
@@ -117,7 +117,7 @@ class _FakeRegistry:
 
 
 class _FakeGateway:
-    """Minimal gateway shim — routes jobs.get_status to the owning backend.
+    """Minimal gateway shim — routes jobs_get_status to the owning backend.
 
     Simulates core #322: maps job_id → backend_pid via a TTL routing cache.
     """
@@ -221,7 +221,7 @@ def test_async_call_then_poll_via_gateway(gateway, backend_a, backend_b):
     Simulates the round-trip:
     1. MCP client calls a tool on backend A; backend A enqueues a job.
     2. Gateway records job_id → backend A in its routing cache (#322).
-    3. Client polls ``jobs.get_status`` via gateway.
+    3. Client polls ``jobs_get_status`` via gateway.
     4. Gateway routes to backend A regardless of which backend the
        client originally connected to.
     """
@@ -321,7 +321,7 @@ def test_cache_eviction_after_completion(gateway, backend_a, backend_b):
 def test_backend_crash_during_job(gateway, backend_a, backend_b):
     """Issue #86 test 4: backend A crash mid-job → get_status returns error.
 
-    When backend A crashes while holding a job, ``jobs.get_status`` must not
+    When backend A crashes while holding a job, ``jobs_get_status`` must not
     hang — it should return an error indicating the backend is unreachable
     instead of the ``interrupted`` state (core #328).
     """
@@ -349,7 +349,7 @@ def test_backend_crash_during_job(gateway, backend_a, backend_b):
 def test_jobs_get_status_unknown_id(gateway, backend_a, backend_b):
     """Issue #86 test 5: unknown job_id returns isError=True.
 
-    ``jobs.get_status`` with an id that was never registered must return a
+    ``jobs_get_status`` with an id that was never registered must return a
     valid ``CallToolResult`` with ``isError: true`` rather than raising.
     """
     pid_a, mgr_a = backend_a

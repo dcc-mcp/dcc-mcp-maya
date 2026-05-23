@@ -5,13 +5,13 @@ These tests exercise three concentric rings:
 1. **Unit ring** — pure logic of :class:`ProjectToolsIntegration`,
    :class:`MayaSceneResolver`, env-var resolution, defensive paths.
 2. **MCP ring** — start a real :class:`MayaMcpServer`, hit it over HTTP,
-   prove ``project.save`` / ``project.load`` / ``project.resume`` /
-   ``project.status`` round-trip correctly.
+   prove ``project_save`` / ``project_load`` / ``project_resume`` /
+   ``project_status`` round-trip correctly.
 3. **REST ring** — when core mounts ``/v1/tools/call`` (issue #165),
    the same four tools must be reachable via the gateway-friendly
    REST channel as well.
 
-Token-budget guard: ``tools/list`` must report each ``project.*`` tool
+Token-budget guard: ``tools/list`` must report each ``project_*`` tool
 in **<= 800 B** of serialised JSON.  The point of these tools is that
 they are cheap to expose; if the upstream description ever grows
 silently we want CI to catch it before agents start paying for the
@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import socket
 import tempfile
 import unittest
@@ -50,6 +51,8 @@ _MCP_HEADERS = {
     "Accept": "application/json, text/event-stream",
     "Content-Type": "application/json",
 }
+_CLAUDE_TOOL_NAME_RE = re.compile(r"^[a-zA-Z0-9_-]{1,64}$")
+_PROJECT_TOOL_NAMES = {"project_save", "project_load", "project_resume", "project_status"}
 
 
 def _free_port() -> int:
@@ -289,7 +292,7 @@ class TestProjectToolsIntegrationUnit(unittest.TestCase):
 
 
 class TestProjectToolsListedAndCallableOverMcp:
-    """``project.*`` tools must round-trip via the live MCP server."""
+    """``project_*`` tools must round-trip via the live MCP server."""
 
     @pytest.fixture
     def scene(self, tmp_path: Path) -> Path:
@@ -305,12 +308,14 @@ class TestProjectToolsListedAndCallableOverMcp:
     def test_tools_list_includes_all_four_project_tools(self, server_with_default_project) -> None:
         _, handle = server_with_default_project
         names = {t["name"] for t in _list_all_mcp_tools(handle.mcp_url(), request_id=1)}
-        assert {"project.save", "project.load", "project.resume", "project.status"} <= names
+        assert _PROJECT_TOOL_NAMES <= names
+        assert not any(name.startswith("project.") for name in names)
+        assert all(_CLAUDE_TOOL_NAME_RE.fullmatch(name) for name in names)
 
     def test_token_budget_per_project_tool_is_under_800_bytes(self, server_with_default_project) -> None:
         """Guard against silent description bloat in the upstream tools.
 
-        Each ``project.*`` entry in ``tools/list`` should fit comfortably
+        Each ``project_*`` entry in ``tools/list`` should fit comfortably
         under 800 B serialised — that is the whole point of registering
         them as a thin filesystem surface instead of bundling them as
         a full skill.  If this assertion fires, an upstream
@@ -319,7 +324,7 @@ class TestProjectToolsListedAndCallableOverMcp:
         """
         _, handle = server_with_default_project
         project_tools = [
-            t for t in _list_all_mcp_tools(handle.mcp_url(), request_id=2) if t["name"].startswith("project.")
+            t for t in _list_all_mcp_tools(handle.mcp_url(), request_id=2) if t["name"].startswith("project_")
         ]
         assert len(project_tools) == 4
         for tool in project_tools:
@@ -335,7 +340,7 @@ class TestProjectToolsListedAndCallableOverMcp:
                 "id": 10,
                 "method": "tools/call",
                 "params": {
-                    "name": "project.save",
+                    "name": "project_save",
                     "arguments": {"scene_path": str(scene)},
                 },
             },
@@ -349,7 +354,7 @@ class TestProjectToolsListedAndCallableOverMcp:
         assert state_path.is_file(), state_path
         assert state_path.parent.name == ".dcc-mcp"
 
-        # ``project.status`` should report the same state file.
+        # ``project_status`` should report the same state file.
         _, status_body = _post_json(
             handle.mcp_url(),
             {
@@ -357,7 +362,7 @@ class TestProjectToolsListedAndCallableOverMcp:
                 "id": 11,
                 "method": "tools/call",
                 "params": {
-                    "name": "project.status",
+                    "name": "project_status",
                     "arguments": {"scene_path": str(scene)},
                 },
             },
@@ -367,7 +372,7 @@ class TestProjectToolsListedAndCallableOverMcp:
         assert status_payload["context"]["state_path"] == str(state_path)
 
     def test_load_returns_failure_for_missing_project(self, server_with_default_project, tmp_path: Path) -> None:
-        # Pointing ``project.load`` at a directory that has never had a
+        # Pointing ``project_load`` at a directory that has never had a
         # project saved must return a structured failure — not an
         # internal 5xx — so agents can recover gracefully.
         unrelated = tmp_path / "elsewhere" / "fresh.ma"
@@ -381,7 +386,7 @@ class TestProjectToolsListedAndCallableOverMcp:
                 "id": 20,
                 "method": "tools/call",
                 "params": {
-                    "name": "project.load",
+                    "name": "project_load",
                     "arguments": {"scene_path": str(unrelated)},
                 },
             },
@@ -400,7 +405,7 @@ class TestProjectToolsListedAndCallableOverMcp:
                 "id": 30,
                 "method": "tools/call",
                 "params": {
-                    "name": "project.save",
+                    "name": "project_save",
                     "arguments": {"scene_path": str(scene)},
                 },
             },
@@ -412,7 +417,7 @@ class TestProjectToolsListedAndCallableOverMcp:
                 "id": 31,
                 "method": "tools/call",
                 "params": {
-                    "name": "project.resume",
+                    "name": "project_resume",
                     "arguments": {"scene_path": str(scene)},
                 },
             },
@@ -442,7 +447,7 @@ class TestProjectToolsListedAndCallableOverMcp:
         """The integration must remember the bound scene on the server.
 
         Upstream MCP schema validation requires ``scene_path`` for
-        every ``project.*`` call (good — agents must be explicit
+        every ``project_*`` call (good — agents must be explicit
         about which scene they target), so the bound default project
         is not a "skip the argument" shortcut at the MCP layer.  Its
         real purpose is to give in-process Python callers (and future
@@ -453,7 +458,7 @@ class TestProjectToolsListedAndCallableOverMcp:
 
         1. The :class:`ProjectToolsIntegration` recorded the scene
            the resolver returned.
-        2. ``project.save`` with the explicit ``scene_path`` writes
+        2. ``project_save`` with the explicit ``scene_path`` writes
            ``project.json`` next to that same scene — proving the
            server-side handler and the bound project agree on the
            filesystem location.
@@ -471,7 +476,7 @@ class TestProjectToolsListedAndCallableOverMcp:
                 "id": 40,
                 "method": "tools/call",
                 "params": {
-                    "name": "project.save",
+                    "name": "project_save",
                     "arguments": {"scene_path": str(scene)},
                 },
             },
@@ -516,7 +521,7 @@ class TestProjectToolsWithoutDefaultProject:
                 "jsonrpc": "2.0",
                 "id": 50,
                 "method": "tools/call",
-                "params": {"name": "project.save", "arguments": {}},
+                "params": {"name": "project_save", "arguments": {}},
             },
         )
         assert status == 200
@@ -544,7 +549,7 @@ class TestProjectToolsViaRestChannel:
     configurations the mount is conditional — we accept 404 as a valid
     "endpoint not present" answer (mirrors :mod:`test_rest_skill_api`)
     but reject any 5xx, malformed JSON, or — when present — any
-    response that omits the four ``project.*`` tools.
+    response that omits the four ``project_*`` tools.
     """
 
     @pytest.fixture
@@ -596,14 +601,15 @@ class TestProjectToolsViaRestChannel:
         except json.JSONDecodeError:
             pytest.fail(f"Non-JSON 200 from /v1/tools: {body[:200]!r}")
         names = {t["name"] for t in payload.get("tools", [])}
-        assert {"project.save", "project.load", "project.resume", "project.status"} <= names
+        assert _PROJECT_TOOL_NAMES <= names
+        assert not any(name.startswith("project.") for name in names)
 
     def test_rest_tools_call_save_round_trips(self, rest_server) -> None:
         (server, handle), scene = rest_server
         base = self._rest_base(handle)
         status, body = self._safe_post(
             base + "/v1/call",
-            {"tool_slug": "maya.core.project.save", "params": {"scene_path": str(scene)}},
+            {"tool_slug": "maya.core.project_save", "params": {"scene_path": str(scene)}},
         )
         assert status == 200, body[:200]
         try:
@@ -632,7 +638,7 @@ class TestProjectToolsOptOut:
         with _running_server() as (server, handle):
             assert server._project_tools is None
             names = {t["name"] for t in _list_all_mcp_tools(handle.mcp_url(), request_id=60)}
-            assert not any(n.startswith("project.") for n in names)
+            assert not any(n.startswith("project_") for n in names)
 
 
 # ---------------------------------------------------------------------------
