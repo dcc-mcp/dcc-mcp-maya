@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.3.8](https://github.com/loonghao/dcc-mcp-maya/compare/v0.3.7...v0.3.8) (2026-05-23)
+
+
+### Features
+
+* publish maya-dev run check events ([4c011d8](https://github.com/loonghao/dcc-mcp-maya/commit/4c011d8e033ba40901c916797c97cb06aeda3c1a))
+
+
+### Bug Fixes
+
+* align scripting schema contract tests ([cd72d77](https://github.com/loonghao/dcc-mcp-maya/commit/cd72d779022e8c1c00f579900bf4d354f415a5b0))
+* require core 0.17.23 safe tool names ([13f3cf8](https://github.com/loonghao/dcc-mcp-maya/commit/13f3cf8d83dd7b4e19f379c5431d01a3967e1ee8))
+* update skill schema fields and render survival coverage ([d3ff9a3](https://github.com/loonghao/dcc-mcp-maya/commit/d3ff9a3f1fdd5e03699234d71dbf54062d3ed1e5))
+
+
+### Documentation
+
+* document rez skill paths ([d28ef58](https://github.com/loonghao/dcc-mcp-maya/commit/d28ef58e32753e3a8104653ce268ea70d36647fc))
+
 ## [0.3.7](https://github.com/loonghao/dcc-mcp-maya/compare/v0.3.6...v0.3.7) (2026-05-21)
 
 
