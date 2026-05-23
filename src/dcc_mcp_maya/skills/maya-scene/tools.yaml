@@ -44,7 +44,7 @@ tools:
   annotations:
     read_only_hint: true
     idempotent_hint: true
-  inputSchema:
+  input_schema:
     type: object
     required:
     - pattern
@@ -79,7 +79,7 @@ tools:
   description: Group a list of objects under a new transform node.
   execution: sync
   affinity: main
-  inputSchema:
+  input_schema:
     type: object
     required:
     - objects
@@ -129,7 +129,7 @@ tools:
     destructive_hint: true
     idempotent_hint: true
   group: scene-management
-  inputSchema:
+  input_schema:
     type: object
     properties:
       force:
@@ -149,7 +149,7 @@ tools:
     destructive_hint: true
     idempotent_hint: true
   group: scene-management
-  inputSchema:
+  input_schema:
     type: object
     required:
     - file_path
@@ -180,7 +180,7 @@ tools:
   affinity: main
   timeout_hint_secs: 120
   group: scene-management
-  inputSchema:
+  input_schema:
     type: object
     properties:
       file_path:
