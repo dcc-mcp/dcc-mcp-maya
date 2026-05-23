@@ -156,7 +156,7 @@ def _write_echo_skill(root: Path, name: str) -> Path:
                 execution: sync
                 affinity: any
                 group: core
-                inputSchema:
+                input_schema:
                   type: object
                   additionalProperties: true
             """
@@ -179,6 +179,72 @@ def _write_echo_skill(root: Path, name: str) -> Path:
     return pkg
 
 
+def _write_render_smoke_skill(root: Path) -> Path:
+    pkg = root / "maya-render"
+    (pkg / "scripts").mkdir(parents=True)
+    (pkg / "SKILL.md").write_text(
+        textwrap.dedent(
+            """\
+            ---
+            name: maya-render
+            description: Render transport regression skill.
+            license: MIT
+            metadata:
+              dcc-mcp:
+                dcc: maya
+                layer: domain
+                version: 1.0.0
+                tools: tools.yaml
+            ---
+
+            # maya-render
+            """
+        ),
+        encoding="utf-8",
+    )
+    (pkg / "tools.yaml").write_text(
+        textwrap.dedent(
+            """\
+            tools:
+              - name: capture_viewport
+                description: Test capture path.
+                execution: async
+                affinity: main
+                timeout_hint_secs: 600
+                group: rendering
+                input_schema:
+                  type: object
+                  additionalProperties: true
+              - name: playblast
+                description: Test playblast path.
+                execution: async
+                affinity: main
+                timeout_hint_secs: 600
+                group: rendering
+                input_schema:
+                  type: object
+                  additionalProperties: true
+            """
+        ),
+        encoding="utf-8",
+    )
+    (pkg / "groups.yaml").write_text(
+        "groups:\n- name: rendering\n  description: rendering\n  default_active: true\n  tools:\n  - capture_viewport\n  - playblast\n",
+        encoding="utf-8",
+    )
+    for stem in ("capture_viewport", "playblast"):
+        (pkg / "scripts" / "{}.py".format(stem)).write_text(
+            textwrap.dedent(
+                """\
+                def main(**kwargs):
+                    return {{"success": True, "message": "{stem}", "context": {{"args": kwargs}}}}
+                """
+            ).format(stem=stem),
+            encoding="utf-8",
+        )
+    return pkg
+
+
 def _extract_tool_payload(result: Dict[str, Any]) -> Dict[str, Any]:
     if isinstance(result, dict) and "success" in result:
         return result
@@ -186,8 +252,15 @@ def _extract_tool_payload(result: Dict[str, Any]) -> Dict[str, Any]:
     if content and isinstance(content[0], dict):
         text = content[0].get("text") or ""
         if text:
-            return json.loads(text)
+            try:
+                return json.loads(text)
+            except json.JSONDecodeError:
+                return {"message": text}
     return result
+
+
+def _structured_tool_payload(result: Dict[str, Any]) -> Dict[str, Any]:
+    return result.get("structuredContent") or result.get("structured_content") or {}
 
 
 @pytest.fixture(scope="module")
@@ -268,6 +341,68 @@ class TestInProcessHttpApi:
             assert output["success"] is True
         else:
             assert called
+
+    def test_capture_then_playblast_keeps_http_server_responsive(self, tmp_path):
+        """Regression for issue #235: render capture -> playblast must not kill HTTP."""
+        skill_pkg = _write_render_smoke_skill(tmp_path)
+        server = MayaMcpServer(port=0, enable_gateway_failover=False, gateway_port=0)
+        server.register_builtin_actions(
+            extra_skill_paths=[str(skill_pkg.parent)],
+            include_bundled=False,
+            minimal=False,
+        )
+        assert server.load_skill("maya-render")
+        handle = server.start()
+        try:
+            mcp_url = handle.mcp_url()
+            session = mcp_initialize(mcp_url, client_name="maya-render-survival")
+
+            for idx, action in enumerate(
+                (
+                    _qualified_action_name("maya-render", "capture_viewport"),
+                    _qualified_action_name("maya-render", "playblast"),
+                ),
+                start=10,
+            ):
+                response = mcp_post(
+                    mcp_url,
+                    {
+                        "jsonrpc": "2.0",
+                        "id": idx,
+                        "method": "tools/call",
+                        "params": {"name": action, "arguments": {"width": 1280, "height": 720}},
+                    },
+                    session_id=session,
+                )
+                assert "result" in response, response
+                result = response["result"]
+                structured = _structured_tool_payload(result)
+                if structured.get("status") == "pending":
+                    assert structured.get("job_id"), structured
+                    payload = _extract_tool_payload(result)
+                    assert "queued" in payload.get("message", "").lower(), payload
+                else:
+                    payload = _extract_tool_payload(result)
+                    assert payload.get("success") is True, payload
+
+                base = mcp_url.rsplit("/", 1)[0]
+                assert rest_get_json(base, "/v1/healthz").get("ok") is True
+
+            listing = mcp_post(
+                mcp_url,
+                {"jsonrpc": "2.0", "id": 20, "method": "tools/list", "params": {}},
+                session_id=session,
+            )
+            names = {tool["name"] for tool in listing["result"]["tools"]}
+            assert {
+                "playblast",
+                _qualified_action_name("maya-render", "playblast"),
+            } & names
+
+            base = mcp_url.rsplit("/", 1)[0]
+            assert rest_get_json(base, "/v1/healthz").get("ok") is True
+        finally:
+            server.stop()
 
 
 @pytest.fixture

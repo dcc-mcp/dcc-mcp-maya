@@ -4,7 +4,7 @@ tools:
   execution: sync
   affinity: main
   group: modeling
-  inputSchema:
+  input_schema:
     type: object
     properties:
       radius:
@@ -20,7 +20,7 @@ tools:
   execution: sync
   affinity: main
   group: modeling
-  inputSchema:
+  input_schema:
     type: object
     properties:
       width:
@@ -42,7 +42,7 @@ tools:
   execution: sync
   affinity: main
   group: modeling
-  inputSchema:
+  input_schema:
     type: object
     properties:
       radius:
@@ -64,7 +64,7 @@ tools:
   execution: sync
   affinity: main
   group: modeling
-  inputSchema:
+  input_schema:
     type: object
     properties:
       width:
@@ -93,7 +93,7 @@ tools:
     destructive_hint: true
     idempotent_hint: true
   group: modeling
-  inputSchema:
+  input_schema:
     type: object
     required:
     - names
@@ -115,7 +115,7 @@ tools:
     read_only_hint: true
     idempotent_hint: true
   group: modeling
-  inputSchema:
+  input_schema:
     type: object
     required:
     - object_name
@@ -133,7 +133,7 @@ tools:
   annotations:
     idempotent_hint: true
   group: modeling
-  inputSchema:
+  input_schema:
     type: object
     required:
     - old_name
@@ -150,7 +150,7 @@ tools:
   annotations:
     idempotent_hint: true
   group: modeling
-  inputSchema:
+  input_schema:
     type: object
     required:
     - object_name
