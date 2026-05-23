@@ -538,6 +538,72 @@ def test_run_check_writes_artifact_refs_for_large_output(tmp_path: Path) -> None
     assert out["context"]["run_summary"]["artifact_count"] == 1
 
 
+def test_run_check_publishes_session_events_for_output(tmp_path: Path) -> None:
+    from dcc_mcp_maya import _dev_session
+
+    _dev_session.reset_for_tests()
+    old_sys_path = sys.path[:]
+    _cleanup_demo_modules()
+    _write_demo_package(tmp_path)
+    (tmp_path / "demo_tool" / "runner.py").write_text(
+        "import sys\n"
+        "def main():\n"
+        "    print('stdout-event')\n"
+        "    print('stderr-event', file=sys.stderr)\n"
+        "    return 'ok'\n",
+        encoding="utf-8",
+    )
+    buffer = _dev_session.get_session_event_buffer("maya-dev-test")
+
+    try:
+        _dev_session.attach_project(str(tmp_path), package_prefixes=["demo_tool"])
+        out = _dev_session.run_check(
+            target="demo_tool.runner:main",
+            event_tool_call_id="call-1",
+            event_job_id="job-1",
+        )
+    finally:
+        sys.path[:] = old_sys_path
+        _cleanup_demo_modules()
+        _dev_session.reset_for_tests()
+
+    assert out["success"] is True
+    event_ctx = out["context"]["observability_events"]
+    assert event_ctx["available"] is True
+    assert event_ctx["published_count"] == 3
+    assert out["context"]["run_summary"]["event_count"] == 3
+
+    page = buffer.read(cursor=0, limit=10, drain=False)
+    streams = [event["stream"] for event in page["events"]]
+    assert streams == ["progress", "stdout", "stderr"]
+    assert {event["job_id"] for event in page["events"]} == {"job-1"}
+    assert {event["tool_call_id"] for event in page["events"]} == {"call-1"}
+    assert page["events"][1]["message"] == "stdout-event\n"
+
+
+def test_run_check_keeps_inline_output_when_session_events_unavailable(tmp_path: Path) -> None:
+    from dcc_mcp_maya import _dev_session
+
+    _dev_session.reset_for_tests()
+    old_sys_path = sys.path[:]
+    _cleanup_demo_modules()
+    _write_demo_package(tmp_path)
+
+    try:
+        _dev_session.attach_project(str(tmp_path), package_prefixes=["demo_tool"])
+        with patch.object(_dev_session, "_create_session_event_buffer", return_value=None):
+            out = _dev_session.run_check(target="demo_tool.runner:main")
+    finally:
+        sys.path[:] = old_sys_path
+        _cleanup_demo_modules()
+        _dev_session.reset_for_tests()
+
+    assert out["success"] is True
+    assert out["context"]["run"]["stdout"] == "runner-main 0\n"
+    assert out["context"]["observability_events"]["available"] is False
+    assert out["context"]["observability_events"]["published_count"] == 0
+
+
 def test_maya_dev_scripts_delegate_to_shared_session(tmp_path: Path) -> None:
     from dcc_mcp_maya import _dev_session
 

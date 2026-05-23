@@ -43,6 +43,7 @@ ENV_DEV_ROOTS = "DCC_MCP_MAYA_DEV_ROOTS"
 ENV_DEBUGPY_LOG_DIR = "DCC_MCP_MAYA_DEBUGPY_LOG_DIR"
 ENV_DEV_ARTIFACT_DIR = "DCC_MCP_MAYA_DEV_ARTIFACT_DIR"
 DEFAULT_ARTIFACT_THRESHOLD = 4096
+DEFAULT_SESSION_EVENT_INSTANCE_ID = "maya-dev"
 
 _LOCK = threading.RLock()
 _DEBUGPY_STATE: Dict[str, Any] = {
@@ -57,6 +58,12 @@ _UI_STATE: Dict[str, Any] = {
     "session_id": "maya-ui-1",
     "refs": {},
     "seq": 0,
+}
+_SESSION_EVENT_STATE: Dict[str, Any] = {
+    "buffer": None,
+    "instance_id": None,
+    "resource_uri": None,
+    "registered": False,
 }
 
 
@@ -622,6 +629,161 @@ def _write_text_artifact(kind: str, text: str) -> Dict[str, Any]:
     with open(path, "w", encoding="utf-8", errors="replace") as fh:
         fh.write(text)
     return _artifact_payload(safe_kind, path, "text/plain", len(text.encode("utf-8", errors="replace")))
+
+
+def _create_session_event_buffer(instance_id: str) -> Optional[Any]:
+    """Create core's bounded runtime-event buffer when the API exists."""
+    try:
+        from dcc_mcp_core import SessionEventBuffer  # noqa: PLC0415
+    except Exception:
+        return None
+    try:
+        return SessionEventBuffer(instance_id)
+    except Exception:
+        return None
+
+
+def _get_or_create_session_event_buffer(instance_id: Optional[str] = None) -> Optional[Any]:
+    with _LOCK:
+        existing = _SESSION_EVENT_STATE.get("buffer")
+        if instance_id is None and existing is not None:
+            return existing
+        resolved = str(instance_id or _SESSION_EVENT_STATE.get("instance_id") or DEFAULT_SESSION_EVENT_INSTANCE_ID)
+        if existing is not None and _SESSION_EVENT_STATE.get("instance_id") == resolved:
+            return existing
+        buffer = _create_session_event_buffer(resolved)
+        _SESSION_EVENT_STATE.update(
+            {
+                "buffer": buffer,
+                "instance_id": resolved if buffer is not None else None,
+                "resource_uri": getattr(buffer, "resource_uri", None) if buffer is not None else None,
+                "registered": False,
+            }
+        )
+        return buffer
+
+
+def get_session_event_buffer(instance_id: Optional[str] = None) -> Optional[Any]:
+    """Return the maya-dev runtime-event buffer, if supported by installed core."""
+    return _get_or_create_session_event_buffer(instance_id)
+
+
+def register_session_event_buffer(resources_handle: Any, instance_id: Optional[str] = None) -> Dict[str, Any]:
+    """Register maya-dev's session event buffer as ``events://session/*``.
+
+    This is intentionally best-effort so older core builds keep the inline
+    result behavior that ``maya-dev`` had before runtime event buffers existed.
+    """
+    buffer = _get_or_create_session_event_buffer(instance_id)
+    if buffer is None:
+        return _session_event_context(published_count=0)
+    register = getattr(resources_handle, "register_session_event_buffer", None)
+    if not callable(register):
+        return _session_event_context(published_count=0)
+    try:
+        register(buffer)
+    except Exception:
+        return _session_event_context(published_count=0)
+    with _LOCK:
+        _SESSION_EVENT_STATE["registered"] = True
+        _SESSION_EVENT_STATE["resource_uri"] = getattr(buffer, "resource_uri", None)
+    return _session_event_context(published_count=0)
+
+
+def _session_event_context(published_count: int) -> Dict[str, Any]:
+    with _LOCK:
+        buffer = _SESSION_EVENT_STATE.get("buffer")
+        return {
+            "available": buffer is not None,
+            "registered": bool(_SESSION_EVENT_STATE.get("registered")),
+            "instance_id": _SESSION_EVENT_STATE.get("instance_id"),
+            "resource_uri": _SESSION_EVENT_STATE.get("resource_uri"),
+            "published_count": int(published_count),
+        }
+
+
+def _append_session_event(
+    stream: str,
+    message: str,
+    *,
+    level: str = "info",
+    session_id: Optional[str] = None,
+    tool_call_id: Optional[str] = None,
+    job_id: Optional[str] = None,
+    correlation_id: Optional[str] = None,
+    metadata: Optional[Dict[str, Any]] = None,
+) -> Optional[Dict[str, Any]]:
+    buffer = _get_or_create_session_event_buffer()
+    if buffer is None or not message:
+        return None
+    try:
+        return buffer.append(
+            source="maya-dev",
+            stream=stream,
+            message=message,
+            level=level,
+            session_id=session_id,
+            tool_call_id=tool_call_id,
+            job_id=job_id,
+            correlation_id=correlation_id,
+            metadata=metadata or {},
+        )
+    except Exception:
+        return None
+
+
+def _publish_run_check_events(
+    run_context: Dict[str, Any],
+    run_summary: Dict[str, Any],
+    artifacts: Sequence[Dict[str, Any]],
+    *,
+    run_success: bool,
+    session_id: Optional[str] = None,
+    tool_call_id: Optional[str] = None,
+    job_id: Optional[str] = None,
+    correlation_id: Optional[str] = None,
+) -> Dict[str, Any]:
+    artifacts_by_kind = {str(artifact.get("kind")): artifact for artifact in artifacts if artifact.get("kind")}
+    base_metadata = {
+        "target": run_summary.get("target"),
+        "elapsed_secs": run_summary.get("elapsed_secs"),
+        "run_success": bool(run_success),
+    }
+    common = {
+        "session_id": session_id,
+        "tool_call_id": tool_call_id,
+        "job_id": job_id,
+        "correlation_id": correlation_id,
+    }
+
+    published = 0
+    progress = _append_session_event(
+        "progress",
+        "run_check {} for {}".format("completed" if run_success else "failed", run_summary.get("target") or "entrypoint"),
+        level="info" if run_success else "error",
+        metadata=dict(base_metadata, run_summary=run_summary),
+        **common,
+    )
+    if progress is not None:
+        published += 1
+
+    for stream, level in (("stdout", "info"), ("stderr", "warning"), ("traceback", "error")):
+        text = run_context.get(stream)
+        if not isinstance(text, str) or not text:
+            continue
+        metadata = dict(base_metadata, char_count=len(text))
+        artifact = artifacts_by_kind.get(stream)
+        if artifact:
+            metadata["artifact"] = {
+                "uri": artifact.get("uri"),
+                "mime": artifact.get("mime"),
+                "bytes": artifact.get("bytes"),
+            }
+        event = _append_session_event(stream, text, level=level, metadata=metadata, **common)
+        if event is not None:
+            published += 1
+
+    return _session_event_context(published)
 
 
 def _ui_artifact_refs(artifacts: Sequence[Dict[str, Any]]) -> List[UiArtifactRef]:
@@ -1874,6 +2036,10 @@ def run_check(
     capture_ui_image: bool = False,
     ui_object_name: Optional[str] = None,
     artifact_threshold: int = DEFAULT_ARTIFACT_THRESHOLD,
+    event_session_id: Optional[str] = None,
+    event_tool_call_id: Optional[str] = None,
+    event_job_id: Optional[str] = None,
+    event_correlation_id: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Reload project code, run an entrypoint, and optionally capture Maya UI."""
 
@@ -1902,6 +2068,17 @@ def run_check(
         "has_traceback": bool(run_context.get("traceback")),
         "artifact_count": len(run_artifacts),
     }
+    event_context = _publish_run_check_events(
+        run_context,
+        run_summary,
+        run_artifacts,
+        run_success=bool(run_result.get("success")),
+        session_id=event_session_id,
+        tool_call_id=event_tool_call_id,
+        job_id=event_job_id,
+        correlation_id=event_correlation_id,
+    )
+    run_summary["event_count"] = event_context["published_count"]
     ui_context: Optional[Dict[str, Any]] = None
     ui_success: Optional[bool] = None
     if capture_ui_image:
@@ -1913,6 +2090,7 @@ def run_check(
         "run": run_context,
         "run_summary": run_summary,
         "artifacts": run_artifacts,
+        "observability_events": event_context,
         "run_success": bool(run_result.get("success")),
     }
     if ui_context is not None:
@@ -1950,3 +2128,11 @@ def reset_for_tests() -> None:
         )
         _UI_STATE["refs"] = {}
         _UI_STATE["seq"] = 0
+        _SESSION_EVENT_STATE.update(
+            {
+                "buffer": None,
+                "instance_id": None,
+                "resource_uri": None,
+                "registered": False,
+            }
+        )
