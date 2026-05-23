@@ -38,7 +38,7 @@ MCP tools map naturally to OpenAI function calling:
 | `function.arguments` | JSON payload sent to `tools/call` |
 | `function_call` | `tools/call` request with `_meta.progressToken` for async |
 
-For async tools (`execution: async` in `tools.yaml`), the server returns a `job_id` immediately. Poll `jobs.get_status` to track progress — similar to OpenAI's `run` status polling.
+For async tools (`execution: async` in `tools.yaml`), the server returns a `job_id` immediately. Poll `jobs_get_status` to track progress — similar to OpenAI's `run` status polling.
 
 ---
 
@@ -46,7 +46,7 @@ For async tools (`execution: async` in `tools.yaml`), the server returns a `job_
 
 - **System prompt:** Include a summary of [llms.txt](llms.txt) in your system prompt so the model knows the available tool surface.
 - **Tool selection:** With 73+ tools, the initial `tools/list` in minimal mode is small (~8 tools). The model should learn to call `load_skill` before attempting specialized operations.
-- **Async handling:** Long renders return a `job_id`. Use `jobs.get_status` with the same `job_id` to poll. Set a reasonable polling interval (2–5s).
+- **Async handling:** Long renders return a `job_id`. Use `jobs_get_status` with the same `job_id` to poll. Set a reasonable polling interval (2–5s).
 
 ---
 

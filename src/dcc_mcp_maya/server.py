@@ -97,7 +97,7 @@ def _log_dispatcher_shutdown(dcc_name: str, signalled: Any) -> None:
 
 @dataclass
 class MayaServerOptions:
-    """Maya adapter options collapsed for the core 0.17.20 server contract."""
+    """Maya adapter options collapsed for the core 0.17.23 server contract."""
 
     port: int = 8765
     server_name: str = "maya-mcp"
