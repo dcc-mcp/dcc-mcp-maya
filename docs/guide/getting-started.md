@@ -100,7 +100,7 @@ Or be more specific:
 |----------|---------|-------------|
 | `DCC_MCP_MAYA_PORT` | `8765` | TCP port for the MCP server |
 | `DCC_MCP_MAYA_SERVER_NAME` | `maya-mcp` | Name shown in MCP `initialize` response |
-| `DCC_MCP_MAYA_SKILL_PATHS` | _(empty)_ | Extra skill directories (colon/semicolon separated) |
+| `DCC_MCP_MAYA_SKILL_PATHS` | _(empty)_ | Extra skill search roots (`;` on Windows, `:` on Unix); use a root like `{rez_root}/skills` whose children are skill packages |
 | `DCC_MCP_GATEWAY_PORT` | `9765` in plugin mode | Local gateway URL used by MCP hosts |
 
 ## Stop the Server

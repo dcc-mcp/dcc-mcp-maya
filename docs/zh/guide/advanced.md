@@ -87,6 +87,34 @@ set DCC_MCP_MAYA_SKILL_PATHS=C:\studio\maya-skills;C:\personal\skills
 export DCC_MCP_MAYA_SKILL_PATHS=/studio/maya-skills:/personal/skills
 ```
 
+### Rez 发布的 Studio Skills
+
+Skill 路径是一个搜索根目录。这个根目录可以直接是包含 `SKILL.md` 的单个
+skill 包，也可以是多个子 skill 包的父目录。Rez bundle 推荐把 skills 放在稳定的
+`skills/` 目录下：
+
+```text
+studio_maya_dev_skills/
+└── skills/
+    └── lightbox-maya-dev/
+        ├── SKILL.md
+        ├── tools.yaml
+        └── scripts/
+```
+
+然后在 `package.py` 中追加该目录：
+
+```python
+def commands():
+    env.DCC_MCP_MAYA_SKILL_PATHS.append("{root}/skills")
+```
+
+适配器会在 `register_builtin_actions()` 或 `start_server()` 期间扫描
+`DCC_MCP_MAYA_SKILL_PATHS`。Gateway search、`dcc_capability_manifest`、
+`search_skills` 与 `load_skill` 都使用这份已发现的 catalog。Rez context 或环境路径
+变更后，请重启/重载 Maya 插件或启动新的 server，让 discovery 重新执行；
+`load_skill` 只会激活启动扫描已发现的 skill。
+
 ## 主线程调度
 
 Maya 的 UI 和 `cmds` 操作必须在**主线程**运行。插件入口和启动辅助函数都围绕这个约束设计；你自己的自定义代码如果涉及 Maya UI 状态，仍然需要谨慎调度。
