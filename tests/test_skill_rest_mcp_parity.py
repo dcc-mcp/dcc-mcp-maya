@@ -619,6 +619,19 @@ def _iter_bundled_tools_yaml() -> Iterable[Tuple[str, Dict[str, Any]]]:
         yield skill_name, data
 
 
+def test_bundled_tools_yaml_use_core_schema_field_names():
+    """tools.yaml must use core's snake_case schema keys, not MCP wire keys."""
+    offenders = []
+    for skill_name, data in _iter_bundled_tools_yaml():
+        for tool in data.get("tools", []) or []:
+            name = tool.get("name")
+            if "inputSchema" in tool:
+                offenders.append(("inputSchema", skill_name, name))
+            if "outputSchema" in tool:
+                offenders.append(("outputSchema", skill_name, name))
+    assert not offenders, "tools.yaml must use input_schema/output_schema: {}".format(offenders)
+
+
 def test_bundled_tools_yaml_have_no_bloated_descriptions():
     """Prevent future PRs from inflating tools.yaml descriptions.
 
@@ -645,7 +658,7 @@ def test_bundled_tools_yaml_inputschema_budget():
     offenders = []
     for skill_name, data in _iter_bundled_tools_yaml():
         for tool in data.get("tools", []) or []:
-            schema = tool.get("inputSchema") or {}
+            schema = tool.get("input_schema") or {}
             if not schema:
                 continue
             encoded = json.dumps(schema, separators=(",", ":"))
