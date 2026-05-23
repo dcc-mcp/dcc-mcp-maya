@@ -7,7 +7,7 @@ tools:
     read_only_hint: true
     idempotent_hint: true
   group: core
-  inputSchema:
+  input_schema:
     type: object
     required:
     - path
@@ -34,7 +34,7 @@ tools:
   annotations:
     destructive_hint: true
   group: geometry
-  inputSchema:
+  input_schema:
     type: object
     required:
     - path
@@ -107,7 +107,7 @@ tools:
   annotations:
     destructive_hint: true
   group: geometry
-  inputSchema:
+  input_schema:
     type: object
     required:
     - file_path
@@ -135,7 +135,7 @@ tools:
   annotations:
     destructive_hint: true
   group: geometry
-  inputSchema:
+  input_schema:
     type: object
     required:
     - path
@@ -174,7 +174,7 @@ tools:
   annotations:
     destructive_hint: true
   group: geometry
-  inputSchema:
+  input_schema:
     type: object
     required:
     - path
