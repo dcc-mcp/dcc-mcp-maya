@@ -126,6 +126,24 @@ class TestCustomSkillEndToEnd:
         finally:
             server.stop()
 
+    def test_discover_custom_skill_via_single_package_extra_skill_path(self, tmp_path):
+        """A direct skill package path is a valid ``extra_skill_paths`` entry."""
+        skill = _write_skill(
+            tmp_path,
+            "maya-itest-direct-root",
+            {"ping": "def main(**kwargs):\n    return {'success': True, 'message': 'pong'}\n"},
+        )
+        server = _make_server()
+        try:
+            server.register_builtin_actions(extra_skill_paths=[str(skill)], include_bundled=False, minimal=False)
+            assert server.load_skill(skill.name)
+
+            actions = server._server.registry.list_actions_enabled()
+            names = {a["name"] for a in actions if isinstance(a, dict) and a.get("name")}
+            assert _action_name("maya-itest-direct-root", "ping") in names
+        finally:
+            server.stop()
+
     def test_handler_registered_for_custom_skill(self, tmp_path):
         skill = _write_skill(
             tmp_path,
