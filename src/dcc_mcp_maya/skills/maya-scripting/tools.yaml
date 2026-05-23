@@ -9,7 +9,7 @@ tools:
     destructive_hint: true
     read_only_hint: false
   group: core
-  inputSchema:
+  input_schema:
     type: object
     properties:
       code:
@@ -33,7 +33,7 @@ tools:
     destructive_hint: true
     read_only_hint: false
   group: core
-  inputSchema:
+  input_schema:
     type: object
     properties:
       code:
@@ -79,7 +79,7 @@ tools:
     destructive_hint: true
     read_only_hint: false
   group: core
-  inputSchema:
+  input_schema:
     type: object
     required:
     - name
@@ -110,7 +110,7 @@ tools:
     read_only_hint: false
     idempotent_hint: true
   group: core
-  inputSchema:
+  input_schema:
     type: object
     required:
     - action
@@ -141,7 +141,7 @@ tools:
     read_only_hint: true
     idempotent_hint: true
   group: core
-  inputSchema:
+  input_schema:
     type: object
     required:
     - node_name
