@@ -12,7 +12,7 @@
 **Repo:** https://github.com/loonghao/dcc-mcp-maya
 **Python:** >=3.7
 **Maya:** 2020+
-**Core dep:** `dcc-mcp-core>=0.17.20,<1.0.0`
+**Core dep:** `dcc-mcp-core>=0.17.23,<1.0.0`
 
 ---
 
@@ -109,7 +109,7 @@ Live sync with the gateway FileRegistry:
 
 Project-state persistence (issue #576 / core 0.14.21):
 
-* `dcc_mcp_maya._project_tools.attach_to_server(server)` — registers `project.save / project.load / project.resume / project.status` MCP tools that persist scene state to `<scene_dir>/.dcc-mcp/project.json`.  Auto-invoked by `register_builtin_actions()`; opt out with `DCC_MCP_MAYA_PROJECT_TOOLS=0`.
+* `dcc_mcp_maya._project_tools.attach_to_server(server)` — registers `project_save / project_load / project_resume / project_status` MCP tools that persist scene state to `<scene_dir>/.dcc-mcp/project.json`.  Auto-invoked by `register_builtin_actions()`; opt out with `DCC_MCP_MAYA_PROJECT_TOOLS=0`.
 * Public symbols: `ProjectToolsIntegration`, `MayaSceneResolver`, `attach_project_tools`, `ENV_PROJECT_TOOLS`.
 
 MCP resource publishing (issue #187, requires `dcc-mcp-core>=0.15.0`):

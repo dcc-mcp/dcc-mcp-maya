@@ -52,7 +52,7 @@ def mock_async_sleep(
 
     return skill_success(
         f"Slept {slept:.2f}s of {duration_secs}s",
-        prompt="Use jobs.get_status to check completion.",
+        prompt="Use jobs_get_status to check completion.",
         slept_secs=round(slept, 3),
         cancelled=False,
     )
