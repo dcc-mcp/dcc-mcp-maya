@@ -371,9 +371,10 @@ tools:
 - name: run_check
   source_file: scripts/run_check.py
   description: 'Development convenience wrapper: reload project modules, run an entrypoint,
-    capture stdout/stderr/traceback, optionally capture a Maya UI screenshot, and return
-    artifact refs for large diagnostics. Use after editing project code to verify behavior
-    inside the live Maya session.'
+    capture stdout/stderr/traceback, optionally capture a Maya UI screenshot, return
+    artifact refs for large diagnostics, and publish bounded session events when core
+    supports them. Use after editing project code to verify behavior inside the live
+    Maya session.'
   execution: async
   affinity: main
   timeout_hint_secs: 300
@@ -416,3 +417,15 @@ tools:
         minimum: 1
         default: 4096
         description: Inline text length at which run_check also writes a text artifact reference.
+      event_session_id:
+        type: string
+        description: Optional MCP/session id to stamp onto emitted observability events.
+      event_tool_call_id:
+        type: string
+        description: Optional tool-call/request id to stamp onto emitted observability events.
+      event_job_id:
+        type: string
+        description: Optional async job id to stamp onto emitted observability events.
+      event_correlation_id:
+        type: string
+        description: Optional adapter-defined correlation id for emitted observability events.
