@@ -187,8 +187,8 @@ Tool naming: `{skill_name.replace("-","_")}__{script_stem}` (e.g. `maya_scene__n
 |----------|---------|-------------|
 | `DCC_MCP_MAYA_PORT` | `8765` | TCP port |
 | `DCC_MCP_MAYA_SERVER_NAME` | `maya-mcp` | MCP init name |
-| `DCC_MCP_MAYA_SKILL_PATHS` | — | Extra skill dirs (`;` Win / `:` Unix) |
-| `DCC_MCP_SKILL_PATHS` | — | Global fallback skill dirs |
+| `DCC_MCP_MAYA_SKILL_PATHS` | — | Maya skill search roots (`;` Win / `:` Unix); Rez packages usually append `{root}/skills` |
+| `DCC_MCP_SKILL_PATHS` | — | Global fallback skill search roots |
 | `DCC_MCP_MINIMAL` | `1` | `0`=full mode, `1`=minimal mode |
 | `DCC_MCP_DEFAULT_TOOLS` | — | Comma-separated startup skill list |
 | `DCC_MCP_MAYA_METRICS` | `0` | `1`=Prometheus `/metrics` |

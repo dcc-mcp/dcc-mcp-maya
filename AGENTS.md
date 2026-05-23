@@ -371,7 +371,7 @@ All other skills appear as `__skill__<name>` stubs (default behavior). Call `loa
 |----------|---------|---------|
 | `DCC_MCP_MAYA_PORT` | `8765` | TCP port for MCP HTTP server. |
 | `DCC_MCP_MAYA_SERVER_NAME` | `maya-mcp` | Name in MCP `initialize` response. |
-| `DCC_MCP_MAYA_SKILL_PATHS` | — | Extra skill directories (`;` on Windows, `:` on Unix). |
+| `DCC_MCP_MAYA_SKILL_PATHS` | — | Maya skill search roots (`;` on Windows, `:` on Unix); Rez packages usually append `{root}/skills` whose children are skill packages. |
 | `DCC_MCP_MINIMAL` | `1` | `0` = full mode; `1` = minimal mode. |
 | `DCC_MCP_DEFAULT_TOOLS` | — | Comma-separated skill names to load at startup (overrides minimal). |
 | `DCC_MCP_MAYA_METRICS` | `0` | `1` = enable Prometheus `/metrics` endpoint. |

@@ -85,13 +85,43 @@ print(handle.mcp_url())   # http://127.0.0.1:8765/mcp
 |---|---|---|
 | `DCC_MCP_MAYA_PORT` | `8765` | MCP 服务器的 TCP 端口 |
 | `DCC_MCP_MAYA_SERVER_NAME` | `maya-mcp` | MCP initialize 中显示的名称 |
-| `DCC_MCP_MAYA_SKILL_PATHS` | _(无)_ | 额外的技能目录（Windows 用分号分隔，Unix 用冒号） |
-| `DCC_MCP_SKILL_PATHS` | _(无)_ | 所有 DCC 适配器的全局回退技能目录 |
+| `DCC_MCP_MAYA_SKILL_PATHS` | _(无)_ | Maya 专用 skill 搜索根目录（Windows 用分号分隔，Unix 用冒号）；每个根目录可以是单个 skill 包，也可以包含多个子 skill 包 |
+| `DCC_MCP_SKILL_PATHS` | _(无)_ | 所有 DCC 适配器的全局回退 skill 搜索根目录 |
 | `DCC_MCP_MINIMAL` | `1` | `0` = full mode；`1` = minimal mode |
 | `DCC_MCP_DEFAULT_TOOLS` | _(无)_ | 启动时加载的逗号分隔技能名称（覆盖最小默认） |
 | `DCC_MCP_MAYA_DISABLE_EXECUTE_PYTHON` | `0` | `1`/`true`/`yes`/`on` — 拒绝 `execute_python`（强制技能优先） |
 | `DCC_MCP_MAYA_DISABLE_EXECUTE_MEL` | `0` | 同上真值 — 仅拒绝 `execute_mel` |
 | `DCC_MCP_MAYA_DISABLE_ARBITRARY_SCRIPT` | `0` | 同上真值 — 同时拒绝 `execute_python` 与 `execute_mel` |
+
+### Studio Skill 路径与 Rez
+
+`DCC_MCP_MAYA_SKILL_PATHS` 会在服务器注册/启动时读取，并按平台路径分隔符切分
+（Windows 为 `;`，Linux/macOS 为 `:`）。每一项都是一个 skill 搜索根目录：
+它可以直接是单个 skill 包，也可以是多个子 skill 包的父目录：
+
+```text
+studio_maya_skills/
+└── skills/
+    ├── lightbox-maya-dev/
+    │   ├── SKILL.md
+    │   ├── tools.yaml
+    │   └── scripts/
+    └── shot-publish/
+        ├── SKILL.md
+        └── scripts/
+```
+
+Rez 包可以在 `package.py` 的 `commands()` 中追加 `skills` 根目录：
+
+```python
+def commands():
+    env.DCC_MCP_MAYA_SKILL_PATHS.append("{root}/skills")
+```
+
+`load_skill("lightbox-maya-dev")`、`search_skills`、gateway `/v1/search` 与
+`dcc_capability_manifest` 都基于注册时发现的 skill 集合工作。Maya 启动后如果
+Rez context 或环境变量发生变化，需要重启/重载插件或重新启动 server 让适配器重新扫描；
+`load_skill` 只会激活已发现的 skill，不会重新扫描新加入的环境路径。
 
 ### 渐进式加载（最小模式）
 
