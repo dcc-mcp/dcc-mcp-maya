@@ -721,10 +721,13 @@ class TestToolsYamlContract:
         path = Path(__file__).parent.parent / "src" / "dcc_mcp_maya" / "skills" / "maya-scripting" / "tools.yaml"
         return yaml.safe_load(path.read_text(encoding="utf-8"))
 
+    def _input_schema(self, tool: dict) -> dict:
+        return tool.get("input_schema", {})
+
     def test_execute_python_advertises_result_type_param(self):
         data = self._load_tools()
         tool = next(t for t in data["tools"] if t["name"] == "execute_python")
-        props = tool.get("inputSchema", {}).get("properties", {})
+        props = self._input_schema(tool).get("properties", {})
         assert "result_type" in props, "execute_python must advertise the result_type selector"
         assert props["result_type"].get("type") == "string"
         assert set(props["result_type"].get("enum", [])) >= {"NONE", "VALUE", "JSON", "REPR"}
@@ -733,14 +736,14 @@ class TestToolsYamlContract:
         """Regression guard: the deferred / settrace path was removed in #248."""
         data = self._load_tools()
         tool = next(t for t in data["tools"] if t["name"] == "execute_python")
-        props = tool.get("inputSchema", {}).get("properties", {})
+        props = self._input_schema(tool).get("properties", {})
         assert "defer" not in props
         assert "timeout_secs" not in props
 
     def test_execute_python_schema_keeps_file_path(self):
         data = self._load_tools()
         tool = next(t for t in data["tools"] if t["name"] == "execute_python")
-        props = tool.get("inputSchema", {}).get("properties", {})
+        props = self._input_schema(tool).get("properties", {})
         assert "file_path" in props
         assert "script_path" in props
 
@@ -759,24 +762,26 @@ class TestToolsYamlContract:
         data = self._load_tools()
         tool = next((t for t in data["tools"] if t["name"] == "write_module"), None)
         assert tool is not None, "write_module must be declared in tools.yaml"
-        props = tool.get("inputSchema", {}).get("properties", {})
+        schema = self._input_schema(tool)
+        props = schema.get("properties", {})
         assert {"name", "source", "overwrite"} <= set(props.keys())
-        assert "name" in tool["inputSchema"].get("required", [])
-        assert "source" in tool["inputSchema"].get("required", [])
+        assert "name" in schema.get("required", [])
+        assert "source" in schema.get("required", [])
 
     def test_io_is_declared_with_action_multiplexer(self):
         data = self._load_tools()
         tool = next((t for t in data["tools"] if t["name"] == "io"), None)
         assert tool is not None, "io must be declared in tools.yaml"
-        props = tool.get("inputSchema", {}).get("properties", {})
+        schema = self._input_schema(tool)
+        props = schema.get("properties", {})
         assert "action" in props
         assert set(props["action"].get("enum", [])) >= {"install", "uninstall", "get", "clear", "status"}
-        assert "action" in tool["inputSchema"].get("required", [])
+        assert "action" in schema.get("required", [])
 
     def test_execute_mel_schema_has_file_path(self):
         data = self._load_tools()
         tool = next(t for t in data["tools"] if t["name"] == "execute_mel")
-        props = tool.get("inputSchema", {}).get("properties", {})
+        props = self._input_schema(tool).get("properties", {})
         assert "file_path" in props
 
 
