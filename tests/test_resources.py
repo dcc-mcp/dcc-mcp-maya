@@ -274,12 +274,16 @@ class _RecordingResourceHandle:
         self.scenes: List[Any] = []
         self.producers: Dict[str, Callable[[str], Dict[str, Any]]] = {}
         self.notifications: List[str] = []
+        self.session_event_buffers: List[Any] = []
 
     def set_scene(self, value: Any) -> None:
         self.scenes.append(value)
 
     def register_producer(self, scheme_or_uri: str, callable_: Callable[[str], Dict[str, Any]]) -> None:
         self.producers[scheme_or_uri] = callable_
+
+    def register_session_event_buffer(self, buffer: Any) -> None:
+        self.session_event_buffers.append(buffer)
 
     def notify_updated(self, uri: str) -> None:
         self.notifications.append(uri)
@@ -324,6 +328,8 @@ class TestMayaResourceBinderBind:
                 SCHEME_MAYA_PROJECT,
             ]
         )
+        assert server.resource_handle.session_event_buffers
+        assert binder.session_event_uri
 
     def test_bind_without_snapshot_provider_skips_initial_publish(self) -> None:
         server = _FakeServer()
@@ -331,6 +337,7 @@ class TestMayaResourceBinderBind:
         assert binder.bind(server) is True
         assert binder.scene_publish_count == 0
         assert server.resource_handle.scenes == []
+        assert server.resource_handle.session_event_buffers
 
     def test_bind_is_idempotent(self) -> None:
         server = _FakeServer()
@@ -339,6 +346,7 @@ class TestMayaResourceBinderBind:
         binder.bind(server)  # second call must be a no-op
         # Producers registered exactly once each.
         assert len(server.resource_handle.producers) == 3
+        assert len(server.resource_handle.session_event_buffers) == 1
         # Scene published exactly once.
         assert binder.scene_publish_count == 1
 

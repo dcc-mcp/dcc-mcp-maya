@@ -36,7 +36,7 @@ live Maya session. The intended loop is:
 1. `attach_project` once for the project root.
 2. Edit files in the normal workspace.
 3. `run_check` or `reload_modules` + `run_entrypoint`.
-4. Inspect stdout, stderr, traceback, and optional UI screenshot.
+4. Inspect the concise summary, artifact refs, session events, and optional UI screenshot.
 
 Set `DCC_MCP_MAYA_DEV_ROOTS` to a path-list of trusted roots when a studio
 wants to restrict which local projects can be attached.
@@ -51,4 +51,4 @@ wants to restrict which local projects can be attached.
 - `capture_ui` — Capture the Maya main window or a named Qt widget as PNG
 - `ui_snapshot` / `ui_find` / `ui_action` — Inspect and operate Maya Qt UI controls, with optional action evidence artifacts
 - `make_node_ref` / `resolve_node_ref` — Build and resolve stable Maya node references
-- `run_check` — Reload, run an entrypoint, capture diagnostics/artifacts, optionally grab UI
+- `run_check` — Reload, run an entrypoint, capture diagnostics/artifacts/session events, optionally grab UI
