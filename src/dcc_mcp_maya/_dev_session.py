@@ -759,7 +759,9 @@ def _publish_run_check_events(
     published = 0
     progress = _append_session_event(
         "progress",
-        "run_check {} for {}".format("completed" if run_success else "failed", run_summary.get("target") or "entrypoint"),
+        "run_check {} for {}".format(
+            "completed" if run_success else "failed", run_summary.get("target") or "entrypoint"
+        ),
         level="info" if run_success else "error",
         metadata=dict(base_metadata, run_summary=run_summary),
         **common,
