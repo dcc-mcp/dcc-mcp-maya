@@ -80,7 +80,7 @@ def _write_skill(root: Path, name: str, scripts: Dict[str, str]) -> Path:
                 "  execution: sync",
                 "  affinity: any",
                 "  group: core",
-                "  inputSchema:",
+                "  input_schema:",
                 "    type: object",
                 "    additionalProperties: true",
             ]
