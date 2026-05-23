@@ -19,7 +19,7 @@ The Maya plugin starts a Rust `dcc-mcp-server` sidecar by default, so HTTP and g
 [![Python](https://img.shields.io/pypi/pyversions/dcc-mcp-maya?label=Python)](https://pypi.org/project/dcc-mcp-maya/)
 [![Maya](https://img.shields.io/badge/Maya-2020%2B-37A5CC)](https://www.autodesk.com/products/maya/overview)
 [![MCP](https://img.shields.io/badge/MCP-Streamable%20HTTP-6f42c1)](https://modelcontextprotocol.io/)
-[![dcc-mcp-core](https://img.shields.io/badge/dcc--mcp--core-%3E%3D0.17.20-blue)](https://github.com/loonghao/dcc-mcp-core)
+[![dcc-mcp-core](https://img.shields.io/badge/dcc--mcp--core-%3E%3D0.17.23-blue)](https://github.com/loonghao/dcc-mcp-core)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 ## Why Use It
@@ -144,7 +144,7 @@ See [`src/dcc_mcp_maya/skills/SKILLS_INDEX.md`](src/dcc_mcp_maya/skills/SKILLS_I
 | Capability manifest | `dcc_capability_manifest({"loaded_only": false})` returns a compact index of loaded and unloaded Maya actions without full schemas. |
 | MCP resources | `scene://current`, `maya-cmds://help/<command>`, `maya-cmds://flags/<command>`, `maya-api://signatures/<class>`, `maya-project://current`. |
 | Readiness | `/v1/readyz` reports `process`, `dispatcher`, and `dcc` readiness before orchestration routes work to Maya. |
-| Project state | `project.save`, `project.load`, `project.resume`, and `project.status` persist state under `<scene_dir>/.dcc-mcp/project.json`. |
+| Project state | `project_save`, `project_load`, `project_resume`, and `project_status` persist state under `<scene_dir>/.dcc-mcp/project.json`. |
 | Job persistence | Optional SQLite-backed job storage with `DCC_MCP_MAYA_JOB_STORAGE` and `DCC_MCP_MAYA_JOB_RECOVERY=requeue`. |
 | Shutdown hardening | Maya exiting hook, `atexit`, process sentinel, and optional defensive finalizer reduce stale registry rows. |
 | Safe sessions | MCP-dispatched Maya jobs suppress blocking modal dialogs and snooze AutoSave unless opted out. |
@@ -322,8 +322,8 @@ Windows symlinks require Developer Mode or an elevated shell. If symlinks are un
 
 - Autodesk Maya 2020+
 - Python 3.7+
-- `dcc-mcp-core>=0.17.20,<1.0.0`
-- Standard sidecar binary for plugin mode: `dcc-mcp-server>=0.17.20`
+- `dcc-mcp-core>=0.17.23,<1.0.0`
+- Standard sidecar binary for plugin mode: `dcc-mcp-server>=0.17.23`
 
 ## License
 

@@ -4,7 +4,7 @@ job routing — issues #86, #87, #89.
 All tests run without a real Maya install. The dcc-mcp-core 0.14.3 wheel
 ships the required features: ``McpHttpConfig.enable_prometheus``,
 ``McpHttpConfig.job_storage_path``, ``McpHttpConfig.enable_job_notifications``,
-and the ``jobs.get_status`` built-in tool.
+and the ``jobs_get_status`` built-in tool.
 """
 
 from __future__ import annotations
@@ -180,7 +180,7 @@ class TestJobPersistence:
         assert server._config.enable_job_notifications is True
 
     def test_jobs_get_status_builtin_tool_present(self, tmp_path):
-        """The ``jobs.get_status`` built-in tool must appear in ``tools/list``
+        """The ``jobs_get_status`` built-in tool must appear in ``tools/list``
         when job storage is configured."""
         db = str(tmp_path / "test-jobs.db")
         srv_mod = _fresh_server_module()
@@ -205,7 +205,10 @@ class TestJobPersistence:
             with urllib.request.urlopen(req, timeout=5) as resp:
                 body = json.loads(resp.read())
             tool_names = [t["name"] for t in body.get("result", {}).get("tools", [])]
-            assert "jobs.get_status" in tool_names, f"Missing jobs.get_status in {tool_names}"
+            assert "jobs_get_status" in tool_names, f"Missing jobs_get_status in {tool_names}"
+            assert "jobs_cleanup" in tool_names, f"Missing jobs_cleanup in {tool_names}"
+            assert "jobs.get_status" not in tool_names
+            assert "jobs.cleanup" not in tool_names
         finally:
             server.stop()
 
@@ -216,11 +219,11 @@ class TestJobPersistence:
 
 
 class TestGatewayJobRouting:
-    """Integration tests for jobs.get_status routed through a gateway.
+    """Integration tests for jobs_get_status routed through a gateway.
 
     Uses two MayaStandaloneDispatcher-backed MayaMcpServer instances on
     distinct ports behind one gateway, exercising core #319 (built-in
-    ``jobs.get_status`` tool) and core #322 (gateway job-route cache TTL).
+    ``jobs_get_status`` tool) and core #322 (gateway job-route cache TTL).
 
     No Maya installation required — MayaStandaloneDispatcher runs Python
     callables directly on the current thread without any Maya API.
@@ -268,9 +271,15 @@ class TestGatewayJobRouting:
         resp_b = self._rpc(hb.mcp_url(), "tools/list")
         tools_a = {t["name"] for t in resp_a.get("result", {}).get("tools", [])}
         tools_b = {t["name"] for t in resp_b.get("result", {}).get("tools", [])}
-        # jobs.get_status should appear on both backends since both have job storage
-        assert "jobs.get_status" in tools_a
-        assert "jobs.get_status" in tools_b
+        # jobs_get_status should appear on both backends since both have job storage
+        assert "jobs_get_status" in tools_a
+        assert "jobs_get_status" in tools_b
+        assert "jobs_cleanup" in tools_a
+        assert "jobs_cleanup" in tools_b
+        assert "jobs.get_status" not in tools_a
+        assert "jobs.get_status" not in tools_b
+        assert "jobs.cleanup" not in tools_a
+        assert "jobs.cleanup" not in tools_b
 
     def test_jobs_get_status_unknown_id_returns_error(self, two_backends):
         """Polling an unknown job_id returns an error result, not a hang."""
@@ -279,7 +288,7 @@ class TestGatewayJobRouting:
             ha.mcp_url(),
             "tools/call",
             {
-                "name": "jobs.get_status",
+                "name": "jobs_get_status",
                 "arguments": {"job_id": "nonexistent-job-id-000"},
             },
         )
@@ -300,7 +309,7 @@ class TestGatewayJobRouting:
             hb.mcp_url(),
             "tools/call",
             {
-                "name": "jobs.get_status",
+                "name": "jobs_get_status",
                 "arguments": {"job_id": "backend-a-only-job"},
             },
         )
