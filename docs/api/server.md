@@ -194,8 +194,8 @@ Returned by `server.start()` and `start_server()`.
 |----------|---------|-------------|
 | `DCC_MCP_MAYA_PORT` | `8765` | Default TCP port when you start the singleton server directly |
 | `DCC_MCP_MAYA_SERVER_NAME` | `maya-mcp` | Default server name |
-| `DCC_MCP_MAYA_SKILL_PATHS` | — | Maya-specific skill directories (`;`-separated) |
-| `DCC_MCP_SKILL_PATHS` | — | Global fallback skill directories |
+| `DCC_MCP_MAYA_SKILL_PATHS` | — | Maya-specific skill search roots (`;` on Windows, `:` on Unix); each root may be one skill package or a parent of skill packages |
+| `DCC_MCP_SKILL_PATHS` | — | Global fallback skill search roots |
 | `DCC_MCP_MAYA_HOT_RELOAD` | `0` | Enable skill hot-reload when set to `1` |
 | `DCC_MCP_MAYA_METRICS` | `0` | Enable Prometheus `/metrics` endpoint when set to `1` |
 | `DCC_MCP_MAYA_JOB_STORAGE` | `<data_dir>/jobs.db` | SQLite job persistence database path |

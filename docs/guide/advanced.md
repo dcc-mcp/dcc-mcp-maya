@@ -95,6 +95,35 @@ set DCC_MCP_MAYA_SKILL_PATHS=C:\studio\maya-skills;C:\personal\skills
 export DCC_MCP_MAYA_SKILL_PATHS=/studio/maya-skills:/personal/skills
 ```
 
+### Rez-Shipped Studio Skills
+
+A skill path is a search root. The root may be a single skill package with
+`SKILL.md` directly inside it, or a directory whose immediate children are skill
+packages. For Rez bundles, ship skills under a stable `skills/` directory:
+
+```text
+studio_maya_dev_skills/
+└── skills/
+    └── lightbox-maya-dev/
+        ├── SKILL.md
+        ├── tools.yaml
+        └── scripts/
+```
+
+Then append that directory in `package.py`:
+
+```python
+def commands():
+    env.DCC_MCP_MAYA_SKILL_PATHS.append("{root}/skills")
+```
+
+The adapter scans `DCC_MCP_MAYA_SKILL_PATHS` during `register_builtin_actions()`
+or `start_server()`. Gateway search, `dcc_capability_manifest`, `search_skills`,
+and `load_skill` all use that discovered catalog. After changing a Rez context
+or appending a new environment path, restart/reload the Maya plugin or start a
+new server so discovery runs again; `load_skill` only activates a skill already
+found by the startup scan.
+
 ## Main-Thread Scheduling
 
 Maya's UI and `cmds` operations must run on the **main thread**. The plugin entry points and startup helpers are written with that constraint in mind, and any custom code that touches Maya UI state should still be scheduled carefully.
