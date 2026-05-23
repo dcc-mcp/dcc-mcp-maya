@@ -81,6 +81,10 @@ load_skill("maya-primitives")
 4. `DCC_MCP_SKILL_PATHS` 环境变量（全局回退）
 5. 平台默认 Skill 目录
 
+每个环境变量条目都是一个 skill 搜索根目录：它可以直接是 skill 包，也可以是多个
+子 skill 包的父目录。Rez 包通常在 `package.py` 中追加 `{root}/skills`；环境变化后，
+Maya 需要重启或重新注册，gateway search 与 `load_skill` 才会看到新的路径。
+
 ## 下一步
 
 - [快速开始](./getting-started) — 5 分钟让 Maya 与 Claude Desktop 联通

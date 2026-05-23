@@ -181,8 +181,8 @@ server.stop()
 |------|--------|------|
 | `DCC_MCP_MAYA_PORT` | `8765` | 直接启动单例服务器时的默认 TCP 端口 |
 | `DCC_MCP_MAYA_SERVER_NAME` | `maya-mcp` | 默认服务器名称 |
-| `DCC_MCP_MAYA_SKILL_PATHS` | — | Maya 专用技能目录（`;` 分隔）|
-| `DCC_MCP_SKILL_PATHS` | — | 全局备用技能目录 |
+| `DCC_MCP_MAYA_SKILL_PATHS` | — | Maya 专用 skill 搜索根目录（Windows 用 `;`，Unix 用 `:`）；每个根目录可以是单个 skill 包或多个子 skill 包的父目录 |
+| `DCC_MCP_SKILL_PATHS` | — | 全局回退 skill 搜索根目录 |
 | `DCC_MCP_MAYA_HOT_RELOAD` | `0` | 设为 `1` 时启用 Skill 热重载 |
 | `DCC_MCP_MAYA_METRICS` | `0` | 设为 `1` 时启用 Prometheus `/metrics` |
 | `DCC_MCP_MAYA_JOB_STORAGE` | `<data_dir>/jobs.db` | SQLite job 持久化数据库路径 |
