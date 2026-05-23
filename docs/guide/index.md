@@ -85,6 +85,12 @@ Paths are resolved in order (highest priority first):
 4. `DCC_MCP_SKILL_PATHS` environment variable
 5. Platform default skills directory
 
+Each environment entry is a skill search root: either the skill package itself
+or a parent directory whose immediate children are skill packages. Rez packages
+typically append `{root}/skills` from `package.py`, then Maya must restart or
+rerun registration for a changed environment to affect gateway search and
+`load_skill`.
+
 ## Next Steps
 
 - [Quick Start](./getting-started) — get Maya talking to Claude Desktop in 5 minutes

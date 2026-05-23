@@ -444,8 +444,8 @@ tools:
 |----------|---------|-------|-------------|
 | `DCC_MCP_MAYA_PORT` | `8765` | per-process | TCP port for MCP HTTP server. `0` = OS-assigned. |
 | `DCC_MCP_MAYA_SERVER_NAME` | `maya-mcp` | per-process | Name in MCP `initialize`. |
-| `DCC_MCP_MAYA_SKILL_PATHS` | — | per-process | Extra skill dirs (`;` Win, `:` Unix). |
-| `DCC_MCP_SKILL_PATHS` | — | global fallback | Global skill dirs for all DCC adapters. |
+| `DCC_MCP_MAYA_SKILL_PATHS` | — | per-process | Maya skill search roots (`;` Win, `:` Unix); each root may be one skill package or a parent such as Rez `{root}/skills`. |
+| `DCC_MCP_SKILL_PATHS` | — | global fallback | Global skill search roots for all DCC adapters. |
 | `DCC_MCP_MAYA_DEV_ROOTS` | — | per-process | Optional path-list of trusted roots for `maya-dev` project attachment. |
 | `DCC_MCP_MINIMAL` | `1` | per-process | `0`=full mode; `1`=minimal mode. |
 | `DCC_MCP_DEFAULT_TOOLS` | — | per-process | Comma-separated skill names overriding minimal mode. |

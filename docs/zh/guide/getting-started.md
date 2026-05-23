@@ -100,7 +100,7 @@ Agent 应先发现工具、加载需要的 skill（例如 `maya-primitives` 和
 |------|--------|------|
 | `DCC_MCP_MAYA_PORT` | `8765` | MCP 服务器 TCP 端口 |
 | `DCC_MCP_MAYA_SERVER_NAME` | `maya-mcp` | MCP `initialize` 响应中显示的名称 |
-| `DCC_MCP_MAYA_SKILL_PATHS` | _(空)_ | 额外 Skill 目录（以冒号/分号分隔） |
+| `DCC_MCP_MAYA_SKILL_PATHS` | _(空)_ | 额外 skill 搜索根目录（Windows 用 `;`，Unix 用 `:`）；Rez 可指向 `{root}/skills`，其子目录是各个 skill 包 |
 | `DCC_MCP_GATEWAY_PORT` | 插件模式为 `9765` | MCP 宿主连接的本机 gateway 端口 |
 
 ## 停止服务器
