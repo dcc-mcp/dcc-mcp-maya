@@ -199,8 +199,8 @@ Useful plugin defaults:
 |---|---|---|
 | `DCC_MCP_MAYA_PORT` | `8765` direct, `0` plugin | TCP port for the in-process Maya server. Plugin mode uses an OS-assigned instance port by default. |
 | `DCC_MCP_MAYA_SERVER_NAME` | `maya-mcp` | Name shown in MCP `initialize`. |
-| `DCC_MCP_MAYA_SKILL_PATHS` | none | Extra Maya skill directories (`;` on Windows, `:` on Unix). |
-| `DCC_MCP_SKILL_PATHS` | none | Global fallback skill directories for all DCC adapters. |
+| `DCC_MCP_MAYA_SKILL_PATHS` | none | Maya-specific skill search roots (`;` on Windows, `:` on Unix); each root can be a single skill package or contain child skill packages. |
+| `DCC_MCP_SKILL_PATHS` | none | Global fallback skill search roots for all DCC adapters. |
 | `DCC_MCP_MINIMAL` | `1` | `0` loads the full tool surface at startup. |
 | `DCC_MCP_DEFAULT_TOOLS` | none | Comma-separated skill names to load at startup. |
 | `DCC_MCP_MAYA_EXCLUDE_STUBS_FROM_TOOLS_LIST` | `0` | Hide `__skill__*` / `__group__*` stubs from large `tools/list` syncs. |
@@ -229,6 +229,39 @@ Useful plugin defaults:
 | `DCC_MCP_MAYA_DISABLE_EXECUTE_PYTHON` | `0` | Refuse `execute_python`. |
 | `DCC_MCP_MAYA_DISABLE_EXECUTE_MEL` | `0` | Refuse `execute_mel`. |
 | `DCC_MCP_MAYA_DISABLE_ARBITRARY_SCRIPT` | `0` | Refuse both arbitrary Python and MEL execution. |
+
+### Studio Skill Paths and Rez
+
+`DCC_MCP_MAYA_SKILL_PATHS` is read during server registration/startup and is
+split with the platform path separator (`;` on Windows, `:` on Linux/macOS).
+Each entry is a skill search root. The scanner accepts either a single skill
+package directly or a directory whose immediate children are skill packages:
+
+```text
+studio_maya_skills/
+└── skills/
+    ├── lightbox-maya-dev/
+    │   ├── SKILL.md
+    │   ├── tools.yaml
+    │   └── scripts/
+    └── shot-publish/
+        ├── SKILL.md
+        └── scripts/
+```
+
+Rez packages should append the `skills` root in `package.py`:
+
+```python
+def commands():
+    env.DCC_MCP_MAYA_SKILL_PATHS.append("{root}/skills")
+```
+
+`load_skill("lightbox-maya-dev")`, `search_skills`, the gateway `/v1/search`,
+and `dcc_capability_manifest` operate on the skills discovered at registration
+time. If a Rez context or environment variable changes after Maya has started,
+restart/reload the plugin or start the server again so the adapter rescans the
+new roots; `load_skill` activates an already discovered skill, but it does not
+rescan newly added environment paths.
 
 ## Authoring Skills
 
