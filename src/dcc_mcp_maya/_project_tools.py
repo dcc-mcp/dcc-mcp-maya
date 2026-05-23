@@ -2,16 +2,16 @@
 
 Wires the four project-persistence MCP/REST tools from ``dcc-mcp-core``:
 
-* ``project.save``   — persist current Maya project state to ``.dcc-mcp/project.json``
-* ``project.load``   — read an existing ``project.json`` back
-* ``project.resume`` — return the rehydration payload an agent needs to
+* ``project_save``   — persist current Maya project state to ``.dcc-mcp/project.json``
+* ``project_load``   — read an existing ``project.json`` back
+* ``project_resume`` — return the rehydration payload an agent needs to
   restore scene, assets, active skills, tool groups and checkpoint IDs
-* ``project.status`` — pure-read snapshot of the current state
+* ``project_status`` — pure-read snapshot of the current state
 
 Design notes (SOLID)
 --------------------
 * **Single Responsibility** — only orchestration: resolve the *current*
-  Maya scene (so agents can call ``project.save`` with no arguments
+  Maya scene (so agents can call ``project_save`` with no arguments
   while inside Maya) and forward to ``register_project_tools``.
 * **Open/Closed** — the scene resolver is injectable
   (:class:`MayaSceneResolver`).  Tests subclass it to fake a scene path

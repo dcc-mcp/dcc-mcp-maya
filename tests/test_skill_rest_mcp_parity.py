@@ -485,7 +485,7 @@ def test_backend_tool_is_mcp_callable_when_exposed(mcp):
     overlap = backend_tools & mcp_tool_names
 
     # Restrict to tools that we know are safe to invoke without arguments —
-    # a naive "first overlap" pick hit ``project.save`` which (correctly)
+    # a naive "first overlap" pick hit ``project_save`` which (correctly)
     # rejects the empty-args call.
     ZERO_ARG_SAFE = ("list_skills", "list_roots", "list_dynamic_tools")
     candidates = [t for t in ZERO_ARG_SAFE if t in overlap]
