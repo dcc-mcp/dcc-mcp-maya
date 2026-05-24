@@ -23,7 +23,6 @@ metadata:
     search-hint: |-
       standardize export, export preset, FBX preset, Alembic preset,
       load export config, save export config, share export settings
-    depends: []
     tools: tools.yaml
 ---
 # maya-export-preset (Interchange stage)

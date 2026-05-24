@@ -26,7 +26,6 @@ metadata:
     search-hint: |-
       edit mesh, modify polygons, bevel edge, extrude face, bridge, combine,
       separate, cleanup, boolean, subdivide, smooth topology
-    depends: []
     tools: tools.yaml
     groups: groups.yaml
 ---

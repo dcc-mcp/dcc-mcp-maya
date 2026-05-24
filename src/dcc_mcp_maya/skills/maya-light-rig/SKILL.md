@@ -23,7 +23,6 @@ metadata:
     search-hint: |-
       lighting template, three point rig, key fill rim, HDRI dome,
       studio setup, environment light
-    depends: []
     tools: tools.yaml
     groups: groups.yaml
 ---

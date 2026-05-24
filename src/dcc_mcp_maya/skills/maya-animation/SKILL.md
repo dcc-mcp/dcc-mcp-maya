@@ -23,7 +23,6 @@ metadata:
     search-hint: |-
       animate motion, keyframe, set key, timeline range, animation curve,
       curve tangent, bake constraint, bake simulation, anim file import export
-    depends: []
     tools: tools.yaml
     groups: groups.yaml
 ---

@@ -22,7 +22,6 @@ metadata:
     search-hint: |-
       reuse material, material preset, shader library, share material,
       load preset, save preset, JSON shader
-    depends: []
     tools: tools.yaml
     groups: groups.yaml
 ---
