@@ -27,7 +27,6 @@ metadata:
       export FBX, import FBX, export OBJ, file_exists, geometry round trip,
       scene interchange, FBXExport options, bake animation FBX. Use
       maya-scene save_scene for .ma/.mb scene saves.
-    depends: []
     tools: tools.yaml
     groups: groups.yaml
     recipes: references/IO_CHECKLIST.md

@@ -21,7 +21,6 @@ metadata:
     search-hint: |-
       viewport visibility, display layer, show hide, layer assign,
       hide group, isolate selection
-    depends: []
     tools: tools.yaml
     groups: groups.yaml
 ---
