@@ -398,8 +398,6 @@ class TestMayaMcpServerApi:
 
     def test_standalone_affinity_compat_bundle_disables_enforcement(self):
         """mayapy direct HTTP uses a manifest copy without core enforcement."""
-        import yaml
-
         srv_mod = _import_server()
         server = srv_mod.MayaMcpServer(port=0, enable_gateway_failover=False, gateway_port=0)
         server._host_dispatcher = type("MayaStandaloneDispatcher", (), {})()
@@ -407,14 +405,37 @@ class TestMayaMcpServerApi:
             compat_dir = server._affinity_enforcement_compat_skills_dir()
             assert compat_dir is not None
             tools_yaml = compat_dir / "maya-primitives" / "tools.yaml"
-            data = yaml.safe_load(tools_yaml.read_text(encoding="utf-8")) or {}
-            assert all(tool.get("enforce_thread_affinity") is False for tool in data["tools"])
+            text = tools_yaml.read_text(encoding="utf-8")
+            assert "enforce_thread_affinity: false" in text
+            assert "enforce_thread_affinity: true" not in text
         finally:
             created_dir = server._standalone_skill_dir
             server.stop()
 
         assert created_dir is not None
         assert not created_dir.exists()
+
+    def test_standalone_registration_discovers_bundled_skills_without_pyyaml(self):
+        """Clean release archives do not need PyYAML to expose Maya skills."""
+        srv_mod = _import_server()
+        dispatcher = type("MayaStandaloneDispatcher", (), {})()
+
+        with patch.dict(sys.modules, {"yaml": None}):
+            server = srv_mod.MayaMcpServer(
+                port=0,
+                enable_gateway_failover=False,
+                gateway_port=0,
+                host_dispatcher=dispatcher,
+            )
+            try:
+                server.register_builtin_actions(minimal=True)
+                assert server._registration_report.outcomes[0].success is True
+                skills = server.list_skills()
+                assert any(skill.get("name") == "maya-scene" for skill in skills)
+                assert server.load_skill("maya-scene") is True
+                assert any("maya_scene__get_session_info" in str(action) for action in server.list_actions())
+            finally:
+                server.stop()
 
     def test_affinity_compat_bundle_skipped_for_host_dispatcher(self):
         """Bundled source YAML is used directly once core owns affinity enforcement."""
