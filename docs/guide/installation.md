@@ -30,6 +30,13 @@ mayapy -c "import dcc_mcp_maya; print(dcc_mcp_maya.__version__)"
 Use `dcc-mcp-maya` without `[sidecar]` only when your environment already
 provides the `dcc-mcp-server` binary.
 
+Release module ZIPs follow the same rule: they include the Maya plugin,
+`dcc-mcp-maya`, and the in-process bridge dependencies such as `dcc-mcp-core`,
+but they do not bundle the external `dcc-mcp-server` sidecar binary. For clean
+module deployments, install `dcc-mcp-server>=0.17.23` into the matching
+`mayapy`, set `DCC_MCP_SERVER_BIN`, or put `dcc-mcp-server` on `PATH`. Verify
+with `mayapy -c "from dcc_mcp_maya.sidecar import resolve_sidecar_binary; print(resolve_sidecar_binary())"`.
+
 ## Method 2 — Maya Plugin
 
 This is the recommended GUI path. Copy the plugin file to a directory on

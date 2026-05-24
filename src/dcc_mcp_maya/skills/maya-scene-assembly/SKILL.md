@@ -24,7 +24,6 @@ metadata:
     search-hint: |-
       assemble environment, large scene, assembly definition, assembly reference,
       LOD switch, representation swap, GPU cache representation
-    depends: []
     tools: tools.yaml
     groups: groups.yaml
 ---

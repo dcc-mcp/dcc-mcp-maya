@@ -166,6 +166,23 @@ enough:
 mayapy -m pip install dcc-mcp-maya
 ```
 
+### Maya Module ZIPs
+
+Release module archives bundle the Maya plugin, `dcc-mcp-maya`, and the
+in-process Python bridge dependencies such as `dcc-mcp-core`. They do not bundle
+the external `dcc-mcp-server` sidecar binary used by default plugin gateway
+mode. On clean machines, install or provide the sidecar runtime before loading
+the plugin:
+
+```bash
+mayapy -m pip install "dcc-mcp-server>=0.17.23"
+mayapy -c "from dcc_mcp_maya.sidecar import resolve_sidecar_binary; print(resolve_sidecar_binary())"
+```
+
+Alternatively, set `DCC_MCP_SERVER_BIN` to the sidecar executable, put
+`dcc-mcp-server` on `PATH`, or set `DCC_MCP_MAYA_SIDECAR=0` before loading the
+plugin to use the legacy in-process gateway path.
+
 ### Maya Plugin
 
 1. Put `maya/plugin/dcc_mcp_maya_plugin.py` on `MAYA_PLUG_IN_PATH`.

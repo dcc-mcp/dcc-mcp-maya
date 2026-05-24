@@ -21,7 +21,6 @@ metadata:
     search-hint: |-
       procedural animation, expression node, drive attribute, expression node,
       expression-driven motion, drive translateX with sin
-    depends: []
     tools: tools.yaml
     groups: groups.yaml
 ---
