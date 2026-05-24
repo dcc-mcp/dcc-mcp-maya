@@ -25,7 +25,6 @@ metadata:
       last resort after load_skill, no-matching-tool, bulk loop in maya,
       MEL Python escape hatch, inspect api, cmds help, signature,
       flag list, introspect only
-    depends: []
     tools: tools.yaml
     groups: groups.yaml
     recipes: references/RECIPES.md

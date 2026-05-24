@@ -13,6 +13,7 @@ from __future__ import annotations
 # Import built-in modules
 import importlib
 import importlib.util
+import logging
 import os
 import sys
 import threading
@@ -342,6 +343,20 @@ class TestSidecarUsesCoreRegistryDefaults:
 
         _, kwargs = sidecar_pkg.start_sidecar.call_args
         assert "registry_dir" not in kwargs
+
+    def test_sidecar_spawn_failure_log_names_clean_machine_remedies(self, plugin_module, monkeypatch, caplog):
+        """A missing dcc-mcp-server binary should point operators at the external runtime."""
+        sidecar_pkg = self._arm_plugin(plugin_module, monkeypatch)
+        sidecar_pkg.start_sidecar.side_effect = sidecar_pkg.SidecarSpawnError("missing dcc-mcp-server")
+
+        with caplog.at_level(logging.ERROR, logger=plugin_module.logger.name):
+            plugin_module._maybe_spawn_sidecar()
+
+        assert plugin_module._sidecar_handle is None
+        assert "Default sidecar gateway startup requires the dcc-mcp-server binary" in caplog.text
+        assert "mayapy -m pip install dcc-mcp-server" in caplog.text
+        assert "DCC_MCP_SERVER_BIN" in caplog.text
+        assert "DCC_MCP_MAYA_SIDECAR=0" in caplog.text
 
     def test_sidecar_passes_debug_identity_to_binary(self, plugin_module, monkeypatch):
         """Maya should label both the per-DCC sidecar and standalone gateway."""

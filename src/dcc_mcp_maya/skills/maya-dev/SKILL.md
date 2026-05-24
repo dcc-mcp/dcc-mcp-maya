@@ -24,7 +24,6 @@ metadata:
       develop maya tools, attach python project, hot reload modules, run
       project entrypoint, debugpy attach, capture maya ui screenshot, script
       stdout stderr traceback diagnostics
-    depends: []
     tools: tools.yaml
     groups: groups.yaml
 ---
