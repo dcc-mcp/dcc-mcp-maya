@@ -23,7 +23,6 @@ metadata:
     search-hint: |-
       assign shader, basic material, surface shader, lambert blinn,
       create material, shading group, shadingEngine, sets surfaceShader
-    depends: []
     tools: tools.yaml
     groups: groups.yaml
 ---

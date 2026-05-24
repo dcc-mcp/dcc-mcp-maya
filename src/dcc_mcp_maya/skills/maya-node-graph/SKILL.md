@@ -23,7 +23,6 @@ metadata:
     search-hint: |-
       node connection, attribute link, DG topology, construction history,
       list connections, transfer attributes, smooth subdivide
-    depends: []
     tools: tools.yaml
 ---
 # maya-node-graph (Scene stage)

@@ -22,7 +22,6 @@ metadata:
     search-hint: |-
       get attribute, set attribute, add custom attribute, lock unlock attribute,
       list attributes, attribute value
-    depends: []
     tools: tools.yaml
 ---
 # maya-attributes (Scene stage)
