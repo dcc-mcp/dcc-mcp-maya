@@ -95,6 +95,76 @@ def _log_dispatcher_shutdown(dcc_name: str, signalled: Any) -> None:
     )
 
 
+def _patch_tool_affinity_enforcement(raw: str, *, desired: bool) -> str:
+    """Set per-tool affinity enforcement in a tools.yaml document.
+
+    The release module archive intentionally does not bundle PyYAML. Keep this
+    patcher narrow and stdlib-only so mayapy standalone can still build its
+    temporary compatibility catalog on clean machines.
+    """
+
+    lines = raw.splitlines()
+    trailing_newline = raw.endswith(("\n", "\r"))
+    desired_text = "true" if desired else "false"
+    patched: list[str] = []
+    block: list[str] = []
+
+    def _is_tool_start(line: str) -> bool:
+        stripped = line.lstrip()
+        return stripped.startswith("- name:")
+
+    def _flush_tool_block() -> None:
+        if not block:
+            return
+        patched.extend(_patch_single_tool_block(block, desired_text=desired_text))
+
+    for line in lines:
+        if _is_tool_start(line):
+            _flush_tool_block()
+            block = [line]
+        elif block:
+            block.append(line)
+        else:
+            patched.append(line)
+    _flush_tool_block()
+
+    text = "\n".join(patched)
+    if trailing_newline:
+        text += "\n"
+    return text
+
+
+def _patch_single_tool_block(block: list[str], *, desired_text: str) -> list[str]:
+    first = block[0]
+    base_indent = len(first) - len(first.lstrip())
+    field_indent = base_indent + 2
+    affinity_index: Optional[int] = None
+    enforce_index: Optional[int] = None
+    affinity_value: Optional[str] = None
+
+    for index, line in enumerate(block):
+        stripped = line.strip()
+        indent = len(line) - len(line.lstrip())
+        if indent != field_indent:
+            continue
+        if stripped.startswith("affinity:"):
+            affinity_index = index
+            affinity_value = stripped.split(":", 1)[1].strip().split("#", 1)[0].strip().strip('"').strip("'")
+        elif stripped.startswith("enforce_thread_affinity:"):
+            enforce_index = index
+
+    if affinity_value not in {"main", "any"}:
+        return list(block)
+
+    patched = list(block)
+    enforce_line = "{}enforce_thread_affinity: {}".format(" " * field_indent, desired_text)
+    if enforce_index is not None:
+        patched[enforce_index] = enforce_line
+    elif affinity_index is not None:
+        patched.insert(affinity_index + 1, enforce_line)
+    return patched
+
+
 @dataclass
 class MayaServerOptions:
     """Maya adapter options collapsed for the core 0.17.23 server contract."""
@@ -541,26 +611,15 @@ class MayaMcpServer(DccServerBase):
         if existing is not None:
             return existing
 
-        import yaml  # noqa: PLC0415
-
         target_root = Path(tempfile.mkdtemp(prefix="dcc-mcp-maya-standalone-skills-"))
         target = target_root / "skills"
         shutil.copytree(_BUILTIN_SKILLS_DIR, target)
         for tools_yaml in target.glob("*/tools.yaml"):
-            data = yaml.safe_load(tools_yaml.read_text(encoding="utf-8")) or {}
-            tools = data.get("tools")
-            if not isinstance(tools, list):
-                continue
-            changed = False
-            for tool in tools:
-                if not isinstance(tool, dict):
-                    continue
-                desired = False if standalone_mode else True
-                if tool.get("affinity") in {"main", "any"} and tool.get("enforce_thread_affinity") is not desired:
-                    tool["enforce_thread_affinity"] = desired
-                    changed = True
-            if changed:
-                tools_yaml.write_text(yaml.safe_dump(data, sort_keys=False), encoding="utf-8")
+            desired = False if standalone_mode else True
+            original = tools_yaml.read_text(encoding="utf-8")
+            patched = _patch_tool_affinity_enforcement(original, desired=desired)
+            if patched != original:
+                tools_yaml.write_text(patched, encoding="utf-8")
         self._standalone_skill_dir = target
         logger.info(
             "[%s] affinity compatibility enabled for skill discovery (standalone=%s): %s",
