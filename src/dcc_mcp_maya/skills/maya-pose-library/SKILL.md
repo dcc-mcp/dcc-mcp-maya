@@ -21,7 +21,6 @@ metadata:
     search-hint: |-
       save pose, load pose, mirror pose, character pose preset, pose library,
       pose JSON, reuse pose
-    depends: []
     tools: tools.yaml
     groups: groups.yaml
 ---

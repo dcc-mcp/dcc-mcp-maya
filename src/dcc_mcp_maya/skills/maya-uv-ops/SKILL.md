@@ -21,7 +21,6 @@ metadata:
     search-hint: |-
       layout UVs, unfold UV, texture coordinates, UV projection, automatic UV,
       planar projection, UV set, normalize UV
-    depends: []
     tools: tools.yaml
     groups: groups.yaml
 ---
