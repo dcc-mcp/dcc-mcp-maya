@@ -23,7 +23,6 @@ metadata:
     search-hint: |-
       bake texture map, AO normal, ambient occlusion, high to low res,
       static map, transfer maps, bake lighting
-    depends: []
     tools: tools.yaml
     groups: groups.yaml
 ---

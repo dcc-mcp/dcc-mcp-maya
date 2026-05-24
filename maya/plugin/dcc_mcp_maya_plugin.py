@@ -837,7 +837,12 @@ def _maybe_spawn_sidecar() -> None:
         )
     except SidecarSpawnError as exc:
         logger.error(
-            "dcc-mcp-maya: sidecar spawn failed; continuing in-process only. Cause: %s",
+            "dcc-mcp-maya: sidecar spawn failed; continuing with the in-process "
+            "Maya server only. Default sidecar gateway startup requires the "
+            "dcc-mcp-server binary. Install with `mayapy -m pip install "
+            "dcc-mcp-server`, set DCC_MCP_SERVER_BIN, put dcc-mcp-server on "
+            "PATH, or set DCC_MCP_MAYA_SIDECAR=0 before loading the plugin to "
+            "use the legacy in-process gateway. Cause: %s",
             exc,
         )
         _sidecar_handle = None

@@ -23,7 +23,6 @@ metadata:
     search-hint: |-
       build character rig, skeleton setup, IK chain, skin bind, blendshape,
       control curve, deformer, joint hierarchy, weight paint
-    depends: []
     tools: tools.yaml
     groups: groups.yaml
 ---

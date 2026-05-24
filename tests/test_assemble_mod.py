@@ -219,6 +219,16 @@ class TestGenerateModuleInfo:
         assert info["supported_maya_versions"] == ["2022", "2023", "2024", "2025", "2026"]
 
 
+class TestPackagingReadmes:
+    def test_module_readmes_document_external_sidecar_runtime(self):
+        for name in ("README.txt", "README-pipeline.txt"):
+            text = (PROJECT_ROOT / "packaging" / name).read_text(encoding="utf-8")
+            assert "does not bundle the external dcc-mcp-server sidecar binary" in text
+            assert "DCC_MCP_SERVER_BIN" in text
+            assert "DCC_MCP_MAYA_SIDECAR=0" in text
+            assert "resolve_sidecar_binary" in text
+
+
 def _setup_project(tmp_path: Path) -> Path:
     project = tmp_path / "project"
     project.mkdir()
