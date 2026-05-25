@@ -12,7 +12,7 @@ same environment that launches Maya.
 Requirements
 ------------
 - Autodesk Maya 2022, 2023, 2024, 2025, or 2026 (matching platform ZIP; Maya 2022 requires python37/, available in Windows/Linux packages)
-- dcc-mcp-server >= 0.17.23 for default sidecar gateway mode, unless your studio provides the binary on PATH or via DCC_MCP_SERVER_BIN
+- dcc-mcp-server >= 0.17.31 for default sidecar gateway mode, unless your studio provides the binary on PATH or via DCC_MCP_SERVER_BIN
 
 Installation
 ------------
@@ -31,7 +31,7 @@ Default plugin mode starts a dcc-mcp-server sidecar and exposes the
 gateway at http://127.0.0.1:9765/mcp. Install or provide the sidecar
 runtime before loading the plugin on a clean machine:
 
-  mayapy -m pip install "dcc-mcp-server>=0.17.23"
+  mayapy -m pip install "dcc-mcp-server>=0.17.31"
 
 Clean-machine verification:
 

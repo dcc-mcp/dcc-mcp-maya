@@ -26,7 +26,7 @@ The Maya plugin starts a Rust `dcc-mcp-server` sidecar by default, so HTTP and g
 
 | What you get | Why it matters |
 |---|---|
-| **177 typed Maya tools** across 24 bundled skill packages | Agents can call validated tools for scene, mesh, material, animation, render, export, pipeline work, and live tool-development diagnostics. |
+| **198 typed Maya tools** across 25 bundled skill packages | Agents can call validated tools for scene, mesh, material, animation, rigging, dynamics, render, export, pipeline work, and live tool-development diagnostics. |
 | **Progressive loading** | Maya boots with a compact tool surface; agents discover unloaded capabilities and load only what they need. |
 | **Sidecar isolation by default** | HTTP/gateway runtime is out of Maya's UI thread, with a Qt dispatcher bridge back into Maya. |
 | **Multi-instance gateway** | Run several Maya sessions behind one local MCP URL, with optional LAN gateway exposure. |
@@ -120,7 +120,7 @@ Default startup is intentionally small: `maya-scripting` and the core `maya-scen
 |---|---|---|
 | `bootstrap` | Escape hatch when no typed skill fits | `maya-scripting` |
 | `scene` | Scene lifecycle, DAG, attributes, node graph, viewport display | `maya-scene`, `maya-scene-assembly`, `maya-display`, `maya-attributes`, `maya-node-graph` |
-| `authoring` | Meshes, UVs, materials, rigs, animation, expressions, lighting | `maya-primitives`, `maya-mesh-ops`, `maya-uv-ops`, `maya-materials`, `maya-material-library`, `maya-texture-bake`, `maya-rigging`, `maya-animation`, `maya-pose-library`, `maya-expressions`, `maya-light-rig` |
+| `authoring` | Meshes, UVs, materials, rigs, animation, dynamics, expressions, lighting | `maya-primitives`, `maya-mesh-ops`, `maya-uv-ops`, `maya-materials`, `maya-material-library`, `maya-texture-bake`, `maya-rigging`, `maya-animation`, `maya-dynamics`, `maya-pose-library`, `maya-expressions`, `maya-light-rig` |
 | `interchange` | Geometry and scene I/O | `maya-geometry`, `maya-export-preset` |
 | `pipeline` | Project, publish, shot export, render, render farm, development diagnostics | `maya-dev`, `maya-pipeline`, `maya-shot-export`, `maya-render`, `maya-render-farm` |
 
@@ -133,7 +133,7 @@ search_skills / dcc_capability_manifest
   -> activate_group("extended") only when optional tools are needed
 ```
 
-`execute_python` and `execute_mel` remain available as escape hatches, but production deployments can block them with `DCC_MCP_MAYA_DISABLE_EXECUTE_PYTHON=1`, `DCC_MCP_MAYA_DISABLE_EXECUTE_MEL=1`, or `DCC_MCP_MAYA_DISABLE_ARBITRARY_SCRIPT=1`.
+`execute_python` and `execute_mel` remain available as escape hatches, while common plug-in lifecycle work should use `maya_scripting__list_plugins`, `maya_scripting__load_plugin`, and `maya_scripting__unload_plugin`. Production deployments can block arbitrary execution with `DCC_MCP_MAYA_DISABLE_EXECUTE_PYTHON=1`, `DCC_MCP_MAYA_DISABLE_EXECUTE_MEL=1`, or `DCC_MCP_MAYA_DISABLE_ARBITRARY_SCRIPT=1`.
 
 See [`src/dcc_mcp_maya/skills/SKILLS_INDEX.md`](src/dcc_mcp_maya/skills/SKILLS_INDEX.md) for task-to-skill routing examples and [`docs/guide/mcp-tools.md`](docs/guide/mcp-tools.md) for a user-facing tool map.
 
