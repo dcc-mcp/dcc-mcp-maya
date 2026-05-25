@@ -5,8 +5,9 @@ description: |-
   Agents should prefer search_skills / dcc_capability_manifest → load_skill →
   typed tools (inputSchema + annotations) from domain skills; use execute_python
   or execute_mel only when no skill matches, for bulk in-process loops, or for
-  API introspection. Includes introspection tools so an agent can discover flags
-  and method signatures without leaving the loop.
+  API introspection. Includes typed plug-in lifecycle tools and introspection
+  tools so an agent can discover flags and method signatures without leaving the
+  loop.
 license: MIT
 allowed-tools: Bash Read
 metadata:
@@ -14,16 +15,18 @@ metadata:
     dcc: maya
     layer: thin-harness
     stage: bootstrap
-    version: 2.1.0
+    version: 2.2.0
     tags:
     - maya
     - scripting
     - mel
     - python
+    - plugins
     - introspect
     search-hint: |-
       last resort after load_skill, no-matching-tool, bulk loop in maya,
-      MEL Python escape hatch, inspect api, cmds help, signature,
+      MEL Python escape hatch, load plugin, unload plugin, pluginInfo,
+      loadPlugin, unloadPlugin, inspect api, cmds help, signature,
       flag list, introspect only
     tools: tools.yaml
     groups: groups.yaml
@@ -47,6 +50,8 @@ Intent matches an Authoring skill (mesh, uv, material, rig, anim, light)?
   → load that domain skill — its tools.yaml has full inputSchema and safety hints.
 Only need cmds / OpenMaya discovery (no mutation)?
   → activate introspect group; prefer introspect_* over execute_python.
+Need to load, unload, or inspect a Maya plug-in?
+  → call list_plugins / load_plugin / unload_plugin instead of raw MEL/Python.
 Genuine gap, bulk loop, or one-off not worth a new skill yet?
   → load maya-scripting, read RECIPES.md if helpful, call execute_python / execute_mel.
 Unsure of flag name or method signature while authoring a script?
@@ -123,7 +128,8 @@ payload.
 ## Groups
 
 - **core** (`default_active: true`) — `execute_mel`, `execute_python`,
-  `list_mel_procedures`, `get_script_node`. Always loaded.
+  `list_plugins`, `load_plugin`, `unload_plugin`, `list_mel_procedures`,
+  `get_script_node`. Always loaded.
 - **introspect** (`default_active: false`) — API introspection tools.
   Load with `activate_group("introspect")`. See `references/INTROSPECTION.md`.
 
@@ -131,6 +137,9 @@ payload.
 
 - `execute_python` — Inline Python (isolated namespace) or `file_path` / `script_path` to a `.py` (runs in `__main__` with `__file__` / `this_root`, Maya-native)
 - `execute_mel` — Inline MEL or `file_path` to a `.mel` (MEL `source` via `mel.eval`)
+- `list_plugins` — List loaded Maya plug-ins and optional `pluginInfo` metadata
+- `load_plugin` — Load a Maya plug-in with `cmds.loadPlugin` and optional autoload update
+- `unload_plugin` — Unload a Maya plug-in with `cmds.unloadPlugin` and optional autoload clearing
 - `list_mel_procedures` — List available MEL global procedures
 - `get_script_node` — Inspect a Maya scriptNode's content
 - `introspect_list_module` — List public names in `maya.cmds` / OpenMaya (paginated)

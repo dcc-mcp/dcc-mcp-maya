@@ -29,14 +29,14 @@ metadata:
 
 Scene file lifecycle (new / open / save) plus DAG navigation: list,
 select, group, parent, freeze, lock, query bounding boxes, list
-cameras, set frame rate, etc.
+cameras, create/edit cameras, set frame rate, etc.
 
 ## Groups
 
 - **core** (`default_active: true`) — Read-only scene queries (`get_scene_info`,
   `get_selection`, `get_session_info`). Active in minimal mode.
 - **scene-management** (deactivated in minimal mode) — write-side tools:
-  open / save / group / parent / set selection, etc. Activate with
+  open / save / group / parent / camera / set selection, etc. Activate with
   `activate_group("scene-management")` when the agent needs to mutate the
   scene.
 
@@ -61,5 +61,8 @@ cameras, set frame rate, etc.
 - `lock_object` — Lock or unlock the transform attributes of an object
 - `set_frame_rate` — Change the scene's playback frame rate
 - `list_cameras` — List all cameras in the scene
+- `create_camera` — Create a camera transform and shape
+- `set_camera` — Edit camera transform and common shape attributes
+- `look_through_camera` — Switch a model panel to a camera
 - `create_locator` — Create a Maya locator node
 - `find_by_pattern` — Find nodes by Maya wildcard pattern
