@@ -526,6 +526,13 @@ class MayaMcpServer(DccServerBase):
             include_bundled=context.include_bundled,
             minimal_mode=None,
         )
+        prepared = self._prepare_standalone_skill_metadata_overrides()
+        if prepared:
+            logger.info(
+                "[%s] Prepared %d discovered skill(s) for standalone affinity overrides",
+                self._dcc_name,
+                prepared,
+            )
         if minimal_mode is not None:
             loaded = apply_minimal_mode(self, minimal_mode, dcc_name=self._dcc_name)
             logger.info(
@@ -536,12 +543,62 @@ class MayaMcpServer(DccServerBase):
 
     @property
     def catalog(self) -> Any | None:
-        """Expose the inner skill catalog for core minimal-mode group toggles."""
-        return getattr(self._server, "catalog", None)
+        """Expose a usable core catalog handle when the runtime provides one."""
+        catalog = getattr(self._server, "catalog", None)
+        if hasattr(catalog, "deactivate_group"):
+            return catalog
+        return None
 
     def _uses_standalone_affinity_override(self) -> bool:
         dispatcher = getattr(self, "_host_dispatcher", None)
         return type(dispatcher).__name__ in {"MayaStandaloneDispatcher", "PyStandaloneDispatcher"}
+
+    def _prepare_standalone_skill_metadata_overrides(self) -> int:
+        """Persist standalone affinity overrides for core-managed stub loading."""
+        skill_names = self._discovered_skill_names()
+        prepared = 0
+        for skill_name in skill_names:
+            skill = self.get_skill(skill_name)
+            if skill is None or not self._disable_tool_affinity_enforcement(skill):
+                continue
+            try:
+                if self.load_skill_object(skill):
+                    prepared += 1
+                else:
+                    logger.warning(
+                        "[%s] Could not prepare standalone affinity overrides for %r",
+                        self._dcc_name,
+                        skill_name,
+                    )
+            except Exception as exc:  # noqa: BLE001
+                logger.warning(
+                    "[%s] Could not prepare standalone affinity overrides for %r: %s",
+                    self._dcc_name,
+                    skill_name,
+                    exc,
+                )
+
+        for skill_name in skill_names:
+            if not self.is_skill_loaded(skill_name):
+                continue
+            try:
+                self.unload_skill(skill_name)
+            except Exception as exc:  # noqa: BLE001
+                logger.debug(
+                    "[%s] cleanup unload after standalone affinity prepare failed for %r: %s",
+                    self._dcc_name,
+                    skill_name,
+                    exc,
+                )
+        return prepared
+
+    def _discovered_skill_names(self) -> tuple[str, ...]:
+        names: list[str] = []
+        for item in self.list_skills():
+            name = item.get("name") if isinstance(item, dict) else getattr(item, "name", None)
+            if name:
+                names.append(str(name))
+        return tuple(dict.fromkeys(names))
 
     def _load_skill_via_core_object(self, skill_name: str) -> bool:
         if not self._uses_standalone_affinity_override():
