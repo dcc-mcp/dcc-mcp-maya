@@ -32,7 +32,7 @@ from typing import Any, List, Optional
 
 # Import third-party modules
 from dcc_mcp_core import DccServerOptions, HostExecutionBridge, scan_and_load_strict
-from dcc_mcp_core._server.minimal_mode import resolve_default_tools, resolve_minimal_disabled
+from dcc_mcp_core._server.minimal_mode import apply_minimal_mode
 from dcc_mcp_core.factory import create_dcc_server
 from dcc_mcp_core.server_base import DccServerBase
 
@@ -96,7 +96,7 @@ def _log_dispatcher_shutdown(dcc_name: str, signalled: Any) -> None:
 
 @dataclass
 class MayaServerOptions:
-    """Maya adapter options collapsed for the core 0.17.29 server contract."""
+    """Maya adapter options collapsed for the core 0.17.31 server contract."""
 
     port: int = 8765
     server_name: str = "maya-mcp"
@@ -513,7 +513,7 @@ class MayaMcpServer(DccServerBase):
 
     def _register_core_builtin_actions(self, context: _registration.RegistrationContext) -> None:
         minimal_mode = self._build_minimal_mode_config(context.minimal)
-        if not self._uses_skill_object_affinity_compat():
+        if not self._uses_standalone_affinity_override():
             super().register_builtin_actions(
                 extra_skill_paths=context.extra_skill_paths,
                 include_bundled=context.include_bundled,
@@ -527,88 +527,38 @@ class MayaMcpServer(DccServerBase):
             minimal_mode=None,
         )
         if minimal_mode is not None:
-            loaded = self._apply_minimal_mode_with_skill_objects(minimal_mode)
+            loaded = apply_minimal_mode(self, minimal_mode, dcc_name=self._dcc_name)
             logger.info(
                 "[%s] Minimal mode: %d skill(s) loaded eagerly via core skill objects",
                 self._dcc_name,
                 loaded,
             )
 
-    def _uses_skill_object_affinity_compat(self) -> bool:
+    @property
+    def catalog(self) -> Any | None:
+        """Expose the inner skill catalog for core minimal-mode group toggles."""
+        return getattr(self._server, "catalog", None)
+
+    def _uses_standalone_affinity_override(self) -> bool:
         dispatcher = getattr(self, "_host_dispatcher", None)
         return type(dispatcher).__name__ in {"MayaStandaloneDispatcher", "PyStandaloneDispatcher"}
 
-    def _apply_minimal_mode_with_skill_objects(self, config: Any) -> int:
-        explicit = resolve_default_tools(config.env_var_default_tools)
-        if explicit is not None:
-            logger.info(
-                "[%s] Minimal mode overridden by %s: loading %d skill(s)",
-                self._dcc_name,
-                config.env_var_default_tools,
-                len(explicit),
-            )
-            return self._load_named_skill_objects(explicit)
-
-        if resolve_minimal_disabled(config.env_var_minimal):
-            logger.info(
-                "[%s] Minimal mode disabled by %s; leaving discovered skills unloaded",
-                self._dcc_name,
-                config.env_var_minimal,
-            )
-            return 0
-
-        loaded = self._load_named_skill_objects(config.skills)
-        catalog = getattr(self._server, "catalog", None)
-        if catalog is None:
-            return loaded
-        for skill_name, groups in config.deactivate_groups.items():
-            if skill_name not in config.skills:
-                continue
-            for group in groups:
-                try:
-                    catalog.deactivate_group(group)
-                except Exception as exc:  # noqa: BLE001
-                    logger.debug(
-                        "[%s] deactivate_group(%r) for skill %r failed: %s",
-                        self._dcc_name,
-                        group,
-                        skill_name,
-                        exc,
-                    )
-        return loaded
-
-    def _load_named_skill_objects(self, names: Any) -> int:
-        loaded = 0
-        for name in tuple(names):
-            try:
-                ok = self._load_skill_via_core_object(str(name))
-            except Exception as exc:  # noqa: BLE001
-                logger.warning("[%s] load_skill(%r) failed: %s", self._dcc_name, name, exc)
-                ok = False
-            if ok:
-                loaded += 1
-        return loaded
-
     def _load_skill_via_core_object(self, skill_name: str) -> bool:
-        if self._uses_skill_object_affinity_compat():
-            get_skill = getattr(self._server, "get_skill", None)
-            load_skill_object = getattr(self._server, "load_skill_object", None)
-            if callable(get_skill) and callable(load_skill_object):
-                skill = get_skill(skill_name)
-                if skill is None:
-                    logger.debug("[%s] get_skill(%r) returned no skill", self._dcc_name, skill_name)
-                    return False
-                changed = self._disable_tool_affinity_enforcement(skill)
-                logger.debug(
-                    "[%s] load_skill(%r) using core skill object affinity overrides changed=%s",
-                    self._dcc_name,
-                    skill_name,
-                    changed,
-                )
-                load_skill_object(skill)
-                return True
+        if not self._uses_standalone_affinity_override():
+            return super().load_skill(skill_name)
 
-        self._server.load_skill(skill_name)
+        skill = self.get_skill(skill_name)
+        if skill is None:
+            logger.debug("[%s] get_skill(%r) returned no skill", self._dcc_name, skill_name)
+            return False
+        changed = self._disable_tool_affinity_enforcement(skill)
+        logger.debug(
+            "[%s] load_skill(%r) using core skill object affinity overrides changed=%s",
+            self._dcc_name,
+            skill_name,
+            changed,
+        )
+        self.load_skill_object(skill)
         return True
 
     @staticmethod
