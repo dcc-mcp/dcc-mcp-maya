@@ -6,10 +6,15 @@ groups:
   - assign_deformer
   - blend_shape_add_target
   - create_blend_shape
+  - copy_skin_weights
+  - create_constraint
   - create_curve
   - create_ik_handle
   - create_joint
+  - create_rig_control
+  - detect_rig_frameworks
   - mirror_joints
+  - query_skin_cluster
   - set_driven_key
   - set_ik_fk_blend
   - set_joint_limit

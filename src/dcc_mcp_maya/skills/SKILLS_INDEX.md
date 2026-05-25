@@ -2,7 +2,7 @@
 
 > Cross-skill navigation map. Read this before deciding which skill to load.
 
-The 24 bundled skills are organised into **five stages** that match the
+The 25 bundled skills are organised into **five stages** that match the
 mental model of a Maya pipeline. Each skill carries the stage in its
 SKILL.md frontmatter under `metadata.dcc-mcp.stage`.
 
@@ -12,7 +12,7 @@ SKILL.md frontmatter under `metadata.dcc-mcp.stage`.
 |-------|---------|-----------------|--------|
 | `bootstrap` | Escape hatch; arbitrary code only when no typed skill fits. | yes | `maya-scripting` |
 | `scene` | Scene file lifecycle, DAG navigation, attributes, node graph, viewport visibility. | partial (`maya-scene` only) | `maya-scene`, `maya-scene-assembly`, `maya-display`, `maya-attributes`, `maya-node-graph` |
-| `authoring` | Create / edit content: meshes, UVs, materials, rigs, animation, light rigs. | no | `maya-primitives`, `maya-mesh-ops`, `maya-uv-ops`, `maya-materials`, `maya-material-library`, `maya-texture-bake`, `maya-rigging`, `maya-animation`, `maya-pose-library`, `maya-expressions`, `maya-light-rig` |
+| `authoring` | Create / edit content: meshes, UVs, materials, rigs, animation, dynamics, light rigs. | no | `maya-primitives`, `maya-mesh-ops`, `maya-uv-ops`, `maya-materials`, `maya-material-library`, `maya-texture-bake`, `maya-rigging`, `maya-animation`, `maya-dynamics`, `maya-pose-library`, `maya-expressions`, `maya-light-rig` |
 | `interchange` | Move geometry / scenes across DCCs (FBX, OBJ, presets, save). | no | `maya-geometry`, `maya-export-preset` |
 | `pipeline` | Production pipeline: project, publish, shot export, render, render farm, development diagnostics. | no | `maya-dev`, `maya-pipeline`, `maya-shot-export`, `maya-render`, `maya-render-farm` |
 
@@ -25,7 +25,8 @@ Ask yourself, in order:
    - A change inside the current scene? → start with the **authoring** skill that owns that change.
    - A query / inspection? → start with the **scene** skill (`maya-scene`, `maya-attributes`, `maya-node-graph`).
 2. **Match a domain skill first:** `search_skills(query=...)` (or `dcc_capability_manifest` / `search_tools` on the gateway) → `load_skill(...)` → call the **typed** tool (`inputSchema` + annotations). This is the default path for stability and crash avoidance.
-3. **Only when no skill fits** (bulk homogeneous loop, OpenMaya-only gap, quick one-off): load `maya-scripting` and use `execute_python` / `execute_mel`, optionally guided by `maya-scripting/references/RECIPES.md`.
+3. **Runtime plug-in lifecycle:** use `maya-scripting` typed tools `list_plugins`, `load_plugin`, and `unload_plugin` before falling back to arbitrary script snippets.
+4. **Only when no skill fits** (bulk homogeneous loop, OpenMaya-only gap, quick one-off): load `maya-scripting` and use `execute_python` / `execute_mel`, optionally guided by `maya-scripting/references/RECIPES.md`.
 
 ## Bulk import, export, and naming
 
@@ -42,13 +43,13 @@ Full rationale: repo root `AGENTS.md` § *Bulk import, export, and naming*; exam
 
 | Task | Skill chain |
 |------|-------------|
-| Create N spheres with random transforms, bake bounce animation, export FBX, import in another Maya | Prefer **`load_skill`** chain: `maya-primitives` → `maya-animation` → `maya-geometry` (`export_fbx` / `import_fbx`). Use **one** `execute_python` only when round-trip count would dominate latency and you accept weaker validation |
-| Build a rig + animate + send to render farm | `maya-rigging` → `maya-animation` → `maya-render-farm` |
+| Create N spheres with random transforms, add gravity/rigid bodies, bake bounce animation, export FBX, import in another Maya | Prefer **`load_skill`** chain: `maya-primitives` → `maya-dynamics` → `maya-animation` → `maya-geometry` (`export_fbx` / `import_fbx`). Use **one** `execute_python` only when round-trip count would dominate latency and you accept weaker validation |
+| Build a rig, detect optional rig frameworks, copy skin weights, animate, and send to render farm | `maya-rigging` (`detect_rig_frameworks`, `create_rig_control`, `create_constraint`, `copy_skin_weights`) → `maya-animation` → `maya-render-farm` |
 | Look-dev a hero asset, save material preset | `maya-materials` → `maya-material-library` |
 | Publish an asset version | `maya-pipeline` (uses `maya-geometry` under the hood; declared in `depends`) |
 | Bake AO maps from high-res to low-res | `maya-uv-ops` → `maya-texture-bake` |
 | Create a three-point light rig and tweak intensity | `maya-light-rig` |
-| Snapshot the viewport | `maya-render` (`playblast`) |
+| Snapshot the viewport or write a playblast sequence | `maya-render` (`playblast`, `capture_viewport`, `capture_playblast_sequence`) |
 | Develop and debug a Maya Python tool inside the live session | `maya-dev` (`attach_project` → `run_check`; optional `start_debugpy`) |
 
 ## Side-Effect Taxonomy

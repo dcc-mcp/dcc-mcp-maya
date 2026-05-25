@@ -9,6 +9,55 @@ tools:
   affinity: main
   group: scene-management
   description: Create a locator in the current Maya scene.
+- name: create_camera
+  description: Create a camera transform and shape with common camera attributes.
+  execution: sync
+  affinity: main
+  group: scene-management
+  input_schema:
+    type: object
+    properties:
+      name:
+        type: string
+      position:
+        type: array
+        items:
+          type: number
+        minItems: 3
+        maxItems: 3
+        default:
+        - 0.0
+        - 2.0
+        - 10.0
+      rotation:
+        type: array
+        items:
+          type: number
+        minItems: 3
+        maxItems: 3
+      look_at:
+        type: array
+        items:
+          type: number
+        minItems: 3
+        maxItems: 3
+      focal_length:
+        type: number
+        default: 35.0
+      near_clip:
+        type: number
+        default: 0.1
+      far_clip:
+        type: number
+        default: 10000.0
+      renderable:
+        type: boolean
+        default: true
+      orthographic:
+        type: boolean
+        default: false
+      orthographic_width:
+        type: number
 - name: duplicate_object
   execution: sync
   affinity: main
@@ -105,6 +154,25 @@ tools:
     idempotent_hint: true
   group: scene-management
   description: List cameras without modifying the Maya scene.
+- name: look_through_camera
+  description: Switch a model panel to look through a camera.
+  execution: sync
+  affinity: main
+  annotations:
+    idempotent_hint: true
+  group: scene-management
+  input_schema:
+    type: object
+    required:
+    - camera
+    properties:
+      camera:
+        type: string
+      panel:
+        type: string
+      view_fit:
+        type: boolean
+        default: false
 - name: list_objects
   description: List objects in the current Maya scene. For wildcard name searches,
     prefer find_by_pattern with type=transform to avoid matching shape or animation-curve
@@ -204,6 +272,50 @@ tools:
     idempotent_hint: true
   group: scene-management
   description: Set the frame rate in the current Maya scene.
+- name: set_camera
+  description: Edit camera transform and common shape attributes.
+  execution: sync
+  affinity: main
+  annotations:
+    idempotent_hint: true
+  group: scene-management
+  input_schema:
+    type: object
+    required:
+    - camera
+    properties:
+      camera:
+        type: string
+      position:
+        type: array
+        items:
+          type: number
+        minItems: 3
+        maxItems: 3
+      rotation:
+        type: array
+        items:
+          type: number
+        minItems: 3
+        maxItems: 3
+      look_at:
+        type: array
+        items:
+          type: number
+        minItems: 3
+        maxItems: 3
+      focal_length:
+        type: number
+      near_clip:
+        type: number
+      far_clip:
+        type: number
+      renderable:
+        type: boolean
+      orthographic:
+        type: boolean
+      orthographic_width:
+        type: number
 - name: set_selection
   description: Set the active Maya selection
   execution: sync

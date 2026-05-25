@@ -1,9 +1,9 @@
 ---
 name: maya-node-graph
 description: |-
-  Scene stage — connect / disconnect attributes, query construction history,
-  and inspect DG / DAG topology. Use whenever you reason about how nodes
-  drive each other or construction history. Not for attribute *value* edits
+  Scene stage — create nodes, connect / disconnect attributes, query construction
+  history, and inspect DG / DAG topology. Use whenever you reason about how
+  nodes drive each other or construction history. Not for attribute *value* edits
   (use maya-attributes), polygon topology cleanup (use maya-mesh-ops), or
   scene file lifecycle (use maya-scene).
 license: MIT
@@ -21,8 +21,9 @@ metadata:
     - graph
     - utility
     search-hint: |-
-      node connection, attribute link, DG topology, construction history,
-      list connections, transfer attributes, smooth subdivide
+      create node, delete node, describe node, node connection, attribute link,
+      DG topology, construction history, list connections, transfer attributes,
+      smooth subdivide
     tools: tools.yaml
 ---
 # maya-node-graph (Scene stage)
@@ -34,6 +35,9 @@ rather than polygon topology cleanup.
 
 ## Scripts
 
+- `create_node` — Create a generic Maya DG / DAG node
+- `describe_node` — Return node identity, optional attributes, and graph connections
+- `delete_node` — Delete generic Maya nodes
 - `connect_attr` — Connect two Maya node attributes
 - `disconnect_attr` — Disconnect two connected Maya node attributes
 - `list_connections` — List nodes/attributes connected to a Maya node or attribute
