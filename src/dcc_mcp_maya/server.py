@@ -24,9 +24,7 @@ from __future__ import annotations
 # Import built-in modules
 import logging
 import os
-import shutil
 import sys
-import tempfile
 import threading
 from dataclasses import dataclass
 from pathlib import Path
@@ -34,6 +32,7 @@ from typing import Any, List, Optional
 
 # Import third-party modules
 from dcc_mcp_core import DccServerOptions, HostExecutionBridge, scan_and_load_strict
+from dcc_mcp_core._server.minimal_mode import resolve_default_tools, resolve_minimal_disabled
 from dcc_mcp_core.factory import create_dcc_server
 from dcc_mcp_core.server_base import DccServerBase
 
@@ -95,79 +94,9 @@ def _log_dispatcher_shutdown(dcc_name: str, signalled: Any) -> None:
     )
 
 
-def _patch_tool_affinity_enforcement(raw: str, *, desired: bool) -> str:
-    """Set per-tool affinity enforcement in a tools.yaml document.
-
-    The release module archive intentionally does not bundle PyYAML. Keep this
-    patcher narrow and stdlib-only so mayapy standalone can still build its
-    temporary compatibility catalog on clean machines.
-    """
-
-    lines = raw.splitlines()
-    trailing_newline = raw.endswith(("\n", "\r"))
-    desired_text = "true" if desired else "false"
-    patched: list[str] = []
-    block: list[str] = []
-
-    def _is_tool_start(line: str) -> bool:
-        stripped = line.lstrip()
-        return stripped.startswith("- name:")
-
-    def _flush_tool_block() -> None:
-        if not block:
-            return
-        patched.extend(_patch_single_tool_block(block, desired_text=desired_text))
-
-    for line in lines:
-        if _is_tool_start(line):
-            _flush_tool_block()
-            block = [line]
-        elif block:
-            block.append(line)
-        else:
-            patched.append(line)
-    _flush_tool_block()
-
-    text = "\n".join(patched)
-    if trailing_newline:
-        text += "\n"
-    return text
-
-
-def _patch_single_tool_block(block: list[str], *, desired_text: str) -> list[str]:
-    first = block[0]
-    base_indent = len(first) - len(first.lstrip())
-    field_indent = base_indent + 2
-    affinity_index: Optional[int] = None
-    enforce_index: Optional[int] = None
-    affinity_value: Optional[str] = None
-
-    for index, line in enumerate(block):
-        stripped = line.strip()
-        indent = len(line) - len(line.lstrip())
-        if indent != field_indent:
-            continue
-        if stripped.startswith("affinity:"):
-            affinity_index = index
-            affinity_value = stripped.split(":", 1)[1].strip().split("#", 1)[0].strip().strip('"').strip("'")
-        elif stripped.startswith("enforce_thread_affinity:"):
-            enforce_index = index
-
-    if affinity_value not in {"main", "any"}:
-        return list(block)
-
-    patched = list(block)
-    enforce_line = "{}enforce_thread_affinity: {}".format(" " * field_indent, desired_text)
-    if enforce_index is not None:
-        patched[enforce_index] = enforce_line
-    elif affinity_index is not None:
-        patched.insert(affinity_index + 1, enforce_line)
-    return patched
-
-
 @dataclass
 class MayaServerOptions:
-    """Maya adapter options collapsed for the core 0.17.23 server contract."""
+    """Maya adapter options collapsed for the core 0.17.29 server contract."""
 
     port: int = 8765
     server_name: str = "maya-mcp"
@@ -338,7 +267,6 @@ class MayaMcpServer(DccServerBase):
         self._maya_dispatcher: Any = None
         self._host_dispatcher: Any = None
         self._auto_ui_pump: Any = None
-        self._standalone_skill_dir: Optional[Path] = None
         self._execution_bridge: HostExecutionBridge
 
         # ── Runtime readiness binder (issue #184) ──────────────────────
@@ -554,10 +482,6 @@ class MayaMcpServer(DccServerBase):
                 logger.debug("[%s] resources.unbind failed: %s", self._dcc_name, exc)
 
         super().stop()
-        if self._standalone_skill_dir is not None:
-            cleanup_dir = self._standalone_skill_dir.parent
-            shutil.rmtree(cleanup_dir, ignore_errors=True)
-            self._standalone_skill_dir = None
 
     # ── Skill loading + executor wiring ────────────────────────────────
 
@@ -588,46 +512,117 @@ class MayaMcpServer(DccServerBase):
         return self
 
     def _register_core_builtin_actions(self, context: _registration.RegistrationContext) -> None:
-        original_skills_dir = self._builtin_skills_dir
-        compat_skills_dir = self._affinity_enforcement_compat_skills_dir()
-        if compat_skills_dir is not None:
-            self._builtin_skills_dir = compat_skills_dir
-        try:
+        minimal_mode = self._build_minimal_mode_config(context.minimal)
+        if not self._uses_skill_object_affinity_compat():
             super().register_builtin_actions(
                 extra_skill_paths=context.extra_skill_paths,
                 include_bundled=context.include_bundled,
-                minimal_mode=self._build_minimal_mode_config(context.minimal),
+                minimal_mode=minimal_mode,
             )
-        finally:
-            self._builtin_skills_dir = original_skills_dir
+            return
 
-    def _affinity_enforcement_compat_skills_dir(self) -> Optional[Path]:
-        dispatcher = getattr(self, "_host_dispatcher", None)
-        standalone_mode = type(dispatcher).__name__ in {"MayaStandaloneDispatcher", "PyStandaloneDispatcher"}
-        if not standalone_mode:
-            return None
-
-        existing = getattr(self, "_standalone_skill_dir", None)
-        if existing is not None:
-            return existing
-
-        target_root = Path(tempfile.mkdtemp(prefix="dcc-mcp-maya-standalone-skills-"))
-        target = target_root / "skills"
-        shutil.copytree(_BUILTIN_SKILLS_DIR, target)
-        for tools_yaml in target.glob("*/tools.yaml"):
-            desired = False if standalone_mode else True
-            original = tools_yaml.read_text(encoding="utf-8")
-            patched = _patch_tool_affinity_enforcement(original, desired=desired)
-            if patched != original:
-                tools_yaml.write_text(patched, encoding="utf-8")
-        self._standalone_skill_dir = target
-        logger.info(
-            "[%s] affinity compatibility enabled for skill discovery (standalone=%s): %s",
-            self._dcc_name,
-            standalone_mode,
-            target,
+        super().register_builtin_actions(
+            extra_skill_paths=context.extra_skill_paths,
+            include_bundled=context.include_bundled,
+            minimal_mode=None,
         )
-        return target
+        if minimal_mode is not None:
+            loaded = self._apply_minimal_mode_with_skill_objects(minimal_mode)
+            logger.info(
+                "[%s] Minimal mode: %d skill(s) loaded eagerly via core skill objects",
+                self._dcc_name,
+                loaded,
+            )
+
+    def _uses_skill_object_affinity_compat(self) -> bool:
+        dispatcher = getattr(self, "_host_dispatcher", None)
+        return type(dispatcher).__name__ in {"MayaStandaloneDispatcher", "PyStandaloneDispatcher"}
+
+    def _apply_minimal_mode_with_skill_objects(self, config: Any) -> int:
+        explicit = resolve_default_tools(config.env_var_default_tools)
+        if explicit is not None:
+            logger.info(
+                "[%s] Minimal mode overridden by %s: loading %d skill(s)",
+                self._dcc_name,
+                config.env_var_default_tools,
+                len(explicit),
+            )
+            return self._load_named_skill_objects(explicit)
+
+        if resolve_minimal_disabled(config.env_var_minimal):
+            logger.info(
+                "[%s] Minimal mode disabled by %s; leaving discovered skills unloaded",
+                self._dcc_name,
+                config.env_var_minimal,
+            )
+            return 0
+
+        loaded = self._load_named_skill_objects(config.skills)
+        catalog = getattr(self._server, "catalog", None)
+        if catalog is None:
+            return loaded
+        for skill_name, groups in config.deactivate_groups.items():
+            if skill_name not in config.skills:
+                continue
+            for group in groups:
+                try:
+                    catalog.deactivate_group(group)
+                except Exception as exc:  # noqa: BLE001
+                    logger.debug(
+                        "[%s] deactivate_group(%r) for skill %r failed: %s",
+                        self._dcc_name,
+                        group,
+                        skill_name,
+                        exc,
+                    )
+        return loaded
+
+    def _load_named_skill_objects(self, names: Any) -> int:
+        loaded = 0
+        for name in tuple(names):
+            try:
+                ok = self._load_skill_via_core_object(str(name))
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("[%s] load_skill(%r) failed: %s", self._dcc_name, name, exc)
+                ok = False
+            if ok:
+                loaded += 1
+        return loaded
+
+    def _load_skill_via_core_object(self, skill_name: str) -> bool:
+        if self._uses_skill_object_affinity_compat():
+            get_skill = getattr(self._server, "get_skill", None)
+            load_skill_object = getattr(self._server, "load_skill_object", None)
+            if callable(get_skill) and callable(load_skill_object):
+                skill = get_skill(skill_name)
+                if skill is None:
+                    logger.debug("[%s] get_skill(%r) returned no skill", self._dcc_name, skill_name)
+                    return False
+                changed = self._disable_tool_affinity_enforcement(skill)
+                logger.debug(
+                    "[%s] load_skill(%r) using core skill object affinity overrides changed=%s",
+                    self._dcc_name,
+                    skill_name,
+                    changed,
+                )
+                load_skill_object(skill)
+                return True
+
+        self._server.load_skill(skill_name)
+        return True
+
+    @staticmethod
+    def _disable_tool_affinity_enforcement(skill: Any) -> bool:
+        changed = False
+        tools = list(getattr(skill, "tools", ()) or ())
+        for tool in tools:
+            if getattr(tool, "enforce_thread_affinity", None) is not True:
+                continue
+            setattr(tool, "enforce_thread_affinity", False)
+            changed = True
+        if changed:
+            setattr(skill, "tools", tools)
+        return changed
 
     def _register_recipes_tools(self, context: _registration.RegistrationContext) -> None:
         """Register ``recipes__*`` tools so ``metadata.dcc-mcp.recipes`` files are agent-readable."""
@@ -756,11 +751,10 @@ class MayaMcpServer(DccServerBase):
         publish can invoke :meth:`publish_capability_snapshot` directly.
         """
         try:
-            self._server.load_skill(skill_name)
+            return self._load_skill_via_core_object(skill_name)
         except Exception as exc:  # noqa: BLE001
             logger.debug("[%s] load_skill(%r) failed: %s", self._dcc_name, skill_name, exc)
             return False
-        return True
 
     def unload_skill(self, skill_name: str) -> bool:
         """Unload *skill_name*.
