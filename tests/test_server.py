@@ -396,24 +396,41 @@ class TestMayaMcpServerApi:
         assert type(dispatcher).__name__ == "MayaUiDispatcher"
         assert isinstance(server._auto_ui_pump, FailingPump)
 
-    def test_standalone_affinity_compat_bundle_disables_enforcement(self):
-        """mayapy direct HTTP uses a manifest copy without core enforcement."""
+    def test_standalone_affinity_compat_uses_core_skill_object(self):
+        """mayapy direct HTTP adjusts detached core skill metadata before loading."""
         srv_mod = _import_server()
-        server = srv_mod.MayaMcpServer(port=0, enable_gateway_failover=False, gateway_port=0)
-        server._host_dispatcher = type("MayaStandaloneDispatcher", (), {})()
-        try:
-            compat_dir = server._affinity_enforcement_compat_skills_dir()
-            assert compat_dir is not None
-            tools_yaml = compat_dir / "maya-primitives" / "tools.yaml"
-            text = tools_yaml.read_text(encoding="utf-8")
-            assert "enforce_thread_affinity: false" in text
-            assert "enforce_thread_affinity: true" not in text
-        finally:
-            created_dir = server._standalone_skill_dir
-            server.stop()
 
-        assert created_dir is not None
-        assert not created_dir.exists()
+        class Tool:
+            def __init__(self, enforce_thread_affinity):
+                self.enforce_thread_affinity = enforce_thread_affinity
+
+        class Skill:
+            def __init__(self):
+                self.tools = [Tool(True), Tool(False)]
+
+        class Inner:
+            def __init__(self):
+                self.skill = Skill()
+                self.loaded = None
+
+            def get_skill(self, name):
+                assert name == "maya-scene"
+                return self.skill
+
+            def load_skill_object(self, skill):
+                self.loaded = skill
+
+            def load_skill(self, name):  # pragma: no cover - must not be used
+                raise AssertionError(f"unexpected YAML-backed load_skill({name!r})")
+
+        server = object.__new__(srv_mod.MayaMcpServer)
+        server._dcc_name = "maya"
+        server._host_dispatcher = type("MayaStandaloneDispatcher", (), {})()
+        server._server = Inner()
+
+        assert server._load_skill_via_core_object("maya-scene") is True
+        assert server._server.loaded is server._server.skill
+        assert [tool.enforce_thread_affinity for tool in server._server.skill.tools] == [False, False]
 
     def test_standalone_registration_discovers_bundled_skills_without_pyyaml(self):
         """Clean release archives do not need PyYAML to expose Maya skills."""
@@ -437,16 +454,14 @@ class TestMayaMcpServerApi:
             finally:
                 server.stop()
 
-    def test_affinity_compat_bundle_skipped_for_host_dispatcher(self):
-        """Bundled source YAML is used directly once core owns affinity enforcement."""
+    def test_affinity_compat_skipped_for_host_dispatcher(self):
+        """Only standalone dispatchers need object-level affinity overrides."""
         srv_mod = _import_server()
 
         server = srv_mod.MayaMcpServer(port=0, enable_gateway_failover=False, gateway_port=0)
         server._host_dispatcher = object()
         try:
-            compat_dir = server._affinity_enforcement_compat_skills_dir()
-            assert compat_dir is None
-            assert server._standalone_skill_dir is None
+            assert server._uses_skill_object_affinity_compat() is False
         finally:
             server.stop()
 
