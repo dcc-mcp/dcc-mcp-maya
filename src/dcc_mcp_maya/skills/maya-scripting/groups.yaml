@@ -1,10 +1,13 @@
 groups:
 - name: core
-  description: "Core scripting tools — execute_python, execute_mel, list_mel_procedures, get_script_node. Always active."
+  description: "Core scripting tools — execute_python, execute_mel, plug-in lifecycle, list_mel_procedures, get_script_node. Always active."
   default_active: true
   tools:
   - execute_mel
   - execute_python
+  - list_plugins
+  - load_plugin
+  - unload_plugin
   - get_script_node
   - list_mel_procedures
 - name: introspect

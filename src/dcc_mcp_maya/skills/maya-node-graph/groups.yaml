@@ -5,7 +5,10 @@ groups:
   tools:
   - apply_symmetry
   - connect_attr
+  - create_node
   - delete_history
+  - delete_node
+  - describe_node
   - disconnect_attr
   - get_dag_path
   - list_connections
