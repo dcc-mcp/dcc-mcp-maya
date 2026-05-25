@@ -14,7 +14,7 @@ Embeds a standards-compliant MCP Streamable HTTP server (2025-03-26 spec) direct
 - **Repository:** https://github.com/loonghao/dcc-mcp-maya
 - **Python:** >=3.7
 - **Maya:** 2020+
-- **Core dependency:** `dcc-mcp-core>=0.17.29,<1.0.0`
+- **Core dependency:** `dcc-mcp-core>=0.17.31,<1.0.0`
 - **Entry point:** `dcc_mcp.adapters` → `maya = "dcc_mcp_maya:MayaMcpServer"`
 
 ---

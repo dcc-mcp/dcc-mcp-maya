@@ -27,11 +27,12 @@ classifiers = [
 ]
 
 dependencies = [
-    # 0.17.29+: adapter-facing mutable SkillMetadata loading, plus
-    # Claude-safe underscore names for built-in jobs/project tools, registry
-    # write hardening, runtime observation contracts, and gateway diagnostics.
+    # 0.17.31+: public DccServerBase get_skill/load_skill_object for
+    # adapter-facing SkillMetadata overrides, plus Claude-safe underscore names
+    # for built-in jobs/project tools, registry write hardening, runtime
+    # observation contracts, and gateway diagnostics.
     # abi3 (cp38+) on 3.8+; separate cp37 wheels on Python 3.7 (Maya 2022).
-    "dcc-mcp-core>=0.17.29,<1.0.0",
+    "dcc-mcp-core>=0.17.31,<1.0.0",
 ]
 
 [project.optional-dependencies]
@@ -42,7 +43,7 @@ dev = [
     "pytest-timeout>=2.1.0",
     "pytest-xdist>=3.0",
     "requests>=2.28.0",
-    "dcc-mcp-server>=0.17.29",
+    "dcc-mcp-server>=0.17.31",
     "ruff>=0.8.0",
     "hatchling",
     "build",
@@ -50,7 +51,7 @@ dev = [
     "pyyaml>=5.0",  # YAML parsing for SKILL.md test validation
 ]
 sidecar = [
-    "dcc-mcp-server>=0.17.29",
+    "dcc-mcp-server>=0.17.31",
 ]
 
 [project.urls]

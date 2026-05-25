@@ -4,7 +4,7 @@
 
 - **Maya**: 2020+ (tested with Maya 2022 through 2026 module packages)
 - **Python**: 3.7 – 3.12 (embedded in Maya)
-- **dcc-mcp-core**: ≥ 0.17.29 (auto-installed as dependency)
+- **dcc-mcp-core**: ≥ 0.17.31 (auto-installed as dependency)
 
 ## Method 1 — pip into mayapy
 
@@ -33,7 +33,7 @@ provides the `dcc-mcp-server` binary.
 Release module ZIPs follow the same rule: they include the Maya plugin,
 `dcc-mcp-maya`, and the in-process bridge dependencies such as `dcc-mcp-core`,
 but they do not bundle the external `dcc-mcp-server` sidecar binary. For clean
-module deployments, install `dcc-mcp-server>=0.17.29` into the matching
+module deployments, install `dcc-mcp-server>=0.17.31` into the matching
 `mayapy`, set `DCC_MCP_SERVER_BIN`, or put `dcc-mcp-server` on `PATH`. Verify
 with `mayapy -c "from dcc_mcp_maya.sidecar import resolve_sidecar_binary; print(resolve_sidecar_binary())"`.
 
