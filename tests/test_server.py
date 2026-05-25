@@ -396,7 +396,7 @@ class TestMayaMcpServerApi:
         assert type(dispatcher).__name__ == "MayaUiDispatcher"
         assert isinstance(server._auto_ui_pump, FailingPump)
 
-    def test_standalone_affinity_compat_uses_core_skill_object(self):
+    def test_standalone_affinity_override_uses_core_skill_object(self):
         """mayapy direct HTTP adjusts detached core skill metadata before loading."""
         srv_mod = _import_server()
 
@@ -427,9 +427,14 @@ class TestMayaMcpServerApi:
         server._dcc_name = "maya"
         server._host_dispatcher = type("MayaStandaloneDispatcher", (), {})()
         server._server = Inner()
+        server._skill_client = MagicMock()
+        server._skill_client.get_skill.side_effect = server._server.get_skill
+        server._skill_client.load_skill_object.side_effect = server._server.load_skill_object
 
         assert server._load_skill_via_core_object("maya-scene") is True
         assert server._server.loaded is server._server.skill
+        server._skill_client.get_skill.assert_called_once_with("maya-scene")
+        server._skill_client.load_skill_object.assert_called_once_with(server._server.skill)
         assert [tool.enforce_thread_affinity for tool in server._server.skill.tools] == [False, False]
 
     def test_standalone_registration_discovers_bundled_skills_without_pyyaml(self):
@@ -454,14 +459,14 @@ class TestMayaMcpServerApi:
             finally:
                 server.stop()
 
-    def test_affinity_compat_skipped_for_host_dispatcher(self):
+    def test_affinity_override_skipped_for_host_dispatcher(self):
         """Only standalone dispatchers need object-level affinity overrides."""
         srv_mod = _import_server()
 
         server = srv_mod.MayaMcpServer(port=0, enable_gateway_failover=False, gateway_port=0)
         server._host_dispatcher = object()
         try:
-            assert server._uses_skill_object_affinity_compat() is False
+            assert server._uses_standalone_affinity_override() is False
         finally:
             server.stop()
 

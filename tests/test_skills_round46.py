@@ -5,8 +5,8 @@ Verifies that the register_handler-based in-process executor:
 2. Calls main(**params) directly so kwargs reach the skill function.
 3. Returns the dict returned by main(), not a fake placeholder.
 4. Handles missing main(), loader errors, and skill_exception paths.
-5. Registers handlers via McpHttpServer.register_handler (core 0.14.x API).
-6. Handles dynamic load_skill calls by registering handlers automatically.
+5. Installs the core global in-process executor instead of per-action handlers.
+6. Delegates dynamic load_skill calls through the core skill client.
 """
 
 from __future__ import annotations
@@ -42,6 +42,7 @@ def _make_server(with_dispatcher=False):
     mock_inner.registry.list_actions_enabled.return_value = []
     mock_inner.registry.get_action.return_value = None
     server._server = mock_inner
+    server._skill_client = MagicMock()
 
     if with_dispatcher:
         dispatcher = MagicMock()
@@ -283,23 +284,25 @@ class TestDynamicLoadSkill:
         """load_skill() no longer registers per-action handlers that subprocess can win."""
         _ = tmp_skill("def main(**kwargs):\n    return {'success': True}\n")
         server = _make_server()
-        server._server.load_skill = MagicMock(return_value=["my_skill__action"])
+        server._skill_client.load_skill = MagicMock(return_value=True)
 
         result = server.load_skill("my-skill")
         assert result is True
+        server._skill_client.load_skill.assert_called_once_with("my-skill")
         server._server.register_handler.assert_not_called()
 
     def test_load_skill_empty_result_no_handlers(self):
         """load_skill() with no actions returned must not call register_handler."""
         server = _make_server()
-        server._server.load_skill = MagicMock(return_value=[])
+        server._skill_client.load_skill = MagicMock(return_value=True)
         result = server.load_skill("empty-skill")
         assert result is True
+        server._skill_client.load_skill.assert_called_once_with("empty-skill")
         server._server.register_handler.assert_not_called()
 
     def test_load_skill_exception_returns_false(self):
         """load_skill() must return False and not raise when inner load fails."""
         server = _make_server()
-        server._server.load_skill = MagicMock(side_effect=ValueError("not found"))
+        server._skill_client.load_skill = MagicMock(side_effect=ValueError("not found"))
         result = server.load_skill("missing-skill")
         assert result is False
