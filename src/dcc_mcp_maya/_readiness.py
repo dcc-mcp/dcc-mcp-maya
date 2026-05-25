@@ -10,7 +10,7 @@ listener has not answered its first request yet.
 
 Core 0.14.28 first exposed the three-state probe in Rust and its Python
 binding (``dcc_mcp_core.ReadinessProbe`` + ``McpHttpServer.set_readiness_probe``);
-``pyproject.toml`` now pins the floor at 0.17.23, the Python 3.7-capable
+``pyproject.toml`` now pins the floor at 0.17.31, the Python 3.7-capable
 core release.  This module owns the **Maya-specific** half of the contract:
 
 * flip ``dispatcher = true`` the moment the in-process executor is wired;
@@ -208,10 +208,11 @@ class ReadinessBinder:
     # ── Public API ──────────────────────────────────────────────────────
 
     def report(self) -> dict:
-        """Return the current three-state readiness snapshot as a dict.
+        """Return the current readiness snapshot as a dict.
 
-        Delegates to :meth:`dcc_mcp_core.ReadinessProbe.report`.  Keys:
-        ``process`` / ``dispatcher`` / ``dcc``.
+        Delegates to :meth:`dcc_mcp_core.ReadinessProbe.report`. Maya
+        drives ``process`` / ``dispatcher`` / ``dcc``; newer core releases
+        may include additional diagnostic bits.
         """
         return self.probe.report()
 

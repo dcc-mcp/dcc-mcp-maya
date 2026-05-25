@@ -330,7 +330,7 @@ lint 在 `Lint Skills` CI 作业中运行，因此添加新工具而没有这些
 ## 要求
 
 - Maya 2020+（Python 3.7+）
-- [`dcc-mcp-core`](https://github.com/loonghao/dcc-mcp-core) ≥ 0.17.29
+- [`dcc-mcp-core`](https://github.com/loonghao/dcc-mcp-core) ≥ 0.17.31
 
 ## 技能脚本中的协作取消
 

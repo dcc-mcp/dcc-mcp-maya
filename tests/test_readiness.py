@@ -134,6 +134,13 @@ class _FakeServer:
         self._server = _FakeInnerServer()
 
 
+def _assert_ready_bits(report: dict, *, process: bool, dispatcher: bool, dcc: bool) -> None:
+    """Assert Maya's readiness bits while allowing core to add diagnostics."""
+    assert report["process"] is process
+    assert report["dispatcher"] is dispatcher
+    assert report["dcc"] is dcc
+
+
 # ---------------------------------------------------------------------------
 # ReadinessBinder.bind — the core contract
 # ---------------------------------------------------------------------------
@@ -155,11 +162,7 @@ class TestReadinessBinderBind:
         binder = ReadinessBinder()
         bound = binder.bind(server)
         assert bound is True
-        assert binder.report() == {
-            "process": True,
-            "dispatcher": True,
-            "dcc": True,
-        }
+        _assert_ready_bits(binder.report(), process=True, dispatcher=True, dcc=True)
 
     def test_bind_with_standalone_flips_both_bits_synchronously(self) -> None:
         """:class:`MayaStandaloneDispatcher` runs callbacks on the calling thread."""
@@ -168,11 +171,7 @@ class TestReadinessBinderBind:
         bound = binder.bind(server)
         assert bound is True
         assert binder.is_ready() is True
-        assert binder.report() == {
-            "process": True,
-            "dispatcher": True,
-            "dcc": True,
-        }
+        _assert_ready_bits(binder.report(), process=True, dispatcher=True, dcc=True)
 
     def test_bind_with_never_pumping_dispatcher_keeps_dcc_red(self) -> None:
         dispatcher = _NeverPumpingDispatcher()
@@ -212,11 +211,7 @@ class TestReadinessBinderBind:
         binder = ReadinessBinder()
         bound = binder.bind(server)
         assert bound is True
-        assert binder.report() == {
-            "process": True,
-            "dispatcher": True,
-            "dcc": True,
-        }
+        _assert_ready_bits(binder.report(), process=True, dispatcher=True, dcc=True)
 
     def test_bind_is_idempotent(self) -> None:
         server = _FakeServer(dispatcher=MayaStandaloneDispatcher())
@@ -305,11 +300,12 @@ class TestMayaMcpServerReadinessIntegration:
 
         server = MayaMcpServer(port=0)
         try:
-            assert server.readiness_report() == {
-                "process": True,
-                "dispatcher": True,
-                "dcc": True,
-            }
+            _assert_ready_bits(
+                server.readiness_report(),
+                process=True,
+                dispatcher=True,
+                dcc=True,
+            )
             assert server.readiness is not None
             # The binder published its probe to the inner Rust server
             # via ``set_readiness_probe`` (core 0.14.28+).
@@ -351,11 +347,12 @@ class TestMayaMcpServerReadinessIntegration:
             host_dispatcher=MayaStandaloneDispatcher(),
         )
         try:
-            assert server.readiness_report() == {
-                "process": True,
-                "dispatcher": True,
-                "dcc": True,
-            }
+            _assert_ready_bits(
+                server.readiness_report(),
+                process=True,
+                dispatcher=True,
+                dcc=True,
+            )
         finally:
             try:
                 server.stop()
