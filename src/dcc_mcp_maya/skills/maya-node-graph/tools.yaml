@@ -11,6 +11,28 @@ tools:
   affinity: main
   group: node_graph
   description: Connect node attributes in the current Maya scene.
+- name: create_node
+  description: Create a generic Maya dependency graph or DAG node.
+  execution: sync
+  affinity: main
+  group: node_graph
+  input_schema:
+    type: object
+    required:
+    - node_type
+    properties:
+      node_type:
+        type: string
+      name:
+        type: string
+      parent:
+        type: string
+      skip_select:
+        type: boolean
+        default: true
+      shared:
+        type: boolean
+        default: false
 - name: delete_history
   execution: sync
   affinity: main
@@ -19,6 +41,47 @@ tools:
     destructive_hint: true
     idempotent_hint: true
   description: Delete node construction history in the current Maya scene.
+- name: delete_node
+  description: Delete one or more Maya dependency graph or DAG nodes.
+  execution: sync
+  affinity: main
+  group: node_graph
+  annotations:
+    destructive_hint: true
+    idempotent_hint: true
+  input_schema:
+    type: object
+    required:
+    - nodes
+    properties:
+      nodes:
+        oneOf:
+        - type: string
+        - type: array
+          items:
+            type: string
+          minItems: 1
+- name: describe_node
+  description: Describe a node with optional attributes and graph connections.
+  execution: sync
+  affinity: main
+  group: node_graph
+  annotations:
+    read_only_hint: true
+    idempotent_hint: true
+  input_schema:
+    type: object
+    required:
+    - node_name
+    properties:
+      node_name:
+        type: string
+      include_attributes:
+        type: boolean
+        default: false
+      include_connections:
+        type: boolean
+        default: true
 - name: disconnect_attr
   execution: sync
   affinity: main

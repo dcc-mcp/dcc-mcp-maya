@@ -1,11 +1,71 @@
 tools:
+- name: capture_playblast_sequence
+  description: Capture a playblast image sequence to disk and return paths plus camera
+    metadata.
+  execution: async
+  affinity: main
+  timeout_hint_secs: 600
+  annotations:
+    read_only_hint: false
+    destructive_hint: false
+    idempotent_hint: false
+    open_world_hint: false
+  group: rendering
+  input_schema:
+    type: object
+    properties:
+      output_dir:
+        type: string
+        description: Optional output directory; a temporary directory is created when
+          omitted.
+      prefix:
+        type: string
+        default: mcp_playblast
+      start_frame:
+        type: number
+      end_frame:
+        type: number
+      width:
+        type: integer
+        minimum: 1
+        maximum: 8192
+        default: 1920
+      height:
+        type: integer
+        minimum: 1
+        maximum: 8192
+        default: 1080
+      percent:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 100
+      compression:
+        type: string
+        enum:
+        - png
+        - jpg
+        - jpeg
+        default: png
+      off_screen:
+        type: boolean
+      show_ornaments:
+        type: boolean
+        default: false
+      view_fit:
+        type: boolean
+        default: false
+      camera:
+        type: string
+      include_camera_metadata:
+        type: boolean
+        default: true
 - name: capture_viewport
-  description: >-
-    Capture the active Maya viewport as a base64 PNG via playblast. When Maya
-    is minimized or in batch mode, off-screen rendering is auto-enabled (issue
-    #152). Use optional view_fit instead of execute_python with viewFit: the
-    correct flag is allObjects=True, not all=True. Width and height are clamped
-    to reduce GPU OOM risk.
+  description: 'Capture the active Maya viewport as a base64 PNG via playblast. When
+    Maya is minimized or in batch mode, off-screen rendering is auto-enabled (issue
+    #152). Use optional view_fit instead of execute_python with viewFit: the correct
+    flag is allObjects=True, not all=True. Width and height are clamped to reduce GPU
+    OOM risk.'
   execution: async
   affinity: main
   timeout_hint_secs: 600
@@ -33,15 +93,13 @@ tools:
         description: Frame to capture; defaults to current frame.
       off_screen:
         type: boolean
-        description: Force off-screen capture. Auto-enabled in batch mode and when
-          no model panel is visible.
+        description: Force off-screen capture. Auto-enabled in batch mode and when no
+          model panel is visible.
       view_fit:
         type: boolean
         default: false
-        description: >-
-          When true, runs cmds.viewFit(allObjects=True, animate=False) on the
-          active model panel before capture. Prefer this over raw viewFit in
-          execute_python.
+        description: When true, runs cmds.viewFit(allObjects=True, animate=False) on
+          the active model panel before capture. Prefer this over raw viewFit in execute_python.
 - name: get_render_settings
   description: Query current render settings
   execution: sync
@@ -51,18 +109,25 @@ tools:
     idempotent_hint: true
   group: rendering
 - name: get_scene_render_stats
+  description: Get scene render statistics without modifying the Maya scene.
   execution: sync
   affinity: main
   annotations:
     read_only_hint: true
     idempotent_hint: true
   group: rendering
-  description: Get scene render statistics without modifying the Maya scene.
+- name: get_viewport_camera
+  description: Query the active model panel camera with scene-camera fallback.
+  execution: sync
+  affinity: main
+  annotations:
+    read_only_hint: true
+    idempotent_hint: true
+  group: rendering
 - name: playblast
-  description: >-
-    Capture a viewport screenshot as a base64-encoded PNG via playblast
-    (off-screen). Frame is passed as a proper Maya time range; width and height
-    are clamped to reduce GPU OOM risk.
+  description: Capture a viewport screenshot as a base64-encoded PNG via playblast (off-screen).
+    Frame is passed as a proper Maya time range; width and height are clamped to reduce
+    GPU OOM risk.
   execution: async
   affinity: main
   timeout_hint_secs: 600
@@ -94,12 +159,12 @@ tools:
         maximum: 100
         default: 100
 - name: set_render_quality
+  description: Set render quality settings in the current Maya scene.
   execution: sync
   affinity: main
   annotations:
     idempotent_hint: true
   group: rendering
-  description: Set render quality settings in the current Maya scene.
 - name: set_render_settings
   description: Set render parameters (resolution, frame range, renderer, image format)
   execution: sync
