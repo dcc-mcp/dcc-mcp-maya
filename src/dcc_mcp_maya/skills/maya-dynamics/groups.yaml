@@ -1,0 +1,10 @@
+groups:
+- name: dynamics
+  description: Rigid bodies, fields, and classic dynamics setup
+  default_active: false
+  tools:
+  - connect_dynamic_field
+  - create_gravity_field
+  - list_dynamics
+  - make_rigid_body
+  - set_rigid_body_properties

@@ -18,6 +18,8 @@ metadata:
     - maya
     - render
     - playblast
+    - camera
+    - capture
     - settings
     - viewport
     search-hint: |-
@@ -41,4 +43,6 @@ packaging belongs to `maya-shot-export`. For distributed rendering, see
 - `get_scene_render_stats` — Query render-facing scene statistics
 - `set_render_quality` — Set render quality presets
 - `capture_viewport` — Capture the active viewport as a base64-encoded PNG
-- `playblast` — Capture a viewport screenshot as a base64-encoded PNG
+- `playblast` — Capture a single viewport frame as a base64-encoded PNG
+- `capture_playblast_sequence` — Capture a playblast image sequence to disk
+- `get_viewport_camera` — Query the active model panel camera

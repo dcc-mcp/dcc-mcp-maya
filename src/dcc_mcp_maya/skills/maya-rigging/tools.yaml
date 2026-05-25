@@ -1,71 +1,255 @@
 tools:
 - name: assign_deformer
-  execution: sync
-  affinity: main
-  annotations:
-    idempotent_hint: true
-  group: rigging
   description: Assign a deformer in the current Maya scene.
+  execution: sync
+  affinity: main
+  annotations:
+    idempotent_hint: true
+  group: rigging
 - name: blend_shape_add_target
-  execution: sync
-  affinity: main
-  group: rigging
   description: Blend shape add target in the current Maya scene.
+  execution: sync
+  affinity: main
+  group: rigging
 - name: create_blend_shape
-  execution: sync
-  affinity: main
-  group: rigging
   description: Create a blend shape in the current Maya scene.
+  execution: sync
+  affinity: main
+  group: rigging
+- name: copy_skin_weights
+  description: Copy or mirror skin weights between skinned meshes.
+  execution: sync
+  affinity: main
+  group: rigging
+  input_schema:
+    type: object
+    required:
+    - source_mesh
+    - target_mesh
+    properties:
+      source_mesh:
+        type: string
+      target_mesh:
+        type: string
+      source_skin_cluster:
+        type: string
+      target_skin_cluster:
+        type: string
+      create_missing_target_skin_cluster:
+        type: boolean
+        default: false
+      surface_association:
+        type: string
+        default: closestPoint
+      influence_association:
+        type: array
+        items:
+          type: string
+        default:
+        - closestJoint
+        - oneToOne
+        - name
+      mirror:
+        type: boolean
+        default: false
+      mirror_mode:
+        type: string
+        enum:
+        - XY
+        - YZ
+        - XZ
+        default: YZ
+      normalize:
+        type: boolean
+        default: true
+- name: create_constraint
+  description: Create a parent, point, orient, scale, aim, or pole-vector constraint.
+  execution: sync
+  affinity: main
+  group: rigging
+  input_schema:
+    type: object
+    required:
+    - drivers
+    - driven
+    properties:
+      drivers:
+        oneOf:
+        - type: string
+        - type: array
+          items:
+            type: string
+          minItems: 1
+      driven:
+        type: string
+      constraint_type:
+        type: string
+        enum:
+        - parent
+        - point
+        - orient
+        - scale
+        - aim
+        - pole_vector
+        default: parent
+      maintain_offset:
+        type: boolean
+        default: true
+      weight:
+        type: number
+        default: 1.0
+      name:
+        type: string
+      aim_vector:
+        type: array
+        items:
+          type: number
+        minItems: 3
+        maxItems: 3
+      up_vector:
+        type: array
+        items:
+          type: number
+        minItems: 3
+        maxItems: 3
 - name: create_curve
-  execution: sync
-  affinity: main
-  group: rigging
   description: Create a curve in the current Maya scene.
+  execution: sync
+  affinity: main
+  group: rigging
 - name: create_ik_handle
-  execution: sync
-  affinity: main
-  group: rigging
   description: Create an IK handle in the current Maya scene.
+  execution: sync
+  affinity: main
+  group: rigging
 - name: create_joint
-  execution: sync
-  affinity: main
-  group: rigging
   description: Create a joint in the current Maya scene.
+  execution: sync
+  affinity: main
+  group: rigging
+- name: create_rig_control
+  description: Create a rig control curve with optional offset groups and constraints.
+  execution: sync
+  affinity: main
+  group: rigging
+  input_schema:
+    type: object
+    required:
+    - name
+    properties:
+      name:
+        type: string
+      shape:
+        type: string
+        enum:
+        - circle
+        - square
+        - diamond
+        - cross
+        - cube
+        default: circle
+      size:
+        type: number
+        minimum: 0.001
+        default: 1.0
+      target:
+        type: string
+      match_target:
+        type: boolean
+        default: true
+      parent:
+        type: string
+      offset_groups:
+        type: integer
+        minimum: 0
+        maximum: 8
+        default: 1
+      color_index:
+        type: integer
+        minimum: 0
+        maximum: 31
+      lock_attrs:
+        type: array
+        items:
+          type: string
+      constrain_target:
+        type: boolean
+        default: false
+      constraint_type:
+        type: string
+        enum:
+        - parent
+        - point
+        - orient
+        default: parent
+- name: detect_rig_frameworks
+  description: Detect optional Maya rigging frameworks such as mGear or AdvancedSkeleton.
+  execution: sync
+  affinity: main
+  annotations:
+    read_only_hint: true
+    idempotent_hint: true
+  group: rigging
+  input_schema:
+    type: object
+    properties:
+      frameworks:
+        type: array
+        items:
+          type: string
+      include_unavailable:
+        type: boolean
+        default: false
 - name: mirror_joints
-  execution: sync
-  affinity: main
-  group: rigging
   description: Mirror joints in the current Maya scene.
+  execution: sync
+  affinity: main
+  group: rigging
+- name: query_skin_cluster
+  description: Query skinCluster influences, geometry, and common settings.
+  execution: sync
+  affinity: main
+  annotations:
+    read_only_hint: true
+    idempotent_hint: true
+  group: rigging
+  input_schema:
+    type: object
+    required:
+    - node
+    properties:
+      node:
+        type: string
 - name: set_driven_key
-  execution: sync
-  affinity: main
-  annotations:
-    idempotent_hint: true
-  group: rigging
   description: Set a driven key in the current Maya scene.
+  execution: sync
+  affinity: main
+  annotations:
+    idempotent_hint: true
+  group: rigging
 - name: set_ik_fk_blend
-  execution: sync
-  affinity: main
-  annotations:
-    idempotent_hint: true
-  group: rigging
   description: Set IK/FK blend values in the current Maya scene.
+  execution: sync
+  affinity: main
+  annotations:
+    idempotent_hint: true
+  group: rigging
 - name: set_joint_limit
-  execution: sync
-  affinity: main
-  annotations:
-    idempotent_hint: true
-  group: rigging
   description: Set joint limits in the current Maya scene.
-- name: set_joint_orient
   execution: sync
   affinity: main
   annotations:
     idempotent_hint: true
   group: rigging
+- name: set_joint_orient
   description: Set joint orientation in the current Maya scene.
+  execution: sync
+  affinity: main
+  annotations:
+    idempotent_hint: true
+  group: rigging
 - name: skin_cluster_bind
+  description: Skin cluster bind in the current Maya scene.
   execution: sync
   affinity: main
   group: rigging
-  description: Skin cluster bind in the current Maya scene.

@@ -133,6 +133,91 @@ tools:
         type: string
         description: "For action=drain \u2014 free-form label written to the cancelled\
           \ futures' WedgeDetectedError envelope. Defaults to a generic message."
+- name: list_plugins
+  description: "List loaded Maya plug-ins and optional metadata via pluginInfo. Use\
+    \ before load_plugin / unload_plugin when an agent needs exact plug-in names."
+  execution: sync
+  affinity: main
+  annotations:
+    read_only_hint: true
+    idempotent_hint: true
+  group: core
+  input_schema:
+    type: object
+    properties:
+      pattern:
+        type: string
+        default: ""
+        description: Optional case-insensitive substring filter.
+      include_details:
+        type: boolean
+        default: true
+        description: Include path, version, vendor, API version, and unload-ok fields
+          when Maya provides them.
+      limit:
+        type: integer
+        default: 200
+        minimum: 1
+        description: Maximum number of plug-in records to return.
+- name: load_plugin
+  description: "Load a Maya plug-in using cmds.loadPlugin and optionally update its\
+    \ autoload preference. Prefer this typed tool over execute_python or execute_mel\
+    \ for plug-in setup."
+  execution: sync
+  affinity: main
+  annotations:
+    read_only_hint: false
+    idempotent_hint: true
+  group: core
+  input_schema:
+    type: object
+    required:
+    - plugin
+    properties:
+      plugin:
+        type: string
+        description: Maya plug-in name or plug-in file path, for example fbxmaya.
+      quiet:
+        type: boolean
+        default: true
+        description: Pass quiet=True to cmds.loadPlugin.
+      set_autoload:
+        type: boolean
+        description: Optional autoload preference to set after loading.
+      already_loaded_ok:
+        type: boolean
+        default: true
+        description: Return success when the plug-in is already loaded.
+- name: unload_plugin
+  description: "Unload a Maya plug-in using cmds.unloadPlugin and optionally clear\
+    \ autoload. This can affect runtime tools, so callers should confirm intent first."
+  execution: sync
+  affinity: main
+  annotations:
+    destructive_hint: true
+    read_only_hint: false
+    idempotent_hint: true
+  group: core
+  input_schema:
+    type: object
+    required:
+    - plugin
+    properties:
+      plugin:
+        type: string
+        description: Maya plug-in name reported by list_plugins.
+      force:
+        type: boolean
+        default: false
+        description: Pass force=True to cmds.unloadPlugin.
+      remove_autoload:
+        type: boolean
+        default: false
+        description: Set the plug-in autoload preference to false before unloading.
+      not_loaded_ok:
+        type: boolean
+        default: true
+        description: Return success when the plug-in is already unloaded.
 - name: get_script_node
   description: Get, create, or delete a Maya scriptNode.
   execution: sync

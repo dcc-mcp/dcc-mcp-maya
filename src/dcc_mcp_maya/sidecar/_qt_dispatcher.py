@@ -482,7 +482,8 @@ def start_qt_server(port=0, host="127.0.0.1"):
 def stop_qt_server():
     """Tear down the singleton server, if any. Idempotent."""
     with _singleton_lock:
-        server = _singleton.pop("server", None)
+        server = _singleton.get("server")
+        _singleton["server"] = None
     if server is not None:
         server.stop()
     return {"stopped": server is not None}
