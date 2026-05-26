@@ -29,6 +29,7 @@ from tests._transport_support import (
     QtJsonLineStubServer,
     allocate_ephemeral_port,
     mcp_initialize,
+    mcp_list_all_tools,
     mcp_post,
     mcp_url_from_registry_entry,
     qt_stub_factory,
@@ -388,12 +389,9 @@ class TestInProcessHttpApi:
                 base = mcp_url.rsplit("/", 1)[0]
                 assert rest_get_json(base, "/v1/healthz").get("ok") is True
 
-            listing = mcp_post(
-                mcp_url,
-                {"jsonrpc": "2.0", "id": 20, "method": "tools/list", "params": {}},
-                session_id=session,
-            )
-            names = {tool["name"] for tool in listing["result"]["tools"]}
+            # ``tools/list`` is paginated; loaded tools are not guaranteed to land on page 1.
+            tools = mcp_list_all_tools(mcp_url, session_id=session, request_id=20)
+            names = {tool["name"] for tool in tools}
             assert {
                 "playblast",
                 _qualified_action_name("maya-render", "playblast"),
