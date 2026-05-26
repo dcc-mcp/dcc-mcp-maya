@@ -208,11 +208,10 @@ class ReadinessBinder:
     # ── Public API ──────────────────────────────────────────────────────
 
     def report(self) -> dict:
-        """Return the current readiness snapshot as a dict.
+        """Return the current three-state readiness snapshot as a dict.
 
-        Delegates to :meth:`dcc_mcp_core.ReadinessProbe.report`. Maya
-        drives ``process`` / ``dispatcher`` / ``dcc``; newer core releases
-        may include additional diagnostic bits.
+        Delegates to :meth:`dcc_mcp_core.ReadinessProbe.report`.  Keys:
+        ``process`` / ``dispatcher`` / ``dcc``.
         """
         return self.probe.report()
 
