@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
-from dcc_mcp_maya.sidecar import _dispatcher, _supervisor
+from dcc_mcp_maya.sidecar import _supervisor
 from dcc_mcp_maya.sidecar._supervisor import start_sidecar
 
 
@@ -108,4 +109,5 @@ def test_start_qt_server_imports_core_dispatcher(monkeypatch):
 
     assert info["port"] == 45555
     assert captured["port"] == 0
-    assert captured["dispatch_handler"] is _dispatcher.dispatch_payload
+    current_dispatcher = sys.modules["dcc_mcp_maya.sidecar._dispatcher"]
+    assert captured["dispatch_handler"] is current_dispatcher.dispatch_payload
