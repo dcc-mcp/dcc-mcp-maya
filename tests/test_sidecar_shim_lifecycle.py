@@ -64,6 +64,7 @@ from dcc_mcp_maya.sidecar import (
     start_sidecar,
     stop_sidecar,
 )
+from tests._transport_support import iter_registry_entries, wait_for_sidecar_registry_row
 
 # ── shared fixtures ──────────────────────────────────────────────
 
@@ -230,55 +231,6 @@ def isolated_registry_dir(tmp_path: Path) -> Path:
     return registry
 
 
-def _wait_for_registry_row(registry_dir: Path, timeout: float = 5.0) -> dict:
-    """Poll ``services.json`` until a per-dcc-sidecar row appears."""
-    services_path = registry_dir / "services.json"
-    deadline = time.monotonic() + timeout
-    last_err = None
-    while time.monotonic() < deadline:
-        if services_path.is_file():
-            try:
-                payload = json.loads(services_path.read_text())
-            except json.JSONDecodeError as exc:
-                last_err = exc
-            else:
-                for entry in _iter_entries(payload):
-                    metadata = entry.get("metadata") or {}
-                    if metadata.get("dcc_mcp_role") == "per-dcc-sidecar":
-                        return entry
-        time.sleep(0.05)
-    raise AssertionError(
-        f"per-dcc-sidecar row never appeared in {services_path} within "
-        f"{timeout}s. Last JSON error: {last_err}. "
-        f"Final contents: {services_path.read_text() if services_path.is_file() else '<missing>'}"
-    )
-
-
-def _iter_entries(payload: object) -> Iterator[dict]:
-    """Yield service entries regardless of which container shape the
-    Rust ``FileRegistry`` flushed (``services.json`` schema has changed
-    a few times — be liberal in what we accept)."""
-    if isinstance(payload, list):
-        for item in payload:
-            if isinstance(item, dict):
-                yield item
-    elif isinstance(payload, dict):
-        services = payload.get("services")
-        if isinstance(services, list):
-            for item in services:
-                if isinstance(item, dict):
-                    yield item
-        elif isinstance(services, dict):
-            for item in services.values():
-                if isinstance(item, dict):
-                    yield item
-        else:
-            # Top-level mapping of key -> entry
-            for value in payload.values():
-                if isinstance(value, dict) and "dcc_type" in value:
-                    yield value
-
-
 def _wait_for_proc_exit(handle: SidecarHandle, timeout: float = 5.0) -> int:
     """Block until the sidecar subprocess exits; return its exit code."""
     deadline = time.monotonic() + timeout
@@ -352,7 +304,7 @@ class TestSidecarLifecycle:
             start_qt_server_fn=_qt_stub_factory(fake_qt_server),
         )
         try:
-            entry = _wait_for_registry_row(isolated_registry_dir)
+            entry = wait_for_sidecar_registry_row(isolated_registry_dir, timeout=5.0, require_dialable_port=False)
             assert entry["dcc_type"] == "maya"
             assert entry["pid"] == parent_surrogate.pid, (
                 "FileRegistry row's pid must equal the parent we asked the "
@@ -389,7 +341,7 @@ class TestSidecarLifecycle:
             registry_dir=isolated_registry_dir,
             start_qt_server_fn=_qt_stub_factory(fake_qt_server),
         )
-        _wait_for_registry_row(isolated_registry_dir)
+        wait_for_sidecar_registry_row(isolated_registry_dir, timeout=5.0, require_dialable_port=False)
 
         parent_surrogate.kill()
 
@@ -407,7 +359,7 @@ class TestSidecarLifecycle:
             payload = json.loads(services_path.read_text())
             survivors = [
                 entry
-                for entry in _iter_entries(payload)
+                for entry in iter_registry_entries(payload)
                 if (entry.get("metadata") or {}).get("dcc_mcp_role") == "per-dcc-sidecar"
             ]
             assert survivors == [], (
@@ -433,7 +385,7 @@ class TestSidecarLifecycle:
             start_qt_server_fn=_qt_stub_factory(fake_qt_server),
         )
         try:
-            entry = _wait_for_registry_row(isolated_registry_dir)
+            entry = wait_for_sidecar_registry_row(isolated_registry_dir, timeout=5.0, require_dialable_port=False)
             assert entry.get("display_name") == "Maya-Test"
             assert entry.get("adapter_version") == "0.0.0-test"
             assert entry.get("adapter_dcc") == "maya"

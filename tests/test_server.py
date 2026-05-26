@@ -74,67 +74,6 @@ def test_dispatcher_shutdown_log_skips_closed_stream(capsys):
         srv_mod.logger.removeHandler(handler)
 
 
-def _core_supports_nested_dcc_mcp_metadata():
-    """True iff the installed dcc-mcp-core honours nested ``metadata.dcc-mcp``.
-
-    After the sibling-file migration, every SKILL.md uses the nested
-    mapping form (``metadata: { dcc-mcp: { tools: "tools.yaml", ... } }``).
-    Cores older than dcc-mcp-core#385 silently drop these overrides,
-    which makes the server-level assertions about ``__skill__`` stubs
-    and group activation meaningless. We probe by scanning a temp skill
-    and checking whether the override is actually applied.
-    """
-    import tempfile
-    from pathlib import Path
-
-    try:
-        from dcc_mcp_core import scan_and_load
-    except ImportError:
-        return False
-
-    with tempfile.TemporaryDirectory() as tmp:
-        probe = Path(tmp) / "probe-skill"
-        probe.mkdir()
-        (probe / "tools.yaml").write_text(
-            "tools:\n  - name: ping\n    description: probe tool\n",
-            encoding="utf-8",
-        )
-        (probe / "SKILL.md").write_text(
-            "---\n"
-            "name: probe-skill\n"
-            "description: probe for nested dcc-mcp metadata support\n"
-            "metadata:\n"
-            "  dcc-mcp:\n"
-            "    dcc: maya\n"
-            "    tools: tools.yaml\n"
-            "---\n# body\n",
-            encoding="utf-8",
-        )
-        try:
-            skills, _ = scan_and_load(extra_paths=[tmp], dcc_name="maya")
-        except Exception:
-            return False
-        for s in skills:
-            if s.name == "probe-skill":
-                tools = getattr(s, "tools", None)
-                if callable(tools):
-                    tools = tools()
-                return bool(tools)
-    return False
-
-
-_CORE_SUPPORTS_NESTED_META = _core_supports_nested_dcc_mcp_metadata()
-
-_skip_without_nested_meta = pytest.mark.skipif(
-    not _CORE_SUPPORTS_NESTED_META,
-    reason=(
-        "Installed dcc-mcp-core does not support nested metadata.dcc-mcp "
-        "(requires dcc-mcp-core#385 / >= 0.15). Skipping assertions that "
-        "depend on skill tools/groups being visible to the scanner."
-    ),
-)
-
-
 def _builtin_skills_dir():
     """Return the built-in skills directory, resolving it from the package."""
     from pathlib import Path
@@ -396,6 +335,23 @@ class TestMayaMcpServerApi:
         assert type(dispatcher).__name__ == "MayaUiDispatcher"
         assert isinstance(server._auto_ui_pump, FailingPump)
 
+    def test_core_builtin_registration_uses_normal_minimal_mode_path(self):
+        """Core-owned minimal-mode loading should not require local skill manifest rewriting."""
+        srv_mod = _import_server()
+        server = srv_mod.MayaMcpServer(port=0, enable_gateway_failover=False, gateway_port=0)
+        try:
+            context = srv_mod._registration.RegistrationContext(
+                server=server,
+                extra_skill_paths=[_builtin_skills_dir()],
+                include_bundled=True,
+                minimal=True,
+            )
+            server._register_core_builtin_actions(context)
+            skill_names = [s.name if hasattr(s, "name") else s["name"] for s in server._server.list_skills()]
+            assert "maya-scripting" in skill_names
+        finally:
+            server.stop()
+
     def test_standalone_affinity_override_uses_core_skill_object(self):
         """mayapy direct HTTP adjusts detached core skill metadata before loading."""
         srv_mod = _import_server()
@@ -419,9 +375,10 @@ class TestMayaMcpServerApi:
 
             def load_skill_object(self, skill):
                 self.loaded = skill
+                return True
 
             def load_skill(self, name):  # pragma: no cover - must not be used
-                raise AssertionError(f"unexpected YAML-backed load_skill({name!r})")
+                raise AssertionError(f"unexpected direct load_skill({name!r})")
 
         server = object.__new__(srv_mod.MayaMcpServer)
         server._dcc_name = "maya"
@@ -705,7 +662,7 @@ class TestMayaMcpServerHttp:
             for n in names
             if n not in core_meta_tools and not n.startswith(reserved_prefix) and not n.startswith("maya-")
         }
-        skill_tools = skill_stubs | prefixed_tools | bare_skill_tools
+        skill_tools = set().union(skill_stubs, prefixed_tools, bare_skill_tools)
         assert len(skill_tools) >= 3, (
             f"Expected >=3 maya skill tools (stubs/prefixed/bare), got {len(skill_tools)}: {names}"
         )
