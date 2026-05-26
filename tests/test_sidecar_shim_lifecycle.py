@@ -206,7 +206,7 @@ def _qt_stub_factory(port: int):
     """Return a ``start_qt_server_fn`` stub that advertises ``port``.
 
     Mirrors the production signature of
-    :func:`dcc_mcp_maya.sidecar._qt_dispatcher.start_qt_server` so the
+    :func:`dcc_mcp_core.qt_dispatcher.start_qt_server` so the
     supervisor cannot tell it's been replaced. The returned info dict
     has the same shape the real dispatcher emits.
     """
