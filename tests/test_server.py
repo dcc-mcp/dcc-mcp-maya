@@ -352,7 +352,7 @@ class TestMayaMcpServerApi:
         finally:
             server.stop()
 
-    def test_standalone_affinity_override_uses_core_skill_object(self):
+    def test_standalone_skill_load_transform_disables_affinity_enforcement(self):
         """mayapy direct HTTP adjusts detached core skill metadata before loading."""
         srv_mod = _import_server()
 
@@ -364,37 +364,12 @@ class TestMayaMcpServerApi:
             def __init__(self):
                 self.tools = [Tool(True), Tool(False)]
 
-        class Inner:
-            def __init__(self):
-                self.skill = Skill()
-                self.loaded = None
+        skill = Skill()
 
-            def get_skill(self, name):
-                assert name == "maya-scene"
-                return self.skill
+        assert srv_mod.MayaMcpServer._standalone_skill_load_transform(skill) is None
+        assert [tool.enforce_thread_affinity for tool in skill.tools] == [False, False]
 
-            def load_skill_object(self, skill):
-                self.loaded = skill
-                return True
-
-            def load_skill(self, name):  # pragma: no cover - must not be used
-                raise AssertionError(f"unexpected direct load_skill({name!r})")
-
-        server = object.__new__(srv_mod.MayaMcpServer)
-        server._dcc_name = "maya"
-        server._host_dispatcher = type("MayaStandaloneDispatcher", (), {})()
-        server._server = Inner()
-        server._skill_client = MagicMock()
-        server._skill_client.get_skill.side_effect = server._server.get_skill
-        server._skill_client.load_skill_object.side_effect = server._server.load_skill_object
-
-        assert server._load_skill_via_core_object("maya-scene") is True
-        assert server._server.loaded is server._server.skill
-        server._skill_client.get_skill.assert_called_once_with("maya-scene")
-        server._skill_client.load_skill_object.assert_called_once_with(server._server.skill)
-        assert [tool.enforce_thread_affinity for tool in server._server.skill.tools] == [False, False]
-
-    def test_standalone_affinity_prepare_persists_for_core_catalog_load(self):
+    def test_standalone_transform_persists_for_core_catalog_load(self):
         """Core-owned MCP load_skill sees Maya standalone metadata overrides too."""
         srv_mod = _import_server()
 
