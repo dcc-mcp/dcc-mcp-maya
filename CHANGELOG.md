@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.3.9](https://github.com/loonghao/dcc-mcp-maya/compare/v0.3.8...v0.3.9) (2026-05-26)
+
+
+### Features
+
+* expand maya atomic skills ([85a17fd](https://github.com/loonghao/dcc-mcp-maya/commit/85a17fda370044e18b0439b92eb7bc44b0952747))
+
+
+### Bug Fixes
+
+* document sidecar runtime for module archives ([8e71b0d](https://github.com/loonghao/dcc-mcp-maya/commit/8e71b0d9d2c00ba8847c7355c95941290c8c5de5))
+* keep standalone skill discovery stdlib-only ([6132003](https://github.com/loonghao/dcc-mcp-maya/commit/6132003409fb7d6829b4c2103d5feb5f98dc2db6))
+* prepare standalone skill metadata overrides ([bbb2144](https://github.com/loonghao/dcc-mcp-maya/commit/bbb21442675873a389bb8a90a0c5b9a1a2d73f0e))
+* restore standalone skill affinity overrides ([d58fd09](https://github.com/loonghao/dcc-mcp-maya/commit/d58fd09dc213fce87e5ffd5b6a363ed8f12a6103))
+* use core 0.17.31 skill object api ([511d121](https://github.com/loonghao/dcc-mcp-maya/commit/511d121d5f824ecf19eae04e24558e1e2ce8edcf))
+* use core skill load transforms ([61d2cd0](https://github.com/loonghao/dcc-mcp-maya/commit/61d2cd063a6cce823e3b3ecdba7eca490452bda8))
+* use core skill object loading for standalone affinity ([fec06db](https://github.com/loonghao/dcc-mcp-maya/commit/fec06dbfbe025cc6fce77362231484a0f6b06300))
+
+
+### Code Refactoring
+
+* use core sidecar dispatchers ([b11a1cc](https://github.com/loonghao/dcc-mcp-maya/commit/b11a1ccc79dbfacb9a8cad337fb4c5b5bc5ac7b5))
+
 ## [0.3.8](https://github.com/loonghao/dcc-mcp-maya/compare/v0.3.7...v0.3.8) (2026-05-23)
 
 
