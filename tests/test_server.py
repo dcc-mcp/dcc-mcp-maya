@@ -352,6 +352,103 @@ class TestMayaMcpServerApi:
         finally:
             server.stop()
 
+    def test_standalone_affinity_override_uses_core_skill_object(self):
+        """mayapy direct HTTP adjusts detached core skill metadata before loading."""
+        srv_mod = _import_server()
+
+        class Tool:
+            def __init__(self, enforce_thread_affinity):
+                self.enforce_thread_affinity = enforce_thread_affinity
+
+        class Skill:
+            def __init__(self):
+                self.tools = [Tool(True), Tool(False)]
+
+        class Inner:
+            def __init__(self):
+                self.skill = Skill()
+                self.loaded = None
+
+            def get_skill(self, name):
+                assert name == "maya-scene"
+                return self.skill
+
+            def load_skill_object(self, skill):
+                self.loaded = skill
+                return True
+
+            def load_skill(self, name):  # pragma: no cover - must not be used
+                raise AssertionError(f"unexpected direct load_skill({name!r})")
+
+        server = object.__new__(srv_mod.MayaMcpServer)
+        server._dcc_name = "maya"
+        server._host_dispatcher = type("MayaStandaloneDispatcher", (), {})()
+        server._server = Inner()
+        server._skill_client = MagicMock()
+        server._skill_client.get_skill.side_effect = server._server.get_skill
+        server._skill_client.load_skill_object.side_effect = server._server.load_skill_object
+
+        assert server._load_skill_via_core_object("maya-scene") is True
+        assert server._server.loaded is server._server.skill
+        server._skill_client.get_skill.assert_called_once_with("maya-scene")
+        server._skill_client.load_skill_object.assert_called_once_with(server._server.skill)
+        assert [tool.enforce_thread_affinity for tool in server._server.skill.tools] == [False, False]
+
+    def test_standalone_affinity_prepare_persists_for_core_catalog_load(self):
+        """Core-owned MCP load_skill sees Maya standalone metadata overrides too."""
+        srv_mod = _import_server()
+
+        dispatcher = type("MayaStandaloneDispatcher", (), {})()
+        server = srv_mod.MayaMcpServer(
+            port=0,
+            enable_gateway_failover=False,
+            gateway_port=0,
+            host_dispatcher=dispatcher,
+        )
+        try:
+            server.register_builtin_actions(minimal=True)
+            loaded = server._server.load_skill("maya-primitives")
+            assert "maya_primitives__create_sphere" in loaded
+            meta = server._server.registry.get_action("maya_primitives__create_sphere")
+            assert meta is not None
+            assert meta["thread_affinity"] == "main"
+            assert meta.get("enforce_thread_affinity", False) is False
+        finally:
+            server.stop()
+
+    def test_standalone_registration_discovers_bundled_skills_without_pyyaml(self):
+        """Clean release archives do not need PyYAML to expose Maya skills."""
+        srv_mod = _import_server()
+        dispatcher = type("MayaStandaloneDispatcher", (), {})()
+
+        with patch.dict(sys.modules, {"yaml": None}):
+            server = srv_mod.MayaMcpServer(
+                port=0,
+                enable_gateway_failover=False,
+                gateway_port=0,
+                host_dispatcher=dispatcher,
+            )
+            try:
+                server.register_builtin_actions(minimal=True)
+                assert server._registration_report.outcomes[0].success is True
+                skills = server.list_skills()
+                assert any(skill.get("name") == "maya-scene" for skill in skills)
+                assert server.load_skill("maya-scene") is True
+                assert any("maya_scene__get_session_info" in str(action) for action in server.list_actions())
+            finally:
+                server.stop()
+
+    def test_affinity_override_skipped_for_host_dispatcher(self):
+        """Only standalone dispatchers need object-level affinity overrides."""
+        srv_mod = _import_server()
+
+        server = srv_mod.MayaMcpServer(port=0, enable_gateway_failover=False, gateway_port=0)
+        server._host_dispatcher = object()
+        try:
+            assert server._uses_standalone_affinity_override() is False
+        finally:
+            server.stop()
+
 
 # ── Issue #138: strict skill scan opt-in ──────────────────────────────────────
 
