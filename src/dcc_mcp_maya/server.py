@@ -32,7 +32,6 @@ from typing import Any, List, Optional
 
 # Import third-party modules
 from dcc_mcp_core import DccServerOptions, HostExecutionBridge, scan_and_load_strict
-from dcc_mcp_core._server.minimal_mode import apply_minimal_mode
 from dcc_mcp_core.factory import create_dcc_server
 from dcc_mcp_core.server_base import DccServerBase
 
@@ -513,112 +512,33 @@ class MayaMcpServer(DccServerBase):
 
     def _register_core_builtin_actions(self, context: _registration.RegistrationContext) -> None:
         minimal_mode = self._build_minimal_mode_config(context.minimal)
-        if not self._uses_standalone_affinity_override():
-            super().register_builtin_actions(
-                extra_skill_paths=context.extra_skill_paths,
-                include_bundled=context.include_bundled,
-                minimal_mode=minimal_mode,
-            )
-            return
+        self._configure_skill_load_transform()
 
         super().register_builtin_actions(
             extra_skill_paths=context.extra_skill_paths,
             include_bundled=context.include_bundled,
-            minimal_mode=None,
+            minimal_mode=minimal_mode,
         )
-        prepared = self._prepare_standalone_skill_metadata_overrides()
-        if prepared:
-            logger.info(
-                "[%s] Prepared %d discovered skill(s) for standalone affinity overrides",
-                self._dcc_name,
-                prepared,
-            )
-        if minimal_mode is not None:
-            loaded = apply_minimal_mode(self, minimal_mode, dcc_name=self._dcc_name)
-            logger.info(
-                "[%s] Minimal mode: %d skill(s) loaded eagerly via core skill objects",
-                self._dcc_name,
-                loaded,
-            )
-
-    @property
-    def catalog(self) -> Any | None:
-        """Expose a usable core catalog handle when the runtime provides one."""
-        catalog = getattr(self._server, "catalog", None)
-        if hasattr(catalog, "deactivate_group"):
-            return catalog
-        return None
 
     def _uses_standalone_affinity_override(self) -> bool:
         dispatcher = getattr(self, "_host_dispatcher", None)
         return type(dispatcher).__name__ in {"MayaStandaloneDispatcher", "PyStandaloneDispatcher"}
 
-    def _prepare_standalone_skill_metadata_overrides(self) -> int:
-        """Persist standalone affinity overrides for core-managed stub loading."""
-        skill_names = self._discovered_skill_names()
-        prepared = 0
-        for skill_name in skill_names:
-            skill = self.get_skill(skill_name)
-            if skill is None or not self._disable_tool_affinity_enforcement(skill):
-                continue
-            try:
-                if self.load_skill_object(skill):
-                    prepared += 1
-                else:
-                    logger.warning(
-                        "[%s] Could not prepare standalone affinity overrides for %r",
-                        self._dcc_name,
-                        skill_name,
-                    )
-            except Exception as exc:  # noqa: BLE001
-                logger.warning(
-                    "[%s] Could not prepare standalone affinity overrides for %r: %s",
-                    self._dcc_name,
-                    skill_name,
-                    exc,
-                )
-
-        for skill_name in skill_names:
-            if not self.is_skill_loaded(skill_name):
-                continue
-            try:
-                self.unload_skill(skill_name)
-            except Exception as exc:  # noqa: BLE001
-                logger.debug(
-                    "[%s] cleanup unload after standalone affinity prepare failed for %r: %s",
-                    self._dcc_name,
-                    skill_name,
-                    exc,
-                )
-        return prepared
-
-    def _discovered_skill_names(self) -> tuple[str, ...]:
-        names: list[str] = []
-        for item in self.list_skills():
-            name = item.get("name") if isinstance(item, dict) else getattr(item, "name", None)
-            if name:
-                names.append(str(name))
-        return tuple(dict.fromkeys(names))
-
-    def _load_skill_via_core_object(self, skill_name: str) -> bool:
+    def _configure_skill_load_transform(self) -> None:
+        """Install Maya's standalone policy through core's skill-load hook."""
         if not self._uses_standalone_affinity_override():
-            return super().load_skill(skill_name)
+            self.clear_skill_load_transform()
+            return
 
-        skill = self.get_skill(skill_name)
-        if skill is None:
-            logger.debug("[%s] get_skill(%r) returned no skill", self._dcc_name, skill_name)
-            return False
-        changed = self._disable_tool_affinity_enforcement(skill)
-        logger.debug(
-            "[%s] load_skill(%r) using core skill object affinity overrides changed=%s",
-            self._dcc_name,
-            skill_name,
-            changed,
-        )
-        return bool(self.load_skill_object(skill))
+        if self.set_skill_load_transform(self._standalone_skill_load_transform):
+            logger.info("[%s] Standalone skill-load transform installed", self._dcc_name)
+            return
+
+        logger.warning("[%s] Standalone skill-load transform unavailable", self._dcc_name)
 
     @staticmethod
-    def _disable_tool_affinity_enforcement(skill: Any) -> bool:
+    def _standalone_skill_load_transform(skill: Any) -> None:
+        """Let core load main-affinity Maya tools inline in mayapy standalone mode."""
         changed = False
         tools = list(getattr(skill, "tools", ()) or ())
         for tool in tools:
@@ -628,7 +548,6 @@ class MayaMcpServer(DccServerBase):
             changed = True
         if changed:
             setattr(skill, "tools", tools)
-        return changed
 
     def _register_recipes_tools(self, context: _registration.RegistrationContext) -> None:
         """Register ``recipes__*`` tools so ``metadata.dcc-mcp.recipes`` files are agent-readable."""
@@ -767,7 +686,7 @@ class MayaMcpServer(DccServerBase):
         publish can invoke :meth:`publish_capability_snapshot` directly.
         """
         try:
-            return self._load_skill_via_core_object(skill_name)
+            return bool(super().load_skill(skill_name))
         except Exception as exc:  # noqa: BLE001
             logger.debug("[%s] load_skill(%r) failed: %s", self._dcc_name, skill_name, exc)
             return False
