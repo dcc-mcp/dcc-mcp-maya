@@ -330,7 +330,7 @@ class QtJsonLineStubServer:
                 ensure_ascii=False,
             )
         if method == "dispatch":
-            raw = self._dispatch_payload(
+            result = self._dispatch_payload(
                 {
                     "action": params.get("action"),
                     "args": params.get("args") or {},
@@ -338,7 +338,7 @@ class QtJsonLineStubServer:
                 },
                 server_lookup=self._server_lookup,
             )
-            return json.dumps({"id": req_id, "result": json.loads(raw)}, ensure_ascii=False)
+            return json.dumps({"id": req_id, "result": result}, ensure_ascii=False)
         return json.dumps(
             {
                 "id": req_id,
