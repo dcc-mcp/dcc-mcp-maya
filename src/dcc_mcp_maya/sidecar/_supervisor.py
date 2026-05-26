@@ -5,16 +5,16 @@ main thread is idle, and :func:`stop_sidecar` from
 ``uninitializePlugin``. The supervisor:
 
 1. Eagerly starts the universal in-DCC **Qt event-loop dispatcher**
-   (see :mod:`dcc_mcp_maya.sidecar._qt_dispatcher`) inside Maya itself,
-   so an external sidecar binary never needs ``commandPort`` to
+   from :mod:`dcc_mcp_core.qt_dispatcher` inside Maya itself,
+   so an external sidecar binary does not need ``commandPort`` to
    bootstrap the wire. The dispatcher binds an ephemeral TCP port via
    ``QTcpServer`` and runs cooperatively on Maya's own Qt event loop —
    structurally immune to the single-flight / modal-dialog / PyO3-tokio
    contention failure modes the legacy ``commandPort`` path suffered
    from (RFC #998 Addendum B).
 
-2. Registers a ``dispatch`` handler on the Qt dispatcher's registry
-   that forwards JSON wire frames to the existing Maya-side action
+2. Passes a ``dispatch`` handler into the Qt dispatcher that forwards
+   JSON wire frames to the Maya-side action
    dispatcher (:mod:`dcc_mcp_maya.sidecar._dispatcher`). The Qt server
    becomes the transport, but the action-lookup contract stays
    identical to the in-process path.
@@ -137,8 +137,7 @@ def build_qtserver_uri(port: int, host: str = "127.0.0.1") -> str:
     impl. Keep it lowercase and stable.
 
     Args:
-        port: TCP port the in-Maya ``QTcpServer`` bound to (announced
-            by :func:`_qt_dispatcher.start_qt_server`).
+        port: TCP port the in-Maya ``QTcpServer`` bound to.
         host: bind address. Defaults to loopback.
 
     Raises:
@@ -247,9 +246,9 @@ def start_sidecar(
             top of :data:`os.environ` so the sidecar inherits Maya's
             existing ``DCC_MCP_*`` settings.
         start_qt_server_fn: dependency-injection seam for tests. When
-            ``None`` (production) imports the vendored
-            :mod:`dcc_mcp_maya.sidecar._qt_dispatcher` and calls its
-            :func:`start_qt_server`. Tests pass a stub that returns a
+            ``None`` (production) imports
+            :func:`dcc_mcp_core.qt_dispatcher.start_qt_server` and passes
+            Maya's dispatch handler. Tests pass a stub that returns a
             canned ``{"host", "port", "qt_binding"}`` dict so the
             supervisor can be exercised without a Qt runtime.
         stop_qt_server_fn: companion teardown hook used if startup fails
@@ -275,14 +274,6 @@ def start_sidecar(
     qt_port = int(qt_info["port"])
     qt_host = str(qt_info.get("host", "127.0.0.1"))
     qt_binding = str(qt_info.get("qt_binding", "unknown"))
-
-    try:
-        _register_dispatch_handler(start_qt_server_fn)
-    except Exception as exc:  # noqa: BLE001 — narrow it to SidecarSpawnError
-        _stop_qt_server(stop_qt_server_fn)
-        raise SidecarSpawnError(
-            "failed to register `dispatch` handler on the in-Maya Qt server: {0}".format(exc)
-        ) from exc
 
     host_rpc_uri = build_qtserver_uri(qt_port, host=qt_host)
 
@@ -375,8 +366,8 @@ def stop_sidecar(
             ``SIGKILL``-ing the process. ``5.0`` mirrors the sidecar
             binary's own shutdown timeout default.
         stop_qt_server_fn: dependency-injection seam for tests.
-            When ``None`` (production) calls the vendored
-            :func:`_qt_dispatcher.stop_qt_server`.
+            When ``None`` (production) calls
+            :func:`dcc_mcp_core.qt_dispatcher.stop_qt_server`.
     """
     if handle.proc.poll() is None:
         try:
@@ -411,20 +402,22 @@ def stop_sidecar(
 def _start_qt_server(port, start_qt_server_fn):
     """Resolve the Qt dispatcher and start it on the given port.
 
-    Lazy-imports the vendored dispatcher so this module stays
+    Lazy-imports the core dispatcher so this module stays
     importable from CI / pytest without a Qt binding being available.
     Tests can pass ``start_qt_server_fn`` to bypass the import.
     """
     if start_qt_server_fn is not None:
         return start_qt_server_fn(port=port)
     try:
-        from dcc_mcp_maya.sidecar._qt_dispatcher import start_qt_server
+        from dcc_mcp_core.qt_dispatcher import start_qt_server
+
+        from dcc_mcp_maya.sidecar._dispatcher import dispatch_payload
     except ImportError as exc:
         raise SidecarSpawnError(
-            "failed to import in-Maya Qt dispatcher (dcc_mcp_maya.sidecar._qt_dispatcher): {0}".format(exc)
+            "failed to import core Qt dispatcher (dcc_mcp_core.qt_dispatcher): {0}".format(exc)
         ) from exc
     try:
-        return start_qt_server(port=port)
+        return start_qt_server(port=port, dispatch_handler=dispatch_payload)
     except Exception as exc:  # noqa: BLE001 — narrow to SidecarSpawnError
         raise SidecarSpawnError("failed to start in-Maya Qt server on port {0}: {1}".format(port, exc)) from exc
 
@@ -443,7 +436,7 @@ def _stop_qt_server(stop_qt_server_fn):
             logger.debug("custom stop_qt_server_fn raised: %s", exc)
         return
     try:
-        from dcc_mcp_maya.sidecar._qt_dispatcher import stop_qt_server
+        from dcc_mcp_core.qt_dispatcher import stop_qt_server
     except ImportError as exc:
         logger.debug("qt dispatcher unavailable on teardown: %s", exc)
         return
@@ -451,45 +444,6 @@ def _stop_qt_server(stop_qt_server_fn):
         stop_qt_server()
     except Exception as exc:  # noqa: BLE001
         logger.debug("stop_qt_server raised: %s", exc)
-
-
-def _register_dispatch_handler(start_qt_server_fn):
-    """Install a ``dispatch`` method on the Qt server's registry.
-
-    The Rust ``QtServerClient`` wraps every ``HostRpcClient::call``
-    as a ``method="dispatch"`` JSON-line frame. We tie that wire
-    method back to the existing Maya-side action dispatcher
-    (:mod:`dcc_mcp_maya.sidecar._dispatcher`) so the dispatch contract
-    is wire-format-agnostic — same action-lookup logic regardless of
-    whether the caller is in-process, qtserver, or a future scheme.
-
-    When ``start_qt_server_fn`` is non-None (test path), we skip the
-    registration — tests assert the supervisor *attempted* to register
-    via their stubbed ``start_qt_server_fn`` and exercise the dispatch
-    contract in a separate test.
-    """
-    if start_qt_server_fn is not None:
-        return
-    try:
-        from dcc_mcp_maya.sidecar import _qt_dispatcher
-    except ImportError as exc:
-        raise RuntimeError("vendored dispatcher missing: {0}".format(exc)) from exc
-    from dcc_mcp_maya.sidecar._dispatcher import dispatch_payload
-
-    server = _qt_dispatcher.current_server()
-    if server is None:
-        raise RuntimeError(
-            "in-Maya Qt server is not running — start_qt_server returned without populating the singleton"
-        )
-
-    def _handle_dispatch(params):
-        # The wire frame is `{"action", "args", "request_id"}` — see
-        # the Rust QtServerClient::call wrapper. dispatch_payload
-        # returns a JSON envelope dict; we return it as-is so the Qt
-        # dispatcher wraps it into `{"id": ..., "result": <dict>}`.
-        return dispatch_payload(params)
-
-    server.registry.register("dispatch", _handle_dispatch)
 
 
 def _detached_process_flags() -> int:
