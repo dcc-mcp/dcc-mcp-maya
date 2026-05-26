@@ -13,7 +13,7 @@ import time
 import urllib.parse
 import urllib.request
 from pathlib import Path
-from typing import Any, Callable, Dict, Iterator, Optional
+from typing import Any, Callable, Dict, Iterator, List, Optional
 
 from dcc_mcp_maya.sidecar._resolver import SidecarBinaryError, resolve_sidecar_binary
 
@@ -98,6 +98,38 @@ def mcp_initialize(mcp_url: str, *, client_name: str = "maya-transport-test") ->
         expect_response=False,
     )
     return session_id
+
+
+def mcp_list_all_tools(
+    mcp_url: str,
+    *,
+    session_id: Optional[str] = None,
+    request_id: int = 100,
+    max_pages: int = 50,
+) -> List[Dict[str, Any]]:
+    """Walk every ``tools/list`` cursor page and return all advertised tools."""
+    tools: List[Dict[str, Any]] = []
+    cursor: Optional[str] = None
+    for page in range(max_pages):
+        params: Dict[str, Any] = {}
+        if cursor:
+            params["cursor"] = cursor
+        response = mcp_post(
+            mcp_url,
+            {
+                "jsonrpc": "2.0",
+                "id": request_id + page,
+                "method": "tools/list",
+                "params": params,
+            },
+            session_id=session_id,
+        )
+        result = response.get("result") or {}
+        tools.extend(result.get("tools") or [])
+        cursor = result.get("nextCursor")
+        if not cursor:
+            return tools
+    raise RuntimeError("tools/list pagination exceeded {} pages".format(max_pages))
 
 
 def rest_get_json(base_url: str, endpoint: str) -> Dict[str, Any]:
