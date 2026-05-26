@@ -68,6 +68,8 @@ def _make_bare_server(builtin_dir=None):
     srv._standalone_main_thread = False
     srv._execution_bridge = None
     srv._inprocess_executor_registered = False
+    srv._skill_client = MagicMock()
+    srv._skill_client.clear_skill_load_transform.return_value = True
     return srv
 
 
