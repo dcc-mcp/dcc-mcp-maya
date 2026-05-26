@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from dcc_mcp_maya.sidecar import _dispatcher, _supervisor
 from dcc_mcp_maya.sidecar._supervisor import start_sidecar
 
 
@@ -88,3 +89,23 @@ def test_start_sidecar_honors_extra_env_gateway_port_zero(monkeypatch):
 
     assert "--gateway-port" not in captured["cmd"]
     assert captured["kwargs"]["env"]["DCC_MCP_GATEWAY_PORT"] == "0"
+
+
+def test_start_qt_server_imports_core_dispatcher(monkeypatch):
+    captured = {}
+
+    def fake_start_qt_server(**kwargs):
+        captured.update(kwargs)
+        return {
+            "host": "127.0.0.1",
+            "port": 45555,
+            "qt_binding": "fake-core",
+        }
+
+    monkeypatch.setattr("dcc_mcp_core.qt_dispatcher.start_qt_server", fake_start_qt_server)
+
+    info = _supervisor._start_qt_server(0, start_qt_server_fn=None)
+
+    assert info["port"] == 45555
+    assert captured["port"] == 0
+    assert captured["dispatch_handler"] is _dispatcher.dispatch_payload
