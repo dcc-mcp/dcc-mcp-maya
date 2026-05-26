@@ -11,7 +11,7 @@ cascading transport errors.
 ## Wire format — ``qtserver://`` (RFC #998 Addendum B item 2)
 
 The sidecar binary talks to Maya over the universal Qt-event-loop JSON-line
-dispatcher (:mod:`dcc_mcp_maya.sidecar._qt_dispatcher`). The dispatcher
+dispatcher provided by :mod:`dcc_mcp_core.qt_dispatcher`. The dispatcher
 binds an ephemeral TCP port via ``QTcpServer`` and runs cooperatively on
 Maya's own Qt event loop — structurally immune to the single-flight /
 modal-dialog / PyO3-tokio contention failure modes the legacy
@@ -21,18 +21,14 @@ The plug-in flow:
 
 1. Plug-in load → :func:`start_sidecar` eagerly starts the in-Maya Qt
    server on an ephemeral port.
-2. The Qt server's registry gains a ``dispatch`` method handler that
-   forwards to the existing
+2. The Qt server receives a ``dispatch`` method handler that forwards to
    :mod:`dcc_mcp_maya.sidecar._dispatcher.dispatch_payload` —
    same action-lookup contract as the in-process path.
 3. The supervisor spawns ``dcc-mcp-server sidecar --host-rpc
    qtserver://127.0.0.1:<port>`` and the sidecar binary connects back
    to Maya over the JSON-line wire.
 
-No ``commandPort`` is ever opened on the Maya side. The legacy
-``commandport://`` URI scheme is still supported by the Rust router
-(useful for one-shot bootstrap fallback on hosts that cannot ship a
-Qt binding) but the Maya plug-in does not use it.
+No ``commandPort`` is opened on the Maya side.
 
 ## Activation
 
@@ -56,15 +52,13 @@ spawns the supervisor automatically unless disabled.
   ``maya_pid``.
 * :class:`SidecarSpawnError` — raised on resolver / Qt-start /
   spawn failure.
-* :func:`dispatch` / :func:`dispatch_payload` — Maya-side wire-frame
-  handler. Used by the in-Maya Qt server (auto-registered as the
-  ``dispatch`` method) and re-exported here so external callers /
-  tests can exercise the same lookup directly.
+* :func:`dispatch_payload` — Maya-side wire-frame handler used by the
+  in-Maya Qt server's ``dispatch`` method.
 """
 
 from __future__ import annotations
 
-from dcc_mcp_maya.sidecar._dispatcher import dispatch, dispatch_payload
+from dcc_mcp_maya.sidecar._dispatcher import dispatch_payload
 from dcc_mcp_maya.sidecar._resolver import (
     ENV_SIDECAR_BINARY,
     SidecarBinaryError,
@@ -98,7 +92,6 @@ __all__ = [
     "SidecarHandle",
     "SidecarSpawnError",
     "build_qtserver_uri",
-    "dispatch",
     "dispatch_payload",
     "is_sidecar_mode_enabled",
     "resolve_sidecar_binary",
