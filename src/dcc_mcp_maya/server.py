@@ -615,8 +615,7 @@ class MayaMcpServer(DccServerBase):
             skill_name,
             changed,
         )
-        self.load_skill_object(skill)
-        return True
+        return bool(self.load_skill_object(skill))
 
     @staticmethod
     def _disable_tool_affinity_enforcement(skill: Any) -> bool:
@@ -638,11 +637,7 @@ class MayaMcpServer(DccServerBase):
         except ImportError as exc:
             logger.debug("[%s] recipes tools skipped (import): %s", self._dcc_name, exc)
             return
-        try:
-            skills = self._scan_skill_metadata_for_sidecars(context)
-            register_recipes_tools(self._server, skills=skills, dcc_name=self._dcc_name)
-        except Exception as exc:  # noqa: BLE001
-            logger.debug("[%s] register_recipes_tools failed: %s", self._dcc_name, exc)
+        self._register_skill_metadata_tools(self._server, context, register_recipes_tools, "recipes")
 
     def _register_skill_reference_docs_tools(self, context: _registration.RegistrationContext) -> None:
         """Register ``skill_refs__*`` for arbitrary reference Markdown/text beside a skill."""
@@ -651,11 +646,25 @@ class MayaMcpServer(DccServerBase):
         except ImportError as exc:
             logger.debug("[%s] skill_refs tools skipped (import): %s", self._dcc_name, exc)
             return
+        self._register_skill_metadata_tools(
+            self._server,
+            context,
+            register_skill_reference_docs_tools,
+            "skill_refs",
+        )
+
+    def _register_skill_metadata_tools(
+        self,
+        server: Any,
+        context: _registration.RegistrationContext,
+        register_fn,
+        kind: str,
+    ) -> None:
         try:
             skills = self._scan_skill_metadata_for_sidecars(context)
-            register_skill_reference_docs_tools(self._server, skills=skills, dcc_name=self._dcc_name)
+            register_fn(server, skills=skills, dcc_name=self._dcc_name)
         except Exception as exc:  # noqa: BLE001
-            logger.debug("[%s] register_skill_reference_docs_tools failed: %s", self._dcc_name, exc)
+            logger.debug("[%s] %s tools failed: %s", self._dcc_name, kind, exc)
 
     def _scan_skill_metadata_for_sidecars(self, context: _registration.RegistrationContext) -> List[Any]:
         """Return ``SkillMetadata`` list aligned with ``collect_skill_search_paths`` (read-only scan)."""

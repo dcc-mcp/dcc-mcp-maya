@@ -62,9 +62,10 @@ def _make_bare_server(builtin_dir=None):
 
     srv._config = McpHttpConfig()
     srv._server = MagicMock()
-    # Core 0.14.20 register_builtin_actions touches these attributes; normally
+    # DccServerBase.register_builtin_actions touches these attributes; normally
     # populated by DccServerBase.__init__, which we bypass here.
     srv._dcc_dispatcher = None
+    srv._standalone_main_thread = False
     srv._execution_bridge = None
     srv._inprocess_executor_registered = False
     return srv
@@ -124,15 +125,12 @@ class TestLoadSkillFailure:
         server = _make_bare_server()
 
         mock_mcp_server = MagicMock()
-        mock_mcp_server.discover.return_value = 1
         mock_mcp_server.list_skills.return_value = []
         server._server = mock_mcp_server
 
-        # minimal=False → _load_all_discovered_skills is called but list_skills
-        # returns empty, so load_skill is never called
         result = server.register_builtin_actions(minimal=False)
         assert result is server
-        mock_mcp_server.discover.assert_called_once()
+        assert server._registration_report.success is True
         mock_mcp_server.load_skill.assert_not_called()
 
     def test_register_builtin_actions_keeps_working_when_discover_succeeds(self):
@@ -140,12 +138,11 @@ class TestLoadSkillFailure:
         server = _make_bare_server()
 
         mock_mcp_server = MagicMock()
-        mock_mcp_server.discover.return_value = 2
         server._server = mock_mcp_server
 
         result = server.register_builtin_actions()
         assert result is server
-        mock_mcp_server.discover.assert_called_once()
+        assert server._registration_report.success is True
 
 
 # ── start_server with extra_skill_paths ───────────────────────────────────────
