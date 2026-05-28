@@ -150,5 +150,32 @@ def test_enable_hot_reload_on_server():
     assert hasattr(MayaMcpServer, "hot_reload_stats")
 
 
+def test_start_server_source_does_not_reference_legacy_hot_reload_module():
+    """Regression for dcc-mcp-core#1391.
+
+    The previous ``register_builtins=True`` branch in ``start_server`` imported
+    ``HotReloader`` from ``dcc_mcp_core.hot_reload`` — a module that no longer
+    exists (it was renamed to ``dcc_mcp_core.hotreload`` and the class to
+    ``DccSkillHotReloader``).  The broken import was swallowed by a bare
+    ``except Exception`` so ``enable_hot_reload=True`` failed silently in Maya.
+
+    Guard the source so future refactors cannot reintroduce the legacy name.
+    """
+    import inspect
+
+    from dcc_mcp_maya import server as server_module
+
+    source = inspect.getsource(server_module)
+    assert "dcc_mcp_core.hot_reload" not in source, (
+        "Legacy 'dcc_mcp_core.hot_reload' import path must not appear in "
+        "server.py; use dcc_mcp_core.hotreload.DccSkillHotReloader or call "
+        "server.enable_hot_reload() instead."
+    )
+    assert "HotReloader(" not in source, (
+        "Legacy 'HotReloader' class instantiation must not appear in "
+        "server.py; the class was renamed to 'DccSkillHotReloader' in core."
+    )
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
