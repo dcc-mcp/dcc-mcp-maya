@@ -1046,21 +1046,23 @@ def start_server(
                 minimal=minimal,
             )
 
-            # Hot-reload setup
+            # Hot-reload setup — reuse the core ``DccServerBase.enable_hot_reload``
+            # helper so this branch matches the factory-driven
+            # ``register_builtins=False`` branch below (core renamed the
+            # module to ``hotreload`` and the class to ``DccSkillHotReloader``
+            # — issue dcc-mcp-core#1391).
             effective_hot_reload = enable_hot_reload
             if not effective_hot_reload:
                 env_val = os.environ.get("DCC_MCP_MAYA_HOT_RELOAD", "").strip()
                 effective_hot_reload = env_val == "1"
             if effective_hot_reload:
                 try:
-                    # Optional core feature: keep this import local so normal startup
-                    # does not fail when a core build omits hot_reload support.
-                    from dcc_mcp_core.hot_reload import HotReloader  # noqa: PLC0415
-
-                    server._hot_reloader = HotReloader(server)  # type: ignore[attr-defined]
-                    server._hot_reloader.start()  # type: ignore[attr-defined]
-                except Exception as exc:
-                    logger.debug("Hot-reload setup failed: %s", exc)
+                    if server.enable_hot_reload():
+                        logger.info("[%s] Skill hot-reload enabled", server._dcc_name)
+                    else:
+                        logger.warning("[%s] Failed to enable skill hot-reload", server._dcc_name)
+                except Exception as exc:  # noqa: BLE001
+                    logger.warning("Error enabling hot-reload: %s", exc)
 
             handle = server.start()
             _server_instance = server
