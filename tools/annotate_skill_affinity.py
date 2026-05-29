@@ -68,6 +68,9 @@ SKILL_DEFAULTS: Dict[str, ExecAffinity] = {
     # Scripting: arbitrary user code — sync + main by default; caller chooses
     # async if they know the script is long-running.
     "maya-scripting": ("sync", "main", None),
+    # Procedural rig workflow: most ops are fast scene authoring; the
+    # keyframe / playblast / export verbs are long-running (see overrides).
+    "maya-procedural-rig": ("sync", "main", None),
     # Pure filesystem readers: worker-thread safe
     "maya-dev": ("sync", "main", None),
     "maya-pipeline": ("sync", "main", None),
@@ -205,6 +208,10 @@ TOOL_OVERRIDES: Dict[Tuple[str, str], ExecAffinity] = {
     ("maya-scripting", "introspect_search"): ("sync", "any", None),
     # introspect_eval touches DAG via expression, must stay main-thread
     ("maya-scripting", "introspect_eval"): ("sync", "main", None),
+    # maya-procedural-rig long-running verbs (frame loops, render, file I/O)
+    ("maya-procedural-rig", "keyframe_orbit_animation"): ("async", "main", 120),
+    ("maya-procedural-rig", "create_playblast"): ("async", "main", 600),
+    ("maya-procedural-rig", "export_scene_artifact"): ("async", "main", 300),
 }
 
 
