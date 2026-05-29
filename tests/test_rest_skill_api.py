@@ -494,9 +494,21 @@ def test_rest_search_describe_call_round_trip(rest_base):
     described = _rest_post_json(rest_base, "/v1/describe", {"tool_slug": slug, "include_schema": True})
     assert described.get("entry") or described.get("tool") or described.get("schema") is not None
 
-    called = _rest_post_json(
-        rest_base, "/v1/call", {"tool_slug": "maya.core.diagnostics__process_status", "params": {}}
-    )
+    # Discover a no-arg, read-only diagnostics tool slug dynamically — the
+    # fully-qualified slug prefix changed across core versions, so hard-coding
+    # ``maya.core.diagnostics__process_status`` 404s on newer core builds.
+    diag = _rest_post_json(rest_base, "/v1/search", {"query": "process status diagnostics", "limit": 10})
+    diag_hits = diag.get("hits") or diag.get("tools") or []
+    call_slug = None
+    for hit in diag_hits:
+        candidate = hit.get("slug") or hit.get("tool_slug") or hit.get("name") or ""
+        if "process_status" in candidate or "diagnostics" in candidate:
+            call_slug = candidate
+            break
+    # Fall back to the scene slug we already described if no diagnostics tool
+    # surfaced; either way /v1/call must round-trip to a structured response.
+    call_slug = call_slug or slug
+    called = _rest_post_json(rest_base, "/v1/call", {"tool_slug": call_slug, "arguments": {}})
     assert called
 
 
