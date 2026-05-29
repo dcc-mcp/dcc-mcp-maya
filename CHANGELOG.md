@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.3.10](https://github.com/loonghao/dcc-mcp-maya/compare/v0.3.9...v0.3.10) (2026-05-29)
+
+
+### Features
+
+* **search:** opt-in VectorSkillIndex morphology-aware skill recall ([#313](https://github.com/loonghao/dcc-mcp-maya/issues/313)) ([#316](https://github.com/loonghao/dcc-mcp-maya/issues/316)) ([7558817](https://github.com/loonghao/dcc-mcp-maya/commit/7558817f21d41e53c4e209c780202a8e4178da3c))
+* **skills:** add typed maya-procedural-rig workflow skill ([#306](https://github.com/loonghao/dcc-mcp-maya/issues/306)) ([#318](https://github.com/loonghao/dcc-mcp-maya/issues/318)) ([7db97b7](https://github.com/loonghao/dcc-mcp-maya/commit/7db97b7debd2d0b68656464942bfb8421e2cf108))
+* **ui:** adopt shared core qt-ui-inspector skill for Maya ([#307](https://github.com/loonghao/dcc-mcp-maya/issues/307)) ([92766e8](https://github.com/loonghao/dcc-mcp-maya/commit/92766e8ab324047d3128e27339498c4f905b8b0b))
+
+
+### Bug Fixes
+
+* **lint:** move _SCRIPT_PATH_DEPRECATION constant below imports (E402) ([52b9c82](https://github.com/loonghao/dcc-mcp-maya/commit/52b9c82fce57378c7e126d954b9b91aed04b0b15))
+* **scripting:** emit DeprecationWarning for script_path alias ([#311](https://github.com/loonghao/dcc-mcp-maya/issues/311)) ([223bc57](https://github.com/loonghao/dcc-mcp-maya/commit/223bc571723f75c012fba6f83ab4d3dcfe1a56b8))
+* **server:** use core hotreload API in start_server register_builtins=True branch ([8784a59](https://github.com/loonghao/dcc-mcp-maya/commit/8784a59020a4aa95a4467cc543ad894095a9c2dc))
+
+
+### Documentation
+
+* **env:** present EXCLUDE_STUBS as generic DCC_MCP_&lt;DCC&gt;_* instance ([#310](https://github.com/loonghao/dcc-mcp-maya/issues/310)) ([#315](https://github.com/loonghao/dcc-mcp-maya/issues/315)) ([9536743](https://github.com/loonghao/dcc-mcp-maya/commit/9536743b62b18f38bbe1bd0dedae5a11382cd4b9))
+
 ## [0.3.9](https://github.com/loonghao/dcc-mcp-maya/compare/v0.3.8...v0.3.9) (2026-05-26)
 
 
