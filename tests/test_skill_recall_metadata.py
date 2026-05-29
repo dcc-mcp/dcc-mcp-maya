@@ -87,11 +87,7 @@ def test_every_skill_declares_layer_and_stage() -> None:
 
 
 def test_arbitrary_execution_tools_live_in_thin_harness_bootstrap() -> None:
-    owners = {
-        skill
-        for skill, tool in _bundled_tools()
-        if tool.get("name") in {"execute_python", "execute_mel"}
-    }
+    owners = {skill for skill, tool in _bundled_tools() if tool.get("name") in {"execute_python", "execute_mel"}}
     assert owners, "execute_python / execute_mel must exist as the escape hatch"
     for owner in owners:
         meta = _frontmatter(SKILLS_DIR / owner)
