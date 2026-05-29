@@ -131,7 +131,9 @@ class MayaSemanticIndex:
         from dcc_mcp_core import SkillDocument  # noqa: PLC0415
 
         signature = frozenset(
-            (n, getattr(s, "version", "")) for s in summaries if (n := _summary_name(s)) is not None
+            (name, getattr(s, "version", ""))
+            for s, name in ((s, _summary_name(s)) for s in summaries)
+            if name is not None
         )
         if signature == self._signature:
             return
@@ -189,7 +191,11 @@ class MayaSemanticIndex:
             logger.debug("[maya] semantic rebuild failed: %s", exc)
             return result
 
-        by_name = {n: s for s in all_summaries if (n := _summary_name(s)) is not None}
+        by_name = {
+            name: s
+            for s, name in ((s, _summary_name(s)) for s in all_summaries)
+            if name is not None
+        }
         present = {_summary_name(s) for s in result}
         for skill_id in self.recall(query):
             if skill_id in present or skill_id not in by_name:
