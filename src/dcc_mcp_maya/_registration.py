@@ -90,6 +90,15 @@ class StrictSkillScanPhase(RegistrationPhase):
         )
 
 
+class QtUiInspectorPhase(RegistrationPhase):
+    """Register the shared core ``qt_ui_inspector__*`` tools (issue #307)."""
+
+    name = "qt_ui_inspector"
+
+    def run(self, context: RegistrationContext) -> None:
+        context.server._register_qt_ui_inspector()  # noqa: SLF001
+
+
 class CapabilityManifestPhase(RegistrationPhase):
     name = "capability_manifest"
 
@@ -117,6 +126,7 @@ def default_registration_phases() -> Sequence[RegistrationPhase]:
         RecipesToolsPhase(),
         SkillReferenceDocsPhase(),
         StrictSkillScanPhase(),
+        QtUiInspectorPhase(),
         CapabilityManifestPhase(),
         ProjectToolsPhase(),
         ResourcesPhase(),
