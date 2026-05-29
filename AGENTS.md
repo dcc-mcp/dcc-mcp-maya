@@ -391,6 +391,32 @@ All other skills appear as `__skill__<name>` stubs (default behavior). Call `loa
 | `DCC_MCP_MAYA_DISABLE_EXECUTE_PYTHON` | `0` | `1` / `true` / `yes` / `on` — refuse ``execute_python`` (skills-first policy). |
 | `DCC_MCP_MAYA_DISABLE_EXECUTE_MEL` | `0` | Same truthy tokens — refuse ``execute_mel`` only. |
 | `DCC_MCP_MAYA_DISABLE_ARBITRARY_SCRIPT` | `0` | Same truthy tokens — refuse **both** ``execute_python`` and ``execute_mel``. |
+| `DCC_MCP_MAYA_QT_UI_INSPECTOR` | `1` | `0` = skip registering the shared core ``qt_ui_inspector__*`` tools (issue #307). Read-only widget discovery (``list_windows`` / ``find_widgets`` / ``describe_widget`` / ``snapshot_tree`` / ``wait_for_widget``) routed onto Maya's main thread; locate buttons / dialogs / custom controls by text / objectName / class / accessibleName instead of ad-hoc PySide scripts. |
+
+---
+
+## Qt UI Inspection (issue #307)
+
+Maya adopts the DCC-agnostic **`qt-ui-inspector`** tools from `dcc-mcp-core`
+(`register_qt_ui_inspector`). Use these read-only tools to find Maya windows,
+shelves, dialogs, custom buttons, menus, tree/table views, and line edits by
+`objectName` / class / `accessibleName` **before** falling back to
+`execute_python` + ad-hoc PySide enumeration:
+
+| Tool | Purpose |
+|------|---------|
+| `qt_ui_inspector__list_windows` | Enumerate top-level Qt windows. |
+| `qt_ui_inspector__find_widgets` | Search by object name (exact/substring/regex) and/or class. |
+| `qt_ui_inspector__describe_widget` | Structured state for one widget (class, geometry, flags, accessible name, bounded properties). |
+| `qt_ui_inspector__snapshot_tree` | Walk the widget tree with depth/node budgets. |
+| `qt_ui_inspector__wait_for_widget` | Poll for a widget to appear/enable within a timeout. |
+
+All five run on Maya's main thread and return a structured
+`qt-binding-unavailable` / `qt-no-application` envelope when Qt or a running
+`QApplication` is missing, so an unavailable inspector reports a clear
+capability message instead of silently encouraging ad-hoc scripting. Mutation
+tools (`set_text` / `select_option` with explicit locator/value separation and
+post-action verification) are a follow-up in the shared core skill.
 
 ---
 
