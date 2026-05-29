@@ -40,6 +40,7 @@ from dcc_mcp_maya import (
     _env,
     _executor,
     _project_tools,
+    _qt_inspector,
     _readiness,
     _registration,
     _resources,
@@ -612,6 +613,19 @@ class MayaMcpServer(DccServerBase):
     ) -> None:
         if _env.resolve_strict_skill_scan(strict_scan):
             self._strict_skill_scan(extra_skill_paths, include_bundled)
+
+    def _register_qt_ui_inspector(self) -> None:
+        """Adopt the shared core ``qt_ui_inspector__*`` tools (issue #307).
+
+        Registered on the inner MCP server with Maya main-thread routing so
+        widget reads happen on the UI thread. Read-only; self-reports a clear
+        ``qt-binding-unavailable`` / ``qt-no-application`` envelope when Qt is
+        not present rather than encouraging ad-hoc PySide scripts.
+        """
+        try:
+            _qt_inspector.register_maya_qt_ui_inspector(self._server, dcc_name=self._dcc_name)
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("[%s] qt-ui-inspector registration failed: %s", "maya", exc)
 
     def _register_capability_manifest_tool(self) -> None:
         try:
