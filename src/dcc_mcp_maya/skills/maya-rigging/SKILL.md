@@ -27,7 +27,8 @@ metadata:
     search-hint: |-
       build character rig, skeleton setup, IK chain, rig control, constraint,
       skin bind, skin weight copy, blendshape, control curve, mgear,
-      advanced skeleton, deformer, joint hierarchy, weight paint
+      advanced skeleton, deformer, joint hierarchy, weight paint,
+      animated rig, rig for animation, make a rig, set up joints to animate
     tools: tools.yaml
     groups: groups.yaml
 ---

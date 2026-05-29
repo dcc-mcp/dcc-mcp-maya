@@ -24,7 +24,8 @@ metadata:
     search-hint: |-
       create sphere cube cylinder plane, set transform, get transform, rename,
       delete object, primitive geometry, basic shape, polySphere polyCube,
-      batch primitives, random transforms, many cubes procedural
+      batch primitives, random transforms, many cubes procedural,
+      populate a scene with shapes, build a scene, create geometry to animate
     tools: tools.yaml
     groups: groups.yaml
 ---
