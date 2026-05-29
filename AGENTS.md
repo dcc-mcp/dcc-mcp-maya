@@ -82,7 +82,7 @@ def create_sphere(radius: float = 1.0) -> dict:
   2. Alternatively: `search_skills` / `search_tools` → **`load_skill`** → optional `activate_group("extended")` → invoke the **typed** tool (validated `inputSchema`, e.g. `maya_mesh_ops__bevel_edge`). Treat `maya_scripting__execute_python` / `execute_mel` as **last resort** when no skill covers the task (bulk in-Maya loops, OpenMaya gaps, one-off experiments). Studios can hard-block arbitrary execution with `DCC_MCP_MAYA_DISABLE_EXECUTE_PYTHON`, `DCC_MCP_MAYA_DISABLE_EXECUTE_MEL`, or `DCC_MCP_MAYA_DISABLE_ARBITRARY_SCRIPT` (see `README.md` / `llms.txt`).
   3. When using the **gateway**, read **`resources/read` `uri=gateway://docs/agent-workflows`** for MCP + resources + efficiency guidance; for Maya-heavy examples see `examples/workflows/maya_bulk_rbd_fbx.md`.
   4. **cmds documentation:** `resources/read` on `maya-cmds://help/<command>` or `maya-cmds://flags/<command>` (use the exact URI from `resources/list`).
-- **Token hygiene:** Set `DCC_MCP_MAYA_EXCLUDE_STUBS_FROM_TOOLS_LIST=1` when your MCP host repeatedly syncs a large `tools/list`; discovery remains available via `dcc_capability_manifest` and gateway `/v1/search`.
+- **Token hygiene:** Set `DCC_MCP_MAYA_EXCLUDE_STUBS_FROM_TOOLS_LIST=1` (Maya's instance of the generic core `DCC_MCP_<DCC>_EXCLUDE_STUBS_FROM_TOOLS_LIST`, with `DCC_MCP_EXCLUDE_STUBS_FROM_TOOLS_LIST` as the all-DCC global fallback) when your MCP host repeatedly syncs a large `tools/list`; discovery remains available via `dcc_capability_manifest` and gateway `/v1/search`.
 - **Always check cancellation in long-running loops:**
   ```python
   from dcc_mcp_maya import check_maya_cancelled
@@ -364,7 +364,7 @@ lookup failure).
 At startup only 2 skills are fully loaded: `maya-scripting` and `maya-scene` (core groups only).
 All other skills appear as `__skill__<name>` stubs (default behavior). Call `load_skill(name)` to activate on demand.
 
-**Note:** Set ``DCC_MCP_MAYA_EXCLUDE_STUBS_FROM_TOOLS_LIST=1`` to exclude ``__skill__*`` / ``__group__*`` stubs from ``tools/list`` (issue #174). Discovery is still possible via ``build_capability_manifest()`` and ``/v1/search``.
+**Note:** Set ``DCC_MCP_MAYA_EXCLUDE_STUBS_FROM_TOOLS_LIST=1`` — Maya's instance of the generic core ``DCC_MCP_<DCC>_EXCLUDE_STUBS_FROM_TOOLS_LIST`` (global fallback: ``DCC_MCP_EXCLUDE_STUBS_FROM_TOOLS_LIST``) — to exclude ``__skill__*`` / ``__group__*`` stubs from ``tools/list`` (issue #174). Discovery is still possible via ``build_capability_manifest()`` and ``/v1/search``.
 
 ### Environment Variables
 | Variable | Default | Purpose |
@@ -387,7 +387,7 @@ All other skills appear as `__skill__<name>` stubs (default behavior). Call `loa
 | `DCC_MCP_MAYA_AUTO_DISMISS_CRASH_DIALOG` | `0` | `1` = auto-dismiss detected Maya Qt recovery dialogs after main-thread tool calls and surface `maya_recovered` in results / `scene://current`. |
 | `DCC_MCP_GATEWAY_PORT` | `9765` | Multi-instance gateway election port. `0` = disable. |
 | `DCC_MCP_REGISTRY_DIR` | OS temp dir | Shared service-discovery registry directory. |
-| `DCC_MCP_MAYA_EXCLUDE_STUBS_FROM_TOOLS_LIST` | `0` | `1` = exclude ``__skill__*`` / ``__group__*`` stubs from ``tools/list`` (issue #174). Discovery still possible via capability manifest / ``/v1/search``. |
+| `DCC_MCP_MAYA_EXCLUDE_STUBS_FROM_TOOLS_LIST` | `0` | Maya's instance of the generic core `DCC_MCP_<DCC>_EXCLUDE_STUBS_FROM_TOOLS_LIST`; `1` = exclude ``__skill__*`` / ``__group__*`` stubs from ``tools/list`` (issue #174). `DCC_MCP_EXCLUDE_STUBS_FROM_TOOLS_LIST` is the all-DCC global fallback. Resolved entirely by `dcc-mcp-core`; discovery still possible via capability manifest / ``/v1/search``. |
 | `DCC_MCP_MAYA_DISABLE_EXECUTE_PYTHON` | `0` | `1` / `true` / `yes` / `on` — refuse ``execute_python`` (skills-first policy). |
 | `DCC_MCP_MAYA_DISABLE_EXECUTE_MEL` | `0` | Same truthy tokens — refuse ``execute_mel`` only. |
 | `DCC_MCP_MAYA_DISABLE_ARBITRARY_SCRIPT` | `0` | Same truthy tokens — refuse **both** ``execute_python`` and ``execute_mel``. |

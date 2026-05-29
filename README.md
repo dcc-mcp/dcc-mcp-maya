@@ -220,7 +220,7 @@ Useful plugin defaults:
 | `DCC_MCP_SKILL_PATHS` | none | Global fallback skill search roots for all DCC adapters. |
 | `DCC_MCP_MINIMAL` | `1` | `0` loads the full tool surface at startup. |
 | `DCC_MCP_DEFAULT_TOOLS` | none | Comma-separated skill names to load at startup. |
-| `DCC_MCP_MAYA_EXCLUDE_STUBS_FROM_TOOLS_LIST` | `0` | Hide `__skill__*` / `__group__*` stubs from large `tools/list` syncs. |
+| `DCC_MCP_MAYA_EXCLUDE_STUBS_FROM_TOOLS_LIST` | `0` | Maya's instance of the generic core `DCC_MCP_<DCC>_EXCLUDE_STUBS_FROM_TOOLS_LIST`. Hide `__skill__*` / `__group__*` stubs from large `tools/list` syncs. Global fallback: `DCC_MCP_EXCLUDE_STUBS_FROM_TOOLS_LIST`. |
 | `DCC_MCP_MAYA_SIDECAR` | `1` | `0` disables the default plugin sidecar process. |
 | `DCC_MCP_SERVER_BIN` | auto | Override the `dcc-mcp-server` binary path. |
 | `DCC_MCP_GATEWAY_PORT` | `9765` plugin | Local standalone gateway port; `0` disables gateway mode. |
