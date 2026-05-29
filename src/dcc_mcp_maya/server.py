@@ -44,6 +44,7 @@ from dcc_mcp_maya import (
     _readiness,
     _registration,
     _resources,
+    _semantic_index,
     _skill_loader,
     _transport,
     _version_probe,
@@ -327,6 +328,20 @@ class MayaMcpServer(DccServerBase):
         # API memory rule) so skill scripts and plugin code never
         # touch the raw ``ResourceHandle`` directly.
         self._resources: Optional[_resources.MayaResourceBinder] = None
+
+        # ── Morphology-aware semantic recall (issue #313) ───────────────
+        # Opt-in fused lexical+vector index that augments base BM25
+        # ``search_skills`` results with morphology recalls (e.g. the
+        # query "rendering" recovering a "render" skill). ``None`` when
+        # ``DCC_MCP_MAYA_SEMANTIC_INDEX`` is unset or core lacks the
+        # VectorSkillIndex API (dcc-mcp-core>=0.17.38).
+        try:
+            self._semantic: Optional[_semantic_index.MayaSemanticIndex] = _semantic_index.build_semantic_index()
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("[%s] semantic index init failed: %s", "maya", exc)
+            self._semantic = None
+        if self._semantic is not None:
+            logger.info("[%s] semantic skill recall enabled (embedder=%s)", "maya", self._semantic.embedder_kind)
 
     # ── Lifecycle additions ────────────────────────────────────────────
 
@@ -741,10 +756,20 @@ class MayaMcpServer(DccServerBase):
         if dcc is None:
             dcc = self._dcc_name
         try:
-            return list(super().search_skills(query=query, tags=tags, dcc=dcc))
+            base = list(super().search_skills(query=query, tags=tags, dcc=dcc))
         except Exception as exc:  # noqa: BLE001
             logger.debug("[%s] search_skills failed: %s", self._dcc_name, exc)
             return []
+
+        # Issue #313: when the opt-in semantic index is enabled, augment the
+        # canonical BM25 results with morphology recalls. ``base`` ordering is
+        # preserved (promote, never demote); vector-only hits are appended.
+        if self._semantic is not None and query:
+            try:
+                return self._semantic.augment(base, query, self.list_skills())
+            except Exception as exc:  # noqa: BLE001
+                logger.debug("[%s] semantic augment failed: %s", self._dcc_name, exc)
+        return base
 
     def get_skill_categories(self) -> list:
         try:
