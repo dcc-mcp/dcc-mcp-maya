@@ -453,6 +453,7 @@ tools:
 | `DCC_MCP_MAYA_JOB_STORAGE` | `<data_dir>/jobs.db` | per-process | SQLite job persistence path. `""`=disable. |
 | `DCC_MCP_MAYA_JOB_RECOVERY` | `drop` | per-process | `requeue`=resume idempotent interrupted jobs on startup. |
 | `DCC_MCP_MAYA_HOT_RELOAD` | `0` | per-process | `1`=watch bundled skills for edit-on-disk reload. |
+| `DCC_MCP_MAYA_EXCLUDE_STUBS_FROM_TOOLS_LIST` | `0` | per-process | Maya's instance of the generic core `DCC_MCP_<DCC>_EXCLUDE_STUBS_FROM_TOOLS_LIST`; `1`=exclude `__skill__*` / `__group__*` stubs from `tools/list` (issue #174). Resolved entirely by `dcc-mcp-core`. Global fallback: `DCC_MCP_EXCLUDE_STUBS_FROM_TOOLS_LIST`. Discovery still via capability manifest / `/v1/search`. |
 | `DCC_MCP_MAYA_DISABLE_EXECUTE_PYTHON` | `0` | per-process | `1`/`true`/`yes`/`on` — refuse `execute_python` (skills-first enforcement). |
 | `DCC_MCP_MAYA_DISABLE_EXECUTE_MEL` | `0` | per-process | Same truthy tokens — refuse `execute_mel` only. |
 | `DCC_MCP_MAYA_DISABLE_ARBITRARY_SCRIPT` | `0` | per-process | Same truthy tokens — refuse both `execute_python` and `execute_mel`. |
