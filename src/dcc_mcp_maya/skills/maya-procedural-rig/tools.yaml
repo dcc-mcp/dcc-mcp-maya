@@ -1,0 +1,263 @@
+tools:
+- name: create_sphere_layout
+  description: Create a procedural distribution of polygon spheres (sphere / grid / line).
+  execution: sync
+  affinity: main
+  group: procedural
+  input_schema:
+    type: object
+    properties:
+      count:
+        type: integer
+        minimum: 1
+        maximum: 500
+        default: 8
+        description: Number of spheres to create.
+      radius:
+        type: number
+        minimum: 0.0001
+        default: 1.0
+        description: Per-sphere radius.
+      layout:
+        type: string
+        enum:
+        - sphere
+        - grid
+        - line
+        default: sphere
+        description: Distribution shape.
+      spacing:
+        type: number
+        minimum: 0.0
+        default: 4.0
+        description: Distance between spheres for grid / line layouts.
+      distribution_radius:
+        type: number
+        minimum: 0.0001
+        default: 10.0
+        description: Shell radius for the sphere layout.
+      name_prefix:
+        type: string
+        default: procSphere
+- name: assign_palette_materials
+  description: Create and assign one Lambert material per object from a generated palette.
+  execution: sync
+  affinity: main
+  group: procedural
+  input_schema:
+    type: object
+    required:
+    - objects
+    properties:
+      objects:
+        type: array
+        items:
+          type: string
+        minItems: 1
+        description: Transform names to shade (typically from create_sphere_layout).
+      palette:
+        type: string
+        enum:
+        - rainbow
+        - random
+        - mono
+        default: rainbow
+      seed:
+        type: integer
+        default: 0
+        description: Seed for the random palette (deterministic).
+      base_hue:
+        type: number
+        minimum: 0.0
+        maximum: 1.0
+        default: 0.58
+        description: Anchor hue (0-1) for the mono palette.
+      material_prefix:
+        type: string
+        default: procMat
+- name: create_rig_joints
+  description: Create a root joint plus one child joint snapped to each object's position.
+  execution: sync
+  affinity: main
+  group: procedural
+  input_schema:
+    type: object
+    required:
+    - objects
+    properties:
+      objects:
+        type: array
+        items:
+          type: string
+        minItems: 1
+        description: Transform names whose positions seed the child joints.
+      center_position:
+        type: array
+        items:
+          type: number
+        minItems: 3
+        maxItems: 3
+        description: World position [x, y, z] for the root joint. Defaults to origin.
+      joint_prefix:
+        type: string
+        default: procJnt
+      root_name:
+        type: string
+        default: procRoot
+- name: bind_objects_to_joints
+  description: Bind objects[i] to joints[i] using a constraint or re-parenting.
+  execution: sync
+  affinity: main
+  group: procedural
+  input_schema:
+    type: object
+    required:
+    - objects
+    - joints
+    properties:
+      objects:
+        type: array
+        items:
+          type: string
+        minItems: 1
+      joints:
+        type: array
+        items:
+          type: string
+        minItems: 1
+      bind_mode:
+        type: string
+        enum:
+        - parentConstraint
+        - parent
+        - point
+        default: parentConstraint
+      maintain_offset:
+        type: boolean
+        default: true
+- name: keyframe_orbit_animation
+  description: Keyframe a procedural orbit / bounce / spin animation across a frame range.
+  execution: async
+  affinity: main
+  timeout_hint_secs: 120
+  group: procedural
+  input_schema:
+    type: object
+    required:
+    - nodes
+    properties:
+      nodes:
+        type: array
+        items:
+          type: string
+        minItems: 1
+        description: Transform / joint names to animate.
+      start_frame:
+        type: integer
+        default: 1
+      end_frame:
+        type: integer
+        default: 120
+      keys:
+        type: integer
+        minimum: 2
+        default: 5
+        description: Number of keyframes per node across the range.
+      amplitude:
+        type: number
+        default: 5.0
+        description: Motion magnitude (units, or rotations for spin).
+      axis:
+        type: string
+        enum:
+        - x
+        - y
+        - z
+        default: y
+      mode:
+        type: string
+        enum:
+        - orbit
+        - bounce
+        - spin
+        default: orbit
+      seed:
+        type: integer
+        default: 0
+- name: create_playblast
+  description: Capture a playblast preview of the current animation to disk.
+  execution: async
+  affinity: main
+  timeout_hint_secs: 600
+  group: procedural
+  annotations:
+    idempotent_hint: true
+  input_schema:
+    type: object
+    required:
+    - output_path
+    properties:
+      output_path:
+        type: string
+        description: Target file path (extension implied by fmt).
+      start_frame:
+        type: integer
+        description: First frame; defaults to the timeline minimum.
+      end_frame:
+        type: integer
+        description: Last frame; defaults to the timeline maximum.
+      width:
+        type: integer
+        minimum: 1
+        default: 1280
+      height:
+        type: integer
+        minimum: 1
+        default: 720
+      fmt:
+        type: string
+        enum:
+        - image
+        - qt
+        - avi
+        default: image
+      show_ornaments:
+        type: boolean
+        default: false
+- name: export_scene_artifact
+  description: >-
+    Export the whole scene or just a selection to an interchange file
+    (maya_ascii .ma, maya_binary .mb, obj, or fbx). Pass an absolute output_path;
+    parent folders are created automatically and the correct extension is appended.
+    FBX requires the bundled fbxmaya plugin (loaded on demand); OBJ requires
+    the objExport plugin. Common failures: missing/unloadable plugin, an empty
+    selection when selection_only is true, or names in objects that do not exist.
+  execution: async
+  affinity: main
+  timeout_hint_secs: 300
+  group: procedural
+  annotations:
+    idempotent_hint: true
+  input_schema:
+    type: object
+    required:
+    - output_path
+    properties:
+      output_path:
+        type: string
+      fmt:
+        type: string
+        enum:
+        - maya_ascii
+        - maya_binary
+        - obj
+        - fbx
+        default: maya_ascii
+      selection_only:
+        type: boolean
+        default: false
+      objects:
+        type: array
+        items:
+          type: string
+        description: Explicit nodes to select before a selection-only export.
