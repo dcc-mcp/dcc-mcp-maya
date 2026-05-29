@@ -65,7 +65,10 @@ import json
 import os
 import threading
 import traceback
+import warnings
 from typing import Any, Dict, Optional, Tuple
+
+_SCRIPT_PATH_DEPRECATION = "`script_path` is deprecated, use `file_path` instead."
 
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
@@ -385,13 +388,22 @@ def _should_marshal_to_maya_main_thread() -> bool:
 
 
 def _resolve_script_file_path(params: Dict[str, Any]) -> Optional[str]:
-    for key in ("file_path", "script_path"):
-        raw = params.get(key)
-        if raw is None:
-            continue
-        s = str(raw).strip()
-        if s:
-            return s
+    file_path = params.get("file_path")
+    if file_path is not None:
+        cleaned = str(file_path).strip()
+        if cleaned:
+            return cleaned
+    # ``script_path`` is the deprecated alias kept for one release while
+    # callers migrate to ``file_path`` (issue #311). It only resolves when
+    # ``file_path`` is empty, and emits a ``DeprecationWarning`` so external
+    # MCP clients still sending it get a clear migration signal before the
+    # alias is dropped here and in the dcc-mcp-core wire schema.
+    script_path = params.get("script_path")
+    if script_path is not None:
+        cleaned = str(script_path).strip()
+        if cleaned:
+            warnings.warn(_SCRIPT_PATH_DEPRECATION, DeprecationWarning, stacklevel=2)
+            return cleaned
     return None
 
 
