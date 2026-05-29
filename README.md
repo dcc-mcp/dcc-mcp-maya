@@ -222,7 +222,10 @@ Useful plugin defaults:
 | `DCC_MCP_DEFAULT_TOOLS` | none | Comma-separated skill names to load at startup. |
 | `DCC_MCP_MAYA_EXCLUDE_STUBS_FROM_TOOLS_LIST` | `0` | Maya's instance of the generic core `DCC_MCP_<DCC>_EXCLUDE_STUBS_FROM_TOOLS_LIST`. Hide `__skill__*` / `__group__*` stubs from large `tools/list` syncs. Global fallback: `DCC_MCP_EXCLUDE_STUBS_FROM_TOOLS_LIST`. |
 | `DCC_MCP_MAYA_SIDECAR` | `1` | `0` disables the default plugin sidecar process. |
+<<<<<<< HEAD
 | `DCC_MCP_MAYA_QT_UI_INSPECTOR` | `1` | `0` skips the shared core `qt_ui_inspector__*` read-only widget-discovery tools (find buttons/dialogs/custom controls by text/objectName/class), routed onto Maya's main thread. |
+| `DCC_MCP_MAYA_SEMANTIC_INDEX` | `0` | `1` enables morphology-aware skill recall by fusing a zero-dep `VectorSkillIndex` with the BM25 path so inflected queries (`rendering` → `maya-render`) recall the right skill. Requires `dcc-mcp-core>=0.17.38`. |
+| `DCC_MCP_MAYA_SEMANTIC_EMBEDDER` | `hashed` | `onnx` uses the dense `OnnxEmbedder` for semantic recall (install `pip install 'dcc-mcp-core[semantic]'`; falls back to `hashed`). |
 | `DCC_MCP_SERVER_BIN` | auto | Override the `dcc-mcp-server` binary path. |
 | `DCC_MCP_GATEWAY_PORT` | `9765` plugin | Local standalone gateway port; `0` disables gateway mode. |
 | `DCC_MCP_GATEWAY_NAME` | `dcc-mcp-gateway@<hostname>` sidecar | Human-readable gateway label shown in admin and CLI diagnostics. |
