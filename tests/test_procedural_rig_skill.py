@@ -37,9 +37,7 @@ def _load_yaml(name: str) -> Dict:
 
 def _load_script_module(stem: str):
     """Import a workflow script by file path without installing the package."""
-    spec = importlib.util.spec_from_file_location(
-        "procedural_rig_" + stem, SCRIPTS_DIR / (stem + ".py")
-    )
+    spec = importlib.util.spec_from_file_location("procedural_rig_" + stem, SCRIPTS_DIR / (stem + ".py"))
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
