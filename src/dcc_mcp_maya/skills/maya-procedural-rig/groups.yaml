@@ -1,0 +1,12 @@
+groups:
+- name: procedural
+  description: Staged procedural rig / animation / playblast / export workflow tools
+  default_active: true
+  tools:
+  - assign_palette_materials
+  - bind_objects_to_joints
+  - create_playblast
+  - create_rig_joints
+  - create_sphere_layout
+  - export_scene_artifact
+  - keyframe_orbit_animation
