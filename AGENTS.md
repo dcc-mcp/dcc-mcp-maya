@@ -392,6 +392,8 @@ All other skills appear as `__skill__<name>` stubs (default behavior). Call `loa
 | `DCC_MCP_MAYA_DISABLE_EXECUTE_MEL` | `0` | Same truthy tokens — refuse ``execute_mel`` only. |
 | `DCC_MCP_MAYA_DISABLE_ARBITRARY_SCRIPT` | `0` | Same truthy tokens — refuse **both** ``execute_python`` and ``execute_mel``. |
 | `DCC_MCP_MAYA_QT_UI_INSPECTOR` | `1` | `0` = skip registering the shared core ``qt_ui_inspector__*`` tools (issue #307). Read-only widget discovery (``list_windows`` / ``find_widgets`` / ``describe_widget`` / ``snapshot_tree`` / ``wait_for_widget``) routed onto Maya's main thread; locate buttons / dialogs / custom controls by text / objectName / class / accessibleName instead of ad-hoc PySide scripts. |
+| `DCC_MCP_MAYA_SEMANTIC_INDEX` | `0` | `1` = fuse a Python `VectorSkillIndex` (morphology-aware, zero-dep `HashedEmbedder`) with the Rust BM25 path so inflected queries (`rendering` → `maya-render`) still recall the right skill (issue #313). Base results are never demoted — vector recalls are appended. Requires `dcc-mcp-core>=0.17.38`; no-op on older cores. |
+| `DCC_MCP_MAYA_SEMANTIC_EMBEDDER` | `hashed` | `onnx` = use the dense `OnnxEmbedder` instead of `HashedEmbedder` for `DCC_MCP_MAYA_SEMANTIC_INDEX`. Requires the optional extra: `pip install 'dcc-mcp-core[semantic]'` (falls back to `hashed` when unavailable). |
 
 ---
 

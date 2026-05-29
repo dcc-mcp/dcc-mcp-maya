@@ -398,6 +398,8 @@ class TestServerFindSkills:
         lifecycle = MagicMock()
         lifecycle.dispatch.side_effect = lambda event, payload=None, session_id=None: dict(payload or {})
         server._lifecycle_events = lifecycle
+        # Opt-in morphology semantic index (issue #313) is disabled by default.
+        server._semantic = None
         return server
 
     def test_method_exists(self):
