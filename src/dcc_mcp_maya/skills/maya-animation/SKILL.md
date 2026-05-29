@@ -22,7 +22,8 @@ metadata:
     - bake
     search-hint: |-
       animate motion, keyframe, set key, timeline range, animation curve,
-      curve tangent, bake constraint, bake simulation, anim file import export
+      curve tangent, bake constraint, bake simulation, anim file import export,
+      animate a rig, make an animated rig, animate joints, motion for playblast
     tools: tools.yaml
     groups: groups.yaml
 ---
