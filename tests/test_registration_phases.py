@@ -28,6 +28,7 @@ def test_default_registration_phases_are_ordered() -> None:
         "recipes_tools",
         "skill_reference_docs",
         "strict_skill_scan",
+        "qt_ui_inspector",
         "capability_manifest",
         "project_tools",
         "resources",
