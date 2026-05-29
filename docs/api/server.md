@@ -203,7 +203,7 @@ Returned by `server.start()` and `start_server()`.
 | `DCC_MCP_MAYA_ENABLE_GATEWAY_FAILOVER` | `1` | Enable automatic gateway failover election |
 | `DCC_MCP_MAYA_ENABLE_WORKFLOWS` | `0` | Enable core workflow tools |
 | `DCC_MCP_MAYA_READINESS_TIMEOUT_SECS` | — | Advisory timeout value for readiness consumers |
-| `DCC_MCP_MAYA_EXCLUDE_STUBS_FROM_TOOLS_LIST` | `0` | Hide unloaded skill/group stubs from `tools/list` |
+| `DCC_MCP_MAYA_EXCLUDE_STUBS_FROM_TOOLS_LIST` | `0` | Maya's instance of the generic core `DCC_MCP_<DCC>_EXCLUDE_STUBS_FROM_TOOLS_LIST`; hide unloaded skill/group stubs from `tools/list`. Global fallback: `DCC_MCP_EXCLUDE_STUBS_FROM_TOOLS_LIST` |
 | `DCC_MCP_MAYA_SIDECAR` | `1` | Set `0` to disable the default `dcc-mcp-server sidecar` from the Maya plugin |
 | `DCC_MCP_GATEWAY_PORT` | `9765` in plugin mode | Standalone gateway port; `0` disables gateway mode |
 | `DCC_MCP_GATEWAY_NAME` | `dcc-mcp-gateway@<hostname>` in sidecar mode | Human-readable standalone gateway label surfaced in admin, health, and CLI diagnostics |

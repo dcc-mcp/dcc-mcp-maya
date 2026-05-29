@@ -46,9 +46,14 @@ ENV_DISABLE_EXECUTE_PYTHON = "DCC_MCP_MAYA_DISABLE_EXECUTE_PYTHON"
 ENV_DISABLE_ARBITRARY_SCRIPT = "DCC_MCP_MAYA_DISABLE_ARBITRARY_SCRIPT"
 #: Optional per-tool opt-out for MEL when arbitrary script is otherwise allowed.
 ENV_DISABLE_EXECUTE_MEL = "DCC_MCP_MAYA_DISABLE_EXECUTE_MEL"
-#: Issue #174 / #238 — omit ``__skill__*`` / ``__group__*`` from ``tools/list``.
-#: Applied by core ``DccServerBase`` (``dcc-mcp-core>=0.17.3``); discovery via
-#: ``search_tools``, capability manifest, or gateway ``/v1/search``.
+#: Issue #174 / #238 / #310 — omit ``__skill__*`` / ``__group__*`` from
+#: ``tools/list``. This is Maya's instance of the generic core variable
+#: ``DCC_MCP_<DCC>_EXCLUDE_STUBS_FROM_TOOLS_LIST`` (global fallback:
+#: ``DCC_MCP_EXCLUDE_STUBS_FROM_TOOLS_LIST``). The value is resolved entirely
+#: inside core ``DccServerBase`` (``dcc-mcp-core>=0.17.3``) — this adapter never
+#: reads it directly; the constant is kept only as a documentation anchor.
+#: Discovery stays available via ``search_tools``, capability manifest, or
+#: gateway ``/v1/search``.
 ENV_EXCLUDE_STUBS_FROM_TOOLS_LIST = "DCC_MCP_MAYA_EXCLUDE_STUBS_FROM_TOOLS_LIST"
 #: Default SQLite filename inside the platform data directory.
 DEFAULT_JOB_DB_FILENAME = "jobs.db"

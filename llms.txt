@@ -198,6 +198,7 @@ Tool naming: `{skill_name.replace("-","_")}__{script_stem}` (e.g. `maya_scene__n
 | `DCC_MCP_GATEWAY_NAME` | `dcc-mcp-gateway@<hostname>` | Human-readable standalone gateway label |
 | `DCC_MCP_REGISTRY_DIR` | OS temp | Shared discovery registry |
 | `DCC_MCP_MAYA_HOT_RELOAD` | `0` | `1`=watch skills for disk changes |
+| `DCC_MCP_MAYA_EXCLUDE_STUBS_FROM_TOOLS_LIST` | `0` | Maya instance of generic core `DCC_MCP_<DCC>_EXCLUDE_STUBS_FROM_TOOLS_LIST`; `1`=hide `__skill__*` / `__group__*` stubs from `tools/list` (global fallback `DCC_MCP_EXCLUDE_STUBS_FROM_TOOLS_LIST`) |
 | `DCC_MCP_MAYA_DEV_ROOTS` | — | Optional path-list of trusted roots for `maya-dev` project attachment |
 | `DCC_MCP_MAYA_AUTO_DISMISS_CRASH_DIALOG` | `0` | `1`=best-effort dismiss detected Maya Qt recovery dialogs after `affinity: main` tool calls |
 | `DCC_MCP_MAYA_DISABLE_EXECUTE_PYTHON` | `0` | `1`/`true`/`yes`/`on` — refuse `execute_python` (skills-first enforcement) |
