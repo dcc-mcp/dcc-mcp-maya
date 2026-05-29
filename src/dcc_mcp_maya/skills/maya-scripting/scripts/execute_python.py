@@ -68,11 +68,11 @@ import traceback
 import warnings
 from typing import Any, Dict, Optional, Tuple
 
-_SCRIPT_PATH_DEPRECATION = "`script_path` is deprecated, use `file_path` instead."
-
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 from dcc_mcp_maya._cmds_file_guard import MayaFilePromptBlockedError, guard_cmds_file
+
+_SCRIPT_PATH_DEPRECATION = "`script_path` is deprecated, use `file_path` instead."
 
 # Maya's main thread is the only thread that can safely touch the scene
 # graph / call ``maya.cmds`` / load native plug-ins. The ``execute_python``
