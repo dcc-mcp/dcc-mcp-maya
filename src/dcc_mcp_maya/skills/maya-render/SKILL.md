@@ -24,7 +24,9 @@ metadata:
     - viewport
     search-hint: |-
       final output, preview render, playblast, viewport capture, render globals,
-      set render settings, image format, frame range render
+      set render settings, image format, frame range render, make a playblast,
+      playblast the animation, preview movie, turntable, capture animation,
+      record viewport, animated rig playblast, review video
     tools: tools.yaml
     groups: groups.yaml
 ---
