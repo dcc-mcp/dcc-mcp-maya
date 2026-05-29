@@ -45,6 +45,14 @@ def _make_server():
     server._config = McpHttpConfig()
     # Mock the skill client (used by DccServerBase methods)
     server._skill_client = MagicMock()
+    # core 0.17.38+ DccServerBase.search_skills dispatches a
+    # ``before_search`` / ``after_search`` lifecycle event before
+    # delegating to the skill client. The bare ``object.__new__`` server
+    # skips ``__init__`` so wire a pass-through stub that returns the
+    # mutable payload unchanged.
+    lifecycle = MagicMock()
+    lifecycle.dispatch.side_effect = lambda event, payload=None, session_id=None: dict(payload or {})
+    server._lifecycle_events = lifecycle
     return server
 
 
