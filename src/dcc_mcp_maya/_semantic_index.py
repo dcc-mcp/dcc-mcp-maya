@@ -191,11 +191,7 @@ class MayaSemanticIndex:
             logger.debug("[maya] semantic rebuild failed: %s", exc)
             return result
 
-        by_name = {
-            name: s
-            for s, name in ((s, _summary_name(s)) for s in all_summaries)
-            if name is not None
-        }
+        by_name = {name: s for s, name in ((s, _summary_name(s)) for s in all_summaries) if name is not None}
         present = {_summary_name(s) for s in result}
         for skill_id in self.recall(query):
             if skill_id in present or skill_id not in by_name:
