@@ -33,7 +33,7 @@ dependencies = [
     # Upper bound <0.17.0: 0.17.x introduces breaking API changes (gateway
     # init signatures, tool naming conventions). Upgrade to 0.17.x after
     # porting to the new APIs (see agent/claude-dev/1442e128 for WIP).
-    "dcc-mcp-core>=0.15.9,<0.17.0",
+    "dcc-mcp-core>=0.17.47,<0.18.0",
 ]
 
 [project.optional-dependencies]
