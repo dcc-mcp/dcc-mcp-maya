@@ -251,6 +251,34 @@ def test_export_obj_loads_plugin_and_exports_all():
     assert kwargs["exportAll"] is True
 
 
+def test_export_alembic_loads_plugin_and_verifies_output(tmp_path):
+    cmds = MagicMock()
+    cmds.pluginInfo.return_value = False
+    cmds.ls.return_value = ["pCube1"]
+    out_path = tmp_path / "out.abc"
+
+    def _write_abc(j):
+        out_path.write_bytes(b"ABC-bytes")
+
+    cmds.AbcExport.side_effect = _write_abc
+
+    result = load_and_call(
+        "maya-geometry/scripts/export_alembic.py",
+        cmds,
+        "main",
+        file_path=str(out_path),
+    )
+
+    assert result["success"] is True, result
+    assert result["context"]["size_bytes"] == len(b"ABC-bytes")
+    cmds.pluginInfo.assert_called_once_with("AbcExport", query=True, loaded=True)
+    cmds.loadPlugin.assert_called_once_with("AbcExport")
+    cmds.AbcExport.assert_called_once()
+    job = cmds.AbcExport.call_args[1]["j"]
+    assert "-root pCube1" in job
+    assert '-file "{}"'.format(str(out_path).replace("\\", "/")) in job
+
+
 def test_geometry_tools_yaml_declares_affinity():
     tools_yaml = Path(__file__).parents[1] / "src" / "dcc_mcp_maya" / "skills" / "maya-geometry" / "tools.yaml"
     text = tools_yaml.read_text(encoding="utf-8")
@@ -261,4 +289,5 @@ def test_geometry_tools_yaml_declares_affinity():
     assert text.count("affinity: main") >= 3
     # Interchange skill must expose both export and import contracts.
     assert "name: export_fbx" in text
+    assert "name: export_alembic" in text
     assert "name: import_fbx" in text

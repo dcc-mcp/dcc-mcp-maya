@@ -139,6 +139,7 @@ TOOL_OVERRIDES: Dict[Tuple[str, str], ExecAffinity] = {
     ("maya-geometry", "export_fbx"): ("async", "main", 300),
     ("maya-geometry", "import_file"): ("async", "main", 300),
     ("maya-geometry", "export_obj"): ("async", "main", 300),
+    ("maya-geometry", "export_alembic"): ("async", "main", 300),
     # maya-scripting execute_* stays sync; long scripts submitted separately
     # maya-cache
     ("maya-cache", "list_geometry_caches"): ("sync", "main", None),
