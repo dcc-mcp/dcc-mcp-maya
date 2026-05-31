@@ -12,3 +12,4 @@ groups:
   - import_file
   - import_fbx
   - export_obj
+  - export_alembic
