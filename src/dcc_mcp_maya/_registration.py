@@ -60,22 +60,22 @@ class CoreBuiltinActionsPhase(RegistrationPhase):
         context.server._register_core_builtin_actions(context)  # noqa: SLF001
 
 
-class RecipesToolsPhase(RegistrationPhase):
-    """Expose ``recipes__*`` MCP tools for skills that declare ``metadata.dcc-mcp.recipes``."""
+class MetadataDrivenToolsPhase(RegistrationPhase):
+    """Expose ``recipes__*`` / ``skill_refs__*`` via core metadata registration.
 
-    name = "recipes_tools"
+    Replaces the previous ``RecipesToolsPhase`` + ``SkillReferenceDocsPhase``
+    pair (issue PIP-179).  Core 0.17.38+ already registers the built-in
+    ``recipes__*`` / ``qt_ui_inspector__*`` stubs during ``DccServerBase.__init__``;
+    this phase re-registers them with the actual scanned skill set so
+    ``metadata.dcc-mcp.recipes`` and peer reference docs are visible.
+
+    Uses :func:`dcc_mcp_core.metadata_registration.register_metadata_driven_tools`.
+    """
+
+    name = "metadata_driven_tools"
 
     def run(self, context: RegistrationContext) -> None:
-        context.server._register_recipes_tools(context)  # noqa: SLF001
-
-
-class SkillReferenceDocsPhase(RegistrationPhase):
-    """Expose ``skill_refs__*`` for sibling reference docs (globs + ``references/``)."""
-
-    name = "skill_reference_docs"
-
-    def run(self, context: RegistrationContext) -> None:
-        context.server._register_skill_reference_docs_tools(context)  # noqa: SLF001
+        context.server._register_metadata_driven_tools(context)  # noqa: SLF001
 
 
 class StrictSkillScanPhase(RegistrationPhase):
@@ -114,8 +114,7 @@ class ResourcesPhase(RegistrationPhase):
 def default_registration_phases() -> Sequence[RegistrationPhase]:
     return (
         CoreBuiltinActionsPhase(),
-        RecipesToolsPhase(),
-        SkillReferenceDocsPhase(),
+        MetadataDrivenToolsPhase(),
         StrictSkillScanPhase(),
         CapabilityManifestPhase(),
         ProjectToolsPhase(),
