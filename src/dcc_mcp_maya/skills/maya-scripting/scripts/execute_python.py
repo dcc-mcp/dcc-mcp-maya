@@ -86,6 +86,7 @@ def _merge_capture(primary: str, extra: str) -> str:
         return primary + extra
     return primary + "\n" + extra
 
+
 # Maya's main thread is the only thread that can safely touch the scene
 # graph / call ``maya.cmds`` / load native plug-ins. The ``execute_python``
 # entry point is reached from a hyper (tokio) worker thread when an MCP

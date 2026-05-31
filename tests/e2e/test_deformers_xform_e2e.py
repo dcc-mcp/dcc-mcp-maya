@@ -27,15 +27,10 @@ pytestmark = pytest.mark.e2e
 _SKILLS_ROOT = Path(__file__).parent.parent.parent / "src" / "dcc_mcp_maya" / "skills"
 
 # Skip entire module when the referenced skill directories no longer exist.
-_MISSING_SKILLS = [
-    d for d in ("maya-deformers", "maya-xform-utils")
-    if not (_SKILLS_ROOT / d).is_dir()
-]
+_MISSING_SKILLS = [d for d in ("maya-deformers", "maya-xform-utils") if not (_SKILLS_ROOT / d).is_dir()]
 if _MISSING_SKILLS:
     pytest.skip(
-        "Skill directories not found: {} — skip phantom e2e".format(
-            ", ".join(_MISSING_SKILLS)
-        ),
+        "Skill directories not found: {} — skip phantom e2e".format(", ".join(_MISSING_SKILLS)),
         allow_module_level=True,
     )
 
