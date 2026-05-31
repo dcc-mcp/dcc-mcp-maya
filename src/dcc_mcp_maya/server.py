@@ -549,54 +549,44 @@ class MayaMcpServer(DccServerBase):
         if changed:
             setattr(skill, "tools", tools)
 
-    def _register_recipes_tools(self, context: _registration.RegistrationContext) -> None:
-        """Register ``recipes__*`` tools so ``metadata.dcc-mcp.recipes`` files are agent-readable."""
+    def _register_metadata_driven_tools(self, context: _registration.RegistrationContext) -> None:
+        """Register ``recipes__*`` and ``skill_refs__*`` via core's metadata registration helper.
+
+        Core 0.17.38+ already registered stubs during ``DccServerBase.__init__``
+        with an empty skill list.  This phase re-registers with the actual
+        scanned skill set so ``metadata.dcc-mcp.recipes`` and sibling
+        reference docs are visible.  Registration is idempotent.
+
+        Uses :func:`dcc_mcp_core.metadata_registration.register_metadata_driven_tools`
+        (0.17.34+) which scans skills once and applies both extensions.
+        """
         try:
-            from dcc_mcp_core.recipes import register_recipes_tools
+            from dcc_mcp_core.metadata_registration import register_metadata_driven_tools
         except ImportError as exc:
-            logger.debug("[%s] recipes tools skipped (import): %s", self._dcc_name, exc)
+            logger.debug("[%s] metadata_driven_tools skipped (import): %s", self._dcc_name, exc)
             return
-        self._register_skill_metadata_tools(self._server, context, register_recipes_tools, "recipes")
-
-    def _register_skill_reference_docs_tools(self, context: _registration.RegistrationContext) -> None:
-        """Register ``skill_refs__*`` for arbitrary reference Markdown/text beside a skill."""
-        try:
-            from dcc_mcp_core.skill_reference_docs import register_skill_reference_docs_tools
-        except ImportError as exc:
-            logger.debug("[%s] skill_refs tools skipped (import): %s", self._dcc_name, exc)
-            return
-        self._register_skill_metadata_tools(
-            self._server,
-            context,
-            register_skill_reference_docs_tools,
-            "skill_refs",
-        )
-
-    def _register_skill_metadata_tools(
-        self,
-        server: Any,
-        context: _registration.RegistrationContext,
-        register_fn,
-        kind: str,
-    ) -> None:
-        try:
-            skills = self._scan_skill_metadata_for_sidecars(context)
-            register_fn(server, skills=skills, dcc_name=self._dcc_name)
-        except Exception as exc:  # noqa: BLE001
-            logger.debug("[%s] %s tools failed: %s", self._dcc_name, kind, exc)
-
-    def _scan_skill_metadata_for_sidecars(self, context: _registration.RegistrationContext) -> List[Any]:
-        """Return ``SkillMetadata`` list aligned with ``collect_skill_search_paths`` (read-only scan)."""
-        from dcc_mcp_core import scan_and_load_lenient
-
         paths = self.collect_skill_search_paths(
             extra_paths=context.extra_skill_paths,
             include_bundled=context.include_bundled,
             filter_existing=True,
         )
-        extra = paths if paths else None
-        skills, _skipped = scan_and_load_lenient(extra_paths=extra, dcc_name=self._dcc_name)
-        return skills
+        try:
+            report = register_metadata_driven_tools(
+                self._server,
+                dcc_name=self._dcc_name,
+                extra_paths=paths,
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("[%s] metadata_driven_tools registration failed: %s", self._dcc_name, exc)
+            return
+        if not report.ok:
+            logger.debug(
+                "[%s] metadata_driven_tools: %d registered, %d skipped, %d failed",
+                self._dcc_name,
+                report.registered_count,
+                report.skipped_count,
+                report.failed_count,
+            )
 
     def _build_minimal_mode_config(self, minimal: Optional[bool]) -> Any:
         """Return Maya's core MinimalModeConfig or ``None`` for full mode."""

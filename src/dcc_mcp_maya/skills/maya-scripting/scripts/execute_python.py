@@ -12,9 +12,11 @@ The implementation keeps the bare-exec shape:
 * **No** broad ``mcp_safe_session`` dialog monkey-patch (deleted in #248).
   Only ``cmds.file`` is guarded during execution so dirty-scene file
   operations fail fast instead of opening modal prompts.
-* **No** ``MayaOutputCapture`` (the C++ ``MCommandMessage`` callback bridge
-  crashed Maya on idle ticks; default no-op since #248 da5f6184. Opt
-  in via ``DCC_MCP_MAYA_HOOK_MAYA_OUTPUT=1`` if you really need it).
+* **MayaOutputCapture** is present but defaults to no-op for stability
+  (the C++ ``MCommandMessage`` callback bridge crashed Maya on idle ticks;
+  see :mod:`dcc_mcp_maya._maya_output`). Operators who explicitly need
+  ``cmds.warning()`` / ``cmds.displayInfo()`` captured into the MCP
+  envelope can opt in via ``DCC_MCP_MAYA_HOOK_MAYA_OUTPUT=1``.
 * **No** ``sys.settrace`` cancellation tracer.
 * Standard ``contextlib.redirect_stdout`` / ``redirect_stderr`` for the
   optional ``capture_output=True`` path — this is pure Python and
@@ -70,6 +72,19 @@ from typing import Any, Dict, Optional, Tuple
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 from dcc_mcp_maya._cmds_file_guard import MayaFilePromptBlockedError, guard_cmds_file
+
+_SCRIPT_PATH_DEPRECATION = "`script_path` is deprecated, use `file_path` instead."
+
+
+def _merge_capture(primary: str, extra: str) -> str:
+    """Concatenate two capture buffers, preserving blank-line separation."""
+    if not extra:
+        return primary
+    if not primary:
+        return extra
+    if primary.endswith("\n"):
+        return primary + extra
+    return primary + "\n" + extra
 
 # Maya's main thread is the only thread that can safely touch the scene
 # graph / call ``maya.cmds`` / load native plug-ins. The ``execute_python``
@@ -308,14 +323,28 @@ def _execute_bare_inplace(
     wrapper above decides which thread to run on. ``_execute_bare_inplace``
     only knows how to ``exec`` against the given namespace and capture
     output — it never touches Maya's threading machinery.
+
+    When ``DCC_MCP_MAYA_HOOK_MAYA_OUTPUT=1`` is set, ``MayaOutputCapture``
+    is also active so ``cmds.warning()`` / ``cmds.error()`` /
+    ``cmds.displayInfo()`` messages from user code are captured via the
+    MCommandMessage callback bridge (in addition to the standard
+    stdout/stderr redirects). The OpenMaya bridge defaults to no-op for
+    stability — operators accept the crash risk documented in
+    ``_maya_output.py`` by opting in.
     """
+    # Import local modules
+    from dcc_mcp_maya._maya_output import MayaOutputCapture  # noqa: PLC0415
+
     stdout_buf = io.StringIO() if capture_output else None
     stderr_buf = io.StringIO() if capture_output else None
 
     error: Optional[Dict[str, str]] = None
     result: Any = None
 
+    maya_capture = MayaOutputCapture()
+
     with contextlib.ExitStack() as stack:
+        stack.enter_context(maya_capture)
         stack.enter_context(guard_cmds_file(namespace.get("cmds")))
         if stdout_buf is not None:
             stack.enter_context(contextlib.redirect_stdout(stdout_buf))
@@ -345,12 +374,20 @@ def _execute_bare_inplace(
                 else:
                     result = _coerce_result(value, result_type)
 
+    # Merge MayaOutputCapture results with the stdio redirects so
+    # cmds.warning() / cmds.displayInfo() messages are visible to MCP
+    # clients when DCC_MCP_MAYA_HOOK_MAYA_OUTPUT=1 (no-op otherwise).
+    py_stdout = stdout_buf.getvalue() if stdout_buf is not None else ""
+    py_stderr = stderr_buf.getvalue() if stderr_buf is not None else ""
+    merged_stdout = _merge_capture(py_stdout, maya_capture.stdout)
+    merged_stderr = _merge_capture(py_stderr, maya_capture.stderr)
+
     return {
         "success": error is None,
         "result": result,
         "error": error,
-        "stdout": stdout_buf.getvalue() if stdout_buf is not None else "",
-        "stderr": stderr_buf.getvalue() if stderr_buf is not None else "",
+        "stdout": merged_stdout,
+        "stderr": merged_stderr,
     }
 
 
