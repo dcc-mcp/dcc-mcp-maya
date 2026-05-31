@@ -63,18 +63,28 @@ def maya_capabilities():
     )
 
 
-# Pre-computed plain dict — available without importing dcc_mcp_core at import
-# time.  Useful for fast serialisation or when dcc_mcp_core is unavailable.
-MAYA_CAPABILITIES_DICT = {
-    "scene_manager": True,
-    "transform": True,
-    "hierarchy": True,
-    "selection": True,
-    "render_capture": True,
-    "snapshot": True,
-    "undo_redo": True,
-    "file_operations": True,
-    "has_embedded_python": True,
-    "progress_reporting": True,
-    "scene_info": True,
-}
+def _build_capabilities_dict():
+    """Return a plain dict derived from :func:`maya_capabilities`.
+
+    Single source of truth — no shadow table to drift.  Only boolean
+    flags are included; bridge/extension fields are adapter-internal.
+    """
+    caps = maya_capabilities()
+    return {
+        "scene_manager": caps.scene_manager,
+        "transform": caps.transform,
+        "hierarchy": caps.hierarchy,
+        "selection": caps.selection,
+        "render_capture": caps.render_capture,
+        "snapshot": caps.snapshot,
+        "undo_redo": caps.undo_redo,
+        "file_operations": caps.file_operations,
+        "has_embedded_python": caps.has_embedded_python,
+        "progress_reporting": caps.progress_reporting,
+        "scene_info": caps.scene_info,
+    }
+
+
+# Pre-computed plain dict derived from :func:`maya_capabilities` —
+# single source of truth; no shadow table to drift.
+MAYA_CAPABILITIES_DICT = _build_capabilities_dict()

@@ -1,5 +1,9 @@
 """E2E tests for maya-grooming and maya-paint-effects skills.
 
+.. note::
+    These skills have been removed from the source tree.  The tests are
+    retained but skipped automatically until the skills are re-added.
+
 These tests are skipped automatically when ``maya.standalone`` is not
 available (i.e., outside a mayapy / tahv/mayapy Docker environment).
 
@@ -29,6 +33,19 @@ import pytest
 pytestmark = pytest.mark.e2e
 
 SKILLS_ROOT = Path(__file__).parent.parent.parent / "src" / "dcc_mcp_maya" / "skills"
+
+# Skip entire module when the referenced skill directories no longer exist.
+_MISSING_SKILLS = [
+    d for d in ("maya-grooming", "maya-paint-effects")
+    if not (SKILLS_ROOT / d).is_dir()
+]
+if _MISSING_SKILLS:
+    pytest.skip(
+        "Skill directories not found: {} — skip phantom e2e".format(
+            ", ".join(_MISSING_SKILLS)
+        ),
+        allow_module_level=True,
+    )
 
 
 def _import_script(skill_dir: str, script_name: str):
