@@ -1,4 +1,4 @@
-"""Runtime readiness wiring for :class:`MayaMcpServer` (issue #184).
+"""Runtime readiness wiring for :class:`MayaMcpServer` (issue #184, PIP-179).
 
 Maya's embedded MCP HTTP server publishes itself to the ``FileRegistry``
 long before Maya's main thread has finished booting.  During that window
@@ -8,18 +8,9 @@ until Maya's main thread pumps, and the gateway's first auto-aggregation
 probe fails with *"not a DCC MCP HTTP endpoint"* because the fresh HTTP
 listener has not answered its first request yet.
 
-Core 0.14.28 first exposed the three-state probe in Rust and its Python
-binding (``dcc_mcp_core.ReadinessProbe`` + ``McpHttpServer.set_readiness_probe``);
-``pyproject.toml`` now pins the floor at 0.17.31, the Python 3.7-capable
-core release.  This module owns the **Maya-specific** half of the contract:
-
-* flip ``dispatcher = true`` the moment the in-process executor is wired;
-* schedule a cheap no-op job on the UI dispatcher and flip ``dcc = true``
-  from its completion callback — guaranteeing that ``dcc`` is only green
-  once Maya's main thread has actually pumped one job;
-* expose an env knob (:data:`ENV_READINESS_TIMEOUT_SECS`) so orchestrators
-  can bound how long a cold Maya may stall before they consider
-  ``/v1/readyz`` permanently red.
+This module now delegates to core :class:`dcc_mcp_core.readiness.AdapterReadinessBinder`
+(0.17.32+) for probe lifecycle management while retaining the Maya-specific
+dispatcher-probe pattern via :func:`_default_probe_scheduler`.
 
 SOLID notes
 -----------
@@ -38,7 +29,7 @@ import logging
 import os
 from typing import Any, Callable, Optional
 
-from dcc_mcp_core import ReadinessProbe
+from dcc_mcp_core.readiness import AdapterReadinessBinder
 
 logger = logging.getLogger(__name__)
 
@@ -154,12 +145,12 @@ def _default_probe_scheduler(dispatcher: Any, on_done: Callable[[], None]) -> bo
 
 
 # ---------------------------------------------------------------------------
-# Maya-side binder — wraps a core ReadinessProbe with lifecycle hooks
+# Maya-side binder — wraps a core AdapterReadinessBinder with lifecycle hooks
 # ---------------------------------------------------------------------------
 
 
 class ReadinessBinder:
-    """Drive a :class:`dcc_mcp_core.ReadinessProbe` across a Maya lifecycle.
+    """Drive readiness using core :class:`AdapterReadinessBinder` with Maya lifecycle hooks.
 
     Usage (called once from ``MayaMcpServer.__init__``)::
 
@@ -170,8 +161,8 @@ class ReadinessBinder:
         # transitions to all-green after the first main-thread pump.
 
     Calling :meth:`bind` twice on the same server is a no-op.  The core
-    :class:`ReadinessProbe` is published to the inner Rust
-    ``McpHttpServer`` via ``set_readiness_probe`` so that
+    :class:`AdapterReadinessBinder` publishes the :class:`ReadinessProbe`
+    to the Rust ``McpHttpServer`` via ``set_readiness_probe`` so that
     ``/v1/readyz`` serves honest values.
 
     Parameters
@@ -197,15 +188,24 @@ class ReadinessBinder:
         self.timeout_secs: Optional[int] = resolve_readiness_timeout_secs(
             timeout_secs,
         )
-        self.probe: ReadinessProbe = ReadinessProbe()
         self.probe_scheduler: ProbeScheduler = probe_scheduler or _default_probe_scheduler
+        # Create the core ReadinessProbe eagerly so tests can mark bits
+        # before calling bind().
+        from dcc_mcp_core import ReadinessProbe  # noqa: PLC0415
+
+        self.probe: ReadinessProbe = ReadinessProbe()
         # Populated by :meth:`bind` so tests can assert what we wired.
+        self._adapter_binder: Optional[AdapterReadinessBinder] = None
         self.bound_server: Any = None
         self.bound_dispatcher: Any = None
         self.dcc_scheduled: bool = False
-        self.published_to_server: bool = False
 
-    # ── Public API ──────────────────────────────────────────────────────
+    # ── Public API (delegates to core ReadinessProbe via AdapterReadinessBinder) ─
+
+    @property
+    def published_to_server(self) -> bool:
+        """Whether the probe was published to the inner Rust server."""
+        return self._adapter_binder.published if self._adapter_binder else False
 
     def report(self) -> dict:
         """Return the current three-state readiness snapshot as a dict.
@@ -224,17 +224,17 @@ class ReadinessBinder:
 
         Steps:
 
-        1. Publish :attr:`probe` to the inner Rust ``McpHttpServer`` via
-           :meth:`McpHttpServer.set_readiness_probe`.  This is what
-           causes ``/v1/readyz`` to serve honest values.
-        2. Flip ``dispatcher = true`` unconditionally — by the time
-           :meth:`bind` is called, :meth:`MayaMcpServer.__init__` has
-           already registered ``HostExecutionBridge``, so the Rust
-           handler routing is live.
+        1. Create a core :class:`AdapterReadinessBinder` that publishes
+           the shared probe to the inner Rust ``McpHttpServer`` via
+           ``set_readiness_probe``.
+        2. Mark ``dispatcher``, ``host_execution_bridge``, and
+           ``main_thread_executor`` ready — by the time :meth:`bind` is
+           called, :meth:`MayaMcpServer.__init__` has already registered
+           ``HostExecutionBridge``, so handler routing is live.
         3. If no host dispatcher is attached
            (``server._maya_dispatcher is None``), the inline executor
            runs jobs on the HTTP worker thread — there is **no** Maya
-           main thread to wait on — so flip ``dcc = true`` immediately.
+           main thread to wait on — so flip all bits green immediately.
         4. Otherwise, schedule a no-op probe on the host dispatcher so
            the first main-thread pump flips ``dcc = true``.  On
            :class:`MayaStandaloneDispatcher` that callback fires
@@ -251,25 +251,27 @@ class ReadinessBinder:
             return self.dcc_scheduled
         self.bound_server = server
 
-        # Step 1 — publish to the inner Rust server.
-        server._server.set_readiness_probe(self.probe)
-        self.published_to_server = True
+        # Step 1 — create core AdapterReadinessBinder with the shared probe
+        # and publish to the inner Rust server.
+        self._adapter_binder = AdapterReadinessBinder(server, probe=self.probe, publish=True)
 
-        # Step 2 — dispatcher bit: the executor is always wired by the
-        # time we arrive here, so handler routing is live regardless of
+        # Step 2 — dispatcher & execution bits: the executor is always wired
+        # by the time we arrive here, so handler routing is live regardless of
         # whether a Maya UI dispatcher is present.
-        self.mark_dispatcher_ready()
+        self._adapter_binder.mark_dispatcher_ready(
+            True,
+            host_execution_bridge_ready=True,
+            main_thread_executor_ready=True,
+        )
 
         # Step 3 / 4 — dcc bit.
         dispatcher = server._maya_dispatcher
         if dispatcher is None:
-            # Inline execution bridge path:
-            # every ``tools/call`` runs on the HTTP worker thread — there
-            # is no separate Maya main thread to wait on, so the "dcc"
-            # bit is meaningful only as "handler routing is live", which
-            # is already true.  Collapse to green.
+            # Inline execution bridge path: every ``tools/call`` runs on the
+            # HTTP worker thread — there is no separate Maya main thread to
+            # wait on, so collapse to green.
             self.bound_dispatcher = None
-            self.mark_dcc_ready()
+            self._adapter_binder.mark_inline_ready()
             self.dcc_scheduled = True
             return True
 
