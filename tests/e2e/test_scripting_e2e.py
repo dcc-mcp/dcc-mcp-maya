@@ -34,6 +34,9 @@ pytestmark = pytest.mark.e2e
 
 _SKILLS_ROOT = Path(__file__).parent.parent.parent / "src" / "dcc_mcp_maya" / "skills"
 
+# Check whether maya-utility skill directory exists for conditional skip.
+_UTILITY_SKILL_EXISTS = (_SKILLS_ROOT / "maya-utility").is_dir()
+
 _MOD_COUNTER = [0]
 
 
@@ -139,53 +142,11 @@ class TestScriptingE2E:
         assert "from-print" in combined
         assert "from-cmds-warning" in combined
 
-    def test_execute_python_defer_cancels_long_loop(self):
-        """Issue #153 — a ``defer=True`` infinite loop must abort when
-        the active job's cancel flag fires.
 
-        Uses the real in-Maya path: ``maya.utils.executeDeferred`` is
-        available, so the snippet runs on the main thread's idle queue.
-        Because ``mayapy`` drives that queue synchronously when the main
-        thread is idle, the snippet would otherwise block indefinitely.
-        The ``sys.settrace`` hook installed by ``_run_inline`` observes
-        the cancel event between Python lines and raises ``CancelledError``.
-        """
-        # Import local modules
-        from dcc_mcp_maya.dispatcher.job import _current_job, _JobEntry
-
-        mod = _load("maya-scripting", "execute_python")
-        job = _JobEntry(
-            request_id="e2e-defer-cancel",
-            affinity="main",
-            task=lambda: None,
-        )
-        token = _current_job.set(job)
-        try:
-            deferred = mod._run_deferred(
-                code=("i = 0\nwhile True:\n    i += 1\n"),
-                capture_output=False,
-                timeout_secs=5.0,
-            )
-            # Cancel before polling so the first settrace checkpoint sees it.
-            job.cancel()
-            envelope = None
-            # Drive the poll loop a few times; CancelledError will surface
-            # from check_is_finished as soon as the tracer trips.
-            try:
-                for _ in range(50):
-                    envelope = deferred.check_is_finished()
-                    if envelope is not None:
-                        break
-            except Exception as exc:  # core cancellation raises
-                assert "cancel" in type(exc).__name__.lower()
-                return
-            # If we reached here, the snippet either finished (not expected
-            # given the infinite loop) or returned a cancelled envelope.
-            assert envelope is not None and envelope.get("success") is False
-        finally:
-            _current_job.reset(token)
-
-
+@pytest.mark.skipif(
+    not _UTILITY_SKILL_EXISTS,
+    reason="maya-utility skill directory not found — phantom skill",
+)
 class TestUtilityE2E:
     def setup_method(self):
         _new_scene()

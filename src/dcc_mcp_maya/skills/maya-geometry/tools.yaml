@@ -16,18 +16,12 @@ tools:
         type: string
         description: Path to test for existence.
 - name: export_fbx
-  description: 'Export the current Maya scene or selection to FBX. Animation is baked
-  
-    by default so constraints / IK / driven keys round-trip correctly.
-  
-    All FBXExport* options are pushed via mel.eval before cmds.file is
-  
-    called, and the destination is verified for non-zero size afterwards.
-  
-    Prefer this over raw ``FBXExport`` MEL from ``execute_mel`` / ``execute_python`` —
-    the tool sets the correct MEL command spelling and plugin state.
-  
-    '
+  description: "Export the current Maya scene or selection to FBX. Animation is baked\n\
+    by default so constraints / IK / driven keys round-trip correctly.\nAll FBXExport*\
+    \ options are pushed via mel.eval before cmds.file is\ncalled, and the destination\
+    \ is verified for non-zero size afterwards.\nPrefer this over raw ``FBXExport``\
+    \ MEL from ``execute_mel`` / ``execute_python`` \u2014 the tool sets the correct\
+    \ MEL command spelling and plugin state.\n"
   execution: async
   affinity: main
   timeout_hint_secs: 300
@@ -96,11 +90,10 @@ tools:
         type: boolean
         default: false
 - name: import_file
-  description: >-
-    Import a generic Maya-recognised scene or geometry file into the current scene
-    for interchange. Automatically checks and loads known required plug-ins for
-    FBX (fbxmaya), OBJ (objExport), and Alembic (AbcImport) before import. Use
-    import_fbx when you need FBX-specific take, namespace, and diagnostics controls.
+  description: Import a generic Maya-recognised scene or geometry file into the current
+    scene for interchange. Automatically checks and loads known required plug-ins for
+    FBX (fbxmaya), OBJ (objExport), and Alembic (AbcImport) before import. Use import_fbx
+    when you need FBX-specific take, namespace, and diagnostics controls.
   execution: async
   affinity: main
   timeout_hint_secs: 300
@@ -163,11 +156,11 @@ tools:
         minimum: 1
         description: Animation take index (1-based) for files with multiple takes.
 - name: export_obj
-  description: >-
-    Export the current Maya scene (or selection, per script) to Wavefront OBJ at an
-    absolute or workspace-relative path. Parent directory must exist; large meshes
-    may take minutes — keep timeout_hint in mind. Not a substitute for FBX when
-    animation or materials must round-trip — use maya_geometry__export_fbx instead.
+  description: "Export the current Maya scene (or selection, per script) to Wavefront\
+    \ OBJ at an absolute or workspace-relative path. Parent directory must exist; large\
+    \ meshes may take minutes \u2014 keep timeout_hint in mind. Not a substitute for\
+    \ FBX when animation or materials must round-trip \u2014 use maya_geometry__export_fbx\
+    \ instead."
   execution: async
   affinity: main
   timeout_hint_secs: 300
@@ -182,3 +175,38 @@ tools:
       path:
         type: string
         description: Destination .obj path.
+- name: export_alembic
+  description: Export the current selection (or specified objects) to Alembic (.abc).
+    Loads the AbcExport plugin automatically.  For shot-level sequence export with frame-range
+    control, prefer maya_shot_export__export_shot_alembic.
+  execution: async
+  affinity: main
+  timeout_hint_secs: 300
+  annotations:
+    destructive_hint: true
+  group: geometry
+  input_schema:
+    type: object
+    required:
+    - file_path
+    properties:
+      file_path:
+        type: string
+        description: Destination .abc path.
+      objects:
+        type: array
+        items:
+          type: string
+        description: Objects to export. Defaults to current selection.
+      world_space:
+        type: boolean
+        default: true
+        description: Write geometry in world space.
+      uv_write:
+        type: boolean
+        default: true
+        description: Write UV sets.
+      write_visibility:
+        type: boolean
+        default: true
+        description: Write visibility state.

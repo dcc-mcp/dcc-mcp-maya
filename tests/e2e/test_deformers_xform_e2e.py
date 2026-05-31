@@ -1,5 +1,9 @@
 """E2E tests for maya-deformers and maya-xform-utils skills.
 
+.. note::
+    These skills have been removed from the source tree.  The tests are
+    retained but skipped automatically until the skills are re-added.
+
 Requires a real mayapy interpreter.  Skipped automatically when maya is not
 available so the file is safe to collect in normal (non-mayapy) test runs.
 
@@ -18,21 +22,22 @@ from pathlib import Path
 # Import third-party modules
 import pytest
 
-maya_standalone = pytest.importorskip(
-    "maya.standalone",
-    reason="maya.standalone not available — run under mayapy",
-)
-
-try:
-    maya_standalone.initialize(name="python")
-except Exception:
-    pass
-
-from maya import cmds  # noqa: E402
-
 pytestmark = pytest.mark.e2e
 
 _SKILLS_ROOT = Path(__file__).parent.parent.parent / "src" / "dcc_mcp_maya" / "skills"
+
+# Skip entire module when the referenced skill directories no longer exist.
+_MISSING_SKILLS = [
+    d for d in ("maya-deformers", "maya-xform-utils")
+    if not (_SKILLS_ROOT / d).is_dir()
+]
+if _MISSING_SKILLS:
+    pytest.skip(
+        "Skill directories not found: {} — skip phantom e2e".format(
+            ", ".join(_MISSING_SKILLS)
+        ),
+        allow_module_level=True,
+    )
 
 _MOD_COUNTER = [0]
 
