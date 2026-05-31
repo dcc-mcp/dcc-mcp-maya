@@ -39,6 +39,9 @@ if _MISSING_SKILLS:
         allow_module_level=True,
     )
 
+# Import built-in modules
+import maya.cmds as cmds  # noqa: E402 — must follow conditional skip
+
 _MOD_COUNTER = [0]
 
 
