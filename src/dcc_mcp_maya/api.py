@@ -887,7 +887,17 @@ def _current_scene_path(cmds: Any) -> Optional[str]:
     return str(path) if path else None
 
 
-def node_ref_from_name(cmds: Any, node_name: str) -> Dict[str, Any]:
+_UNSET = object()
+
+
+def node_ref_from_name(
+    cmds: Any,
+    node_name: str,
+    *,
+    scene_path: Any = _UNSET,
+    node_type: Optional[str] = None,
+    exists: Optional[bool] = None,
+) -> Dict[str, Any]:
     """Build a stable JSON NodeRef for a Maya node.
 
     The payload is intentionally plain JSON and PyMEL-free.  UUID is preferred
@@ -898,18 +908,19 @@ def node_ref_from_name(cmds: Any, node_name: str) -> Dict[str, Any]:
     long_name = node_long_name(cmds, node_name)
     short_name = long_name.rsplit("|", 1)[-1] if "|" in long_name else str(node_name)
     uuid_value = node_uuid(cmds, long_name)
-    exists = _node_exists(cmds, long_name)
-    node_type = _node_type(cmds, long_name)
+    node_exists = _node_exists(cmds, long_name) if exists is None else bool(exists)
+    resolved_scene_path = _current_scene_path(cmds) if scene_path is _UNSET else scene_path
+    resolved_node_type = _node_type(cmds, long_name) if node_type is None else node_type
     return {
         "kind": "maya_node",
         "id": uuid_value or long_name,
         "uuid": uuid_value,
         "long_name": long_name,
         "short_name": short_name,
-        "type": node_type,
-        "exists": exists,
-        "stale": not exists,
-        "metadata": build_context_dict(scene_path=_current_scene_path(cmds)),
+        "type": resolved_node_type,
+        "exists": node_exists,
+        "stale": not node_exists,
+        "metadata": build_context_dict(scene_path=resolved_scene_path),
     }
 
 
