@@ -86,6 +86,59 @@ def test_get_scene_info_includes_node_refs():
     assert node["node_ref"]["metadata"]["scene_path"] == "C:/show/scene.ma"
 
 
+def test_get_scene_info_reads_scene_path_once_for_many_node_refs():
+    cmds = MagicMock()
+
+    def _ls(*args, **kwargs):
+        if kwargs.get("type") == "transform" and kwargs.get("long"):
+            return ["|pCube1", "|pCube2", "|pCube3"]
+        if kwargs.get("uuid"):
+            return ["uuid-" + str(args[0]).rsplit("|", 1)[-1]]
+        if kwargs.get("long"):
+            return [str(args[0])]
+        return [str(args[0])] if args else []
+
+    cmds.ls.side_effect = _ls
+    cmds.nodeType.return_value = "transform"
+    cmds.objectType.return_value = "transform"
+    cmds.objExists.return_value = True
+    cmds.file.return_value = "C:/show/scene.ma"
+    cmds.getAttr.return_value = True
+    cmds.listRelatives.return_value = []
+
+    result = load_and_call("maya-scene/scripts/get_scene_info.py", cmds, "main", detail_mode="standard")
+
+    assert result["success"] is True
+    assert result["context"]["count"] == 3
+    cmds.file.assert_called_once_with(query=True, sceneName=True)
+
+
+def test_get_scene_info_lightweight_omits_node_refs_and_transforms():
+    cmds = MagicMock()
+    cmds.ls.return_value = ["|pCube1"]
+    cmds.objectType.return_value = "transform"
+    cmds.getAttr.return_value = True
+    cmds.listRelatives.return_value = []
+
+    result = load_and_call("maya-scene/scripts/get_scene_info.py", cmds, "main", detail_mode="lightweight")
+
+    assert result["success"] is True
+    node = result["context"]["nodes"][0]
+    assert result["context"]["detail_mode"] == "lightweight"
+    assert "node_ref" not in node
+    assert "translate" not in node
+    cmds.file.assert_not_called()
+
+
+def test_get_scene_info_rejects_invalid_detail_mode():
+    cmds = MagicMock()
+
+    result = load_and_call("maya-scene/scripts/get_scene_info.py", cmds, "main", detail_mode="verbose")
+
+    assert result["success"] is False
+    assert "detail_mode" in result["message"]
+
+
 def test_create_camera_sets_transform_shape_attrs_and_optional_aim():
     cmds = MagicMock()
     cmds.camera.return_value = ["camera1", "cameraShape1"]
