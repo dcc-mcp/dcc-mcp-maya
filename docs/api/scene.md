@@ -26,16 +26,31 @@ Return high-level Maya session information.
 
 Return a hierarchical DAG description of the scene.
 
+### Parameters
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `detail_mode` | enum string | `"full"` | Payload/cost profile: `lightweight`, `standard`, or `full`. `lightweight` omits `node_ref` and transforms for frequent polling; `standard` includes `node_ref`; `full` preserves the historical transform-rich payload. |
+| `include_transforms` | bool | `true` | Include translate/rotate/scale fields in `full` mode. |
+
 ### Return Value
 
 ```typescript
 {
-  name: string
-  children: Array<{
+  nodes: Array<{
     name: string
-    type: string        // Maya node type
-    children: Array<...>
+    long_name: string
+    object_type: string | null
+    parent: string | null
+    visible: boolean
+    children: string[]
+    node_ref?: object
+    translate?: number[]
+    rotate?: number[]
+    scale?: number[]
   }>
+  count: number
+  detail_mode: "lightweight" | "standard" | "full"
 }
 ```
 

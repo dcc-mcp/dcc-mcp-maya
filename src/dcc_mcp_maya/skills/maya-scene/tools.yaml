@@ -77,13 +77,31 @@ tools:
   group: scene-management
   description: Get an object bounding box without modifying the Maya scene.
 - name: get_scene_info
-  description: Return a hierarchical DAG description of the current scene
+  description: Return a hierarchical DAG description of the current scene. Use
+    detail_mode=lightweight for high-frequency polling, standard when stable
+    node refs are needed, and full for the historical transform-rich payload.
   execution: sync
   affinity: main
   annotations:
     read_only_hint: true
     idempotent_hint: true
   group: core
+  input_schema:
+    type: object
+    properties:
+      include_transforms:
+        type: boolean
+        default: true
+        description: Include translate/rotate/scale fields in full detail mode.
+      detail_mode:
+        type: string
+        enum:
+        - lightweight
+        - standard
+        - full
+        default: full
+        description: Payload/cost profile. lightweight omits node_ref and transform
+          fields; standard includes node_ref; full preserves the historical payload.
 - name: find_by_pattern
   description: Find nodes by Maya wildcard pattern, defaulting to transform nodes
     so object searches exclude shapes and animation curves.
