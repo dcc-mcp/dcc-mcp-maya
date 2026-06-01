@@ -66,7 +66,7 @@ Cursor's codebase-aware edits work well for bulk changes:
 
 ## See Also
 
-- [AGENTS.md](AGENTS.md) — Progressive disclosure map for all agent types
+- [AGENTS.md](AGENTS.md) — Shared agent navigation map; keep common guidance single-sourced there
 - [llms.txt](llms.txt) — One-page core reference
 - [llms-full.txt](llms-full.txt) — Exhaustive API reference
 - [README.md](README.md) — Human-facing installation and overview

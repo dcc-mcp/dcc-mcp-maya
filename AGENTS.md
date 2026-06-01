@@ -414,14 +414,6 @@ A: `src/dcc_mcp_maya/skills/` (25 packages, 195 scripts, 198 tool declarations).
 **Q: How do I force agents to stop using ``execute_python``?**  
 A: Set ``DCC_MCP_MAYA_DISABLE_EXECUTE_PYTHON=1`` (Python only) or ``DCC_MCP_MAYA_DISABLE_ARBITRARY_SCRIPT=1`` (Python + MEL). Callers get a structured error that points to ``load_skill`` + typed tools.
 
----
-
-## Gateway HTTP regression traces (VRS)
-
-Bugs that only reproduce through the **gateway REST** surface (`/v1/search`, `/v1/call`, …) — for example `execute_python` crashing the host after a handled Python error — should get a **JSONL replay trace** in **dcc-mcp-core** (`tests/vrs/traces/`), not only a pytest in this repo. Workflow, `just vrs-replay`, and naming rules live in upstream [`AGENTS.md`](https://github.com/loonghao/dcc-mcp-core/blob/main/AGENTS.md) (section **Verified Regression Suite (VRS)**) and [`tests/vrs/README.md`](https://github.com/loonghao/dcc-mcp-core/blob/main/tests/vrs/README.md). Reference trace: [`maya-215-execute-python-regression.jsonl`](https://github.com/loonghao/dcc-mcp-core/blob/main/tests/vrs/traces/maya-215-execute-python-regression.jsonl).
-
----
-
 ## Gateway HTTP regression traces (VRS)
 
 Bugs that only reproduce through the **gateway REST** surface (`/v1/search`, `/v1/call`, …) — for example `execute_python` crashing the host after a handled Python error — should get a **JSONL replay trace** in **dcc-mcp-core** (`tests/vrs/traces/`), not only a pytest in this repo. Workflow, `just vrs-replay`, and naming rules live in upstream [`AGENTS.md`](https://github.com/loonghao/dcc-mcp-core/blob/main/AGENTS.md) (section **Verified Regression Suite (VRS)**) and [`tests/vrs/README.md`](https://github.com/loonghao/dcc-mcp-core/blob/main/tests/vrs/README.md). Reference trace: [`maya-215-execute-python-regression.jsonl`](https://github.com/loonghao/dcc-mcp-core/blob/main/tests/vrs/traces/maya-215-execute-python-regression.jsonl).
