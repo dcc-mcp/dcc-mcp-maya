@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.4.1](https://github.com/loonghao/dcc-mcp-maya/compare/v0.4.0...v0.4.1) (2026-06-01)
+
+
+### Bug Fixes
+
+* **e2e:** PIP-181 — phantom skill cleanup, Alembic export, MayaOutputCapture opt-in ([bcdebe2](https://github.com/loonghao/dcc-mcp-maya/commit/bcdebe27bc99b7e27b3d0f44ed3066b2fe701836))
+* **e2e:** PIP-181 — phantom skill cleanup, Alembic export, MayaOutputCapture opt-in ([688bedf](https://github.com/loonghao/dcc-mcp-maya/commit/688bedf024fa9cb6e25a82c1cc0f962683d54cb9))
+* **lint:** add missing maya.cmds import in phantom-skip e2e file ([35d24fd](https://github.com/loonghao/dcc-mcp-maya/commit/35d24fd3c56cf93d37fdde3ed7b53cc7dd3b3dff))
+
+
+### Performance Improvements
+
+* **maya-scene:** reduce get_scene_info polling cost ([699738b](https://github.com/loonghao/dcc-mcp-maya/commit/699738b272e2357442f71a124b2139366a9db837))
+
+
+### Documentation
+
+* clean agent entry docs ([5baf5ea](https://github.com/loonghao/dcc-mcp-maya/commit/5baf5ea2fbb9d7fb4d3dcbe0b555dbcf04bad014))
+
 ## [0.4.0](https://github.com/loonghao/dcc-mcp-maya/compare/v0.3.9...v0.4.0) (2026-05-30)
 
 
