@@ -198,7 +198,7 @@ server.register_builtin_actions(include_bundled=False)
 
 ## 可用的 MCP 工具
 
-`dcc-mcp-maya` 附带 **12 个内置技能包**和 **73+ 个 Maya MCP 工具**。
+`dcc-mcp-maya` 附带 **25 个内置技能包**和 **198 个 Maya MCP 工具**。
 在默认最小模式下，仅核心工具在启动时激活；其余通过 `load_skill` 渐进式加载。
 
 以下章节是代表性类别，而非详尽清单。
