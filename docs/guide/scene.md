@@ -28,25 +28,25 @@ Get the full DAG hierarchy as a nested structure:
 
 **Tool:** `maya_scene__get_scene_info`
 
+For frequent polling in medium or large scenes, pass
+`{"detail_mode": "lightweight"}`. It returns the DAG skeleton without per-node
+`node_ref` or transform fields. Use `detail_mode="standard"` when stable node
+references are required, and `detail_mode="full"` for the historical
+transform-rich payload.
+
 ```json
 {
-  "name": "root",
-  "children": [
+  "nodes": [
     {
       "name": "pSphere1",
-      "type": "transform",
-      "children": [
-        { "name": "pSphereShape1", "type": "mesh" }
-      ]
-    },
-    {
-      "name": "directionalLight1",
-      "type": "transform",
-      "children": [
-        { "name": "directionalLightShape1", "type": "directionalLight" }
-      ]
+      "long_name": "|pSphere1",
+      "object_type": "transform",
+      "parent": null,
+      "children": ["|pSphere1|pSphereShape1"]
     }
-  ]
+  ],
+  "count": 1,
+  "detail_mode": "lightweight"
 }
 ```
 
