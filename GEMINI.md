@@ -7,7 +7,7 @@
 
 ## What This Project Does
 
-`dcc-mcp-maya` embeds an MCP Streamable HTTP server directly inside Autodesk Maya. Gemini (via an MCP-compatible client or custom integration) can discover and invoke 73+ Maya tools over HTTP.
+`dcc-mcp-maya` embeds an MCP Streamable HTTP server directly inside Autodesk Maya. Gemini (via an MCP-compatible client or custom integration) can discover and invoke 198 Maya tools over HTTP.
 
 ---
 
@@ -80,7 +80,7 @@ Endpoint: http://127.0.0.1:9765/mcp
 
 ## See Also
 
-- [AGENTS.md](AGENTS.md) — Progressive disclosure map for all agent types
+- [AGENTS.md](AGENTS.md) — Shared agent navigation map; keep common guidance single-sourced there
 - [llms.txt](llms.txt) — One-page core reference
 - [llms-full.txt](llms-full.txt) — Exhaustive API reference
 - [README.md](README.md) — Human-facing installation and overview
