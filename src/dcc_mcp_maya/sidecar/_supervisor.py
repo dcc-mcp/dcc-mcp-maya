@@ -19,7 +19,8 @@ main thread is idle, and :func:`stop_sidecar` from
    becomes the transport, but the action-lookup contract stays
    identical to the in-process path.
 
-3. Spawns the ``dcc-mcp-server sidecar`` subprocess with
+3. Asks :mod:`dcc_mcp_core.install_lifecycle` for the canonical
+   ``dcc-mcp-server sidecar`` launch contract and spawns it with
    ``--host-rpc qtserver://...`` so the binary connects back to the
    Maya-hosted Qt server. The binary runs alongside Maya, supervised
    by its PPID-watch, and survives non-cooperative Maya shutdowns so
@@ -121,6 +122,8 @@ class SidecarHandle:
     host_rpc_uri: str
     binary_path: Path
     maya_pid: int
+    command: list = field(default_factory=list)
+    launch_contract: dict = field(default_factory=dict)
     extra_env: dict = field(default_factory=dict)
 
     @property
@@ -192,6 +195,19 @@ def resolve_gateway_remote_options(env: Optional[dict] = None) -> tuple[str, int
     if port < 0:
         port = DEFAULT_GATEWAY_REMOTE_PORT
     return host, port
+
+
+def _resolve_gateway_port(env: dict) -> int:
+    """Resolve the local gateway port option passed to core's launch helper."""
+
+    raw = str(env.get("DCC_MCP_GATEWAY_PORT", "9765")).strip()
+    try:
+        port = int(raw)
+    except ValueError:
+        return 9765
+    if port < 0 or port > 65535:
+        return 9765
+    return port
 
 
 def start_sidecar(
@@ -277,42 +293,43 @@ def start_sidecar(
 
     host_rpc_uri = build_qtserver_uri(qt_port, host=qt_host)
 
-    cmd = [
-        str(binary),
-        "sidecar",
-        "--dcc",
-        dcc_name,
-        "--host-rpc",
-        host_rpc_uri,
-        "--watch-pid",
-        str(maya_pid),
-    ]
-    if registry_dir is not None:
-        cmd.extend(["--registry-dir", str(registry_dir)])
-    if instance_id is not None:
-        cmd.extend(["--instance-id", str(instance_id)])
-    if display_name is not None:
-        cmd.extend(["--display-name", display_name])
-    if adapter_version is not None:
-        cmd.extend(["--adapter-version", adapter_version])
-    if gateway_name is not None:
-        cmd.extend(["--gateway-name", gateway_name])
-
     spawn_env = os.environ.copy()
     if extra_env:
         spawn_env.update(extra_env)
 
-    gateway_port_str = str(spawn_env.get("DCC_MCP_GATEWAY_PORT", "9765")).strip()
     try:
-        gateway_port = int(gateway_port_str)
-    except ValueError:
-        gateway_port = 9765
-    if gateway_port > 0:
-        cmd.extend(["--gateway-port", str(gateway_port)])
-    if extra_args:
-        cmd.extend(extra_args)
+        from dcc_mcp_core.install_lifecycle import build_sidecar_command  # noqa: PLC0415
+    except Exception as exc:  # noqa: BLE001
+        _stop_qt_server(stop_qt_server_fn)
+        raise SidecarSpawnError(
+            "dcc_mcp_core.install_lifecycle.build_sidecar_command is unavailable: {0}".format(exc)
+        ) from exc
 
     gateway_remote_host, gateway_remote_port = resolve_gateway_remote_options(spawn_env)
+    launch_contract = build_sidecar_command(
+        dcc_type=dcc_name,
+        host_rpc=host_rpc_uri,
+        watch_pid=maya_pid,
+        registry_dir=registry_dir,
+        server_bin=str(binary),
+        instance_id=instance_id,
+        display_name=display_name,
+        adapter_version=adapter_version,
+        gateway_port=_resolve_gateway_port(spawn_env),
+        gateway_name=gateway_name,
+        gateway_remote_host=gateway_remote_host,
+        gateway_remote_port=gateway_remote_port,
+        extra_args=extra_args,
+        env=spawn_env,
+    )
+    if not launch_contract.get("success"):
+        _stop_qt_server(stop_qt_server_fn)
+        reason = launch_contract.get("reason") or "invalid_sidecar_launch"
+        message = launch_contract.get("message") or "unknown launch-contract failure"
+        raise SidecarSpawnError("failed to build sidecar launch command ({0}): {1}".format(reason, message))
+
+    cmd = list(launch_contract["command"])
+    spawn_env.update(dict(launch_contract.get("environment", {}).get("set", {})))
     spawn_env[ENV_GATEWAY_REMOTE_HOST] = gateway_remote_host
     spawn_env[ENV_GATEWAY_REMOTE_PORT] = str(gateway_remote_port)
 
@@ -344,6 +361,8 @@ def start_sidecar(
         host_rpc_uri=host_rpc_uri,
         binary_path=binary,
         maya_pid=maya_pid,
+        command=cmd,
+        launch_contract=dict(launch_contract),
         extra_env=dict(extra_env or {}),
     )
 

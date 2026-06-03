@@ -51,7 +51,7 @@ dev = [
     "pyyaml>=5.0",  # YAML parsing for SKILL.md test validation
 ]
 sidecar = [
-    "dcc-mcp-server>=0.17.36",
+    "dcc-mcp-server>=0.17.43",
 ]
 
 [project.urls]
