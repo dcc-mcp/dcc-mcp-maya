@@ -16,6 +16,11 @@ class _FakeProc:
         return None
 
 
+def _flag_value(cmd, flag):
+    index = cmd.index(flag)
+    return cmd[index + 1]
+
+
 def test_start_sidecar_forwards_identity_flags(monkeypatch):
     captured = {}
 
@@ -43,26 +48,25 @@ def test_start_sidecar_forwards_identity_flags(monkeypatch):
     )
 
     assert handle.host_rpc_uri == "qtserver://127.0.0.1:45555"
-    assert captured["cmd"] == [
-        "dcc-mcp-server",
-        "sidecar",
-        "--dcc",
-        "maya",
-        "--host-rpc",
-        "qtserver://127.0.0.1:45555",
-        "--watch-pid",
-        "1234",
-        "--instance-id",
-        "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
-        "--display-name",
-        "Maya 2025 pid 1234",
-        "--adapter-version",
-        "0.0.0-test",
-        "--gateway-name",
-        "dcc-mcp-gateway@workstation-01",
-        "--gateway-port",
-        "9765",
-    ]
+    assert captured["cmd"] == handle.command
+    assert captured["cmd"][:2] == ["dcc-mcp-server", "sidecar"]
+    assert _flag_value(captured["cmd"], "--dcc") == "maya"
+    assert _flag_value(captured["cmd"], "--host-rpc") == "qtserver://127.0.0.1:45555"
+    assert _flag_value(captured["cmd"], "--watch-pid") == "1234"
+    assert _flag_value(captured["cmd"], "--instance-id") == "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee"
+    assert _flag_value(captured["cmd"], "--display-name") == "Maya 2025 pid 1234"
+    assert _flag_value(captured["cmd"], "--adapter-version") == "0.0.0-test"
+    assert _flag_value(captured["cmd"], "--gateway-name") == "dcc-mcp-gateway@workstation-01"
+    assert _flag_value(captured["cmd"], "--gateway-port") == "9765"
+    assert _flag_value(captured["cmd"], "--gateway-remote-host") == "0.0.0.0"
+    assert _flag_value(captured["cmd"], "--gateway-remote-port") == "59765"
+    assert _flag_value(captured["cmd"], "--registry-dir")
+    assert captured["kwargs"]["env"]["DCC_MCP_REGISTRY_DIR"] == _flag_value(captured["cmd"], "--registry-dir")
+    assert captured["kwargs"]["env"]["DCC_MCP_GATEWAY_PORT"] == "9765"
+    assert captured["kwargs"]["env"]["DCC_MCP_GATEWAY_REMOTE_HOST"] == "0.0.0.0"
+    assert captured["kwargs"]["env"]["DCC_MCP_GATEWAY_REMOTE_PORT"] == "59765"
+    assert handle.launch_contract["role"] == "per-dcc-sidecar"
+    assert handle.launch_contract["recommended_next_action"]
 
 
 def test_start_sidecar_honors_extra_env_gateway_port_zero(monkeypatch):
@@ -88,7 +92,7 @@ def test_start_sidecar_honors_extra_env_gateway_port_zero(monkeypatch):
         extra_env={"DCC_MCP_GATEWAY_PORT": "0"},
     )
 
-    assert "--gateway-port" not in captured["cmd"]
+    assert _flag_value(captured["cmd"], "--gateway-port") == "0"
     assert captured["kwargs"]["env"]["DCC_MCP_GATEWAY_PORT"] == "0"
 
 
