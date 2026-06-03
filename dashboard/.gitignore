@@ -1,0 +1,5 @@
+node_modules/
+dist/
+.vinxi/
+*.local
+.cta.json

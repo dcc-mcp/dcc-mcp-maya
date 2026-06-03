@@ -400,3 +400,29 @@ maya-dev: maya-link
     @echo "   Then verify with:"
     @echo "     just maya-status       # Unix/macOS"
     @echo "     just maya-status-win   # Windows"
+
+# ============================================================================
+# Dashboard (TanStack Start)
+# ============================================================================
+
+# Install dashboard dependencies
+@dashboard-install:
+    echo "📦 Installing dashboard dependencies..."
+    cd dashboard && npm install
+    echo "✅ Dashboard dependencies installed"
+
+# Start the TanStack Start dev server (port 3000)
+@dashboard-dev:
+    echo "🚀 Starting dashboard dev server..."
+    echo "   Make sure the MCP server is running on port 8765"
+    cd dashboard && npm run dev
+
+# Build the dashboard for production
+@dashboard-build:
+    echo "🔨 Building dashboard..."
+    cd dashboard && npm run build
+    echo "✅ Dashboard built (dist/)"
+
+# Preview the production build
+@dashboard-preview:
+    cd dashboard && npm run preview
