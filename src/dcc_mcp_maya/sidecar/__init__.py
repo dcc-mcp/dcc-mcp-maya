@@ -24,9 +24,10 @@ The plug-in flow:
 2. The Qt server receives a ``dispatch`` method handler that forwards to
    :mod:`dcc_mcp_maya.sidecar._dispatcher.dispatch_payload` —
    same action-lookup contract as the in-process path.
-3. The supervisor spawns ``dcc-mcp-server sidecar --host-rpc
-   qtserver://127.0.0.1:<port>`` and the sidecar binary connects back
-   to Maya over the JSON-line wire.
+3. The supervisor asks :mod:`dcc_mcp_core.install_lifecycle` for the
+   canonical ``dcc-mcp-server sidecar`` launch contract, spawns that
+   command, and the sidecar binary connects back to Maya over the
+   JSON-line wire.
 
 No ``commandPort`` is opened on the Maya side.
 
@@ -49,7 +50,7 @@ spawns the supervisor automatically unless disabled.
 * :func:`is_sidecar_mode_enabled` — read the env-var gate.
 * :class:`SidecarHandle` — lifetime handle exposing ``proc``,
   ``qt_port``, ``qt_binding``, ``host_rpc_uri``, ``binary_path``,
-  ``maya_pid``.
+  ``maya_pid``, ``command``, and ``launch_contract``.
 * :class:`SidecarSpawnError` — raised on resolver / Qt-start /
   spawn failure.
 * :func:`dispatch_payload` — Maya-side wire-frame handler used by the
