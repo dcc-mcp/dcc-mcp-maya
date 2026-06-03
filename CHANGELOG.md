@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.2](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.4.1...v0.4.2) (2026-06-03)
+
+
+### Features
+
+* **sidecar:** use core launch lifecycle contract ([872b7ac](https://github.com/dcc-mcp/dcc-mcp-maya/commit/872b7acc5918c947df1f5b8d4f3282edcaf31ff3))
+
 ## [0.4.1](https://github.com/loonghao/dcc-mcp-maya/compare/v0.4.0...v0.4.1) (2026-06-01)
 
 
