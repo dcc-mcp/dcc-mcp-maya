@@ -139,6 +139,32 @@ def test_get_scene_info_rejects_invalid_detail_mode():
     assert "detail_mode" in result["message"]
 
 
+def test_get_session_info_includes_renderer_and_mtoa_version():
+    cmds = MagicMock()
+    cmds.ls.return_value = ["persp", "pCube1"]
+    cmds.about.side_effect = lambda **kwargs: "2022" if kwargs.get("version") else 20220501
+    cmds.file.side_effect = lambda **kwargs: "C:/show/scene.ma" if kwargs.get("sceneName") else False
+    cmds.currentUnit.return_value = "film"
+    cmds.upAxis.return_value = "y"
+    cmds.getAttr.return_value = "arnold"
+
+    def _plugin_info(_plugin, **kwargs):
+        if kwargs.get("loaded"):
+            return True
+        if kwargs.get("version"):
+            return "5.0.0.3"
+        return None
+
+    cmds.pluginInfo.side_effect = _plugin_info
+
+    result = load_and_call("maya-scene/scripts/get_session_info.py", cmds, "main")
+
+    assert result["success"] is True, result
+    assert result["context"]["current_renderer"] == "arnold"
+    assert result["context"]["mtoa_loaded"] is True
+    assert result["context"]["mtoa_version"] == "5.0.0.3"
+
+
 def test_create_camera_sets_transform_shape_attrs_and_optional_aim():
     cmds = MagicMock()
     cmds.camera.return_value = ["camera1", "cameraShape1"]
