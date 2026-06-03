@@ -5,10 +5,12 @@ groups:
   tools:
   - capture_playblast_sequence
   - capture_viewport
+  - debug_scene_snapshot
   - get_render_settings
   - get_scene_render_stats
   - get_viewport_camera
   - playblast
+  - playblast_to_mp4
   - render_frame
   - set_render_quality
   - set_render_settings
