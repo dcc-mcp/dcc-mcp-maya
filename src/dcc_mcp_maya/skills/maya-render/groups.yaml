@@ -9,5 +9,6 @@ groups:
   - get_scene_render_stats
   - get_viewport_camera
   - playblast
+  - render_frame
   - set_render_quality
   - set_render_settings
