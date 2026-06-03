@@ -3,6 +3,7 @@ groups:
   description: Materials, shading, lighting, and environment tools
   default_active: false
   tools:
+  - create_light
   - create_hdri_dome
   - create_three_point_rig
   - list_light_rigs

@@ -48,7 +48,7 @@ Full rationale: repo root `AGENTS.md` § *Bulk import, export, and naming*; exam
 | Look-dev a hero asset, save material preset | `maya-materials` → `maya-material-library` |
 | Publish an asset version | `maya-pipeline` (uses `maya-geometry` under the hood; declared in `depends`) |
 | Bake AO maps from high-res to low-res | `maya-uv-ops` → `maya-texture-bake` |
-| Create a three-point light rig and tweak intensity | `maya-light-rig` |
+| Create a single light or three-point rig and tweak intensity | `maya-light-rig` (`create_light`, `create_three_point_rig`, `set_light_rig_intensity`) |
 | Render an image, snapshot the viewport, write an MP4 preview, or collect debug evidence | `maya-render` (`render_frame`, `playblast`, `capture_viewport`, `capture_playblast_sequence`, `playblast_to_mp4`, `debug_scene_snapshot`) |
 | Develop and debug a Maya Python tool inside the live session | `maya-dev` (`attach_project` → `run_check`; optional `start_debugpy`) |
 
