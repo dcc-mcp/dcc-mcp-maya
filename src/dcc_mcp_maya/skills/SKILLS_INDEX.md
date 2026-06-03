@@ -49,7 +49,7 @@ Full rationale: repo root `AGENTS.md` § *Bulk import, export, and naming*; exam
 | Publish an asset version | `maya-pipeline` (uses `maya-geometry` under the hood; declared in `depends`) |
 | Bake AO maps from high-res to low-res | `maya-uv-ops` → `maya-texture-bake` |
 | Create a three-point light rig and tweak intensity | `maya-light-rig` |
-| Snapshot the viewport or write a playblast sequence | `maya-render` (`playblast`, `capture_viewport`, `capture_playblast_sequence`) |
+| Render an image, snapshot the viewport, or write a playblast sequence | `maya-render` (`render_frame`, `playblast`, `capture_viewport`, `capture_playblast_sequence`) |
 | Develop and debug a Maya Python tool inside the live session | `maya-dev` (`attach_project` → `run_check`; optional `start_debugpy`) |
 
 ## Side-Effect Taxonomy
