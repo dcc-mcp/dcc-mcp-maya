@@ -158,6 +158,50 @@ tools:
         minimum: 1
         maximum: 100
         default: 100
+- name: render_frame
+  description: Render a single frame to disk without using Maya model panels or playblast.
+    Uses Arnold when currentRenderer is arnold, otherwise falls back to cmds.render.
+    Returns a non-empty output path and optional base64 image payload.
+  execution: async
+  affinity: main
+  timeout_hint_secs: 600
+  annotations:
+    read_only_hint: false
+    destructive_hint: false
+    idempotent_hint: false
+    open_world_hint: false
+  group: rendering
+  input_schema:
+    type: object
+    properties:
+      camera:
+        type: string
+        description: Camera transform or shape to render. Defaults to the first renderable
+          camera, then persp.
+      frame:
+        type: number
+        description: Frame to render; defaults to current time.
+      width:
+        type: integer
+        minimum: 1
+        maximum: 8192
+        description: Optional render width override.
+      height:
+        type: integer
+        minimum: 1
+        maximum: 8192
+        description: Optional render height override.
+      output_dir:
+        type: string
+        description: Directory for rendered output. Defaults to the workspace images rule
+          or a temporary directory.
+      output_name:
+        type: string
+        description: Output filename prefix; sanitized before use.
+      return_base64:
+        type: boolean
+        default: true
+        description: Include base64 image bytes in context.image_base64.
 - name: set_render_quality
   description: Set render quality settings in the current Maya scene.
   execution: sync

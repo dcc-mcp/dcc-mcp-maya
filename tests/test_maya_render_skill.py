@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from unittest.mock import MagicMock
 
-from conftest import load_and_call
+from conftest import load_and_call, load_and_call_with_mel
 
 
 def _write_playblast_bytes(data: bytes):
@@ -17,6 +17,45 @@ def _write_playblast_bytes(data: bytes):
         return path
 
     return _write
+
+
+def _configure_render_cmds(cmds, renderer="mayaSoftware", current_frame=1.0):
+    prefix_holder = {"prefix": ""}
+
+    def _get_attr(attr):
+        values = {
+            "defaultRenderGlobals.currentRenderer": renderer,
+            "defaultResolution.width": 640,
+            "defaultResolution.height": 360,
+            "defaultRenderGlobals.imageFormat": 8,
+            "defaultRenderGlobals.imageFilePrefix": "",
+        }
+        return values.get(attr)
+
+    def _set_attr(attr, value, **_kwargs):
+        if attr == "defaultRenderGlobals.imageFilePrefix":
+            prefix_holder["prefix"] = value
+
+    def _current_time(*_args, **kwargs):
+        if kwargs.get("q"):
+            return current_frame
+        return None
+
+    def _workspace(*_args, **kwargs):
+        if kwargs.get("q") and kwargs.get("rootDirectory"):
+            return str(Path.cwd())
+        if kwargs.get("fileRuleEntry") == "images":
+            return "images"
+        return None
+
+    cmds.getAttr.side_effect = _get_attr
+    cmds.setAttr.side_effect = _set_attr
+    cmds.currentTime.side_effect = _current_time
+    cmds.workspace.side_effect = _workspace
+    cmds.ls.return_value = []
+    cmds.objExists.side_effect = lambda node: node == "persp"
+    cmds.listRelatives.return_value = ["perspShape"]
+    return prefix_holder
 
 
 def test_capture_viewport_forces_offscreen_when_view_fit_fails():
@@ -164,3 +203,88 @@ def test_capture_playblast_sequence_writes_paths_and_camera_metadata(tmp_path):
     cmds.lookThru.assert_any_call("modelPanel4", "shotCam")
     cmds.lookThru.assert_any_call("modelPanel4", "persp")
     cmds.viewFit.assert_called_once_with("modelPanel4", allObjects=True, animate=False)
+
+
+def test_render_frame_uses_cmds_render_and_returns_nonempty_file(tmp_path):
+    cmds = MagicMock()
+    prefix_holder = _configure_render_cmds(cmds, renderer="mayaSoftware", current_frame=12.0)
+
+    def _render(camera, **_kwargs):
+        path = "{}.png".format(prefix_holder["prefix"])
+        Path(path).write_bytes(b"render-bytes")
+        return path
+
+    cmds.render.side_effect = _render
+
+    result = load_and_call(
+        "maya-render/scripts/render_frame.py",
+        cmds,
+        "main",
+        output_dir=str(tmp_path),
+        output_name="shot 01",
+        width=320,
+        height=200,
+    )
+
+    assert result["success"] is True, result
+    context = result["context"]
+    assert context["renderer"] == "mayaSoftware"
+    assert context["camera"] == "persp"
+    assert context["width"] == 320
+    assert context["height"] == 200
+    assert context["output_size"] == len(b"render-bytes")
+    assert context["image_base64"]
+    cmds.render.assert_called_once_with("persp", x=320, y=200)
+    assert Path(context["output_path"]).name == "shot_01.png"
+
+
+def test_render_frame_uses_arnold_mel_when_current_renderer_is_arnold(tmp_path):
+    cmds = MagicMock()
+    mel = MagicMock()
+    prefix_holder = _configure_render_cmds(cmds, renderer="arnold", current_frame=1.0)
+    cmds.pluginInfo.return_value = True
+
+    def _mel_eval(_command):
+        path = "{}.png".format(prefix_holder["prefix"])
+        Path(path).write_bytes(b"arnold-bytes")
+        return path
+
+    mel.eval.side_effect = _mel_eval
+
+    result = load_and_call_with_mel(
+        "maya-render/scripts/render_frame.py",
+        cmds,
+        mel,
+        output_dir=str(tmp_path),
+        camera="persp",
+        frame=5,
+        return_base64=False,
+    )
+
+    assert result["success"] is True, result
+    assert result["context"]["renderer"] == "arnold"
+    assert result["context"]["image_base64"] is None
+    mel.eval.assert_called_once_with('arnoldRender -camera "persp" -frame 5.0')
+
+
+def test_render_frame_rejects_zero_byte_output(tmp_path):
+    cmds = MagicMock()
+    prefix_holder = _configure_render_cmds(cmds, renderer="mayaSoftware", current_frame=1.0)
+
+    def _render(camera, **_kwargs):
+        path = "{}.png".format(prefix_holder["prefix"])
+        Path(path).write_bytes(b"")
+        return path
+
+    cmds.render.side_effect = _render
+
+    result = load_and_call(
+        "maya-render/scripts/render_frame.py",
+        cmds,
+        "main",
+        output_dir=str(tmp_path),
+    )
+
+    assert result["success"] is False
+    assert result["context"]["error_code"] == "EMPTY_RENDER"
+    assert result["context"]["empty_paths"]
