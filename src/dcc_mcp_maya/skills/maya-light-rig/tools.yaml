@@ -1,4 +1,47 @@
 tools:
+- name: create_light
+  execution: sync
+  affinity: main
+  group: shading-lighting
+  description: Create a single Maya light and return both transform and shape names.
+  input_schema:
+    type: object
+    properties:
+      name:
+        type: string
+        default: mcpLight
+      light_type:
+        type: string
+        enum:
+        - ambientLight
+        - areaLight
+        - directionalLight
+        - pointLight
+        - spotLight
+        - volumeLight
+        - aiSkyDomeLight
+        default: directionalLight
+      intensity:
+        type: number
+        default: 1.0
+      color:
+        type: array
+        items:
+          type: number
+      position:
+        type: array
+        items:
+          type: number
+      rotation:
+        type: array
+        items:
+          type: number
+      parent:
+        type: string
+      cone_angle:
+        type: number
+      penumbra_angle:
+        type: number
 - name: create_hdri_dome
   execution: sync
   affinity: main

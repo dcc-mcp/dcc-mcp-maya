@@ -12,6 +12,47 @@ from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_
 from dcc_mcp_maya.api import validate_node_exists
 
 _SUPPORTED_SHADERS = ("lambert", "blinn", "phong", "phongE", "aiStandardSurface")
+_ARNOLD_ATTRIBUTE_ALIASES = {
+    "metallic": ("metalness",),
+    "specular_roughness": ("specularRoughness",),
+    "base_color": ("baseColor", "baseColorR"),
+    "baseColor": ("baseColor", "color"),
+}
+
+
+def _attribute_exists(cmds, material_name: str, attribute: str) -> bool:
+    try:
+        return bool(cmds.objExists("{}.{}".format(material_name, attribute)))
+    except Exception:
+        return False
+
+
+def _node_type(cmds, node: str) -> str:
+    try:
+        return str(cmds.nodeType(node))
+    except Exception:
+        return ""
+
+
+def _resolve_attribute(cmds, material_name: str, attribute: str):
+    node_type = _node_type(cmds, material_name)
+    if node_type != "aiStandardSurface":
+        return attribute, False, node_type, None
+    if _attribute_exists(cmds, material_name, attribute):
+        return attribute, False, node_type, None
+    for candidate in _ARNOLD_ATTRIBUTE_ALIASES.get(attribute, ()):
+        if _attribute_exists(cmds, material_name, candidate):
+            return candidate, True, node_type, attribute
+    return attribute, False, node_type, None
+
+
+def _mtoa_version(cmds):
+    try:
+        if cmds.pluginInfo("mtoa", q=True, loaded=True):
+            return cmds.pluginInfo("mtoa", q=True, version=True)
+    except Exception:
+        return None
+    return None
 
 
 def set_material_attribute(
@@ -36,16 +77,23 @@ def set_material_attribute(
         if err:
             return err
 
-        attr_path = "{}.{}".format(material_name, attribute)
+        resolved_attribute, alias_applied, material_type, requested_attribute = _resolve_attribute(
+            cmds, material_name, attribute
+        )
+        attr_path = "{}.{}".format(material_name, resolved_attribute)
         if isinstance(value, (list, tuple)):
             cmds.setAttr(attr_path, *value, type="double3" if len(value) == 3 else "double4")
         else:
             cmds.setAttr(attr_path, value)
 
         return skill_success(
-            "Set {}.{} = {}".format(material_name, attribute, value),
+            "Set {}.{} = {}".format(material_name, resolved_attribute, value),
             material_name=material_name,
-            attribute=attribute,
+            attribute=resolved_attribute,
+            requested_attribute=requested_attribute or attribute,
+            attribute_alias_applied=alias_applied,
+            material_type=material_type,
+            mtoa_version=_mtoa_version(cmds) if material_type == "aiStandardSurface" else None,
             value=value,
             prompt="Use get_material_connections to verify or render_frame to preview.",
         )
