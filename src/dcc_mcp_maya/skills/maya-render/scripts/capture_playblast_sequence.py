@@ -79,6 +79,24 @@ def _camera_from_panel(cmds: Any, panel: Optional[str]) -> Optional[str]:
         return None
 
 
+def _viewport_renderer(cmds: Any, panel: Optional[str]) -> Optional[str]:
+    if not panel:
+        return None
+    try:
+        return str(cmds.modelEditor(panel, query=True, rendererName=True))
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def _visible_model_panels(cmds: Any) -> List[str]:
+    try:
+        panels = cmds.getPanel(type="modelPanel") or []
+        visible = set(cmds.getPanel(visiblePanels=True) or [])
+        return [str(panel) for panel in panels if panel in visible]
+    except Exception:  # noqa: BLE001
+        return []
+
+
 def _look_through_camera(cmds: Any, panel: Optional[str], camera: Optional[str]) -> Optional[str]:
     if not panel or not camera:
         return None
@@ -241,6 +259,8 @@ def capture_playblast_sequence(
 
         f0, f1 = _frame_range(cmds, start_frame, end_frame)
         panel = _active_model_panel(cmds)
+        viewport_renderer = _viewport_renderer(cmds, panel)
+        visible_panels = _visible_model_panels(cmds)
         previous_camera = _look_through_camera(cmds, panel, camera)
         active_camera = camera or _camera_from_panel(cmds, panel)
         view_fit_applied = False
@@ -253,7 +273,7 @@ def capture_playblast_sequence(
 
         prefix_path = str(out_dir / safe_prefix)
         try:
-            cmds.playblast(
+            playblast_kwargs = dict(
                 startTime=f0,
                 endTime=f1,
                 format="image",
@@ -267,6 +287,9 @@ def capture_playblast_sequence(
                 offScreen=bool(off_screen),
                 forceOverwrite=True,
             )
+            if panel:
+                playblast_kwargs["editorPanelName"] = panel
+            cmds.playblast(**playblast_kwargs)
         finally:
             _restore_camera(cmds, panel, previous_camera)
 
@@ -279,9 +302,23 @@ def capture_playblast_sequence(
                 prefix=safe_prefix,
                 start_frame=f0,
                 end_frame=f1,
+                panel=panel,
+                viewport_renderer=viewport_renderer,
+                visible_model_panels=visible_panels,
             )
         empty_error = _nonempty_or_error(files)
         if empty_error:
+            empty_error["context"].update(
+                {
+                    "panel": panel,
+                    "viewport_renderer": viewport_renderer,
+                    "visible_model_panels": visible_panels,
+                    "possible_solutions": [
+                        "Use maya_render__render_frame for preview frames when Maya is minimized or playblast is unavailable.",
+                        "Bring Maya to the foreground and ensure a model panel is visible before recording viewport previews.",
+                    ],
+                }
+            )
             return empty_error
 
         return skill_success(
@@ -299,6 +336,8 @@ def capture_playblast_sequence(
             camera=active_camera,
             camera_metadata=_camera_metadata(cmds, active_camera) if include_camera_metadata else None,
             panel=panel,
+            viewport_renderer=viewport_renderer,
+            visible_model_panels=visible_panels,
             off_screen=bool(off_screen),
             show_ornaments=bool(show_ornaments),
             view_fit=bool(view_fit),
