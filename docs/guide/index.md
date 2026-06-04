@@ -98,3 +98,4 @@ rerun registration for a changed environment to affect gateway search and
 - [MCP Tools Guide](./mcp-tools) — user-facing examples and skill routing guidance
 - [Advanced Usage](./advanced) — custom skills, main-thread scheduling, `defer=True` long-running scripts
 - [Multi-instance Deployment](./multi-instance) — run multiple Maya instances on a single workstation
+- [Strict Skill-Only Regression](./strict-skill-only-regression) — automated performance regression suite (PIP-481) that validates strict skill-only workflows
