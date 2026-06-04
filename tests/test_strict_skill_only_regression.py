@@ -209,9 +209,7 @@ class TestUtcNow:
 class TestSlugCache:
     def test_resolve_caches_result(self, mocker):
         client = mocker.MagicMock(spec=GatewayClient)
-        client.search.return_value = {
-            "hits": [{"backend_tool": "test_action", "tool_slug": "cached_slug"}]
-        }
+        client.search.return_value = {"hits": [{"backend_tool": "test_action", "tool_slug": "cached_slug"}]}
 
         cache = SlugCache()
         slug1 = cache.resolve(client, "test_action")
@@ -227,9 +225,7 @@ class TestSlugCache:
         client = mocker.MagicMock(spec=GatewayClient)
 
         def search_side_effect(query, **__):
-            return {
-                "hits": [{"backend_tool": query, "tool_slug": f"slug_{query}"}]
-            }
+            return {"hits": [{"backend_tool": query, "tool_slug": f"slug_{query}"}]}
 
         client.search.side_effect = search_side_effect
 
@@ -247,9 +243,7 @@ class TestSlugCache:
         client = mocker.MagicMock(spec=GatewayClient)
 
         def search_side_effect(query, **__):
-            return {
-                "hits": [{"backend_tool": query, "tool_slug": f"slug_for_{query}"}]
-            }
+            return {"hits": [{"backend_tool": query, "tool_slug": f"slug_for_{query}"}]}
 
         client.search.side_effect = search_side_effect
 
@@ -536,13 +530,20 @@ class TestParseArgs:
         assert args.report == ""
 
     def test_custom_values(self):
-        args = parse_args([
-            "--base-url", "http://localhost:1234",
-            "--output-dir", "/tmp/results",
-            "--soak-iterations", "100",
-            "--timeout-secs", "60",
-            "--report", "/tmp/my_report.json",
-        ])
+        args = parse_args(
+            [
+                "--base-url",
+                "http://localhost:1234",
+                "--output-dir",
+                "/tmp/results",
+                "--soak-iterations",
+                "100",
+                "--timeout-secs",
+                "60",
+                "--report",
+                "/tmp/my_report.json",
+            ]
+        )
         assert args.base_url == "http://localhost:1234"
         assert args.output_dir == "/tmp/results"
         assert args.soak_iterations == 100
@@ -621,15 +622,21 @@ class TestMainCLI:
         """When gateway is unreachable, main() exits non-zero and prints JSON."""
         monkeypatch.delenv("DCC_MCP_GATEWAY_BASE_URL", raising=False)
 
-        exit_code = main([
-            "--base-url", "http://127.0.0.1:1",
-            "--output-dir", str(tmp_path),
-            "--soak-iterations", "5",
-            "--timeout-secs", "1",
-        ])
+        exit_code = main(
+            [
+                "--base-url",
+                "http://127.0.0.1:1",
+                "--output-dir",
+                str(tmp_path),
+                "--soak-iterations",
+                "5",
+                "--timeout-secs",
+                "1",
+            ]
+        )
         assert exit_code == 1
         captured = capsys.readouterr()
-        combined = (captured.out + captured.err)
+        combined = captured.out + captured.err
 
         # The pretty-printed JSON is emitted somewhere after the banner.
         # Find the outermost JSON object in the output.
@@ -653,20 +660,24 @@ class TestMainCLI:
             assert failure["success"] is False
             assert "error" in failure
         else:
-            pytest.fail(
-                f"main() did not print valid JSON failure record.\n"
-                f"Output (first 500 chars): {combined[:500]}"
-            )
+            pytest.fail(f"main() did not print valid JSON failure record.\nOutput (first 500 chars): {combined[:500]}")
 
     def test_main_parses_report_flag(self, tmp_path, monkeypatch, capsys):
         """The --report flag is accepted by argparse (we test parsing, not running)."""
         monkeypatch.delenv("DCC_MCP_GATEWAY_BASE_URL", raising=False)
 
-        exit_code = main([
-            "--base-url", "http://127.0.0.1:1",
-            "--output-dir", str(tmp_path),
-            "--soak-iterations", "3",
-            "--timeout-secs", "1",
-            "--report", str(tmp_path / "explicit.json"),
-        ])
+        exit_code = main(
+            [
+                "--base-url",
+                "http://127.0.0.1:1",
+                "--output-dir",
+                str(tmp_path),
+                "--soak-iterations",
+                "3",
+                "--timeout-secs",
+                "1",
+                "--report",
+                str(tmp_path / "explicit.json"),
+            ]
+        )
         assert exit_code == 1  # fails because no gateway, not because of parsing
