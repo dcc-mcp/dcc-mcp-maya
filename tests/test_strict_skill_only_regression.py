@@ -19,8 +19,6 @@ import json
 import os
 import sys
 import time
-import urllib.request
-from pathlib import Path
 
 import pytest
 
@@ -33,7 +31,7 @@ _TOOLS = os.path.join(os.path.dirname(os.path.dirname(__file__)), "tools")
 if _TOOLS not in sys.path:
     sys.path.insert(0, _TOOLS)
 
-from strict_skill_only_regression import (
+from strict_skill_only_regression import (  # noqa: E402
     GatewayClient,
     SlugCache,
     _ensure_call_success,
@@ -48,7 +46,6 @@ from strict_skill_only_regression import (
     parse_args,
     run,
 )
-
 
 # ---------------------------------------------------------------------------
 # Pure utility function tests
@@ -317,7 +314,7 @@ class TestGatewayClientIntegration:
         """Search should find the maya_scripting__execute_python tool."""
         search = gw_client.search("execute_python", loaded_only=False, limit=50)
         slug = _pick_slug_for_action(search, "maya_scripting__execute_python")
-        assert slug, f"Cannot resolve execute_python slug from search"
+        assert slug, "Cannot resolve execute_python slug from search"
         assert "execute_python" in slug
 
     def test_describe_returns_entry(self, gw_client):
