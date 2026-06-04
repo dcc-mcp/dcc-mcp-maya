@@ -35,7 +35,7 @@ def _summary_ms(values_ms: Sequence[float]) -> Dict[str, float]:
         return {"avg": 0.0, "p50": 0.0, "p95": 0.0, "p99": 0.0, "max": 0.0}
     ordered = sorted(values_ms)
     return {
-        "avg": float(statistics.fmean(values_ms)),
+        "avg": float(statistics.mean(values_ms)),
         "p50": _percentile(ordered, 0.50),
         "p95": _percentile(ordered, 0.95),
         "p99": _percentile(ordered, 0.99),
