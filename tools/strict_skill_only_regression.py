@@ -82,7 +82,7 @@ def _extract_action(hit: Dict[str, Any]) -> str:
     return str(
         hit.get("backend_tool")
         or hit.get("action")
-        or hit.get("tool_slug")   # slug often encodes the action (e.g. "maya_scene__new_scene")
+        or hit.get("tool_slug")  # slug often encodes the action (e.g. "maya_scene__new_scene")
         or hit.get("slug")
         or hit.get("name")
         or ""
@@ -169,7 +169,7 @@ def _verify_arbitrary_script_blocked(client: GatewayClient, slug_cache: SlugCach
     checks: Dict[str, Any] = {"execute_python": None, "execute_mel": None}
     for action_name, args in (
         ("maya_scripting__execute_python", {"code": "print('blocked-check')", "capture_output": True}),
-        ("maya_scripting__execute_mel", {"code": "print \"blocked-check\";"}),
+        ("maya_scripting__execute_mel", {"code": 'print "blocked-check";'}),
     ):
         slug = slug_cache.resolve(client, action_name)
         resp = client.call(slug, args)
@@ -242,7 +242,9 @@ def _run_workload(client: GatewayClient, slug_cache: SlugCache, out_dir: Path) -
     mats = []
     for idx in range(3):
         material_name = f"perf_mat_{idx + 1:02d}"
-        _typed_call(client, slug_cache, "maya_materials__create_material", {"material_type": "lambert", "name": material_name})
+        _typed_call(
+            client, slug_cache, "maya_materials__create_material", {"material_type": "lambert", "name": material_name}
+        )
         mats.append(material_name)
     print(f"[workload] created {len(mats)} materials, assigning to {len(created)} objects...")
 
@@ -387,7 +389,11 @@ def run(args: argparse.Namespace) -> Dict[str, Any]:
 
 def parse_args(argv: Sequence[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Strict skill-only Maya performance regression runner")
-    parser.add_argument("--base-url", default=None, help="Gateway REST base URL (default: env DCC_MCP_GATEWAY_BASE_URL or http://127.0.0.1:9765)")
+    parser.add_argument(
+        "--base-url",
+        default=None,
+        help="Gateway REST base URL (default: env DCC_MCP_GATEWAY_BASE_URL or http://127.0.0.1:9765)",
+    )
     parser.add_argument("--output-dir", default="artifacts/perf", help="Directory for FBX + JSON report")
     parser.add_argument("--report", default="", help="Optional explicit report path")
     parser.add_argument("--soak-iterations", type=int, default=500, help="Read-only soak iteration count")
@@ -411,7 +417,11 @@ def main(argv: Sequence[str]) -> int:
 
     out_dir = Path(args.output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
-    report_path = Path(args.report) if args.report else out_dir / ("strict_skill_only_regression_" + datetime.now().strftime("%Y%m%d_%H%M%S") + ".json")
+    report_path = (
+        Path(args.report)
+        if args.report
+        else out_dir / ("strict_skill_only_regression_" + datetime.now().strftime("%Y%m%d_%H%M%S") + ".json")
+    )
     report_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
     print(json.dumps(report, ensure_ascii=False, indent=2))
     print(f"REPORT_PATH={report_path}")
