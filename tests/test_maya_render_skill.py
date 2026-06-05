@@ -376,7 +376,9 @@ def test_debug_scene_snapshot_returns_summary_without_preview():
         "aiSkyDomeLight": [],
     }.get(kwargs.get("type"), [])
     cmds.objectType.side_effect = lambda node: "transform"
-    cmds.listRelatives.side_effect = lambda node, **kwargs: ["|root"] if kwargs.get("parent") and node != "|root" else []
+    cmds.listRelatives.side_effect = lambda node, **kwargs: (
+        ["|root"] if kwargs.get("parent") and node != "|root" else []
+    )
     cmds.getAttr.return_value = True
     cmds.file.return_value = "scene.ma"
 
