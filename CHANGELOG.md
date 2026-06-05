@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.4.3](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.4.2...v0.4.3) (2026-06-05)
+
+
+### Features
+
+* **maya-render:** add background render_frame tool ([0e47b08](https://github.com/dcc-mcp/dcc-mcp-maya/commit/0e47b0871129d79779a362fa57b0986fe7a45a7a))
+* **maya-render:** add debug capture workflows ([91a0a85](https://github.com/dcc-mcp/dcc-mcp-maya/commit/91a0a85cf6050217c4e86bb622f7328d8e28f01d))
+* **maya-render:** promote debug capture workflows ([670468a](https://github.com/dcc-mcp/dcc-mcp-maya/commit/670468ae114ced5919f996c1afd58b61f3c46cd6))
+* **maya:** add agent compatibility helpers ([4b2dc16](https://github.com/dcc-mcp/dcc-mcp-maya/commit/4b2dc16600c00319e0315bcf26c8053b070e852d))
+* **regression:** add strict skill-only Maya performance regression suite (PIP-481) ([b8db771](https://github.com/dcc-mcp/dcc-mcp-maya/commit/b8db771d719c277e6d39cf0d24dcd803bc788646))
+
+
+### Bug Fixes
+
+* **ci:** apply ruff format to strict skill-only regression files ([a860f36](https://github.com/dcc-mcp/dcc-mcp-maya/commit/a860f363113a80d5a665b3a8380b541bf2bfa73f))
+* **ci:** resolve lint errors, Python 3.7 compat, and missing ZH docs ([1c0b44e](https://github.com/dcc-mcp/dcc-mcp-maya/commit/1c0b44ee65f07376277588b70b7abaf4a37d77d4))
+
 ## [0.4.2](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.4.1...v0.4.2) (2026-06-03)
 
 
