@@ -46,6 +46,8 @@ packaging belongs to `maya-shot-export`. For distributed rendering, see
 - `playblast` — Capture a single viewport frame as a base64-encoded PNG
 - `render_frame` — Render a single frame to disk without using model panels or playblast
 - `capture_playblast_sequence` — Capture a playblast image sequence to disk
+- `playblast_to_mp4` — Capture a viewport animation preview and encode it to MP4 with ffmpeg
+- `debug_scene_snapshot` — Collect scene structure plus optional render preview and UI screenshot
 - `get_viewport_camera` — Query the active model panel camera
 
 ## Examples
@@ -60,4 +62,16 @@ Render through a named camera to a deterministic output prefix:
 
 ```json
 {"tool": "maya_render__render_frame", "arguments": {"camera": "shotCam", "output_dir": "C:/renders/shot01", "output_name": "shot01_beauty", "return_base64": false}}
+```
+
+Capture an MP4 viewport preview:
+
+```json
+{"tool": "maya_render__playblast_to_mp4", "arguments": {"start_frame": 1, "end_frame": 48, "fps": 24, "width": 1280, "height": 720}}
+```
+
+Collect debug evidence for an agent:
+
+```json
+{"tool": "maya_render__debug_scene_snapshot", "arguments": {"max_nodes": 40, "preview_width": 640, "preview_height": 480, "include_ui": true}}
 ```

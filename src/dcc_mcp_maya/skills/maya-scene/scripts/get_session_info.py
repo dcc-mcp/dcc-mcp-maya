@@ -10,6 +10,27 @@ import sys
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 
+def _safe_get_attr(cmds, attr: str):
+    try:
+        return cmds.getAttr(attr)
+    except Exception:
+        return None
+
+
+def _plugin_loaded(cmds, plugin_name: str) -> bool:
+    try:
+        return bool(cmds.pluginInfo(plugin_name, q=True, loaded=True))
+    except Exception:
+        return False
+
+
+def _plugin_version(cmds, plugin_name: str):
+    try:
+        return cmds.pluginInfo(plugin_name, q=True, version=True)
+    except Exception:
+        return None
+
+
 def get_session_info() -> dict:
     """Return Maya version, scene path, and basic stats.
 
@@ -26,6 +47,7 @@ def get_session_info() -> dict:
         # ``TypeError: … boolean parameter``.  ``type=`` filters are safe
         # off-thread; transform count is a stable proxy for scene size.
         transforms = cmds.ls(type="transform") or []
+        mtoa_loaded = _plugin_loaded(cmds, "mtoa")
         info = {
             "maya_version": cmds.about(version=True),
             "api_version": cmds.about(apiVersion=True),
@@ -35,6 +57,9 @@ def get_session_info() -> dict:
             "fps": cmds.currentUnit(query=True, time=True),
             "up_axis": cmds.upAxis(query=True, axis=True),
             "object_count": len(transforms),
+            "current_renderer": _safe_get_attr(cmds, "defaultRenderGlobals.currentRenderer"),
+            "mtoa_loaded": mtoa_loaded,
+            "mtoa_version": _plugin_version(cmds, "mtoa") if mtoa_loaded else None,
         }
         return skill_success(
             "Maya session info", **info, prompt="Check the result with list_scene or use related actions to continue."
