@@ -42,6 +42,42 @@ def _unlink_if_exists(path: Optional[str]) -> None:
             pass
 
 
+def _active_model_panel(cmds) -> Optional[str]:
+    try:
+        focused = cmds.getPanel(withFocus=True)
+        if focused and cmds.getPanel(typeOf=focused) == "modelPanel":
+            return str(focused)
+    except Exception:
+        pass
+    try:
+        panels = cmds.getPanel(type="modelPanel") or []
+        visible = set(cmds.getPanel(visiblePanels=True) or [])
+    except Exception:
+        return None
+    for panel in panels:
+        if panel in visible:
+            return str(panel)
+    return str(panels[0]) if panels else None
+
+
+def _viewport_renderer(cmds, panel: Optional[str]) -> Optional[str]:
+    if not panel:
+        return None
+    try:
+        return str(cmds.modelEditor(panel, query=True, rendererName=True))
+    except Exception:
+        return None
+
+
+def _visible_model_panels(cmds):
+    try:
+        panels = cmds.getPanel(type="modelPanel") or []
+        visible = set(cmds.getPanel(visiblePanels=True) or [])
+        return [panel for panel in panels if panel in visible]
+    except Exception:
+        return []
+
+
 def playblast(
     width: int = 1920,
     height: int = 1080,
@@ -76,11 +112,14 @@ def playblast(
         width, height = _clamp_playblast_dims(width, height)
         percent = max(1, min(int(percent), 100))
         f0, f1 = _playblast_frame_range(frame)
+        model_panel = _active_model_panel(cmds)
+        viewport_renderer = _viewport_renderer(cmds, model_panel)
+        visible_panels = _visible_model_panels(cmds)
 
         with tempfile.NamedTemporaryFile(suffix=".png", delete=False, prefix="mcp_blast_") as tmp:
             tmp_base = tmp.name[:-4]  # strip .png — playblast appends frame number
 
-        cmds.playblast(
+        playblast_kwargs = dict(
             frame=(f0, f1),
             format="image",
             compression="png",
@@ -92,6 +131,9 @@ def playblast(
             showOrnaments=False,
             offScreen=True,
         )
+        if model_panel:
+            playblast_kwargs["editorPanelName"] = model_panel
+        cmds.playblast(**playblast_kwargs)
 
         # Maya appends ".{frame}.png" → look for the file
         candidates = [
@@ -126,6 +168,10 @@ def playblast(
             frame=frame,
             width=width,
             height=height,
+            off_screen=True,
+            model_panel=model_panel,
+            viewport_renderer=viewport_renderer,
+            visible_model_panels=visible_panels,
         )
     except ValueError as exc:
         if str(exc) != "EMPTY_PLAYBLAST":
@@ -140,6 +186,7 @@ def playblast(
             "Playblast produced an empty image",
             "Maya playblast wrote a 0-byte PNG",
             possible_solutions=[
+                "Use maya_render__render_frame with preview-sized dimensions when Maya is minimized or playblast is unavailable.",
                 "Retry after ensuring a model panel exists.",
                 "Use capture_viewport with off_screen=True and view_fit=True for hidden or minimized Maya sessions.",
             ],
@@ -147,6 +194,10 @@ def playblast(
             frame=frame,
             width=width,
             height=height,
+            off_screen=True,
+            model_panel=model_panel,
+            viewport_renderer=viewport_renderer,
+            visible_model_panels=visible_panels,
         )
     except ImportError:
         return skill_error("Maya not available", "maya.cmds could not be imported")
