@@ -110,7 +110,9 @@ def _nonempty_sequence_or_error(files: List[str]) -> Optional[dict]:
     return None
 
 
-def _encode_mp4(ffmpeg: str, input_pattern: str, output_path: str, fps: int, overwrite: bool) -> subprocess.CompletedProcess:
+def _encode_mp4(
+    ffmpeg: str, input_pattern: str, output_path: str, fps: int, overwrite: bool
+) -> subprocess.CompletedProcess:
     command = [
         ffmpeg,
         "-y" if overwrite else "-n",

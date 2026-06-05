@@ -67,7 +67,11 @@ def create_light(
         if parent and not cmds.objExists(parent):
             return skill_error("Parent node not found", "The supplied parent transform does not exist.", parent=parent)
 
-        transform = cmds.createNode("transform", name=name, parent=parent) if parent else cmds.createNode("transform", name=name)
+        transform = (
+            cmds.createNode("transform", name=name, parent=parent)
+            if parent
+            else cmds.createNode("transform", name=name)
+        )
         shape = cmds.createNode(light_type, name="{}Shape".format(transform), parent=transform)
 
         rgb = _as_float3(color, [1.0, 1.0, 1.0])
