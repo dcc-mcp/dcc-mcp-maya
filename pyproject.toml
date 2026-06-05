@@ -44,8 +44,8 @@ dev = [
     "ruff>=0.8.0",
     "hatchling",
     "build",
-    "tomli; python_version < '3.11'",  # tomllib backport for Python < 3.11
-    "pyyaml>=5.0",  # YAML parsing for SKILL.md test validation
+    "tomli; python_version < '3.11'",
+    "pyyaml>=5.0",
 ]
 sidecar = [
     "dcc-mcp-server>=0.18.0,<1.0.0",
@@ -62,9 +62,6 @@ maya = "dcc_mcp_maya:MayaMcpServer"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/dcc_mcp_maya"]
-
-# Version is managed by release-please — do not edit manually.
-# release-please updates both pyproject.toml [project].version and __version__.py
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -101,5 +98,3 @@ ignore = ["E501"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["dcc_mcp_maya"]
-# Prefer module-level imports (stdlib → third-party → first-party). ``ruff format`` does not
-# reorder imports; use ``ruff check --select I --fix`` when tightening import blocks.
