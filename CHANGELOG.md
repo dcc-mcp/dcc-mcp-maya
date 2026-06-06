@@ -9,7 +9,7 @@
 * **maya-render:** add debug capture workflows ([91a0a85](https://github.com/dcc-mcp/dcc-mcp-maya/commit/91a0a85cf6050217c4e86bb622f7328d8e28f01d))
 * **maya-render:** promote debug capture workflows ([670468a](https://github.com/dcc-mcp/dcc-mcp-maya/commit/670468ae114ced5919f996c1afd58b61f3c46cd6))
 * **maya:** add agent compatibility helpers ([4b2dc16](https://github.com/dcc-mcp/dcc-mcp-maya/commit/4b2dc16600c00319e0315bcf26c8053b070e852d))
-* **regression:** add strict skill-only Maya performance regression suite (PIP-481) ([b8db771](https://github.com/dcc-mcp/dcc-mcp-maya/commit/b8db771d719c277e6d39cf0d24dcd803bc788646))
+* **regression:** add strict skill-only Maya performance regression suite ([b8db771](https://github.com/dcc-mcp/dcc-mcp-maya/commit/b8db771d719c277e6d39cf0d24dcd803bc788646))
 
 
 ### Bug Fixes
