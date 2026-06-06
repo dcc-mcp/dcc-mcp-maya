@@ -41,13 +41,13 @@ userSetup.py.
 Sidecar runtime
 ---------------
 Default plugin mode starts a dcc-mcp-server sidecar and exposes the
-gateway at http://127.0.0.1:9765/mcp. Provide dcc-mcp-server >= 0.17.23
+gateway at http://127.0.0.1:9765/mcp. Provide dcc-mcp-server >= 0.18.7
 for every Maya environment that consumes this network module.
 
 Common deployment options:
 
 - Install into each target mayapy:
-    mayapy -m pip install "dcc-mcp-server>=0.17.23"
+    mayapy -m pip install "dcc-mcp-server>=0.18.7"
 - Set DCC_MCP_SERVER_BIN to a centrally managed dcc-mcp-server path.
 - Put dcc-mcp-server on PATH in the launcher that starts Maya.
 - Set DCC_MCP_MAYA_SIDECAR=0 before loading the plugin to use the
