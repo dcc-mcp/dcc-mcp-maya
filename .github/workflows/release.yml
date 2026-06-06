@@ -11,8 +11,8 @@ on:
         default: ""
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}${{ inputs.tag_name && format('-{0}', inputs.tag_name) || '' }}
+  cancel-in-progress: ${{ github.event_name == 'push' }}
 
 permissions:
   contents: write
