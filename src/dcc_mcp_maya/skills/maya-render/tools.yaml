@@ -147,29 +147,39 @@ tools:
         type: string
         description: Optional Qt objectName/windowTitle for the UI capture.
 - name: get_render_settings
-  description: Query current render settings
+  description: Query current render settings (resolution, renderer, frame range, format, output path).
   execution: sync
   affinity: main
   annotations:
     read_only_hint: true
     idempotent_hint: true
   group: rendering
+  input_schema:
+    type: object
+    properties: {}
 - name: get_scene_render_stats
-  description: Get scene render statistics without modifying the Maya scene.
+  description: Get scene render statistics including quality attributes without modifying the Maya scene.
   execution: sync
   affinity: main
   annotations:
     read_only_hint: true
     idempotent_hint: true
   group: rendering
+  input_schema:
+    type: object
+    properties: {}
 - name: get_viewport_camera
-  description: Query the active model panel camera with scene-camera fallback.
+  description: Query the active model panel camera with scene-camera fallback, returning
+    camera transform, shape, focal length, and film aperture.
   execution: sync
   affinity: main
   annotations:
     read_only_hint: true
     idempotent_hint: true
   group: rendering
+  input_schema:
+    type: object
+    properties: {}
 - name: playblast
   description: Capture a viewport screenshot as a base64-encoded PNG via playblast (off-screen).
     Frame is passed as a proper Maya time range; width and height are clamped to reduce
@@ -307,16 +317,52 @@ tools:
         default: true
         description: Include base64 image bytes in context.image_base64.
 - name: set_render_quality
-  description: Set render quality settings in the current Maya scene.
+  description: Apply a render quality preset (low/medium/high) to the Maya defaultRenderQuality node.
   execution: sync
   affinity: main
   annotations:
     idempotent_hint: true
   group: rendering
+  input_schema:
+    type: object
+    properties:
+      preset:
+        type: string
+        enum:
+        - low
+        - medium
+        - high
+        default: medium
 - name: set_render_settings
-  description: Set render parameters (resolution, frame range, renderer, image format)
+  description: Set render parameters (resolution, frame range, renderer, image format, output path).
   execution: sync
   affinity: main
   annotations:
     idempotent_hint: true
   group: rendering
+  input_schema:
+    type: object
+    properties:
+      width:
+        type: integer
+        minimum: 1
+        description: Render width in pixels.
+      height:
+        type: integer
+        minimum: 1
+        description: Render height in pixels.
+      start_frame:
+        type: number
+        description: Animation start frame.
+      end_frame:
+        type: number
+        description: Animation end frame.
+      renderer:
+        type: string
+        description: Render engine name (e.g. mayaSoftware, arnold, vray).
+      image_format:
+        type: string
+        description: Image format (e.g. png, exr, jpg, tiff).
+      output_path:
+        type: string
+        description: Output directory path for rendered images.
