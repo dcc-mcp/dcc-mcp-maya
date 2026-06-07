@@ -27,9 +27,9 @@ classifiers = [
 ]
 
 dependencies = [
-    # Release Train anchor: dcc-mcp-core v0.18.2 (PIP-552).
+    # Release Train anchor: dcc-mcp-core v0.18.9 (PIP-908).
     # Provides abi3 (cp38+) on 3.8+; separate cp37 wheels on Python 3.7 (Maya 2022).
-    "dcc-mcp-core>=0.18.2,<1.0.0",
+    "dcc-mcp-core>=0.18.9,<1.0.0",
 ]
 
 [project.optional-dependencies]
