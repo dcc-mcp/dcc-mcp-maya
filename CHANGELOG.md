@@ -53,7 +53,8 @@
 * **queue:** wedge detection + drain_pending + io action=drain (auto-unwedge) ([aebb08b](https://github.com/dcc-mcp/dcc-mcp-maya/commit/aebb08b72ea09faf057f25fed389a11053c88987))
 * **readiness:** wire three-state ReadinessProbe into MayaMcpServer ([#184](https://github.com/dcc-mcp/dcc-mcp-maya/issues/184)) ([#188](https://github.com/dcc-mcp/dcc-mcp-maya/issues/188)) ([932d8ee](https://github.com/dcc-mcp/dcc-mcp-maya/commit/932d8ee7a26d43c56d74dd8717c09e6ab9acb0cf))
 * refactor to new architecture — McpHttpServer embedded in Maya ([#8](https://github.com/dcc-mcp/dcc-mcp-maya/issues/8)) ([dca6180](https://github.com/dcc-mcp/dcc-mcp-maya/commit/dca618054d8dc2a841ea949bbbb75ebf36cb6286))
-* **regression:** add strict skill-only Maya performance regression suite (PIP-481) ([b8db771](https://github.com/dcc-mcp/dcc-mcp-maya/commit/b8db771d719c277e6d39cf0d24dcd803bc788646))
+* **regression:** add strict skill-only Maya performance regression suite ([b8db771](https://github.com/dcc-mcp/dcc-mcp-maya/commit/b8db771d719c277e6d39cf0d24dcd803bc788646))
+
 * **resources:** wire Maya scene + producers into core 0.15.0 ResourceRegistry ([#187](https://github.com/dcc-mcp/dcc-mcp-maya/issues/187)) ([#190](https://github.com/dcc-mcp/dcc-mcp-maya/issues/190)) ([8feca51](https://github.com/dcc-mcp/dcc-mcp-maya/commit/8feca51158dda7c30ed499ceb1e30aa810583541))
 * **scripting:** spill long inline execute_python to host temp file ([0cf1b59](https://github.com/dcc-mcp/dcc-mcp-maya/commit/0cf1b5997114d6aa514e5d609f268e7465e5cc78))
 * **server:** add gateway support + rename plugin to fix namespace collision ([e4733ca](https://github.com/dcc-mcp/dcc-mcp-maya/commit/e4733ca44f695e6b6069121a9cf3e7a73ded7ab9))
@@ -129,8 +130,9 @@
 * **e2e:** fix annotation, metadata, script node and Python 3.7 test failures ([ac46ac4](https://github.com/dcc-mcp/dcc-mcp-maya/commit/ac46ac447b96488a4ec58068a4d3ee9f69ce2079))
 * **e2e:** fix deformer E2E tests and mark HTTP tool-call tests as xfail ([592be22](https://github.com/dcc-mcp/dcc-mcp-maya/commit/592be2284471bf5f8a570d468b293b250210bb23))
 * **e2e:** lazy-import requests in GatewayTestClient to fix E2E conftest loading ([d913259](https://github.com/dcc-mcp/dcc-mcp-maya/commit/d91325975b70e42f462f4959bc775f2d17e146e3))
-* **e2e:** PIP-181 — phantom skill cleanup, Alembic export, MayaOutputCapture opt-in ([bcdebe2](https://github.com/dcc-mcp/dcc-mcp-maya/commit/bcdebe27bc99b7e27b3d0f44ed3066b2fe701836))
-* **e2e:** PIP-181 — phantom skill cleanup, Alembic export, MayaOutputCapture opt-in ([688bedf](https://github.com/dcc-mcp/dcc-mcp-maya/commit/688bedf024fa9cb6e25a82c1cc0f962683d54cb9))
+* **e2e:** phantom skill cleanup, Alembic export, MayaOutputCapture opt-in ([bcdebe2](https://github.com/dcc-mcp/dcc-mcp-maya/commit/bcdebe27bc99b7e27b3d0f44ed3066b2fe701836))
+* **e2e:** phantom skill cleanup, Alembic export, MayaOutputCapture opt-in ([688bedf](https://github.com/dcc-mcp/dcc-mcp-maya/commit/688bedf024fa9cb6e25a82c1cc0f962683d54cb9))
+
 * **e2e:** resolve all e2e test failures ([eff4f31](https://github.com/dcc-mcp/dcc-mcp-maya/commit/eff4f31d20ea81ae4f1a1e7ac73797ecfc683f7a))
 * enforce maya affinity and default sidecar ([4caaac8](https://github.com/dcc-mcp/dcc-mcp-maya/commit/4caaac86b7940a6e81d0b2cc8933c78ff6642f75))
 * ensure Python 3.7+ compatibility across all source files ([#10](https://github.com/dcc-mcp/dcc-mcp-maya/issues/10)) ([8952145](https://github.com/dcc-mcp/dcc-mcp-maya/commit/8952145390a381ad677250cf84dc5f5350048937))
@@ -632,6 +634,7 @@
 * **ci:** apply ruff format to strict skill-only regression files ([a860f36](https://github.com/dcc-mcp/dcc-mcp-maya/commit/a860f363113a80d5a665b3a8380b541bf2bfa73f))
 * **ci:** resolve lint errors, Python 3.7 compat, and missing ZH docs ([1c0b44e](https://github.com/dcc-mcp/dcc-mcp-maya/commit/1c0b44ee65f07376277588b70b7abaf4a37d77d4))
 
+
 ## [0.4.2](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.4.1...v0.4.2) (2026-06-03)
 
 
@@ -644,8 +647,8 @@
 
 ### Bug Fixes
 
-* **e2e:** PIP-181 — phantom skill cleanup, Alembic export, MayaOutputCapture opt-in ([bcdebe2](https://github.com/loonghao/dcc-mcp-maya/commit/bcdebe27bc99b7e27b3d0f44ed3066b2fe701836))
-* **e2e:** PIP-181 — phantom skill cleanup, Alembic export, MayaOutputCapture opt-in ([688bedf](https://github.com/loonghao/dcc-mcp-maya/commit/688bedf024fa9cb6e25a82c1cc0f962683d54cb9))
+* **e2e:** phantom skill cleanup, Alembic export, MayaOutputCapture opt-in ([bcdebe2](https://github.com/loonghao/dcc-mcp-maya/commit/bcdebe27bc99b7e27b3d0f44ed3066b2fe701836))
+* **e2e:** phantom skill cleanup, Alembic export, MayaOutputCapture opt-in ([688bedf](https://github.com/loonghao/dcc-mcp-maya/commit/688bedf024fa9cb6e25a82c1cc0f962683d54cb9))
 * **lint:** add missing maya.cmds import in phantom-skip e2e file ([35d24fd](https://github.com/loonghao/dcc-mcp-maya/commit/35d24fd3c56cf93d37fdde3ed7b53cc7dd3b3dff))
 
 
