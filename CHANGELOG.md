@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.7.1](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.7.0...v0.7.1) (2026-06-07)
+
+
+### Bug Fixes
+
+* **release:** scrub internal PIP-* references from CHANGELOG ([6e6144e](https://github.com/dcc-mcp/dcc-mcp-maya/commit/6e6144e5211feed187ea49821e8a40ec60587053))
+* **release:** scrub internal PIP-* references from CHANGELOG ([eaaadbb](https://github.com/dcc-mcp/dcc-mcp-maya/commit/eaaadbb23c24be7d19de5b101115700a7dd98b7b))
+* **release:** scrub internal PIP-* references from CHANGELOG ([#344](https://github.com/dcc-mcp/dcc-mcp-maya/issues/344)) ([6e6144e](https://github.com/dcc-mcp/dcc-mcp-maya/commit/6e6144e5211feed187ea49821e8a40ec60587053))
+
 ## [0.7.0](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.6.0...v0.7.0) (2026-06-06)
 
 
