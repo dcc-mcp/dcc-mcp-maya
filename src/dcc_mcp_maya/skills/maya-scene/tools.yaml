@@ -3,12 +3,30 @@ tools:
   execution: sync
   affinity: main
   group: scene-management
-  description: Center pivot in the current Maya scene.
+  description: Center the pivot point of an object to its bounding box center.
+  input_schema:
+    type: object
+    required:
+    - object_name
+    properties:
+      object_name:
+        type: string
 - name: create_locator
   execution: sync
   affinity: main
   group: scene-management
-  description: Create a locator in the current Maya scene.
+  description: Create a Maya locator node at an optional world-space position.
+  input_schema:
+    type: object
+    properties:
+      name:
+        type: string
+      position:
+        type: array
+        items:
+          type: number
+        minItems: 3
+        maxItems: 3
 - name: create_camera
   description: Create a camera transform and shape with common camera attributes.
   execution: sync
@@ -62,12 +80,31 @@ tools:
   execution: sync
   affinity: main
   group: scene-management
-  description: Duplicate an object in the current Maya scene.
+  description: Duplicate an object in the Maya scene, optionally as an instance.
+  input_schema:
+    type: object
+    required:
+    - object_name
+    properties:
+      object_name:
+        type: string
+      new_name:
+        type: string
+      instance:
+        type: boolean
+        default: false
 - name: freeze_transforms
   execution: sync
   affinity: main
   group: scene-management
-  description: Freeze transforms in the current Maya scene.
+  description: Freeze (apply) the transforms of an object, zeroing out translate/rotate and resetting scale to 1.
+  input_schema:
+    type: object
+    required:
+    - object_name
+    properties:
+      object_name:
+        type: string
 - name: get_bounding_box
   execution: sync
   affinity: main
@@ -75,7 +112,14 @@ tools:
     read_only_hint: true
     idempotent_hint: true
   group: scene-management
-  description: Get an object bounding box without modifying the Maya scene.
+  description: Query the world-space bounding box of an object, returning min, max, center, and size.
+  input_schema:
+    type: object
+    required:
+    - object_name
+    properties:
+      object_name:
+        type: string
 - name: get_scene_info
   description: Return a hierarchical DAG description of the current scene. Use
     detail_mode=lightweight for high-frequency polling, standard when stable
@@ -134,6 +178,9 @@ tools:
     read_only_hint: true
     idempotent_hint: true
   group: core
+  input_schema:
+    type: object
+    properties: {}
 - name: get_session_info
   description: Return Maya version, scene path, and basic session statistics
   execution: sync
@@ -142,6 +189,9 @@ tools:
     read_only_hint: true
     idempotent_hint: true
   group: core
+  input_schema:
+    type: object
+    properties: {}
 - name: group_objects
   description: Group a list of objects under a new transform node.
   execution: sync
@@ -171,7 +221,14 @@ tools:
     read_only_hint: true
     idempotent_hint: true
   group: scene-management
-  description: List cameras without modifying the Maya scene.
+  description: List all cameras in the scene with focal length, clip planes, and renderable status.
+  input_schema:
+    type: object
+    properties:
+      include_default:
+        type: boolean
+        default: true
+        description: Include Maya built-in cameras (persp, top, front, side).
 - name: look_through_camera
   description: Switch a model panel to look through a camera.
   execution: sync
@@ -201,11 +258,31 @@ tools:
     read_only_hint: true
     idempotent_hint: true
   group: scene-management
+  input_schema:
+    type: object
+    properties:
+      object_type:
+        type: string
+        description: Optional Maya node type filter (e.g. mesh, transform, joint).
+      dag:
+        type: boolean
+        default: true
+        description: Return only DAG nodes.
 - name: lock_object
   execution: sync
   affinity: main
   group: scene-management
-  description: Lock an object in the current Maya scene.
+  description: Lock or unlock the translate/rotate/scale attributes of an object.
+  input_schema:
+    type: object
+    required:
+    - object_name
+    properties:
+      object_name:
+        type: string
+      lock:
+        type: boolean
+        default: true
 - name: new_scene
   description: Create a new empty Maya scene
   execution: async
@@ -255,7 +332,19 @@ tools:
   execution: sync
   affinity: main
   group: scene-management
-  description: Parent an object in the current Maya scene.
+  description: Set or clear the parent of an object.
+  input_schema:
+    type: object
+    required:
+    - child
+    properties:
+      child:
+        type: string
+      parent:
+        type: string
+      world:
+        type: boolean
+        default: false
 - name: save_scene
   description: >-
     Canonical native Maya scene save. Saves the current scene in place, or first
@@ -282,14 +371,41 @@ tools:
   execution: sync
   affinity: main
   group: scene-management
-  description: Select by type in the current Maya scene.
+  description: Select all objects of a given Maya type (e.g. mesh, transform, joint, camera).
+  input_schema:
+    type: object
+    required:
+    - object_type
+    properties:
+      object_type:
+        type: string
 - name: set_frame_rate
   execution: sync
   affinity: main
   annotations:
     idempotent_hint: true
   group: scene-management
-  description: Set the frame rate in the current Maya scene.
+  description: Change the scene playback frame rate.
+  input_schema:
+    type: object
+    properties:
+      fps:
+        type: string
+        enum:
+        - game
+        - film
+        - pal
+        - ntsc
+        - show
+        - palf
+        - ntscf
+        - 23.976fps
+        - 29.97fps
+        - 47.952fps
+        - 59.94fps
+        - 44100fps
+        - 48000fps
+        default: film
 - name: set_camera
   description: Edit camera transform and common shape attributes.
   execution: sync
@@ -341,10 +457,30 @@ tools:
   annotations:
     idempotent_hint: true
   group: scene-management
+  input_schema:
+    type: object
+    required:
+    - objects
+    properties:
+      objects:
+        type: array
+        items:
+          type: string
+        minItems: 1
 - name: set_visibility
   execution: sync
   affinity: main
   annotations:
     idempotent_hint: true
   group: scene-management
-  description: Set object visibility in the current Maya scene.
+  description: Show or hide an object in the viewport.
+  input_schema:
+    type: object
+    required:
+    - object_name
+    - visible
+    properties:
+      object_name:
+        type: string
+      visible:
+        type: boolean
