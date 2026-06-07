@@ -473,3 +473,276 @@ def safe_set_attr(node, attr, *value, **kwargs):
     cmds.setAttr(full, *value, **kwargs)
     return True
 ```
+
+---
+
+## maya2022-compat
+
+> **Target audience:** agents running against Maya 2022 instances.
+> All snippets below include version detection so the same code works across
+> Maya 2022, 2023, 2024, and 2025 without modification.
+>
+> **Core pattern:** parse `cmds.about(version=True)`, compare major version,
+> and branch on the flag set.  For full introspection of a command's flags
+> at runtime, use `dcc_introspect__signature("maya.cmds.<cmd>")` first
+> (see `references/INTROSPECTION.md`).
+
+### maya2022-compat: version detection helper
+
+```python
+import maya.cmds as cmds
+
+def maya_major_version() -> int:
+    """Return the Maya major version as an integer (2022, 2023, ...)."""
+    ver = cmds.about(version=True)  # e.g. "2022.3"
+    try:
+        return int(ver.split(".")[0])
+    except (ValueError, IndexError):
+        return 0
+```
+
+### maya2022-compat: polyReduce (no keepQuads flag)
+
+The `keepQuads` / `keepQuadsWeight` flags were added in Maya 2023.
+In Maya 2022, `polyReduce` does **not** accept these flags —
+calling `cmds.polyReduce(keepQuads=True)` raises `RuntimeError`.
+
+**Version-safe wrapper:**
+
+```python
+import maya.cmds as cmds
+
+def safe_poly_reduce(mesh, percentage=50, keep_quads=True):
+    """Apply polyReduce, skipping keepQuads on Maya 2022."""
+    flags = {"percentage": percentage}
+    if maya_major_version() >= 2023:
+        flags["keepQuads"] = keep_quads
+    return cmds.polyReduce(mesh, **flags)
+```
+
+### maya2022-compat: lattice (no localInfluence flag)
+
+The `localInfluence` / `li` flag was added in Maya 2023.
+In Maya 2022, `cmds.lattice(localInfluence=True)` raises `RuntimeError`.
+
+**Version-safe wrapper:**
+
+```python
+import maya.cmds as cmds
+
+def safe_lattice(objects, divisions=(2, 2, 2), local_influence=True):
+    """Create a lattice deformer, skipping localInfluence on Maya 2022."""
+    flags = {
+        "divisions": divisions,
+        "objectCentered": True,
+    }
+    if maya_major_version() >= 2023:
+        flags["localInfluence"] = local_influence
+    lattice_node, _ffd, _base = cmds.lattice(objects, **flags)
+    return lattice_node
+```
+
+### maya2022-compat: joint orient version differences
+
+`cmds.joint()` orient behavior changed across Maya versions:
+
+| Version | Default `-oj` | Notes |
+|---------|---------------|-------|
+| 2022 | `"none"` | Must set `-oj xyz` explicitly for world-aligned joints |
+| 2023+ | `"xyz"` | Default changed; `-oj` flag still accepted but default differs |
+
+Orient mode strings accepted: `"xyz"`, `"yzx"`, `"zxy"`, `"xzy"`, `"yxz"`,
+`"zyx"`, `"none"`.
+
+**Version-safe wrapper:**
+
+```python
+import maya.cmds as cmds
+
+def safe_joint(name=None, position=(0, 0, 0), orient="xyz"):
+    """Create a joint with explicit orient, consistent across Maya versions.
+
+    Always passes -oj explicitly instead of relying on the version-dependent
+    default.  Maya 2022 defaults to 'none'; 2023+ defaults to 'xyz'.
+    """
+    flags = {
+        "position": position,
+        "orientation": orient,  # explicit: avoids version-dependent default
+    }
+    if name:
+        flags["name"] = name
+    return cmds.joint(**flags)
+```
+
+### maya2022-compat: arnoldRender (-camera, not -c)
+
+In the **MtoA version bundled with Maya 2022** (`mtoa` 5.0.x), the
+`arnoldRender` MEL command uses `-camera <name>` (long form).  The short
+`-c` flag does **not** work and raises a MEL syntax error.
+
+Later MtoA versions (5.2+, Maya 2023+) accept both `-c` and `-camera`.
+
+**Version-safe wrapper:**
+
+```python
+import maya.cmds as cmds
+import maya.mel as mel
+
+def safe_arnold_render(camera="persp", width=1920, height=1080,
+                       start_frame=None, end_frame=None):
+    """Call arnoldRender with the correct camera flag for the Maya version.
+
+    Uses -camera on MtoA < 5.2 (Maya 2022); uses -c on MtoA >= 5.2 or when
+    available.  Also guards against headless/MEL-only render failures.
+    """
+    mtoa_ver = 0
+    try:
+        if cmds.pluginInfo("mtoa", q=True, loaded=True):
+            ver_str = cmds.pluginInfo("mtoa", q=True, version=True) or "0"
+            mtoa_ver = float(".".join(ver_str.split(".")[:2]))
+    except Exception:
+        pass
+
+    # MtoA < 5.2 only accepts -camera; >= 5.2 accepts both
+    if mtoa_ver > 0 and mtoa_ver < 5.2:
+        cam_flag = "-camera"
+    else:
+        cam_flag = "-c"
+
+    cmd = 'arnoldRender {} {} -x {} -y {}'.format(cam_flag, camera, width, height)
+    if start_frame is not None and end_frame is not None:
+        cmd += ' -s {} -e {}'.format(start_frame, end_frame)
+
+    return mel.eval(cmd)
+```
+
+### maya2022-compat: aiSkyDomeLight.color (file node or RGB components)
+
+`aiSkyDomeLight` (Arnold skydome light) exposes a `color` attribute, but
+it is a **texturable color slot** — you cannot set it with a plain
+`setAttr` + float3.  The attribute expects a connected **file texture
+node** (for HDR/EXR maps) or must be driven via the per-channel
+`colorR` / `colorG` / `colorB` child attributes.
+
+This applies to **all** Maya versions with MtoA, not just 2022, but
+agents trained on newer docs frequently hit this footgun.
+
+**Method A — connect a file texture (for HDR/EXR environment lighting):**
+
+```python
+import maya.cmds as cmds
+
+def set_skydome_texture(skydome_light, image_path):
+    """Connect a file texture node to aiSkyDomeLight.color for HDR lighting."""
+    # Create file node and load texture
+    file_node = cmds.shadingNode("file", asTexture=True,
+                                  name="{}_file".format(skydome_light))
+    cmds.setAttr(file_node + ".fileTextureName", image_path, type="string")
+
+    # Connect file.outColor → aiSkyDomeLight.color
+    cmds.connectAttr(file_node + ".outColor",
+                     skydome_light + ".color", force=True)
+    return file_node
+```
+
+**Method B — set solid color via RGB components:**
+
+```python
+def set_skydome_solid_color(skydome_light, r=0.5, g=0.7, b=1.0):
+    """Set aiSkyDomeLight solid color through per-channel attributes."""
+    cmds.setAttr(skydome_light + ".colorR", r)
+    cmds.setAttr(skydome_light + ".colorG", g)
+    cmds.setAttr(skydome_light + ".colorB", b)
+```
+
+**Method C — create skydome light with texture in one step:**
+
+```python
+def create_skydome_with_hdri(image_path, intensity=1.0, name="skydomeLight"):
+    """Create an aiSkyDomeLight pre-wired to an HDR file texture."""
+    light_shape = cmds.shadingNode("aiSkyDomeLight", asLight=True,
+                                    name=name + "Shape")
+    light_xform = cmds.listRelatives(light_shape, parent=True, fullPath=True)[0]
+
+    file_node = cmds.shadingNode("file", asTexture=True,
+                                  name=light_xform + "_file")
+    cmds.setAttr(file_node + ".fileTextureName", image_path, type="string")
+    cmds.connectAttr(file_node + ".outColor",
+                     light_shape + ".color", force=True)
+    cmds.setAttr(light_shape + ".intensity", intensity)
+
+    return light_xform
+```
+
+### maya2022-compat: MtoA version check helper
+
+```python
+def mtoa_version_tuple():
+    """Return (major, minor) for the loaded MtoA plugin, or (0, 0)."""
+    import maya.cmds as cmds
+    try:
+        if cmds.pluginInfo("mtoa", q=True, loaded=True):
+            ver_str = cmds.pluginInfo("mtoa", q=True, version=True) or "0"
+            parts = ver_str.split(".")[:2]
+            return (int(parts[0]), int(parts[1]) if len(parts) > 1 else 0)
+    except Exception:
+        pass
+    return (0, 0)
+```
+
+### maya2022-compat: full version-probe wrapper
+
+Combine all version probes into one reusable function that an agent can
+drop into any `execute_python` payload before using the Maya 2022-safe
+wrappers above.
+
+```python
+import maya.cmds as cmds
+
+def probe_maya2022_compat():
+    """Return a dict describing the Maya / MtoA compatibility surface.
+
+    Agents can call this once, then branch on `maya_major` or individual
+    `flags.*` booleans before assembling their payload.
+
+    Returns::
+
+        {
+            "maya_version": "2022.3",
+            "maya_major": 2022,
+            "mtoa_version": "5.0.2",
+            "flags": {
+                "polyReduce_keepQuads": false,
+                "lattice_localInfluence": false,
+                "joint_default_orient_xyz": false,
+                "arnoldRender_short_c": false,
+                "aiSkyDomeLight_color_rgb": true,
+            }
+        }
+    """
+    ver_str = cmds.about(version=True)
+    major = int(ver_str.split(".")[0]) if ver_str else 0
+
+    mtoa_str = "0"
+    try:
+        if cmds.pluginInfo("mtoa", q=True, loaded=True):
+            mtoa_str = cmds.pluginInfo("mtoa", q=True, version=True) or "0"
+    except Exception:
+        pass
+
+    mtoa_parts = mtoa_str.split(".")
+    mtoa_major = int(mtoa_parts[0]) if mtoa_parts else 0
+    mtoa_minor = int(mtoa_parts[1]) if len(mtoa_parts) > 1 else 0
+
+    return {
+        "maya_version": ver_str,
+        "maya_major": major,
+        "mtoa_version": mtoa_str,
+        "flags": {
+            "polyReduce_keepQuads": major >= 2023,
+            "lattice_localInfluence": major >= 2023,
+            "joint_default_orient_xyz": major >= 2023,
+            "arnoldRender_short_c": mtoa_major > 5 or (mtoa_major == 5 and mtoa_minor >= 2),
+            "aiSkyDomeLight_color_rgb": True,  # always true — colorR/G/B children exist
+        },
+    }
