@@ -145,7 +145,6 @@ class TestGatewayProperties:
         mock_handle = MagicMock()
         mock_handle.is_gateway = is_gateway_val
         server._handle = mock_handle
-        server._config = mock_config
         return server
 
     def test_is_gateway_true_when_handle_is_gateway(self):
