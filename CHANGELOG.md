@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.2](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.8.1...v0.8.2) (2026-06-07)
+
+
+### Bug Fixes
+
+* **ci:** add fetch-depth: 0 to test-mayapy-py37 checkout step ([2cf60d4](https://github.com/dcc-mcp/dcc-mcp-maya/commit/2cf60d4d81e0aebc1e994d766d90e60671e09c04))
+
 ## [0.8.1](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.8.0...v0.8.1) (2026-06-07)
 
 
