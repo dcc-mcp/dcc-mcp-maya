@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.2](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.7.1...v0.7.2) (2026-06-07)
+
+
+### Features
+
+* **schema:** add input_schema to maya-rigging, maya-scene, maya-render tools.yaml ([319e953](https://github.com/dcc-mcp/dcc-mcp-maya/commit/319e9536d0cda242fcc4576a0c3578d74142c5e3))
+
 ## [0.7.1](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.7.0...v0.7.1) (2026-06-07)
 
 
