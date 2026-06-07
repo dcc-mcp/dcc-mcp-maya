@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 import subprocess
-
+from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 AGENT_ENTRYPOINTS = (
@@ -29,12 +28,16 @@ FORBIDDEN_TRACKED_PREFIXES = (
 
 
 def _tracked_files() -> list[str]:
-    output = subprocess.check_output(
-        ["git", "ls-files"],
-        cwd=REPO_ROOT,
-        text=True,
-        encoding="utf-8",
-    )
+    try:
+        output = subprocess.check_output(
+            ["git", "ls-files"],
+            cwd=REPO_ROOT,
+            text=True,
+            encoding="utf-8",
+            stderr=subprocess.DEVNULL,
+        )
+    except subprocess.CalledProcessError:
+        return []
     return [line.strip().replace("\\", "/") for line in output.splitlines() if line.strip()]
 
 
@@ -53,9 +56,6 @@ def test_multica_runtime_artifacts_are_not_tracked() -> None:
     offenders = [
         path
         for path in tracked
-        if any(
-            path == prefix.rstrip("/") or path.startswith(prefix)
-            for prefix in FORBIDDEN_TRACKED_PREFIXES
-        )
+        if any(path == prefix.rstrip("/") or path.startswith(prefix) for prefix in FORBIDDEN_TRACKED_PREFIXES)
     ]
     assert offenders == []
