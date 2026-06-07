@@ -84,3 +84,8 @@ DOCKER_QUICK_START.md
 
 # Mock artefacts occasionally produced by tests that patch `cmds.file`
 /MagicMock/
+
+# Multica local runtime context. The daemon may write these into a bound
+# local_directory, but they must not be committed.
+.agent_context/
+.multica/
