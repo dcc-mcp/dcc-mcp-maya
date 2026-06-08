@@ -27,9 +27,10 @@ classifiers = [
 ]
 
 dependencies = [
-    # Release Train anchor: dcc-mcp-core v0.18.9 (PIP-908).
+    # Release Train anchor: dcc-mcp-core v0.18.14 (PIP-688/689).
+    # 4 seam controllers + shared registration phase pipeline.
     # Provides abi3 (cp38+) on 3.8+; separate cp37 wheels on Python 3.7 (Maya 2022).
-    "dcc-mcp-core>=0.18.9,<1.0.0",
+    "dcc-mcp-core>=0.18.14,<1.0.0",
 ]
 
 [project.optional-dependencies]
