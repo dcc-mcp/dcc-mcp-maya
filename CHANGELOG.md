@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.4](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.8.3...v0.8.4) (2026-06-08)
+
+
+### Bug Fixes
+
+* **ci:** add buildkit image retry to handle Docker Hub transient failures ([8d0da1e](https://github.com/dcc-mcp/dcc-mcp-maya/commit/8d0da1eaa6cffc222e2543753d273d200be062bc))
+
 ## [0.8.3](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.8.2...v0.8.3) (2026-06-08)
 
 
