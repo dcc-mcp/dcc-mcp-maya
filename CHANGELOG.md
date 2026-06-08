@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.8.5](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.8.4...v0.8.5) (2026-06-08)
+
+
+### Features
+
+* **maya:** adapt to core v0.18.14 — shared registration + 4 seam controllers ([860924a](https://github.com/dcc-mcp/dcc-mcp-maya/commit/860924ab4849a77c411eac449155d1d82576a229))
+
+
+### Bug Fixes
+
+* **maya:** fallback import for dcc_mcp_core._registration backward compat ([57a94a2](https://github.com/dcc-mcp/dcc-mcp-maya/commit/57a94a2a36c15733a5f50c0e012e63e516664a7f))
+* **maya:** remove unused PhaseOutcome/RegistrationReport re-exports ([a76f0ee](https://github.com/dcc-mcp/dcc-mcp-maya/commit/a76f0eec576eccdd1e1c688501d328f126b4ceaa))
+
+
+### Code Refactoring
+
+* **maya:** import shared registration base classes from dcc_mcp_core ([6683f80](https://github.com/dcc-mcp/dcc-mcp-maya/commit/6683f804bb9c2d0852724b01bba65ae726dbd2e7))
+
 ## [0.8.4](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.8.3...v0.8.4) (2026-06-08)
 
 
