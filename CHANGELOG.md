@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.3](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.8.2...v0.8.3) (2026-06-08)
+
+
+### Features
+
+* update maya-render SKILL.md and SKILLS_INDEX.md cross-refs ([bbd8eec](https://github.com/dcc-mcp/dcc-mcp-maya/commit/bbd8eecf439860b9067be21fbd5b71afd42e9f59))
+
 ## [0.8.2](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.8.1...v0.8.2) (2026-06-07)
 
 
