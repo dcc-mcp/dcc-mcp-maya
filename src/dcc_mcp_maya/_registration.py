@@ -14,11 +14,9 @@ from __future__ import annotations
 from typing import Sequence
 
 from dcc_mcp_core._registration import (
-    PhaseOutcome,
     RegistrationContext,
     RegistrationPhase,
-    RegistrationReport,
-    run_registration_phases,
+    run_registration_phases,  # noqa: F401 - re-exported for callers
 )
 
 
