@@ -395,8 +395,8 @@ class TestSidecarUsesCoreRegistryDefaults:
         assert "RFC #998" not in output
         assert f"dcc-mcp-maya v{plugin_module.VERSION}" in output
         assert "PID          : 5678" in output
-        assert "Gateway local: http://127.0.0.1:9765/mcp  (if elected)" in output
-        assert "Gateway LAN  : http://192.168.1.20:59765/mcp  (if elected)" in output
+        assert "Gateway      : http://127.0.0.1:9765/mcp  (sidecar-managed)" in output
+        assert "Gateway LAN  : http://192.168.1.20:59765/mcp  (sidecar-managed)" in output
 
     def test_sidecar_remote_gateway_options_default_and_disable(self, monkeypatch):
         from dcc_mcp_maya.sidecar import resolve_gateway_remote_options
