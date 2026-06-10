@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.6](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.8.5...v0.8.6) (2026-06-10)
+
+
+### Bug Fixes
+
+* **maya:** improve gateway banner messaging and add deferred health probe ([8b03f81](https://github.com/dcc-mcp/dcc-mcp-maya/commit/8b03f8166fe2c9edbb366c992348eb701f973d3a))
+
 ## [0.8.5](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.8.4...v0.8.5) (2026-06-08)
 
 
