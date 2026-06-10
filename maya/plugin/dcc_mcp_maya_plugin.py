@@ -849,6 +849,7 @@ def _maybe_spawn_sidecar() -> None:
         return
 
     _print_sidecar_info(_sidecar_handle)
+    _probe_gateway_health_deferred()
 
 
 def _print_sidecar_info(handle) -> None:  # noqa: ANN001
@@ -856,7 +857,7 @@ def _print_sidecar_info(handle) -> None:  # noqa: ANN001
     gateway_port = _resolve_gateway_port_for_display()
     gateway_lines = []
     if gateway_port > 0:
-        gateway_lines.append(f"  Gateway local: http://127.0.0.1:{gateway_port}/mcp  (if elected)")
+        gateway_lines.append(f"  Gateway      : http://127.0.0.1:{gateway_port}/mcp  (sidecar-managed)")
         try:
             from dcc_mcp_maya.sidecar import resolve_gateway_remote_options  # noqa: PLC0415
 
@@ -865,7 +866,7 @@ def _print_sidecar_info(handle) -> None:  # noqa: ANN001
             remote_host, remote_port = "0.0.0.0", 59765
         if remote_port > 0:
             display_host = _gateway_remote_display_host(remote_host)
-            gateway_lines.append(f"  Gateway LAN  : http://{display_host}:{remote_port}/mcp  (if elected)")
+            gateway_lines.append(f"  Gateway LAN  : http://{display_host}:{remote_port}/mcp  (sidecar-managed)")
 
     border = "=" * 60
     lines = [
@@ -892,6 +893,48 @@ def _print_sidecar_info(handle) -> None:  # noqa: ANN001
             )
         except Exception:  # noqa: BLE001 — viewport HUD is cosmetic
             pass
+
+
+def _probe_gateway_health_deferred(delay: float = 3.0, timeout: float = 2.0) -> None:
+    """Deferred gateway health probe (non-blocking, runs on a daemon thread).
+
+    Spawned after the sidecar so users get timely feedback about whether the
+    sidecar-managed gateway actually became reachable.
+    """
+    gateway_port = _resolve_gateway_port_for_display()
+    if gateway_port <= 0:
+        return
+
+    def _probe() -> None:
+        import time
+        from urllib.error import HTTPError, URLError
+        from urllib.request import urlopen
+
+        time.sleep(delay)
+        url = f"http://127.0.0.1:{gateway_port}/health"
+        try:
+            with urlopen(url, timeout=timeout) as resp:
+                if resp.status == 200:
+                    print(f"[dcc-mcp-maya] Gateway health OK: {url}")  # noqa: T201
+                else:
+                    print(f"[dcc-mcp-maya] Gateway health check: HTTP {resp.status} at {url}")  # noqa: T201
+        except HTTPError as exc:
+            print(  # noqa: T201
+                f"[dcc-mcp-maya] Gateway NOT reachable (HTTP {exc.code}) — "
+                f"the sidecar may still be starting the gateway, or the "
+                f"dcc-mcp-server binary may be missing the gateway-daemon feature. "
+                f"Check sidecar logs or run: dcc-mcp-server gateway --port {gateway_port}"
+            )
+        except (URLError, OSError):
+            print(  # noqa: T201
+                f"[dcc-mcp-maya] Gateway NOT reachable at {url} — "
+                f"the sidecar may still be starting the gateway. "
+                f"If this persists, verify the dcc-mcp-server binary was built "
+                f"with the gateway-daemon feature."
+            )
+
+    t = threading.Thread(target=_probe, name="dcc-mcp-gateway-probe", daemon=True)
+    t.start()
 
 
 def _resolve_gateway_port_for_display() -> int:
@@ -934,6 +977,21 @@ def _print_startup_info(cfg: dict) -> None:
     srv = _srv_mod._server_instance  # noqa: SLF001
     is_gw = bool(srv and getattr(srv, "is_gateway", False))
 
+    # Detect sidecar-managed gateway mode. When sidecar mode is enabled
+    # _resolve_config() sets gateway_port=0 for the in-process server
+    # because the gateway is owned by the sidecar binary. Read the env
+    # directly to report the user's actual gateway port setting.
+    _sidecar_gw_port = 0
+    if gateway_port == 0:
+        try:
+            from dcc_mcp_maya.sidecar import is_sidecar_mode_enabled  # noqa: PLC0415
+
+            if is_sidecar_mode_enabled():
+                raw = os.environ.get("DCC_MCP_GATEWAY_PORT", "")
+                _sidecar_gw_port = int(raw) if raw.strip().isdigit() else 0
+        except (ImportError, ValueError):
+            pass
+
     # ── banner ────────────────────────────────────────────────────────────────
     border = "=" * 60
     lines = [
@@ -952,6 +1010,11 @@ def _print_startup_info(cfg: dict) -> None:
             lines.append(f"  Gateway URL  : {gw_url}  [registered as instance]")
             lines.append(f"  Connect MCP client to: {gw_url}/mcp  (via gateway)")
         lines.append("  Instance discovery: MCP resources/read uri=gateway://instances")
+    elif _sidecar_gw_port > 0:
+        lines.append(
+            f"  Gateway      : sidecar-managed (port {_sidecar_gw_port}, starting...)",
+        )
+        lines.append(f"  Connect MCP client to: {instance_url}")
     else:
         lines.append(f"  Connect MCP client to: {instance_url}")
         lines.append("  (Gateway disabled — set DCC_MCP_GATEWAY_PORT=9765 to enable)")
