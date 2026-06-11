@@ -9,7 +9,7 @@
 **dcc-mcp-maya** — Maya plugin for the DCC Model Context Protocol (MCP) ecosystem.  
 Embeds a standards-compliant MCP Streamable HTTP server (2025-03-26 spec) directly inside Maya.
 
-- **Version:** 0.8.6 <!-- x-release-please-version -->
+- **Version:** 0.8.7 <!-- x-release-please-version -->
 - **License:** MIT
 - **Repository:** https://github.com/loonghao/dcc-mcp-maya
 - **Python:** >=3.7
@@ -52,7 +52,7 @@ The server starts automatically when the plugin loads. In interactive mode a "DC
 MayaMcpServer(
     port: int = 8765,
     server_name: str = "maya-mcp",
-    server_version: str = "0.8.6",  # x-release-please-version
+    server_version: str = "0.8.7",  # x-release-please-version
     gateway_port: Optional[int] = None,
     registry_dir: Optional[str] = None,
     dcc_version: Optional[str] = None,
@@ -70,7 +70,7 @@ MayaMcpServer(
 |-----------|------|---------|-------------|
 | `port` | `int` | `8765` | TCP port. Use `0` for OS-assigned. |
 | `server_name` | `str` | `"maya-mcp"` | Name in MCP `initialize` response. |
-| `server_version` | `str` | `"0.8.6"` | Version reported in `initialize`. | <!-- x-release-please-version -->
+| `server_version` | `str` | `"0.8.7"` | Version reported in `initialize`. | <!-- x-release-please-version -->
 | `gateway_port` | `int \| None` | `None` | Multi-instance gateway port. `None` reads `DCC_MCP_GATEWAY_PORT`; `0` disables. |
 | `registry_dir` | `str \| None` | `None` | Shared `FileRegistry` directory for service discovery. |
 | `dcc_version` | `str \| None` | `None` | Maya version string advertised to the registry. |
