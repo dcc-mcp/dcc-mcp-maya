@@ -4,7 +4,8 @@
 
 - **Maya**：2020+（模块包覆盖 Maya 2022 至 2026）
 - **Python**：3.7 – 3.12（Maya 内嵌）
-- **dcc-mcp-core**：≥ 0.17.31（作为依赖自动安装）
+- **dcc-mcp-core**：≥ 0.18.17（作为依赖自动安装）
+- **dcc-mcp-server**：≥ 0.18.17（默认 sidecar gateway 运行时，作为依赖自动安装）
 
 ## 方式一 — pip 安装到 mayapy
 
@@ -12,13 +13,13 @@
 
 ```bash
 # 通用
-mayapy -m pip install "dcc-mcp-maya[sidecar]"
+mayapy -m pip install dcc-mcp-maya
 
 # Windows — Maya 2024
-"C:\Program Files\Autodesk\Maya2024\bin\mayapy.exe" -m pip install "dcc-mcp-maya[sidecar]"
+"C:\Program Files\Autodesk\Maya2024\bin\mayapy.exe" -m pip install dcc-mcp-maya
 
 # macOS — Maya 2024
-/Applications/Autodesk/maya2024/Maya.app/Contents/bin/mayapy -m pip install "dcc-mcp-maya[sidecar]"
+/Applications/Autodesk/maya2024/Maya.app/Contents/bin/mayapy -m pip install dcc-mcp-maya
 ```
 
 验证安装：
@@ -26,9 +27,6 @@ mayapy -m pip install "dcc-mcp-maya[sidecar]"
 ```bash
 mayapy -c "import dcc_mcp_maya; print(dcc_mcp_maya.__version__)"
 ```
-
-只有当你的环境已经提供 `dcc-mcp-server` binary 时，才使用不带
-`[sidecar]` 的基础包。
 
 ## 方式二 — Maya 插件
 
@@ -130,13 +128,13 @@ gateway URL：`http://127.0.0.1:9765/mcp`。
 
 ```bash
 # Maya 2022（Python 3.7）
-"C:\Program Files\Autodesk\Maya2022\bin\mayapy.exe" -m pip install "dcc-mcp-maya[sidecar]"
+"C:\Program Files\Autodesk\Maya2022\bin\mayapy.exe" -m pip install dcc-mcp-maya
 
 # Maya 2024
-"C:\Program Files\Autodesk\Maya2024\bin\mayapy.exe" -m pip install "dcc-mcp-maya[sidecar]"
+"C:\Program Files\Autodesk\Maya2024\bin\mayapy.exe" -m pip install dcc-mcp-maya
 
 # Maya 2025
-"C:\Program Files\Autodesk\Maya2025\bin\mayapy.exe" -m pip install "dcc-mcp-maya[sidecar]"
+"C:\Program Files\Autodesk\Maya2025\bin\mayapy.exe" -m pip install dcc-mcp-maya
 ```
 
 同时运行多个 Maya 实例时，插件 gateway 模式更简单：所有实例都会注册到

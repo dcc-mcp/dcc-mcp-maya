@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import builtins
+import importlib.util
+import sys
 from unittest.mock import MagicMock
 
 import pytest
@@ -81,3 +84,38 @@ def test_phase_methods_delegate_to_server() -> None:
     server._register_capability_manifest_tool.assert_called_once_with()
     server._attach_project_tools.assert_called_once_with()
     server._attach_resources.assert_called_once_with()
+
+
+def test_registration_module_falls_back_when_core_helper_is_missing(monkeypatch) -> None:
+    original_import = builtins.__import__
+
+    def guarded_import(name, globals=None, locals=None, fromlist=(), level=0):  # noqa: A002
+        if name == "dcc_mcp_core._registration":
+            raise ModuleNotFoundError("No module named 'dcc_mcp_core._registration'", name=name)
+        return original_import(name, globals, locals, fromlist, level)
+
+    monkeypatch.setattr(builtins, "__import__", guarded_import)
+
+    module_path = _registration.__file__
+    spec = importlib.util.spec_from_file_location("_maya_registration_fallback_test", module_path)
+    fallback = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    sys.modules[spec.name] = fallback
+    spec.loader.exec_module(fallback)
+
+    calls = []
+    server = MagicMock()
+    context = fallback.RegistrationContext(server=server)
+    report = fallback.run_registration_phases(
+        [
+            _RecordingPhase("one", calls),
+            _RecordingPhase("two", calls, fail=True),
+            _RecordingPhase("three", calls),
+        ],
+        context,
+    )
+
+    assert [outcome.name for outcome in report.outcomes] == ["one", "two", "three"]
+    assert [outcome.success for outcome in report.outcomes] == [True, False, True]
+    assert report.success is False
+    assert report.outcomes[1].error == "boom"

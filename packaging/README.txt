@@ -2,17 +2,14 @@ DCC-MCP-Maya — Maya Module Distribution
 ========================================
 
 Offline Maya .mod module package. Contains the MCP Streamable HTTP
-server plugin and the Python dependencies needed by the in-process
-Maya bridge (including dcc-mcp-core).
-
-This ZIP does not bundle the external dcc-mcp-server sidecar binary.
-Default plugin gateway mode needs that binary to be available from the
-same environment that launches Maya.
+server plugin, the Python dependencies needed by the in-process Maya
+bridge (including dcc-mcp-core), and the dcc-mcp-server sidecar binary
+used by the default gateway path.
 
 Requirements
 ------------
 - Autodesk Maya 2022, 2023, 2024, 2025, or 2026 (matching platform ZIP; Maya 2022 requires python37/, available in Windows/Linux packages)
-- dcc-mcp-server >= 0.17.31 for default sidecar gateway mode, unless your studio provides the binary on PATH or via DCC_MCP_SERVER_BIN
+- Bundled dcc-mcp-server >= 0.18.17 for default sidecar gateway mode
 
 Installation
 ------------
@@ -27,11 +24,8 @@ files stay where you extracted them — only the .mod pointer is copied.
 
 Sidecar runtime
 ---------------
-Default plugin mode starts a dcc-mcp-server sidecar and exposes the
-gateway at http://127.0.0.1:9765/mcp. Install or provide the sidecar
-runtime before loading the plugin on a clean machine:
-
-  mayapy -m pip install "dcc-mcp-server>=0.17.31"
+Default plugin mode starts the bundled dcc-mcp-server sidecar and exposes
+the gateway at http://127.0.0.1:9765/mcp.
 
 Clean-machine verification:
 
