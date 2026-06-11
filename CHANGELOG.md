@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.8](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.8.7...v0.8.8) (2026-06-11)
+
+
+### Bug Fixes
+
+* remove core compatibility shims ([5f2bdf3](https://github.com/dcc-mcp/dcc-mcp-maya/commit/5f2bdf3b69777e55aaf2acad9bceca663b7650f5))
+
 ## [0.8.7](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.8.6...v0.8.7) (2026-06-11)
 
 
