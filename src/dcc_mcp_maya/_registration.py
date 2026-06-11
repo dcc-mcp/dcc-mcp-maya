@@ -1,9 +1,9 @@
 """Registration phases for MayaMcpServer builtin actions.
 
-Shared base classes (RegistrationContext, RegistrationPhase,
-PhaseOutcome, RegistrationReport) and the executor
-(run_registration_phases) are imported from
-:mod:`dcc_mcp_core._registration` (PIP-689, core v0.18.14+).
+Shared base classes (RegistrationContext, RegistrationPhase, and
+run_registration_phases) are imported from :mod:`dcc_mcp_core._registration`
+(PIP-689, core v0.18.14+). Older core builds did not ship that helper module,
+so this adapter keeps a narrow local fallback with the same contract.
 
 Adapters define their own phase subclasses here for host-specific
 registration steps.
@@ -11,13 +11,99 @@ registration steps.
 
 from __future__ import annotations
 
-from typing import Sequence
+import time
+from dataclasses import dataclass, field
+from typing import Any, List, Optional, Sequence
 
-from dcc_mcp_core._registration import (
-    RegistrationContext,
-    RegistrationPhase,
-    run_registration_phases,  # noqa: F401 - re-exported for callers
-)
+try:
+    from dcc_mcp_core._registration import (  # noqa: F401 - re-exported for callers
+        RegistrationContext,
+        RegistrationPhase,
+        run_registration_phases,
+    )
+except ModuleNotFoundError as exc:
+    if exc.name != "dcc_mcp_core._registration":
+        raise
+
+    @dataclass
+    class RegistrationContext:  # type: ignore[no-redef]
+        """Input shared by every registration phase."""
+
+        server: Any
+        extra_skill_paths: Optional[List[str]] = None
+        include_bundled: bool = True
+        minimal: Optional[bool] = None
+        strict_scan: Optional[bool] = None
+
+    @dataclass
+    class PhaseOutcome:
+        """Result for one registration phase."""
+
+        name: str
+        success: bool
+        elapsed_secs: float
+        error: Optional[str] = None
+
+    @dataclass
+    class RegistrationReport:
+        """Summary emitted after builtin-action registration completes."""
+
+        outcomes: List[PhaseOutcome] = field(default_factory=list)
+
+        @property
+        def success(self) -> bool:
+            return all(outcome.success for outcome in self.outcomes)
+
+        @property
+        def elapsed_secs(self) -> float:
+            return sum(outcome.elapsed_secs for outcome in self.outcomes)
+
+    class RegistrationPhase:  # type: ignore[no-redef]
+        """Base class for one side-effect in Maya builtin registration."""
+
+        name = "registration"
+        fatal_exceptions = ()
+
+        def run(self, context: RegistrationContext) -> None:
+            raise NotImplementedError
+
+    def run_registration_phases(  # type: ignore[no-redef]
+        phases: Sequence[RegistrationPhase],
+        context: RegistrationContext,
+    ) -> RegistrationReport:
+        report = RegistrationReport()
+        for phase in phases:
+            started = time.monotonic()
+            try:
+                phase.run(context)
+            except phase.fatal_exceptions as exc:
+                report.outcomes.append(
+                    PhaseOutcome(
+                        name=phase.name,
+                        success=False,
+                        elapsed_secs=time.monotonic() - started,
+                        error=str(exc),
+                    )
+                )
+                raise
+            except Exception as exc:  # noqa: BLE001
+                report.outcomes.append(
+                    PhaseOutcome(
+                        name=phase.name,
+                        success=False,
+                        elapsed_secs=time.monotonic() - started,
+                        error=str(exc),
+                    )
+                )
+            else:
+                report.outcomes.append(
+                    PhaseOutcome(
+                        name=phase.name,
+                        success=True,
+                        elapsed_secs=time.monotonic() - started,
+                    )
+                )
+        return report
 
 
 class CoreBuiltinActionsPhase(RegistrationPhase):

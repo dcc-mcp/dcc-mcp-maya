@@ -19,7 +19,7 @@ The Maya plugin starts a Rust `dcc-mcp-server` sidecar by default, so HTTP and g
 [![Python](https://img.shields.io/pypi/pyversions/dcc-mcp-maya?label=Python)](https://pypi.org/project/dcc-mcp-maya/)
 [![Maya](https://img.shields.io/badge/Maya-2020%2B-37A5CC)](https://www.autodesk.com/products/maya/overview)
 [![MCP](https://img.shields.io/badge/MCP-Streamable%20HTTP-6f42c1)](https://modelcontextprotocol.io/)
-[![dcc-mcp-core](https://img.shields.io/badge/dcc--mcp--core-%3E%3D0.17.43-blue)](https://github.com/loonghao/dcc-mcp-core)
+[![dcc-mcp-core](https://img.shields.io/badge/dcc--mcp--core-%3E%3D0.18.17-blue)](https://github.com/loonghao/dcc-mcp-core)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 ## Why Use It
@@ -47,11 +47,11 @@ The agent should follow
 which delegates the setup workflow to
 [`skills/dcc-mcp-maya-setup`](https://github.com/loonghao/dcc-mcp-maya/tree/main/skills/dcc-mcp-maya-setup).
 
-Install into Maya's Python. Include the `sidecar` extra unless your studio
-already ships the `dcc-mcp-server` binary:
+Install into Maya's Python. The normal install includes the standard
+`dcc-mcp-server` runtime used by the default gateway path:
 
 ```bash
-mayapy -m pip install "dcc-mcp-maya[sidecar]"
+mayapy -m pip install dcc-mcp-maya
 ```
 
 Load the Maya plugin from `maya/plugin/dcc_mcp_maya_plugin.py` with
@@ -156,32 +156,23 @@ See [`src/dcc_mcp_maya/skills/SKILLS_INDEX.md`](src/dcc_mcp_maya/skills/SKILLS_I
 ### PyPI
 
 ```bash
-mayapy -m pip install "dcc-mcp-maya[sidecar]"
-```
-
-If your environment already provides `dcc-mcp-server`, the base package is
-enough:
-
-```bash
 mayapy -m pip install dcc-mcp-maya
 ```
 
 ### Maya Module ZIPs
 
 Release module archives bundle the Maya plugin, `dcc-mcp-maya`, and the
-in-process Python bridge dependencies such as `dcc-mcp-core`. They do not bundle
-the external `dcc-mcp-server` sidecar binary used by default plugin gateway
-mode. On clean machines, install or provide the sidecar runtime before loading
-the plugin:
+in-process Python bridge dependencies such as `dcc-mcp-core`, plus the
+`dcc-mcp-server` sidecar binary used by the default plugin gateway mode.
+Clean-machine verification:
 
 ```bash
-mayapy -m pip install "dcc-mcp-server>=0.17.43"
 mayapy -c "from dcc_mcp_maya.sidecar import resolve_sidecar_binary; print(resolve_sidecar_binary())"
 ```
 
-Alternatively, set `DCC_MCP_SERVER_BIN` to the sidecar executable, put
-`dcc-mcp-server` on `PATH`, or set `DCC_MCP_MAYA_SIDECAR=0` before loading the
-plugin to use the legacy in-process gateway path.
+Set `DCC_MCP_SERVER_BIN` only when you want to override the bundled sidecar
+executable. Set `DCC_MCP_MAYA_SIDECAR=0` before loading the plugin to use the
+legacy in-process gateway path.
 
 ### Maya Plugin
 
@@ -372,8 +363,8 @@ Windows symlinks require Developer Mode or an elevated shell. If symlinks are un
 
 - Autodesk Maya 2020+
 - Python 3.7+
-- `dcc-mcp-core>=0.17.43,<1.0.0`
-- Standard sidecar binary for plugin mode: `dcc-mcp-server>=0.17.43`
+- `dcc-mcp-core>=0.18.17,<1.0.0`
+- Standard sidecar binary for plugin mode: `dcc-mcp-server>=0.18.17`
 
 ## License
 

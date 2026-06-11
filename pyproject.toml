@@ -27,10 +27,11 @@ classifiers = [
 ]
 
 dependencies = [
-    # Release Train anchor: dcc-mcp-core v0.18.14 (PIP-688/689).
-    # 4 seam controllers + shared registration phase pipeline.
+    # Release Train anchor: dcc-mcp-core/server v0.18.17 (PIP-688/689).
+    # 4 lifecycle controllers + shared registration phase pipeline + gateway runtime.
     # Provides abi3 (cp38+) on 3.8+; separate cp37 wheels on Python 3.7 (Maya 2022).
-    "dcc-mcp-core>=0.18.14,<1.0.0",
+    "dcc-mcp-core>=0.18.17,<1.0.0",
+    "dcc-mcp-server>=0.18.17,<1.0.0",
 ]
 
 [project.optional-dependencies]
@@ -41,15 +42,12 @@ dev = [
     "pytest-timeout>=2.1.0",
     "pytest-xdist>=3.0",
     "requests>=2.28.0",
-    "dcc-mcp-server>=0.18.0,<1.0.0",
+    "dcc-mcp-server>=0.18.17,<1.0.0",
     "ruff>=0.8.0",
     "hatchling",
     "build",
     "tomli; python_version < '3.11'",
     "pyyaml>=5.0",
-]
-sidecar = [
-    "dcc-mcp-server>=0.18.0,<1.0.0",
 ]
 
 [project.urls]
