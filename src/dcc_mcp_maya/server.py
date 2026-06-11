@@ -39,7 +39,6 @@ from dcc_mcp_core.server_base import DccServerBase
 from dcc_mcp_maya import (
     _env,
     _executor,
-    _gateway_runtime,
     _project_tools,
     _readiness,
     _registration,
@@ -765,13 +764,7 @@ class MayaMcpServer(DccServerBase):
         registered before the local election won.  The gateway's own
         heartbeat (5 s) publishes our metadata anyway.
         """
-        if self._is_gateway_daemon_enabled():
-            _gateway_runtime.ensure_gateway_server_binary_env()
         return super().start()
-
-    def _is_gateway_daemon_enabled(self) -> bool:
-        gateway_port = int(getattr(self._config, "gateway_port", 0) or 0)
-        return bool(gateway_port > 0 and getattr(self, "_enable_gateway_failover", False))
 
     def _upgrade_to_gateway(self) -> bool:
         """Promote to gateway on the Maya UI thread when possible.
