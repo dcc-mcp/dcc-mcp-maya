@@ -5,10 +5,8 @@ This package is designed for network-share deployment in pipeline
 environments. No install scripts are included.
 
 The module content includes the Maya plugin, dcc-mcp-maya Python
-package, and the in-process bridge dependencies such as dcc-mcp-core.
-It does not bundle the external dcc-mcp-server sidecar binary. Default
-plugin gateway mode needs that binary to be available from the same
-environment that launches Maya.
+package, the in-process bridge dependencies such as dcc-mcp-core, and
+the dcc-mcp-server sidecar binary used by the default gateway path.
 
 Deployment Options
 ------------------
@@ -40,14 +38,11 @@ userSetup.py.
 
 Sidecar runtime
 ---------------
-Default plugin mode starts a dcc-mcp-server sidecar and exposes the
-gateway at http://127.0.0.1:9765/mcp. Provide dcc-mcp-server >= 0.17.23
-for every Maya environment that consumes this network module.
+Default plugin mode starts the bundled dcc-mcp-server sidecar and exposes
+the gateway at http://127.0.0.1:9765/mcp.
 
 Common deployment options:
 
-- Install into each target mayapy:
-    mayapy -m pip install "dcc-mcp-server>=0.17.23"
 - Set DCC_MCP_SERVER_BIN to a centrally managed dcc-mcp-server path.
 - Put dcc-mcp-server on PATH in the launcher that starts Maya.
 - Set DCC_MCP_MAYA_SIDECAR=0 before loading the plugin to use the

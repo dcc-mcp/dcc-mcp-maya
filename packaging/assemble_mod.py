@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import shutil
 import tempfile
 from pathlib import Path
@@ -35,7 +36,17 @@ PLATFORMS_WITH_CP37_WHEELS = {"win64", "linux"}
 
 
 def resolve_core_version(project_root: Path) -> str:
-    """Resolve the best available dcc-mcp-core version from PyPI.
+    """Resolve the best available dcc-mcp-core version from PyPI."""
+    return _resolve_dependency_version(project_root, "dcc-mcp-core")
+
+
+def resolve_server_version(project_root: Path) -> str:
+    """Resolve the best available dcc-mcp-server version from PyPI."""
+    return _resolve_dependency_version(project_root, "dcc-mcp-server")
+
+
+def _resolve_dependency_version(project_root: Path, package_name: str) -> str:
+    """Resolve the best available dependency version from PyPI.
 
     Reads the minimum version from pyproject.toml, then queries PyPI
     for the latest compatible version.  Falls back to the minimum
@@ -45,11 +56,12 @@ def resolve_core_version(project_root: Path) -> str:
 
     toml_path = project_root / "pyproject.toml"
     content = toml_path.read_text(encoding="utf-8")
-    m = re.search(r"dcc-mcp-core>=(\d+\.\d+\.\d+)", content)
+    escaped = re.escape(package_name)
+    m = re.search(rf"{escaped}>=(\d+\.\d+\.\d+)", content)
     if not m:
-        m = re.search(r"dcc-mcp-core>=([\d.]+)", content)
+        m = re.search(rf"{escaped}>=([\d.]+)", content)
     if not m:
-        raise RuntimeError("Cannot find dcc-mcp-core version in pyproject.toml")
+        raise RuntimeError(f"Cannot find {package_name} version in pyproject.toml")
     min_version = m.group(1)
 
     # Try to get the latest version from PyPI so we download a version
@@ -57,15 +69,15 @@ def resolve_core_version(project_root: Path) -> str:
     try:
         import urllib.request
 
-        url = "https://pypi.org/pypi/dcc-mcp-core/json"
+        url = f"https://pypi.org/pypi/{package_name}/json"
         with urllib.request.urlopen(url, timeout=15) as resp:
             data = json.loads(resp.read())
         latest = data.get("info", {}).get("version", "")
         if latest and _version_gte(latest, min_version):
-            print(f"  PyPI latest dcc-mcp-core: {latest} (>= {min_version})")
+            print(f"  PyPI latest {package_name}: {latest} (>= {min_version})")
             return latest
     except Exception as exc:
-        print(f"  Warning: could not query PyPI for latest version ({exc}), using minimum {min_version}")
+        print(f"  Warning: could not query PyPI for latest {package_name} ({exc}), using minimum {min_version}")
 
     return min_version
 
@@ -123,6 +135,39 @@ def download_core_wheels(version: str, platform: str, dest: Path) -> List[Path]:
     return wheels
 
 
+def download_server_wheel(version: str, platform: str, dest: Path) -> Path:
+    """Download the dcc-mcp-server sidecar wheel for the target platform."""
+    import urllib.request
+
+    pypi_url = f"https://pypi.org/pypi/dcc-mcp-server/{version}/json"
+    print(f"  Querying PyPI: {pypi_url}")
+    with urllib.request.urlopen(pypi_url, timeout=30) as resp:
+        pypi_data = json.loads(resp.read())
+
+    releases = pypi_data.get("releases", {})
+    version_files = releases.get(version, [])
+    if not version_files:
+        version_files = pypi_data.get("urls", [])
+
+    file_map = {f["filename"]: f["url"] for f in version_files if f.get("packagetype") == "bdist_wheel"}
+    patterns = _server_wheel_patterns(platform)
+    for pattern in patterns:
+        matching = [fn for fn in file_map if pattern in fn]
+        if not matching:
+            continue
+        filename = matching[0]
+        dest_file = dest / filename
+        if dest_file.exists():
+            print(f"  Already cached: {filename}")
+            return dest_file
+        print(f"  Downloading {filename} (sidecar server)...")
+        urllib.request.urlretrieve(file_map[filename], str(dest_file))
+        return dest_file
+    raise RuntimeError(
+        f"No dcc-mcp-server wheel matching {patterns!r} found on PyPI for platform={platform}, version={version}"
+    )
+
+
 def _core_wheel_patterns(platform: str) -> List[Tuple[str, str]]:
     if platform == "win64":
         return [("cp37-cp37m-win_amd64", "cp37, win_amd64"), ("cp38-abi3-win_amd64", "cp38-abi3, win_amd64")]
@@ -133,6 +178,16 @@ def _core_wheel_patterns(platform: str) -> List[Tuple[str, str]]:
         ]
     if platform == "macos":
         return [("cp38-abi3-macosx", "cp38-abi3, macosx universal2")]
+    return []
+
+
+def _server_wheel_patterns(platform: str) -> List[str]:
+    if platform == "win64":
+        return ["win_amd64"]
+    if platform == "linux":
+        return ["manylinux", "linux_x86_64"]
+    if platform == "macos":
+        return ["macosx"]
     return []
 
 
@@ -171,6 +226,39 @@ def extract_wheel(
             dest_file.parent.mkdir(parents=True, exist_ok=True)
             with zf.open(info) as src, open(dest_file, "wb") as dst:
                 dst.write(src.read())
+            mode = info.external_attr >> 16
+            if mode:
+                os.chmod(dest_file, mode)
+
+
+def extract_server_wheel(wheel_path: Path, dest: Path) -> None:
+    """Extract dcc-mcp-server package files and its binary into *dest*.
+
+    ``pip install`` maps ``*.data/scripts/dcc-mcp-server`` into the target
+    environment's scripts directory.  Module ZIP assembly extracts wheels
+    directly, so we perform that mapping explicitly.
+    """
+    import zipfile
+
+    with zipfile.ZipFile(str(wheel_path)) as zf:
+        for info in zf.infolist():
+            if info.is_dir():
+                continue
+            parts = Path(info.filename).parts
+            if any(p.endswith(".dist-info") for p in parts):
+                continue
+            if len(parts) >= 3 and parts[0].endswith(".data") and parts[1] == "scripts":
+                dest_file = dest / "scripts" / Path(*parts[2:])
+            elif parts[0] == "dcc_mcp_server":
+                dest_file = dest / info.filename
+            else:
+                continue
+            dest_file.parent.mkdir(parents=True, exist_ok=True)
+            with zf.open(info) as src, open(dest_file, "wb") as dst:
+                dst.write(src.read())
+            mode = info.external_attr >> 16
+            if mode:
+                os.chmod(dest_file, mode)
 
 
 def generate_mod_file(version: str, platform: str, path: str = ".") -> str:
@@ -226,9 +314,13 @@ def assemble(project_root: Path, version: str, platform: str, output: Path) -> P
     # 1. Download and extract dcc_mcp_core
     core_version = resolve_core_version(project_root)
     print(f"  Resolved dcc-mcp-core version: >={core_version}")
+    server_version = resolve_server_version(project_root)
+    print(f"  Resolved dcc-mcp-server version: >={server_version}")
 
     with tempfile.TemporaryDirectory() as wheel_cache:
-        wheels = download_core_wheels(core_version, platform, Path(wheel_cache))
+        cache_dir = Path(wheel_cache)
+        wheels = download_core_wheels(core_version, platform, cache_dir)
+        server_wheel = download_server_wheel(server_version, platform, cache_dir)
         abi3_wheels = [wheel for wheel in wheels if "abi3" in wheel.name]
         cp37_wheels = [wheel for wheel in wheels if "cp37-cp37m" in wheel.name]
 
@@ -241,7 +333,14 @@ def assemble(project_root: Path, version: str, platform: str, output: Path) -> P
             for wheel in cp37_wheels:
                 print(f"  Extracting {wheel.name} extensions to python37/...")
                 extract_wheel(wheel, python37_dir, extensions_only=True)
+
+        for package_root in (python_dir, python37_dir):
+            if not package_root.is_dir():
+                continue
+            print(f"  Extracting {server_wheel.name} to {package_root.name}/...")
+            extract_server_wheel(server_wheel, package_root)
     print("  Extracted dcc_mcp_core")
+    print("  Extracted dcc_mcp_server")
 
     # 2. Copy Maya plugin
     plugin_src = project_root / "maya" / "plugin" / "dcc_mcp_maya_plugin.py"

@@ -4,7 +4,8 @@
 
 - **Maya**: 2020+ (tested with Maya 2022 through 2026 module packages)
 - **Python**: 3.7 – 3.12 (embedded in Maya)
-- **dcc-mcp-core**: ≥ 0.17.31 (auto-installed as dependency)
+- **dcc-mcp-core**: ≥ 0.18.17 (auto-installed as dependency)
+- **dcc-mcp-server**: ≥ 0.18.17 (auto-installed as dependency for the default sidecar gateway)
 
 ## Method 1 — pip into mayapy
 
@@ -12,13 +13,13 @@ The simplest approach. Use Maya's own Python interpreter:
 
 ```bash
 # Generic
-mayapy -m pip install "dcc-mcp-maya[sidecar]"
+mayapy -m pip install dcc-mcp-maya
 
 # Windows — Maya 2024
-"C:\Program Files\Autodesk\Maya2024\bin\mayapy.exe" -m pip install "dcc-mcp-maya[sidecar]"
+"C:\Program Files\Autodesk\Maya2024\bin\mayapy.exe" -m pip install dcc-mcp-maya
 
 # macOS — Maya 2024
-/Applications/Autodesk/maya2024/Maya.app/Contents/bin/mayapy -m pip install "dcc-mcp-maya[sidecar]"
+/Applications/Autodesk/maya2024/Maya.app/Contents/bin/mayapy -m pip install dcc-mcp-maya
 ```
 
 Verify installation:
@@ -27,15 +28,10 @@ Verify installation:
 mayapy -c "import dcc_mcp_maya; print(dcc_mcp_maya.__version__)"
 ```
 
-Use `dcc-mcp-maya` without `[sidecar]` only when your environment already
-provides the `dcc-mcp-server` binary.
-
 Release module ZIPs follow the same rule: they include the Maya plugin,
-`dcc-mcp-maya`, and the in-process bridge dependencies such as `dcc-mcp-core`,
-but they do not bundle the external `dcc-mcp-server` sidecar binary. For clean
-module deployments, install `dcc-mcp-server>=0.17.31` into the matching
-`mayapy`, set `DCC_MCP_SERVER_BIN`, or put `dcc-mcp-server` on `PATH`. Verify
-with `mayapy -c "from dcc_mcp_maya.sidecar import resolve_sidecar_binary; print(resolve_sidecar_binary())"`.
+`dcc-mcp-maya`, the in-process bridge dependencies such as `dcc-mcp-core`, and
+the `dcc-mcp-server` sidecar binary used by the default gateway path. Verify
+clean module deployments with `mayapy -c "from dcc_mcp_maya.sidecar import resolve_sidecar_binary; print(resolve_sidecar_binary())"`.
 
 ## Method 2 — Maya Plugin
 
@@ -142,13 +138,13 @@ Each Maya version has its own Python interpreter. Install separately per version
 
 ```bash
 # Maya 2022 (Python 3.7)
-"C:\Program Files\Autodesk\Maya2022\bin\mayapy.exe" -m pip install "dcc-mcp-maya[sidecar]"
+"C:\Program Files\Autodesk\Maya2022\bin\mayapy.exe" -m pip install dcc-mcp-maya
 
 # Maya 2024
-"C:\Program Files\Autodesk\Maya2024\bin\mayapy.exe" -m pip install "dcc-mcp-maya[sidecar]"
+"C:\Program Files\Autodesk\Maya2024\bin\mayapy.exe" -m pip install dcc-mcp-maya
 
 # Maya 2025
-"C:\Program Files\Autodesk\Maya2025\bin\mayapy.exe" -m pip install "dcc-mcp-maya[sidecar]"
+"C:\Program Files\Autodesk\Maya2025\bin\mayapy.exe" -m pip install dcc-mcp-maya
 ```
 
 If running multiple Maya instances simultaneously, plugin gateway mode is
