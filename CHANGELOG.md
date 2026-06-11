@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.8.7](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.8.6...v0.8.7) (2026-06-11)
+
+
+### Bug Fixes
+
+* align core registration and gateway runtime ([5088127](https://github.com/dcc-mcp/dcc-mcp-maya/commit/50881271229cbb9c9fc4c35585ef713b3fed8e30))
+* expose packaged gateway binary to core ([61fd166](https://github.com/dcc-mcp/dcc-mcp-maya/commit/61fd166e37d749aea08f4d836f0e08912a61afd8))
+
 ## [0.8.6](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.8.5...v0.8.6) (2026-06-10)
 
 
