@@ -378,6 +378,17 @@ class TestSidecarUsesCoreRegistryDefaults:
         assert kwargs["instance_id"] == "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee"
         plugin_module._probe_gateway_health_deferred.assert_called_once_with(plugin_module._sidecar_handle)
 
+    def test_sidecar_omits_unresolved_instance_id(self, plugin_module, monkeypatch):
+        """A cosmetic sentinel value must not become a strict sidecar CLI UUID."""
+        monkeypatch.setattr(plugin_module, "_resolve_instance_id", lambda: None)
+
+        sidecar_pkg = self._arm_plugin(plugin_module, monkeypatch)
+        plugin_module._maybe_spawn_sidecar()
+
+        sidecar_pkg.start_sidecar.assert_called_once()
+        _, kwargs = sidecar_pkg.start_sidecar.call_args
+        assert kwargs["instance_id"] is None
+
     def test_sidecar_banner_omits_internal_rfc_marker(self, plugin_module, monkeypatch, capsys):
         monkeypatch.setattr(plugin_module, "_is_interactive", lambda: False)
         monkeypatch.setenv("DCC_MCP_GATEWAY_PORT", "9765")
