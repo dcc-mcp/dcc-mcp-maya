@@ -849,7 +849,7 @@ def _maybe_spawn_sidecar() -> None:
         return
 
     _print_sidecar_info(_sidecar_handle)
-    _probe_gateway_health_deferred()
+    _probe_gateway_health_deferred(_sidecar_handle)
 
 
 def _print_sidecar_info(handle) -> None:  # noqa: ANN001
@@ -895,15 +895,26 @@ def _print_sidecar_info(handle) -> None:  # noqa: ANN001
             pass
 
 
-def _probe_gateway_health_deferred(delay: float = 3.0, timeout: float = 2.0) -> None:
+def _probe_gateway_health_deferred(
+    handle=None,  # noqa: ANN001 - sidecar handle shape is intentionally duck-typed.
+    delay: float = 1.0,
+    timeout: float = 1.0,
+    attempts: int = 12,
+    interval: float = 1.0,
+) -> None:
     """Deferred gateway health probe (non-blocking, runs on a daemon thread).
 
     Spawned after the sidecar so users get timely feedback about whether the
-    sidecar-managed gateway actually became reachable.
+    sidecar-managed gateway actually became reachable.  The gateway daemon may
+    need a couple of seconds to reclaim stale registry state and bind the local
+    and LAN listeners, so this probe is deliberately bounded-retry rather than a
+    single startup snapshot.
     """
     gateway_port = _resolve_gateway_port_for_display()
     if gateway_port <= 0:
         return
+    attempts = max(1, int(attempts))
+    interval = max(0.0, float(interval))
 
     def _probe() -> None:
         import time
@@ -912,26 +923,43 @@ def _probe_gateway_health_deferred(delay: float = 3.0, timeout: float = 2.0) -> 
 
         time.sleep(delay)
         url = f"http://127.0.0.1:{gateway_port}/health"
-        try:
-            with urlopen(url, timeout=timeout) as resp:
-                if resp.status == 200:
-                    print(f"[dcc-mcp-maya] Gateway health OK: {url}")  # noqa: T201
-                else:
-                    print(f"[dcc-mcp-maya] Gateway health check: HTTP {resp.status} at {url}")  # noqa: T201
-        except HTTPError as exc:
-            print(  # noqa: T201
-                f"[dcc-mcp-maya] Gateway NOT reachable (HTTP {exc.code}) — "
-                f"the sidecar may still be starting the gateway, or the "
-                f"dcc-mcp-server binary may be missing the gateway-daemon feature. "
-                f"Check sidecar logs or run: dcc-mcp-server gateway --port {gateway_port}"
-            )
-        except (URLError, OSError):
-            print(  # noqa: T201
-                f"[dcc-mcp-maya] Gateway NOT reachable at {url} — "
-                f"the sidecar may still be starting the gateway. "
-                f"If this persists, verify the dcc-mcp-server binary was built "
-                f"with the gateway-daemon feature."
-            )
+        last_error = None
+        for attempt in range(1, attempts + 1):
+            try:
+                with urlopen(url, timeout=timeout) as resp:
+                    if resp.status == 200:
+                        print(f"[dcc-mcp-maya] Gateway health OK: {url}")  # noqa: T201
+                        return
+                    last_error = f"HTTP {resp.status}"
+            except HTTPError as exc:
+                last_error = f"HTTP {exc.code}"
+            except (URLError, OSError) as exc:
+                last_error = str(exc) or exc.__class__.__name__
+
+            proc = getattr(handle, "proc", None)
+            poll = getattr(proc, "poll", None)
+            if callable(poll):
+                returncode = poll()
+                if returncode is not None:
+                    pid = getattr(proc, "pid", "?")
+                    print(  # noqa: T201
+                        f"[dcc-mcp-maya] Gateway NOT reachable at {url}; "
+                        f"sidecar PID {pid} exited early (exit={returncode}). "
+                        f"Last probe error: {last_error}. Check dcc-mcp-server "
+                        f"logs or run: dcc-mcp-server gateway --port {gateway_port}"
+                    )
+                    return
+
+            if attempt < attempts:
+                time.sleep(interval)
+
+        print(  # noqa: T201
+            f"[dcc-mcp-maya] Gateway NOT reachable at {url} after {attempts} "
+            f"attempt(s). Last probe error: {last_error}. The sidecar may still "
+            f"be starting the gateway, stale registry state may need cleanup, "
+            f"or the dcc-mcp-server binary may be missing the gateway-daemon "
+            f"feature."
+        )
 
     t = threading.Thread(target=_probe, name="dcc-mcp-gateway-probe", daemon=True)
     t.start()
