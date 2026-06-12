@@ -29,7 +29,7 @@ Gateway mode (default ON)
 By default the plugin starts a per-Maya ``dcc-mcp-server sidecar``. The sidecar
 ensures a standalone machine-wide gateway is running on port ``9765`` and then
 registers this Maya instance as a backend. Every Maya sidecar gets an explicit
-``--display-name`` and ``--instance-id``; the gateway gets a machine-level
+``--display-name`` and, when available, ``--instance-id``; the gateway gets a machine-level
 ``--gateway-name`` (default ``dcc-mcp-gateway@<hostname>``) so admin and CLI
 debug views can distinguish the gateway from Maya sessions.
 
@@ -881,6 +881,12 @@ def _print_sidecar_info(handle) -> None:  # noqa: ANN001
         *gateway_lines,
         border,
     ]
+    stdout_path = getattr(handle, "stdout_path", None)
+    stderr_path = getattr(handle, "stderr_path", None)
+    if stdout_path:
+        lines.insert(-1, f"  stdout log   : {stdout_path}")
+    if stderr_path:
+        lines.insert(-1, f"  stderr log   : {stderr_path}")
     print("\n".join(lines))  # noqa: T201 — intentional console output
 
     if _is_interactive():
@@ -928,6 +934,19 @@ def _probe_gateway_health_deferred(
             try:
                 with urlopen(url, timeout=timeout) as resp:
                     if resp.status == 200:
+                        exit_message = _format_sidecar_exit_message(handle)
+                        if exit_message:
+                            print(  # noqa: T201
+                                f"[dcc-mcp-maya] Gateway health OK at {url}, but {exit_message}"
+                            )
+                            return
+                        time.sleep(0.25)
+                        exit_message = _format_sidecar_exit_message(handle)
+                        if exit_message:
+                            print(  # noqa: T201
+                                f"[dcc-mcp-maya] Gateway health OK at {url}, but {exit_message}"
+                            )
+                            return
                         print(f"[dcc-mcp-maya] Gateway health OK: {url}")  # noqa: T201
                         return
                     last_error = f"HTTP {resp.status}"
@@ -941,10 +960,9 @@ def _probe_gateway_health_deferred(
             if callable(poll):
                 returncode = poll()
                 if returncode is not None:
-                    pid = getattr(proc, "pid", "?")
                     print(  # noqa: T201
                         f"[dcc-mcp-maya] Gateway NOT reachable at {url}; "
-                        f"sidecar PID {pid} exited early (exit={returncode}). "
+                        f"{_format_sidecar_exit_message(handle, returncode=returncode)} "
                         f"Last probe error: {last_error}. Check dcc-mcp-server "
                         f"logs or run: dcc-mcp-server gateway --port {gateway_port}"
                     )
@@ -963,6 +981,44 @@ def _probe_gateway_health_deferred(
 
     t = threading.Thread(target=_probe, name="dcc-mcp-gateway-probe", daemon=True)
     t.start()
+
+
+def _format_sidecar_exit_message(handle=None, returncode=None) -> str:  # noqa: ANN001
+    proc = getattr(handle, "proc", None)
+    if proc is None:
+        return ""
+    if returncode is None:
+        poll = getattr(proc, "poll", None)
+        if not callable(poll):
+            return ""
+        returncode = poll()
+    if returncode is None:
+        return ""
+    pid = getattr(proc, "pid", "?")
+    parts = [f"sidecar PID {pid} exited early (exit={returncode})."]
+    stderr_path = getattr(handle, "stderr_path", None)
+    stdout_path = getattr(handle, "stdout_path", None)
+    if stderr_path:
+        parts.append(f"stderr log: {stderr_path}.")
+        tail = _read_log_tail(stderr_path)
+        if tail:
+            parts.append(f"stderr tail: {tail}")
+    if stdout_path:
+        parts.append(f"stdout log: {stdout_path}.")
+    return " ".join(parts)
+
+
+def _read_log_tail(path, *, limit: int = 800) -> str:  # noqa: ANN001
+    try:
+        with open(path, "rb") as handle:
+            handle.seek(0, os.SEEK_END)
+            size = handle.tell()
+            handle.seek(max(0, size - limit), os.SEEK_SET)
+            data = handle.read()
+    except OSError:
+        return ""
+    text = data.decode("utf-8", "replace").strip()
+    return " ".join(text.split())
 
 
 def _resolve_gateway_port_for_display() -> int:
@@ -1139,15 +1195,15 @@ def _stop_blocking() -> None:
 # ── shutdown safety nets (issue #186) ─────────────────────────────────────────
 
 
-def _resolve_instance_id() -> str:
-    """Return the Maya MCP instance id for the active server, or ``"unknown"``.
+def _resolve_instance_id() -> Optional[str]:
+    """Return the Maya MCP instance id for the active server, if available.
 
     Used to tag the crash-resilient process sentinel (issue #186) so
     sweepers can cross-reference a FileRegistry row against its
     sentinel.  Robust to every degraded state — missing server,
-    Python-3.7 fallback path, server not yet registered — because the
-    tag is cosmetic; the sentinel's filesystem presence is what
-    actually matters.
+    Python-3.7 fallback path, server not yet registered.  Sidecar launch
+    treats the value as a strict CLI contract, so degraded states return
+    ``None`` instead of a cosmetic sentinel like ``"unknown"``.
     """
     try:
         import dcc_mcp_maya  # noqa: PLC0415
@@ -1159,7 +1215,7 @@ def _resolve_instance_id() -> str:
                 return str(instance_id)
     except Exception as exc:  # noqa: BLE001
         logger.debug("instance id lookup failed: %s", exc)
-    return "unknown"
+    return None
 
 
 def _resolve_sidecar_display_name() -> str:
@@ -1206,7 +1262,7 @@ def _install_shutdown_safety() -> None:
         coordinator = ShutdownCoordinator()
         coordinator.install(
             stop_callback=_stop_blocking,
-            instance_id=_resolve_instance_id(),
+            instance_id=_resolve_instance_id() or "unknown",
             registry_dir=os.environ.get("DCC_MCP_REGISTRY_DIR") or None,
         )
         _shutdown_coordinator = coordinator
