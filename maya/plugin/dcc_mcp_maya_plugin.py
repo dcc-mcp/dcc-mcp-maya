@@ -1207,12 +1207,16 @@ def _resolve_instance_id() -> Optional[str]:
     """
     try:
         import dcc_mcp_maya  # noqa: PLC0415
+        from dcc_mcp_maya._identity import normalize_instance_id  # noqa: PLC0415
 
         server = getattr(dcc_mcp_maya.server, "_server_instance", None)
         if server is not None:
             instance_id = getattr(server, "instance_id", None)
+            normalized = normalize_instance_id(instance_id)
+            if normalized:
+                return normalized
             if instance_id:
-                return str(instance_id)
+                logger.debug("ignoring invalid server instance id for sidecar launch: %r", instance_id)
     except Exception as exc:  # noqa: BLE001
         logger.debug("instance id lookup failed: %s", exc)
     return None

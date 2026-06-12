@@ -69,6 +69,32 @@ def test_start_sidecar_forwards_identity_flags(monkeypatch):
     assert handle.launch_contract["recommended_next_action"]
 
 
+def test_start_sidecar_omits_invalid_instance_id(monkeypatch):
+    captured = {}
+
+    def fake_popen(cmd, **kwargs):
+        captured["cmd"] = list(cmd)
+        captured["kwargs"] = dict(kwargs)
+        return _FakeProc()
+
+    monkeypatch.setattr("subprocess.Popen", fake_popen)
+
+    handle = start_sidecar(
+        maya_pid=1234,
+        binary_override=Path("dcc-mcp-server"),
+        qt_port_override=45555,
+        instance_id="unknown",
+        start_qt_server_fn=lambda port: {
+            "host": "127.0.0.1",
+            "port": port,
+            "qt_binding": "fake-test-stub",
+        },
+    )
+
+    assert "--instance-id" not in captured["cmd"]
+    assert handle.launch_contract["readiness_selector"]["instance_id"] is None
+
+
 def test_start_sidecar_captures_stdio_to_registry_logs(monkeypatch, tmp_path):
     captured = {}
 
