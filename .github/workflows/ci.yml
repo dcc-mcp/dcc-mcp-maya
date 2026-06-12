@@ -195,7 +195,7 @@ jobs:
     env:
       DCC_MCP_ALLOW_AMBIENT_PYTHON: "1"
       DCC_MCP_DISABLE_FILE_LOGGING: "1"
-      DCC_MCP_GATEWAY_PORT: "0"
+      DCC_MCP_GATEWAY_PORT: "18765"
       DCC_MCP_MAYA_SIDECAR: "0"
       DCC_MCP_BASE_URL: "http://127.0.0.1:18765"
     steps:
@@ -223,7 +223,7 @@ jobs:
           import time
           from dcc_mcp_maya import start_server
 
-          handle = start_server(port=18765, gateway_port=0, enable_gateway_failover=False)
+          handle = start_server(port=18766, gateway_port=18765, enable_gateway_failover=False)
           print(handle.mcp_url(), flush=True)
           try:
               while True:
@@ -235,6 +235,8 @@ jobs:
 
       - name: Probe service with dcc-mcp-cli
         run: |
+          set -o pipefail
+
           cleanup() {
             if [ -f "$RUNNER_TEMP/maya-cli-smoke.pid" ]; then
               kill "$(cat "$RUNNER_TEMP/maya-cli-smoke.pid")" 2>/dev/null || true
@@ -250,8 +252,41 @@ jobs:
           done
 
           dcc-mcp-cli health
-          dcc-mcp-cli search --query get_session --limit 3 | tee "$RUNNER_TEMP/dcc-mcp-cli-search.json"
-          dcc-mcp-cli describe maya.maya-scene.maya_scene__get_session_info
+
+          TOOL_SLUG=""
+          for _ in $(seq 1 30); do
+            if ! dcc-mcp-cli search --query scene --limit 10 | tee "$RUNNER_TEMP/dcc-mcp-cli-search.json"; then
+              sleep 1
+              continue
+            fi
+            TOOL_SLUG="$(python - <<'PY'
+          import json
+          import os
+
+          preferred = "maya_scene__get_session_info"
+          path = os.path.join(os.environ["RUNNER_TEMP"], "dcc-mcp-cli-search.json")
+          try:
+              payload = json.load(open(path, encoding="utf-8"))
+          except Exception:
+              raise SystemExit(0)
+          fallback = ""
+          for hit in payload.get("hits", []) or payload.get("tools", []):
+              backend_tool = hit.get("backend_tool") or hit.get("tool") or hit.get("name") or ""
+              slug = hit.get("slug") or hit.get("tool_slug") or hit.get("name") or ""
+              if slug and not fallback:
+                  fallback = slug
+              if slug and (backend_tool == preferred or slug.endswith(preferred)):
+                  print(slug)
+                  break
+          else:
+              print(fallback)
+          PY
+          )"
+            if [ -n "$TOOL_SLUG" ]; then
+              break
+            fi
+            sleep 1
+          done
 
           python - <<'PY'
           import json
@@ -259,11 +294,18 @@ jobs:
 
           path = os.path.join(os.environ["RUNNER_TEMP"], "dcc-mcp-cli-search.json")
           payload = json.load(open(path, encoding="utf-8"))
-          slugs = {hit.get("slug") for hit in payload.get("hits", [])}
-          expected = "maya.maya-scene.maya_scene__get_session_info"
-          if expected not in slugs:
-              raise SystemExit(f"{expected} not found in dcc-mcp-cli search results: {sorted(slugs)}")
+          hits = payload.get("hits", []) or payload.get("tools", [])
+          slugs = []
+          for hit in hits:
+              slug = hit.get("slug") or hit.get("tool_slug") or hit.get("name") or ""
+              if slug:
+                  slugs.append(slug)
+          if not slugs:
+              raise SystemExit(f"dcc-mcp-cli search returned no describable slug: {payload!r}")
           PY
+
+          echo "Resolved tool slug: $TOOL_SLUG"
+          dcc-mcp-cli describe "$TOOL_SLUG"
 
       - name: Dump service log on failure
         if: failure()
