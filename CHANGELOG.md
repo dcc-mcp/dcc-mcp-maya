@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.8.9](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.8.8...v0.8.9) (2026-06-12)
+
+
+### Bug Fixes
+
+* align cli smoke with gateway slugs ([0309e02](https://github.com/dcc-mcp/dcc-mcp-maya/commit/0309e0267bb00467563238af1a0820e8a95ab9ea))
+* align maya sidecar diagnostics ([949e92e](https://github.com/dcc-mcp/dcc-mcp-maya/commit/949e92eea407ce0d0b44a4bc9d8da8fdeafb095b))
+* keep maya sidecar diagnostics visible ([b1b5a95](https://github.com/dcc-mcp/dcc-mcp-maya/commit/b1b5a9587d34cae9b64aa91246e41a1f1feea1c5))
+* sanitize maya sidecar instance ids ([02f25a7](https://github.com/dcc-mcp/dcc-mcp-maya/commit/02f25a7a5171e8fa9668f5b6bce6e14448173b34))
+
 ## [0.8.8](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.8.7...v0.8.8) (2026-06-11)
 
 
