@@ -54,6 +54,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
+from dcc_mcp_maya._identity import normalize_instance_id
 from dcc_mcp_maya.sidecar._resolver import (
     SidecarBinaryError,
     resolve_sidecar_binary,
@@ -304,13 +305,17 @@ def start_sidecar(
         ) from exc
 
     gateway_remote_host, gateway_remote_port = resolve_gateway_remote_options(spawn_env)
+    normalized_instance_id = normalize_instance_id(instance_id)
+    if instance_id not in (None, "") and normalized_instance_id is None:
+        logger.debug("Ignoring invalid sidecar instance_id %r; expected UUID", instance_id)
+
     launch_contract = build_sidecar_command(
         dcc_type=dcc_name,
         host_rpc=host_rpc_uri,
         watch_pid=maya_pid,
         registry_dir=registry_dir,
         server_bin=str(binary),
-        instance_id=instance_id,
+        instance_id=normalized_instance_id,
         display_name=display_name,
         adapter_version=adapter_version,
         gateway_port=_resolve_gateway_port(spawn_env),
