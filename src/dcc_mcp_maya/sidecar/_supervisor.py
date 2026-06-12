@@ -41,10 +41,6 @@ Design choices worth pinning:
   inheriting Maya's process tree. When Maya exits the OS reaps the
   sidecar naturally as a backstop in case PPID-watch was somehow
   bypassed.
-* **No raw ``log to stderr`` plumbing** — the binary writes structured
-  logs to ``DCC_MCP_LOG_DIR`` already (see
-  ``dcc-mcp-logging::file_logging``). The Python plug-in shouldn't
-  duplicate that.
 """
 
 from __future__ import annotations
@@ -125,6 +121,8 @@ class SidecarHandle:
     command: list = field(default_factory=list)
     launch_contract: dict = field(default_factory=dict)
     extra_env: dict = field(default_factory=dict)
+    stdout_path: Optional[Path] = None
+    stderr_path: Optional[Path] = None
 
     @property
     def is_alive(self) -> bool:
@@ -340,19 +338,22 @@ def start_sidecar(
         maya_pid,
         qt_binding,
     )
+    stdio = _prepare_sidecar_stdio(launch_contract, spawn_env, maya_pid)
     try:
         proc = subprocess.Popen(  # noqa: S603 — argv is built from trusted vars
             cmd,
             env=spawn_env,
             stdin=subprocess.DEVNULL,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
+            stdout=stdio["stdout"],
+            stderr=stdio["stderr"],
             close_fds=True,
             creationflags=_detached_process_flags(),
         )
     except OSError as exc:
         _stop_qt_server(stop_qt_server_fn)
         raise SidecarSpawnError("failed to spawn dcc-mcp-server sidecar at {0}: {1}".format(binary, exc)) from exc
+    finally:
+        _close_sidecar_stdio(stdio)
 
     return SidecarHandle(
         proc=proc,
@@ -364,6 +365,8 @@ def start_sidecar(
         command=cmd,
         launch_contract=dict(launch_contract),
         extra_env=dict(extra_env or {}),
+        stdout_path=stdio.get("stdout_path"),
+        stderr_path=stdio.get("stderr_path"),
     )
 
 
@@ -480,6 +483,51 @@ def _detached_process_flags() -> int:
         CREATE_NO_WINDOW = 0x0800_0000  # noqa: N806
         return CREATE_NO_WINDOW
     return 0
+
+
+def _prepare_sidecar_stdio(launch_contract: dict, env: dict, maya_pid: int) -> dict:
+    """Open stdout/stderr log files for the sidecar child process.
+
+    The sidecar can exit before structured file logging starts, especially for
+    CLI argument-contract failures. Keeping raw stdio makes those failures
+    visible without blocking Maya startup.
+    """
+
+    try:
+        log_root = env.get("DCC_MCP_LOG_DIR")
+        if log_root:
+            log_dir = Path(log_root)
+        else:
+            log_dir = Path(str(launch_contract.get("registry_dir") or ".")) / "logs"
+        log_dir.mkdir(parents=True, exist_ok=True)
+        stamp = time.strftime("%Y%m%d-%H%M%S")
+        prefix = "dcc-mcp-sidecar-{0}-{1}".format(maya_pid, stamp)
+        stdout_path = log_dir / "{0}.stdout.log".format(prefix)
+        stderr_path = log_dir / "{0}.stderr.log".format(prefix)
+        return {
+            "stdout": stdout_path.open("ab"),
+            "stderr": stderr_path.open("ab"),
+            "stdout_path": stdout_path,
+            "stderr_path": stderr_path,
+        }
+    except OSError as exc:
+        logger.warning("dcc-mcp-maya: failed to open sidecar stdio logs; falling back to DEVNULL: %s", exc)
+        return {
+            "stdout": subprocess.DEVNULL,
+            "stderr": subprocess.DEVNULL,
+            "stdout_path": None,
+            "stderr_path": None,
+        }
+
+
+def _close_sidecar_stdio(stdio: dict) -> None:
+    for key in ("stdout", "stderr"):
+        handle = stdio.get(key)
+        if hasattr(handle, "close"):
+            try:
+                handle.close()
+            except OSError as exc:
+                logger.debug("sidecar stdio close raised: %s", exc)
 
 
 def _await_proc_alive(proc: subprocess.Popen, timeout: float = 0.5) -> bool:
