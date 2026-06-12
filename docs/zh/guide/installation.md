@@ -4,8 +4,8 @@
 
 - **Maya**：2020+（模块包覆盖 Maya 2022 至 2026）
 - **Python**：3.7 – 3.12（Maya 内嵌）
-- **dcc-mcp-core**：≥ 0.18.20（作为依赖自动安装）
-- **dcc-mcp-server**：≥ 0.18.20（默认 sidecar gateway 运行时，作为依赖自动安装）
+- **dcc-mcp-core**：≥ 0.18.21（作为依赖自动安装）
+- **dcc-mcp-server**：≥ 0.18.21（默认 sidecar gateway 运行时，作为依赖自动安装）
 
 ## 方式一 — pip 安装到 mayapy
 
