@@ -69,6 +69,39 @@ def test_start_sidecar_forwards_identity_flags(monkeypatch):
     assert handle.launch_contract["recommended_next_action"]
 
 
+def test_start_sidecar_captures_stdio_to_registry_logs(monkeypatch, tmp_path):
+    captured = {}
+
+    def fake_popen(cmd, **kwargs):
+        captured["cmd"] = list(cmd)
+        captured["kwargs"] = dict(kwargs)
+        return _FakeProc()
+
+    monkeypatch.setattr("subprocess.Popen", fake_popen)
+    registry_dir = tmp_path / "registry"
+
+    handle = start_sidecar(
+        maya_pid=1234,
+        binary_override=Path("dcc-mcp-server"),
+        qt_port_override=45555,
+        registry_dir=registry_dir,
+        start_qt_server_fn=lambda port: {
+            "host": "127.0.0.1",
+            "port": port,
+            "qt_binding": "fake-test-stub",
+        },
+    )
+
+    stdout_path = Path(captured["kwargs"]["stdout"].name)
+    stderr_path = Path(captured["kwargs"]["stderr"].name)
+    assert stdout_path.parent == registry_dir / "logs"
+    assert stderr_path.parent == registry_dir / "logs"
+    assert stdout_path.name.startswith("dcc-mcp-sidecar-1234-")
+    assert stderr_path.name.startswith("dcc-mcp-sidecar-1234-")
+    assert handle.stdout_path == stdout_path
+    assert handle.stderr_path == stderr_path
+
+
 def test_start_sidecar_honors_extra_env_gateway_port_zero(monkeypatch):
     captured = {}
 
