@@ -389,6 +389,16 @@ class TestSidecarUsesCoreRegistryDefaults:
         _, kwargs = sidecar_pkg.start_sidecar.call_args
         assert kwargs["instance_id"] is None
 
+    def test_resolve_instance_id_ignores_invalid_server_value(self, plugin_module, monkeypatch):
+        """Core-sidecar UUID validation should not turn a cosmetic fallback into a launch failure."""
+        import dcc_mcp_maya.server as server_module
+
+        server = MagicMock()
+        server.instance_id = "unknown"
+        monkeypatch.setattr(server_module, "_server_instance", server)
+
+        assert plugin_module._resolve_instance_id() is None
+
     def test_sidecar_banner_omits_internal_rfc_marker(self, plugin_module, monkeypatch, capsys):
         monkeypatch.setattr(plugin_module, "_is_interactive", lambda: False)
         monkeypatch.setenv("DCC_MCP_GATEWAY_PORT", "9765")
