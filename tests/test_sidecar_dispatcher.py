@@ -47,12 +47,26 @@ class _StubServer:
         self._actions = actions or []
         self._raise_on_list = raise_on_list
         self.list_actions_call_count = 0
+        self._skills: dict[str, bool] = {}
 
     def list_actions(self) -> list[_StubAction]:
         self.list_actions_call_count += 1
         if self._raise_on_list is not None:
             raise self._raise_on_list
         return list(self._actions)
+
+    def load_skill(self, skill_name: str) -> bool:
+        if skill_name in ("maya-primitives", "maya-animation"):
+            self._skills[skill_name] = True
+            return True
+        return False
+
+    def get_skill_info(self, skill_name: str) -> dict[str, Any] | None:
+        if skill_name == "maya-primitives":
+            return {"name": "maya-primitives", "tools": ["create_sphere", "create_cube"], "loaded": True}
+        if skill_name == "maya-scene":
+            return {"name": "maya-scene", "tools": ["save_scene"], "loaded": False}
+        return None
 
 
 def _server_lookup_returning(server: Any) -> Callable[[], Any]:
@@ -248,3 +262,122 @@ class TestQtDispatchHandler:
 
         assert isinstance(envelope, dict)
         assert envelope["message"] == "已完成 (done)"
+
+
+class TestBuiltinActionsLoadSkill:
+    """Tests for the built-in ``load_skill`` sidecar action."""
+
+    def test_load_skill_happy_path(self):
+        server = _StubServer()
+        envelope = dispatch_payload(
+            {"action": "load_skill", "args": {"skill_name": "maya-primitives"}, "request_id": "r-load-1"},
+            server_lookup=_server_lookup_returning(server),
+        )
+        assert envelope["success"] is True
+        assert envelope["loaded"] is True
+        assert envelope["skill_name"] == "maya-primitives"
+        assert envelope["action"] == "load_skill"
+        assert envelope["request_id"] == "r-load-1"
+        assert "loaded successfully" in envelope["message"]
+
+    def test_load_skill_failure(self):
+        server = _StubServer()
+        envelope = dispatch_payload(
+            {"action": "load_skill", "args": {"skill_name": "nonexistent-skill"}, "request_id": "r-load-2"},
+            server_lookup=_server_lookup_returning(server),
+        )
+        assert envelope["success"] is False
+        assert envelope["loaded"] is False
+        assert envelope["skill_name"] == "nonexistent-skill"
+        assert envelope["error"] == "load-skill-failed"
+        assert envelope["action"] == "load_skill"
+
+    def test_load_skill_missing_skill_name(self):
+        envelope = dispatch_payload(
+            {"action": "load_skill", "args": {}, "request_id": "r-load-3"},
+            server_lookup=_server_lookup_returning(_StubServer()),
+        )
+        assert envelope["success"] is False
+        assert envelope["error"] == "payload-malformed"
+        assert envelope["context"]["reason"] == "missing-skill-name"
+
+    def test_load_skill_extra_args_passthrough(self):
+        server = _StubServer()
+        envelope = dispatch_payload(
+            {"action": "load_skill", "args": {"skill_name": "maya-animation", "activate_groups": True}},
+            server_lookup=_server_lookup_returning(server),
+        )
+        assert envelope["success"] is True
+        assert envelope["loaded"] is True
+        assert envelope["skill_name"] == "maya-animation"
+
+    def test_load_skill_server_not_running(self):
+        envelope = dispatch_payload(
+            {"action": "load_skill", "args": {"skill_name": "maya-primitives"}, "request_id": "r-load-5"},
+            server_lookup=lambda: None,
+        )
+        assert envelope["success"] is False
+        assert envelope["error"] == "server-not-running"
+        assert "server is not running" in envelope["message"]
+
+    def test_load_skill_unknown_action_from_resolver_preserved(self):
+        """A non-builtin action with name 'load_skill_fake' should still go through the resolver."""
+        server = _StubServer()
+        envelope = dispatch_payload(
+            {"action": "load_skill_fake", "args": {}, "request_id": "r-load-6"},
+            server_lookup=_server_lookup_returning(server),
+        )
+        assert envelope["error"] == ERROR_UNKNOWN_ACTION
+
+
+class TestBuiltinActionsGetSkillInfo:
+    """Tests for the built-in ``get_skill_info`` sidecar action."""
+
+    def test_get_skill_info_happy_path(self):
+        server = _StubServer()
+        envelope = dispatch_payload(
+            {"action": "get_skill_info", "args": {"skill_name": "maya-primitives"}, "request_id": "r-info-1"},
+            server_lookup=_server_lookup_returning(server),
+        )
+        assert envelope["success"] is True
+        assert envelope["skill_name"] == "maya-primitives"
+        assert envelope["skill_info"] is not None
+        assert "create_sphere" in envelope["skill_info"]
+        assert envelope["action"] == "get_skill_info"
+
+    def test_get_skill_info_not_found(self):
+        server = _StubServer()
+        envelope = dispatch_payload(
+            {"action": "get_skill_info", "args": {"skill_name": "nonexistent"}, "request_id": "r-info-2"},
+            server_lookup=_server_lookup_returning(server),
+        )
+        assert envelope["success"] is True
+        assert envelope["skill_name"] == "nonexistent"
+        assert envelope["skill_info"] is None
+
+    def test_get_skill_info_missing_skill_name(self):
+        envelope = dispatch_payload(
+            {"action": "get_skill_info", "args": {}, "request_id": "r-info-3"},
+            server_lookup=_server_lookup_returning(_StubServer()),
+        )
+        assert envelope["success"] is False
+        assert envelope["error"] == "payload-malformed"
+        assert envelope["context"]["reason"] == "missing-skill-name"
+
+    def test_get_skill_info_server_not_running(self):
+        envelope = dispatch_payload(
+            {"action": "get_skill_info", "args": {"skill_name": "maya-primitives"}, "request_id": "r-info-4"},
+            server_lookup=lambda: None,
+        )
+        assert envelope["success"] is False
+        assert envelope["error"] == "server-not-running"
+
+    def test_regular_actions_still_routed_through_resolver(self):
+        """Non-builtin actions should not be intercepted; resolver is called."""
+        server = _StubServer(actions=[_StubAction("regular_tool", "/tmp/some_tool.py")])
+        dispatch_payload(
+            {"action": "regular_tool", "args": {}},
+            server_lookup=_server_lookup_returning(server),
+        )
+        # list_actions() was called, proving the resolver path was used
+        assert server.list_actions_call_count == 1
