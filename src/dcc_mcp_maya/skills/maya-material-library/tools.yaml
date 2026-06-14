@@ -7,6 +7,13 @@ tools:
     destructive_hint: true
     idempotent_hint: true
   group: shading-lighting
+  input_schema:
+    type: object
+    properties:
+      file_path:
+        type: string
+    required:
+    - file_path
 - name: list_material_presets
   description: List reusable material preset JSON files from a material library directory
     without touching the Maya scene.
@@ -18,19 +25,56 @@ tools:
   group: shading-lighting
   input_schema:
     type: object
-    required:
-    - library_dir
     properties:
       library_dir:
         type: string
-        description: Directory containing saved material preset .json files.
+    required:
+    - library_dir
 - name: load_material
   description: Load a material in the current Maya scene.
   execution: sync
   affinity: main
   group: shading-lighting
+  input_schema:
+    type: object
+    properties:
+      file_path:
+        type: string
+      material_name:
+        type: string
+      assign_to:
+        oneOf:
+        - type: string
+        - type: array
+          items:
+            type: string
+          minItems: 1
+    required:
+    - file_path
 - name: save_material
   description: Save a material in the current Maya scene.
   execution: sync
   affinity: main
   group: shading-lighting
+  input_schema:
+    type: object
+    properties:
+      material:
+        type: string
+      library_dir:
+        type: string
+      preset_name:
+        type: string
+      attributes:
+        oneOf:
+        - type: string
+        - type: array
+          items:
+            type: string
+          minItems: 1
+      overwrite:
+        type: boolean
+        default: true
+    required:
+    - material
+    - library_dir

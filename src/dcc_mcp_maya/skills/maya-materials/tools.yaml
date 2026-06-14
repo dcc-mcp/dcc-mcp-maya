@@ -6,11 +6,34 @@ tools:
     idempotent_hint: true
   group: shading-lighting
   description: Assign a material in the current Maya scene.
+  input_schema:
+    type: object
+    properties:
+      material_name:
+        type: string
+      objects:
+        oneOf:
+        - type: string
+        - type: array
+          items:
+            type: string
+          minItems: 1
+    required:
+    - material_name
+    - objects
 - name: create_material
   execution: sync
   affinity: main
   group: shading-lighting
   description: Create a material in the current Maya scene.
+  input_schema:
+    type: object
+    properties:
+      material_type:
+        type: string
+        default: lambert
+      name:
+        type: string
 - name: get_material_connections
   execution: sync
   affinity: main
@@ -19,6 +42,13 @@ tools:
     idempotent_hint: true
   group: shading-lighting
   description: Get material connections without modifying the Maya scene.
+  input_schema:
+    type: object
+    properties:
+      material_name:
+        type: string
+    required:
+    - material_name
 - name: get_shader_assignment
   execution: sync
   affinity: main
@@ -27,6 +57,13 @@ tools:
     idempotent_hint: true
   group: shading-lighting
   description: Get shader assignments without modifying the Maya scene.
+  input_schema:
+    type: object
+    properties:
+      object_name:
+        type: string
+    required:
+    - object_name
 - name: list_materials
   execution: sync
   affinity: main
@@ -35,6 +72,11 @@ tools:
     idempotent_hint: true
   group: shading-lighting
   description: List materials without modifying the Maya scene.
+  input_schema:
+    type: object
+    properties:
+      shader_type:
+        type: string
 - name: list_shading_groups
   execution: sync
   affinity: main
@@ -43,6 +85,9 @@ tools:
     idempotent_hint: true
   group: shading-lighting
   description: List shading groups without modifying the Maya scene.
+  input_schema:
+    type: object
+    additionalProperties: false
 - name: reset_to_default_material
   execution: sync
   affinity: main
@@ -50,6 +95,13 @@ tools:
     idempotent_hint: true
   group: shading-lighting
   description: Reset to default material in the current Maya scene.
+  input_schema:
+    type: object
+    properties:
+      object_name:
+        type: string
+    required:
+    - object_name
 - name: set_material_attribute
   execution: sync
   affinity: main
@@ -57,3 +109,16 @@ tools:
     idempotent_hint: true
   group: shading-lighting
   description: Set a material attribute in the current Maya scene.
+  input_schema:
+    type: object
+    properties:
+      material_name:
+        type: string
+      attribute:
+        type: string
+      value:
+        type: string
+    required:
+    - material_name
+    - attribute
+    - value

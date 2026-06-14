@@ -4,6 +4,24 @@ tools:
   affinity: main
   group: animation
   description: Create a Maya expression in the current Maya scene.
+  input_schema:
+    type: object
+    properties:
+      expression:
+        type: string
+      name:
+        type: string
+      object:
+        type: string
+      object_name:
+        type: string
+      attribute:
+        type: string
+      unit_conversion:
+        type: string
+        default: all
+    required:
+    - expression
 - name: delete_expression
   execution: sync
   affinity: main
@@ -12,11 +30,30 @@ tools:
     idempotent_hint: true
   group: animation
   description: Delete a Maya expression in the current Maya scene.
+  input_schema:
+    type: object
+    properties:
+      expression_name:
+        type: string
+    required:
+    - expression_name
 - name: edit_expression
   execution: sync
   affinity: main
   group: animation
   description: Edit a Maya expression in the current Maya scene.
+  input_schema:
+    type: object
+    properties:
+      name:
+        type: string
+      expression:
+        type: string
+      unit_conversion:
+        type: string
+    required:
+    - name
+    - expression
 - name: list_expressions
   execution: sync
   affinity: main
@@ -25,3 +62,10 @@ tools:
     idempotent_hint: true
   group: animation
   description: List Maya expressions without modifying the Maya scene.
+  input_schema:
+    type: object
+    properties:
+      object:
+        type: string
+      object_name:
+        type: string
