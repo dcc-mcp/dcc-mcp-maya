@@ -4,6 +4,28 @@ tools:
   affinity: main
   group: attributes
   description: Add a node attribute in the current Maya scene.
+  input_schema:
+    type: object
+    properties:
+      node_name:
+        type: string
+      attribute:
+        type: string
+      attr_type:
+        type: string
+        default: float
+      default_value:
+        type: string
+      min_value:
+        type: number
+      max_value:
+        type: number
+      keyable:
+        type: boolean
+        default: true
+    required:
+    - node_name
+    - attribute
 - name: delete_attribute
   execution: sync
   affinity: main
@@ -12,6 +34,16 @@ tools:
     destructive_hint: true
     idempotent_hint: true
   description: Delete a node attribute in the current Maya scene.
+  input_schema:
+    type: object
+    properties:
+      node_name:
+        type: string
+      attribute:
+        type: string
+    required:
+    - node_name
+    - attribute
 - name: get_attribute
   execution: sync
   affinity: main
@@ -20,6 +52,16 @@ tools:
     read_only_hint: true
     idempotent_hint: true
   description: Get a node attribute without modifying the Maya scene.
+  input_schema:
+    type: object
+    properties:
+      node_name:
+        type: string
+      attribute:
+        type: string
+    required:
+    - node_name
+    - attribute
 - name: list_attributes
   execution: sync
   affinity: main
@@ -28,6 +70,19 @@ tools:
     read_only_hint: true
     idempotent_hint: true
   description: List attributes on a node without modifying the Maya scene.
+  input_schema:
+    type: object
+    properties:
+      node_name:
+        type: string
+      user_defined_only:
+        type: boolean
+        default: false
+      keyable_only:
+        type: boolean
+        default: false
+    required:
+    - node_name
 - name: set_attribute
   execution: sync
   affinity: main
@@ -35,3 +90,16 @@ tools:
   annotations:
     idempotent_hint: true
   description: Set a node attribute in the current Maya scene.
+  input_schema:
+    type: object
+    properties:
+      node_name:
+        type: string
+      attribute:
+        type: string
+      value:
+        type: string
+    required:
+    - node_name
+    - attribute
+    - value

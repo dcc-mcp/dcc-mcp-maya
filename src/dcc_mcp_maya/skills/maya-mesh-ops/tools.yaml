@@ -5,27 +5,105 @@ tools:
   annotations:
     idempotent_hint: true
   group: modeling
-  description: Apply mesh-focused subdivision/topology smoothing. Use maya-node-graph for construction-history inspection or attribute wiring.
+  description: Apply mesh-focused subdivision/topology smoothing. Use maya-node-graph
+    for construction-history inspection or attribute wiring.
+  input_schema:
+    type: object
+    properties:
+      object_name:
+        type: string
+      level:
+        type: integer
+        default: 1
+      method:
+        type: string
+        default: preview
+    required:
+    - object_name
 - name: cleanup_mesh
   execution: sync
   affinity: main
   group: modeling
-  description: Clean up polygon mesh topology and invalid components. Use maya-node-graph delete_history/list_history for construction-history operations.
+  description: Clean up polygon mesh topology and invalid components. Use maya-node-graph
+    delete_history/list_history for construction-history operations.
+  input_schema:
+    type: object
+    properties:
+      object_name:
+        type: string
+      non_manifold:
+        type: boolean
+        default: true
+      lamina_faces:
+        type: boolean
+        default: true
+      invalid_components:
+        type: boolean
+        default: true
+    required:
+    - object_name
 - name: combine_meshes
   execution: sync
   affinity: main
   group: modeling
   description: Combine meshes in the current Maya scene.
+  input_schema:
+    type: object
+    properties:
+      objects:
+        oneOf:
+        - type: string
+        - type: array
+          items:
+            type: string
+          minItems: 1
+      name:
+        type: string
+    required:
+    - objects
 - name: create_proxy_mesh
   execution: sync
   affinity: main
   group: modeling
   description: Create a proxy mesh in the current Maya scene.
+  input_schema:
+    type: object
+    properties:
+      object_name:
+        type: string
+      reduction:
+        type: number
+        default: 0.5
+      name:
+        type: string
+    required:
+    - object_name
 - name: extract_faces
   execution: sync
   affinity: main
   group: modeling
   description: Extract mesh faces in the current Maya scene.
+  input_schema:
+    type: object
+    properties:
+      object_name:
+        type: string
+      face_indices:
+        oneOf:
+        - type: string
+        - type: array
+          items:
+            type: integer
+          minItems: 1
+      keep_original:
+        type: boolean
+        default: false
+      separate:
+        type: boolean
+        default: true
+    required:
+    - object_name
+    - face_indices
 - name: get_mesh_edge_info
   execution: sync
   affinity: main
@@ -34,6 +112,20 @@ tools:
     idempotent_hint: true
   group: modeling
   description: Get mesh edge information without modifying the Maya scene.
+  input_schema:
+    type: object
+    properties:
+      object_name:
+        type: string
+      edge_indices:
+        oneOf:
+        - type: string
+        - type: array
+          items:
+            type: integer
+          minItems: 1
+    required:
+    - object_name
 - name: get_poly_count
   execution: sync
   affinity: main
@@ -42,28 +134,83 @@ tools:
     idempotent_hint: true
   group: modeling
   description: Get polygon counts without modifying the Maya scene.
+  input_schema:
+    type: object
+    properties:
+      object_name:
+        type: string
 - name: merge_vertices
   execution: sync
   affinity: main
   group: modeling
   description: Merge mesh vertices in the current Maya scene.
+  input_schema:
+    type: object
+    properties:
+      object_name:
+        type: string
+      threshold:
+        type: number
+        default: 0.001
+    required:
+    - object_name
 - name: mirror_mesh
   execution: sync
   affinity: main
   group: modeling
   description: Mirror mesh data in the current Maya scene.
+  input_schema:
+    type: object
+    properties:
+      object_name:
+        type: string
+      axis:
+        type: string
+        default: x
+      cut_position:
+        type: number
+        default: 0.0
+      merge_threshold:
+        type: number
+        default: 0.001
+      merge_border:
+        type: boolean
+        default: true
+    required:
+    - object_name
 - name: select_by_material
   execution: sync
   affinity: main
   group: modeling
   description: Select objects by material in the current Maya scene.
+  input_schema:
+    type: object
+    properties:
+      material_name:
+        type: string
+    required:
+    - material_name
 - name: separate_mesh
   execution: sync
   affinity: main
   group: modeling
   description: Separate mesh data in the current Maya scene.
+  input_schema:
+    type: object
+    properties:
+      object_name:
+        type: string
+    required:
+    - object_name
 - name: triangulate
   execution: sync
   affinity: main
   group: modeling
   description: Triangulate triangulate in the current Maya scene.
+  input_schema:
+    type: object
+    properties:
+      object_name:
+        type: string
+    required:
+    - object_name

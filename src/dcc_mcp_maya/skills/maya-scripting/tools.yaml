@@ -1,8 +1,8 @@
 tools:
 - name: execute_mel
-  description: "Last-resort arbitrary MEL. Prefer search_skills \u2192 load_skill \u2192\
-    \ typed tools. Inline MEL uses `code`; studio `.mel` files use `file_path` / `script_path`\
-    \ and are sourced with forward slashes."
+  description: Last-resort arbitrary MEL. Prefer search_skills → load_skill → typed
+    tools. Inline MEL uses `code`; studio `.mel` files use `file_path` / `script_path`
+    and are sourced with forward slashes.
   execution: sync
   affinity: main
   annotations:
@@ -17,16 +17,17 @@ tools:
         description: Inline MEL to evaluate (required when file_path is omitted).
       file_path:
         type: string
-        description: Path to a .mel file; sources via MEL `source` (native). Alias `script_path`.
+        description: Path to a .mel file; sources via MEL `source` (native). Alias
+          `script_path`.
       script_path:
         type: string
         description: Same as file_path.
 - name: execute_python
-  description: "Bare-exec Python in Maya. Persistent globals (cmds / mel pre-bound).\
-    \ Off-main-thread calls are serialised through a bounded FIFO queue and marshaled\
-    \ to Maya's UI thread; QueueFullError on overflow. result_type \u2260 NONE captures\
-    \ the trailing expression. Prefer search_skills / load_skill \u2192 typed tools\
-    \ when one fits; upload long scripts via write_module then call `import name; name.run()`."
+  description: Bare-exec Python in Maya. Persistent globals (cmds / mel pre-bound).
+    Off-main-thread calls are serialised through a bounded FIFO queue and marshaled
+    to Maya's UI thread; QueueFullError on overflow. result_type ≠ NONE captures the
+    trailing expression. Prefer search_skills / load_skill → typed tools when one
+    fits; upload long scripts via write_module then call `import name; name.run()`.
   execution: sync
   affinity: main
   annotations:
@@ -62,17 +63,17 @@ tools:
       inplace:
         type: boolean
         default: false
-        description: "Skip the automatic main-thread marshalling. By default, when the\
-          \ MCP handler runs off Maya's UI thread (hyper worker), user code is wrapped\
-          \ in maya.utils.executeInMainThreadWithResult so cmds.file / loadPlugin /\
-          \ scene-mutating cmds.* calls stay on the safe thread. Set inplace=true to\
-          \ opt out \u2014 only do this when you have already dispatched onto the main\
-          \ thread yourself or when the script touches no Maya state."
+        description: Skip the automatic main-thread marshalling. By default, when
+          the MCP handler runs off Maya's UI thread (hyper worker), user code is wrapped
+          in maya.utils.executeInMainThreadWithResult so cmds.file / loadPlugin /
+          scene-mutating cmds.* calls stay on the safe thread. Set inplace=true to
+          opt out — only do this when you have already dispatched onto the main thread
+          yourself or when the script touches no Maya state.
 - name: write_module
-  description: "Inject a Python module into Maya's sys.modules from a source string.\
-    \ Same shape as maya-mcp-server's write_module. Use this to upload long scripts\
-    \ ONCE then call `execute_python(code='import name; name.run()')` many times \u2014\
-    \ saves the agent prompt budget on repeated dispatch."
+  description: Inject a Python module into Maya's sys.modules from a source string.
+    Same shape as maya-mcp-server's write_module. Use this to upload long scripts
+    ONCE then call `execute_python(code='import name; name.run()')` many times — saves
+    the agent prompt budget on repeated dispatch.
   execution: sync
   affinity: main
   annotations:
@@ -99,11 +100,11 @@ tools:
         type: string
         description: Optional opaque version stamped as __dcc_mcp_module_version__.
 - name: io
-  description: "Stdout / stderr capture + main-thread queue admin. Stream actions: install\
-    \ / uninstall / get / clear / status. Queue admin: `drain` cancels every QUEUED\
-    \ (not in-flight) main-thread job with WedgeDetectedError \u2014 use when Maya's\
-    \ UI thread is stuck and new MCP requests pile up. In-flight job is NOT cancellable\
-    \ (Maya is cooperative). affinity:any so drain works even when the pump is wedged."
+  description: 'Stdout / stderr capture + main-thread queue admin. Stream actions:
+    install / uninstall / get / clear / status. Queue admin: `drain` cancels every
+    QUEUED (not in-flight) main-thread job with WedgeDetectedError — use when Maya''s
+    UI thread is stuck and new MCP requests pile up. In-flight job is NOT cancellable
+    (Maya is cooperative). affinity:any so drain works even when the pump is wedged.'
   execution: sync
   affinity: main
   annotations:
@@ -127,15 +128,14 @@ tools:
       drain:
         type: boolean
         default: true
-        description: "For action=get \u2014 drain the buffer (default) or peek without\
-          \ consuming."
+        description: For action=get — drain the buffer (default) or peek without consuming.
       reason:
         type: string
-        description: "For action=drain \u2014 free-form label written to the cancelled\
-          \ futures' WedgeDetectedError envelope. Defaults to a generic message."
+        description: For action=drain — free-form label written to the cancelled futures'
+          WedgeDetectedError envelope. Defaults to a generic message.
 - name: list_plugins
-  description: "List loaded Maya plug-ins and optional metadata via pluginInfo. Use\
-    \ before load_plugin / unload_plugin when an agent needs exact plug-in names."
+  description: List loaded Maya plug-ins and optional metadata via pluginInfo. Use
+    before load_plugin / unload_plugin when an agent needs exact plug-in names.
   execution: sync
   affinity: main
   annotations:
@@ -147,22 +147,17 @@ tools:
     properties:
       pattern:
         type: string
-        default: ""
-        description: Optional case-insensitive substring filter.
+        default: ''
       include_details:
         type: boolean
         default: true
-        description: Include path, version, vendor, API version, and unload-ok fields
-          when Maya provides them.
       limit:
         type: integer
         default: 200
-        minimum: 1
-        description: Maximum number of plug-in records to return.
 - name: load_plugin
-  description: "Load a Maya plug-in using cmds.loadPlugin and optionally update its\
-    \ autoload preference. Prefer this typed tool over execute_python or execute_mel\
-    \ for plug-in setup."
+  description: Load a Maya plug-in using cmds.loadPlugin and optionally update its
+    autoload preference. Prefer this typed tool over execute_python or execute_mel
+    for plug-in setup.
   execution: sync
   affinity: main
   annotations:
@@ -171,26 +166,22 @@ tools:
   group: core
   input_schema:
     type: object
-    required:
-    - plugin
     properties:
       plugin:
         type: string
-        description: Maya plug-in name or plug-in file path, for example fbxmaya.
       quiet:
         type: boolean
         default: true
-        description: Pass quiet=True to cmds.loadPlugin.
       set_autoload:
         type: boolean
-        description: Optional autoload preference to set after loading.
       already_loaded_ok:
         type: boolean
         default: true
-        description: Return success when the plug-in is already loaded.
+    required:
+    - plugin
 - name: unload_plugin
-  description: "Unload a Maya plug-in using cmds.unloadPlugin and optionally clear\
-    \ autoload. This can affect runtime tools, so callers should confirm intent first."
+  description: Unload a Maya plug-in using cmds.unloadPlugin and optionally clear
+    autoload. This can affect runtime tools, so callers should confirm intent first.
   execution: sync
   affinity: main
   annotations:
@@ -200,24 +191,20 @@ tools:
   group: core
   input_schema:
     type: object
-    required:
-    - plugin
     properties:
       plugin:
         type: string
-        description: Maya plug-in name reported by list_plugins.
       force:
         type: boolean
         default: false
-        description: Pass force=True to cmds.unloadPlugin.
       remove_autoload:
         type: boolean
         default: false
-        description: Set the plug-in autoload preference to false before unloading.
       not_loaded_ok:
         type: boolean
         default: true
-        description: Return success when the plug-in is already unloaded.
+    required:
+    - plugin
 - name: get_script_node
   description: Get, create, or delete a Maya scriptNode.
   execution: sync
@@ -228,32 +215,19 @@ tools:
   group: core
   input_schema:
     type: object
-    required:
-    - node_name
     properties:
       node_name:
         type: string
-        description: scriptNode name in the scene.
       action:
         type: string
-        enum:
-        - get
-        - create
-        - delete
         default: get
-        description: Operation to perform on the scriptNode.
       script:
         type: string
-        description: Script body (required when `action=create`).
       script_type:
         type: integer
-        enum:
-        - 0
-        - 1
-        - 2
-        - 3
         default: 0
-        description: 0=demand, 1=open/close, 2=ui create, 3=ui delete.
+    required:
+    - node_name
 - name: list_mel_procedures
   description: List MEL procedures without modifying the Maya scene.
   execution: sync
@@ -262,6 +236,15 @@ tools:
     read_only_hint: true
     idempotent_hint: true
   group: core
+  input_schema:
+    type: object
+    properties:
+      pattern:
+        type: string
+        default: ''
+      limit:
+        type: integer
+        default: 200
 - name: introspect_list_module
   description: Introspect list module for agent-facing Maya scripting introspection.
   execution: sync
@@ -270,6 +253,19 @@ tools:
     read_only_hint: true
     idempotent_hint: true
   group: introspect
+  input_schema:
+    type: object
+    properties:
+      module:
+        type: string
+      page:
+        type: integer
+        default: 0
+      per_page:
+        type: integer
+        default: 200
+    required:
+    - module
 - name: introspect_signature
   description: Introspect a Python callable signature for agent-facing Maya scripting
     introspection.
@@ -279,6 +275,13 @@ tools:
     read_only_hint: true
     idempotent_hint: true
   group: introspect
+  input_schema:
+    type: object
+    properties:
+      name:
+        type: string
+    required:
+    - name
 - name: introspect_search
   description: Introspect Python introspection search results for agent-facing Maya
     scripting introspection.
@@ -288,11 +291,34 @@ tools:
     read_only_hint: true
     idempotent_hint: true
   group: introspect
+  input_schema:
+    type: object
+    properties:
+      module:
+        type: string
+      query:
+        type: string
+      max_results:
+        type: integer
+        default: 30
+    required:
+    - module
+    - query
 - name: introspect_eval
-  description: Introspect a Python introspection expression for agent-facing Maya scripting
-    introspection.
+  description: Introspect a Python introspection expression for agent-facing Maya
+    scripting introspection.
   execution: sync
   affinity: main
   annotations:
     read_only_hint: true
   group: introspect
+  input_schema:
+    type: object
+    properties:
+      expression:
+        type: string
+      timeout_secs:
+        type: number
+        default: 2.0
+    required:
+    - expression
