@@ -142,6 +142,4 @@ class TestLintToolSchemas:
         all_issues = []
         for tools_yaml in sorted(skills_root.glob("*/tools.yaml")):
             all_issues.extend(lint_tool_schemas.lint_file(tools_yaml))
-        assert all_issues == [], "Schema lint issues found:\n" + "\n".join(
-            f"  [{r}] {m}" for r, m in all_issues
-        )
+        assert all_issues == [], "Schema lint issues found:\n" + "\n".join(f"  [{r}] {m}" for r, m in all_issues)
