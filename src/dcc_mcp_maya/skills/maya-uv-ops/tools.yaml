@@ -4,11 +4,37 @@ tools:
   affinity: main
   group: modeling
   description: Copy UVs in the current Maya scene.
+  input_schema:
+    type: object
+    properties:
+      source:
+        type: string
+      target:
+        type: string
+      source_uv_set:
+        type: string
+      target_uv_set:
+        type: string
+    required:
+    - source
+    - target
 - name: create_uv_set
   execution: sync
   affinity: main
   group: modeling
   description: Create a UV set in the current Maya scene.
+  input_schema:
+    type: object
+    properties:
+      object_name:
+        type: string
+      uv_set_name:
+        type: string
+      copy_from:
+        type: string
+    required:
+    - object_name
+    - uv_set_name
 - name: delete_uv_set
   execution: sync
   affinity: main
@@ -17,6 +43,16 @@ tools:
     idempotent_hint: true
   group: modeling
   description: Delete a UV set in the current Maya scene.
+  input_schema:
+    type: object
+    properties:
+      object_name:
+        type: string
+      uv_set_name:
+        type: string
+    required:
+    - object_name
+    - uv_set_name
 - name: get_uv_info
   execution: sync
   affinity: main
@@ -25,6 +61,15 @@ tools:
     idempotent_hint: true
   group: modeling
   description: Get UV information without modifying the Maya scene.
+  input_schema:
+    type: object
+    properties:
+      object_name:
+        type: string
+      uv_set:
+        type: string
+    required:
+    - object_name
 - name: get_uv_shell_info
   execution: sync
   affinity: main
@@ -33,18 +78,69 @@ tools:
     idempotent_hint: true
   group: modeling
   description: Get UV shell information without modifying the Maya scene.
+  input_schema:
+    type: object
+    properties:
+      object_name:
+        type: string
+      uv_set:
+        type: string
+    required:
+    - object_name
 - name: normalize_uvs
   execution: sync
   affinity: main
   group: modeling
   description: Normalize UVs in the current Maya scene.
+  input_schema:
+    type: object
+    properties:
+      object_name:
+        type: string
+      layout_u:
+        type: number
+        default: 1.0
+      layout_v:
+        type: number
+        default: 1.0
+      preserve_aspect:
+        type: boolean
+        default: true
+    required:
+    - object_name
 - name: project_uvs
   execution: sync
   affinity: main
   group: modeling
   description: Project UVs in the current Maya scene.
+  input_schema:
+    type: object
+    properties:
+      object_name:
+        type: string
+      projection_type:
+        type: string
+        default: planar
+      axis:
+        type: string
+        default: y
+    required:
+    - object_name
 - name: unfold_uvs
   execution: sync
   affinity: main
   group: modeling
   description: Unfold UVs in the current Maya scene.
+  input_schema:
+    type: object
+    properties:
+      object_name:
+        type: string
+      iterations:
+        type: integer
+        default: 1
+      optimize_scale:
+        type: boolean
+        default: true
+    required:
+    - object_name

@@ -6,6 +6,13 @@ tools:
     destructive_hint: true
     idempotent_hint: true
   description: Delete an export preset in the current Maya scene.
+  input_schema:
+    type: object
+    properties:
+      preset_path:
+        type: string
+    required:
+    - preset_path
 - name: list_export_presets
   execution: sync
   affinity: main
@@ -13,11 +20,47 @@ tools:
     read_only_hint: true
     idempotent_hint: true
   description: List export presets without modifying the Maya scene.
+  input_schema:
+    type: object
+    properties:
+      preset_dir:
+        type: string
 - name: load_export_preset
   execution: sync
   affinity: main
   description: Load an export preset in the current Maya scene.
+  input_schema:
+    type: object
+    properties:
+      preset_path:
+        type: string
+      apply_frame_range:
+        type: boolean
+        default: true
+    required:
+    - preset_path
 - name: save_export_preset
   execution: sync
   affinity: main
   description: Save an export preset in the current Maya scene.
+  input_schema:
+    type: object
+    properties:
+      preset_name:
+        type: string
+      preset_dir:
+        type: string
+      format:
+        type: string
+        default: fbx
+      frame_range:
+        oneOf:
+        - type: string
+        - type: array
+          items:
+            type: integer
+          minItems: 1
+      custom_settings:
+        type: string
+    required:
+    - preset_name

@@ -6,11 +6,37 @@ tools:
   annotations:
     idempotent_hint: true
   description: Apply symmetry operations in the current Maya scene.
+  input_schema:
+    type: object
+    properties:
+      object_name:
+        type: string
+      axis:
+        type: string
+        default: x
+      world_space:
+        type: boolean
+        default: true
+    required:
+    - object_name
 - name: connect_attr
   execution: sync
   affinity: main
   group: node_graph
   description: Connect node attributes in the current Maya scene.
+  input_schema:
+    type: object
+    properties:
+      source_attr:
+        type: string
+      dest_attr:
+        type: string
+      force:
+        type: boolean
+        default: false
+    required:
+    - source_attr
+    - dest_attr
 - name: create_node
   description: Create a generic Maya dependency graph or DAG node.
   execution: sync
@@ -18,8 +44,6 @@ tools:
   group: node_graph
   input_schema:
     type: object
-    required:
-    - node_type
     properties:
       node_type:
         type: string
@@ -33,6 +57,8 @@ tools:
       shared:
         type: boolean
         default: false
+    required:
+    - node_type
 - name: delete_history
   execution: sync
   affinity: main
@@ -41,6 +67,13 @@ tools:
     destructive_hint: true
     idempotent_hint: true
   description: Delete node construction history in the current Maya scene.
+  input_schema:
+    type: object
+    properties:
+      object_name:
+        type: string
+    required:
+    - object_name
 - name: delete_node
   description: Delete one or more Maya dependency graph or DAG nodes.
   execution: sync
@@ -51,8 +84,6 @@ tools:
     idempotent_hint: true
   input_schema:
     type: object
-    required:
-    - nodes
     properties:
       nodes:
         oneOf:
@@ -61,6 +92,8 @@ tools:
           items:
             type: string
           minItems: 1
+    required:
+    - nodes
 - name: describe_node
   description: Describe a node with optional attributes and graph connections.
   execution: sync
@@ -71,8 +104,6 @@ tools:
     idempotent_hint: true
   input_schema:
     type: object
-    required:
-    - node_name
     properties:
       node_name:
         type: string
@@ -82,11 +113,23 @@ tools:
       include_connections:
         type: boolean
         default: true
+    required:
+    - node_name
 - name: disconnect_attr
   execution: sync
   affinity: main
   group: node_graph
   description: Disconnect node attributes in the current Maya scene.
+  input_schema:
+    type: object
+    properties:
+      source_attr:
+        type: string
+      dest_attr:
+        type: string
+    required:
+    - source_attr
+    - dest_attr
 - name: get_dag_path
   execution: sync
   affinity: main
@@ -95,6 +138,13 @@ tools:
     read_only_hint: true
     idempotent_hint: true
   description: Get a DAG path without modifying the Maya scene.
+  input_schema:
+    type: object
+    properties:
+      object_name:
+        type: string
+    required:
+    - object_name
 - name: list_connections
   execution: sync
   affinity: main
@@ -103,6 +153,21 @@ tools:
     read_only_hint: true
     idempotent_hint: true
   description: List node graph connections without modifying the Maya scene.
+  input_schema:
+    type: object
+    properties:
+      object_name:
+        type: string
+      attribute:
+        type: string
+      incoming:
+        type: boolean
+        default: true
+      outgoing:
+        type: boolean
+        default: true
+    required:
+    - object_name
 - name: list_history
   execution: sync
   affinity: main
@@ -111,13 +176,65 @@ tools:
     read_only_hint: true
     idempotent_hint: true
   description: List node construction history without modifying the Maya scene.
+  input_schema:
+    type: object
+    properties:
+      object_name:
+        type: string
+      future:
+        type: boolean
+        default: false
+      levels:
+        type: integer
+        default: 0
+    required:
+    - object_name
 - name: smooth_mesh
   execution: sync
   affinity: main
   group: node_graph
-  description: Apply node-history mesh smoothing by creating/updating construction history. Use maya-mesh-ops for polygon topology edits or mesh cleanup.
+  description: Apply node-history mesh smoothing by creating/updating construction
+    history. Use maya-mesh-ops for polygon topology edits or mesh cleanup.
+  input_schema:
+    type: object
+    properties:
+      object_name:
+        type: string
+      divisions:
+        type: integer
+        default: 1
+      method:
+        type: string
+        default: preview
+    required:
+    - object_name
 - name: transfer_attributes
   execution: sync
   affinity: main
   group: node_graph
   description: Transfer attributes on a node in the current Maya scene.
+  input_schema:
+    type: object
+    properties:
+      source:
+        type: string
+      target:
+        type: string
+      sample_space:
+        type: integer
+        default: 0
+      transfer_positions:
+        type: boolean
+        default: false
+      transfer_normals:
+        type: boolean
+        default: true
+      transfer_uvs:
+        type: boolean
+        default: true
+      transfer_colors:
+        type: boolean
+        default: false
+    required:
+    - source
+    - target
