@@ -486,6 +486,29 @@ def main_eval(**kwargs) -> dict:
     return eval_expr(**kwargs)
 
 
+# -- main() routing -- the executor's run_skill_script calls main(**params),
+# so we inspect kwargs to dispatch to the correct underlying function.
+# Each function has a unique distinguishing parameter.
+
+
+@skill_entry
+def main(**kwargs) -> dict:
+    """Route to the correct introspect entry point based on parameters.
+
+    The ``@skill_entry`` wrapper catches ``ImportError`` (Maya not running),
+    ``Exception``, and ``BaseException`` so the caller always receives a
+    structured envelope instead of an unhandled traceback.
+    """
+    if "expression" in kwargs:
+        return eval_expr(**kwargs)
+    if "name" in kwargs:
+        return signature(**kwargs)
+    if "query" in kwargs:
+        return search(**kwargs)
+    # Fallback: list_module is the default when only module/page/per_page is present.
+    return list_module(**kwargs)
+
+
 if __name__ == "__main__":
     from dcc_mcp_core.skill import run_main
 
