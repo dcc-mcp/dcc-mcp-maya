@@ -18,7 +18,6 @@ default:
     echo "🔧 Installing development dependencies..."
     python -m pip install --upgrade pip
     python -m pip install -e ".[dev]"
-    python -m pip install -r requirements-test.txt
     echo "✅ Development dependencies installed"
 
 # Install minimal dependencies (production only)
@@ -243,8 +242,6 @@ lint-all: lint lint-skills lint-docs
     python -m pip install -e .
     echo "  - Installing dev dependencies..."
     python -m pip install -e ".[dev]"
-    echo "  - Installing test requirements..."
-    python -m pip install -r requirements-test.txt
     echo "✅ Dependency issues fixed"
 
 # ============================================================================
