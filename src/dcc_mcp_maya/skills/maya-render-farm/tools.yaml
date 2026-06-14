@@ -7,12 +7,41 @@ tools:
     idempotent_hint: true
   group: rendering
   description: Get render job status without modifying the Maya scene.
+  input_schema:
+    type: object
+    properties:
+      job_id:
+        type: string
+      deadline_command:
+        type: string
+    required:
+    - job_id
 - name: submit_to_deadline
   execution: async
   affinity: main
   timeout_hint_secs: 900
   group: rendering
   description: Submit to deadline in the current Maya scene.
+  input_schema:
+    type: object
+    properties:
+      job_name:
+        type: string
+      pool:
+        type: string
+        default: maya
+      priority:
+        type: integer
+        default: 50
+      start_frame:
+        type: integer
+      end_frame:
+        type: integer
+      chunk_size:
+        type: integer
+        default: 10
+      deadline_command:
+        type: string
 - name: validate_scene_for_farm
   execution: async
   affinity: main
@@ -20,9 +49,36 @@ tools:
   group: rendering
   description: Validate a scene for render-farm submission without modifying the Maya
     scene.
+  input_schema:
+    type: object
+    additionalProperties: false
 - name: write_render_job
   execution: async
   affinity: main
   timeout_hint_secs: 900
   group: rendering
   description: Write a render job file in the current Maya scene.
+  input_schema:
+    type: object
+    properties:
+      output_dir:
+        type: string
+      job_name:
+        type: string
+      renderer:
+        type: string
+      start_frame:
+        type: integer
+      end_frame:
+        type: integer
+      step:
+        type: integer
+        default: 1
+      chunk_size:
+        type: integer
+        default: 10
+      priority:
+        type: integer
+        default: 50
+    required:
+    - output_dir

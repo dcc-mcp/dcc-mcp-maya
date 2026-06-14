@@ -189,6 +189,9 @@ jobs:
       - name: Check EN/ZH documentation parity (issue #88)
         run: python tools/check_doc_parity.py
 
+      - name: Lint tools.yaml input_schema (issue #382)
+        run: python tools/lint_tool_schemas.py
+
   cli-smoke:
     name: dcc-mcp-cli Service Smoke
     runs-on: ubuntu-latest

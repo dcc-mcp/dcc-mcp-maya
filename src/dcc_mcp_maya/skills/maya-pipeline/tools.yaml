@@ -7,11 +7,40 @@ tools:
     idempotent_hint: true
   group: scene-management
   description: Get asset metadata without modifying the Maya scene.
+  input_schema:
+    type: object
+    properties:
+      node_name:
+        type: string
+    required:
+    - node_name
 - name: publish_asset
   execution: sync
   affinity: main
   group: scene-management
   description: Publish an asset in the current Maya scene.
+  input_schema:
+    type: object
+    properties:
+      asset_name:
+        type: string
+      publish_dir:
+        type: string
+      format:
+        type: string
+        default: fbx
+      frame_range:
+        oneOf:
+        - type: string
+        - type: array
+          items:
+            type: integer
+          minItems: 1
+      version:
+        type: integer
+    required:
+    - asset_name
+    - publish_dir
 - name: set_project
   execution: sync
   affinity: main
@@ -19,8 +48,33 @@ tools:
     idempotent_hint: true
   group: scene-management
   description: Set the Maya project workspace in the current Maya scene.
+  input_schema:
+    type: object
+    properties:
+      project_path:
+        type: string
+      create_if_missing:
+        type: boolean
+        default: false
+    required:
+    - project_path
 - name: tag_asset_metadata
   execution: sync
   affinity: main
   group: scene-management
   description: Tag asset metadata in the current Maya scene.
+  input_schema:
+    type: object
+    properties:
+      node_name:
+        type: string
+      asset_name:
+        type: string
+      asset_variant:
+        type: string
+      asset_version:
+        type: string
+      pipeline_step:
+        type: string
+    required:
+    - node_name
