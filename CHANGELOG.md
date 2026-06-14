@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.8.11](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.8.10...v0.8.11) (2026-06-14)
+
+
+### Features
+
+* provide complete input_schema for all 203 built-in Maya tools ([fcc50b8](https://github.com/dcc-mcp/dcc-mcp-maya/commit/fcc50b8a90e763011e4b7544f592112246b9f4da))
+
+
+### Bug Fixes
+
+* remove extraneous f-prefix in test assertion ([ce0df13](https://github.com/dcc-mcp/dcc-mcp-maya/commit/ce0df130314ac26c35795229f40603ef40d101ad))
+
 ## [0.8.10](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.8.9...v0.8.10) (2026-06-14)
 
 
