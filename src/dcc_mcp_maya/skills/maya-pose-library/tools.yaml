@@ -7,18 +7,80 @@ tools:
     idempotent_hint: true
   group: animation
   description: List poses without modifying the Maya scene.
+  input_schema:
+    type: object
+    properties:
+      directory:
+        type: string
+      recursive:
+        type: boolean
+        default: false
+    required:
+    - directory
 - name: load_pose
   execution: sync
   affinity: main
   group: animation
   description: Load a pose in the current Maya scene.
+  input_schema:
+    type: object
+    properties:
+      file_path:
+        type: string
+      namespace:
+        type: string
+        default: ''
+      skip_missing:
+        type: boolean
+        default: true
+    required:
+    - file_path
 - name: mirror_pose
   execution: sync
   affinity: main
   group: animation
   description: Mirror a pose in the current Maya scene.
+  input_schema:
+    type: object
+    properties:
+      file_path:
+        type: string
+      output_path:
+        type: string
+      left_prefix:
+        type: string
+        default: L_
+      right_prefix:
+        type: string
+        default: R_
+    required:
+    - file_path
 - name: save_pose
   execution: sync
   affinity: main
   group: animation
   description: Save a pose in the current Maya scene.
+  input_schema:
+    type: object
+    properties:
+      file_path:
+        type: string
+      controls:
+        oneOf:
+        - type: string
+        - type: array
+          items:
+            type: string
+          minItems: 1
+      attributes:
+        oneOf:
+        - type: string
+        - type: array
+          items:
+            type: string
+          minItems: 1
+      overwrite:
+        type: boolean
+        default: true
+    required:
+    - file_path

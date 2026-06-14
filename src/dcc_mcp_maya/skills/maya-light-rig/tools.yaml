@@ -12,30 +12,31 @@ tools:
         default: mcpLight
       light_type:
         type: string
-        enum:
-        - ambientLight
-        - areaLight
-        - directionalLight
-        - pointLight
-        - spotLight
-        - volumeLight
-        - aiSkyDomeLight
         default: directionalLight
       intensity:
         type: number
         default: 1.0
       color:
-        type: array
-        items:
-          type: number
+        oneOf:
+        - type: string
+        - type: array
+          items:
+            type: string
+          minItems: 1
       position:
-        type: array
-        items:
-          type: number
+        oneOf:
+        - type: string
+        - type: array
+          items:
+            type: string
+          minItems: 1
       rotation:
-        type: array
-        items:
-          type: number
+        oneOf:
+        - type: string
+        - type: array
+          items:
+            type: string
+          minItems: 1
       parent:
         type: string
       cone_angle:
@@ -47,11 +48,71 @@ tools:
   affinity: main
   group: shading-lighting
   description: Create an HDRI dome light in the current Maya scene.
+  input_schema:
+    type: object
+    properties:
+      hdri_path:
+        type: string
+      name:
+        type: string
+      intensity:
+        type: number
+        default: 1.0
+      rotation:
+        type: number
+        default: 0.0
+      visible_in_diffuse:
+        type: boolean
+        default: true
+      visible_in_specular:
+        type: boolean
+        default: true
+    required:
+    - hdri_path
 - name: create_three_point_rig
   execution: sync
   affinity: main
   group: shading-lighting
   description: Create a three-point light rig in the current Maya scene.
+  input_schema:
+    type: object
+    properties:
+      name:
+        type: string
+        default: threePoint_rig
+      key_intensity:
+        type: number
+        default: 1.0
+      fill_intensity:
+        type: number
+        default: 0.5
+      rim_intensity:
+        type: number
+        default: 0.75
+      light_type:
+        type: string
+        default: directionalLight
+      key_color:
+        oneOf:
+        - type: string
+        - type: array
+          items:
+            type: string
+          minItems: 1
+      fill_color:
+        oneOf:
+        - type: string
+        - type: array
+          items:
+            type: string
+          minItems: 1
+      rim_color:
+        oneOf:
+        - type: string
+        - type: array
+          items:
+            type: string
+          minItems: 1
 - name: list_light_rigs
   execution: sync
   affinity: main
@@ -60,6 +121,9 @@ tools:
     idempotent_hint: true
   group: shading-lighting
   description: List light rigs without modifying the Maya scene.
+  input_schema:
+    type: object
+    additionalProperties: false
 - name: set_light_rig_intensity
   execution: sync
   affinity: main
@@ -67,3 +131,16 @@ tools:
     idempotent_hint: true
   group: shading-lighting
   description: Set light rig intensity in the current Maya scene.
+  input_schema:
+    type: object
+    properties:
+      rig_group:
+        type: string
+      intensity:
+        type: number
+      multiply:
+        type: boolean
+        default: false
+    required:
+    - rig_group
+    - intensity
