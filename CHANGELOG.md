@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.10](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.8.9...v0.8.10) (2026-06-14)
+
+
+### Bug Fixes
+
+* implement load_skill and get_skill_info as built-in sidecar actions in Maya dispatcher ([f8bed41](https://github.com/dcc-mcp/dcc-mcp-maya/commit/f8bed41a31629ffa559ae7426be68f2c8bd3f462))
+
 ## [0.8.9](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.8.8...v0.8.9) (2026-06-12)
 
 
