@@ -4,11 +4,52 @@ tools:
   affinity: main
   group: animation
   description: Bake constraints in the current Maya scene.
+  input_schema:
+    type: object
+    properties:
+      objects:
+        oneOf:
+        - type: string
+        - type: array
+          items:
+            type: string
+          minItems: 1
+      start_frame:
+        type: number
+        default: 1.0
+      end_frame:
+        type: number
+        default: 120.0
+      sample_by:
+        type: number
+        default: 1.0
+      remove_constraints:
+        type: boolean
+        default: false
 - name: bake_simulation
   description: Bake simulation / constraints to keyframes on objects
   execution: sync
   affinity: main
   group: animation
+  input_schema:
+    type: object
+    properties:
+      objects:
+        oneOf:
+        - type: string
+        - type: array
+          items:
+            type: string
+          minItems: 1
+      start_frame:
+        type: number
+        default: 1.0
+      end_frame:
+        type: number
+        default: 120.0
+      sample_by:
+        type: number
+        default: 1.0
 - name: delete_keyframes
   description: Delete keyframes from an object within an optional frame range
   execution: sync
@@ -17,6 +58,30 @@ tools:
     destructive_hint: true
     idempotent_hint: true
   group: animation
+  input_schema:
+    type: object
+    properties:
+      object_name:
+        type: string
+      attributes:
+        oneOf:
+        - type: string
+        - type: array
+          items:
+            type: string
+          minItems: 1
+      attribute:
+        type: string
+      start_frame:
+        type: number
+      end_frame:
+        type: number
+      start_time:
+        type: number
+      end_time:
+        type: number
+    required:
+    - object_name
 - name: export_animation_curves
   execution: sync
   affinity: main
@@ -24,10 +89,31 @@ tools:
     read_only_hint: true
     idempotent_hint: true
   group: animation
-  description: >-
-    Export animation curves from the Maya scene to a host path. Pass an absolute
-    or workspace-relative file path; the parent directory must exist and be writable.
-    Use for backup or transfer of curve data — verify disk space on long takes.
+  description: Export animation curves from the Maya scene to a host path. Pass an
+    absolute or workspace-relative file path; the parent directory must exist and
+    be writable. Use for backup or transfer of curve data — verify disk space on long
+    takes.
+  input_schema:
+    type: object
+    properties:
+      object_name:
+        type: string
+      file_path:
+        type: string
+      attributes:
+        oneOf:
+        - type: string
+        - type: array
+          items:
+            type: string
+          minItems: 1
+      start_frame:
+        type: number
+      end_frame:
+        type: number
+    required:
+    - object_name
+    - file_path
 - name: get_current_time
   description: Get the current frame number
   execution: sync
@@ -36,6 +122,9 @@ tools:
     read_only_hint: true
     idempotent_hint: true
   group: animation
+  input_schema:
+    type: object
+    additionalProperties: false
 - name: get_frame_range
   execution: sync
   affinity: main
@@ -44,6 +133,9 @@ tools:
     idempotent_hint: true
   group: animation
   description: Get the scene animation frame range without modifying the Maya scene.
+  input_schema:
+    type: object
+    additionalProperties: false
 - name: get_keyframes
   description: Get all keyframe times for an object / attribute
   execution: sync
@@ -52,14 +144,34 @@ tools:
     read_only_hint: true
     idempotent_hint: true
   group: animation
+  input_schema:
+    type: object
+    properties:
+      object_name:
+        type: string
+      attribute:
+        type: string
+    required:
+    - object_name
 - name: import_animation_curves
   execution: sync
   affinity: main
   group: animation
-  description: >-
-    Import animation curves from a file on disk into the Maya scene. Source path
-    must exist (expand ~ and env vars first); prefer absolute paths. On failure,
+  description: Import animation curves from a file on disk into the Maya scene. Source
+    path must exist (expand ~ and env vars first); prefer absolute paths. On failure,
     check file format and Maya version compatibility before retrying.
+  input_schema:
+    type: object
+    properties:
+      file_path:
+        type: string
+      target_object:
+        type: string
+      merge:
+        type: boolean
+        default: true
+    required:
+    - file_path
 - name: list_animation_curves
   execution: sync
   affinity: main
@@ -68,6 +180,15 @@ tools:
     idempotent_hint: true
   group: animation
   description: List animation curves without modifying the Maya scene.
+  input_schema:
+    type: object
+    properties:
+      object_name:
+        type: string
+      attribute:
+        type: string
+    required:
+    - object_name
 - name: query_scene_time_info
   execution: sync
   affinity: main
@@ -76,6 +197,9 @@ tools:
     idempotent_hint: true
   group: animation
   description: Query scene time settings without modifying the Maya scene.
+  input_schema:
+    type: object
+    additionalProperties: false
 - name: set_animation_curve_tangent
   execution: sync
   affinity: main
@@ -83,6 +207,25 @@ tools:
     idempotent_hint: true
   group: animation
   description: Set animation curve tangents in the current Maya scene.
+  input_schema:
+    type: object
+    properties:
+      object_name:
+        type: string
+      attribute:
+        type: string
+      frame:
+        type: number
+      tangent_type:
+        type: string
+        default: auto
+      in_tangent_type:
+        type: string
+      out_tangent_type:
+        type: string
+    required:
+    - object_name
+    - attribute
 - name: set_current_time
   description: Set the current frame number
   execution: sync
@@ -90,6 +233,13 @@ tools:
   annotations:
     idempotent_hint: true
   group: animation
+  input_schema:
+    type: object
+    properties:
+      frame:
+        type: number
+    required:
+    - frame
 - name: set_keyframe
   description: Set a keyframe on an object at the given time
   execution: sync
@@ -97,6 +247,26 @@ tools:
   annotations:
     idempotent_hint: true
   group: animation
+  input_schema:
+    type: object
+    properties:
+      object_name:
+        type: string
+      attribute:
+        type: string
+      attributes:
+        oneOf:
+        - type: string
+        - type: array
+          items:
+            type: string
+          minItems: 1
+      time:
+        type: number
+      value:
+        type: number
+    required:
+    - object_name
 - name: set_timeline
   description: Set the playback and animation timeline range
   execution: sync
@@ -104,3 +274,16 @@ tools:
   annotations:
     idempotent_hint: true
   group: animation
+  input_schema:
+    type: object
+    properties:
+      start_frame:
+        type: number
+        default: 1.0
+      end_frame:
+        type: number
+        default: 120.0
+      min_frame:
+        type: number
+      max_frame:
+        type: number

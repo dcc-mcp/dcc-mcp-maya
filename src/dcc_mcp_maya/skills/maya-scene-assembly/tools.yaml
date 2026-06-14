@@ -4,18 +4,48 @@ tools:
   affinity: main
   group: scene-management
   description: Add an assembly representation in the current Maya scene.
+  input_schema:
+    type: object
+    properties:
+      assembly:
+        type: string
+      rep_type:
+        type: string
+      rep_name:
+        type: string
+      file_path:
+        type: string
+    required:
+    - assembly
+    - rep_type
 - name: create_assembly_definition
   execution: async
   affinity: main
   timeout_hint_secs: 120
   group: scene-management
   description: Create an assembly definition in the current Maya scene.
+  input_schema:
+    type: object
+    properties:
+      name:
+        type: string
 - name: create_assembly_reference
   execution: async
   affinity: main
   timeout_hint_secs: 120
   group: scene-management
   description: Create an assembly reference in the current Maya scene.
+  input_schema:
+    type: object
+    properties:
+      definition:
+        type: string
+      name:
+        type: string
+      active_rep:
+        type: string
+    required:
+    - definition
 - name: list_assemblies
   execution: sync
   affinity: main
@@ -24,3 +54,9 @@ tools:
     idempotent_hint: true
   group: scene-management
   description: List assemblies without modifying the Maya scene.
+  input_schema:
+    type: object
+    properties:
+      node_type:
+        type: string
+        default: all
