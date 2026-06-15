@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.8.12](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.8.11...v0.8.12) (2026-06-14)
+
+
+### Bug Fixes
+
+* add source_file and main() router for maya-scripting introspect tools ([2726da3](https://github.com/dcc-mcp/dcc-mcp-maya/commit/2726da38a9fb143d7354b2c25f49c1cf384e74d2))
+* align maya-primitives inputSchema with script parameter names ([3552cd8](https://github.com/dcc-mcp/dcc-mcp-maya/commit/3552cd8912ba03ffafe3f2f4fb2551f43da55503))
+
 ## [0.8.11](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.8.10...v0.8.11) (2026-06-14)
 
 
