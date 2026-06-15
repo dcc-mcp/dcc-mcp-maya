@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.13](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.8.12...v0.8.13) (2026-06-15)
+
+
+### Bug Fixes
+
+* publish sidecar discovery endpoint ([1507336](https://github.com/dcc-mcp/dcc-mcp-maya/commit/15073362f6f266afb7ca6bb2b94065ca93bdca95))
+
 ## [0.8.12](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.8.11...v0.8.12) (2026-06-14)
 
 
