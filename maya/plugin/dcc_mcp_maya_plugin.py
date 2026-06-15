@@ -832,6 +832,7 @@ def _maybe_spawn_sidecar() -> None:
         _sidecar_handle = start_sidecar(
             adapter_version=VERSION,
             display_name=_resolve_sidecar_display_name(),
+            discovery_mcp_url=_handle.mcp_url() if _handle is not None else None,
             gateway_name=_resolve_gateway_name(),
             instance_id=_resolve_instance_id(),
         )
