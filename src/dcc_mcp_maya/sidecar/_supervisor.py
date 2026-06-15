@@ -219,6 +219,7 @@ def start_sidecar(
     instance_id: Optional[str] = None,
     display_name: Optional[str] = None,
     adapter_version: Optional[str] = None,
+    discovery_mcp_url: Optional[str] = None,
     gateway_name: Optional[str] = None,
     extra_args: Optional[list] = None,
     extra_env: Optional[dict] = None,
@@ -251,6 +252,10 @@ def start_sidecar(
             the row (``--adapter-version``). The plug-in passes its own
             ``VERSION`` here so gateway and admin diagnostics can report
             adapter generations.
+        discovery_mcp_url: read-only in-process MCP/REST endpoint used by
+            the gateway for ``tools/list``, schema describe, resources,
+            prompts, and admin skill inventory. Tool calls still route
+            through the sidecar dispatcher endpoint.
         gateway_name: machine-level gateway label forwarded to
             ``--gateway-name``. Keep this stable per workstation; do
             not derive it from a scene because the standalone gateway
@@ -309,22 +314,35 @@ def start_sidecar(
     if instance_id not in (None, "") and normalized_instance_id is None:
         logger.debug("Ignoring invalid sidecar instance_id %r; expected UUID", instance_id)
 
-    launch_contract = build_sidecar_command(
-        dcc_type=dcc_name,
-        host_rpc=host_rpc_uri,
-        watch_pid=maya_pid,
-        registry_dir=registry_dir,
-        server_bin=str(binary),
-        instance_id=normalized_instance_id,
-        display_name=display_name,
-        adapter_version=adapter_version,
-        gateway_port=_resolve_gateway_port(spawn_env),
-        gateway_name=gateway_name,
-        gateway_remote_host=gateway_remote_host,
-        gateway_remote_port=gateway_remote_port,
-        extra_args=extra_args,
-        env=spawn_env,
-    )
+    launch_kwargs = {
+        "dcc_type": dcc_name,
+        "host_rpc": host_rpc_uri,
+        "watch_pid": maya_pid,
+        "registry_dir": registry_dir,
+        "server_bin": str(binary),
+        "instance_id": normalized_instance_id,
+        "display_name": display_name,
+        "adapter_version": adapter_version,
+        "gateway_port": _resolve_gateway_port(spawn_env),
+        "gateway_name": gateway_name,
+        "gateway_remote_host": gateway_remote_host,
+        "gateway_remote_port": gateway_remote_port,
+        "extra_args": extra_args,
+        "env": spawn_env,
+    }
+    if discovery_mcp_url:
+        launch_kwargs["discovery_mcp_url"] = discovery_mcp_url
+    try:
+        launch_contract = build_sidecar_command(**launch_kwargs)
+    except TypeError as exc:
+        if "discovery_mcp_url" not in str(exc):
+            raise
+        launch_kwargs.pop("discovery_mcp_url", None)
+        logger.debug(
+            "dcc-mcp-maya: core sidecar helper does not accept discovery_mcp_url; "
+            "continuing without sidecar discovery endpoint metadata"
+        )
+        launch_contract = build_sidecar_command(**launch_kwargs)
     if not launch_contract.get("success"):
         _stop_qt_server(stop_qt_server_fn)
         reason = launch_contract.get("reason") or "invalid_sidecar_launch"
