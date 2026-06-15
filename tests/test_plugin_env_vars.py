@@ -366,6 +366,8 @@ class TestSidecarUsesCoreRegistryDefaults:
         monkeypatch.setattr(plugin_module, "_resolve_instance_id", lambda: "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee")
         monkeypatch.setattr(plugin_module, "_resolve_sidecar_display_name", lambda: "Maya 2025 pid 1234")
         monkeypatch.setattr(plugin_module, "_resolve_gateway_name", lambda: "dcc-mcp-gateway@workstation-01")
+        plugin_module._handle = MagicMock()
+        plugin_module._handle.mcp_url.return_value = "http://127.0.0.1:8765/mcp"
 
         sidecar_pkg = self._arm_plugin(plugin_module, monkeypatch)
         plugin_module._maybe_spawn_sidecar()
@@ -374,6 +376,7 @@ class TestSidecarUsesCoreRegistryDefaults:
         _, kwargs = sidecar_pkg.start_sidecar.call_args
         assert kwargs["adapter_version"] == plugin_module.VERSION
         assert kwargs["display_name"] == "Maya 2025 pid 1234"
+        assert kwargs["discovery_mcp_url"] == "http://127.0.0.1:8765/mcp"
         assert kwargs["gateway_name"] == "dcc-mcp-gateway@workstation-01"
         assert kwargs["instance_id"] == "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee"
         plugin_module._probe_gateway_health_deferred.assert_called_once_with(plugin_module._sidecar_handle)
