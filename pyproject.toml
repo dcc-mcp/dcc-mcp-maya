@@ -30,7 +30,7 @@ dependencies = [
     # Release Train anchor: dcc-mcp-core/server v0.18.21 (sidecar instance-id contract).
     # 4 lifecycle controllers + shared registration phase pipeline + gateway runtime.
     # Provides abi3 (cp38+) on 3.8+; separate cp37 wheels on Python 3.7 (Maya 2022).
-    "dcc-mcp-core>=0.18.21,<1.0.0",
+    "dcc-mcp-core>=0.18.34,<1.0.0",
     "dcc-mcp-server>=0.18.21,<1.0.0",
 ]
 
