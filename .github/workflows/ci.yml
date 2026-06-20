@@ -179,20 +179,24 @@ jobs:
 
       - name: Export tools/list snapshot
         run: |
-          python - <<'PY' > "$RUNNER_TEMP/tools-list.json"
+          python - <<'PY'
           import json
-          import sys
+          import os
+          from pathlib import Path
 
           from dcc_mcp_maya.server import MayaMcpServer
           from tests._transport_support import mcp_initialize, mcp_list_all_tools
 
+          tools_list_path = Path(os.environ["RUNNER_TEMP"]) / "tools-list.json"
+          tmp_path = tools_list_path.with_name("tools-list.json.tmp")
           server = MayaMcpServer(port=0, gateway_port=0, enable_gateway_failover=False)
           server.register_builtin_actions(minimal=False)
           handle = server.start()
           try:
               session_id = mcp_initialize(handle.mcp_url(), client_name="docs-drift-ci")
               tools = mcp_list_all_tools(handle.mcp_url(), session_id=session_id)
-              json.dump({"tools": tools}, sys.stdout)
+              tmp_path.write_text(json.dumps({"tools": tools}), encoding="utf-8")
+              tmp_path.replace(tools_list_path)
           finally:
               server.stop()
           PY
@@ -218,8 +222,20 @@ jobs:
 
       - name: Check docs drift against tools/list
         run: |
-          if [ ! -s "$RUNNER_TEMP/tools-list.json" ]; then
-            echo "Skipping docs drift check because no valid tools-list snapshot was produced."
+          if ! python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          tools_list = Path(os.environ["RUNNER_TEMP"]) / "tools-list.json"
+          try:
+              with tools_list.open(encoding="utf-8") as fh:
+                  json.load(fh)
+          except Exception as exc:
+              print(f"Skipping docs drift check because tools-list JSON is invalid ({tools_list}): {exc}")
+              raise SystemExit(1)
+          PY
+          then
             exit 0
           fi
           python tools/check_docs_drift.py --tools-list "$RUNNER_TEMP/tools-list.json"
