@@ -64,3 +64,15 @@ def test_markdown_fences_are_ignored(drift, tmp_path):
     issues = drift.check_docs_drift(tmp_path, tools_list)
     assert any(issue.code == "TOOL_COUNT_MISMATCH" for issue in issues)
     assert not any(issue.code == "STALE_TOOL_REF" for issue in issues)
+
+
+@pytest.mark.parametrize("content, expected", [("", "empty"), ("{", "invalid")])
+def test_main_reports_bad_tools_list(drift, tmp_path, capsys, content, expected):
+    _write(tmp_path / "README.md", "We ship **1 tool**.\n")
+    tools_list = _write(tmp_path / "tools-list.json", content)
+
+    exit_code = drift.main(["--repo-root", str(tmp_path), "--tools-list", str(tools_list)])
+
+    captured = capsys.readouterr()
+    assert exit_code == 2
+    assert expected in captured.err.lower()
