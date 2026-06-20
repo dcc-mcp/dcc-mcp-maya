@@ -1,0 +1,6 @@
+groups:
+- name: import
+  description: Asset import tools (main-thread).
+  default_active: true
+  tools:
+  - import_to_scene
