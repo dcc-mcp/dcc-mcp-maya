@@ -2,7 +2,7 @@
 
 > Cross-skill navigation map. Read this before deciding which skill to load.
 
-The 25 bundled skills are organised into **five stages** that match the
+The 26 bundled skills are organised into **five stages** that match the
 mental model of a Maya pipeline. Each skill carries the stage in its
 SKILL.md frontmatter under `metadata.dcc-mcp.stage`.
 
@@ -13,7 +13,7 @@ SKILL.md frontmatter under `metadata.dcc-mcp.stage`.
 | `bootstrap` | Escape hatch; arbitrary code only when no typed skill fits. | yes | `maya-scripting` |
 | `scene` | Scene file lifecycle, DAG navigation, attributes, node graph, viewport visibility. | partial (`maya-scene` only) | `maya-scene`, `maya-scene-assembly`, `maya-display`, `maya-attributes`, `maya-node-graph` |
 | `authoring` | Create / edit content: meshes, UVs, materials, rigs, animation, dynamics, light rigs. | no | `maya-primitives`, `maya-mesh-ops`, `maya-uv-ops`, `maya-materials`, `maya-material-library`, `maya-texture-bake`, `maya-rigging`, `maya-animation`, `maya-dynamics`, `maya-pose-library`, `maya-expressions`, `maya-light-rig` |
-| `interchange` | Move geometry / scenes across DCCs (FBX, OBJ, presets, save). | no | `maya-geometry`, `maya-export-preset` |
+| `interchange` | Move geometry / scenes across DCCs (FBX, OBJ, presets, save). | no | `maya-geometry`, `maya-export-preset`, `maya-import-to-scene` |
 | `pipeline` | Production pipeline: project, publish, shot export, render, render farm, development diagnostics. | no | `maya-dev`, `maya-pipeline`, `maya-shot-export`, `maya-render`, `maya-render-farm` |
 
 ## Deciding which skill to load
