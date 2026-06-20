@@ -168,14 +168,34 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install PyYAML
-        run: pip install pyyaml
+      - name: Install package
+        run: pip install -e ".[dev]"
 
       - name: Install dcc-mcp-cli
         run: |
           export DCC_MCP_INSTALL_DIR="$RUNNER_TEMP/dcc-mcp-bin"
           curl -fsSL https://raw.githubusercontent.com/loonghao/dcc-mcp-core/main/scripts/install-cli.sh | bash
           echo "$DCC_MCP_INSTALL_DIR" >> "$GITHUB_PATH"
+
+      - name: Export tools/list snapshot
+        run: |
+          python - <<'PY' > "$RUNNER_TEMP/tools-list.json"
+          import json
+          import sys
+
+          from dcc_mcp_maya.server import MayaMcpServer
+          from tests._transport_support import mcp_initialize, mcp_list_all_tools
+
+          server = MayaMcpServer(port=0, gateway_port=0, enable_gateway_failover=False)
+          server.register_builtin_actions(minimal=False)
+          handle = server.start()
+          try:
+              session_id = mcp_initialize(handle.mcp_url(), client_name="docs-drift-ci")
+              tools = mcp_list_all_tools(handle.mcp_url(), session_id=session_id)
+              json.dump({"tools": tools}, sys.stdout)
+          finally:
+              server.stop()
+          PY
 
       - name: Lint SKILL.md files
         run: python tools/lint_skills.py --error-only
@@ -191,6 +211,9 @@ jobs:
 
       - name: Lint tools.yaml input_schema (issue #382)
         run: python tools/lint_tool_schemas.py
+
+      - name: Check docs drift against tools/list
+        run: python tools/check_docs_drift.py --tools-list "$RUNNER_TEMP/tools-list.json"
 
   cli-smoke:
     name: dcc-mcp-cli Service Smoke
