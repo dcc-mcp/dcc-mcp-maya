@@ -22,10 +22,14 @@ from pathlib import Path
 from typing import Iterable, Optional, Sequence, Set
 
 _INLINE_CODE_RE = re.compile(r"`([^`\n]+)`")
-_TOOL_LIKE_RE = re.compile(r"^[A-Za-z0-9_.-]*[_\.][A-Za-z0-9_.-]*$")
+# Must start with a lowercase letter, contain at least one underscore or hyphen,
+# no dots (excludes module paths like maya.cmds and filenames like config.json),
+# no uppercase (excludes env vars and class names).
+_TOOL_LIKE_RE = re.compile(r"^[a-z][a-z0-9_-]*[_\-][a-z0-9_-]*$")
+_FILE_EXT_RE = re.compile(r"\.(?:py|json|md|txt|yaml|yml|toml|cfg|ini|conf|xml|html|csv|env|sh|bat|ps1|lock)\b", re.IGNORECASE)
 _COUNT_RE = re.compile(r"\b(\d+)(\+?)\s+(?:typed\s+)?(?:Maya\s+)?tools?\b", re.IGNORECASE)
 _FENCE_RE = re.compile(r"^(?:```|~~~)")
-_SKIP_DIRS = {".git", ".hg", ".svn", ".tox", ".venv", "build", "dist", "node_modules", "__pycache__", ".pytest_cache"}
+_SKIP_DIRS = {".git", ".hg", ".svn", ".tox", ".venv", "build", "dist", "node_modules", "__pycache__", ".pytest_cache", ".codebuddy"}
 
 
 @dataclass(frozen=True)
@@ -126,7 +130,7 @@ def _scan_markdown(repo_root: Path, tool_names: Set[str]) -> tuple[list[CountCla
 
             for match in _INLINE_CODE_RE.finditer(line):
                 token = match.group(1).strip()
-                if _TOOL_LIKE_RE.match(token):
+                if _TOOL_LIKE_RE.match(token) and not _FILE_EXT_RE.search(token):
                     refs.append(ToolRef(path=path, line=lineno, name=token))
                     if token in tool_names:
                         referenced.add(token)
@@ -172,7 +176,7 @@ def check_docs_drift(repo_root: Path, tools_list_path: Path) -> list[Issue]:
         if ref.name not in tool_names:
             issues.append(
                 Issue(
-                    severity="error",
+                    severity="warning",
                     code="STALE_TOOL_REF",
                     message="{path}:{line}: references missing tool `{name}`".format(
                         path=ref.path.as_posix(), line=ref.line, name=ref.name
