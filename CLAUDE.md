@@ -7,7 +7,7 @@
 
 ## What This Project Does
 
-`dcc-mcp-maya` embeds an MCP Streamable HTTP server directly inside Autodesk Maya. Claude Desktop (or any Anthropic API client using MCP) can call 198 Maya tools over HTTP without any external gateway process.
+`dcc-mcp-maya` embeds an MCP Streamable HTTP server directly inside Autodesk Maya. Claude Desktop (or any Anthropic API client using MCP) can call 77+ Maya tools over HTTP without any external gateway process.
 
 ---
 
@@ -46,7 +46,7 @@ Restart Claude Desktop after editing.
 
 ## Progressive Loading — Important for Claude
 
-By default, `dcc-mcp-maya` starts in **minimal mode** with only 8 tools active:
+By default, `dcc-mcp-maya` starts in **minimal mode** with only a few built-in tools active:
 - `execute_python`, `execute_mel`
 - `get_scene_info`, `get_selection`, `get_session_info`
 - `search_tools`, `list_skills`, `load_skill`
