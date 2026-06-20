@@ -233,7 +233,7 @@ def _assign_to_collection(
 
     # Find or create the display layer.
     layers = cmds.ls(type="displayLayer") or []
-    layer = next((l for l in layers if l == collection_name), None)
+    layer = next((lyr for lyr in layers if lyr == collection_name), None)
     if layer is None:
         layer = cmds.createDisplayLayer(name=collection_name, empty=True)
 
@@ -394,8 +394,6 @@ def import_to_scene(request: ImportToSceneRequest) -> Dict[str, Any]:
             imported_long = cmds.ls(importedNodes=True, long=True) or []
         except Exception:  # noqa: BLE001
             imported_long = []
-
-    imported_short = sorted({n.rsplit("|", 1)[-1] for n in imported_long})
 
     # --- Tag asset_id on the first transform ---------------------------------
     if descriptor.asset_id:
