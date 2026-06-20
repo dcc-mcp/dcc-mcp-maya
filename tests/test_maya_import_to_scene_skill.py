@@ -193,10 +193,10 @@ def test_import_to_scene_material_mode_skip(tmp_path):
     # ls calls: skip_existing(type="transform"), before, after, importedNodes,
     #            shadingEngine query, mat query, displayLayer (collection=no)
     cmds.ls.side_effect = [
-        [],                    # skip_existing: ls(type="transform")
-        [],                    # before: ls(long=True)
-        ["|nomat"],           # after: ls(long=True)
-        [],                    # importedNodes fallback
+        [],  # skip_existing: ls(type="transform")
+        [],  # before: ls(long=True)
+        ["|nomat"],  # after: ls(long=True)
+        [],  # importedNodes fallback
         ["initialShadingGroup", "mySG"],  # ls(type="shadingEngine")
         ["lambert1", "standardSurface1", "myLambert"],  # ls(mat=True)
     ]
@@ -225,10 +225,10 @@ def test_import_to_scene_material_mode_default_gray(tmp_path):
     cmds.pluginInfo.return_value = False
     # No importedNodes fallback since imported_long is non-empty (set diff).
     cmds.ls.side_effect = [
-        [],                    # skip_existing: ls(type="transform")
-        [],                    # before: ls(long=True)
-        ["|gray"],            # after: ls(long=True) — imported_long non-empty
-        ["|pSphereShape1"],   # _apply_material_mode: ls(type="mesh")
+        [],  # skip_existing: ls(type="transform")
+        [],  # before: ls(long=True)
+        ["|gray"],  # after: ls(long=True) — imported_long non-empty
+        ["|pSphereShape1"],  # _apply_material_mode: ls(type="mesh")
     ]
     cmds.objectType.return_value = "transform"
 
@@ -254,10 +254,10 @@ def test_import_to_scene_target_collection(tmp_path):
     cmds.pluginInfo.return_value = False
     # No importedNodes fallback since imported_long is non-empty.
     cmds.ls.side_effect = [
-        [],                    # skip_existing: ls(type="transform")
-        [],                    # before: ls(long=True)
-        ["|layered"],         # after: ls(long=True) — non-empty
-        [],                    # _assign_to_collection: ls(type="displayLayer")
+        [],  # skip_existing: ls(type="transform")
+        [],  # before: ls(long=True)
+        ["|layered"],  # after: ls(long=True) — non-empty
+        [],  # _assign_to_collection: ls(type="displayLayer")
     ]
     cmds.objectType.return_value = "transform"
 
