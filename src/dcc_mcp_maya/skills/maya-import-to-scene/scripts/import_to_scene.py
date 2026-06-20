@@ -101,17 +101,12 @@ def _select_best_variant(descriptor: AssetDescriptor) -> AssetFileVariant:
         return preferred[0]
 
     # Second pass: pick by format priority (FBX > OBJ > USD > GLTF > ABC).
-    scored = [
-        (v, _FORMAT_PRIORITY.get(_detect_format(v.local_path), 99))
-        for v in descriptor.variants
-    ]
+    scored = [(v, _FORMAT_PRIORITY.get(_detect_format(v.local_path), 99)) for v in descriptor.variants]
     scored.sort(key=lambda pair: pair[1])
     return scored[0][0]
 
 
-def _check_skip_existing(
-    cmds: Any, descriptor: AssetDescriptor
-) -> Optional[str]:
+def _check_skip_existing(cmds: Any, descriptor: AssetDescriptor) -> Optional[str]:
     """Return the existing root node name if skip_existing matches."""
     if not descriptor.asset_id:
         return None
@@ -152,11 +147,7 @@ def _apply_placement(
         return
 
     # Find top-level transforms among imported nodes.
-    tops = [
-        n
-        for n in imported_nodes
-        if n.count("|") <= 1 and cmds.objectType(n) == "transform"
-    ]
+    tops = [n for n in imported_nodes if n.count("|") <= 1 and cmds.objectType(n) == "transform"]
     if not tops:
         return
 
@@ -203,10 +194,12 @@ def _apply_material_mode(
                 if mat not in ("lambert1", "standardSurface1", "particleCloud1"):
                     cmds.delete(mat)
         except Exception as exc:  # noqa: BLE001
-            warnings.append(ImportWarning(
-                code="MATERIAL_SKIP_FAILED",
-                message="Failed to strip materials: {}".format(exc),
-            ))
+            warnings.append(
+                ImportWarning(
+                    code="MATERIAL_SKIP_FAILED",
+                    message="Failed to strip materials: {}".format(exc),
+                )
+            )
     elif material_mode == "default_gray":
         # Assign lambert1 to all mesh faces.
         try:
@@ -214,10 +207,12 @@ def _apply_material_mode(
             if meshes:
                 cmds.hyperShade(assign="lambert1")
         except Exception as exc:  # noqa: BLE001
-            warnings.append(ImportWarning(
-                code="MATERIAL_GRAY_FAILED",
-                message="Failed to assign default gray: {}".format(exc),
-            ))
+            warnings.append(
+                ImportWarning(
+                    code="MATERIAL_GRAY_FAILED",
+                    message="Failed to assign default gray: {}".format(exc),
+                )
+            )
 
     return warnings
 
@@ -238,11 +233,7 @@ def _assign_to_collection(
         layer = cmds.createDisplayLayer(name=collection_name, empty=True)
 
     # Add top-level transforms to the layer.
-    tops = [
-        n
-        for n in imported_nodes
-        if n.count("|") <= 1 and cmds.objectType(n) == "transform"
-    ]
+    tops = [n for n in imported_nodes if n.count("|") <= 1 and cmds.objectType(n) == "transform"]
     if tops:
         cmds.editDisplayLayerMembers(layer, tops, noRecurse=True)
 
@@ -278,9 +269,7 @@ def import_to_scene(request: ImportToSceneRequest) -> Dict[str, Any]:
     existing_root = _check_skip_existing(cmds, descriptor)
     if skip_existing and existing_root is not None:
         return skill_success(
-            "Skipped import: asset_id '{}' already present (node: {})".format(
-                descriptor.asset_id, existing_root
-            ),
+            "Skipped import: asset_id '{}' already present (node: {})".format(descriptor.asset_id, existing_root),
             result=ImportToSceneResult(
                 success=True,
                 imported_nodes=[existing_root],
@@ -354,6 +343,7 @@ def import_to_scene(request: ImportToSceneRequest) -> Dict[str, Any]:
 
         if detected_format == AssetFormat.FBX:
             from maya import mel  # noqa: PLC0415
+
             mel.eval("FBXResetImport")
             mel.eval("FBXImportMode -v add")
             if material_mode == "skip":
@@ -397,11 +387,7 @@ def import_to_scene(request: ImportToSceneRequest) -> Dict[str, Any]:
 
     # --- Tag asset_id on the first transform ---------------------------------
     if descriptor.asset_id:
-        roots = [
-            n
-            for n in imported_long
-            if n.count("|") <= 1 and cmds.objectType(n) == "transform"
-        ]
+        roots = [n for n in imported_long if n.count("|") <= 1 and cmds.objectType(n) == "transform"]
         if roots:
             _tag_asset_id(cmds, roots[0], descriptor.asset_id)
 
@@ -409,10 +395,12 @@ def import_to_scene(request: ImportToSceneRequest) -> Dict[str, Any]:
     try:
         _apply_placement(cmds, imported_long, placement)
     except Exception as exc:  # noqa: BLE001
-        warnings.append(ImportWarning(
-            code="PLACEMENT_FAILED",
-            message="Placement hint partially failed: {}".format(exc),
-        ))
+        warnings.append(
+            ImportWarning(
+                code="PLACEMENT_FAILED",
+                message="Placement hint partially failed: {}".format(exc),
+            )
+        )
 
     # --- Apply material mode -------------------------------------------------
     if material_mode != "as_authored":
@@ -424,10 +412,12 @@ def import_to_scene(request: ImportToSceneRequest) -> Dict[str, Any]:
         try:
             _assign_to_collection(cmds, imported_long, collection)
         except Exception as exc:  # noqa: BLE001
-            warnings.append(ImportWarning(
-                code="COLLECTION_FAILED",
-                message="Failed to assign to layer '{}': {}".format(collection, exc),
-            ))
+            warnings.append(
+                ImportWarning(
+                    code="COLLECTION_FAILED",
+                    message="Failed to assign to layer '{}': {}".format(collection, exc),
+                )
+            )
 
     result = ImportToSceneResult(
         success=True,
