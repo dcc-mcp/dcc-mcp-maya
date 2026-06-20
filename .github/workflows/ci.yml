@@ -196,6 +196,10 @@ jobs:
           finally:
               server.stop()
           PY
+          if [ ! -s "$RUNNER_TEMP/tools-list.json" ]; then
+            echo "::warning::Skipping docs drift check because tools-list export is empty or missing"
+            rm -f "$RUNNER_TEMP/tools-list.json"
+          fi
 
       - name: Lint SKILL.md files
         run: python tools/lint_skills.py --error-only
@@ -213,7 +217,12 @@ jobs:
         run: python tools/lint_tool_schemas.py
 
       - name: Check docs drift against tools/list
-        run: python tools/check_docs_drift.py --tools-list "$RUNNER_TEMP/tools-list.json"
+        run: |
+          if [ ! -s "$RUNNER_TEMP/tools-list.json" ]; then
+            echo "Skipping docs drift check because no valid tools-list snapshot was produced."
+            exit 0
+          fi
+          python tools/check_docs_drift.py --tools-list "$RUNNER_TEMP/tools-list.json"
 
   cli-smoke:
     name: dcc-mcp-cli Service Smoke

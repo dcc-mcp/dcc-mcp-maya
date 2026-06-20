@@ -66,7 +66,13 @@ def _iter_markdown_files(repo_root: Path) -> Iterable[Path]:
 
 
 def _load_tools_list(path: Path) -> list[dict]:
-    payload = json.loads(path.read_text(encoding="utf-8"))
+    raw = path.read_text(encoding="utf-8")
+    if not raw.strip():
+        raise ValueError("tools-list JSON is empty: {}".format(path))
+    try:
+        payload = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise ValueError("tools-list JSON is invalid ({}): {}".format(path, exc)) from exc
     if isinstance(payload, list):
         tools = payload
     elif isinstance(payload, dict):
@@ -230,7 +236,11 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         print("ERROR: tools-list JSON not found: {}".format(tools_list), file=sys.stderr)
         return 2
 
-    issues = check_docs_drift(repo_root, tools_list)
+    try:
+        issues = check_docs_drift(repo_root, tools_list)
+    except (OSError, ValueError) as exc:
+        print("ERROR: {}".format(exc), file=sys.stderr)
+        return 2
     errors = [issue for issue in issues if issue.severity == "error"]
     warnings = [issue for issue in issues if issue.severity == "warning"]
 
