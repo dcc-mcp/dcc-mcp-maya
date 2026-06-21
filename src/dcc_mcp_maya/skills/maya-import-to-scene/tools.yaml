@@ -18,9 +18,7 @@ tools:
     properties:
       asset:
         type: object
-        description: |-
-          AssetDescriptor from maya-asset-source (search_assets or
-          resolve_asset). Must include at minimum "path" and "format".
+        description: AssetDescriptor from maya-asset-source. Must include path and format.
         required:
         - path
         - format
@@ -31,7 +29,6 @@ tools:
             type: string
           path:
             type: string
-            description: Absolute path to the asset file.
           format:
             type: string
             enum:
@@ -48,16 +45,8 @@ tools:
             type: object
       namespace:
         type: string
-        description: |-
-          Optional namespace prefix for imported nodes. Prevents name
-          clashes when importing multiple assets. Maya creates the
-          namespace if it does not exist.
       group_name:
         type: string
-        description: |-
-          Optional name for a wrapper transform at the scene root that
-          parents all imported top-level transforms. Useful for
-          organising multi-root FBX files.
       axis_conversion:
         type: string
         enum:
@@ -65,18 +54,11 @@ tools:
         - y_to_z
         - z_to_y
         default: none
-        description: |-
-          Post-import axis correction applied via cmds.xform on each
-          top-level transform. Use y_to_z when the file is Y-up and the
-          scene is Z-up, or z_to_y for the reverse.
+        description: y_to_z for Y-up files, z_to_y for Z-up.
       unit_scale:
         type: number
         default: 1.0
         exclusiveMinimum: 0
-        description: |-
-          Uniform scale factor applied to every top-level transform after
-          import. Use 0.01 to convert centimetres to metres, 100 for the
-          reverse.
       material_mode:
         type: string
         enum:
@@ -84,10 +66,6 @@ tools:
         - assign_lambert
         - skip
         default: preserve
-        description: |-
-          preserve: keep materials as imported.
-          assign_lambert: assign a default Lambert shader to all new mesh shapes.
-          skip: remove material assignments from new mesh shapes.
       placement_hint:
         type: string
         enum:
@@ -95,27 +73,15 @@ tools:
         - selection
         - custom
         default: origin
-        description: |-
-          origin: leave imported nodes at the position in the file.
-          selection: move the top-level group to the current selection pivot.
-          custom: translate the top-level group to custom_position [x, y, z].
+        description: origin (default), selection pivot, or custom [x,y,z].
       custom_position:
         type: array
         items:
           type: number
         minItems: 3
         maxItems: 3
-        description: |-
-          World-space [x, y, z] translation applied to the top-level group
-          when placement_hint is "custom".
       target_collection:
         type: string
-        description: |-
-          Optional name of an existing Maya set or group to add all
-          imported top-level transforms to after import.
       merge_namespaces:
         type: boolean
         default: false
-        description: |-
-          When true, reuse an existing namespace instead of generating a
-          numeric suffix.
