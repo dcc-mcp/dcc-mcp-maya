@@ -54,6 +54,7 @@ _AXIS_ROTATION: Dict[str, float] = {
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _normalize_path(path: str) -> str:
     expanded = os.path.expandvars(os.path.expanduser(path))
     return expanded.replace("\\", "/")
@@ -139,7 +140,9 @@ def _apply_material_mode(cmds: Any, new_long: List[str], material_mode: str) -> 
     if material_mode == "assign_lambert":
         try:
             lambert = cmds.shadingNode("lambert", asShader=True, name="dcc_mcp_import_lambert")
-            shading_group = cmds.sets(renderable=True, noSurfaceShader=True, empty=True, name="dcc_mcp_import_lambertSG")
+            shading_group = cmds.sets(
+                renderable=True, noSurfaceShader=True, empty=True, name="dcc_mcp_import_lambertSG"
+            )
             cmds.connectAttr("{}.outColor".format(lambert), "{}.surfaceShader".format(shading_group), force=True)
             for shape in shapes:
                 cmds.sets(shape, edit=True, forceElement=shading_group)
@@ -223,6 +226,7 @@ def _apply_target_collection(cmds: Any, top_nodes: List[str], target_collection:
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
+
 
 def import_to_scene(  # noqa: PLR0913
     asset: Dict[str, Any],
@@ -319,6 +323,7 @@ def import_to_scene(  # noqa: PLR0913
         # Extra FBX reset before import
         if fmt == "fbx":
             import maya.mel as mel  # noqa: PLC0415
+
             mel.eval("FBXResetImport")
             mel.eval("FBXImportMode -v add")
             mel.eval("FBXImportMergeAnimationLayers -v true")

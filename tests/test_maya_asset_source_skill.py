@@ -13,6 +13,7 @@ from conftest import load_and_call
 # search_assets
 # ---------------------------------------------------------------------------
 
+
 def test_search_assets_finds_fbx_in_flat_dir(tmp_path):
     (tmp_path / "hero.fbx").write_bytes(b"FBX")
     (tmp_path / "rig.fbx").write_bytes(b"FBX")
@@ -184,6 +185,7 @@ def test_search_assets_usd_formats_detected(tmp_path):
 # ---------------------------------------------------------------------------
 # resolve_asset
 # ---------------------------------------------------------------------------
+
 
 def test_resolve_asset_returns_descriptor_for_fbx(tmp_path):
     path = tmp_path / "hero.fbx"
