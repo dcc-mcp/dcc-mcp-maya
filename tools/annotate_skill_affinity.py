@@ -87,6 +87,7 @@ SKILL_DEFAULTS: Dict[str, ExecAffinity] = {
     "maya-expressions": ("sync", "main", None),
     "maya-gpu-cache": ("sync", "main", None),
     "maya-hdri": ("sync", "main", None),
+    "maya-import-to-scene": ("async", "main", 300),
     "maya-instancer": ("sync", "main", None),
     "maya-light-rig": ("sync", "main", None),
     "maya-geometry": ("sync", "main", None),
