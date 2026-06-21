@@ -22,8 +22,6 @@ metadata:
     - fbx
     - obj
     - usd
-    - AssetDescriptor
-    - ImportToSceneResult
     search-hint: |-
       import asset to scene, import FBX pipeline, import OBJ pipeline,
       import USD Maya, AssetDescriptor import, ImportToSceneResult,
