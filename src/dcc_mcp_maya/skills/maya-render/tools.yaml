@@ -61,11 +61,9 @@ tools:
         type: boolean
         default: true
 - name: capture_viewport
-  description: 'Capture the active Maya viewport as a base64 PNG via playblast. When
-    Maya is minimized or in batch mode, off-screen rendering is auto-enabled (issue
-    #152). Use optional view_fit instead of execute_python with viewFit: the correct
-    flag is allObjects=True, not all=True. Width and height are clamped to reduce GPU
-    OOM risk.'
+  description: 'Capture the active Maya viewport as a base64 PNG via playblast. Off-screen
+    rendering is auto-enabled in batch mode or when Maya is minimized. Width and
+    height are clamped to reduce GPU OOM risk.'
   execution: async
   affinity: main
   timeout_hint_secs: 600
@@ -215,9 +213,8 @@ tools:
         maximum: 100
         default: 100
 - name: playblast_to_mp4
-  description: Capture a viewport playblast image sequence and encode it to MP4
-    with ffmpeg. Use for animation previews; requires a usable modelPanel and ffmpeg
-    on PATH.
+  description: Capture a viewport playblast sequence and encode it to MP4 with ffmpeg.
+    Requires a usable modelPanel and ffmpeg on PATH.
   execution: async
   affinity: main
   timeout_hint_secs: 600
@@ -273,9 +270,8 @@ tools:
         type: boolean
         default: true
 - name: render_frame
-  description: Render a single frame to disk without using Maya model panels or playblast.
-    Uses Arnold when currentRenderer is arnold, otherwise falls back to cmds.render.
-    Returns a non-empty output path and optional base64 image payload.
+  description: Render a single frame to disk. Uses Arnold when currentRenderer is arnold,
+    otherwise falls back to cmds.render.
   execution: async
   affinity: main
   timeout_hint_secs: 600
@@ -317,14 +313,8 @@ tools:
         default: true
         description: Include base64 image bytes in context.image_base64.
 - name: render_scene
-  description: |-
-    Render a scene frame with explicit output format and Arnold sampling controls.
-    Extends render_frame with: output format selection (exr/png/jpg/tif, defaults
-    to exr for HDR fidelity), Arnold AA and per-bounce sample overrides applied
-    only for this render then restored, and output verification.
-    Use this instead of render_frame when you need format control or want to
-    override Arnold quality for a single shot. Chain with setup_hdr_arnold for
-    look-dev renders.
+  description: Render a scene frame with explicit output format and Arnold sample overrides.
+    Use this when you need format control or a one-shot quality override.
   execution: async
   affinity: main
   timeout_hint_secs: 600
