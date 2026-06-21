@@ -38,7 +38,7 @@ MCP tools map naturally to OpenAI function calling:
 | `function.arguments` | JSON payload sent to `tools/call` |
 | `function_call` | `tools/call` request with `_meta.progressToken` for async |
 
-For async tools (`execution: async` in `tools.yaml`), the server returns a `job_id` immediately. Poll `jobs_get_status` to track progress — similar to OpenAI's `run` status polling.
+For async tools (`execution: async` in `tools.yaml`), the server returns a `job_id` immediately. Poll `jobs_get_status` to track progress — similar to OpenAI's `run` status polling. `jobs_get_status` requires a job storage backend and async job surface to be configured; without these, async tools execute synchronously.
 
 ---
 
