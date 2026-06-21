@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.8.14](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.8.13...v0.8.14) (2026-06-21)
+
+
+### Features
+
+* add docs drift checker ([11641d0](https://github.com/dcc-mcp/dcc-mcp-maya/commit/11641d05aa276bd7f86b943b2bee4b1c99b065da))
+* add maya-import-to-scene skill with AssetDescriptor contract support ([73be6ba](https://github.com/dcc-mcp/dcc-mcp-maya/commit/73be6ba6379e4f581d0cdbd51cd50d320dffd869))
+
+
+### Bug Fixes
+
+* **ci:** guard docs drift export failures ([c2dca5d](https://github.com/dcc-mcp/dcc-mcp-maya/commit/c2dca5d024a913bc2c8a3ed46d50cf7d32f0c270))
+* **ci:** skip docs drift check on invalid tools list ([dc323b4](https://github.com/dcc-mcp/dcc-mcp-maya/commit/dc323b4ffb62d33cb85fa7d2cd9663ea0406e405))
+* resolve ruff E741 and F841 in maya-import-to-scene ([6215e17](https://github.com/dcc-mcp/dcc-mcp-maya/commit/6215e17a30a0772c622255b373459f7379f83f7f))
+* update doc tool counts to 77+ and relax docs drift checker ([a5c2c62](https://github.com/dcc-mcp/dcc-mcp-maya/commit/a5c2c627950318d85850508b1397bd91c73e75a2))
+
+
+### Documentation
+
+* align tool counts with current surface ([ea739e6](https://github.com/dcc-mcp/dcc-mcp-maya/commit/ea739e64f69fa34ae9f5a6df3d5c0969d6daff6c))
+* sync skill counts (26 packages, 204 tools) and core dependency version ([01bbc64](https://github.com/dcc-mcp/dcc-mcp-maya/commit/01bbc64c3b3119704afd15c750ee3a30672c4aa1))
+
 ## [0.8.13](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.8.12...v0.8.13) (2026-06-15)
 
 
