@@ -1,13 +1,10 @@
 tools:
 - name: import_to_scene
   description: |-
-    Import an asset into the current Maya scene from an AssetDescriptor
-    produced by maya-asset-source. Supports FBX, OBJ, USD, MA, and MB.
-    Handles post-import axis conversion (y_to_z / z_to_y), uniform unit
-    scaling, MaterialMode (preserve / assign_lambert / skip), and
-    PlacementHint (origin / selection / custom). Returns an
-    ImportToSceneResult with imported node names and transformation applied.
-    Use a namespace to keep multiple imports separable in the outliner.
+    Import an asset from an AssetDescriptor into the Maya scene.
+    Supports FBX, OBJ, USD, MA, MB with axis conversion, unit scale,
+    material mode, placement hint, and optional namespace. Returns
+    ImportToSceneResult with imported node names.
   execution: async
   affinity: main
   timeout_hint_secs: 120

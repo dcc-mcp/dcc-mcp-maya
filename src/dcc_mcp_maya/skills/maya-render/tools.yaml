@@ -61,8 +61,7 @@ tools:
         type: boolean
         default: true
 - name: capture_viewport
-  description: Capture the active Maya viewport as a base64 PNG, auto-enabling
-    off-screen capture in batch or minimized sessions.
+  description: 'Capture the active Maya viewport as a base64 PNG. Off-screen rendering auto-enables when Maya is minimized or in batch mode.'
   execution: async
   affinity: main
   timeout_hint_secs: 600
@@ -212,7 +211,9 @@ tools:
         maximum: 100
         default: 100
 - name: playblast_to_mp4
-  description: Capture a playblast sequence and encode it to MP4 with ffmpeg.
+  description: Capture a viewport playblast image sequence and encode it to MP4
+    with ffmpeg. Use for animation previews; requires a usable modelPanel and ffmpeg
+    on PATH.
   execution: async
   affinity: main
   timeout_hint_secs: 600
@@ -268,8 +269,9 @@ tools:
         type: boolean
         default: true
 - name: render_frame
-  description: Render one frame to disk with the active renderer and optional
-    base64 output.
+  description: Render a single frame to disk without using Maya model panels or playblast.
+    Uses Arnold when currentRenderer is arnold, otherwise falls back to cmds.render.
+    Returns a non-empty output path and optional base64 image payload.
   execution: async
   affinity: main
   timeout_hint_secs: 600
@@ -310,118 +312,6 @@ tools:
         type: boolean
         default: true
         description: Include base64 image bytes in context.image_base64.
-- name: render_scene
-  description: Render a scene frame with optional output format and Arnold sample
-    overrides, restoring settings after render.
-  execution: async
-  affinity: main
-  timeout_hint_secs: 600
-  annotations:
-    read_only_hint: false
-    destructive_hint: false
-    idempotent_hint: false
-    open_world_hint: false
-  group: rendering
-  input_schema:
-    type: object
-    properties:
-      camera:
-        type: string
-      frame:
-        type: number
-      width:
-        type: integer
-        minimum: 1
-        maximum: 8192
-      height:
-        type: integer
-        minimum: 1
-        maximum: 8192
-      output_dir:
-        type: string
-      output_name:
-        type: string
-      format:
-        type: string
-        enum:
-        - exr
-        - png
-        - jpg
-        - tif
-        default: exr
-      aa_samples:
-        type: integer
-        minimum: 1
-        maximum: 16
-      diffuse_samples:
-        type: integer
-        minimum: 1
-        maximum: 12
-      specular_samples:
-        type: integer
-        minimum: 1
-        maximum: 12
-      transmission_samples:
-        type: integer
-        minimum: 1
-        maximum: 12
-      sss_samples:
-        type: integer
-        minimum: 1
-        maximum: 12
-      volume_samples:
-        type: integer
-        minimum: 1
-        maximum: 12
-      return_base64:
-        type: boolean
-        default: false
-- name: setup_hdr_arnold
-  description: Create an Arnold HDR skydome for look-dev and load MtoA when needed.
-  execution: async
-  affinity: main
-  timeout_hint_secs: 600
-  annotations:
-    read_only_hint: false
-    destructive_hint: false
-    idempotent_hint: false
-    open_world_hint: false
-  group: rendering
-  input_schema:
-    type: object
-    required:
-    - hdri_path
-    properties:
-      hdri_path:
-        type: string
-        description: Absolute path to .hdr, .exr, or .tx HDR image file.
-      name:
-        type: string
-        description: Name for the skydome transform node. Defaults to hdri_dome.
-      intensity:
-        type: number
-        default: 1.0
-        description: Light intensity multiplier.
-      rotation:
-        type: number
-        default: 0.0
-        description: Y-axis rotation in degrees for HDRI orientation.
-      visible_in_diffuse:
-        type: boolean
-        default: true
-        description: Enable diffuse contribution from the dome.
-      visible_in_specular:
-        type: boolean
-        default: true
-        description: Enable specular contribution from the dome.
-      set_renderer:
-        type: boolean
-        default: true
-        description: Switch defaultRenderGlobals.currentRenderer to arnold when MtoA is available.
-      exposure:
-        type: number
-        default: 0.0
-        description: Arnold exposure attribute on the dome light.
 - name: set_render_quality
   description: Apply a render quality preset (low/medium/high) to the Maya defaultRenderQuality node.
   execution: sync
