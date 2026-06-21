@@ -316,6 +316,142 @@ tools:
         type: boolean
         default: true
         description: Include base64 image bytes in context.image_base64.
+- name: render_scene
+  description: |-
+    Render a scene frame with explicit output format and Arnold sampling controls.
+    Extends render_frame with: output format selection (exr/png/jpg/tif, defaults
+    to exr for HDR fidelity), Arnold AA and per-bounce sample overrides applied
+    only for this render then restored, and output verification.
+    Use this instead of render_frame when you need format control or want to
+    override Arnold quality for a single shot. Chain with setup_hdr_arnold for
+    look-dev renders.
+  execution: async
+  affinity: main
+  timeout_hint_secs: 600
+  annotations:
+    read_only_hint: false
+    destructive_hint: false
+    idempotent_hint: false
+    open_world_hint: false
+  group: rendering
+  input_schema:
+    type: object
+    properties:
+      camera:
+        type: string
+        description: Camera transform or shape to render. Defaults to first renderable camera.
+      frame:
+        type: number
+        description: Frame to render; defaults to current time.
+      width:
+        type: integer
+        minimum: 1
+        maximum: 8192
+        description: Render width override in pixels.
+      height:
+        type: integer
+        minimum: 1
+        maximum: 8192
+        description: Render height override in pixels.
+      output_dir:
+        type: string
+        description: Output directory. Defaults to workspace images rule or temp dir.
+      output_name:
+        type: string
+        description: Output filename prefix (sanitized). Defaults to mcp_render_scene.
+      format:
+        type: string
+        enum:
+        - exr
+        - png
+        - jpg
+        - tif
+        default: exr
+        description: Output image format. Use exr for HDR look-dev; png for quick review.
+      aa_samples:
+        type: integer
+        minimum: 1
+        maximum: 16
+        description: Arnold AA (camera) samples override. Higher = less noise, slower.
+      diffuse_samples:
+        type: integer
+        minimum: 1
+        maximum: 12
+        description: Arnold GI diffuse samples override.
+      specular_samples:
+        type: integer
+        minimum: 1
+        maximum: 12
+        description: Arnold GI specular samples override.
+      transmission_samples:
+        type: integer
+        minimum: 1
+        maximum: 12
+        description: Arnold GI transmission samples override.
+      sss_samples:
+        type: integer
+        minimum: 1
+        maximum: 12
+        description: Arnold SSS samples override.
+      volume_samples:
+        type: integer
+        minimum: 1
+        maximum: 12
+        description: Arnold volume samples override.
+      return_base64:
+        type: boolean
+        default: false
+        description: Include base64 image bytes in response (default false — EXR files are large).
+- name: setup_hdr_arnold
+  description: |-
+    Configure an Arnold HDR skydome environment for look-dev rendering.
+    Creates an aiSkyDomeLight connected to an HDR file texture, optionally
+    switches the renderer to Arnold, and loads MtoA if not already loaded.
+    Falls back to ambient light approximation with a warning when MtoA is
+    unavailable. Use before render_scene for asset look-dev validation.
+  execution: sync
+  affinity: main
+  annotations:
+    read_only_hint: false
+    destructive_hint: false
+    idempotent_hint: false
+    open_world_hint: false
+  group: rendering
+  input_schema:
+    type: object
+    required:
+    - hdri_path
+    properties:
+      hdri_path:
+        type: string
+        description: Absolute path to .hdr, .exr, or .tx HDR image file.
+      name:
+        type: string
+        description: Name for the skydome transform node. Defaults to hdri_dome.
+      intensity:
+        type: number
+        default: 1.0
+        description: Light intensity multiplier.
+      rotation:
+        type: number
+        default: 0.0
+        description: Y-axis rotation in degrees for HDRI orientation.
+      visible_in_diffuse:
+        type: boolean
+        default: true
+        description: Enable diffuse contribution from the dome.
+      visible_in_specular:
+        type: boolean
+        default: true
+        description: Enable specular contribution from the dome.
+      set_renderer:
+        type: boolean
+        default: true
+        description: Switch defaultRenderGlobals.currentRenderer to arnold when MtoA is available.
+      exposure:
+        type: number
+        default: 0.0
+        description: Arnold exposure attribute on the dome light.
 - name: set_render_quality
   description: Apply a render quality preset (low/medium/high) to the Maya defaultRenderQuality node.
   execution: sync
