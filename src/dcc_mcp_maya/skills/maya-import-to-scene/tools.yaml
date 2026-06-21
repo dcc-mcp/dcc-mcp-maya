@@ -1,122 +1,125 @@
 tools:
 - name: import_to_scene
   description: |-
-    Import an asset into the current Maya scene from a typed
-    AssetDescriptor.  Dispatches to the appropriate importer per
-    AssetFormat, applies material mode (as_authored / default_gray /
-    skip), optional placement hints (translate / rotate / scale /
-    parent), and skip-existing dedup by asset_id.  Returns
-    ImportToSceneResult with the imported node list and any warnings.
-    Loads the required Maya plug-in(s) automatically.
+    Import an asset into the current Maya scene from an AssetDescriptor
+    produced by maya-asset-source. Supports FBX, OBJ, USD, MA, and MB.
+    Handles post-import axis conversion (y_to_z / z_to_y), uniform unit
+    scaling, MaterialMode (preserve / assign_lambert / skip), and
+    PlacementHint (origin / selection / custom). Returns an
+    ImportToSceneResult with imported node names and transformation applied.
+    Use a namespace to keep multiple imports separable in the outliner.
   execution: async
   affinity: main
-  timeout_hint_secs: 300
+  timeout_hint_secs: 120
   annotations:
     destructive_hint: true
+    idempotent_hint: false
   group: import
   input_schema:
     type: object
     required:
-    - descriptor
+    - asset
     properties:
-      descriptor:
+      asset:
         type: object
+        description: |-
+          AssetDescriptor from maya-asset-source (search_assets or
+          resolve_asset). Must include at minimum "path" and "format".
         required:
-        - asset_id
-        - variants
+        - path
+        - format
         properties:
-          asset_id:
+          id:
             type: string
-          variants:
-            type: array
-            items:
-              type: object
-              required:
-              - local_path
-              properties:
-                local_path:
-                  type: string
-                format:
-                  type: string
-                  enum:
-                  - FBX
-                  - OBJ
-                  - USD
-                  - USDZ
-                  - GLTF
-                  - GLB
-                  - ABC
-                  - UNKNOWN
-                  default: UNKNOWN
-                preferred:
-                  type: boolean
-                  default: false
-                mime:
-                  type: string
-          attribution:
-            type: object
-            properties:
-              author:
-                type: string
-              source:
-                type: string
-              created_at:
-                type: string
-          preview:
+          name:
             type: string
-          unit_hint:
+          path:
             type: string
-            default: unitless
-          meters_per_unit:
-            type: number
-            default: 1.0
-          up_axis:
+            description: Absolute path to the asset file.
+          format:
             type: string
-            default: y
             enum:
-            - x
-            - y
-            - z
-          tags:
-            type: array
-            items:
-              type: string
-          extra:
+            - fbx
+            - obj
+            - usd
+            - usda
+            - usdc
+            - ma
+            - mb
+          size_bytes:
+            type: integer
+          metadata:
             type: object
+      namespace:
+        type: string
+        description: |-
+          Optional namespace prefix for imported nodes. Prevents name
+          clashes when importing multiple assets. Maya creates the
+          namespace if it does not exist.
+      group_name:
+        type: string
+        description: |-
+          Optional name for a wrapper transform at the scene root that
+          parents all imported top-level transforms. Useful for
+          organising multi-root FBX files.
+      axis_conversion:
+        type: string
+        enum:
+        - none
+        - y_to_z
+        - z_to_y
+        default: none
+        description: |-
+          Post-import axis correction applied via cmds.xform on each
+          top-level transform. Use y_to_z when the file is Y-up and the
+          scene is Z-up, or z_to_y for the reverse.
+      unit_scale:
+        type: number
+        default: 1.0
+        exclusiveMinimum: 0
+        description: |-
+          Uniform scale factor applied to every top-level transform after
+          import. Use 0.01 to convert centimetres to metres, 100 for the
+          reverse.
       material_mode:
         type: string
         enum:
-        - as_authored
-        - default_gray
+        - preserve
+        - assign_lambert
         - skip
-        default: as_authored
-      placement:
-        type: object
-        properties:
-          translate:
-            type: array
-            items:
-              type: number
-            minItems: 3
-            maxItems: 3
-          rotate:
-            type: array
-            items:
-              type: number
-            minItems: 3
-            maxItems: 3
-          scale:
-            type: array
-            items:
-              type: number
-            minItems: 3
-            maxItems: 3
-          parent_name:
-            type: string
+        default: preserve
+        description: |-
+          preserve: keep materials as imported.
+          assign_lambert: assign a default Lambert shader to all new mesh shapes.
+          skip: remove material assignments from new mesh shapes.
+      placement_hint:
+        type: string
+        enum:
+        - origin
+        - selection
+        - custom
+        default: origin
+        description: |-
+          origin: leave imported nodes at the position in the file.
+          selection: move the top-level group to the current selection pivot.
+          custom: translate the top-level group to custom_position [x, y, z].
+      custom_position:
+        type: array
+        items:
+          type: number
+        minItems: 3
+        maxItems: 3
+        description: |-
+          World-space [x, y, z] translation applied to the top-level group
+          when placement_hint is "custom".
       target_collection:
         type: string
-      skip_existing:
+        description: |-
+          Optional name of an existing Maya set or group to add all
+          imported top-level transforms to after import.
+      merge_namespaces:
         type: boolean
         default: false
-      extra:
-        type: object
+        description: |-
+          When true, reuse an existing namespace instead of generating a
+          numeric suffix.
