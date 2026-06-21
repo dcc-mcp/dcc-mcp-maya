@@ -66,9 +66,7 @@ def resolve_asset(path: str) -> Dict[str, Any]:
         if ext not in _SUPPORTED_EXTENSIONS:
             return skill_error(
                 "Unsupported format",
-                "Extension '{}' is not supported. Supported: {}".format(
-                    ext, ", ".join(sorted(_SUPPORTED_EXTENSIONS))
-                ),
+                "Extension '{}' is not supported. Supported: {}".format(ext, ", ".join(sorted(_SUPPORTED_EXTENSIONS))),
                 path=normalized,
                 extension=ext,
             )
@@ -85,10 +83,7 @@ def resolve_asset(path: str) -> Dict[str, Any]:
         return skill_success(
             "Resolved asset: {}".format(descriptor["name"]),
             asset=descriptor,
-            prompt=(
-                "Pass context.asset to maya_import_to_scene__import_to_scene "
-                "to load into the current Maya scene."
-            ),
+            prompt=("Pass context.asset to maya_import_to_scene__import_to_scene to load into the current Maya scene."),
         )
     except Exception as exc:  # noqa: BLE001
         return skill_exception(exc, message="Failed to resolve asset: {}".format(path))

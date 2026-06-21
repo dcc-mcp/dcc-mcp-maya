@@ -40,6 +40,7 @@ def _setup_cmds(before=None, after=None):
 # Basic import tests
 # ---------------------------------------------------------------------------
 
+
 def test_import_to_scene_fbx_loads_plugin(tmp_path):
     path = tmp_path / "hero.fbx"
     path.write_bytes(b"FBX")
@@ -138,6 +139,7 @@ def test_import_to_scene_returns_import_result_fields(tmp_path):
 # Error handling
 # ---------------------------------------------------------------------------
 
+
 def test_import_to_scene_error_on_missing_file(tmp_path):
     asset = _make_asset(str(tmp_path / "ghost.fbx"), "fbx")
     cmds = MagicMock()
@@ -195,6 +197,7 @@ def test_import_to_scene_error_on_empty_path():
 # ---------------------------------------------------------------------------
 # Axis conversion
 # ---------------------------------------------------------------------------
+
 
 def test_import_to_scene_y_to_z_axis_conversion(tmp_path):
     path = tmp_path / "hero.fbx"
@@ -267,6 +270,7 @@ def test_import_to_scene_none_axis_conversion_skips_xform(tmp_path):
 # Unit scale
 # ---------------------------------------------------------------------------
 
+
 def test_import_to_scene_unit_scale_applies_xform(tmp_path):
     path = tmp_path / "hero.fbx"
     path.write_bytes(b"FBX")
@@ -314,6 +318,7 @@ def test_import_to_scene_unit_scale_1_skips_xform(tmp_path):
 # ---------------------------------------------------------------------------
 # Material mode
 # ---------------------------------------------------------------------------
+
 
 def test_import_to_scene_assign_lambert_creates_shader(tmp_path):
     path = tmp_path / "hero.fbx"
@@ -383,6 +388,7 @@ def test_import_to_scene_skip_material_uses_initial_sg(tmp_path):
 # Placement hint
 # ---------------------------------------------------------------------------
 
+
 def test_import_to_scene_custom_placement_applies_translation(tmp_path):
     path = tmp_path / "hero.fbx"
     path.write_bytes(b"FBX")
@@ -445,6 +451,7 @@ def test_import_to_scene_selection_placement_queries_pivot(tmp_path):
 # Namespace
 # ---------------------------------------------------------------------------
 
+
 def test_import_to_scene_namespace_passed_to_cmds_file(tmp_path):
     path = tmp_path / "hero.fbx"
     path.write_bytes(b"FBX")
@@ -468,6 +475,7 @@ def test_import_to_scene_namespace_passed_to_cmds_file(tmp_path):
 # ---------------------------------------------------------------------------
 # group_name
 # ---------------------------------------------------------------------------
+
 
 def test_import_to_scene_group_name_creates_wrapper(tmp_path):
     path = tmp_path / "hero.fbx"
@@ -494,6 +502,7 @@ def test_import_to_scene_group_name_creates_wrapper(tmp_path):
 # ---------------------------------------------------------------------------
 # target_collection
 # ---------------------------------------------------------------------------
+
 
 def test_import_to_scene_target_collection_objectset_adds_member(tmp_path):
     path = tmp_path / "hero.fbx"
