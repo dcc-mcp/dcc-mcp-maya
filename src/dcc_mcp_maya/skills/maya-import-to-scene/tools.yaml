@@ -21,17 +21,12 @@ tools:
     properties:
       descriptor:
         type: object
-        description: |-
-          AssetDescriptor describing the asset to import.  Must contain
-          at least one variant with a local_path.  The best variant for
-          Maya is selected automatically (FBX > OBJ > USD > GLTF > ABC).
         required:
         - asset_id
         - variants
         properties:
           asset_id:
             type: string
-            description: Unique identifier for this asset (e.g. "arch/city-bank/desk").
           variants:
             type: array
             items:
@@ -41,7 +36,6 @@ tools:
               properties:
                 local_path:
                   type: string
-                  description: Absolute filesystem path to the variant file.
                 format:
                   type: string
                   enum:
@@ -54,37 +48,28 @@ tools:
                   - ABC
                   - UNKNOWN
                   default: UNKNOWN
-                  description: AssetFormat enum value.
                 preferred:
                   type: boolean
                   default: false
-                  description: If true, this variant is preferred over others.
                 mime:
                   type: string
-                  description: Optional MIME type hint.
           attribution:
             type: object
             properties:
               author:
                 type: string
-                description: Author or tool that created the asset.
               source:
                 type: string
-                description: Source reference (e.g. URL, ticket).
               created_at:
                 type: string
-                description: ISO-8601 timestamp of asset creation.
           preview:
             type: string
-            description: Optional path to a preview image.
           unit_hint:
             type: string
             default: unitless
-            description: Expected working units ('centimeter', 'meter', 'inch', 'foot', 'unitless').
           meters_per_unit:
             type: number
             default: 1.0
-            description: Explicit meters-per-unit scale factor.
           up_axis:
             type: string
             default: y
@@ -92,15 +77,12 @@ tools:
             - x
             - y
             - z
-            description: Expected up axis.
           tags:
             type: array
             items:
               type: string
-            description: Asset tags for categorization.
           extra:
             type: object
-            description: Free-form extra metadata.
       material_mode:
         type: string
         enum:
@@ -108,17 +90,8 @@ tools:
         - default_gray
         - skip
         default: as_authored
-        description: |-
-          How to handle materials during import.
-          - as_authored: keep embedded materials.
-          - default_gray: replace with neutral gray.
-          - skip: discard material data entirely.
       placement:
         type: object
-        description: |-
-          Optional placement hint for import transform.  All fields are
-          optional; omitted axes default to (0, 0, 0) for translate,
-          (0, 0, 0) for rotate (degrees), (1, 1, 1) for scale.
         properties:
           translate:
             type: array
@@ -126,36 +99,24 @@ tools:
               type: number
             minItems: 3
             maxItems: 3
-            description: World-space translate [x, y, z].
           rotate:
             type: array
             items:
               type: number
             minItems: 3
             maxItems: 3
-            description: World-space rotate [rx, ry, rz] in degrees.
           scale:
             type: array
             items:
               type: number
             minItems: 3
             maxItems: 3
-            description: World-space scale [sx, sy, sz].
           parent_name:
             type: string
-            description: Optional DAG parent path to parent the imported root.
       target_collection:
         type: string
-        description: |-
-          Optional display-layer or collection name.  The layer is
-          created if missing.
       skip_existing:
         type: boolean
         default: false
-        description: |-
-          If true, check for an existing node tagged with the same
-          asset_id and skip the import when found.  The tag attribute
-          is dcc_mcp_asset_id on the imported root.
       extra:
         type: object
-        description: Free-form adapter-specific options.
