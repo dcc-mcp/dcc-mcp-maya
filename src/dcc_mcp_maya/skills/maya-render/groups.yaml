@@ -12,5 +12,7 @@ groups:
   - playblast
   - playblast_to_mp4
   - render_frame
+  - render_scene
   - set_render_quality
   - set_render_settings
+  - setup_hdr_arnold
