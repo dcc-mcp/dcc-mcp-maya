@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.8.15](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.8.14...v0.8.15) (2026-06-21)
+
+
+### Features
+
+* **maya-render:** add render_scene and setup_hdr_arnold tools ([ef4bc89](https://github.com/dcc-mcp/dcc-mcp-maya/commit/ef4bc89e356f7e10e62f6fc793700a3f726b6567))
+
+
+### Bug Fixes
+
+* **maya-render:** trim manifest descriptions ([9be1ceb](https://github.com/dcc-mcp/dcc-mcp-maya/commit/9be1ceb41f0886cf5e376fff330636a1fe827e98))
+* **maya-render:** trim tool descriptions for CI token-budget (PIP-1920) ([2ae4135](https://github.com/dcc-mcp/dcc-mcp-maya/commit/2ae41353eb96e0eac0b02ff98ac15a8c833ada01))
+
+
+### Documentation
+
+* align tool counts with tools/list surface (72+ instead of 198) ([#399](https://github.com/dcc-mcp/dcc-mcp-maya/issues/399)) ([0deca89](https://github.com/dcc-mcp/dcc-mcp-maya/commit/0deca890fec4663e964806be82dd8aeda7172b02))
+
 ## [0.8.14](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.8.13...v0.8.14) (2026-06-21)
 
 
