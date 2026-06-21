@@ -61,9 +61,9 @@ tools:
         type: boolean
         default: true
 - name: capture_viewport
-  description: 'Capture the active Maya viewport as a base64 PNG via playblast. Off-screen
-    rendering is auto-enabled in batch mode or when Maya is minimized. Width and
-    height are clamped to reduce GPU OOM risk.'
+  description: 'Capture the active Maya viewport as a base64 PNG via playblast. Auto-enables
+    off-screen when Maya is minimized or in batch mode. Use view_fit with allObjects=True
+    (not all=True). Width and height clamped to reduce GPU OOM risk.'
   execution: async
   affinity: main
   timeout_hint_secs: 600
@@ -329,7 +329,7 @@ tools:
     properties:
       camera:
         type: string
-        description: Camera transform or shape to render. Defaults to first renderable camera.
+        description: Camera to render. Defaults to first renderable camera.
       frame:
         type: number
         description: Frame to render; defaults to current time.
@@ -337,18 +337,18 @@ tools:
         type: integer
         minimum: 1
         maximum: 8192
-        description: Render width override in pixels.
+        description: Width in pixels.
       height:
         type: integer
         minimum: 1
         maximum: 8192
-        description: Render height override in pixels.
+        description: Height in pixels.
       output_dir:
         type: string
-        description: Output directory. Defaults to workspace images rule or temp dir.
+        description: Output directory. Defaults to workspace images or temp dir.
       output_name:
         type: string
-        description: Output filename prefix (sanitized). Defaults to mcp_render_scene.
+        description: Filename prefix; defaults to mcp_render_scene.
       format:
         type: string
         enum:
@@ -357,41 +357,41 @@ tools:
         - jpg
         - tif
         default: exr
-        description: Output image format. Use exr for HDR look-dev; png for quick review.
+        description: Output image format. exr for HDR look-dev; png for quick review.
       aa_samples:
         type: integer
         minimum: 1
         maximum: 16
-        description: Arnold AA (camera) samples override. Higher = less noise, slower.
+        description: Camera AA samples override.
       diffuse_samples:
         type: integer
         minimum: 1
         maximum: 12
-        description: Arnold GI diffuse samples override.
+        description: Diffuse samples override.
       specular_samples:
         type: integer
         minimum: 1
         maximum: 12
-        description: Arnold GI specular samples override.
+        description: Specular samples override.
       transmission_samples:
         type: integer
         minimum: 1
         maximum: 12
-        description: Arnold GI transmission samples override.
+        description: Transmission samples override.
       sss_samples:
         type: integer
         minimum: 1
         maximum: 12
-        description: Arnold SSS samples override.
+        description: SSS samples override.
       volume_samples:
         type: integer
         minimum: 1
         maximum: 12
-        description: Arnold volume samples override.
+        description: Volume samples override.
       return_base64:
         type: boolean
         default: false
-        description: Include base64 image bytes in response (default false — EXR files are large).
+        description: Include base64 in response; EXR files large.
 - name: setup_hdr_arnold
   description: |-
     Configure an Arnold HDR skydome environment for look-dev rendering.
