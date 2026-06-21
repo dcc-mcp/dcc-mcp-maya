@@ -73,7 +73,6 @@ Endpoint: http://127.0.0.1:9765/mcp
 ## Gemini-Specific Tips
 
 - **Code-first workflows:** Gemini can write complete skill packages. Generate `SKILL.md`, `tools.yaml`, and `scripts/*.py` in one shot, then place them in a directory listed in `DCC_MCP_MAYA_SKILL_PATHS`.
-- **Batch reasoning:** Use `workflow__run_chain` to chain multiple tool calls. Gemini can plan the chain and validate intermediate results.
 - **Image understanding:** Feed `capture_viewport` base64 PNGs back to Gemini for visual state verification.
 
 ---

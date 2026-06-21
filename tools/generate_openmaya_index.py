@@ -63,6 +63,7 @@ _SKIP_NAMES = frozenset({"mro", "kNullObj"})
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _safe_sig(obj: object) -> str:
     """Return a best-effort signature string for *obj*."""
     try:
@@ -76,7 +77,7 @@ def _safe_sig(obj: object) -> str:
     m = _CEXT_SIG_RE.match(first_line)
     if m:
         args_str = m.group(2)
-        ret_str  = m.group(3) or "None"
+        ret_str = m.group(3) or "None"
         return "({}) -> {}".format(args_str, ret_str.strip())
 
     return "(*args, **kwargs)"
@@ -190,6 +191,7 @@ def _index_module(module_name: str) -> dict:
 # Changelog computation
 # ---------------------------------------------------------------------------
 
+
 def _compute_changelog(new_index: dict, old_path: str) -> dict:
     """Diff *new_index* against *old_path* and return a changelog entry."""
     if not os.path.isfile(old_path):
@@ -235,15 +237,19 @@ def _compute_changelog(new_index: dict, old_path: str) -> dict:
 # Main
 # ---------------------------------------------------------------------------
 
+
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "--output", "-o",
+        "--output",
+        "-o",
         default="src/dcc_mcp_maya/skills/maya-scripting/references/openmaya_signatures/",
         help="Output directory for JSON files.",
     )
     parser.add_argument(
-        "--modules", nargs="+", default=MODULES_TO_INDEX,
+        "--modules",
+        nargs="+",
+        default=MODULES_TO_INDEX,
         help="OpenMaya module names to index.",
     )
     args = parser.parse_args(argv)
@@ -251,10 +257,10 @@ def main(argv: list[str] | None = None) -> None:
     # Detect Maya version
     try:
         import maya.cmds as cmds  # noqa: PLC0415
+
         maya_version = str(cmds.about(majorVersion=True))
     except Exception:
-        print("ERROR: This script must be run inside a Maya session (mayapy or Script Editor).",
-              file=sys.stderr)
+        print("ERROR: This script must be run inside a Maya session (mayapy or Script Editor).", file=sys.stderr)
         sys.exit(1)
 
     print("Indexing OpenMaya for Maya {} ...".format(maya_version))
@@ -280,8 +286,7 @@ def main(argv: list[str] | None = None) -> None:
     prev_versions = sorted(
         re.match(r"maya_(\d{4})\.json$", f).group(1)
         for f in os.listdir(out_dir)
-        if re.match(r"maya_(\d{4})\.json$", f)
-        and re.match(r"maya_(\d{4})\.json$", f).group(1) < maya_version
+        if re.match(r"maya_(\d{4})\.json$", f) and re.match(r"maya_(\d{4})\.json$", f).group(1) < maya_version
     )
     changelog: dict = {}
     if prev_versions:
@@ -304,18 +309,18 @@ def main(argv: list[str] | None = None) -> None:
 
     print("\nWrote index to: {}".format(out_path))
     total_classes = sum(len(v) for v in modules_data.values())
-    total_methods = sum(
-        len(cls.get("methods", {}))
-        for mod in modules_data.values()
-        for cls in mod.values()
+    total_methods = sum(len(cls.get("methods", {})) for mod in modules_data.values() for cls in mod.values())
+    print(
+        "Summary: {} modules, {} classes/functions, {} methods".format(len(modules_data), total_classes, total_methods)
     )
-    print("Summary: {} modules, {} classes/functions, {} methods".format(
-        len(modules_data), total_classes, total_methods))
 
     if changelog.get(maya_version):
         cl = changelog[maya_version]
-        print("Changelog vs previous: +{} added, -{} removed, ~{} signature changed".format(
-            len(cl["added"]), len(cl["removed"]), len(cl["signature_changed"])))
+        print(
+            "Changelog vs previous: +{} added, -{} removed, ~{} signature changed".format(
+                len(cl["added"]), len(cl["removed"]), len(cl["signature_changed"])
+            )
+        )
 
 
 if __name__ == "__main__":

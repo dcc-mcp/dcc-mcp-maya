@@ -1,0 +1,77 @@
+tools:
+- name: search_assets
+  description: |-
+    Search a directory tree for 3D asset files (FBX, OBJ, USD, MA, MB) matching
+    an optional name query. Returns a list of AssetDescriptor records that
+    maya-import-to-scene can consume directly. Each record includes the
+    absolute path, detected format, file size, and a stable ID derived from
+    the path. When no query is given, all supported asset files under root_dir
+    are returned (up to max_results).
+  execution: sync
+  affinity: any
+  annotations:
+    read_only_hint: true
+    idempotent_hint: true
+  group: asset-source
+  input_schema:
+    type: object
+    required:
+    - root_dir
+    properties:
+      root_dir:
+        type: string
+        description: |-
+          Absolute path to the root directory to search. Environment variables
+          and ~ are expanded.
+      query:
+        type: string
+        description: |-
+          Optional case-insensitive substring to match against the asset file
+          stem (no extension). Leave empty to return all supported assets.
+      formats:
+        type: array
+        items:
+          type: string
+          enum:
+          - fbx
+          - obj
+          - usd
+          - usda
+          - usdc
+          - ma
+          - mb
+        description: |-
+          Limit results to these formats. Defaults to all supported formats
+          when omitted.
+      max_results:
+        type: integer
+        default: 100
+        minimum: 1
+        description: Maximum number of AssetDescriptor records to return.
+      recursive:
+        type: boolean
+        default: true
+        description: When true (default), search subdirectories recursively.
+
+- name: resolve_asset
+  description: |-
+    Resolve a single file path to an AssetDescriptor. Use this when you
+    already have a path and need the structured record required by
+    maya-import-to-scene. Returns an error if the file does not exist or
+    if the format is not supported.
+  execution: sync
+  affinity: any
+  annotations:
+    read_only_hint: true
+    idempotent_hint: true
+  group: asset-source
+  input_schema:
+    type: object
+    required:
+    - path
+    properties:
+      path:
+        type: string
+        description: |-
+          Absolute path to the asset file. Environment variables and ~ are
+          expanded. Must exist on disk.
