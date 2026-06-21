@@ -186,7 +186,9 @@ def run(args: argparse.Namespace) -> Dict[str, Any]:
 
 
 def parse_args(argv: Sequence[str]) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Benchmark maya_scene__get_scene_info detail modes through gateway REST")
+    parser = argparse.ArgumentParser(
+        description="Benchmark maya_scene__get_scene_info detail modes through gateway REST"
+    )
     parser.add_argument("--base-url", default=None, help="Gateway REST base URL")
     parser.add_argument("--iterations", type=int, default=100, help="Calls per detail mode")
     parser.add_argument("--object-count", type=int, default=150, help="Object count when --prepare-scene is set")
@@ -202,7 +204,11 @@ def main(argv: Sequence[str]) -> int:
     report = run(args)
     out_dir = Path(args.output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
-    report_path = Path(args.report) if args.report else out_dir / ("get_scene_info_benchmark_" + datetime.now().strftime("%Y%m%d_%H%M%S") + ".json")
+    report_path = (
+        Path(args.report)
+        if args.report
+        else out_dir / ("get_scene_info_benchmark_" + datetime.now().strftime("%Y%m%d_%H%M%S") + ".json")
+    )
     report_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
     print(json.dumps(report, ensure_ascii=False, indent=2))
     print(f"REPORT_PATH={report_path}")

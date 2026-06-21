@@ -1,0 +1,7 @@
+groups:
+- name: asset-source
+  description: Asset discovery and resolution tools — filesystem only, no Maya state.
+  default_active: true
+  tools:
+  - search_assets
+  - resolve_asset
