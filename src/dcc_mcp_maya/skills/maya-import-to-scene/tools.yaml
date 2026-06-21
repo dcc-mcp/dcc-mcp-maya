@@ -2,8 +2,8 @@ tools:
 - name: import_to_scene
   description: |-
     Import an AssetDescriptor into Maya. Supports FBX, OBJ, USD,
-    MA, MB with axis conversion, unit scale, material mode, and
-    placement hint. Returns ImportToSceneResult.
+    MA, MB. Handles axis conversion, unit scale, material mode,
+    and placement hint.
   execution: async
   affinity: main
   timeout_hint_secs: 120
