@@ -2,7 +2,7 @@
 
 > Cross-skill navigation map. Read this before deciding which skill to load.
 
-The 26 bundled skills are organised into **five stages** that match the
+The 27 bundled skills are organised into **five stages** that match the
 mental model of a Maya pipeline. Each skill carries the stage in its
 SKILL.md frontmatter under `metadata.dcc-mcp.stage`.
 
@@ -13,8 +13,8 @@ SKILL.md frontmatter under `metadata.dcc-mcp.stage`.
 | `bootstrap` | Escape hatch; arbitrary code only when no typed skill fits. | yes | `maya-scripting` |
 | `scene` | Scene file lifecycle, DAG navigation, attributes, node graph, viewport visibility. | partial (`maya-scene` only) | `maya-scene`, `maya-scene-assembly`, `maya-display`, `maya-attributes`, `maya-node-graph` |
 | `authoring` | Create / edit content: meshes, UVs, materials, rigs, animation, dynamics, light rigs. | no | `maya-primitives`, `maya-mesh-ops`, `maya-uv-ops`, `maya-materials`, `maya-material-library`, `maya-texture-bake`, `maya-rigging`, `maya-animation`, `maya-dynamics`, `maya-pose-library`, `maya-expressions`, `maya-light-rig` |
-| `interchange` | Move geometry / scenes across DCCs (FBX, OBJ, presets, save). | no | `maya-geometry`, `maya-export-preset`, `maya-import-to-scene` |
-| `pipeline` | Production pipeline: project, publish, shot export, render, render farm, development diagnostics. | no | `maya-dev`, `maya-pipeline`, `maya-shot-export`, `maya-render`, `maya-render-farm` |
+| `interchange` | Move geometry / scenes across DCCs (FBX, OBJ, presets, save). | no | `maya-geometry`, `maya-export-preset` |
+| `pipeline` | Production pipeline: project, publish, shot export, render, render farm, asset import, development diagnostics. | no | `maya-dev`, `maya-pipeline`, `maya-shot-export`, `maya-render`, `maya-render-farm`, `maya-asset-source`, `maya-import-to-scene` |
 
 ## Deciding which skill to load
 
@@ -49,10 +49,10 @@ Full rationale: repo root `AGENTS.md` § *Bulk import, export, and naming*; exam
 | Publish an asset version | `maya-pipeline` (uses `maya-geometry` under the hood; declared in `depends`) |
 | Bake AO maps from high-res to low-res | `maya-uv-ops` → `maya-texture-bake` |
 | Create a single light or three-point rig and tweak intensity | `maya-light-rig` (`create_light`, `create_three_point_rig`, `set_light_rig_intensity`) |
-| Render an image, snapshot the viewport, write an MP4 preview, or collect debug evidence | **Intent-driven:** `maya-render` (`render_scene` for format+sampling control, `render_frame` for simple final-frame output, `debug_scene_snapshot` for diagnostics, `playblast_to_mp4` for animation preview). See `maya-render/SKILL.md` § *Render intents → tool routing* and § *VP2 fallback flow* for error recovery when viewport is unavailable. |
-| Set up an HDR Arnold skydome and render a look-dev validation image | `maya-render` (`setup_hdr_arnold` → `render_scene`). `setup_hdr_arnold` loads MtoA, creates aiSkyDomeLight from a .hdr/.exr file, and switches the renderer to Arnold. Chain with `render_scene` to get an EXR output with Arnold sampling control. |
-| Import an asset and render it for validation | `maya-import-to-scene` (`import_to_scene`) → `maya-render` (`setup_hdr_arnold` → `render_scene`). |
+| Render an image, snapshot the viewport, write an MP4 preview, or collect debug evidence | **Intent-driven:** `maya-render` (`render_frame` for final-frame output, `debug_scene_snapshot` for diagnostics, `playblast_to_mp4` for animation preview). See `maya-render/SKILL.md` § *Render intents → tool routing* and § *VP2 fallback flow* for error recovery when viewport is unavailable. |
 | Develop and debug a Maya Python tool inside the live session | `maya-dev` (`attach_project` → `run_check`; optional `start_debugpy`) |
+| Search an asset library and import an asset with axis/unit correction | `maya-asset-source` (`search_assets` or `resolve_asset` → AssetDescriptor) → `maya-import-to-scene` (`import_to_scene` with `axis_conversion`, `unit_scale`, `material_mode`, `placement_hint`) |
+| Import multiple FBX assets from a directory into separate namespaces | `maya-asset-source` (`search_assets(formats=["fbx"])`) → `maya-import-to-scene` (`import_to_scene` with `namespace` per asset) |
 
 ## Side-Effect Taxonomy
 

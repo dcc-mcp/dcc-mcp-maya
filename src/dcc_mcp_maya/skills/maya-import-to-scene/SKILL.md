@@ -1,96 +1,104 @@
 ---
 name: maya-import-to-scene
 description: |-
-  Interchange stage — import assets into the Maya scene using typed
-  AssetDescriptor contracts. Consumes FBX / OBJ / USD / GLTF / GLB / ABC
-  formats exported from any DCC, places them with configurable namespace
-  and transform hints, and returns the imported node list. Supports
-  material modes (as_authored / default_gray / skip) and skip-existing
-  dedup by asset_id. Does NOT handle scene saving or pipeline publishing
-  — use maya-pipeline for that.
+  Pipeline stage — structured asset import. Consume an AssetDescriptor
+  produced by maya-asset-source and import the asset (FBX, OBJ, USD)
+  into the current Maya scene via cmds.file(). Handles axis/unit
+  conversion, MaterialMode, PlacementHint, and optional target collection
+  grouping. Returns an ImportToSceneResult with the new node list.
 license: MIT
 allowed-tools: Bash Read
 metadata:
   dcc-mcp:
     dcc: maya
     layer: domain
-    stage: interchange
+    stage: pipeline
     version: 1.0.0
     tags:
     - maya
     - import
-    - interchange
+    - asset
+    - pipeline
     - fbx
     - obj
     - usd
-    - asset
-    - material
     search-hint: |-
-      import asset, import to scene, import FBX, import OBJ, import USD,
-      import GLTF, import GLB, import Alembic, asset descriptor, AssetDescriptor,
-      skip existing, material mode, placement, as_authored, default_gray.
+      import asset to scene, import FBX pipeline, import OBJ pipeline,
+      import USD Maya, AssetDescriptor import, ImportToSceneResult,
+      axis conversion import, unit conversion import, material mode,
+      placement hint, target collection, asset import pipeline
     tools: tools.yaml
     groups: groups.yaml
     depends:
-    - maya-geometry
+    - maya-asset-source
 ---
-# maya-import-to-scene (Interchange stage)
+# maya-import-to-scene (Pipeline stage)
 
-Import assets into Maya using typed `AssetDescriptor` contracts from
-`dcc-mcp-core`. This is the **typed counterpart** to the raw `import_file`
-/ `import_fbx` tools in `maya-geometry` — it accepts structured descriptors
-and applies material, placement, and dedup semantics in a single call.
+Structured asset import for the Maya import pipeline. This skill
+consumes **`AssetDescriptor`** records from `maya-asset-source` and
+writes geometry into the current scene, returning an
+**`ImportToSceneResult`**.
 
-## Why this skill exists
+## Typical workflow
 
-`maya-geometry` provides low‑level FBX / OBJ import tools with raw
-path + namespace arguments. `maya-import-to-scene` wraps those with the
-`dcc_mcp_core.asset_import` contract layer:
+```
+maya-asset-source: search_assets / resolve_asset
+         ↓  AssetDescriptor
+import_to_scene(descriptor, axis_conversion=..., material_mode=..., ...)
+         ↓  ImportToSceneResult
+```
 
-| Aspect | `maya-geometry` | `maya-import-to-scene` |
-|--------|-----------------|------------------------|
-| Input shape | `file_path`, `namespace`, … | `AssetDescriptor` + `ImportToSceneRequest` |
-| Material handling | none (plugin defaults) | `as_authored`, `default_gray`, `skip` |
-| Skip-existing | none | dedup by `asset_id` |
-| Placement | `group_name` only | `PlacementHint` (translate / rotate / scale / parent) |
-| Error envelope | `maya_success` / `maya_error` | `ImportToSceneResult` (warnings included) |
+## ImportToSceneResult schema
 
-## Material modes
+```json
+{
+  "asset_id":            "<id from descriptor>",
+  "asset_name":          "<name>",
+  "path":                "<absolute path>",
+  "format":              "fbx | obj | usd | ma | mb",
+  "imported_short_names": ["mesh1", "rig1"],
+  "imported_long_names":  ["|mesh1", "|rig1"],
+  "top_level_groups":    ["|asset_grp"],
+  "size_bytes":          12345,
+  "axis_conversion":     "none | y_to_z | z_to_y",
+  "unit_scale":          1.0,
+  "material_mode":       "preserve | assign_lambert | skip",
+  "placement_hint":      "origin | selection | custom",
+  "target_collection":   null
+}
+```
 
-- **as_authored** — Keep the file's embedded materials (FBX, GLTF
-  shaders, etc.). Connects to Maya's standard surface / lookdev nodes
-  when possible.
-- **default_gray** — Replace all materials with a neutral gray
-  `lambert1`.  Useful for look-dev handoff or lighting tests.
-- **skip** — Discard material data; only import geometry transforms.
+## MaterialMode
 
-## Skip-existing dedup
+| Value | Behaviour |
+|-------|-----------|
+| `preserve` | Keep materials as imported (default). |
+| `assign_lambert` | After import, assign a default Lambert shader to all new mesh shapes. |
+| `skip` | Strip material assignments after import. |
 
-When `ImportToSceneRequest.skip_existing = True`, the script checks
-whether a node tagged with the same `asset_id` already exists in the
-scene (via Maya's attribute `dcc_mcp_asset_id`).  If found, the import
-is skipped and a warning is returned.
+## PlacementHint
 
-## Format support
+| Value | Behaviour |
+|-------|-----------|
+| `origin` | Leave imported nodes at the position encoded in the file (default). |
+| `selection` | Move the top-level group to the current selection's world-space pivot. |
+| `custom` | Translate the top-level group to `custom_position` [x, y, z]. |
 
-Dispatches based on `AssetFileVariant.format`:
+## Axis / unit conversion
 
-| Format | Maya import path |
-|--------|-----------------|
-| `FBX`  | `import_fbx` via FBX plugin |
-| `OBJ`  | `import_file` via OBJ plugin |
-| `USD` / `USDZ` | `mayaUsdPlugin` / `cmds.file` (USD import) |
-| `GLTF` / `GLB` | `gltfPlugin` / raw file import |
-| `ABC`  | `AbcImport` / Alembic plugin |
-| `BLEND` | **unsupported** — returns an error |
-| `UNKNOWN` | Falls back to `import_file` |
+Maya natively reads the axis and unit stored in FBX. The `axis_conversion`
+parameter is a **post-import override** applied via `cmds.xform` on every
+top-level transform when you need to correct mismatches:
 
-## Groups
+| Value | Effect |
+|-------|--------|
+| `none` | No post-import transform (default). |
+| `y_to_z` | Rotate top-level transforms 90° around X (convert Y-up → Z-up). |
+| `z_to_y` | Rotate top-level transforms −90° around X (convert Z-up → Y-up). |
 
-- **import** (`default_active: true`) — Main-thread asset import.
+`unit_scale` applies a uniform scale to every top-level transform (e.g.
+`0.01` to convert cm → m).
 
 ## Scripts
 
-- `import_to_scene` — Main entry point: accepts `ImportToSceneRequest`,
-  imports the best variant, applies material mode and placement, and
-  returns `ImportToSceneResult`.
+- `import_to_scene` — Import an AssetDescriptor into the current Maya scene
