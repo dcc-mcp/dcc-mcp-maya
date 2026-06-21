@@ -20,7 +20,7 @@
 ### Documentation
 
 * align tool counts with current surface ([ea739e6](https://github.com/dcc-mcp/dcc-mcp-maya/commit/ea739e64f69fa34ae9f5a6df3d5c0969d6daff6c))
-* sync skill counts (26 packages, 204 tools) and core dependency version ([01bbc64](https://github.com/dcc-mcp/dcc-mcp-maya/commit/01bbc64c3b3119704afd15c750ee3a30672c4aa1))
+* sync skill counts and core dependency version ([01bbc64](https://github.com/dcc-mcp/dcc-mcp-maya/commit/01bbc64c3b3119704afd15c750ee3a30672c4aa1))
 
 ## [0.8.13](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.8.12...v0.8.13) (2026-06-15)
 
