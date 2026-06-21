@@ -13,7 +13,7 @@ metadata:
     dcc: maya
     layer: domain
     stage: pipeline
-    version: 1.2.0
+    version: 1.3.0
     tags:
     - maya
     - render
@@ -24,10 +24,15 @@ metadata:
     - viewport
     - debug
     - snapshot
+    - arnold
+    - hdr
+    - lookdev
+    - skydome
     search-hint: |-
       final output, preview render, playblast, viewport capture, render globals,
       set render settings, image format, frame range render, debug snapshot,
-      MP4 preview, render intent, VP2 fallback
+      MP4 preview, render intent, VP2 fallback, Arnold HDR skydome, look-dev,
+      EXR render, Arnold sampling, render scene, setup HDR environment
     tools: tools.yaml
     groups: groups.yaml
     resources:
@@ -49,6 +54,8 @@ and one or more supporting tools:
 | Intent | Primary tool | Supporting tools | When to use |
 |--------|-------------|------------------|-------------|
 | **Output a final rendered frame** (beauty pass, look-dev check) | `render_frame` | `set_render_settings`, `get_render_settings`, `set_render_quality` | Render from the active renderer (Arnold / Maya Software). Independent of viewport — works when Maya is minimized or in batch mode. |
+| **Render with explicit format + Arnold sampling** (EXR, look-dev, quality tuning) | `render_scene` | `setup_hdr_arnold`, `set_render_settings` | Extends render_frame with format control (exr/png/jpg/tif) and per-render Arnold AA/diffuse/specular/SSS sample overrides. Scene settings are restored after render. |
+| **Set up HDR Arnold environment** (skydome, HDRI lighting) | `setup_hdr_arnold` | `render_scene` | Creates aiSkyDomeLight + file texture from a .hdr/.exr file. Loads MtoA automatically. Chain with render_scene for asset look-dev validation. |
 | **Collect debug / diagnostic evidence** (scene inspection, bug report) | `debug_scene_snapshot` | `get_scene_render_stats`, `get_viewport_camera`, `render_frame` (internal) | Combines DAG summary, optional render preview, and optional Maya UI capture in one call. `render_frame` is called internally for preview when available. |
 | **Record a viewport animation preview** (anim review, dailies, MP4 clip) | `playblast_to_mp4` | `capture_playblast_sequence`, `capture_viewport`, `playblast` | Viewport-based; requires a visible model panel for best results. Falls back to off-screen when Maya is minimized. Requires `ffmpeg` on PATH for MP4 encoding. |
 
