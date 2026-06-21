@@ -409,7 +409,7 @@ A: Poll `check_maya_cancelled()` inside the loop. It raises `CancelledError` whe
 A: Same API — `dcc_mcp_maya.start_server(port=0)`. In batch mode the `MayaStandaloneDispatcher` runs jobs on the calling thread directly.
 
 **Q: Where are the built-in skills?**  
-A: `src/dcc_mcp_maya/skills/` (26 packages, 195 scripts, 72+ tool declarations). Each package contains `SKILL.md`, `tools.yaml`, optional `groups.yaml`, and `scripts/*.py`.
+A: `src/dcc_mcp_maya/skills/` (25 packages, 195 scripts, 72+ MCP tools). Each package contains `SKILL.md`, `tools.yaml`, optional `groups.yaml`, and `scripts/*.py`.
 
 **Q: How do I force agents to stop using ``execute_python``?**  
 A: Set ``DCC_MCP_MAYA_DISABLE_EXECUTE_PYTHON=1`` (Python only) or ``DCC_MCP_MAYA_DISABLE_ARBITRARY_SCRIPT=1`` (Python + MEL). Callers get a structured error that points to ``load_skill`` + typed tools.
