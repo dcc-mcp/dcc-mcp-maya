@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.16](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.8.15...v0.8.16) (2026-06-21)
+
+
+### Features
+
+* add maya-asset-source and maya-import-to-scene skills (Wave 2) ([f24acec](https://github.com/dcc-mcp/dcc-mcp-maya/commit/f24acec2a8588aaac39406af93e121245b38dc1e))
+
 ## [0.8.15](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.8.14...v0.8.15) (2026-06-21)
 
 
