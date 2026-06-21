@@ -133,9 +133,7 @@ def main() -> int:
         _section("6. Other skills still lazy (not auto-loaded)")
         still_stubs = sorted(n for n in after if n.startswith("__skill__"))
         other_real_prefixes = {
-            n.split(".")[0]
-            for n in after
-            if "." in n and not n.startswith("__") and not n.startswith(f"{target}.")
+            n.split(".")[0] for n in after if "." in n and not n.startswith("__") and not n.startswith(f"{target}.")
         }
         print(f"  remaining stubs: {len(still_stubs)}")
         print(f"  other skills with real tools exposed: {len(other_real_prefixes)}")

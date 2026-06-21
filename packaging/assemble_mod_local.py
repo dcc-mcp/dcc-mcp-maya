@@ -50,9 +50,7 @@ def _generate_mod_body(mod_label: str, platform: str, mod_path: str, *, has_pyth
         versions = [v for v in am.supported_maya_versions(platform) if v != "2022"]
         lines = []
         for maya_version in versions:
-            lines.append(
-                f"+ MAYAVERSION:{maya_version} PLATFORM:{platform} dcc_mcp_maya {mod_label} {mod_path}"
-            )
+            lines.append(f"+ MAYAVERSION:{maya_version} PLATFORM:{platform} dcc_mcp_maya {mod_label} {mod_path}")
             lines.append(f"PYTHONPATH+:={am.MAYA_PYTHONPATH_BY_VERSION[maya_version]}")
             lines.append("PLUG_IN_PATH+:=plug-ins")
         return "\n".join(lines) + "\n"
