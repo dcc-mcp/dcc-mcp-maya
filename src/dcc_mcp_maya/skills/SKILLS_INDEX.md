@@ -49,7 +49,9 @@ Full rationale: repo root `AGENTS.md` § *Bulk import, export, and naming*; exam
 | Publish an asset version | `maya-pipeline` (uses `maya-geometry` under the hood; declared in `depends`) |
 | Bake AO maps from high-res to low-res | `maya-uv-ops` → `maya-texture-bake` |
 | Create a single light or three-point rig and tweak intensity | `maya-light-rig` (`create_light`, `create_three_point_rig`, `set_light_rig_intensity`) |
-| Render an image, snapshot the viewport, write an MP4 preview, or collect debug evidence | **Intent-driven:** `maya-render` (`render_frame` for final-frame output, `debug_scene_snapshot` for diagnostics, `playblast_to_mp4` for animation preview). See `maya-render/SKILL.md` § *Render intents → tool routing* and § *VP2 fallback flow* for error recovery when viewport is unavailable. |
+| Render an image, snapshot the viewport, write an MP4 preview, or collect debug evidence | **Intent-driven:** `maya-render` (`render_scene` for format+sampling control, `render_frame` for simple final-frame output, `debug_scene_snapshot` for diagnostics, `playblast_to_mp4` for animation preview). See `maya-render/SKILL.md` § *Render intents → tool routing* and § *VP2 fallback flow* for error recovery when viewport is unavailable. |
+| Set up an HDR Arnold skydome and render a look-dev validation image | `maya-render` (`setup_hdr_arnold` → `render_scene`). `setup_hdr_arnold` loads MtoA, creates aiSkyDomeLight from a .hdr/.exr file, and switches the renderer to Arnold. Chain with `render_scene` to get an EXR output with Arnold sampling control. |
+| Import an asset and render it for validation | `maya-import-to-scene` (`import_to_scene`) → `maya-render` (`setup_hdr_arnold` → `render_scene`). |
 | Develop and debug a Maya Python tool inside the live session | `maya-dev` (`attach_project` → `run_check`; optional `start_debugpy`) |
 
 ## Side-Effect Taxonomy
