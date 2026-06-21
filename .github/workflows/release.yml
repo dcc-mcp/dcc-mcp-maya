@@ -32,7 +32,11 @@ jobs:
       - uses: googleapis/release-please-action@v5
         id: release
         with:
-          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          # Use a PAT (RELEASE_PLEASE_TOKEN) to trigger CI workflows on
+          # the created PR. With GITHUB_TOKEN, GitHub blocks both
+          # pull_request and pull_request_target events, so release-please
+          # PRs would have no CI status checks.
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN || secrets.PERSONAL_ACCESS_TOKEN }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
 
