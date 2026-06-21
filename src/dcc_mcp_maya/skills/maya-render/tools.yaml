@@ -211,8 +211,10 @@ tools:
         maximum: 100
         default: 100
 - name: playblast_to_mp4
-  description: Capture a playblast sequence and encode to MP4 with
-    ffmpeg. Use for animation previews; requires ffmpeg on PATH.
+<<<<<<< HEAD
+  description: Capture a viewport playblast image sequence and encode it to MP4
+    with ffmpeg. Use for animation previews; requires a usable modelPanel and ffmpeg
+    on PATH.
   execution: async
   affinity: main
   timeout_hint_secs: 600
@@ -268,9 +270,10 @@ tools:
         type: boolean
         default: true
 - name: render_frame
-  description: Render one frame to disk with the active renderer and
-    optional base64 output. Uses Arnold when available, falls back
-    to cmds.render.
+<<<<<<< HEAD
+  description: Render a single frame to disk without using Maya model panels or playblast.
+    Uses Arnold when currentRenderer is arnold, otherwise falls back to cmds.render.
+    Returns a non-empty output path and optional base64 image payload.
   execution: async
   affinity: main
   timeout_hint_secs: 600
