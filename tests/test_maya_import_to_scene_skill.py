@@ -23,7 +23,7 @@ def _setup_cmds(before=None, after=None):
     call_count = [0]
 
     def ls_side_effect(*args, **kwargs):
-        if kwargs.get("long") or (args and args[0] == "-long"):
+        if kwargs.get("long") or kwargs.get("l") or (args and args[0] in {"-long", "-l"}):
             call_count[0] += 1
             if call_count[0] == 1:
                 return list(_before)
@@ -422,7 +422,7 @@ def test_import_to_scene_selection_placement_queries_pivot(tmp_path):
     call_count = [0]
 
     def ls_side_effect(*args, **kwargs):
-        if kwargs.get("long"):
+        if kwargs.get("long") or kwargs.get("l"):
             call_count[0] += 1
             if call_count[0] == 1:
                 return []

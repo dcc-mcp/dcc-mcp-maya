@@ -34,7 +34,7 @@ def get_dag_path(
             return err
 
         # ls -long returns full DAG paths
-        full_paths = cmds.ls(object_name, long=True)
+        full_paths = cmds.ls(object_name, l=True)
         if not full_paths:
             return skill_error(
                 "Could not resolve DAG path for: {}".format(object_name),

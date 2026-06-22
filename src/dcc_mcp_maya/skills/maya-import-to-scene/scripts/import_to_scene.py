@@ -332,7 +332,7 @@ def import_to_scene(  # noqa: PLR0913
         # ------------------------------------------------------------------
         # Snapshot scene before import
         # ------------------------------------------------------------------
-        before = cmds.ls(long=True) or []
+        before = cmds.ls(l=True) or []
 
         # ------------------------------------------------------------------
         # Run import
@@ -359,7 +359,7 @@ def import_to_scene(  # noqa: PLR0913
         # ------------------------------------------------------------------
         # Compute new nodes
         # ------------------------------------------------------------------
-        after = cmds.ls(long=True) or []
+        after = cmds.ls(l=True) or []
         new_long = _select_difference(before, after)
         new_short = sorted({_short_name(n) for n in new_long})
         top_nodes = _top_level_transforms(new_long, cmds)

@@ -86,7 +86,7 @@ def get_scene_info(include_transforms: bool = True, detail_mode: str = "full") -
                 "detail_mode must be one of: {}".format(", ".join(_DETAIL_MODES)),
             )
 
-        transforms = cmds.ls(type="transform", long=True) or []
+        transforms = cmds.ls(type="transform", l=True) or []
         scene_path = _current_scene_path(cmds) if detail_mode in ("standard", "full") else None
         nodes = []
         for long_name in transforms:

@@ -139,7 +139,7 @@ def import_fbx(  # noqa: PLR0913 — public skill contract
         if take is not None:
             mel.eval("FBXImportSetTake -ti {}".format(int(take)))
 
-        before = cmds.ls(long=True) or []
+        before = cmds.ls(l=True) or []
 
         import_kwargs: Dict[str, Any] = {
             "i": True,  # invariant alias for `import=True`
@@ -164,7 +164,7 @@ def import_fbx(  # noqa: PLR0913 — public skill contract
                 path=normalized,
             )
 
-        after = cmds.ls(long=True) or []
+        after = cmds.ls(l=True) or []
         new_long = _select_difference(before, after)
         new_short = sorted({_short_name(n) for n in new_long})
 
