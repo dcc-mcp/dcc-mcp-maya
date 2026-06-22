@@ -3,11 +3,7 @@ from pathlib import Path
 RUNTIME_ROOT = Path(__file__).resolve().parents[1] / "src" / "dcc_mcp_maya"
 DISALLOWED_LS_FLAGS = ("long=True", "materials=True")
 REGRESSED_SCRIPTS = (
-    RUNTIME_ROOT
-    / "skills"
-    / "maya-import-to-scene"
-    / "scripts"
-    / "import_to_scene.py",
+    RUNTIME_ROOT / "skills" / "maya-import-to-scene" / "scripts" / "import_to_scene.py",
     RUNTIME_ROOT / "skills" / "maya-geometry" / "scripts" / "import_fbx.py",
     RUNTIME_ROOT / "skills" / "maya-materials" / "scripts" / "list_materials.py",
 )
