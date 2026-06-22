@@ -826,7 +826,7 @@ def created_node_name(result: Any) -> str:
 
 def node_long_name(cmds: Any, node_name: str) -> str:
     """Resolve *node_name* to a stable long DAG path when Maya can provide one."""
-    matches = cmds.ls(node_name, l=True) or []
+    matches = cmds.ls(node_name, long=True) or []
     return str(matches[0]) if matches else str(node_name)
 
 

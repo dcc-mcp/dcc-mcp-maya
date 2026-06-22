@@ -21,7 +21,7 @@ def _short_name(long_name: str) -> str:
 
 
 def _scene_summary(cmds, max_nodes: int) -> Dict[str, Any]:
-    transforms = cmds.ls(type="transform", l=True) or []
+    transforms = cmds.ls(type="transform", long=True) or []
     cameras = cmds.ls(type="camera") or []
     lights = []
     for light_type in ("light", "directionalLight", "pointLight", "spotLight", "areaLight", "aiSkyDomeLight"):
