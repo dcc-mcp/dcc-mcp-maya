@@ -101,7 +101,7 @@ def export_alembic(
         if objects:
             targets = objects
         else:
-            targets = cmds.ls(selection=True) or []
+            targets = cmds.ls(selection=1) or []
         if not targets:
             return skill_error(
                 "Nothing to export",
