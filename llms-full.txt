@@ -541,7 +541,7 @@ legacy `list_dcc_instances` / `connect_to_dcc` meta-tools.
 | `src/dcc_mcp_maya/api.py` | 18 skill-authoring helpers |
 | `src/dcc_mcp_maya/_recovery_dialog.py` | Qt-level Maya recovery dialog detector + `maya_recovered` status surfacing |
 | `src/dcc_mcp_maya/capabilities.py` | DCC capability declarations |
-| `src/dcc_mcp_maya/skills/` | 25 built-in skill packages, 72+ typed MCP tools |
+| `src/dcc_mcp_maya/skills/` | 27 built-in skill packages, 206 typed MCP tools |
 | `docs/` | VitePress site (EN + ZH) |
 | `tests/` | pytest suite |
 | `maya/plugin/dcc_mcp_maya_plugin.py` | Maya plugin file for `MAYA_PLUG_IN_PATH` |

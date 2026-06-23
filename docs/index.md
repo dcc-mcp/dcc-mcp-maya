@@ -21,8 +21,8 @@ features:
     title: MCP Protocol Native
     details: Implements the 2025-03-26 MCP Streamable HTTP spec — compatible with Claude Desktop, Cursor, OpenClaw and any MCP host.
   - icon: 🎬
-    title: 72+ Typed Maya Tools
-    details: 24 Maya skill packages covering scene management, geometry, materials, animation, light rigs, rendering, rigging, UV operations, interchange, pipeline workflows, and live development diagnostics.
+    title: 74 Typed Maya Tools
+    details: 27 Maya skill packages covering scene management, geometry, materials, animation, light rigs, rendering, rigging, UV operations, interchange, pipeline workflows, and live development diagnostics.
   - icon: 📸
     title: Viewport Capture
     details: Capture any Maya viewport as a base64-encoded PNG with a single MCP call. Perfect for AI visual feedback loops.
