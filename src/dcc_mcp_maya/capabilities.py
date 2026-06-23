@@ -52,7 +52,7 @@ def maya_capabilities():
         scene_manager=True,
         transform=True,
         hierarchy=True,
-        selection=1,
+        selection=True,
         render_capture=True,
         snapshot=True,
         undo_redo=True,
