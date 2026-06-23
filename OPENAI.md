@@ -7,7 +7,7 @@
 
 ## What This Project Does
 
-`dcc-mcp-maya` embeds an MCP Streamable HTTP server directly inside Autodesk Maya. Any OpenAI-powered client that speaks MCP Streamable HTTP can call 72+ Maya tools.
+`dcc-mcp-maya` embeds an MCP Streamable HTTP server directly inside Autodesk Maya. Any OpenAI-powered client that speaks MCP Streamable HTTP can call 206 Maya tools.
 
 ---
 
@@ -38,15 +38,15 @@ MCP tools map naturally to OpenAI function calling:
 | `function.arguments` | JSON payload sent to `tools/call` |
 | `function_call` | `tools/call` request with `_meta.progressToken` for async |
 
-For async tools (`execution: async` in `tools.yaml`), the server returns a `job_id` immediately. Poll `jobs_get_status` to track progress — similar to OpenAI's `run` status polling. `jobs_get_status` requires a job storage backend and async job surface to be configured; without these, async tools execute synchronously.
+For async tools (`execution: async` in `tools.yaml`), the server returns a `job_id` immediately. Poll `maya_render_farm__get_render_job_status` (for render jobs) or check the `_meta.job_id` in the tool response to track async progress — similar to OpenAI's `run` status polling. Job status tracking requires a job storage backend and async job surface to be configured; without these, async tools execute synchronously.
 
 ---
 
 ## OpenAI-Specific Tips
 
 - **System prompt:** Include a summary of [llms.txt](llms.txt) in your system prompt so the model knows the available tool surface.
-- **Tool selection:** With 72+ tools, the initial `tools/list` in minimal mode is small (core tools only). The model should learn to call `load_skill` before attempting specialized operations.
-- **Async handling:** Long renders return a `job_id`. Use `jobs_get_status` with the same `job_id` to poll. Set a reasonable polling interval (2–5s).
+- **Tool selection:** With 206 tools, the initial `tools/list` in minimal mode is small (core tools only). The model should learn to call `load_skill` before attempting specialized operations.
+- **Async handling:** Long renders return a `job_id`. Use `maya_render_farm__get_render_job_status` (for render jobs) with the `job_id` to poll. For other async tools, the returned `_meta` includes the job handle. Set a reasonable polling interval (2–5s).
 
 ---
 
