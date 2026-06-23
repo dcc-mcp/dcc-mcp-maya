@@ -93,7 +93,7 @@ def test_double_underscore_tool_names_are_matched(drift, tmp_path):
 
 def test_snake_case_names_are_tool_refs(drift, tmp_path):
     """Single-underscore names like `maya_success` match the tool-like pattern.
-    
+
     We cannot distinguish between Python API functions (maya_success) and
     MCP tool names (load_skill) by regex alone — both are valid snake_case.
     The check is intentionally inclusive; false positives in STALE_TOOL_REF
