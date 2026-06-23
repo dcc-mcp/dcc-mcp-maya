@@ -55,7 +55,7 @@ def publish_asset(
         import maya.cmds as cmds  # noqa: PLC0415
         import maya.mel as mel  # noqa: PLC0415
 
-        selection = cmds.ls(selection=True)
+        selection = cmds.ls(selection=1)
         if not selection:
             return skill_error("Nothing selected", "Select at least one object before publishing.")
 

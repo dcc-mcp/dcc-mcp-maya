@@ -43,7 +43,7 @@ def save_pose(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        nodes = controls if controls else (cmds.ls(selection=True) or [])
+        nodes = controls if controls else (cmds.ls(selection=1) or [])
         if not nodes:
             return skill_error(
                 "No controls specified",

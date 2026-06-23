@@ -17,7 +17,7 @@ def get_selection() -> dict:
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        selection = cmds.ls(selection=True) or []
+        selection = cmds.ls(selection=1) or []
         return skill_success(
             f"{len(selection)} objects selected",
             selection=selection,

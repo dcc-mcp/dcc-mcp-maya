@@ -1907,10 +1907,10 @@ def _node_ref_from_name(node: str) -> Optional[Dict[str, Any]]:
 
     if not node or not cmds.objExists(node):
         return None
-    long_names = cmds.ls(node, long=True) or []
+    long_names = cmds.ls(node, long=1) or []
     long_name = str(long_names[0]) if long_names else str(node)
     short_name = long_name.split("|")[-1]
-    uuids = cmds.ls(long_name, uuid=True) or []
+    uuids = cmds.ls(long_name, uuid=1) or []
     node_type = cmds.nodeType(long_name) if cmds.objExists(long_name) else None
     return {
         "kind": "maya_node",
@@ -1943,16 +1943,16 @@ def _find_node_by_uuid(uuid_value: str) -> Optional[str]:
     if not uuid_value:
         return None
     try:
-        direct = cmds.ls(uuid_value, long=True) or []
+        direct = cmds.ls(uuid_value, long=1) or []
         for node in direct:
-            uuids = cmds.ls(node, uuid=True) or []
+            uuids = cmds.ls(node, uuid=1) or []
             if uuids and str(uuids[0]) == uuid_value:
                 return str(node)
     except Exception:
         pass
     try:
-        nodes = cmds.ls(long=True) or []
-        uuids = cmds.ls(nodes, uuid=True) or []
+        nodes = cmds.ls(long=1) or []
+        uuids = cmds.ls(nodes, uuid=1) or []
         for node, node_uuid in zip(nodes, uuids):
             if str(node_uuid) == uuid_value:
                 return str(node)
@@ -2000,7 +2000,7 @@ def resolve_node_ref(
         if candidate is None and short_value:
             import maya.cmds as cmds  # noqa: PLC0415
 
-            matches = cmds.ls(str(short_value), long=True) or []
+            matches = cmds.ls(str(short_value), long=1) or []
             if len(matches) == 1:
                 candidate = str(matches[0])
         if candidate is None:
