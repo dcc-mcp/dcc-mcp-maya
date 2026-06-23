@@ -419,7 +419,7 @@ tools:
 
 ---
 
-## Built-in Skills (24 Packages)
+## Built-in Skills (27 Packages)
 
 **Core pipeline skills:**
 - `maya-scene` — scene info, new scene, open/save scene, selection, session info
