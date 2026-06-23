@@ -7,7 +7,7 @@
 
 ## What This Project Does
 
-`dcc-mcp-maya` embeds an MCP Streamable HTTP server directly inside Autodesk Maya. Any OpenAI-powered client that speaks MCP Streamable HTTP can call 206 Maya tools.
+`dcc-mcp-maya` embeds an MCP Streamable HTTP server directly inside Autodesk Maya. Any OpenAI-powered client that speaks MCP Streamable HTTP can call 74 Maya tools.
 
 ---
 
@@ -45,7 +45,7 @@ For async tools (`execution: async` in `tools.yaml`), the server returns a `job_
 ## OpenAI-Specific Tips
 
 - **System prompt:** Include a summary of [llms.txt](llms.txt) in your system prompt so the model knows the available tool surface.
-- **Tool selection:** With 206 tools, the initial `tools/list` in minimal mode is small (core tools only). The model should learn to call `load_skill` before attempting specialized operations.
+- **Tool selection:** With 74 tools, the initial `tools/list` in minimal mode is small (core tools only). The model should learn to call `load_skill` before attempting specialized operations.
 - **Async handling:** Long renders return a `job_id`. Use `maya_render_farm__get_render_job_status` (for render jobs) with the `job_id` to poll. For other async tools, the returned `_meta` includes the job handle. Set a reasonable polling interval (2–5s).
 
 ---
