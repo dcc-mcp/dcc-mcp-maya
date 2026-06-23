@@ -37,7 +37,7 @@ def export_shot_fbx(
 
         if objects:
             cmds.select(objects, replace=True)
-        elif not cmds.ls(selection=True):
+        elif not cmds.ls(selection=1):
             return skill_error(
                 "Nothing selected",
                 "Provide 'objects' or select nodes in Maya",

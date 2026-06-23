@@ -31,7 +31,7 @@ def list_materials(shader_type: Optional[str] = None) -> dict:
             for st in _SUPPORTED_SHADERS:
                 all_shaders.extend(cmds.ls(type=st) or [])
             # Also catch any user-created materials not in known list
-            all_shaders.extend(cmds.ls(materials=True) or [])
+            all_shaders.extend(cmds.ls(materials=1) or [])
             # Deduplicate preserving order
             seen = set()  # type: ignore[var-annotated]
             materials = []  # type: List[str]

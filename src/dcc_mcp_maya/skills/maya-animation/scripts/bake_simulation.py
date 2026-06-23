@@ -44,7 +44,7 @@ def bake_simulation(
                 return err
             cmds.select(targets, replace=True)
         else:
-            targets = cmds.ls(selection=True) or []
+            targets = cmds.ls(selection=1) or []
 
         if not targets:
             return skill_error(
