@@ -134,7 +134,7 @@ class MayaContextSnapshotProvider:
             snapshot["scene_modified"] = bool(modified)
 
         # Selection ----------------------------------------------------------
-        selection = _safe_call(cmds, "ls", sl=True)
+        selection = _safe_call(cmds, "ls", sl=1)
         if isinstance(selection, list):
             snapshot["selection"] = list(selection)
 

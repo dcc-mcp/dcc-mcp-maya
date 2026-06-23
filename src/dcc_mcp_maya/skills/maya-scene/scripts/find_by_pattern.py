@@ -22,9 +22,9 @@ def find_by_pattern(pattern: str, type: Optional[str] = "transform") -> dict:  #
 
         node_type = str(type).strip() if type is not None else ""
         if node_type:
-            names = cmds.ls(pattern, type=node_type, long=False) or []
+            names = cmds.ls(pattern, type=node_type, long=0) or []
         else:
-            names = cmds.ls(pattern, long=False) or []
+            names = cmds.ls(pattern, long=0) or []
         return skill_success(
             "Found {} object(s)".format(len(names)),
             names=names,

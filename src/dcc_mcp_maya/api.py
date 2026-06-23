@@ -826,7 +826,7 @@ def created_node_name(result: Any) -> str:
 
 def node_long_name(cmds: Any, node_name: str) -> str:
     """Resolve *node_name* to a stable long DAG path when Maya can provide one."""
-    matches = cmds.ls(node_name, long=True) or []
+    matches = cmds.ls(node_name, long=1) or []
     return str(matches[0]) if matches else str(node_name)
 
 
@@ -842,7 +842,7 @@ def node_shape_names(cmds: Any, node_name: str) -> List[str]:
 def node_uuid(cmds: Any, node_name: str) -> Optional[str]:
     """Return Maya's UUID for *node_name* when available."""
     try:
-        uuids = cmds.ls(node_name, uuid=True) or []
+        uuids = cmds.ls(node_name, uuid=1) or []
     except Exception:  # noqa: BLE001 - old mocks / host modes may not expose uuid lookup
         logger.debug("Could not read UUID for %s", node_name, exc_info=True)
         return None

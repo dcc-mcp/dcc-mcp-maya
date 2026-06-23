@@ -47,7 +47,7 @@ def make_rigid_body(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        targets = _as_list(objects) or [str(item) for item in (cmds.ls(selection=True) or [])]
+        targets = _as_list(objects) or [str(item) for item in (cmds.ls(selection=1) or [])]
         if not targets:
             return maya_error(
                 "No objects selected for rigid bodies",

@@ -43,7 +43,7 @@ def bake_lighting(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        targets = objects or (cmds.ls(selection=True) or [])
+        targets = objects or (cmds.ls(selection=1) or [])
         if not targets:
             return skill_error(
                 "No objects specified",
