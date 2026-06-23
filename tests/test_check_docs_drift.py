@@ -66,6 +66,54 @@ def test_markdown_fences_are_ignored(drift, tmp_path):
     assert not any(issue.code == "STALE_TOOL_REF" for issue in issues)
 
 
+def test_hyphenated_names_are_not_tool_refs(drift, tmp_path):
+    """Hyphenated names like `maya-scene` are skill names, not MCP tools."""
+    _write(tmp_path / "README.md", "Load `maya-scene` and `maya-primitives`.\n")
+    tools_list = _write_tools_list(tmp_path / "tools-list.json", ["load_skill"])
+    issues = drift.check_docs_drift(tmp_path, tools_list)
+    assert not any(issue.code == "STALE_TOOL_REF" for issue in issues)
+
+
+def test_single_underscore_tool_names_are_matched(drift, tmp_path):
+    """Single-underscore tool names like `load_skill` are valid MCP tools."""
+    _write(tmp_path / "README.md", "Call `load_skill`.\n")
+    tools_list = _write_tools_list(tmp_path / "tools-list.json", ["other_tool"])
+    issues = drift.check_docs_drift(tmp_path, tools_list)
+    assert any(issue.code == "STALE_TOOL_REF" for issue in issues)
+
+
+def test_double_underscore_tool_names_are_matched(drift, tmp_path):
+    """Double-underscore tool names like `dcc_introspect__list_module` are valid."""
+    _write(tmp_path / "README.md", "Call `dcc_introspect__list_module`.\n")
+    tools_list = _write_tools_list(tmp_path / "tools-list.json", ["other_tool"])
+    issues = drift.check_docs_drift(tmp_path, tools_list)
+    # Double-underscore is valid snake_case, should be matched
+    assert any(issue.code == "STALE_TOOL_REF" for issue in issues)
+
+
+def test_snake_case_names_are_tool_refs(drift, tmp_path):
+    """Single-underscore names like `maya_success` match the tool-like pattern.
+    
+    We cannot distinguish between Python API functions (maya_success) and
+    MCP tool names (load_skill) by regex alone — both are valid snake_case.
+    The check is intentionally inclusive; false positives in STALE_TOOL_REF
+    are acceptable as warnings that don't block CI.
+    """
+    _write(tmp_path / "README.md", "Use `maya_success` and `with_maya`.\n")
+    tools_list = _write_tools_list(tmp_path / "tools-list.json", ["load_skill"])
+    issues = drift.check_docs_drift(tmp_path, tools_list)
+    # These are valid snake_case tokens — they WILL trigger STALE_TOOL_REF
+    assert any(issue.code == "STALE_TOOL_REF" for issue in issues)
+
+
+def test_package_names_with_hyphens_are_not_tool_refs(drift, tmp_path):
+    """Package names like `dcc-mcp-maya` with hyphens are not tools."""
+    _write(tmp_path / "README.md", "Import `dcc-mcp-maya`.\n")
+    tools_list = _write_tools_list(tmp_path / "tools-list.json", ["load_skill"])
+    issues = drift.check_docs_drift(tmp_path, tools_list)
+    assert not any(issue.code == "STALE_TOOL_REF" for issue in issues)
+
+
 @pytest.mark.parametrize("content, expected", [("", "empty"), ("{", "invalid")])
 def test_main_reports_bad_tools_list(drift, tmp_path, capsys, content, expected):
     _write(tmp_path / "README.md", "We ship **1 tool**.\n")
