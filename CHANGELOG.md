@@ -338,7 +338,7 @@
 * refresh readme architecture ([fa8f2cb](https://github.com/dcc-mcp/dcc-mcp-maya/commit/fa8f2cbef9e3699d38e6508634e2de1adb43f866))
 * remove stale skill_executor references; fix plugin path in AGENTS ([160188a](https://github.com/dcc-mcp/dcc-mcp-maya/commit/160188a227c5fd82acaf02012072c8ee00f624f7))
 * **skills:** warn about rigidBody dynamics crashes in execute_python ([0f536fe](https://github.com/dcc-mcp/dcc-mcp-maya/commit/0f536fefa0163cf09fd46a6efb93d0e8916e0c2c))
-* sync skill counts (26 packages, 204 tools) and core dependency version ([3661737](https://github.com/dcc-mcp/dcc-mcp-maya/commit/3661737585d8ed471e7f8c05afaedb6f3ee0551a))
+* sync skill counts (26 packages, 74 tools) and core dependency version ([3661737](https://github.com/dcc-mcp/dcc-mcp-maya/commit/3661737585d8ed471e7f8c05afaedb6f3ee0551a))
 * update architecture documentation ([1681e11](https://github.com/dcc-mcp/dcc-mcp-maya/commit/1681e11633d236cd067ac8ad32000f797213e5ee))
 * update docs site with adapter/scene/snapshot API pages and additional guides ([c8d58f6](https://github.com/dcc-mcp/dcc-mcp-maya/commit/c8d58f68dd8697dc0f9a9524877088d3ec112a61))
 * update skill count from 64 to 12 packages (73 scripts) ([f74696a](https://github.com/dcc-mcp/dcc-mcp-maya/commit/f74696a467bab97f32ebd9ab340696786d7306a2))
