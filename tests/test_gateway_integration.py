@@ -135,17 +135,17 @@ class TestGatewayProperties:
     def _make_server_with_handle(self, is_gateway_val, gateway_port=9765):
         with patch.dict(sys.modules, _make_maya_mock()):
             srv_mod = _import_server()
-            mock_config = MagicMock()
-            mock_config.gateway_port = gateway_port
             mock_server = MagicMock()
-            with patch("dcc_mcp_core.McpHttpConfig", return_value=mock_config):
+            with patch("dcc_mcp_core.McpHttpConfig", return_value=MagicMock()):
                 with patch("dcc_mcp_core.create_skill_server", return_value=mock_server):
                     server = srv_mod.MayaMcpServer(port=0, gateway_port=gateway_port)
 
         mock_handle = MagicMock()
         mock_handle.is_gateway = is_gateway_val
         server._handle = mock_handle
-        server._config = mock_config
+        # NOTE: server._config is the real Rust McpHttpConfig (pyo3 builtins type),
+        # which cannot be mocked by patch(). It already has the correct gateway_port
+        # from MayaMcpServer(..., gateway_port=gateway_port). Do not replace it.
         return server
 
     def test_is_gateway_true_when_handle_is_gateway(self):

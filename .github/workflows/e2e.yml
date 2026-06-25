@@ -73,7 +73,9 @@ jobs:
           mayapy -m pip install --upgrade pip
           # Install dev/test extras only; dcc_mcp_maya itself is tested via
           # the packaged .mod module (not pip-installed source).
-          mayapy -m pip install "pytest>=7" pytest-cov pytest-mock pyyaml "tomli; python_version<'3.11'"
+          # dcc-mcp-server provides the gateway daemon binary needed by
+          # gateway election (test_multi_instance, gateway_url tests, etc.).
+          mayapy -m pip install "pytest>=7" pytest-cov pytest-mock pyyaml "tomli; python_version<'3.11'" dcc-mcp-server
 
       # ── Phase 1: Assemble the .mod module ──────────────────────────────
       # We build the packaged module *exactly* as release.yml does, then
