@@ -8,6 +8,10 @@ Maya keeps only the host-specific hooks:
 * read Maya's action registry shape;
 * execute via :func:`dcc_mcp_maya._executor.execute_in_process` so
   ``tools.yaml`` affinity semantics remain unchanged.
+
+Built-in sidecar actions (``load_skill``, ``get_skill_info``) are server
+methods, not script-backed actions. They are handled directly in this
+module before delegating to ``SidecarActionDispatcher``.
 """
 
 from __future__ import annotations
@@ -22,6 +26,10 @@ logger = logging.getLogger(__name__)
 
 __all__ = ["dispatch_payload"]
 
+# Built-in sidecar actions that are not backed by skill scripts.
+# These are handled by calling server methods directly.
+_BUILTIN_SIDECAR_ACTIONS = frozenset({"load_skill", "get_skill_info"})
+
 
 def dispatch_payload(
     payload: Mapping[str, Any] | str,
@@ -30,9 +38,27 @@ def dispatch_payload(
 ) -> dict[str, Any]:
     """Dispatch a sidecar payload through the shared core helper.
 
+    Built-in actions (``load_skill``, ``get_skill_info``) are handled
+    directly since they are server methods, not script-backed actions.
+    All other actions delegate to the core ``SidecarActionDispatcher``.
+
     ``server_lookup`` remains injectable for tests and for the lightweight
     ``qtserver://`` stubs used by transport coverage.
     """
+    coerced = _coerce_payload(payload)
+
+    if isinstance(coerced, Mapping):
+        action = coerced.get("action")
+        if isinstance(action, str) and action in _BUILTIN_SIDECAR_ACTIONS:
+            server = (server_lookup or _default_server_lookup)()
+            if server is None:
+                return _not_running_envelope(action, coerced.get("request_id"))
+            return _dispatch_builtin_action(
+                action=action,
+                args=coerced.get("args", {}) or {},
+                server=server,
+                request_id=coerced.get("request_id"),
+            )
 
     dispatcher = SidecarActionDispatcher(
         "maya",
@@ -40,7 +66,119 @@ def dispatch_payload(
         action_resolver=_resolve_action_source,
         executor=_execute_maya_request,
     )
-    return dispatcher.dispatch_payload(_coerce_payload(payload))
+    return dispatcher.dispatch_payload(coerced)
+
+
+def _not_running_envelope(action: str, request_id: Any) -> dict[str, Any]:
+    """Return a structured ``server-not-running`` envelope for built-in actions."""
+    return _error_envelope(
+        code="server-not-running",
+        message=f"Cannot dispatch built-in sidecar action '{action}': server is not running",
+        action=action,
+        request_id=request_id,
+    )
+
+
+def _error_envelope(code: str, message: str, **context: Any) -> dict[str, Any]:
+    """Build a standard error envelope matching the core sidecar convention."""
+    clean = {k: v for k, v in context.items() if v not in (None, "", {})}
+    result: dict[str, Any] = {"success": False, "message": message, "error": code}
+    if clean:
+        result["context"] = clean
+    return result
+
+
+def _dispatch_builtin_action(
+    action: str,
+    args: Mapping[str, Any],
+    server: Any,
+    request_id: Any,
+) -> dict[str, Any]:
+    """Dispatch a built-in sidecar action by calling the server method directly."""
+    try:
+        if action == "load_skill":
+            return _handle_load_skill(args, server, request_id)
+        if action == "get_skill_info":
+            return _handle_get_skill_info(args, server, request_id)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("builtin sidecar action %r failed: %s", action, exc)
+        return _error_envelope(
+            code="dispatch-failed",
+            message=f"Built-in sidecar action '{action}' failed",
+            action=action,
+            request_id=request_id,
+            error_type=type(exc).__name__,
+        )
+    return _error_envelope(
+        code="unknown-action",
+        message=f"Unknown built-in sidecar action: {action}",
+        action=action,
+        request_id=request_id,
+    )
+
+
+def _handle_load_skill(
+    args: Mapping[str, Any],
+    server: Any,
+    request_id: Any,
+) -> dict[str, Any]:
+    """Handle ``load_skill`` by calling ``server.load_skill()``."""
+    skill_name = args.get("skill_name") if isinstance(args, Mapping) else None
+    if not isinstance(skill_name, str) or not skill_name.strip():
+        return _error_envelope(
+            code="payload-malformed",
+            message="load_skill requires a non-empty skill_name",
+            action="load_skill",
+            request_id=request_id,
+            reason="missing-skill-name",
+        )
+
+    loaded = server.load_skill(skill_name)
+    if loaded:
+        return {
+            "success": True,
+            "loaded": True,
+            "skill_name": skill_name,
+            "message": f"Skill '{skill_name}' loaded successfully",
+            "request_id": request_id or "",
+            "action": "load_skill",
+        }
+    return {
+        "success": False,
+        "loaded": False,
+        "skill_name": skill_name,
+        "message": f"Failed to load skill '{skill_name}'",
+        "error": "load-skill-failed",
+        "request_id": request_id or "",
+        "action": "load_skill",
+    }
+
+
+def _handle_get_skill_info(
+    args: Mapping[str, Any],
+    server: Any,
+    request_id: Any,
+) -> dict[str, Any]:
+    """Handle ``get_skill_info`` by calling ``server.get_skill_info()``."""
+    skill_name = args.get("skill_name") if isinstance(args, Mapping) else None
+    if not isinstance(skill_name, str) or not skill_name.strip():
+        return _error_envelope(
+            code="payload-malformed",
+            message="get_skill_info requires a non-empty skill_name",
+            action="get_skill_info",
+            request_id=request_id,
+            reason="missing-skill-name",
+        )
+
+    info = server.get_skill_info(skill_name)
+    return {
+        "success": True,
+        "skill_name": skill_name,
+        "skill_info": str(info) if info is not None else None,
+        "message": f"Skill info for '{skill_name}'",
+        "request_id": request_id or "",
+        "action": "get_skill_info",
+    }
 
 
 def _coerce_payload(payload: Mapping[str, Any] | str) -> Any:

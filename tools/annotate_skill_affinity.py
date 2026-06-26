@@ -75,7 +75,6 @@ SKILL_DEFAULTS: Dict[str, ExecAffinity] = {
     # Everything else: sync + main (touches maya.cmds)
     "maya-animation": ("sync", "main", None),
     "maya-annotation": ("sync", "main", None),
-    "maya-arnold-aov": ("sync", "main", None),
     "maya-attributes": ("sync", "main", None),
     "maya-audio": ("sync", "main", None),
     "maya-blend-shape-utils": ("sync", "main", None),
@@ -84,11 +83,12 @@ SKILL_DEFAULTS: Dict[str, ExecAffinity] = {
     "maya-color-grading": ("sync", "main", None),
     "maya-constraints": ("sync", "main", None),
     "maya-constraints-advanced": ("sync", "main", None),
-    "maya-deformers": ("sync", "main", None),
     "maya-display": ("sync", "main", None),
     "maya-expressions": ("sync", "main", None),
+    "maya-asset-source": ("sync", "any", None),
     "maya-gpu-cache": ("sync", "main", None),
     "maya-hdri": ("sync", "main", None),
+    "maya-import-to-scene": ("async", "main", 120),
     "maya-instancer": ("sync", "main", None),
     "maya-light-rig": ("sync", "main", None),
     "maya-geometry": ("sync", "main", None),
@@ -113,7 +113,6 @@ SKILL_DEFAULTS: Dict[str, ExecAffinity] = {
     "maya-utility": ("sync", "main", None),
     "maya-uv-ops": ("sync", "main", None),
     "maya-vertex-color": ("sync", "main", None),
-    "maya-xform-utils": ("sync", "main", None),
 }
 
 

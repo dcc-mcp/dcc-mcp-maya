@@ -4,6 +4,21 @@ tools:
   affinity: main
   group: scene-management
   description: Create a display layer in the current Maya scene.
+  input_schema:
+    type: object
+    properties:
+      name:
+        type: string
+      objects:
+        oneOf:
+        - type: string
+        - type: array
+          items:
+            type: string
+          minItems: 1
+      visibility:
+        type: boolean
+        default: true
 - name: delete_display_layer
   execution: sync
   affinity: main
@@ -12,6 +27,16 @@ tools:
     idempotent_hint: true
   group: scene-management
   description: Delete a display layer in the current Maya scene.
+  input_schema:
+    type: object
+    properties:
+      layer_name:
+        type: string
+      remove_objects:
+        type: boolean
+        default: false
+    required:
+    - layer_name
 - name: list_display_layers
   execution: sync
   affinity: main
@@ -20,6 +45,9 @@ tools:
     idempotent_hint: true
   group: scene-management
   description: List display layers without modifying the Maya scene.
+  input_schema:
+    type: object
+    additionalProperties: false
 - name: set_display_layer
   execution: sync
   affinity: main
@@ -27,3 +55,18 @@ tools:
     idempotent_hint: true
   group: scene-management
   description: Set a display layer in the current Maya scene.
+  input_schema:
+    type: object
+    properties:
+      layer_name:
+        type: string
+      objects:
+        oneOf:
+        - type: string
+        - type: array
+          items:
+            type: string
+          minItems: 1
+    required:
+    - layer_name
+    - objects

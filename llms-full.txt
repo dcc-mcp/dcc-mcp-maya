@@ -9,12 +9,12 @@
 **dcc-mcp-maya** — Maya plugin for the DCC Model Context Protocol (MCP) ecosystem.  
 Embeds a standards-compliant MCP Streamable HTTP server (2025-03-26 spec) directly inside Maya.
 
-- **Version:** 0.4.1 <!-- x-release-please-version -->
+- **Version:** 0.8.16 <!-- x-release-please-version -->
 - **License:** MIT
 - **Repository:** https://github.com/loonghao/dcc-mcp-maya
 - **Python:** >=3.7
 - **Maya:** 2020+
-- **Core dependency:** `dcc-mcp-core>=0.17.35,<1.0.0`
+- **Core dependency:** `dcc-mcp-core>=0.18.36,<1.0.0`
 - **Entry point:** `dcc_mcp.adapters` → `maya = "dcc_mcp_maya:MayaMcpServer"`
 
 ---
@@ -52,7 +52,7 @@ The server starts automatically when the plugin loads. In interactive mode a "DC
 MayaMcpServer(
     port: int = 8765,
     server_name: str = "maya-mcp",
-    server_version: str = "0.4.1",  # x-release-please-version
+    server_version: str = "0.8.16",  # x-release-please-version
     gateway_port: Optional[int] = None,
     registry_dir: Optional[str] = None,
     dcc_version: Optional[str] = None,
@@ -70,7 +70,7 @@ MayaMcpServer(
 |-----------|------|---------|-------------|
 | `port` | `int` | `8765` | TCP port. Use `0` for OS-assigned. |
 | `server_name` | `str` | `"maya-mcp"` | Name in MCP `initialize` response. |
-| `server_version` | `str` | `"0.4.1"` | Version reported in `initialize`. | <!-- x-release-please-version -->
+| `server_version` | `str` | `"0.8.16"` | Version reported in `initialize`. | <!-- x-release-please-version -->
 | `gateway_port` | `int \| None` | `None` | Multi-instance gateway port. `None` reads `DCC_MCP_GATEWAY_PORT`; `0` disables. |
 | `registry_dir` | `str \| None` | `None` | Shared `FileRegistry` directory for service discovery. |
 | `dcc_version` | `str \| None` | `None` | Maya version string advertised to the registry. |
@@ -541,7 +541,7 @@ legacy `list_dcc_instances` / `connect_to_dcc` meta-tools.
 | `src/dcc_mcp_maya/api.py` | 18 skill-authoring helpers |
 | `src/dcc_mcp_maya/_recovery_dialog.py` | Qt-level Maya recovery dialog detector + `maya_recovered` status surfacing |
 | `src/dcc_mcp_maya/capabilities.py` | DCC capability declarations |
-| `src/dcc_mcp_maya/skills/` | 25 built-in skill packages, 198 typed tool declarations |
+| `src/dcc_mcp_maya/skills/` | 25 built-in skill packages, 72+ typed MCP tools |
 | `docs/` | VitePress site (EN + ZH) |
 | `tests/` | pytest suite |
 | `maya/plugin/dcc_mcp_maya_plugin.py` | Maya plugin file for `MAYA_PLUG_IN_PATH` |

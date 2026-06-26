@@ -64,9 +64,7 @@ def resolve_mayapy(explicit: Optional[str]) -> Path:
         if expanded.exists():
             return expanded
 
-    raise SystemExit(
-        "Could not find mayapy. Re-run with --mayapy, or set MAYAPY to the full path."
-    )
+    raise SystemExit("Could not find mayapy. Re-run with --mayapy, or set MAYAPY to the full path.")
 
 
 def find_repo_root() -> Path:

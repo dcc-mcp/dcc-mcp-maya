@@ -96,9 +96,9 @@ tools:
   input_schema:
     type: object
     required:
-    - names
+    - object_names
     properties:
-      names:
+      object_names:
         oneOf:
         - type: string
           description: Single object name.
@@ -122,10 +122,6 @@ tools:
     properties:
       object_name:
         type: string
-      world_space:
-        type: boolean
-        default: false
-        description: Read worldSpace transform values instead of object-space.
 - name: rename_object
   description: Rename an object in the scene.
   execution: sync
@@ -136,10 +132,10 @@ tools:
   input_schema:
     type: object
     required:
-    - old_name
+    - object_name
     - new_name
     properties:
-      old_name:
+      object_name:
         type: string
       new_name:
         type: string

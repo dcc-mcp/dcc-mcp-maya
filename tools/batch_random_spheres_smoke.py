@@ -79,14 +79,12 @@ def _run_batch() -> str:
     if not os.path.isfile(fbx_path):
         raise RuntimeError("FBX missing after export: {}".format(fbx_path))
     size = os.path.getsize(fbx_path)
-    return (
-        "BATCH_SPHERES_OK count={} group={} fbx={} size_bytes={} nodes={}".format(
-            len(created),
-            group,
-            fbx_path,
-            size,
-            ",".join(created),
-        )
+    return "BATCH_SPHERES_OK count={} group={} fbx={} size_bytes={} nodes={}".format(
+        len(created),
+        group,
+        fbx_path,
+        size,
+        ",".join(created),
     )
 
 

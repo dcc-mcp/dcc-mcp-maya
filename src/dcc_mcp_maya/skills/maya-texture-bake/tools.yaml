@@ -5,18 +5,95 @@ tools:
   timeout_hint_secs: 600
   group: shading-lighting
   description: Bake ambient occlusion maps in the current Maya scene.
+  input_schema:
+    type: object
+    properties:
+      objects:
+        oneOf:
+        - type: string
+        - type: array
+          items:
+            type: string
+          minItems: 1
+      output_dir:
+        type: string
+        default: /tmp
+      resolution:
+        type: integer
+        default: 1024
+      samples:
+        type: integer
+        default: 64
+      max_distance:
+        type: number
+        default: 0.0
+      file_format:
+        type: string
+        default: png
 - name: bake_lighting
   execution: async
   affinity: main
   timeout_hint_secs: 600
   group: shading-lighting
   description: Bake lighting maps in the current Maya scene.
+  input_schema:
+    type: object
+    properties:
+      objects:
+        oneOf:
+        - type: string
+        - type: array
+          items:
+            type: string
+          minItems: 1
+      output_dir:
+        type: string
+        default: /tmp
+      resolution:
+        type: integer
+        default: 1024
+      samples:
+        type: integer
+        default: 4
+      file_format:
+        type: string
+        default: png
+      bake_shadows:
+        type: boolean
+        default: true
 - name: bake_textures
   execution: async
   affinity: main
   timeout_hint_secs: 600
   group: shading-lighting
   description: Bake texture maps in the current Maya scene.
+  input_schema:
+    type: object
+    properties:
+      objects:
+        oneOf:
+        - type: string
+        - type: array
+          items:
+            type: string
+          minItems: 1
+      file_path:
+        type: string
+      resolution:
+        type: integer
+        default: 512
+      bake_type:
+        type: string
+        default: diffuse
+      renderer:
+        type: string
+        default: mentalRay
+      overscan:
+        type: integer
+        default: 3
+    required:
+    - objects
+    - file_path
 - name: list_bake_sets
   execution: sync
   affinity: main
@@ -25,6 +102,9 @@ tools:
     idempotent_hint: true
   group: shading-lighting
   description: List texture bake sets without modifying the Maya scene.
+  input_schema:
+    type: object
+    additionalProperties: false
 - name: list_color_spaces
   execution: sync
   affinity: main
@@ -33,6 +113,9 @@ tools:
     idempotent_hint: true
   group: shading-lighting
   description: List color spaces without modifying the Maya scene.
+  input_schema:
+    type: object
+    additionalProperties: false
 - name: set_color_management
   execution: sync
   affinity: main
@@ -40,9 +123,50 @@ tools:
     idempotent_hint: true
   group: shading-lighting
   description: Set color management settings in the current Maya scene.
+  input_schema:
+    type: object
+    properties:
+      enabled:
+        type: boolean
+        default: true
+      input_color_space:
+        type: string
+      rendering_space:
+        type: string
+      output_transform:
+        type: string
 - name: transfer_maps
   execution: async
   affinity: main
   timeout_hint_secs: 600
   group: shading-lighting
   description: Transfer texture maps in the current Maya scene.
+  input_schema:
+    type: object
+    properties:
+      source:
+        type: string
+      target:
+        type: string
+      map_types:
+        oneOf:
+        - type: string
+        - type: array
+          items:
+            type: string
+          minItems: 1
+      output_dir:
+        type: string
+        default: /tmp
+      resolution:
+        type: integer
+        default: 1024
+      file_format:
+        type: string
+        default: png
+      search_method:
+        type: integer
+        default: 0
+    required:
+    - source
+    - target

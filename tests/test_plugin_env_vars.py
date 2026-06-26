@@ -18,8 +18,10 @@ import os
 import sys
 import threading
 import types
+import urllib.request
 from pathlib import Path
 from unittest.mock import MagicMock, patch
+from urllib.error import URLError
 
 # Import third-party modules
 import pytest
@@ -306,6 +308,7 @@ class TestSidecarUsesCoreRegistryDefaults:
 
         # Stub the banner so we don't print to stdout during tests.
         plugin_module._print_sidecar_info = MagicMock()
+        plugin_module._probe_gateway_health_deferred = MagicMock()
         return sidecar_pkg
 
     def test_sidecar_does_not_reimplement_registry_env_resolution(self, plugin_module, monkeypatch, tmp_path):
@@ -363,6 +366,8 @@ class TestSidecarUsesCoreRegistryDefaults:
         monkeypatch.setattr(plugin_module, "_resolve_instance_id", lambda: "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee")
         monkeypatch.setattr(plugin_module, "_resolve_sidecar_display_name", lambda: "Maya 2025 pid 1234")
         monkeypatch.setattr(plugin_module, "_resolve_gateway_name", lambda: "dcc-mcp-gateway@workstation-01")
+        plugin_module._handle = MagicMock()
+        plugin_module._handle.mcp_url.return_value = "http://127.0.0.1:8765/mcp"
 
         sidecar_pkg = self._arm_plugin(plugin_module, monkeypatch)
         plugin_module._maybe_spawn_sidecar()
@@ -371,8 +376,31 @@ class TestSidecarUsesCoreRegistryDefaults:
         _, kwargs = sidecar_pkg.start_sidecar.call_args
         assert kwargs["adapter_version"] == plugin_module.VERSION
         assert kwargs["display_name"] == "Maya 2025 pid 1234"
+        assert kwargs["discovery_mcp_url"] == "http://127.0.0.1:8765/mcp"
         assert kwargs["gateway_name"] == "dcc-mcp-gateway@workstation-01"
         assert kwargs["instance_id"] == "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee"
+        plugin_module._probe_gateway_health_deferred.assert_called_once_with(plugin_module._sidecar_handle)
+
+    def test_sidecar_omits_unresolved_instance_id(self, plugin_module, monkeypatch):
+        """A cosmetic sentinel value must not become a strict sidecar CLI UUID."""
+        monkeypatch.setattr(plugin_module, "_resolve_instance_id", lambda: None)
+
+        sidecar_pkg = self._arm_plugin(plugin_module, monkeypatch)
+        plugin_module._maybe_spawn_sidecar()
+
+        sidecar_pkg.start_sidecar.assert_called_once()
+        _, kwargs = sidecar_pkg.start_sidecar.call_args
+        assert kwargs["instance_id"] is None
+
+    def test_resolve_instance_id_ignores_invalid_server_value(self, plugin_module, monkeypatch):
+        """Core-sidecar UUID validation should not turn a cosmetic fallback into a launch failure."""
+        import dcc_mcp_maya.server as server_module
+
+        server = MagicMock()
+        server.instance_id = "unknown"
+        monkeypatch.setattr(server_module, "_server_instance", server)
+
+        assert plugin_module._resolve_instance_id() is None
 
     def test_sidecar_banner_omits_internal_rfc_marker(self, plugin_module, monkeypatch, capsys):
         monkeypatch.setattr(plugin_module, "_is_interactive", lambda: False)
@@ -395,8 +423,8 @@ class TestSidecarUsesCoreRegistryDefaults:
         assert "RFC #998" not in output
         assert f"dcc-mcp-maya v{plugin_module.VERSION}" in output
         assert "PID          : 5678" in output
-        assert "Gateway local: http://127.0.0.1:9765/mcp  (if elected)" in output
-        assert "Gateway LAN  : http://192.168.1.20:59765/mcp  (if elected)" in output
+        assert "Gateway      : http://127.0.0.1:9765/mcp  (sidecar-managed)" in output
+        assert "Gateway LAN  : http://192.168.1.20:59765/mcp  (sidecar-managed)" in output
 
     def test_sidecar_remote_gateway_options_default_and_disable(self, monkeypatch):
         from dcc_mcp_maya.sidecar import resolve_gateway_remote_options
@@ -408,6 +436,81 @@ class TestSidecarUsesCoreRegistryDefaults:
         monkeypatch.setenv("DCC_MCP_GATEWAY_REMOTE_HOST", "192.168.2.10")
         monkeypatch.setenv("DCC_MCP_GATEWAY_REMOTE_PORT", "0")
         assert resolve_gateway_remote_options() == ("192.168.2.10", 0)
+
+
+class TestGatewayHealthProbe:
+    """Gateway probe should be useful without blocking Maya startup."""
+
+    class _ImmediateThread:
+        def __init__(self, target, **_kwargs):
+            self._target = target
+
+        def start(self):
+            self._target()
+
+    class _Response:
+        status = 200
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+    def _run_probe_inline(self, plugin_module, monkeypatch):
+        monkeypatch.setattr(plugin_module.threading, "Thread", self._ImmediateThread)
+        monkeypatch.setattr("time.sleep", lambda _secs: None)
+        monkeypatch.setattr(plugin_module, "_resolve_gateway_port_for_display", lambda: 9765)
+
+    def test_probe_retries_before_reporting_success(self, plugin_module, monkeypatch, capsys):
+        self._run_probe_inline(plugin_module, monkeypatch)
+        calls = []
+
+        def fake_urlopen(url, timeout):  # noqa: ARG001
+            calls.append((url, timeout))
+            if len(calls) == 1:
+                raise URLError("connection refused")
+            return self._Response()
+
+        monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+        handle = MagicMock()
+        handle.proc.poll.return_value = None
+
+        plugin_module._probe_gateway_health_deferred(
+            handle,
+            delay=0,
+            timeout=0.1,
+            attempts=2,
+            interval=0,
+        )
+
+        output = capsys.readouterr().out
+        assert "Gateway health OK" in output
+        assert "Gateway NOT reachable" not in output
+        assert len(calls) == 2
+
+    def test_probe_reports_early_sidecar_exit(self, plugin_module, monkeypatch, capsys):
+        self._run_probe_inline(plugin_module, monkeypatch)
+
+        def fake_urlopen(url, timeout):  # noqa: ARG001
+            raise URLError("timed out")
+
+        monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
+        handle = MagicMock()
+        handle.proc.pid = 12345
+        handle.proc.poll.return_value = 7
+
+        plugin_module._probe_gateway_health_deferred(
+            handle,
+            delay=0,
+            timeout=0.1,
+            attempts=3,
+            interval=0,
+        )
+
+        output = capsys.readouterr().out
+        assert "sidecar PID 12345 exited early (exit=7)" in output
+        assert "Last probe error:" in output
 
 
 class TestRestartStopsSidecar:

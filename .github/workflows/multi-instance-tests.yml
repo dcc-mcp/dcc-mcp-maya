@@ -44,8 +44,24 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e ".[dev]"
 
+      - name: Pre-pull buildkit image (retry on Docker Hub flakiness)
+        continue-on-error: true
+        timeout-minutes: 10
+        run: |
+          echo "Pre-pulling moby/buildkit:buildx-stable-1 with retry..."
+          for i in 1 2 3; do
+            if docker pull moby/buildkit:buildx-stable-1 2>/dev/null; then
+              echo "✓ Buildkit image pulled successfully"
+              exit 0
+            fi
+            echo "⚠ Attempt $i/3 failed, retrying in 15s..."
+            sleep 15
+          done
+          echo "⚠ All pull attempts failed; continuing without pre-pulled image"
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
+        continue-on-error: true
 
       - name: Verify Docker and pull Maya image
         run: |

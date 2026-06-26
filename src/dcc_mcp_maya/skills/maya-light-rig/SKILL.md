@@ -2,10 +2,10 @@
 name: maya-light-rig
 description: |-
   Authoring stage — pre-configured lighting templates: three-point rigs,
-  HDRI domes, and rig-level intensity controls. Use when deploying a
-  ready-made lighting setup. Not for individual light creation or final
-  render output — use maya-scripting + cmds.shadingNode for ad-hoc lights,
-  maya-render for output settings.
+  HDRI domes, individual lights, and rig-level intensity controls. Use when
+  deploying a ready-made lighting setup or adding a typed light without falling
+  back to raw Maya commands. Not for final render output — use maya-render for
+  output settings.
 license: MIT
 allowed-tools: Bash Read
 metadata:
@@ -30,10 +30,13 @@ metadata:
 
 Standard lighting rigs (three-point, HDRI dome) and rig-level intensity
 controls. Designed for fast scene illumination without manually wiring
-individual light nodes.
+light nodes. `create_light` always returns both the transform and shape to
+avoid Maya 2022 command return-value traps such as `cmds.directionalLight()`
+returning a shape node.
 
 ## Scripts
 
+- `create_light` — Create one typed light and return transform + shape
 - `create_three_point_rig` — Create a standard key/fill/rim three-point light rig
 - `create_hdri_dome` — Create a skydome/environment light from an HDR image
 - `list_light_rigs` — List all lights grouped under rig transform nodes
