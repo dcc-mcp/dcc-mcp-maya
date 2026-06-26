@@ -12,17 +12,14 @@
 将包安装到 Maya 的 Python 解释器中：
 
 ```bash
-mayapy -m pip install "dcc-mcp-maya[sidecar]"
+mayapy -m pip install dcc-mcp-maya
 ```
 
 Windows 指定 Maya 版本的示例：
 
 ```bash
-"C:\Program Files\Autodesk\Maya2024\bin\mayapy.exe" -m pip install "dcc-mcp-maya[sidecar]"
+"C:\Program Files\Autodesk\Maya2024\bin\mayapy.exe" -m pip install dcc-mcp-maya
 ```
-
-只有当你的环境已经提供 `dcc-mcp-server` binary 时，才使用不带
-`[sidecar]` 的基础包。
 
 ## 第二步 — 加载 Maya 插件
 

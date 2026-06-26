@@ -32,5 +32,9 @@ Build and assign basic shader networks. Eight scripts cover the typical
 "create a Lambert and assign it" loop while keeping `inputSchema`
 validation in place.
 
+`set_material_attribute` includes Maya 2022 / MtoA compatibility aliases for
+Arnold `aiStandardSurface`, such as accepting `metallic` and writing
+`metalness` when that is the available attribute.
+
 For sharing material presets across assets / shots, use
 `maya-material-library`.

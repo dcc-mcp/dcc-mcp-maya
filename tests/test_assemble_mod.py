@@ -33,7 +33,10 @@ def _make_fake_wheel(dest: Path, name: str, files: dict[str, bytes]) -> Path:
 def _make_fake_pyproject(dest: Path, core_version: str = "0.15.7") -> Path:
     toml_path = dest / "pyproject.toml"
     toml_path.write_text(
-        f'[project]\ndependencies = [\n    "dcc-mcp-core>={core_version},<1.0.0",\n]\n',
+        "[project]\ndependencies = [\n"
+        f'    "dcc-mcp-core>={core_version},<1.0.0",\n'
+        f'    "dcc-mcp-server>={core_version},<1.0.0",\n'
+        "]\n",
         encoding="utf-8",
     )
     return toml_path
@@ -81,6 +84,22 @@ class TestResolveCoreVersion:
         (tmp_path / "pyproject.toml").write_text("[project]\ndependencies = []\n", encoding="utf-8")
         with pytest.raises(RuntimeError, match="Cannot find dcc-mcp-core version"):
             assemble_mod.resolve_core_version(tmp_path)
+
+
+class TestResolveServerVersion:
+    def test_extracts_minimum_version(self, tmp_path):
+        _make_fake_pyproject(tmp_path, "0.18.17")
+        with patch("urllib.request.urlopen", side_effect=Exception("offline")):
+            version = assemble_mod.resolve_server_version(tmp_path)
+        assert version == "0.18.17"
+
+    def test_raises_when_no_version_found(self, tmp_path):
+        (tmp_path / "pyproject.toml").write_text(
+            '[project]\ndependencies = [\n    "dcc-mcp-core>=0.18.17,<1.0.0",\n]\n',
+            encoding="utf-8",
+        )
+        with pytest.raises(RuntimeError, match="Cannot find dcc-mcp-server version"):
+            assemble_mod.resolve_server_version(tmp_path)
 
 
 class TestDownloadCoreWheels:
@@ -158,6 +177,42 @@ class TestDownloadCoreWheels:
                 assemble_mod.download_core_wheels("0.15.0", "win64", tmp_path)
 
 
+class TestDownloadServerWheel:
+    def test_win64_downloads_server_wheel(self, tmp_path):
+        version = "0.18.17"
+        filename = f"dcc_mcp_server-{version}-py3-none-win_amd64.whl"
+        pypi_data = {
+            "info": {"version": version},
+            "urls": [{"filename": filename, "url": f"https://example.com/{filename}", "packagetype": "bdist_wheel"}],
+            "releases": {
+                version: [
+                    {"filename": filename, "url": f"https://example.com/{filename}", "packagetype": "bdist_wheel"}
+                ]
+            },
+        }
+        mock_resp = MagicMock()
+        mock_resp.read.return_value = json.dumps(pypi_data).encode()
+        mock_resp.__enter__ = lambda s: s
+        mock_resp.__exit__ = MagicMock(return_value=False)
+
+        def fake_urlretrieve(_url, dest):
+            _make_fake_wheel(
+                Path(dest).parent,
+                Path(dest).name,
+                {
+                    "dcc_mcp_server/__init__.py": b"# server",
+                    f"dcc_mcp_server-{version}.data/scripts/dcc-mcp-server.exe": b"server",
+                },
+            )
+
+        with patch("urllib.request.urlopen", return_value=mock_resp), patch(
+            "urllib.request.urlretrieve", side_effect=fake_urlretrieve
+        ):
+            wheel = assemble_mod.download_server_wheel(version, "win64", tmp_path)
+
+        assert wheel.name == filename
+
+
 class TestExtractWheel:
     def test_extracts_python_files(self, tmp_path):
         files = {
@@ -185,6 +240,19 @@ class TestExtractWheel:
         assemble_mod.extract_wheel(wheel, dest, extensions_only=True)
         assert (dest / "dcc_mcp_core" / "__init__.py").read_bytes() == b"existing"
         assert (dest / "dcc_mcp_core" / "_core.pyd").read_bytes() == b"\x00binary"
+
+    def test_extract_server_wheel_maps_scripts_data_dir(self, tmp_path):
+        files = {
+            "dcc_mcp_server/__init__.py": b"# server",
+            "dcc_mcp_server-0.18.17.data/scripts/dcc-mcp-server.exe": b"server-bin",
+            "dcc_mcp_server-0.18.17.dist-info/METADATA": b"Metadata-Version: 2.1",
+        }
+        wheel = _make_fake_wheel(tmp_path, "dcc_mcp_server-0.18.17-py3-none-win_amd64.whl", files)
+        dest = tmp_path / "out"
+        assemble_mod.extract_server_wheel(wheel, dest)
+
+        assert (dest / "dcc_mcp_server" / "__init__.py").read_bytes() == b"# server"
+        assert (dest / "scripts" / "dcc-mcp-server.exe").read_bytes() == b"server-bin"
 
 
 class TestGenerateModFile:
@@ -220,10 +288,11 @@ class TestGenerateModuleInfo:
 
 
 class TestPackagingReadmes:
-    def test_module_readmes_document_external_sidecar_runtime(self):
+    def test_module_readmes_document_bundled_sidecar_runtime(self):
         for name in ("README.txt", "README-pipeline.txt"):
             text = (PROJECT_ROOT / "packaging" / name).read_text(encoding="utf-8")
-            assert "does not bundle the external dcc-mcp-server sidecar binary" in text
+            assert "dcc-mcp-server sidecar binary" in text
+            assert "bundled" in text.lower()
             assert "DCC_MCP_SERVER_BIN" in text
             assert "DCC_MCP_MAYA_SIDECAR=0" in text
             assert "resolve_sidecar_binary" in text
@@ -274,6 +343,17 @@ def _mock_download_and_resolve(_project: Path, _tmp_path: Path):
     return fake_download
 
 
+def _mock_server_download(version, _platform, dest):
+    return _make_fake_wheel(
+        dest,
+        f"dcc_mcp_server-{version}-py3-none-win_amd64.whl",
+        {
+            "dcc_mcp_server/__init__.py": b"def binary_path(): pass\n",
+            f"dcc_mcp_server-{version}.data/scripts/dcc-mcp-server.exe": b"server-bin",
+        },
+    )
+
+
 class TestAssemble:
     def test_win64_creates_python_and_python37(self, tmp_path):
         project = _setup_project(tmp_path)
@@ -283,14 +363,20 @@ class TestAssemble:
 
         with patch.object(assemble_mod, "resolve_core_version", return_value="0.15.0"), patch.object(
             assemble_mod, "download_core_wheels", side_effect=fake_download
+        ), patch.object(assemble_mod, "resolve_server_version", return_value="0.15.0"), patch.object(
+            assemble_mod, "download_server_wheel", side_effect=_mock_server_download
         ):
             result = assemble_mod.assemble(project, "0.2.2", "win64", output)
 
         assert (result / "python" / "dcc_mcp_core" / "__init__.py").exists()
         assert (result / "python" / "dcc_mcp_core" / "_core.pyd").exists()
+        assert (result / "python" / "dcc_mcp_server" / "__init__.py").exists()
+        assert (result / "python" / "scripts" / "dcc-mcp-server.exe").exists()
         assert (result / "python" / "dcc_mcp_maya" / "__init__.py").exists()
         assert (result / "python37" / "dcc_mcp_core" / "__init__.py").exists()
         assert (result / "python37" / "dcc_mcp_core" / "_core.pyd").read_bytes() == b"\x00cp37_core"
+        assert (result / "python37" / "dcc_mcp_server" / "__init__.py").exists()
+        assert (result / "python37" / "scripts" / "dcc-mcp-server.exe").exists()
         assert (result / "python37" / "dcc_mcp_maya" / "__init__.py").exists()
 
         mod_content = (result / "dcc_mcp_maya.mod").read_text(encoding="utf-8")
@@ -307,6 +393,8 @@ class TestAssemble:
 
         with patch.object(assemble_mod, "resolve_core_version", return_value="0.15.0"), patch.object(
             assemble_mod, "download_core_wheels", side_effect=fake_download
+        ), patch.object(assemble_mod, "resolve_server_version", return_value="0.15.0"), patch.object(
+            assemble_mod, "download_server_wheel", side_effect=_mock_server_download
         ):
             result = assemble_mod.assemble(project, "0.2.2", "win64", output)
 
@@ -323,6 +411,8 @@ class TestAssemblePortable:
 
         with patch.object(assemble_mod, "resolve_core_version", return_value="0.15.0"), patch.object(
             assemble_mod, "download_core_wheels", side_effect=fake_download
+        ), patch.object(assemble_mod, "resolve_server_version", return_value="0.15.0"), patch.object(
+            assemble_mod, "download_server_wheel", side_effect=_mock_server_download
         ):
             result = assemble_mod.assemble_portable(project, "0.2.2", "win64", output)
 
@@ -340,6 +430,8 @@ class TestAssemblePortable:
 
         with patch.object(assemble_mod, "resolve_core_version", return_value="0.15.0"), patch.object(
             assemble_mod, "download_core_wheels", side_effect=fake_download
+        ), patch.object(assemble_mod, "resolve_server_version", return_value="0.15.0"), patch.object(
+            assemble_mod, "download_server_wheel", side_effect=_mock_server_download
         ):
             result = assemble_mod.assemble_portable(project, "0.2.2", "linux", output)
 
@@ -357,6 +449,8 @@ class TestAssemblePipeline:
 
         with patch.object(assemble_mod, "resolve_core_version", return_value="0.15.0"), patch.object(
             assemble_mod, "download_core_wheels", side_effect=fake_download
+        ), patch.object(assemble_mod, "resolve_server_version", return_value="0.15.0"), patch.object(
+            assemble_mod, "download_server_wheel", side_effect=_mock_server_download
         ):
             result = assemble_mod.assemble_pipeline(project, "0.2.2", "win64", output)
 
@@ -377,6 +471,8 @@ class TestMain:
 
         with patch.object(assemble_mod, "resolve_core_version", return_value="0.15.0"), patch.object(
             assemble_mod, "download_core_wheels", side_effect=fake_download
+        ), patch.object(assemble_mod, "resolve_server_version", return_value="0.15.0"), patch.object(
+            assemble_mod, "download_server_wheel", side_effect=_mock_server_download
         ):
             old_argv = sys.argv
             try:

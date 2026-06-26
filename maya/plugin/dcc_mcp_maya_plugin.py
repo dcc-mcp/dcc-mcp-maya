@@ -29,7 +29,7 @@ Gateway mode (default ON)
 By default the plugin starts a per-Maya ``dcc-mcp-server sidecar``. The sidecar
 ensures a standalone machine-wide gateway is running on port ``9765`` and then
 registers this Maya instance as a backend. Every Maya sidecar gets an explicit
-``--display-name`` and ``--instance-id``; the gateway gets a machine-level
+``--display-name`` and, when available, ``--instance-id``; the gateway gets a machine-level
 ``--gateway-name`` (default ``dcc-mcp-gateway@<hostname>``) so admin and CLI
 debug views can distinguish the gateway from Maya sessions.
 
@@ -832,6 +832,7 @@ def _maybe_spawn_sidecar() -> None:
         _sidecar_handle = start_sidecar(
             adapter_version=VERSION,
             display_name=_resolve_sidecar_display_name(),
+            discovery_mcp_url=_handle.mcp_url() if _handle is not None else None,
             gateway_name=_resolve_gateway_name(),
             instance_id=_resolve_instance_id(),
         )
@@ -849,6 +850,7 @@ def _maybe_spawn_sidecar() -> None:
         return
 
     _print_sidecar_info(_sidecar_handle)
+    _probe_gateway_health_deferred(_sidecar_handle)
 
 
 def _print_sidecar_info(handle) -> None:  # noqa: ANN001
@@ -856,7 +858,7 @@ def _print_sidecar_info(handle) -> None:  # noqa: ANN001
     gateway_port = _resolve_gateway_port_for_display()
     gateway_lines = []
     if gateway_port > 0:
-        gateway_lines.append(f"  Gateway local: http://127.0.0.1:{gateway_port}/mcp  (if elected)")
+        gateway_lines.append(f"  Gateway      : http://127.0.0.1:{gateway_port}/mcp  (sidecar-managed)")
         try:
             from dcc_mcp_maya.sidecar import resolve_gateway_remote_options  # noqa: PLC0415
 
@@ -865,7 +867,7 @@ def _print_sidecar_info(handle) -> None:  # noqa: ANN001
             remote_host, remote_port = "0.0.0.0", 59765
         if remote_port > 0:
             display_host = _gateway_remote_display_host(remote_host)
-            gateway_lines.append(f"  Gateway LAN  : http://{display_host}:{remote_port}/mcp  (if elected)")
+            gateway_lines.append(f"  Gateway LAN  : http://{display_host}:{remote_port}/mcp  (sidecar-managed)")
 
     border = "=" * 60
     lines = [
@@ -880,6 +882,12 @@ def _print_sidecar_info(handle) -> None:  # noqa: ANN001
         *gateway_lines,
         border,
     ]
+    stdout_path = getattr(handle, "stdout_path", None)
+    stderr_path = getattr(handle, "stderr_path", None)
+    if stdout_path:
+        lines.insert(-1, f"  stdout log   : {stdout_path}")
+    if stderr_path:
+        lines.insert(-1, f"  stderr log   : {stderr_path}")
     print("\n".join(lines))  # noqa: T201 — intentional console output
 
     if _is_interactive():
@@ -892,6 +900,126 @@ def _print_sidecar_info(handle) -> None:  # noqa: ANN001
             )
         except Exception:  # noqa: BLE001 — viewport HUD is cosmetic
             pass
+
+
+def _probe_gateway_health_deferred(
+    handle=None,  # noqa: ANN001 - sidecar handle shape is intentionally duck-typed.
+    delay: float = 1.0,
+    timeout: float = 1.0,
+    attempts: int = 12,
+    interval: float = 1.0,
+) -> None:
+    """Deferred gateway health probe (non-blocking, runs on a daemon thread).
+
+    Spawned after the sidecar so users get timely feedback about whether the
+    sidecar-managed gateway actually became reachable.  The gateway daemon may
+    need a couple of seconds to reclaim stale registry state and bind the local
+    and LAN listeners, so this probe is deliberately bounded-retry rather than a
+    single startup snapshot.
+    """
+    gateway_port = _resolve_gateway_port_for_display()
+    if gateway_port <= 0:
+        return
+    attempts = max(1, int(attempts))
+    interval = max(0.0, float(interval))
+
+    def _probe() -> None:
+        import time
+        from urllib.error import HTTPError, URLError
+        from urllib.request import urlopen
+
+        time.sleep(delay)
+        url = f"http://127.0.0.1:{gateway_port}/health"
+        last_error = None
+        for attempt in range(1, attempts + 1):
+            try:
+                with urlopen(url, timeout=timeout) as resp:
+                    if resp.status == 200:
+                        exit_message = _format_sidecar_exit_message(handle)
+                        if exit_message:
+                            print(  # noqa: T201
+                                f"[dcc-mcp-maya] Gateway health OK at {url}, but {exit_message}"
+                            )
+                            return
+                        time.sleep(0.25)
+                        exit_message = _format_sidecar_exit_message(handle)
+                        if exit_message:
+                            print(  # noqa: T201
+                                f"[dcc-mcp-maya] Gateway health OK at {url}, but {exit_message}"
+                            )
+                            return
+                        print(f"[dcc-mcp-maya] Gateway health OK: {url}")  # noqa: T201
+                        return
+                    last_error = f"HTTP {resp.status}"
+            except HTTPError as exc:
+                last_error = f"HTTP {exc.code}"
+            except (URLError, OSError) as exc:
+                last_error = str(exc) or exc.__class__.__name__
+
+            proc = getattr(handle, "proc", None)
+            poll = getattr(proc, "poll", None)
+            if callable(poll):
+                returncode = poll()
+                if returncode is not None:
+                    print(  # noqa: T201
+                        f"[dcc-mcp-maya] Gateway NOT reachable at {url}; "
+                        f"{_format_sidecar_exit_message(handle, returncode=returncode)} "
+                        f"Last probe error: {last_error}. Check dcc-mcp-server "
+                        f"logs or run: dcc-mcp-server gateway --port {gateway_port}"
+                    )
+                    return
+
+            if attempt < attempts:
+                time.sleep(interval)
+
+        print(  # noqa: T201
+            f"[dcc-mcp-maya] Gateway NOT reachable at {url} after {attempts} "
+            f"attempt(s). Last probe error: {last_error}. The sidecar may still "
+            f"be starting the gateway, stale registry state may need cleanup, "
+            f"or the dcc-mcp-server binary may be missing the gateway-daemon "
+            f"feature."
+        )
+
+    t = threading.Thread(target=_probe, name="dcc-mcp-gateway-probe", daemon=True)
+    t.start()
+
+
+def _format_sidecar_exit_message(handle=None, returncode=None) -> str:  # noqa: ANN001
+    proc = getattr(handle, "proc", None)
+    if proc is None:
+        return ""
+    if returncode is None:
+        poll = getattr(proc, "poll", None)
+        if not callable(poll):
+            return ""
+        returncode = poll()
+    if returncode is None:
+        return ""
+    pid = getattr(proc, "pid", "?")
+    parts = [f"sidecar PID {pid} exited early (exit={returncode})."]
+    stderr_path = getattr(handle, "stderr_path", None)
+    stdout_path = getattr(handle, "stdout_path", None)
+    if stderr_path:
+        parts.append(f"stderr log: {stderr_path}.")
+        tail = _read_log_tail(stderr_path)
+        if tail:
+            parts.append(f"stderr tail: {tail}")
+    if stdout_path:
+        parts.append(f"stdout log: {stdout_path}.")
+    return " ".join(parts)
+
+
+def _read_log_tail(path, *, limit: int = 800) -> str:  # noqa: ANN001
+    try:
+        with open(path, "rb") as handle:
+            handle.seek(0, os.SEEK_END)
+            size = handle.tell()
+            handle.seek(max(0, size - limit), os.SEEK_SET)
+            data = handle.read()
+    except OSError:
+        return ""
+    text = data.decode("utf-8", "replace").strip()
+    return " ".join(text.split())
 
 
 def _resolve_gateway_port_for_display() -> int:
@@ -934,6 +1062,21 @@ def _print_startup_info(cfg: dict) -> None:
     srv = _srv_mod._server_instance  # noqa: SLF001
     is_gw = bool(srv and getattr(srv, "is_gateway", False))
 
+    # Detect sidecar-managed gateway mode. When sidecar mode is enabled
+    # _resolve_config() sets gateway_port=0 for the in-process server
+    # because the gateway is owned by the sidecar binary. Read the env
+    # directly to report the user's actual gateway port setting.
+    _sidecar_gw_port = 0
+    if gateway_port == 0:
+        try:
+            from dcc_mcp_maya.sidecar import is_sidecar_mode_enabled  # noqa: PLC0415
+
+            if is_sidecar_mode_enabled():
+                raw = os.environ.get("DCC_MCP_GATEWAY_PORT", "")
+                _sidecar_gw_port = int(raw) if raw.strip().isdigit() else 0
+        except (ImportError, ValueError):
+            pass
+
     # ── banner ────────────────────────────────────────────────────────────────
     border = "=" * 60
     lines = [
@@ -952,6 +1095,11 @@ def _print_startup_info(cfg: dict) -> None:
             lines.append(f"  Gateway URL  : {gw_url}  [registered as instance]")
             lines.append(f"  Connect MCP client to: {gw_url}/mcp  (via gateway)")
         lines.append("  Instance discovery: MCP resources/read uri=gateway://instances")
+    elif _sidecar_gw_port > 0:
+        lines.append(
+            f"  Gateway      : sidecar-managed (port {_sidecar_gw_port}, starting...)",
+        )
+        lines.append(f"  Connect MCP client to: {instance_url}")
     else:
         lines.append(f"  Connect MCP client to: {instance_url}")
         lines.append("  (Gateway disabled — set DCC_MCP_GATEWAY_PORT=9765 to enable)")
@@ -1048,27 +1196,31 @@ def _stop_blocking() -> None:
 # ── shutdown safety nets (issue #186) ─────────────────────────────────────────
 
 
-def _resolve_instance_id() -> str:
-    """Return the Maya MCP instance id for the active server, or ``"unknown"``.
+def _resolve_instance_id() -> Optional[str]:
+    """Return the Maya MCP instance id for the active server, if available.
 
     Used to tag the crash-resilient process sentinel (issue #186) so
     sweepers can cross-reference a FileRegistry row against its
     sentinel.  Robust to every degraded state — missing server,
-    Python-3.7 fallback path, server not yet registered — because the
-    tag is cosmetic; the sentinel's filesystem presence is what
-    actually matters.
+    Python-3.7 fallback path, server not yet registered.  Sidecar launch
+    treats the value as a strict CLI contract, so degraded states return
+    ``None`` instead of a cosmetic sentinel like ``"unknown"``.
     """
     try:
         import dcc_mcp_maya  # noqa: PLC0415
+        from dcc_mcp_maya._identity import normalize_instance_id  # noqa: PLC0415
 
         server = getattr(dcc_mcp_maya.server, "_server_instance", None)
         if server is not None:
             instance_id = getattr(server, "instance_id", None)
+            normalized = normalize_instance_id(instance_id)
+            if normalized:
+                return normalized
             if instance_id:
-                return str(instance_id)
+                logger.debug("ignoring invalid server instance id for sidecar launch: %r", instance_id)
     except Exception as exc:  # noqa: BLE001
         logger.debug("instance id lookup failed: %s", exc)
-    return "unknown"
+    return None
 
 
 def _resolve_sidecar_display_name() -> str:
@@ -1115,7 +1267,7 @@ def _install_shutdown_safety() -> None:
         coordinator = ShutdownCoordinator()
         coordinator.install(
             stop_callback=_stop_blocking,
-            instance_id=_resolve_instance_id(),
+            instance_id=_resolve_instance_id() or "unknown",
             registry_dir=os.environ.get("DCC_MCP_REGISTRY_DIR") or None,
         )
         _shutdown_coordinator = coordinator

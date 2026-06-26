@@ -41,10 +41,6 @@ Design choices worth pinning:
   inheriting Maya's process tree. When Maya exits the OS reaps the
   sidecar naturally as a backstop in case PPID-watch was somehow
   bypassed.
-* **No raw ``log to stderr`` plumbing** — the binary writes structured
-  logs to ``DCC_MCP_LOG_DIR`` already (see
-  ``dcc-mcp-logging::file_logging``). The Python plug-in shouldn't
-  duplicate that.
 """
 
 from __future__ import annotations
@@ -58,6 +54,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
+from dcc_mcp_maya._identity import normalize_instance_id
 from dcc_mcp_maya.sidecar._resolver import (
     SidecarBinaryError,
     resolve_sidecar_binary,
@@ -125,6 +122,8 @@ class SidecarHandle:
     command: list = field(default_factory=list)
     launch_contract: dict = field(default_factory=dict)
     extra_env: dict = field(default_factory=dict)
+    stdout_path: Optional[Path] = None
+    stderr_path: Optional[Path] = None
 
     @property
     def is_alive(self) -> bool:
@@ -220,6 +219,7 @@ def start_sidecar(
     instance_id: Optional[str] = None,
     display_name: Optional[str] = None,
     adapter_version: Optional[str] = None,
+    discovery_mcp_url: Optional[str] = None,
     gateway_name: Optional[str] = None,
     extra_args: Optional[list] = None,
     extra_env: Optional[dict] = None,
@@ -252,6 +252,10 @@ def start_sidecar(
             the row (``--adapter-version``). The plug-in passes its own
             ``VERSION`` here so gateway and admin diagnostics can report
             adapter generations.
+        discovery_mcp_url: read-only in-process MCP/REST endpoint used by
+            the gateway for ``tools/list``, schema describe, resources,
+            prompts, and admin skill inventory. Tool calls still route
+            through the sidecar dispatcher endpoint.
         gateway_name: machine-level gateway label forwarded to
             ``--gateway-name``. Keep this stable per workstation; do
             not derive it from a scene because the standalone gateway
@@ -306,22 +310,39 @@ def start_sidecar(
         ) from exc
 
     gateway_remote_host, gateway_remote_port = resolve_gateway_remote_options(spawn_env)
-    launch_contract = build_sidecar_command(
-        dcc_type=dcc_name,
-        host_rpc=host_rpc_uri,
-        watch_pid=maya_pid,
-        registry_dir=registry_dir,
-        server_bin=str(binary),
-        instance_id=instance_id,
-        display_name=display_name,
-        adapter_version=adapter_version,
-        gateway_port=_resolve_gateway_port(spawn_env),
-        gateway_name=gateway_name,
-        gateway_remote_host=gateway_remote_host,
-        gateway_remote_port=gateway_remote_port,
-        extra_args=extra_args,
-        env=spawn_env,
-    )
+    normalized_instance_id = normalize_instance_id(instance_id)
+    if instance_id not in (None, "") and normalized_instance_id is None:
+        logger.debug("Ignoring invalid sidecar instance_id %r; expected UUID", instance_id)
+
+    launch_kwargs = {
+        "dcc_type": dcc_name,
+        "host_rpc": host_rpc_uri,
+        "watch_pid": maya_pid,
+        "registry_dir": registry_dir,
+        "server_bin": str(binary),
+        "instance_id": normalized_instance_id,
+        "display_name": display_name,
+        "adapter_version": adapter_version,
+        "gateway_port": _resolve_gateway_port(spawn_env),
+        "gateway_name": gateway_name,
+        "gateway_remote_host": gateway_remote_host,
+        "gateway_remote_port": gateway_remote_port,
+        "extra_args": extra_args,
+        "env": spawn_env,
+    }
+    if discovery_mcp_url:
+        launch_kwargs["discovery_mcp_url"] = discovery_mcp_url
+    try:
+        launch_contract = build_sidecar_command(**launch_kwargs)
+    except TypeError as exc:
+        if "discovery_mcp_url" not in str(exc):
+            raise
+        launch_kwargs.pop("discovery_mcp_url", None)
+        logger.debug(
+            "dcc-mcp-maya: core sidecar helper does not accept discovery_mcp_url; "
+            "continuing without sidecar discovery endpoint metadata"
+        )
+        launch_contract = build_sidecar_command(**launch_kwargs)
     if not launch_contract.get("success"):
         _stop_qt_server(stop_qt_server_fn)
         reason = launch_contract.get("reason") or "invalid_sidecar_launch"
@@ -340,19 +361,22 @@ def start_sidecar(
         maya_pid,
         qt_binding,
     )
+    stdio = _prepare_sidecar_stdio(launch_contract, spawn_env, maya_pid)
     try:
         proc = subprocess.Popen(  # noqa: S603 — argv is built from trusted vars
             cmd,
             env=spawn_env,
             stdin=subprocess.DEVNULL,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
+            stdout=stdio["stdout"],
+            stderr=stdio["stderr"],
             close_fds=True,
             creationflags=_detached_process_flags(),
         )
     except OSError as exc:
         _stop_qt_server(stop_qt_server_fn)
         raise SidecarSpawnError("failed to spawn dcc-mcp-server sidecar at {0}: {1}".format(binary, exc)) from exc
+    finally:
+        _close_sidecar_stdio(stdio)
 
     return SidecarHandle(
         proc=proc,
@@ -364,6 +388,8 @@ def start_sidecar(
         command=cmd,
         launch_contract=dict(launch_contract),
         extra_env=dict(extra_env or {}),
+        stdout_path=stdio.get("stdout_path"),
+        stderr_path=stdio.get("stderr_path"),
     )
 
 
@@ -480,6 +506,51 @@ def _detached_process_flags() -> int:
         CREATE_NO_WINDOW = 0x0800_0000  # noqa: N806
         return CREATE_NO_WINDOW
     return 0
+
+
+def _prepare_sidecar_stdio(launch_contract: dict, env: dict, maya_pid: int) -> dict:
+    """Open stdout/stderr log files for the sidecar child process.
+
+    The sidecar can exit before structured file logging starts, especially for
+    CLI argument-contract failures. Keeping raw stdio makes those failures
+    visible without blocking Maya startup.
+    """
+
+    try:
+        log_root = env.get("DCC_MCP_LOG_DIR")
+        if log_root:
+            log_dir = Path(log_root)
+        else:
+            log_dir = Path(str(launch_contract.get("registry_dir") or ".")) / "logs"
+        log_dir.mkdir(parents=True, exist_ok=True)
+        stamp = time.strftime("%Y%m%d-%H%M%S")
+        prefix = "dcc-mcp-sidecar-{0}-{1}".format(maya_pid, stamp)
+        stdout_path = log_dir / "{0}.stdout.log".format(prefix)
+        stderr_path = log_dir / "{0}.stderr.log".format(prefix)
+        return {
+            "stdout": stdout_path.open("ab"),
+            "stderr": stderr_path.open("ab"),
+            "stdout_path": stdout_path,
+            "stderr_path": stderr_path,
+        }
+    except OSError as exc:
+        logger.warning("dcc-mcp-maya: failed to open sidecar stdio logs; falling back to DEVNULL: %s", exc)
+        return {
+            "stdout": subprocess.DEVNULL,
+            "stderr": subprocess.DEVNULL,
+            "stdout_path": None,
+            "stderr_path": None,
+        }
+
+
+def _close_sidecar_stdio(stdio: dict) -> None:
+    for key in ("stdout", "stderr"):
+        handle = stdio.get(key)
+        if hasattr(handle, "close"):
+            try:
+                handle.close()
+            except OSError as exc:
+                logger.debug("sidecar stdio close raised: %s", exc)
 
 
 def _await_proc_alive(proc: subprocess.Popen, timeout: float = 0.5) -> bool:

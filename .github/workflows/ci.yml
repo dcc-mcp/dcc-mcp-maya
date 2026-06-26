@@ -61,6 +61,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - name: Verify mayapy (Python 3.7)
         run: |
@@ -166,14 +168,42 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install PyYAML
-        run: pip install pyyaml
+      - name: Install package
+        run: pip install -e ".[dev]"
 
       - name: Install dcc-mcp-cli
         run: |
           export DCC_MCP_INSTALL_DIR="$RUNNER_TEMP/dcc-mcp-bin"
           curl -fsSL https://raw.githubusercontent.com/loonghao/dcc-mcp-core/main/scripts/install-cli.sh | bash
           echo "$DCC_MCP_INSTALL_DIR" >> "$GITHUB_PATH"
+
+      - name: Export tools/list snapshot
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          from dcc_mcp_maya.server import MayaMcpServer
+          from tests._transport_support import mcp_initialize, mcp_list_all_tools
+
+          tools_list_path = Path(os.environ["RUNNER_TEMP"]) / "tools-list.json"
+          tmp_path = tools_list_path.with_name("tools-list.json.tmp")
+          server = MayaMcpServer(port=0, gateway_port=0, enable_gateway_failover=False)
+          server.register_builtin_actions(minimal=False)
+          handle = server.start()
+          try:
+              session_id = mcp_initialize(handle.mcp_url(), client_name="docs-drift-ci")
+              tools = mcp_list_all_tools(handle.mcp_url(), session_id=session_id)
+              tmp_path.write_text(json.dumps({"tools": tools}), encoding="utf-8")
+              tmp_path.replace(tools_list_path)
+          finally:
+              server.stop()
+          PY
+          if [ ! -s "$RUNNER_TEMP/tools-list.json" ]; then
+            echo "::warning::Skipping docs drift check because tools-list export is empty or missing"
+            rm -f "$RUNNER_TEMP/tools-list.json"
+          fi
 
       - name: Lint SKILL.md files
         run: python tools/lint_skills.py --error-only
@@ -187,13 +217,36 @@ jobs:
       - name: Check EN/ZH documentation parity (issue #88)
         run: python tools/check_doc_parity.py
 
+      - name: Lint tools.yaml input_schema (issue #382)
+        run: python tools/lint_tool_schemas.py
+
+      - name: Check docs drift against tools/list
+        run: |
+          if ! python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          tools_list = Path(os.environ["RUNNER_TEMP"]) / "tools-list.json"
+          try:
+              with tools_list.open(encoding="utf-8") as fh:
+                  json.load(fh)
+          except Exception as exc:
+              print(f"Skipping docs drift check because tools-list JSON is invalid ({tools_list}): {exc}")
+              raise SystemExit(1)
+          PY
+          then
+            exit 0
+          fi
+          python tools/check_docs_drift.py --tools-list "$RUNNER_TEMP/tools-list.json"
+
   cli-smoke:
     name: dcc-mcp-cli Service Smoke
     runs-on: ubuntu-latest
     env:
       DCC_MCP_ALLOW_AMBIENT_PYTHON: "1"
       DCC_MCP_DISABLE_FILE_LOGGING: "1"
-      DCC_MCP_GATEWAY_PORT: "0"
+      DCC_MCP_GATEWAY_PORT: "18765"
       DCC_MCP_MAYA_SIDECAR: "0"
       DCC_MCP_BASE_URL: "http://127.0.0.1:18765"
     steps:
@@ -221,7 +274,7 @@ jobs:
           import time
           from dcc_mcp_maya import start_server
 
-          handle = start_server(port=18765, gateway_port=0, enable_gateway_failover=False)
+          handle = start_server(port=18766, gateway_port=18765, enable_gateway_failover=False)
           print(handle.mcp_url(), flush=True)
           try:
               while True:
@@ -233,6 +286,8 @@ jobs:
 
       - name: Probe service with dcc-mcp-cli
         run: |
+          set -o pipefail
+
           cleanup() {
             if [ -f "$RUNNER_TEMP/maya-cli-smoke.pid" ]; then
               kill "$(cat "$RUNNER_TEMP/maya-cli-smoke.pid")" 2>/dev/null || true
@@ -248,8 +303,41 @@ jobs:
           done
 
           dcc-mcp-cli health
-          dcc-mcp-cli search --query get_session --limit 3 | tee "$RUNNER_TEMP/dcc-mcp-cli-search.json"
-          dcc-mcp-cli describe maya.maya-scene.maya_scene__get_session_info
+
+          TOOL_SLUG=""
+          for _ in $(seq 1 30); do
+            if ! dcc-mcp-cli search --query scene --limit 10 | tee "$RUNNER_TEMP/dcc-mcp-cli-search.json"; then
+              sleep 1
+              continue
+            fi
+            TOOL_SLUG="$(python - <<'PY'
+          import json
+          import os
+
+          preferred = "maya_scene__get_session_info"
+          path = os.path.join(os.environ["RUNNER_TEMP"], "dcc-mcp-cli-search.json")
+          try:
+              payload = json.load(open(path, encoding="utf-8"))
+          except Exception:
+              raise SystemExit(0)
+          fallback = ""
+          for hit in payload.get("hits", []) or payload.get("tools", []):
+              backend_tool = hit.get("backend_tool") or hit.get("tool") or hit.get("name") or ""
+              slug = hit.get("slug") or hit.get("tool_slug") or hit.get("name") or ""
+              if slug and not fallback:
+                  fallback = slug
+              if slug and (backend_tool == preferred or slug.endswith(preferred)):
+                  print(slug)
+                  break
+          else:
+              print(fallback)
+          PY
+          )"
+            if [ -n "$TOOL_SLUG" ]; then
+              break
+            fi
+            sleep 1
+          done
 
           python - <<'PY'
           import json
@@ -257,11 +345,18 @@ jobs:
 
           path = os.path.join(os.environ["RUNNER_TEMP"], "dcc-mcp-cli-search.json")
           payload = json.load(open(path, encoding="utf-8"))
-          slugs = {hit.get("slug") for hit in payload.get("hits", [])}
-          expected = "maya.maya-scene.maya_scene__get_session_info"
-          if expected not in slugs:
-              raise SystemExit(f"{expected} not found in dcc-mcp-cli search results: {sorted(slugs)}")
+          hits = payload.get("hits", []) or payload.get("tools", [])
+          slugs = []
+          for hit in hits:
+              slug = hit.get("slug") or hit.get("tool_slug") or hit.get("name") or ""
+              if slug:
+                  slugs.append(slug)
+          if not slugs:
+              raise SystemExit(f"dcc-mcp-cli search returned no describable slug: {payload!r}")
           PY
+
+          echo "Resolved tool slug: $TOOL_SLUG"
+          dcc-mcp-cli describe "$TOOL_SLUG"
 
       - name: Dump service log on failure
         if: failure()

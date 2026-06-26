@@ -12,17 +12,14 @@ Get Maya talking to an MCP host in under 5 minutes.
 Install into Maya's Python interpreter:
 
 ```bash
-mayapy -m pip install "dcc-mcp-maya[sidecar]"
+mayapy -m pip install dcc-mcp-maya
 ```
 
 For a specific Maya version (Windows example):
 
 ```bash
-"C:\Program Files\Autodesk\Maya2024\bin\mayapy.exe" -m pip install "dcc-mcp-maya[sidecar]"
+"C:\Program Files\Autodesk\Maya2024\bin\mayapy.exe" -m pip install dcc-mcp-maya
 ```
-
-Use `dcc-mcp-maya` without `[sidecar]` only when your environment already
-provides the `dcc-mcp-server` binary.
 
 ## Step 2 — Load the Maya Plugin
 

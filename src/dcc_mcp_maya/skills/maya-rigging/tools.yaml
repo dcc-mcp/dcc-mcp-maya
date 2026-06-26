@@ -1,21 +1,78 @@
 tools:
 - name: assign_deformer
-  description: Assign a deformer in the current Maya scene.
+  description: Apply a deformer (cluster, blendShape, lattice, wrap, bend, twist, flare, sine, squash, wave) to an object.
   execution: sync
   affinity: main
   annotations:
     idempotent_hint: true
   group: rigging
+  input_schema:
+    type: object
+    required:
+    - object_name
+    properties:
+      object_name:
+        type: string
+      deformer_type:
+        type: string
+        enum:
+        - cluster
+        - blendShape
+        - lattice
+        - wrap
+        - bend
+        - twist
+        - flare
+        - sine
+        - squash
+        - wave
+        default: cluster
 - name: blend_shape_add_target
-  description: Blend shape add target in the current Maya scene.
+  description: Add a target mesh to an existing blend shape deformer.
   execution: sync
   affinity: main
   group: rigging
+  input_schema:
+    type: object
+    required:
+    - blend_shape
+    - target_mesh
+    properties:
+      blend_shape:
+        type: string
+      target_mesh:
+        type: string
+      weight:
+        type: number
+        minimum: 0.0
+        maximum: 1.0
+        default: 0.0
+      index:
+        type: integer
 - name: create_blend_shape
-  description: Create a blend shape in the current Maya scene.
+  description: Create a blend shape deformer on a base mesh with optional target meshes.
   execution: sync
   affinity: main
   group: rigging
+  input_schema:
+    type: object
+    required:
+    - base_mesh
+    properties:
+      base_mesh:
+        type: string
+      target_meshes:
+        type: array
+        items:
+          type: string
+      name:
+        type: string
+      origin:
+        type: string
+        enum:
+        - local
+        - world
+        default: local
 - name: copy_skin_weights
   description: Copy or mirror skin weights between skinned meshes.
   execution: sync
@@ -113,20 +170,71 @@ tools:
         minItems: 3
         maxItems: 3
 - name: create_curve
-  description: Create a curve in the current Maya scene.
+  description: Create a NURBS curve from a list of control points.
   execution: sync
   affinity: main
   group: rigging
+  input_schema:
+    type: object
+    properties:
+      points:
+        type: array
+        items:
+          type: array
+          items:
+            type: number
+          minItems: 3
+          maxItems: 3
+      name:
+        type: string
+      degree:
+        type: integer
+        minimum: 1
+        default: 3
+      periodic:
+        type: boolean
+        default: false
 - name: create_ik_handle
-  description: Create an IK handle in the current Maya scene.
+  description: Create an IK handle between two joints with configurable solver.
   execution: sync
   affinity: main
   group: rigging
+  input_schema:
+    type: object
+    required:
+    - start_joint
+    - end_joint
+    properties:
+      start_joint:
+        type: string
+      end_joint:
+        type: string
+      solver:
+        type: string
+        enum:
+        - ikRPsolver
+        - ikSCsolver
+        default: ikRPsolver
+      name:
+        type: string
 - name: create_joint
-  description: Create a joint in the current Maya scene.
+  description: Create a Maya joint node with optional parent and position.
   execution: sync
   affinity: main
   group: rigging
+  input_schema:
+    type: object
+    properties:
+      name:
+        type: string
+      position:
+        type: array
+        items:
+          type: number
+        minItems: 3
+        maxItems: 3
+      parent:
+        type: string
 - name: create_rig_control
   description: Create a rig control curve with optional offset groups and constraints.
   execution: sync
@@ -201,10 +309,33 @@ tools:
         type: boolean
         default: false
 - name: mirror_joints
-  description: Mirror joints in the current Maya scene.
+  description: Mirror a joint chain across an axis plane with optional search/replace renaming.
   execution: sync
   affinity: main
   group: rigging
+  input_schema:
+    type: object
+    required:
+    - joint_name
+    properties:
+      joint_name:
+        type: string
+      mirror_behavior:
+        type: boolean
+        default: true
+      search_replace:
+        type: array
+        items:
+          type: string
+        minItems: 2
+        maxItems: 2
+      mirror_axis:
+        type: string
+        enum:
+        - YZ
+        - XY
+        - XZ
+        default: YZ
 - name: query_skin_cluster
   description: Query skinCluster influences, geometry, and common settings.
   execution: sync
@@ -221,35 +352,146 @@ tools:
       node:
         type: string
 - name: set_driven_key
-  description: Set a driven key in the current Maya scene.
+  description: Create a set-driven key relationship between a driver attribute and driven attributes.
   execution: sync
   affinity: main
   annotations:
     idempotent_hint: true
   group: rigging
+  input_schema:
+    type: object
+    required:
+    - driver_attr
+    - driven_attrs
+    - driver_values
+    - driven_values
+    properties:
+      driver_attr:
+        type: string
+      driven_attrs:
+        type: array
+        items:
+          type: string
+      driver_values:
+        type: array
+        items:
+          type: number
+      driven_values:
+        type: array
+        items:
+          type: array
+          items:
+            type: number
+      tangent_type:
+        type: string
+        enum:
+        - linear
+        - smooth
+        - flat
+        - step
+        default: linear
 - name: set_ik_fk_blend
-  description: Set IK/FK blend values in the current Maya scene.
+  description: Set the IK/FK blend weight on an IK handle (0 = full FK, 1 = full IK).
   execution: sync
   affinity: main
   annotations:
     idempotent_hint: true
   group: rigging
+  input_schema:
+    type: object
+    required:
+    - ik_handle
+    properties:
+      ik_handle:
+        type: string
+      blend:
+        type: number
+        minimum: 0.0
+        maximum: 1.0
+        default: 1.0
+      attribute:
+        type: string
+        default: ikBlend
 - name: set_joint_limit
-  description: Set joint limits in the current Maya scene.
+  description: Set rotation limits on a joint axis (x, y, or z) with min/max angles.
   execution: sync
   affinity: main
   annotations:
     idempotent_hint: true
   group: rigging
+  input_schema:
+    type: object
+    required:
+    - joint_name
+    - axis
+    properties:
+      joint_name:
+        type: string
+      axis:
+        type: string
+        enum:
+        - x
+        - y
+        - z
+      min_angle:
+        type: number
+      max_angle:
+        type: number
+      enable:
+        type: boolean
+        default: true
 - name: set_joint_orient
-  description: Set joint orientation in the current Maya scene.
+  description: Set the joint orientation (local rotation axes) on a Maya joint.
   execution: sync
   affinity: main
   annotations:
     idempotent_hint: true
   group: rigging
+  input_schema:
+    type: object
+    required:
+    - joint_name
+    properties:
+      joint_name:
+        type: string
+      orient:
+        type: array
+        items:
+          type: number
+        minItems: 3
+        maxItems: 3
+      zero_scale_orient:
+        type: boolean
+        default: false
 - name: skin_cluster_bind
-  description: Skin cluster bind in the current Maya scene.
+  description: Bind a mesh to a set of joints using a skin cluster.
   execution: sync
   affinity: main
   group: rigging
+  input_schema:
+    type: object
+    required:
+    - joints
+    - mesh
+    properties:
+      joints:
+        type: array
+        items:
+          type: string
+        minItems: 1
+      mesh:
+        type: string
+      max_influences:
+        type: integer
+        minimum: 1
+        default: 4
+      bind_method:
+        type: integer
+        enum:
+        - 0
+        - 1
+        - 2
+        - 3
+        default: 0
+      name:
+        type: string

@@ -7,12 +7,12 @@
 ## Project
 
 **dcc-mcp-maya** — Embed a standards-compliant MCP Streamable HTTP server directly inside Autodesk Maya.
-**Version:** 0.4.1 <!-- x-release-please-version -->
+**Version:** 0.8.16 <!-- x-release-please-version -->
 **License:** MIT
 **Repo:** https://github.com/loonghao/dcc-mcp-maya
 **Python:** >=3.7
 **Maya:** 2020+
-**Core dep:** `dcc-mcp-core>=0.17.36,<1.0.0`
+**Core dep:** `dcc-mcp-core>=0.18.36,<1.0.0`
 
 ---
 
@@ -57,7 +57,7 @@ stop_server() -> None
 MayaMcpServer(
     port: int = 8765,
     server_name: str = "maya-mcp",
-    server_version: str = "0.4.1",  # x-release-please-version
+    server_version: str = "0.8.16",  # x-release-please-version
     gateway_port: Optional[int] = None,
     registry_dir: Optional[str] = None,
     dcc_version: Optional[str] = None,
@@ -215,7 +215,7 @@ Tool naming: `{skill_name.replace("-","_")}__{script_stem}` (e.g. `maya_scene__n
 | `src/dcc_mcp_maya/api.py` | Skill authoring helpers (18 symbols) |
 | `src/dcc_mcp_maya/_recovery_dialog.py` | Qt-level crash/recovery dialog detector + status surfacing |
 | `src/dcc_mcp_maya/plugin.py` | Maya plugin entry point |
-| `src/dcc_mcp_maya/skills/` | 25 built-in skill packages (198 typed tool declarations) |
+| `src/dcc_mcp_maya/skills/` | 25 built-in skill packages (72+ typed MCP tools) |
 | `docs/` | VitePress docs (EN + ZH) |
 | `README.md` | Human overview |
 | `AGENTS.md` | Progressive disclosure map |

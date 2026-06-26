@@ -38,14 +38,9 @@ def _unlink_if_exists(path: Optional[str]) -> None:
 def _apply_view_fit(cmds) -> bool:
     """Fit the scene in the active model panel (correct ``allObjects`` flag)."""
     try:
-        model_panels = cmds.getPanel(type="modelPanel") or []
-        visible = set(cmds.getPanel(visiblePanels=True) or [])
-        for panel in model_panels:
-            if panel in visible:
-                cmds.viewFit(panel, allObjects=True, animate=False)
-                return True
-        if model_panels:
-            cmds.viewFit(model_panels[0], allObjects=True, animate=False)
+        panel = _active_model_panel(cmds)
+        if panel:
+            cmds.viewFit(panel, allObjects=True, animate=False)
             return True
         cmds.viewFit(allObjects=True, animate=False)
         return True
@@ -60,6 +55,42 @@ def _read_nonempty_png(path: str) -> bytes:
     if not img_bytes:
         raise ValueError("EMPTY_PLAYBLAST")
     return img_bytes
+
+
+def _active_model_panel(cmds) -> Optional[str]:
+    try:
+        focused = cmds.getPanel(withFocus=True)
+        if focused and cmds.getPanel(typeOf=focused) == "modelPanel":
+            return str(focused)
+    except Exception:
+        pass
+    try:
+        panels = cmds.getPanel(type="modelPanel") or []
+        visible = set(cmds.getPanel(visiblePanels=True) or [])
+    except Exception:
+        return None
+    for panel in panels:
+        if panel in visible:
+            return str(panel)
+    return str(panels[0]) if panels else None
+
+
+def _viewport_renderer(cmds, panel: Optional[str]) -> Optional[str]:
+    if not panel:
+        return None
+    try:
+        return str(cmds.modelEditor(panel, query=True, rendererName=True))
+    except Exception:
+        return None
+
+
+def _visible_model_panels(cmds):
+    try:
+        panels = cmds.getPanel(type="modelPanel") or []
+        visible = set(cmds.getPanel(visiblePanels=True) or [])
+        return [panel for panel in panels if panel in visible]
+    except Exception:
+        return []
 
 
 def capture_viewport(
@@ -107,6 +138,9 @@ def capture_viewport(
 
         width, height = _clamp_playblast_dims(width, height)
         f0, f1 = _playblast_frame_range(frame)
+        model_panel = _active_model_panel(cmds)
+        viewport_renderer = _viewport_renderer(cmds, model_panel)
+        visible_panels = _visible_model_panels(cmds)
 
         view_fit_applied = False
         if view_fit:
@@ -127,7 +161,7 @@ def capture_viewport(
 
         # Remove the .png suffix for playblast prefix
         prefix = tmp_path[:-4]
-        cmds.playblast(
+        playblast_kwargs = dict(
             frame=(f0, f1),
             format="image",
             compression="png",
@@ -139,6 +173,9 @@ def capture_viewport(
             showOrnaments=False,
             offScreen=bool(off_screen),
         )
+        if model_panel:
+            playblast_kwargs["editorPanelName"] = model_panel
+        cmds.playblast(**playblast_kwargs)
 
         # playblast appends .<frame>.png
         padded = "{}.{}.png".format(prefix, str(f0).zfill(4))
@@ -160,6 +197,9 @@ def capture_viewport(
             view_fit=bool(view_fit),
             view_fit_applied=view_fit_applied,
             off_screen_forced_by_view_fit_failure=bool(view_fit and not view_fit_applied),
+            model_panel=model_panel,
+            viewport_renderer=viewport_renderer,
+            visible_model_panels=visible_panels,
             prompt="Use capture_viewport with view_fit=True instead of execute_python viewFit(all=True).",
         )
     except ValueError as exc:
@@ -175,6 +215,7 @@ def capture_viewport(
             "Viewport capture produced an empty image",
             "Maya playblast wrote a 0-byte PNG",
             possible_solutions=[
+                "Use maya_render__render_frame with preview-sized dimensions when Maya is minimized or playblast is unavailable.",
                 "Pass off_screen=True if Maya is minimized or running in batch mode.",
                 "Ensure a model panel is visible before capturing.",
                 "Retry after using view_fit=True so the camera frames scene content.",
@@ -187,6 +228,9 @@ def capture_viewport(
             view_fit=bool(view_fit),
             view_fit_applied=view_fit_applied,
             off_screen_forced_by_view_fit_failure=bool(view_fit and not view_fit_applied),
+            model_panel=model_panel,
+            viewport_renderer=viewport_renderer,
+            visible_model_panels=visible_panels,
         )
     except Exception as exc:
         _unlink_if_exists(tmp_path)

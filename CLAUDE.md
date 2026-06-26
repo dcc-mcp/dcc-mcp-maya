@@ -7,7 +7,7 @@
 
 ## What This Project Does
 
-`dcc-mcp-maya` embeds an MCP Streamable HTTP server directly inside Autodesk Maya. Claude Desktop (or any Anthropic API client using MCP) can call 198 Maya tools over HTTP without any external gateway process.
+`dcc-mcp-maya` embeds an MCP Streamable HTTP server directly inside Autodesk Maya. Claude Desktop (or any Anthropic API client using MCP) can call 72+ Maya tools over HTTP without any external gateway process.
 
 ---
 
@@ -46,7 +46,7 @@ Restart Claude Desktop after editing.
 
 ## Progressive Loading — Important for Claude
 
-By default, `dcc-mcp-maya` starts in **minimal mode** with only 8 tools active:
+By default, `dcc-mcp-maya` starts in **minimal mode** with only a few built-in tools active:
 - `execute_python`, `execute_mel`
 - `get_scene_info`, `get_selection`, `get_session_info`
 - `search_tools`, `list_skills`, `load_skill`
@@ -63,7 +63,6 @@ This keeps the initial `tools/list` small and fast for Claude to parse.
 ## Claude-Specific Tips
 
 - **Viewport feedback:** Ask Claude to call `capture_viewport` after geometry changes. The result is a base64-encoded PNG that Claude can "see" in the conversation.
-- **Batch operations:** For multi-step workflows, use `workflow__run_chain` (bundled skill) to chain actions atomically.
 - **Cancellation:** Claude can send `notifications/cancelled` for long renders. Skill scripts that poll `check_maya_cancelled()` will exit cleanly.
 - **Code execution:** Prefer `search_skills` → `load_skill` → typed tools with `inputSchema`. Use `execute_python` only when no skill covers the task (bulk in-Maya loops, OpenMaya gaps, one-offs). Operators can refuse it with `DCC_MCP_MAYA_DISABLE_EXECUTE_PYTHON=1` or `DCC_MCP_MAYA_DISABLE_ARBITRARY_SCRIPT=1`.
 

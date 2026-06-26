@@ -1,0 +1,87 @@
+tools:
+- name: import_to_scene
+  description: |-
+    Import an AssetDescriptor into Maya. Supports FBX, OBJ, USD,
+    MA, MB. Handles axis conversion, unit scale, material mode,
+    and placement hint.
+  execution: async
+  affinity: main
+  timeout_hint_secs: 120
+  annotations:
+    destructive_hint: true
+    idempotent_hint: false
+  group: import
+  input_schema:
+    type: object
+    required:
+    - asset
+    properties:
+      asset:
+        type: object
+        description: AssetDescriptor from maya-asset-source. Must include path and format.
+        required:
+        - path
+        - format
+        properties:
+          id:
+            type: string
+          name:
+            type: string
+          path:
+            type: string
+          format:
+            type: string
+            enum:
+            - fbx
+            - obj
+            - usd
+            - usda
+            - usdc
+            - ma
+            - mb
+          size_bytes:
+            type: integer
+          metadata:
+            type: object
+      namespace:
+        type: string
+      group_name:
+        type: string
+      axis_conversion:
+        type: string
+        enum:
+        - none
+        - y_to_z
+        - z_to_y
+        default: none
+        description: y_to_z for Y-up files, z_to_y for Z-up.
+      unit_scale:
+        type: number
+        default: 1.0
+        exclusiveMinimum: 0
+      material_mode:
+        type: string
+        enum:
+        - preserve
+        - assign_lambert
+        - skip
+        default: preserve
+      placement_hint:
+        type: string
+        enum:
+        - origin
+        - selection
+        - custom
+        default: origin
+        description: origin (default), selection pivot, or custom [x,y,z].
+      custom_position:
+        type: array
+        items:
+          type: number
+        minItems: 3
+        maxItems: 3
+      target_collection:
+        type: string
+      merge_namespaces:
+        type: boolean
+        default: false

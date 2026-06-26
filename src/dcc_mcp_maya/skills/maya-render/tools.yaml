@@ -61,11 +61,7 @@ tools:
         type: boolean
         default: true
 - name: capture_viewport
-  description: 'Capture the active Maya viewport as a base64 PNG via playblast. When
-    Maya is minimized or in batch mode, off-screen rendering is auto-enabled (issue
-    #152). Use optional view_fit instead of execute_python with viewFit: the correct
-    flag is allObjects=True, not all=True. Width and height are clamped to reduce GPU
-    OOM risk.'
+  description: 'Capture the active Maya viewport as a base64 PNG. Off-screen rendering auto-enables when Maya is minimized or in batch mode.'
   execution: async
   affinity: main
   timeout_hint_secs: 600
@@ -100,30 +96,86 @@ tools:
         default: false
         description: When true, runs cmds.viewFit(allObjects=True, animate=False) on
           the active model panel before capture. Prefer this over raw viewFit in execute_python.
+- name: debug_scene_snapshot
+  description: Collect a compact scene debug snapshot with DAG summary, optional
+    render_frame preview, and optional full Maya UI capture.
+  execution: async
+  affinity: main
+  timeout_hint_secs: 600
+  annotations:
+    read_only_hint: true
+    destructive_hint: false
+    idempotent_hint: false
+    open_world_hint: false
+  group: rendering
+  input_schema:
+    type: object
+    properties:
+      max_nodes:
+        type: integer
+        minimum: 1
+        maximum: 500
+        default: 50
+      include_preview:
+        type: boolean
+        default: true
+      include_ui:
+        type: boolean
+        default: false
+      camera:
+        type: string
+      frame:
+        type: number
+      preview_width:
+        type: integer
+        minimum: 1
+        maximum: 8192
+        default: 640
+      preview_height:
+        type: integer
+        minimum: 1
+        maximum: 8192
+        default: 480
+      return_base64:
+        type: boolean
+        default: true
+      ui_object_name:
+        type: string
+        description: Optional Qt objectName/windowTitle for the UI capture.
 - name: get_render_settings
-  description: Query current render settings
+  description: Query current render settings (resolution, renderer, frame range, format, output path).
   execution: sync
   affinity: main
   annotations:
     read_only_hint: true
     idempotent_hint: true
   group: rendering
+  input_schema:
+    type: object
+    properties: {}
 - name: get_scene_render_stats
-  description: Get scene render statistics without modifying the Maya scene.
+  description: Get scene render statistics including quality attributes without modifying the Maya scene.
   execution: sync
   affinity: main
   annotations:
     read_only_hint: true
     idempotent_hint: true
   group: rendering
+  input_schema:
+    type: object
+    properties: {}
 - name: get_viewport_camera
-  description: Query the active model panel camera with scene-camera fallback.
+  description: Query the active model panel camera with scene-camera fallback, returning
+    camera transform, shape, focal length, and film aperture.
   execution: sync
   affinity: main
   annotations:
     read_only_hint: true
     idempotent_hint: true
   group: rendering
+  input_schema:
+    type: object
+    properties: {}
 - name: playblast
   description: Capture a viewport screenshot as a base64-encoded PNG via playblast (off-screen).
     Frame is passed as a proper Maya time range; width and height are clamped to reduce
@@ -158,17 +210,154 @@ tools:
         minimum: 1
         maximum: 100
         default: 100
+- name: playblast_to_mp4
+  description: Capture a playblast sequence and encode to MP4 with
+    ffmpeg. Use for animation previews; requires ffmpeg on PATH.
+  execution: async
+  affinity: main
+  timeout_hint_secs: 600
+  annotations:
+    read_only_hint: false
+    destructive_hint: false
+    idempotent_hint: false
+    open_world_hint: false
+  group: rendering
+  input_schema:
+    type: object
+    properties:
+      output_dir:
+        type: string
+      prefix:
+        type: string
+        default: mcp_playblast
+      start_frame:
+        type: number
+      end_frame:
+        type: number
+      width:
+        type: integer
+        minimum: 1
+        maximum: 8192
+        default: 1920
+      height:
+        type: integer
+        minimum: 1
+        maximum: 8192
+        default: 1080
+      percent:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 100
+      fps:
+        type: integer
+        minimum: 1
+        maximum: 240
+        default: 24
+      off_screen:
+        type: boolean
+      show_ornaments:
+        type: boolean
+        default: false
+      output_path:
+        type: string
+      keep_frames:
+        type: boolean
+        default: false
+      overwrite:
+        type: boolean
+        default: true
+- name: render_frame
+  description: Render one frame to disk with the active renderer and
+    optional base64 output. Uses Arnold when available, falls back
+    to cmds.render.
+  execution: async
+  affinity: main
+  timeout_hint_secs: 600
+  annotations:
+    read_only_hint: false
+    destructive_hint: false
+    idempotent_hint: false
+    open_world_hint: false
+  group: rendering
+  input_schema:
+    type: object
+    properties:
+      camera:
+        type: string
+        description: Camera transform or shape to render. Defaults to the first renderable
+          camera, then persp.
+      frame:
+        type: number
+        description: Frame to render; defaults to current time.
+      width:
+        type: integer
+        minimum: 1
+        maximum: 8192
+        description: Optional render width override.
+      height:
+        type: integer
+        minimum: 1
+        maximum: 8192
+        description: Optional render height override.
+      output_dir:
+        type: string
+        description: Directory for rendered output. Defaults to the workspace images rule
+          or a temporary directory.
+      output_name:
+        type: string
+        description: Output filename prefix; sanitized before use.
+      return_base64:
+        type: boolean
+        default: true
+        description: Include base64 image bytes in context.image_base64.
 - name: set_render_quality
-  description: Set render quality settings in the current Maya scene.
+  description: Apply a render quality preset (low/medium/high) to the Maya defaultRenderQuality node.
   execution: sync
   affinity: main
   annotations:
     idempotent_hint: true
   group: rendering
+  input_schema:
+    type: object
+    properties:
+      preset:
+        type: string
+        enum:
+        - low
+        - medium
+        - high
+        default: medium
 - name: set_render_settings
-  description: Set render parameters (resolution, frame range, renderer, image format)
+  description: Set render parameters (resolution, frame range, renderer, image format, output path).
   execution: sync
   affinity: main
   annotations:
     idempotent_hint: true
   group: rendering
+  input_schema:
+    type: object
+    properties:
+      width:
+        type: integer
+        minimum: 1
+        description: Render width in pixels.
+      height:
+        type: integer
+        minimum: 1
+        description: Render height in pixels.
+      start_frame:
+        type: number
+        description: Animation start frame.
+      end_frame:
+        type: number
+        description: Animation end frame.
+      renderer:
+        type: string
+        description: Render engine name (e.g. mayaSoftware, arnold, vray).
+      image_format:
+        type: string
+        description: Image format (e.g. png, exr, jpg, tiff).
+      output_path:
+        type: string
+        description: Output directory path for rendered images.

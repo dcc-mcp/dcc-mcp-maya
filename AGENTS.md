@@ -7,10 +7,10 @@
 
 ## 30-Second Summary
 
-`dcc-mcp-maya` embeds a standards-compliant MCP Streamable HTTP server directly inside Autodesk Maya. It exposes 198 Maya operations as MCP tools that any AI agent (Claude, Cursor, Gemini, etc.) can call over HTTP — no external gateway, no subprocess bridge.
+`dcc-mcp-maya` embeds a standards-compliant MCP Streamable HTTP server directly inside Autodesk Maya. It exposes 72+ Maya operations as MCP tools that any AI agent (Claude, Cursor, Gemini, etc.) can call over HTTP — no external gateway, no subprocess bridge.
 
-**Current version:** 0.4.1 <!-- x-release-please-version -->
-**Core dependency:** `dcc-mcp-core>=0.17.35,<1.0.0`
+**Current version:** 0.8.16 <!-- x-release-please-version -->
+**Core dependency:** `dcc-mcp-core>=0.18.36,<1.0.0`
 **Python:** 3.7+
 **Maya:** 2020+
 
@@ -409,7 +409,7 @@ A: Poll `check_maya_cancelled()` inside the loop. It raises `CancelledError` whe
 A: Same API — `dcc_mcp_maya.start_server(port=0)`. In batch mode the `MayaStandaloneDispatcher` runs jobs on the calling thread directly.
 
 **Q: Where are the built-in skills?**  
-A: `src/dcc_mcp_maya/skills/` (25 packages, 195 scripts, 198 tool declarations). Each package contains `SKILL.md`, `tools.yaml`, optional `groups.yaml`, and `scripts/*.py`.
+A: `src/dcc_mcp_maya/skills/` (25 packages, 195 scripts, 72+ MCP tools). Each package contains `SKILL.md`, `tools.yaml`, optional `groups.yaml`, and `scripts/*.py`.
 
 **Q: How do I force agents to stop using ``execute_python``?**  
 A: Set ``DCC_MCP_MAYA_DISABLE_EXECUTE_PYTHON=1`` (Python only) or ``DCC_MCP_MAYA_DISABLE_ARBITRARY_SCRIPT=1`` (Python + MEL). Callers get a structured error that points to ``load_skill`` + typed tools.
@@ -445,7 +445,7 @@ Bugs that only reproduce through the **gateway REST** surface (`/v1/search`, `/v
 | `src/dcc_mcp_maya/dispatcher/` | Thread-affinity dispatchers + cancellation (directory module) |
 | `src/dcc_mcp_maya/api.py` | Skill authoring helpers |
 | `src/dcc_mcp_maya/plugin.py` | Maya plugin (`initializePlugin` / menu) |
-| `src/dcc_mcp_maya/skills/` | 25 built-in skill packages, 195 scripts |
+| `src/dcc_mcp_maya/skills/` | 26 built-in skill packages, 195 scripts |
 | `docs/guide/local-mcp-debug.md` | Cursor / Claude MCP URL + **debugpy** remote attach for Maya |
 | `examples/mcp/` | MCP host JSON snippets (e.g. `cursor-maya-streamable-http.json`) |
 | `tools/maya-dev-build-link-core-win.ps1` | Windows: `maturin develop` core with mayapy (`abi3-py38` for mayapy 3.8+ to match PyPI wheels; non-abi3 for Maya 2022 / 3.7) + symlink into `Documents/maya/modules` |
