@@ -1,0 +1,128 @@
+name: Version Consistency Check
+
+# Verifies that all version-bearing files agree on the same version.
+# Triggers on any PR that modifies a version-bearing file.
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+    branches: [main]
+    paths:
+      - "Cargo.toml"
+      - "pyproject.toml"
+      - ".release-please-manifest.json"
+      - "**/__version__.py"
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  version-consistency:
+    name: Check version consistency across files
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Check version consistency
+        run: |
+          python - <<'PY'
+          import json
+          import sys
+          import tomllib
+          from pathlib import Path
+
+          errors = []
+          warnings = []
+
+          # Read the manifest version (source of truth for release-please)
+          manifest_path = Path(".release-please-manifest.json")
+          if not manifest_path.exists():
+              print("::warning::No .release-please-manifest.json found; skipping version check.")
+              sys.exit(0)
+
+          manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+          manifest_version = manifest.get(".")
+          if not manifest_version:
+              print("::error::Missing root package version in .release-please-manifest.json")
+              sys.exit(1)
+
+          print(f"Manifest version (source of truth): {manifest_version}")
+
+          # Check Cargo.toml workspace version (if present)
+          cargo_path = Path("Cargo.toml")
+          if cargo_path.exists():
+              cargo = tomllib.loads(cargo_path.read_text(encoding="utf-8"))
+              cargo_version = cargo.get("workspace", {}).get("package", {}).get("version")
+              if cargo_version is not None:
+                  if cargo_version != manifest_version:
+                      errors.append(
+                          f"Cargo.toml workspace.package.version={cargo_version!r} "
+                          f"!= manifest {manifest_version!r}"
+                      )
+                  else:
+                      print(f"  Cargo.toml: {cargo_version} ✓")
+
+          # Check pyproject.toml project version
+          pyproject_path = Path("pyproject.toml")
+          if pyproject_path.exists():
+              pyproject = tomllib.loads(pyproject_path.read_text(encoding="utf-8"))
+              py_version = pyproject.get("project", {}).get("version")
+              if py_version is not None:
+                  if py_version != manifest_version:
+                      errors.append(
+                          f"pyproject.toml project.version={py_version!r} "
+                          f"!= manifest {manifest_version!r}"
+                      )
+                  else:
+                      print(f"  pyproject.toml: {py_version} ✓")
+
+          # Check sub-package pyproject.toml files
+          for sub_pyproject in Path("pkg").glob("*/pyproject.toml") if Path("pkg").exists() else []:
+              sub = tomllib.loads(sub_pyproject.read_text(encoding="utf-8"))
+              sub_version = sub.get("project", {}).get("version")
+              if sub_version is not None:
+                  if sub_version != manifest_version:
+                      errors.append(
+                          f"{sub_pyproject}: version={sub_version!r} != manifest {manifest_version!r}"
+                      )
+                  else:
+                      print(f"  {sub_pyproject}: {sub_version} ✓")
+
+          # Check any __version__.py files
+          import re
+          for version_py in Path(".").rglob("__version__.py"):
+              if ".git" in version_py.parts:
+                  continue
+              content = version_py.read_text(encoding="utf-8")
+              match = re.search(r'__version__\s*=\s*["\']([^"\']+)["\']', content)
+              if match:
+                  file_version = match.group(1)
+                  if file_version != manifest_version:
+                      warnings.append(
+                          f"{version_py}: __version__={file_version!r} != manifest {manifest_version!r}"
+                      )
+                  else:
+                      print(f"  {version_py}: {file_version} ✓")
+
+          if warnings:
+              for w in warnings:
+                  print(f"::warning::{w}")
+
+          if errors:
+              for e in errors:
+                  print(f"::error::{e}")
+              print(
+                  "::error::Version mismatch detected. All version-bearing files must agree."
+              )
+              sys.exit(1)
+
+          print("Version consistency check passed.")
+          PY

@@ -1,0 +1,42 @@
+name: Release Please Divergence Gate
+
+# Catches stale release-please branches before they can corrupt main.
+# Fails if the release-please branch has drifted more than 5 commits
+# ahead of origin/main.
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  divergence-check:
+    name: Check branch divergence from main
+    runs-on: ubuntu-latest
+    # Only run on release-please branches
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      startsWith(github.event.pull_request.head.ref, 'release-please--branches--main')
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Check divergence from main
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git fetch origin main
+          DIVERGENCE=$(git rev-list --count origin/main..HEAD)
+          echo "Branch is ${DIVERGENCE} commit(s) ahead of origin/main"
+          if [ "${DIVERGENCE}" -gt 5 ]; then
+            echo "::error::Release-please branch diverged by ${DIVERGENCE} commits from main (max 5)." \
+                 " Close and re-open the release PR to regenerate it from the current main."
+            exit 1
+          fi
+          echo "Divergence check passed: ${DIVERGENCE}/5 commits ahead of main."
