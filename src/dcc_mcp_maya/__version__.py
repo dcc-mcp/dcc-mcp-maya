@@ -1,1 +1,1 @@
-__version__ = "0.8.16"  # x-release-please-version
+__version__ = "0.9.0"  # x-release-please-version
