@@ -509,8 +509,14 @@ class MayaMcpServer(DccServerBase):
         return self
 
     def _register_core_builtin_actions(self, context: Any) -> None:
+        """Run core skill discovery without re-entering Maya's phase pipeline."""
+        minimal_mode = self._build_minimal_mode_config(context.minimal)
         self._configure_skill_load_transform()
-        super()._register_core_builtin_actions(context)
+        super().register_builtin_actions(
+            extra_skill_paths=context.extra_skill_paths,
+            include_bundled=context.include_bundled,
+            minimal_mode=minimal_mode,
+        )
 
     def _uses_standalone_affinity_override(self) -> bool:
         dispatcher = getattr(self, "_host_dispatcher", None)
