@@ -41,7 +41,6 @@ from dcc_mcp_maya import (
     _executor,
     _project_tools,
     _readiness,
-    _registration,
     _resources,
     _skill_loader,
     _transport,
@@ -492,15 +491,14 @@ class MayaMcpServer(DccServerBase):
         strict_scan: Optional[bool] = None,
     ) -> "MayaMcpServer":
         """Discover Maya skills and attach Maya-specific core integrations."""
-        context = _registration.RegistrationContext(
-            server=self,
+        minimal_mode = self._build_minimal_mode_config(minimal)
+        report = self.run_registration(
             extra_skill_paths=extra_skill_paths,
             include_bundled=include_bundled,
             minimal=minimal,
+            minimal_mode=minimal_mode,
             strict_scan=strict_scan,
         )
-        report = _registration.run_registration_phases(_registration.default_registration_phases(), context)
-        self._registration_report = report
         logger.info(
             "[%s] builtin action registration completed success=%s phases=%s elapsed=%.3fs",
             self._dcc_name,
@@ -510,10 +508,10 @@ class MayaMcpServer(DccServerBase):
         )
         return self
 
-    def _register_core_builtin_actions(self, context: _registration.RegistrationContext) -> None:
+    def _register_core_builtin_actions(self, context: Any) -> None:
+        """Run core skill discovery without re-entering Maya's phase pipeline."""
         minimal_mode = self._build_minimal_mode_config(context.minimal)
         self._configure_skill_load_transform()
-
         super().register_builtin_actions(
             extra_skill_paths=context.extra_skill_paths,
             include_bundled=context.include_bundled,
@@ -549,73 +547,30 @@ class MayaMcpServer(DccServerBase):
         if changed:
             setattr(skill, "tools", tools)
 
-    def _register_metadata_driven_tools(self, context: _registration.RegistrationContext) -> None:
-        """Register ``recipes__*`` and ``skill_refs__*`` via core's metadata registration helper.
-
-        Core 0.17.38+ already registered stubs during ``DccServerBase.__init__``
-        with an empty skill list.  This phase re-registers with the actual
-        scanned skill set so ``metadata.dcc-mcp.recipes`` and sibling
-        reference docs are visible.  Registration is idempotent.
-
-        Uses :func:`dcc_mcp_core.metadata_registration.register_metadata_driven_tools`
-        (0.17.34+) which scans skills once and applies both extensions.
-        """
-        try:
-            from dcc_mcp_core.metadata_registration import register_metadata_driven_tools
-        except ImportError as exc:
-            logger.debug("[%s] metadata_driven_tools skipped (import): %s", self._dcc_name, exc)
-            return
-        paths = self.collect_skill_search_paths(
-            extra_paths=context.extra_skill_paths,
-            include_bundled=context.include_bundled,
-            filter_existing=True,
-        )
-        try:
-            report = register_metadata_driven_tools(
-                self._server,
-                dcc_name=self._dcc_name,
-                extra_paths=paths,
-            )
-        except Exception as exc:  # noqa: BLE001
-            logger.debug("[%s] metadata_driven_tools registration failed: %s", self._dcc_name, exc)
-            return
-        if not report.ok:
-            logger.debug(
-                "[%s] metadata_driven_tools: %d registered, %d skipped, %d failed",
-                self._dcc_name,
-                report.registered_count,
-                report.skipped_count,
-                report.failed_count,
-            )
-
     def _build_minimal_mode_config(self, minimal: Optional[bool]) -> Any:
         """Return Maya's core MinimalModeConfig or ``None`` for full mode."""
         if minimal is False:
             return None
         return _skill_loader.build_minimal_mode_config()
 
-    def _run_strict_skill_scan_if_enabled(
-        self,
-        strict_scan: Optional[bool],
-        extra_skill_paths: Optional[List[str]],
-        include_bundled: bool,
-    ) -> None:
-        if _env.resolve_strict_skill_scan(strict_scan):
-            self._strict_skill_scan(extra_skill_paths, include_bundled)
+    def _run_strict_skill_scan_phase(self, context: Any) -> None:
+        # Core's StrictSkillScanPhase calls this hook by name.
+        if _env.resolve_strict_skill_scan(context.strict_scan):
+            self._strict_skill_scan(context.extra_skill_paths, context.include_bundled)
 
-    def _register_capability_manifest_tool(self) -> None:
+    def _register_capability_manifest_tool(self, context: Any) -> None:
         try:
             register_capability_mcp_tool(self, builder=self._capability_builder)
         except Exception as exc:  # noqa: BLE001
             logger.debug("[%s] capability manifest MCP tool registration failed: %s", "maya", exc)
 
-    def _attach_project_tools(self) -> None:
+    def _attach_project_tools(self, context: Any) -> None:
         try:
             self._project_tools = _project_tools.attach_to_server(self)
         except Exception as exc:  # noqa: BLE001
             logger.debug("[%s] project tools registration failed: %s", "maya", exc)
 
-    def _attach_resources(self) -> None:
+    def _attach_resources(self, context: Any) -> None:
         try:
             self._resources = _resources.install_resources(
                 self,

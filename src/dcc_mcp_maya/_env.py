@@ -50,6 +50,10 @@ ENV_DISABLE_EXECUTE_MEL = "DCC_MCP_MAYA_DISABLE_EXECUTE_MEL"
 #: Applied by core ``DccServerBase`` (``dcc-mcp-core>=0.17.3``); discovery via
 #: ``search_tools``, capability manifest, or gateway ``/v1/search``.
 ENV_EXCLUDE_STUBS_FROM_TOOLS_LIST = "DCC_MCP_MAYA_EXCLUDE_STUBS_FROM_TOOLS_LIST"
+#: Env var that disables project-tools registration.  ``"0"`` → disabled,
+#: anything else (including unset) → enabled.
+ENV_PROJECT_TOOLS = "DCC_MCP_MAYA_PROJECT_TOOLS"
+
 #: Default SQLite filename inside the platform data directory.
 DEFAULT_JOB_DB_FILENAME = "jobs.db"
 
@@ -198,3 +202,17 @@ def resolve_enable_gateway_failover(
     if raw:
         return _env_truthy(ENV_ENABLE_GATEWAY_FAILOVER)
     return bool(default)
+
+
+def resolve_project_tools_enabled(flag: bool | None = None) -> bool:
+    """Resolve whether project tools should be wired in.
+
+    Priority: explicit ``flag`` argument > ``DCC_MCP_MAYA_PROJECT_TOOLS``
+    env var (``"0"`` disables) > ``True``.
+    """
+    if flag is not None:
+        return bool(flag)
+    raw = os.environ.get(ENV_PROJECT_TOOLS)
+    if raw is None:
+        return True
+    return raw.strip() != "0"

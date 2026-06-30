@@ -113,6 +113,7 @@ def _skill(name: str, *, tags: List[str] = None, summary: str = "") -> Dict[str,
 
 def test_builder_empty_catalog_returns_empty_records():
     builder = MayaCapabilityManifestBuilder(
+        "maya",
         skill_lister=lambda: [],
         action_lister=lambda: [],
         is_loaded=lambda _: False,
@@ -124,7 +125,7 @@ def test_builder_tolerates_missing_lister_callables():
     # When no injection is provided, the builder must still return a list
     # (empty) instead of raising — used during bootstrap before the
     # catalog has finished initialising.
-    builder = MayaCapabilityManifestBuilder()
+    builder = MayaCapabilityManifestBuilder("maya")
     assert builder.build() == []
 
 
@@ -168,6 +169,7 @@ def test_builder_projects_loaded_and_unloaded_actions():
     loaded = {"maya-scene", "maya-scripting"}
 
     builder = MayaCapabilityManifestBuilder(
+        "maya",
         skill_lister=lambda: skills,
         action_lister=lambda: actions,
         is_loaded=lambda name: name in loaded,
@@ -202,6 +204,7 @@ def test_builder_drops_skill_and_group_stubs():
         _action("__group__maya-render.extended", skill="maya-render"),
     ]
     builder = MayaCapabilityManifestBuilder(
+        "maya",
         skill_lister=lambda: [_skill("maya-scene")],
         action_lister=lambda: actions,
         is_loaded=lambda _: False,
@@ -214,6 +217,7 @@ def test_builder_truncates_long_summary():
     long = "x" * 500
     actions = [_action("maya_scene__new_scene", skill="maya-scene", summary=long)]
     builder = MayaCapabilityManifestBuilder(
+        "maya",
         skill_lister=lambda: [_skill("maya-scene")],
         action_lister=lambda: actions,
         is_loaded=lambda _: True,
@@ -229,6 +233,7 @@ def test_builder_survives_lister_exceptions():
         raise RuntimeError("catalog broken")
 
     builder = MayaCapabilityManifestBuilder(
+        "maya",
         skill_lister=boom,
         action_lister=boom,
         is_loaded=lambda _: False,
@@ -241,6 +246,7 @@ def test_builder_infers_skill_from_tool_name_convention():
     # the standard ``{skill}__{script}`` convention.
     actions = [_action("maya_scene__new_scene")]
     builder = MayaCapabilityManifestBuilder(
+        "maya",
         skill_lister=lambda: [],
         action_lister=lambda: actions,
         is_loaded=lambda _: False,
@@ -295,6 +301,7 @@ def test_build_manifest_payload_headers_and_totals():
     ]
     payload = build_manifest_payload(
         records,
+        dcc_name="maya",
         dcc_version="2025",
         scene="/a.ma",
         instance_id="abc123",
@@ -317,7 +324,7 @@ def test_build_manifest_payload_headers_and_totals():
 
 
 def test_build_manifest_payload_strips_none_metadata():
-    payload = build_manifest_payload([], dcc_version=None, scene="", instance_id=None)
+    payload = build_manifest_payload([], dcc_name="maya", dcc_version=None, scene="", instance_id=None)
     # None / empty-string values dropped — keeps the gateway payload compact.
     assert "dcc_version" not in payload["metadata"]
     assert "scene" not in payload["metadata"]
@@ -351,6 +358,7 @@ class _FakeInner:
 def test_register_capability_mcp_tool_returns_manifest_via_handler():
     inner = _FakeInner()
     builder = MayaCapabilityManifestBuilder(
+        "maya",
         skill_lister=lambda: [_skill("maya-scene")],
         action_lister=lambda: [_action("maya_scene__new_scene", skill="maya-scene")],
         is_loaded=lambda _: True,
@@ -407,6 +415,7 @@ def test_builder_projects_unloaded_skills_with_load_hint():
     }
 
     builder = MayaCapabilityManifestBuilder(
+        "maya",
         skill_lister=lambda: skills,
         action_lister=lambda: actions,
         is_loaded=lambda name: name == "maya-scene",
@@ -466,12 +475,13 @@ def test_manifest_totals_report_unloaded_counts():
         },
     }
     builder = MayaCapabilityManifestBuilder(
+        "maya",
         skill_lister=lambda: skills,
         action_lister=lambda: actions,
         is_loaded=lambda name: name == "maya-scene",
         skill_info_lister=lambda name: skill_info_map.get(name),
     )
-    payload = build_manifest_payload(builder.build())
+    payload = build_manifest_payload(builder.build(), dcc_name="maya")
     assert payload["totals"]["loaded_actions"] == 1
     assert payload["totals"]["unloaded_actions"] == 3
     assert payload["totals"]["unloaded_skills"] == 2
@@ -484,6 +494,7 @@ def test_unloaded_records_preserve_callable_id_exact_match():
         "maya-geometry": {"tools": [{"name": "export_fbx", "execution": "async", "timeout_hint_secs": 300}]},
     }
     builder = MayaCapabilityManifestBuilder(
+        "maya",
         skill_lister=lambda: skills,
         action_lister=lambda: [],
         is_loaded=lambda _: False,
@@ -506,6 +517,7 @@ def test_unloaded_records_preserve_callable_id_exact_match():
 def test_register_capability_mcp_tool_honours_loaded_only_param():
     inner = _FakeInner()
     builder = MayaCapabilityManifestBuilder(
+        "maya",
         skill_lister=lambda: [_skill("maya-scene"), _skill("maya-render")],
         action_lister=lambda: [
             _action("maya_scene__new_scene", skill="maya-scene"),
@@ -531,5 +543,5 @@ def test_register_capability_mcp_tool_honours_loaded_only_param():
 def test_register_capability_mcp_tool_missing_inner_returns_false():
     fake_server = MagicMock()
     fake_server._server = None
-    builder = MayaCapabilityManifestBuilder()
+    builder = MayaCapabilityManifestBuilder("maya")
     assert register_capability_mcp_tool(fake_server, builder=builder) is False

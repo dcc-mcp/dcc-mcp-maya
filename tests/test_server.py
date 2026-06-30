@@ -337,10 +337,12 @@ class TestMayaMcpServerApi:
 
     def test_core_builtin_registration_uses_normal_minimal_mode_path(self):
         """Core-owned minimal-mode loading should not require local skill manifest rewriting."""
+        from dcc_mcp_maya import _registration
+
         srv_mod = _import_server()
         server = srv_mod.MayaMcpServer(port=0, enable_gateway_failover=False, gateway_port=0)
         try:
-            context = srv_mod._registration.RegistrationContext(
+            context = _registration.RegistrationContext(
                 server=server,
                 extra_skill_paths=[_builtin_skills_dir()],
                 include_bundled=True,

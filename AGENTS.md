@@ -437,7 +437,6 @@ Bugs that only reproduce through the **gateway REST** surface (`/v1/search`, `/v
 | `src/dcc_mcp_maya/_transport.py` | `TransportManager` wrappers (bind / find / rank) |
 | `src/dcc_mcp_maya/_pyexec.py` | Auto-correct `DCC_MCP_PYTHON_EXECUTABLE` (issue #125) |
 | `src/dcc_mcp_maya/_stale_cleanup.py` | Stale FileRegistry detection + warning (issue #126) |
-| `src/dcc_mcp_maya/_project_tools.py` | `register_project_tools` integration — `project_save/load/resume/status` MCP tools (issue #576 / core 0.14.21; underscore names from core 0.17.23) |
 | `src/dcc_mcp_maya/_readiness.py` | Three-state readiness probe (`process` / `dispatcher` / `dcc`) — honest `/v1/readyz` signal during Maya boot (issue #184) |
 | `src/dcc_mcp_maya/_recovery_dialog.py` | Qt-level Maya recovery dialog detector — optional auto-dismiss + `maya_recovered` status in results/context (issue #241) |
 | `src/dcc_mcp_maya/_resources.py` | `MayaResourceBinder` — `scene://current` snapshot + `maya-cmds://` / `maya-api://` / `maya-project://` producers (issue #187 / core 0.15.0) |
