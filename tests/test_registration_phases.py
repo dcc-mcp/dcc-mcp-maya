@@ -25,11 +25,15 @@ def test_default_registration_phases_are_ordered() -> None:
     names = [phase.name for phase in _registration.default_registration_phases()]
     assert names == [
         "core_builtin_actions",
-        "metadata_driven_tools",
         "strict_skill_scan",
+        "metadata_driven_tools",
+        "introspect_tools",
+        "feedback_tool",
+        "qt_ui_inspector",
         "capability_manifest",
         "project_tools",
         "resources",
+        "skill_catalog_ready",
     ]
 
 
@@ -76,8 +80,11 @@ def test_phase_methods_delegate_to_server() -> None:
         phase.run(context)
 
     server._register_core_builtin_actions.assert_called_once_with(context)
-    server._register_metadata_driven_tools.assert_called_once_with(context)
     server._run_strict_skill_scan_if_enabled.assert_called_once_with(True, ["extras"], False)
+    server._register_metadata_driven_tools.assert_called_once_with(context)
+    server._register_introspect_tools.assert_called_once_with()
+    server._register_feedback_tool.assert_called_once_with()
     server._register_capability_manifest_tool.assert_called_once_with()
     server._attach_project_tools.assert_called_once_with()
     server._attach_resources.assert_called_once_with()
+    server._mark_skill_catalog_ready.assert_called_once_with()

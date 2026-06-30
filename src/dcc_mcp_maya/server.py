@@ -496,15 +496,14 @@ class MayaMcpServer(DccServerBase):
         strict_scan: Optional[bool] = None,
     ) -> "MayaMcpServer":
         """Discover Maya skills and attach Maya-specific core integrations."""
-        context = _registration.RegistrationContext(
-            server=self,
+        minimal_mode = self._build_minimal_mode_config(minimal)
+        report = self.run_registration(
             extra_skill_paths=extra_skill_paths,
             include_bundled=include_bundled,
             minimal=minimal,
+            minimal_mode=minimal_mode,
             strict_scan=strict_scan,
         )
-        report = _registration.run_registration_phases(_registration.default_registration_phases(), context)
-        self._registration_report = report
         logger.info(
             "[%s] builtin action registration completed success=%s phases=%s elapsed=%.3fs",
             self._dcc_name,
@@ -514,15 +513,9 @@ class MayaMcpServer(DccServerBase):
         )
         return self
 
-    def _register_core_builtin_actions(self, context: _registration.RegistrationContext) -> None:
-        minimal_mode = self._build_minimal_mode_config(context.minimal)
+    def _register_core_builtin_actions(self, context: Any) -> None:
         self._configure_skill_load_transform()
-
-        super().register_builtin_actions(
-            extra_skill_paths=context.extra_skill_paths,
-            include_bundled=context.include_bundled,
-            minimal_mode=minimal_mode,
-        )
+        super()._register_core_builtin_actions(context)
 
     def _uses_standalone_affinity_override(self) -> bool:
         dispatcher = getattr(self, "_host_dispatcher", None)
@@ -552,45 +545,6 @@ class MayaMcpServer(DccServerBase):
             changed = True
         if changed:
             setattr(skill, "tools", tools)
-
-    def _register_metadata_driven_tools(self, context: _registration.RegistrationContext) -> None:
-        """Register ``recipes__*`` and ``skill_refs__*`` via core's metadata registration helper.
-
-        Core 0.17.38+ already registered stubs during ``DccServerBase.__init__``
-        with an empty skill list.  This phase re-registers with the actual
-        scanned skill set so ``metadata.dcc-mcp.recipes`` and sibling
-        reference docs are visible.  Registration is idempotent.
-
-        Uses :func:`dcc_mcp_core.metadata_registration.register_metadata_driven_tools`
-        (0.17.34+) which scans skills once and applies both extensions.
-        """
-        try:
-            from dcc_mcp_core.metadata_registration import register_metadata_driven_tools
-        except ImportError as exc:
-            logger.debug("[%s] metadata_driven_tools skipped (import): %s", self._dcc_name, exc)
-            return
-        paths = self.collect_skill_search_paths(
-            extra_paths=context.extra_skill_paths,
-            include_bundled=context.include_bundled,
-            filter_existing=True,
-        )
-        try:
-            report = register_metadata_driven_tools(
-                self._server,
-                dcc_name=self._dcc_name,
-                extra_paths=paths,
-            )
-        except Exception as exc:  # noqa: BLE001
-            logger.debug("[%s] metadata_driven_tools registration failed: %s", self._dcc_name, exc)
-            return
-        if not report.ok:
-            logger.debug(
-                "[%s] metadata_driven_tools: %d registered, %d skipped, %d failed",
-                self._dcc_name,
-                report.registered_count,
-                report.skipped_count,
-                report.failed_count,
-            )
 
     def _build_minimal_mode_config(self, minimal: Optional[bool]) -> Any:
         """Return Maya's core MinimalModeConfig or ``None`` for full mode."""
