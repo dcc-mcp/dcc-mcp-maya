@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.9.1](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.0...v0.9.1) (2026-06-30)
+
+
+### Bug Fixes
+
+* lint + strict-scan hook wiring for shared registration pipeline (PIP-689) ([4106b1c](https://github.com/dcc-mcp/dcc-mcp-maya/commit/4106b1c96e51bc6e88f3f424a9e0c35bb9c0bad4))
+* restore local capability/project modules after premature core migration ([b0ad010](https://github.com/dcc-mcp/dcc-mcp-maya/commit/b0ad010614bb6c177238a5d1383a72efd8d8631e))
+* stop registration phase recursion in core builtin hook ([8d1a743](https://github.com/dcc-mcp/dcc-mcp-maya/commit/8d1a743fd0700ec83a637aa5ab282b5a1691adf8))
+
+
+### Code Refactoring
+
+* migrate builtin registration to shared core pipeline (PIP-689) ([f6b54f7](https://github.com/dcc-mcp/dcc-mcp-maya/commit/f6b54f7be09e3e90ebb09001d79fd52a54b587c2))
+* migrate builtin registration to shared core pipeline (PIP-689) ([89adc14](https://github.com/dcc-mcp/dcc-mcp-maya/commit/89adc14f4b80879a5ca0fd10a5f2a8bce5848cf6))
+* migrate to canonical registration hooks (PIP-689) ([3e547a7](https://github.com/dcc-mcp/dcc-mcp-maya/commit/3e547a7924d2a3cf3ef872e4e3f40a7d37d781a6))
+* use core abstractions for host modules (PIP-684) ([6e71360](https://github.com/dcc-mcp/dcc-mcp-maya/commit/6e71360bb46614eae9c3fa44cdb09e5f7607d3f7))
+
 ## [0.9.0](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.8.16...v0.9.0) (2026-06-27)
 
 
