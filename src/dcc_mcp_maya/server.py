@@ -552,25 +552,11 @@ class MayaMcpServer(DccServerBase):
         return _skill_loader.build_minimal_mode_config()
 
     def _run_strict_skill_scan_phase(self, context: Any) -> None:
-        # Core's StrictSkillScanPhase calls this hook by name; route it to the
-        # Maya strict-scan helper so the integration is not shadowed by the
-        # base-class no-op.
-        self._run_strict_skill_scan_if_enabled(
-            context.strict_scan,
-            context.extra_skill_paths,
-            context.include_bundled,
-        )
+        # Core's StrictSkillScanPhase calls this hook by name.
+        if _env.resolve_strict_skill_scan(context.strict_scan):
+            self._strict_skill_scan(context.extra_skill_paths, context.include_bundled)
 
-    def _run_strict_skill_scan_if_enabled(
-        self,
-        strict_scan: Optional[bool],
-        extra_skill_paths: Optional[List[str]],
-        include_bundled: bool,
-    ) -> None:
-        if _env.resolve_strict_skill_scan(strict_scan):
-            self._strict_skill_scan(extra_skill_paths, include_bundled)
-
-    def _register_capability_manifest_tool(self) -> None:
+    def _register_capability_manifest_tool(self, context: Any) -> None:
         try:
             register_capability_mcp_tool(
                 self,
@@ -581,7 +567,7 @@ class MayaMcpServer(DccServerBase):
         except Exception as exc:  # noqa: BLE001
             logger.debug("[%s] capability manifest MCP tool registration failed: %s", "maya", exc)
 
-    def _attach_project_tools(self) -> None:
+    def _attach_project_tools(self, context: Any) -> None:
         try:
             self._project_tools = attach_project_tools(
                 self,
@@ -592,7 +578,7 @@ class MayaMcpServer(DccServerBase):
         except Exception as exc:  # noqa: BLE001
             logger.debug("[%s] project tools registration failed: %s", "maya", exc)
 
-    def _attach_resources(self) -> None:
+    def _attach_resources(self, context: Any) -> None:
         try:
             self._resources = _resources.install_resources(
                 self,
