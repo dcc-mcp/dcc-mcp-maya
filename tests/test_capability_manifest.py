@@ -24,13 +24,13 @@ from __future__ import annotations
 from typing import Any, Dict, List
 from unittest.mock import MagicMock
 
-from dcc_mcp_maya import (
+from dcc_mcp_maya.capability_manifest import (
     CapabilityRecord,
     MayaCapabilityManifestBuilder,
+    _as_dict,
     build_manifest_payload,
     register_capability_mcp_tool,
 )
-from dcc_mcp_core.capabilities import _as_dict
 
 # ---------------------------------------------------------------------------
 # _as_dict fallback conversion
@@ -367,7 +367,7 @@ def test_register_capability_mcp_tool_returns_manifest_via_handler():
     fake_server._server = inner
     fake_server._config = MagicMock(scene="/p/a.ma", dcc_version="2025")
 
-    ok = register_capability_mcp_tool(fake_server, builder=builder, dcc_name="maya")
+    ok = register_capability_mcp_tool(fake_server, builder=builder)
     assert ok is True
     assert "dcc_capability_manifest" in inner.handlers
     # Registry must also carry the declaration so MCP tools/list picks it up.
@@ -529,7 +529,7 @@ def test_register_capability_mcp_tool_honours_loaded_only_param():
     fake_server._server = inner
     fake_server._config = MagicMock(scene=None, dcc_version="2025")
 
-    register_capability_mcp_tool(fake_server, builder=builder, dcc_name="maya")
+    register_capability_mcp_tool(fake_server, builder=builder)
     handler = inner.handlers["dcc_capability_manifest"]
 
     full = handler({})["context"]
@@ -544,4 +544,4 @@ def test_register_capability_mcp_tool_missing_inner_returns_false():
     fake_server = MagicMock()
     fake_server._server = None
     builder = MayaCapabilityManifestBuilder("maya")
-    assert register_capability_mcp_tool(fake_server, builder=builder, dcc_name="maya") is False
+    assert register_capability_mcp_tool(fake_server, builder=builder) is False

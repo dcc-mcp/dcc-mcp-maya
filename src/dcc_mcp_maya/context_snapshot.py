@@ -41,14 +41,11 @@ from __future__ import annotations
 import logging
 import os
 from typing import Any, Callable, Dict, List, Optional
-from dcc_mcp_core import BaseSceneResolver
-
 
 logger = logging.getLogger(__name__)
 
 __all__ = [
     "MayaContextSnapshotProvider",
-    "MayaSceneResolver",
     "collect_gateway_metadata",
     "make_snapshot_provider",
 ]
@@ -291,30 +288,4 @@ def _derive_display_name(scene: Optional[str], version: Optional[str]) -> Option
         return "Maya — {}".format(basename)
     if version:
         return "Maya {}".format(version)
-
-
-# ---------------------------------------------------------------------------
-# Scene resolver
-# ---------------------------------------------------------------------------
-
-
-class MayaSceneResolver(BaseSceneResolver):
-    """Resolve the *current* Maya scene path, if one is open.
-
-    The default implementation calls ``cmds.file(query=True, sceneName=True)``
-    inside a guarded import block so this module remains usable outside Maya.
-    """
-
-    def current_scene(self) -> str | None:
-        """Return the absolute scene path, or ``None`` when unavailable."""
-        try:
-            import maya.cmds as cmds  # noqa: PLC0415
-        except Exception:  # noqa: BLE001 — Maya unavailable
-            return None
-        try:
-            scene = cmds.file(query=True, sceneName=True)
-        except Exception as exc:  # noqa: BLE001 — Maya in odd state
-            logger.debug("MayaSceneResolver: cmds.file() failed: %s", exc)
-            return None
-        scene = (scene or "").strip()
-        return scene or None
+    return None

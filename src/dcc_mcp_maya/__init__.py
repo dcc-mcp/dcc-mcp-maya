@@ -38,18 +38,17 @@ from dcc_mcp_maya._env import (
     ENV_DISABLE_EXECUTE_MEL,
     ENV_DISABLE_EXECUTE_PYTHON,
     ENV_ENABLE_GATEWAY_FAILOVER,
-    ENV_PROJECT_TOOLS,
     resolve_enable_gateway_failover,
     resolve_execute_mel_disabled,
     resolve_execute_python_disabled,
 )
-from dcc_mcp_core import (
-    CapabilityManifestBuilder as MayaCapabilityManifestBuilder,
-    CapabilityRecord,
+from dcc_mcp_maya._project_tools import (
+    ENV_PROJECT_TOOLS,
+    MayaSceneResolver,
     ProjectToolsIntegration,
-    attach_project_tools,
-    build_manifest_payload,
-    register_capability_mcp_tool,
+)
+from dcc_mcp_maya._project_tools import (
+    attach_to_server as attach_project_tools,
 )
 from dcc_mcp_maya._readiness import (
     ENV_READINESS_TIMEOUT_SECS,
@@ -131,9 +130,14 @@ from dcc_mcp_maya.api import (
     validate_node_type,
     with_maya,
 )
+from dcc_mcp_maya.capability_manifest import (
+    CapabilityRecord,
+    MayaCapabilityManifestBuilder,
+    build_manifest_payload,
+    register_capability_mcp_tool,
+)
 from dcc_mcp_maya.context_snapshot import (
     MayaContextSnapshotProvider,
-    MayaSceneResolver,
     collect_gateway_metadata,
     make_snapshot_provider,
 )
