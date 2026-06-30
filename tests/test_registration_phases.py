@@ -1,10 +1,13 @@
-"""Tests for Maya builtin registration phases."""
+"""Tests for Maya builtin registration phases.
+
+Maya re-uses the shared core phase pipeline, so these tests cover the
+Maya-facing surface only: that ``default_registration_phases()`` returns
+the standard core order, and that the re-exported executor honours the
+order / non-fatal-failure contract. Host-hook delegation and fatal-abort
+behaviour are covered in dcc-mcp-core's ``test_registration_pipeline``.
+"""
 
 from __future__ import annotations
-
-from unittest.mock import MagicMock
-
-import pytest
 
 from dcc_mcp_maya import _registration
 
@@ -16,7 +19,7 @@ class _RecordingPhase(_registration.RegistrationPhase):
         self._fail = fail
 
     def run(self, context: _registration.RegistrationContext) -> None:
-        self._calls.append((self.name, context.server))
+        self._calls.append(self.name)
         if self._fail:
             raise RuntimeError("boom")
 
@@ -38,9 +41,8 @@ def test_default_registration_phases_are_ordered() -> None:
 
 
 def test_run_registration_phases_records_success_and_failure() -> None:
-    calls = []
-    server = MagicMock()
-    context = _registration.RegistrationContext(server=server)
+    calls: list = []
+    context = _registration.RegistrationContext(server=object())
 
     report = _registration.run_registration_phases(
         [
@@ -51,40 +53,9 @@ def test_run_registration_phases_records_success_and_failure() -> None:
         context,
     )
 
+    # A non-fatal failure must not stop later phases.
+    assert calls == ["one", "two", "three"]
     assert [outcome.name for outcome in report.outcomes] == ["one", "two", "three"]
     assert [outcome.success for outcome in report.outcomes] == [True, False, True]
     assert report.success is False
     assert report.outcomes[1].error == "boom"
-    assert [call[0] for call in calls] == ["one", "two", "three"]
-
-
-def test_strict_scan_value_error_remains_fatal() -> None:
-    server = MagicMock()
-    server._run_strict_skill_scan_if_enabled.side_effect = ValueError("bad skill")
-    context = _registration.RegistrationContext(server=server, strict_scan=True)
-
-    with pytest.raises(ValueError):
-        _registration.run_registration_phases([_registration.StrictSkillScanPhase()], context)
-
-
-def test_phase_methods_delegate_to_server() -> None:
-    server = MagicMock()
-    context = _registration.RegistrationContext(
-        server=server,
-        extra_skill_paths=["extras"],
-        include_bundled=False,
-        strict_scan=True,
-    )
-
-    for phase in _registration.default_registration_phases():
-        phase.run(context)
-
-    server._register_core_builtin_actions.assert_called_once_with(context)
-    server._run_strict_skill_scan_if_enabled.assert_called_once_with(True, ["extras"], False)
-    server._register_metadata_driven_tools.assert_called_once_with(context)
-    server._register_introspect_tools.assert_called_once_with()
-    server._register_feedback_tool.assert_called_once_with()
-    server._register_capability_manifest_tool.assert_called_once_with()
-    server._attach_project_tools.assert_called_once_with()
-    server._attach_resources.assert_called_once_with()
-    server._mark_skill_catalog_ready.assert_called_once_with()

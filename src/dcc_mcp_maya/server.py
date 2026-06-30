@@ -49,7 +49,6 @@ from dcc_mcp_maya import (
     _env,
     _executor,
     _readiness,
-    _registration,
     _resources,
     _skill_loader,
     _transport,
@@ -551,6 +550,16 @@ class MayaMcpServer(DccServerBase):
         if minimal is False:
             return None
         return _skill_loader.build_minimal_mode_config()
+
+    def _run_strict_skill_scan_phase(self, context: Any) -> None:
+        # Core's StrictSkillScanPhase calls this hook by name; route it to the
+        # Maya strict-scan helper so the integration is not shadowed by the
+        # base-class no-op.
+        self._run_strict_skill_scan_if_enabled(
+            context.strict_scan,
+            context.extra_skill_paths,
+            context.include_bundled,
+        )
 
     def _run_strict_skill_scan_if_enabled(
         self,
