@@ -36,12 +36,13 @@ import pytest
 
 import dcc_mcp_maya
 from dcc_mcp_maya import (
+    ENV_PROJECT_TOOLS,
     MayaMcpServer,
     MayaSceneResolver,
     ProjectToolsIntegration,
     attach_project_tools,
 )
-from dcc_mcp_maya._project_tools import ENV_PROJECT_TOOLS, resolve_enabled
+from dcc_mcp_maya._env import resolve_project_tools_enabled as resolve_enabled
 
 # ---------------------------------------------------------------------------
 # Shared helpers
@@ -253,7 +254,7 @@ class TestProjectToolsIntegrationUnit(unittest.TestCase):
         self.assertIsNone(ProjectToolsIntegration._inner_server(_Outer()))
 
     def test_safe_resolve_scene_swallows_resolver_errors(self) -> None:
-        integration = ProjectToolsIntegration(scene_resolver=_RaisingSceneResolver())
+        integration = ProjectToolsIntegration(dcc_name="maya", scene_resolver=_RaisingSceneResolver())
         # Must NOT raise — server startup must always succeed.
         self.assertIsNone(integration._safe_resolve_scene())
 
@@ -263,12 +264,12 @@ class TestProjectToolsIntegrationUnit(unittest.TestCase):
         # location.
         with tempfile.TemporaryDirectory() as td:
             scene = os.path.join(td, "shot.ma")
-            integration = ProjectToolsIntegration(scene_resolver=_StaticSceneResolver(scene))
+            integration = ProjectToolsIntegration(dcc_name="maya", scene_resolver=_StaticSceneResolver(scene))
             resolved = integration._safe_resolve_scene()
             self.assertEqual(Path(resolved), Path(scene))
 
     def test_bind_returns_false_when_inner_server_missing(self) -> None:
-        integration = ProjectToolsIntegration(scene_resolver=_StaticSceneResolver(None))
+        integration = ProjectToolsIntegration(dcc_name="maya", scene_resolver=_StaticSceneResolver(None))
 
         class _NoInner:
             pass
@@ -282,7 +283,7 @@ class TestProjectToolsIntegrationUnit(unittest.TestCase):
     def test_attach_to_server_skipped_when_disabled(self) -> None:
         # Explicit ``enabled=False`` must short-circuit before any
         # core call so a tightly-controlled embedding host can opt out.
-        result = attach_project_tools(object(), enabled=False)
+        result = attach_project_tools(object(), dcc_name="maya", enabled=False)
         self.assertIsNone(result)
 
 

@@ -31,7 +31,16 @@ from pathlib import Path
 from typing import Any, List, Optional
 
 # Import third-party modules
-from dcc_mcp_core import DccServerOptions, HostExecutionBridge, scan_and_load_strict
+from dcc_mcp_core import (
+    CapabilityManifestBuilder,
+    DccServerOptions,
+    HostExecutionBridge,
+    ProjectToolsIntegration,
+    attach_project_tools,
+    build_manifest_payload,
+    register_capability_mcp_tool,
+    scan_and_load_strict,
+)
 from dcc_mcp_core.factory import create_dcc_server
 from dcc_mcp_core.server_base import DccServerBase
 
@@ -39,7 +48,6 @@ from dcc_mcp_core.server_base import DccServerBase
 from dcc_mcp_maya import (
     _env,
     _executor,
-    _project_tools,
     _readiness,
     _registration,
     _resources,
@@ -49,13 +57,9 @@ from dcc_mcp_maya import (
 )
 from dcc_mcp_maya.__version__ import __version__
 from dcc_mcp_maya._pyexec import auto_correct as _auto_correct_pyexec
-from dcc_mcp_maya.capability_manifest import (
-    MayaCapabilityManifestBuilder,
-    build_manifest_payload,
-    register_capability_mcp_tool,
-)
 from dcc_mcp_maya.context_snapshot import (
     MayaContextSnapshotProvider,
+    MayaSceneResolver,
     collect_gateway_metadata,
 )
 from dcc_mcp_maya.host import MayaCallableDispatcher
@@ -298,7 +302,7 @@ class MayaMcpServer(DccServerBase):
         except Exception as exc:  # noqa: BLE001
             logger.debug("[%s] set_context_snapshot_provider failed: %s", "maya", exc)
 
-        self._capability_builder: MayaCapabilityManifestBuilder = MayaCapabilityManifestBuilder(
+        self._capability_builder: CapabilityManifestBuilder = CapabilityManifestBuilder(
             dcc_name="maya",
             skill_lister=self.list_skills,
             action_lister=self.list_actions,
@@ -311,7 +315,7 @@ class MayaMcpServer(DccServerBase):
         # registry is fully wired.  ``None`` means the surface was
         # disabled by the operator (``DCC_MCP_MAYA_PROJECT_TOOLS=0``)
         # or the underlying core call failed at registration time.
-        self._project_tools: Optional[_project_tools.ProjectToolsIntegration] = None
+        self._project_tools: Optional[ProjectToolsIntegration] = None
 
         # Bind the readiness binder now that the executor and dispatcher
         # state are settled.  ``attach_dispatcher`` above may have already
@@ -605,13 +609,23 @@ class MayaMcpServer(DccServerBase):
 
     def _register_capability_manifest_tool(self) -> None:
         try:
-            register_capability_mcp_tool(self, builder=self._capability_builder)
+            register_capability_mcp_tool(
+                self,
+                builder=self._capability_builder,
+                dcc_name="maya",
+                metadata_provider=lambda: collect_gateway_metadata(self._snapshot_provider_impl),
+            )
         except Exception as exc:  # noqa: BLE001
             logger.debug("[%s] capability manifest MCP tool registration failed: %s", "maya", exc)
 
     def _attach_project_tools(self) -> None:
         try:
-            self._project_tools = _project_tools.attach_to_server(self)
+            self._project_tools = attach_project_tools(
+                self,
+                dcc_name="maya",
+                scene_resolver=MayaSceneResolver(),
+                enabled=_env.resolve_project_tools_enabled(),
+            )
         except Exception as exc:  # noqa: BLE001
             logger.debug("[%s] project tools registration failed: %s", "maya", exc)
 
