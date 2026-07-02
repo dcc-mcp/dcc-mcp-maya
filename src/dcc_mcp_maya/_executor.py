@@ -158,8 +158,12 @@ def _run_skill_script_untracked(script_path: str, params: Dict[str, Any]) -> Dic
             "message": "Skill script has no main() entry point: {}".format(script_path),
         }
 
+    # Filter gateway-internal reserved kwargs (e.g. _meta injected by the
+    # Rust ToolDispatcher) so they never leak into skill scripts whose
+    # ``main`` does not accept ``**kwargs``.
+    filtered = {k: v for k, v in params.items() if not k.startswith("_")}
     try:
-        result = main_fn(**params)
+        result = main_fn(**filtered)
         return result if isinstance(result, dict) else {"success": True, "message": str(result)}
     except SystemExit:
         return getattr(mod, "__mcp_result__", {"success": True, "message": "Script executed"})

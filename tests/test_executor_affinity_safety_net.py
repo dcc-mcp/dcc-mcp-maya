@@ -304,3 +304,111 @@ class TestEveryDeclaredAffinityHonoured:
         assert out_any["success"] is True
         q_after_any = _main_thread_queue.get_queue().status()["submitted"]
         assert q_after_any == q_after_main, "any-affinity action must NOT touch the queue"
+
+
+class TestMetaFiltering:
+    """``_meta`` and other reserved kwargs must never leak into skill scripts.
+
+    The Rust ``ToolDispatcher`` injects ``_meta`` into params so Rust
+    handlers can consume request-level context (agent_context,
+    credential_profile, etc.).  Python skill scripts must never see
+    these reserved keys — ``_run_skill_script_untracked`` filters them
+    before calling ``main(**params)``.
+    """
+
+    def test_meta_is_stripped_for_skill_without_kwargs(self, tmp_path, monkeypatch):
+        """A skill whose ``main`` does NOT accept ``**kwargs`` must not see ``_meta``."""
+        monkeypatch.setattr(_affinity, "resolve_affinity", lambda _p: "any")
+        monkeypatch.setattr(_executor, "_on_main_thread", lambda: True)
+
+        script = tmp_path / "scripts" / "no_kwargs.py"
+        script.parent.mkdir(parents=True, exist_ok=True)
+        script.write_text(
+            "def main(radius=1.0):\n"
+            "    return {'success': True, 'radius': radius}\n",
+            encoding="utf-8",
+        )
+
+        result = _executor.execute_in_process(
+            MagicMock(spec=[]),
+            str(script),
+            {"radius": 2.0, "_meta": {"agent_context": {"session_id": "abc"}}},
+            "test__no_kwargs",
+        )
+
+        assert result["success"] is True
+        assert result["radius"] == 2.0
+        # No TypeError from unexpected keyword argument.
+
+    def test_meta_is_stripped_for_skill_with_keyword_only(self, tmp_path, monkeypatch):
+        """A skill whose ``main`` uses keyword-only params must not see ``_meta``."""
+        monkeypatch.setattr(_affinity, "resolve_affinity", lambda _p: "any")
+        monkeypatch.setattr(_executor, "_on_main_thread", lambda: True)
+
+        script = tmp_path / "scripts" / "kw_only.py"
+        script.parent.mkdir(parents=True, exist_ok=True)
+        script.write_text(
+            "def main(*, name, size=1):\n"
+            "    return {'success': True, 'name': name, 'size': size}\n",
+            encoding="utf-8",
+        )
+
+        result = _executor.execute_in_process(
+            MagicMock(spec=[]),
+            str(script),
+            {"name": "cube", "size": 3, "_meta": {"agent_context": {"session_id": "xyz"}}},
+            "test__kw_only",
+        )
+
+        assert result["success"] is True
+        assert result["name"] == "cube"
+        assert result["size"] == 3
+
+    def test_meta_passthrough_for_kwargs_skill_is_unaffected(self, tmp_path, monkeypatch):
+        """A skill that accepts ``**kwargs`` should still work — ``_meta`` is
+        filtered, but other kwargs pass through normally."""
+        monkeypatch.setattr(_affinity, "resolve_affinity", lambda _p: "any")
+        monkeypatch.setattr(_executor, "_on_main_thread", lambda: True)
+
+        script = tmp_path / "scripts" / "with_kwargs.py"
+        script.parent.mkdir(parents=True, exist_ok=True)
+        script.write_text(
+            "def main(name, **kwargs):\n"
+            "    return {'success': True, 'name': name, 'extra': list(kwargs.keys())}\n",
+            encoding="utf-8",
+        )
+
+        result = _executor.execute_in_process(
+            MagicMock(spec=[]),
+            str(script),
+            {"name": "test", "color": "red", "_meta": {"agent_context": {"session_id": "abc"}}},
+            "test__with_kwargs",
+        )
+
+        assert result["success"] is True
+        assert result["name"] == "test"
+        # ``color`` passes through; ``_meta`` must be absent.
+        assert "color" in result["extra"]
+        assert "_meta" not in result["extra"]
+
+    def test_empty_params_with_meta_only(self, tmp_path, monkeypatch):
+        """When params contains only ``_meta``, the skill still runs with no args."""
+        monkeypatch.setattr(_affinity, "resolve_affinity", lambda _p: "any")
+        monkeypatch.setattr(_executor, "_on_main_thread", lambda: True)
+
+        script = tmp_path / "scripts" / "no_args.py"
+        script.parent.mkdir(parents=True, exist_ok=True)
+        script.write_text(
+            "def main():\n"
+            "    return {'success': True}\n",
+            encoding="utf-8",
+        )
+
+        result = _executor.execute_in_process(
+            MagicMock(spec=[]),
+            str(script),
+            {"_meta": {"agent_context": {"session_id": "abc"}}},
+            "test__no_args",
+        )
+
+        assert result["success"] is True
