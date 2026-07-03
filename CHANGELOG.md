@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.2](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.1...v0.9.2) (2026-07-03)
+
+
+### Bug Fixes
+
+* downgrade dcc-mcp-core minimum to &gt;=0.19.2 to unblock CI ([90351bb](https://github.com/dcc-mcp/dcc-mcp-maya/commit/90351bbe3a160c89bfb891c4e696d2ae6ca81fc0))
+
 ## [0.9.1](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.0...v0.9.1) (2026-06-30)
 
 
