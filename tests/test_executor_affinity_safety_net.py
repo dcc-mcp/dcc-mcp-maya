@@ -324,8 +324,7 @@ class TestMetaFiltering:
         script = tmp_path / "scripts" / "no_kwargs.py"
         script.parent.mkdir(parents=True, exist_ok=True)
         script.write_text(
-            "def main(radius=1.0):\n"
-            "    return {'success': True, 'radius': radius}\n",
+            "def main(radius=1.0):\n    return {'success': True, 'radius': radius}\n",
             encoding="utf-8",
         )
 
@@ -348,8 +347,7 @@ class TestMetaFiltering:
         script = tmp_path / "scripts" / "kw_only.py"
         script.parent.mkdir(parents=True, exist_ok=True)
         script.write_text(
-            "def main(*, name, size=1):\n"
-            "    return {'success': True, 'name': name, 'size': size}\n",
+            "def main(*, name, size=1):\n    return {'success': True, 'name': name, 'size': size}\n",
             encoding="utf-8",
         )
 
@@ -373,8 +371,7 @@ class TestMetaFiltering:
         script = tmp_path / "scripts" / "with_kwargs.py"
         script.parent.mkdir(parents=True, exist_ok=True)
         script.write_text(
-            "def main(name, **kwargs):\n"
-            "    return {'success': True, 'name': name, 'extra': list(kwargs.keys())}\n",
+            "def main(name, **kwargs):\n    return {'success': True, 'name': name, 'extra': list(kwargs.keys())}\n",
             encoding="utf-8",
         )
 
@@ -399,8 +396,7 @@ class TestMetaFiltering:
         script = tmp_path / "scripts" / "no_args.py"
         script.parent.mkdir(parents=True, exist_ok=True)
         script.write_text(
-            "def main():\n"
-            "    return {'success': True}\n",
+            "def main():\n    return {'success': True}\n",
             encoding="utf-8",
         )
 
