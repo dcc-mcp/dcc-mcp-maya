@@ -27,10 +27,12 @@ classifiers = [
 ]
 
 dependencies = [
-    # Release Train anchor: dcc-mcp-core/server v0.18.21 (sidecar instance-id contract).
-    # 4 lifecycle controllers + shared registration phase pipeline + gateway runtime.
+    # Adapter-level _meta filtering fix (commit 9cf9ea1) handles the fix
+    # at the Maya layer. Core v0.19.3 adds defense-in-depth at the
+    # PyToolDispatcher layer but was blocked by CI runner availability.
+    # Downgraded to >=0.19.2 for now; bump to >=0.19.3 after publish.
     # Provides abi3 (cp38+) on 3.8+; separate cp37 wheels on Python 3.7 (Maya 2022).
-    "dcc-mcp-core>=0.18.36,<1.0.0",
+    "dcc-mcp-core>=0.19.2,<1.0.0",
     "dcc-mcp-server>=0.18.21,<1.0.0",
 ]
 
