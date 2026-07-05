@@ -27,12 +27,9 @@ classifiers = [
 ]
 
 dependencies = [
-    # Adapter-level _meta filtering fix (commit 9cf9ea1) handles the fix
-    # at the Maya layer. Core v0.19.3 adds defense-in-depth at the
-    # PyToolDispatcher layer but was blocked by CI runner availability.
-    # Downgraded to >=0.19.2 for now; bump to >=0.19.3 after publish.
-    # Provides abi3 (cp38+) on 3.8+; separate cp37 wheels on Python 3.7 (Maya 2022).
-    "dcc-mcp-core>=0.19.2,<1.0.0",
+    # Core v0.19.8 adds py37-lite pure-Python fallback when Rust _core is absent
+    # (Maya 2022 / Python 3.7). Provides abi3 (cp38+) on 3.8+; py3-none-any on 3.7.
+    "dcc-mcp-core>=0.19.8,<1.0.0",
     "dcc-mcp-server>=0.18.21,<1.0.0",
 ]
 
