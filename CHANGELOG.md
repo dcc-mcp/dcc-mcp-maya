@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.3](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.2...v0.9.3) (2026-07-06)
+
+
+### Bug Fixes
+
+* **ci:** pin dcc-mcp-core for mayapy py37 wheel compat ([bba3b6e](https://github.com/dcc-mcp/dcc-mcp-maya/commit/bba3b6e08c1401390d9199f13603ae578c798d81))
+
 ## [0.9.2](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.1...v0.9.2) (2026-07-03)
 
 
