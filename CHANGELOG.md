@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.4](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.3...v0.9.4) (2026-07-06)
+
+
+### Bug Fixes
+
+* **plugin:** fallback when core host dispatchers are unavailable ([#428](https://github.com/dcc-mcp/dcc-mcp-maya/issues/428)) ([fa9de81](https://github.com/dcc-mcp/dcc-mcp-maya/commit/fa9de81f49c6932d43afe1bce79b96c41d6de23b))
+
 ## [0.9.3](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.2...v0.9.3) (2026-07-06)
 
 
