@@ -13,6 +13,7 @@ from __future__ import annotations
 import logging
 import os
 import sys
+import types
 from unittest.mock import patch
 
 # Import local modules
@@ -142,6 +143,25 @@ class TestAutoCorrect:
         assert callable(_pyexec.correct_python_executable)
         # A python interpreter must round-trip unchanged (allow Path return).
         assert os.fspath(_pyexec.correct_python_executable(sys.executable)) == sys.executable
+
+    def test_falls_back_when_core_helpers_are_missing(self, tmp_path):
+        """The module stays importable on py37-lite wheels without ``_core``."""
+        maya = tmp_path / "maya.exe"
+        mayapy = tmp_path / "mayapy.exe"
+        maya.write_text("", encoding="utf-8")
+        mayapy.write_text("", encoding="utf-8")
+
+        fake_core = types.ModuleType("dcc_mcp_core")
+
+        def _missing(_name: str) -> object:
+            raise ModuleNotFoundError("No module named 'dcc_mcp_core._core'")
+
+        fake_core.__getattr__ = _missing  # type: ignore[attr-defined]
+
+        with patch.dict(sys.modules, {"dcc_mcp_core": fake_core}, clear=False):
+            with patch.dict(os.environ, {_pyexec.ENV_VAR: str(maya)}, clear=False):
+                assert os.fspath(_pyexec.auto_correct()) == str(mayapy)
+                assert os.environ[_pyexec.ENV_VAR] == str(mayapy)
 
     def test_custom_env_var_name(self):
         """The helper accepts a custom env-var name for forward compatibility."""
