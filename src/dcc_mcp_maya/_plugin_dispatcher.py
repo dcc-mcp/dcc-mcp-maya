@@ -53,13 +53,12 @@ class PluginDispatcherError(RuntimeError):
     def as_dict(self) -> dict:
         mode = "batch" if self.is_batch else "interactive"
         remedies = [
-            "Verify dcc-mcp-core is installed for this Maya Python: "
-            "`mayapy -m pip show dcc-mcp-core`",
+            "Verify dcc-mcp-core is installed for this Maya Python: `mayapy -m pip show dcc-mcp-core`",
             "Reinstall a wheel that includes the native extension for your Maya "
             "Python version (see dcc-mcp-maya README / pyproject pins).",
-            "If the native extension is intentionally unavailable, ensure "
-            "dcc-mcp-maya >= 0.9.4 is installed so the Python dispatcher "
-            "fallback can start the MCP server.",
+            "If the native extension is intentionally unavailable, use a "
+            "dcc-mcp-maya build that includes the Python dispatcher fallback "
+            "(resolve_plugin_host_startup).",
         ]
         return {
             "success": False,
@@ -188,9 +187,8 @@ def resolve_plugin_host_startup(is_batch: bool) -> PluginHostStartup:
 
     core_version = _resolve_core_version()
     mode = "batch" if is_batch else "interactive"
-    message = (
-        "Cannot start MCP server: no host dispatcher available for {} mode "
-        "(dcc-mcp-core {}).".format(mode, core_version)
+    message = "Cannot start MCP server: no host dispatcher available for {} mode (dcc-mcp-core {}).".format(
+        mode, core_version
     )
     raise PluginDispatcherError(
         message,

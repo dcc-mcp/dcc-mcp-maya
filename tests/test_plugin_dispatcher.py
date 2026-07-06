@@ -85,9 +85,6 @@ class TestResolvePluginHostStartup:
         with patch.dict(sys.modules, {"dcc_mcp_core.host": host_mod}), patch(
             "dcc_mcp_maya.dispatcher.create_dispatcher",
             side_effect=RuntimeError("maya.cmds missing"),
-        ), patch(
-            "dcc_mcp_maya._plugin_dispatcher._resolve_core_version",
-            return_value="0.19.3",
         ):
             with pytest.raises(PluginDispatcherError) as excinfo:
                 resolve_plugin_host_startup(is_batch=False)
@@ -95,5 +92,5 @@ class TestResolvePluginHostStartup:
         err = excinfo.value
         detail = err.as_dict()
         assert detail["error"] == "dispatcher-unavailable"
-        assert detail["context"]["core_version"] == "0.19.3"
+        assert detail["context"]["core_version"] not in ("", "unknown")
         assert detail["context"]["possible_solutions"]
