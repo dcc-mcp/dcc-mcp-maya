@@ -9,11 +9,11 @@ import signal
 import threading
 from typing import Any, Dict, Optional
 
-# Import third-party modules
-from dcc_mcp_core.host import BlockingDispatcher, QueueDispatcher
-
 # Import local modules
-from dcc_mcp_maya.host import MayaHost
+from dcc_mcp_maya._plugin_dispatcher import (
+    install_plugin_host_startup,
+    resolve_plugin_host_startup,
+)
 from dcc_mcp_maya.server import start_server, stop_server
 
 _STOP = threading.Event()
@@ -56,17 +56,25 @@ def _install_signal_handlers() -> None:
 def main() -> Any:
     """Start the Maya MCP server and drive its host dispatcher."""
     is_background = _maya_is_background()
-    dispatcher = BlockingDispatcher() if is_background else QueueDispatcher()
-    host = MayaHost(dispatcher)
-    handle = start_server(host_dispatcher=dispatcher, **_server_kwargs())
+    startup = resolve_plugin_host_startup(is_background)
+    install_plugin_host_startup(startup)
+    handle = start_server(host_dispatcher=startup.dispatcher, **_server_kwargs())
     _install_signal_handlers()
+    if startup.host is not None:
+        if is_background:
+            try:
+                startup.host.run_headless(stop_event=_STOP)
+            finally:
+                stop_server()
+        else:
+            startup.host.start()
+        return handle
+
     if is_background:
         try:
-            host.run_headless(stop_event=_STOP)
+            _STOP.wait()
         finally:
             stop_server()
-    else:
-        host.start()
     return handle
 
 

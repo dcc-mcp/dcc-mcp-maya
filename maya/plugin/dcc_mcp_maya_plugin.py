@@ -239,6 +239,7 @@ VERSION = _get_version()
 _handle = None
 _host = None
 _host_dispatcher = None
+_host_startup = None
 _menu_name = "DccMcpMenu"
 _restart_lock = threading.Lock()  # prevent overlapping restart calls
 _shutdown_coordinator = None  # Issue #186 — safety-net composition root
@@ -512,10 +513,14 @@ def _export_worker_env() -> None:
 
 def _start() -> None:
     """Start the MCP server (called from Maya main thread)."""
-    global _handle, _host, _host_dispatcher
-    try:
-        from dcc_mcp_core.host import BlockingDispatcher, QueueDispatcher  # noqa: PLC0415
+    global _handle, _host, _host_dispatcher, _host_startup
+    from dcc_mcp_maya._plugin_dispatcher import (  # noqa: PLC0415
+        PluginDispatcherError,
+        install_plugin_host_startup,
+        resolve_plugin_host_startup,
+    )
 
+    try:
         import dcc_mcp_maya  # noqa: PLC0415
 
         _export_worker_env()
@@ -530,11 +535,21 @@ def _start() -> None:
         except Exception as exc:  # noqa: BLE001 — never block plugin load
             logger.debug("commandPort hygiene skipped: %s", exc)
         cfg = _resolve_config()
-        _host_dispatcher = BlockingDispatcher() if cmds.about(batch=True) else QueueDispatcher()
-        _host = dcc_mcp_maya.MayaHost(_host_dispatcher)
+        is_batch = bool(cmds.about(batch=True))
+        _host_startup = resolve_plugin_host_startup(is_batch)
+        _host_dispatcher = _host_startup.dispatcher
+        _host = _host_startup.host
+        install_plugin_host_startup(_host_startup)
         _handle = dcc_mcp_maya.start_server(host_dispatcher=_host_dispatcher, **cfg)
-        _host.start()
+        if _host is not None:
+            _host.start()
         _post_start(cfg)
+    except PluginDispatcherError as exc:
+        detail = exc.as_dict()
+        logger.error("Failed to start MCP server: %s", detail["message"])
+        for remedy in detail["context"].get("possible_solutions") or []:
+            logger.error("  -> %s", remedy)
+        raise RuntimeError(detail["message"]) from exc
     except Exception as exc:
         logger.error("Failed to start MCP server: %s", exc)
         raise
@@ -1168,15 +1183,17 @@ def _stop_blocking() -> None:
     is wrapped so the others still run, mirroring the resilience
     contract issue #126 added for the in-process path.
     """
-    global _handle, _host, _host_dispatcher
+    global _handle, _host, _host_dispatcher, _host_startup
 
     _stop_sidecar_if_running()
 
     try:
-        if _host is not None:
-            _host.stop()
-            _host = None
-            _host_dispatcher = None
+        from dcc_mcp_maya._plugin_dispatcher import shutdown_plugin_host_startup  # noqa: PLC0415
+
+        shutdown_plugin_host_startup(_host_startup)
+        _host_startup = None
+        _host = None
+        _host_dispatcher = None
         import dcc_mcp_maya  # noqa: PLC0415
 
         dcc_mcp_maya.stop_server()
@@ -1294,14 +1311,17 @@ def _uninstall_shutdown_safety() -> None:
 
 def _stop_host_on_main_thread() -> None:
     """Stop the Maya host idle tick (``detach_tick`` / ``scriptJob`` — main thread only)."""
-    global _host, _host_dispatcher
-    if _host is None:
+    global _host, _host_dispatcher, _host_startup
+    if _host is None and _host_startup is None:
         return
     try:
-        _host.stop()
+        from dcc_mcp_maya._plugin_dispatcher import shutdown_plugin_host_startup  # noqa: PLC0415
+
+        shutdown_plugin_host_startup(_host_startup)
     except Exception as exc:  # noqa: BLE001
         logger.warning("MCP host stop failed: %s", exc)
     finally:
+        _host_startup = None
         _host = None
         _host_dispatcher = None
 

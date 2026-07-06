@@ -566,6 +566,65 @@ class TestRestartStopsSidecar:
         plugin_module._start.assert_called_once_with()
 
 
+class TestPluginDispatcherFallback:
+    """Regression: plugin startup must not crash when core dispatchers are None."""
+
+    def test_start_falls_back_when_core_dispatchers_are_none(self, plugin_module, mock_maya_modules, monkeypatch):
+        mock_maya_modules.cmds.about.side_effect = lambda **kwargs: False if kwargs.get("batch") else "2025"
+
+        host_mod = types.ModuleType("dcc_mcp_core.host")
+        host_mod.BlockingDispatcher = MagicMock(name="BlockingDispatcher")
+        host_mod.QueueDispatcher = None
+
+        ui_dispatcher = MagicMock(name="MayaUiDispatcher")
+        ui_pump = MagicMock(name="MayaUiPump")
+        type(ui_dispatcher).__name__ = "MayaUiDispatcher"
+
+        import dcc_mcp_maya
+
+        monkeypatch.setattr(dcc_mcp_maya, "start_server", MagicMock(return_value=MagicMock()))
+        monkeypatch.setattr(plugin_module, "_export_worker_env", MagicMock())
+        monkeypatch.setattr(plugin_module, "_enable_faulthandler_for_plugin", MagicMock())
+        monkeypatch.setattr(plugin_module, "_post_start", MagicMock())
+
+        with patch.dict(sys.modules, {"dcc_mcp_core.host": host_mod}), patch(
+            "dcc_mcp_maya.dispatcher.create_dispatcher",
+            return_value=(ui_dispatcher, ui_pump),
+        ):
+            plugin_module._start()
+
+        assert plugin_module._host_dispatcher is ui_dispatcher
+        assert plugin_module._host is None
+        assert plugin_module._host_startup is not None
+        assert plugin_module._host_startup.backend == "python-fallback"
+        ui_pump.install.assert_called_once_with()
+        dcc_mcp_maya.start_server.assert_called_once()
+        _, kwargs = dcc_mcp_maya.start_server.call_args
+        assert kwargs["host_dispatcher"] is ui_dispatcher
+
+    def test_start_raises_structured_error_when_all_dispatchers_fail(
+        self, plugin_module, mock_maya_modules, monkeypatch
+    ):
+        mock_maya_modules.cmds.about.side_effect = lambda **kwargs: True if kwargs.get("batch") else "2025"
+
+        host_mod = types.ModuleType("dcc_mcp_core.host")
+        host_mod.BlockingDispatcher = None
+        host_mod.QueueDispatcher = None
+
+        monkeypatch.setattr(plugin_module, "_export_worker_env", MagicMock())
+        monkeypatch.setattr(plugin_module, "_enable_faulthandler_for_plugin", MagicMock())
+
+        with patch.dict(sys.modules, {"dcc_mcp_core.host": host_mod}), patch(
+            "dcc_mcp_maya.dispatcher.create_dispatcher",
+            side_effect=RuntimeError("no maya"),
+        ), patch(
+            "dcc_mcp_maya._plugin_dispatcher._resolve_core_version",
+            return_value="0.19.3",
+        ):
+            with pytest.raises(RuntimeError, match="Cannot start MCP server"):
+                plugin_module._start()
+
+
 class TestExportWorkerEnv:
     """Tests for ``_export_worker_env()``."""
 
