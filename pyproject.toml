@@ -27,11 +27,11 @@ classifiers = [
 ]
 
 dependencies = [
-    # 0.19.11+ ships py3-none-any.whl lacking _core — py37 Maya 2022
-    # mayapy cannot install the cp38-abi3 wheel.  Pin <0.19.11 until
-    # dcc-mcp-core provides a complete py37 wheel or pure-Python _core
-    # fallback for all symbols that dcc-mcp-maya imports.
-    "dcc-mcp-core>=0.19.8,<0.19.11",
+    # 0.19.5+ drops the cp37-cp37m native wheel — Maya 2022 mayapy (py3.7)
+    # cannot install the cp38-abi3 wheel and the py3-none-any wheel lacks
+    # the Rust _core extension.  Pin <0.19.5 until dcc-mcp-core restores
+    # cp37 wheels (or provides full _core fallbacks for py37).
+    "dcc-mcp-core>=0.19.3,<0.19.5",
     "dcc-mcp-server>=0.18.21,<1.0.0",
 ]
 
