@@ -27,9 +27,9 @@ classifiers = [
 ]
 
 dependencies = [
-    # Core v0.19.10+ py37-lite pure-Python fallbacks when Rust _core is absent
-    # (Maya 2022 / Python 3.7). Provides abi3 (cp38+) on 3.8+; py3-none-any on 3.7.
-    "dcc-mcp-core>=0.19.10,<1.0.0",
+    # Core v0.19.11+ py37-lite fallbacks incl. scan_and_load_strict (dcc-mcp-core#1822).
+    # Provides abi3 (cp38+) on 3.8+; py3-none-any on 3.7 (Maya 2022).
+    "dcc-mcp-core>=0.19.11,<1.0.0",
     "dcc-mcp-server>=0.18.21,<1.0.0",
 ]
 
