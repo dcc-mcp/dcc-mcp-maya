@@ -27,9 +27,11 @@ classifiers = [
 ]
 
 dependencies = [
-    # Core v0.19.11+ py37-lite fallbacks incl. scan_and_load_strict (dcc-mcp-core#1822).
-    # Provides abi3 (cp38+) on 3.8+; py3-none-any on 3.7 (Maya 2022).
-    "dcc-mcp-core>=0.19.11,<1.0.0",
+    # 0.19.11+ ships py3-none-any.whl lacking _core — py37 Maya 2022
+    # mayapy cannot install the cp38-abi3 wheel.  Pin <0.19.11 until
+    # dcc-mcp-core provides a complete py37 wheel or pure-Python _core
+    # fallback for all symbols that dcc-mcp-maya imports.
+    "dcc-mcp-core>=0.19.8,<0.19.11",
     "dcc-mcp-server>=0.18.21,<1.0.0",
 ]
 

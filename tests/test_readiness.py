@@ -28,7 +28,18 @@ from typing import Any, Callable, List, Optional
 from unittest.mock import MagicMock
 
 import pytest
-from dcc_mcp_core import ReadinessProbe
+
+try:
+    from dcc_mcp_core import ReadinessProbe
+except ModuleNotFoundError:
+    # dcc-mcp-core>=0.19.11 ships a py3-none-any.whl that has no _core Rust
+    # extension.  Python 3.7 (Maya 2022 mayapy) cannot install the cp38-abi3
+    # wheel, so ReadinessProbe is unavailable.  The probe state machine is
+    # unit-tested upstream in dcc-mcp-core — skipping here is safe.
+    pytest.skip(
+        "dcc_mcp_core._core not available (py3-none wheel on Python 3.7)",
+        allow_module_level=True,
+    )
 
 from dcc_mcp_maya import (
     ENV_READINESS_TIMEOUT_SECS,
