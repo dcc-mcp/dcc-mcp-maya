@@ -30,11 +30,11 @@ def _make_fake_wheel(dest: Path, name: str, files: dict[str, bytes]) -> Path:
     return wheel_path
 
 
-def _make_fake_pyproject(dest: Path, core_version: str = "0.15.7") -> Path:
+def _make_fake_pyproject(dest: Path, core_version: str = "0.15.7", core_upper: str = "1.0.0") -> Path:
     toml_path = dest / "pyproject.toml"
     toml_path.write_text(
         "[project]\ndependencies = [\n"
-        f'    "dcc-mcp-core>={core_version},<1.0.0",\n'
+        f'    "dcc-mcp-core>={core_version},<{core_upper}",\n'
         f'    "dcc-mcp-server>={core_version},<1.0.0",\n'
         "]\n",
         encoding="utf-8",
@@ -63,7 +63,7 @@ class TestResolveCoreVersion:
     def test_uses_pypi_latest_when_available(self, tmp_path):
         _make_fake_pyproject(tmp_path, "0.15.0")
         mock_resp = MagicMock()
-        mock_resp.read.return_value = json.dumps({"info": {"version": "0.15.2"}}).encode()
+        mock_resp.read.return_value = json.dumps({"releases": {"0.15.0": [], "0.15.2": []}}).encode()
         mock_resp.__enter__ = lambda s: s
         mock_resp.__exit__ = MagicMock(return_value=False)
         with patch("urllib.request.urlopen", return_value=mock_resp):
@@ -73,12 +73,22 @@ class TestResolveCoreVersion:
     def test_falls_back_when_pypi_version_too_old(self, tmp_path):
         _make_fake_pyproject(tmp_path, "0.15.0")
         mock_resp = MagicMock()
-        mock_resp.read.return_value = json.dumps({"info": {"version": "0.14.9"}}).encode()
+        mock_resp.read.return_value = json.dumps({"releases": {"0.14.9": [], "0.14.8": []}}).encode()
         mock_resp.__enter__ = lambda s: s
         mock_resp.__exit__ = MagicMock(return_value=False)
         with patch("urllib.request.urlopen", return_value=mock_resp):
             version = assemble_mod.resolve_core_version(tmp_path)
         assert version == "0.15.0"
+
+    def test_respects_upper_bound_when_pypi_latest_is_too_new(self, tmp_path):
+        _make_fake_pyproject(tmp_path, "0.19.4", "0.19.5")
+        mock_resp = MagicMock()
+        mock_resp.read.return_value = json.dumps({"releases": {"0.19.4": [], "0.19.14": []}}).encode()
+        mock_resp.__enter__ = lambda s: s
+        mock_resp.__exit__ = MagicMock(return_value=False)
+        with patch("urllib.request.urlopen", return_value=mock_resp):
+            version = assemble_mod.resolve_core_version(tmp_path)
+        assert version == "0.19.4"
 
     def test_raises_when_no_version_found(self, tmp_path):
         (tmp_path / "pyproject.toml").write_text("[project]\ndependencies = []\n", encoding="utf-8")
