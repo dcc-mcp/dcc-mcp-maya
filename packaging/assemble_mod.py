@@ -48,45 +48,68 @@ def resolve_server_version(project_root: Path) -> str:
 def _resolve_dependency_version(project_root: Path, package_name: str) -> str:
     """Resolve the best available dependency version from PyPI.
 
-    Reads the minimum version from pyproject.toml, then queries PyPI
-    for the latest compatible version.  Falls back to the minimum
-    version when PyPI is unreachable.
+    Reads the version bounds from pyproject.toml, then queries PyPI for
+    the latest compatible version. Falls back to the minimum version when
+    PyPI is unreachable.
     """
     import re
 
     toml_path = project_root / "pyproject.toml"
     content = toml_path.read_text(encoding="utf-8")
     escaped = re.escape(package_name)
-    m = re.search(rf"{escaped}>=(\d+\.\d+\.\d+)", content)
-    if not m:
-        m = re.search(rf"{escaped}>=([\d.]+)", content)
+    m = re.search(rf'"{escaped}(?P<spec>[^"]+)"', content)
     if not m:
         raise RuntimeError(f"Cannot find {package_name} version in pyproject.toml")
-    min_version = m.group(1)
+    spec = m.group("spec")
 
-    # Try to get the latest version from PyPI so we download a version
-    # that actually has compiled wheels for all platforms.
+    min_match = re.search(r">=\s*([\d.]+)", spec)
+    if not min_match:
+        raise RuntimeError(f"Cannot find {package_name} minimum version in pyproject.toml")
+    min_version = min_match.group(1)
+
+    max_match = re.search(r"<\s*([\d.]+)", spec)
+    max_version = max_match.group(1) if max_match else None
+
+    # Try to get the latest compatible version from PyPI so we download
+    # a version that actually has compiled wheels for all platforms.
     try:
         import urllib.request
 
         url = f"https://pypi.org/pypi/{package_name}/json"
         with urllib.request.urlopen(url, timeout=15) as resp:
             data = json.loads(resp.read())
-        latest = data.get("info", {}).get("version", "")
-        if latest and _version_gte(latest, min_version):
-            print(f"  PyPI latest {package_name}: {latest} (>= {min_version})")
-            return latest
+        releases = sorted(data.get("releases", {}).keys(), key=_version_key)
+        compatible = [
+            version
+            for version in releases
+            if _version_gte(version, min_version) and (max_version is None or _version_lt(version, max_version))
+        ]
+        if compatible:
+            selected = compatible[-1]
+            if max_version:
+                print(f"  PyPI selected {package_name}: {selected} (>= {min_version}, < {max_version})")
+            else:
+                print(f"  PyPI latest {package_name}: {selected} (>= {min_version})")
+            return selected
     except Exception as exc:
         print(f"  Warning: could not query PyPI for latest {package_name} ({exc}), using minimum {min_version}")
 
     return min_version
 
 
+def _version_key(ver: str) -> Tuple[int, ...]:
+    """Return a sortable key for dotted numeric versions."""
+    return tuple(int(x) for x in ver.split("."))
+
+
 def _version_gte(ver: str, minimum: str) -> bool:
     """Return True if *ver* >= *minimum* (simple dotted comparison)."""
-    v_parts = [int(x) for x in ver.split(".")]
-    m_parts = [int(x) for x in minimum.split(".")]
-    return v_parts >= m_parts
+    return _version_key(ver) >= _version_key(minimum)
+
+
+def _version_lt(ver: str, maximum: str) -> bool:
+    """Return True if *ver* < *maximum* (simple dotted comparison)."""
+    return _version_key(ver) < _version_key(maximum)
 
 
 def download_core_wheels(version: str, platform: str, dest: Path) -> List[Path]:

@@ -27,11 +27,9 @@ classifiers = [
 ]
 
 dependencies = [
-    # 0.19.5+ drops the cp37-cp37m native wheel — Maya 2022 mayapy (py3.7)
-    # cannot install the cp38-abi3 wheel and the py3-none-any wheel lacks
-    # the Rust _core extension.  Pin <0.19.5 until dcc-mcp-core restores
-    # cp37 wheels (or provides full _core fallbacks for py37).
-    "dcc-mcp-core>=0.19.3,<0.19.5",
+    # Roll back Maya 2022/py37 to the last known-good core before py37-lite host_rpc tightening.
+    # Keep the resolver pinned below 0.19.5 so Rez cannot float to 0.19.14 again.
+    "dcc-mcp-core>=0.19.4,<0.19.5",
     "dcc-mcp-server>=0.18.21,<1.0.0",
 ]
 
