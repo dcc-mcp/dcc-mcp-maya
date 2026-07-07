@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.5](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.4...v0.9.5) (2026-07-07)
+
+
+### Bug Fixes
+
+* pin dcc-mcp-core&lt;0.19.5 and enforce upper bound in resolver ([be34c3a](https://github.com/dcc-mcp/dcc-mcp-maya/commit/be34c3aa92395b969e58aac201906c2c50f2c383))
+
 ## [0.9.4](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.3...v0.9.4) (2026-07-06)
 
 
