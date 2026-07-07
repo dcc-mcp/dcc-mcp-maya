@@ -6,6 +6,13 @@ on:
   pull_request:
     branches: [main]
 
+env:
+  PY37_CI_IMAGE: ghcr.io/dcc-mcp/dcc-mcp-py37@sha256:1dd8fba0da3f2a70ce44f55aee7cf08ee3d67768367deb3985a4f70779687ac5
+
+permissions:
+  contents: read
+  packages: read
+
 jobs:
   # Python 3.8+ with stock CPython (abi3 dcc-mcp-core wheels). Maya 2022 / py3.7
   # is covered by test-mayapy-py37 below — not setup-python 3.7.
@@ -48,6 +55,32 @@ jobs:
           files: ./coverage.xml
           fail_ci_if_error: false
           token: ${{ secrets.CODECOV_TOKEN }}
+
+  # Linux resolver gate for supported Maya Python 3.7. This proves the adapter
+  # installs a native cp37 dcc-mcp-core wheel from the rollback pin; real host
+  # behavior is still covered by the mayapy job below.
+  test-py37-native-core:
+    name: Test (Python 3.7 native core / Linux)
+    runs-on: ubuntu-latest
+    env:
+      DCC_MCP_ALLOW_AMBIENT_PYTHON: "1"
+      DCC_MCP_DISABLE_FILE_LOGGING: "1"
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Log in to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Verify py37 native core resolver
+        shell: bash
+        run: |
+          docker run --rm \
+            -v "$PWD:/io" \
+            -w /io \
+            -e DCC_MCP_ALLOW_AMBIENT_PYTHON \
+            -e DCC_MCP_DISABLE_FILE_LOGGING \
+            "$PY37_CI_IMAGE" \
+            sh -lc 'python -m pip install -e . && python -c "import importlib, sys; import dcc_mcp_core, dcc_mcp_maya; assert sys.version_info[:3] == (3, 7, 17), sys.version; version = tuple(int(p) for p in dcc_mcp_core.__version__.split(\".\")[:3]); assert (0, 19, 4) <= version < (0, 19, 5), dcc_mcp_core.__version__; core = importlib.import_module(\"dcc_mcp_core._core\"); print(\"OK: native core\", dcc_mcp_core.__version__, core.__name__, \"maya\", dcc_mcp_maya.__version__)"'
 
   # Maya 2022 ships Python 3.7 — exercise the real mayapy interpreter + cp37 core wheel.
   test-mayapy-py37:
