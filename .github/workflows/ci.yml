@@ -84,7 +84,13 @@ jobs:
 
       - name: Verify native cp37 core wheel
         run: |
-          echo "=== dcc-mcp-core version ==="
+          echo "=== Pre-installed dcc-mcp-core ==="
+          mayapy -m pip show dcc-mcp-core
+          echo ""
+          echo "=== Upgrade to latest dcc-mcp-core (cp37 wheel) ==="
+          mayapy -m pip install --upgrade dcc-mcp-core
+          echo ""
+          echo "=== Verify upgraded version ==="
           mayapy -m pip show dcc-mcp-core
           echo ""
           echo "=== Native _core import ==="
@@ -97,6 +103,10 @@ jobs:
           spec = getattr(dcc_mcp_core._core, '__spec__', None)
           if spec is not None:
               print('_core origin:', spec.origin)
+          # Confirm the .so file path matches a cp37 native build
+          assert 'cpython-37' in dcc_mcp_core._core.__file__, \
+              f'Expected cp37 native .so, got {dcc_mcp_core._core.__file__}'
+          print('Verified: cp37 native _core wheel installed and importable')
           "
 
       - name: Run tests (mayapy)
