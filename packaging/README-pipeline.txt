@@ -8,6 +8,11 @@ The module content includes the Maya plugin, dcc-mcp-maya Python
 package, the in-process bridge dependencies such as dcc-mcp-core, and
 the dcc-mcp-server sidecar binary used by the default gateway path.
 
+module-info.json records adapter_version, embedded_core_version, and
+bundled_server_version for release smoke/reporting. embedded_core_version may
+be older than the CLI or gateway version; for this release line it is pinned to
+0.19.4 to preserve Maya 2022 / Python 3.7 compatibility.
+
 Deployment Options
 ------------------
 

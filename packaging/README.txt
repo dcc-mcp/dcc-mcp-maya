@@ -9,7 +9,14 @@ used by the default gateway path.
 Requirements
 ------------
 - Autodesk Maya 2022, 2023, 2024, 2025, or 2026 (matching platform ZIP; Maya 2022 requires python37/, available in Windows/Linux packages)
-- Bundled dcc-mcp-server >= 0.18.17 for default sidecar gateway mode
+- Bundled dcc-mcp-server >= 0.18.21 for default sidecar gateway mode
+
+Version metadata
+----------------
+module-info.json records adapter_version, embedded_core_version, and
+bundled_server_version. embedded_core_version may be older than the CLI or
+gateway version; for this release line it is pinned to 0.19.4 to preserve
+Maya 2022 / Python 3.7 compatibility.
 
 Installation
 ------------

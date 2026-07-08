@@ -302,11 +302,20 @@ def supported_maya_versions(platform: str) -> List[str]:
     return [version for version in SUPPORTED_MAYA_VERSIONS if version != "2022"]
 
 
-def generate_module_info(version: str, platform: str = "win64") -> str:
+def generate_module_info(
+    version: str,
+    platform: str = "win64",
+    *,
+    embedded_core_version: Optional[str] = None,
+    bundled_server_version: Optional[str] = None,
+) -> str:
     """Generate module-info.json content with build metadata."""
     info = {
         "name": "dcc_mcp_maya",
         "version": version,
+        "adapter_version": version,
+        "embedded_core_version": embedded_core_version,
+        "bundled_server_version": bundled_server_version,
         "supported_maya_versions": supported_maya_versions(platform),
         "has_python37": platform in PLATFORMS_WITH_CP37_WHEELS,
     }
@@ -391,6 +400,16 @@ def assemble(project_root: Path, version: str, platform: str, output: Path) -> P
     (module_dir / "dcc_mcp_maya.mod").write_text(mod_content, encoding="utf-8")
     print(f"  Generated dcc_mcp_maya.mod (version={version}, platform={platform})")
 
+    # 6. Generate version contract metadata for release smoke reports
+    info_content = generate_module_info(
+        version,
+        platform,
+        embedded_core_version=core_version,
+        bundled_server_version=server_version,
+    )
+    (module_dir / "module-info.json").write_text(info_content, encoding="utf-8")
+    print("  Generated module-info.json")
+
     return module_dir
 
 
@@ -417,11 +436,6 @@ def assemble_portable(project_root: Path, version: str, platform: str, output: P
 def assemble_pipeline(project_root: Path, version: str, platform: str, output: Path) -> Path:
     """Assemble the pipeline ZIP with module-info.json, no install scripts."""
     module_dir = assemble(project_root, version, platform, output)
-
-    # Add module-info.json
-    info_content = generate_module_info(version, platform)
-    (module_dir / "module-info.json").write_text(info_content, encoding="utf-8")
-    print(f"  Generated module-info.json (version={version})")
 
     # Add README-pipeline.txt
     readme_src = project_root / "packaging" / "README-pipeline.txt"

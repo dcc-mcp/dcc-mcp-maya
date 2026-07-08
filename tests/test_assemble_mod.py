@@ -289,10 +289,17 @@ class TestGenerateModFile:
 
 class TestGenerateModuleInfo:
     def test_module_info(self):
-        content = assemble_mod.generate_module_info("0.2.2")
+        content = assemble_mod.generate_module_info(
+            "0.2.2",
+            embedded_core_version="0.19.4",
+            bundled_server_version="0.18.21",
+        )
         info = json.loads(content)
         assert info["name"] == "dcc_mcp_maya"
         assert info["version"] == "0.2.2"
+        assert info["adapter_version"] == "0.2.2"
+        assert info["embedded_core_version"] == "0.19.4"
+        assert info["bundled_server_version"] == "0.18.21"
         assert info["has_python37"] is True
         assert info["supported_maya_versions"] == ["2022", "2023", "2024", "2025", "2026"]
 
@@ -388,6 +395,10 @@ class TestAssemble:
         assert (result / "python37" / "dcc_mcp_server" / "__init__.py").exists()
         assert (result / "python37" / "scripts" / "dcc-mcp-server.exe").exists()
         assert (result / "python37" / "dcc_mcp_maya" / "__init__.py").exists()
+        info = json.loads((result / "module-info.json").read_text(encoding="utf-8"))
+        assert info["adapter_version"] == "0.2.2"
+        assert info["embedded_core_version"] == "0.15.0"
+        assert info["bundled_server_version"] == "0.15.0"
 
         mod_content = (result / "dcc_mcp_maya.mod").read_text(encoding="utf-8")
         assert "MAYAVERSION:2022" in mod_content
@@ -430,7 +441,7 @@ class TestAssemblePortable:
         assert (result / "uninstall.bat").exists()
         assert not (result / "install.sh").exists()
         assert (result / "README.txt").exists()
-        assert not (result / "module-info.json").exists()
+        assert (result / "module-info.json").exists()
 
     def test_linux_has_install_sh(self, tmp_path):
         project = _setup_project(tmp_path)
@@ -466,6 +477,9 @@ class TestAssemblePipeline:
 
         info = json.loads((result / "module-info.json").read_text(encoding="utf-8"))
         assert info["version"] == "0.2.2"
+        assert info["adapter_version"] == "0.2.2"
+        assert info["embedded_core_version"] == "0.15.0"
+        assert info["bundled_server_version"] == "0.15.0"
         assert info["supported_maya_versions"] == ["2022", "2023", "2024", "2025", "2026"]
         assert info["has_python37"] is True
         assert (result / "README-pipeline.txt").exists()
@@ -505,6 +519,12 @@ class TestMain:
         names = [z.name for z in zip_files]
         assert any("0.2.2-win64.zip" in n for n in names), f"Portable ZIP not found in {names}"
         assert any("0.2.2-win64-pipeline.zip" in n for n in names), f"Pipeline ZIP not found in {names}"
+        for zip_file in zip_files:
+            with zipfile.ZipFile(zip_file) as zf:
+                info = json.loads(zf.read("dcc-mcp-maya/module-info.json").decode())
+            assert info["adapter_version"] == "0.2.2"
+            assert info["embedded_core_version"] == "0.15.0"
+            assert info["bundled_server_version"] == "0.15.0"
 
 
 @pytest.mark.packaging
