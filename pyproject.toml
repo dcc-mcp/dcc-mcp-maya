@@ -27,9 +27,8 @@ classifiers = [
 ]
 
 dependencies = [
-    # Roll back Maya 2022/py37 to the last known-good core before py37-lite host_rpc tightening.
-    # Keep the resolver pinned below 0.19.5 so Rez cannot float to 0.19.14 again.
-    "dcc-mcp-core>=0.19.4,<0.19.5",
+    # 0.19.16 restores native cp37 wheels for Maya 2022 / Python 3.7.
+    "dcc-mcp-core>=0.19.16,<0.20.0",
     "dcc-mcp-server>=0.18.21,<1.0.0",
 ]
 
