@@ -82,6 +82,23 @@ jobs:
           mayapy -m pip install --upgrade pip
           mayapy -m pip install -e ".[dev]"
 
+      - name: Verify native cp37 core wheel
+        run: |
+          echo "=== dcc-mcp-core version ==="
+          mayapy -m pip show dcc-mcp-core
+          echo ""
+          echo "=== Native _core import ==="
+          mayapy -c "
+          import sys
+          assert sys.version_info[:2] == (3, 7), f'Expected Python 3.7, got {sys.version}'
+          import dcc_mcp_core._core
+          print('Native _core imported successfully:', dcc_mcp_core._core.__file__)
+          # Verify this is a real native module, not a py37-lite fallback
+          spec = getattr(dcc_mcp_core._core, '__spec__', None)
+          if spec is not None:
+              print('_core origin:', spec.origin)
+          "
+
       - name: Run tests (mayapy)
         run: |
           mayapy -c "
