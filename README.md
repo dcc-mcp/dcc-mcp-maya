@@ -19,7 +19,7 @@ The Maya plugin starts a Rust `dcc-mcp-server` sidecar by default, so HTTP and g
 [![Python](https://img.shields.io/pypi/pyversions/dcc-mcp-maya?label=Python)](https://pypi.org/project/dcc-mcp-maya/)
 [![Maya](https://img.shields.io/badge/Maya-2020%2B-37A5CC)](https://www.autodesk.com/products/maya/overview)
 [![MCP](https://img.shields.io/badge/MCP-Streamable%20HTTP-6f42c1)](https://modelcontextprotocol.io/)
-[![dcc-mcp-core](https://img.shields.io/badge/dcc--mcp--core-%3E%3D0.18.21-blue)](https://github.com/loonghao/dcc-mcp-core)
+[![dcc-mcp-core](https://img.shields.io/badge/dcc--mcp--core-%3E%3D0.19.4%2C%3C0.19.5-blue)](https://github.com/loonghao/dcc-mcp-core)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 ## Why Use It
@@ -164,6 +164,11 @@ mayapy -m pip install dcc-mcp-maya
 Release module archives bundle the Maya plugin, `dcc-mcp-maya`, and the
 in-process Python bridge dependencies such as `dcc-mcp-core`, plus the
 `dcc-mcp-server` sidecar binary used by the default plugin gateway mode.
+Each archive includes `module-info.json` with `adapter_version`,
+`embedded_core_version`, and `bundled_server_version` so release smoke reports
+can distinguish the Maya adapter, embedded core runtime, sidecar server, and
+external CLI/gateway versions. `embedded_core_version` is intentionally pinned
+to `0.19.4` while Maya 2022/Python 3.7 compatibility is maintained.
 Clean-machine verification:
 
 ```bash
@@ -363,7 +368,7 @@ Windows symlinks require Developer Mode or an elevated shell. If symlinks are un
 
 - Autodesk Maya 2020+
 - Python 3.7+
-- `dcc-mcp-core>=0.19.3,<0.19.5`
+- `dcc-mcp-core>=0.19.4,<0.19.5`
 - Standard sidecar binary for plugin mode: `dcc-mcp-server>=0.18.21`
 
 ## License
