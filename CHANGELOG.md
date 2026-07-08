@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.6](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.5...v0.9.6) (2026-07-08)
+
+
+### Bug Fixes
+
+* record release module version matrix ([484d6f2](https://github.com/dcc-mcp/dcc-mcp-maya/commit/484d6f22f95372b8eeaaa7222c578c31fb9b0685))
+
 ## [0.9.5](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.4...v0.9.5) (2026-07-07)
 
 
