@@ -243,3 +243,13 @@ def test_look_through_camera_uses_focused_panel_and_view_fit():
     cmds.lookThru.assert_called_once_with("modelPanel4", "shotCam")
     cmds.viewFit.assert_called_once_with("modelPanel4", allObjects=True, animate=False)
     assert result["context"]["previous_camera"] == "persp"
+
+
+def test_select_by_type_clears_with_an_empty_selection_when_no_nodes_match():
+    cmds = MagicMock()
+    cmds.ls.return_value = []
+
+    result = load_and_call("maya-scene/scripts/select_by_type.py", cmds, object_type="joint")
+
+    assert result["success"] is True, result
+    cmds.select.assert_called_once_with([], clear=True)

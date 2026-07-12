@@ -54,7 +54,7 @@ def create_joint(
         if parent:
             cmds.select(parent, replace=True)
         else:
-            cmds.select(clear=True)
+            cmds.select([], clear=True)
 
         kwargs = {"position": (pos[0], pos[1], pos[2])}
         if name:

@@ -79,7 +79,7 @@ def export_animation_curves(
             export_kwargs["type"] = "mayaBinary"
 
         cmds.file(file_path, **export_kwargs)
-        cmds.select(clear=True)
+        cmds.select([], clear=True)
 
         return skill_success(
             "Exported {} animation curve(s) to '{}'".format(len(anim_curves), file_path),

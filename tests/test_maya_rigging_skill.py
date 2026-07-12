@@ -3,6 +3,21 @@ from unittest.mock import MagicMock
 from conftest import load_and_call, load_and_call_with_mel
 
 
+def test_create_root_joint_passes_an_empty_selection_for_maya_2024():
+    cmds = MagicMock()
+    cmds.joint.return_value = "root_jnt"
+
+    result = load_and_call(
+        "maya-rigging/scripts/create_joint.py",
+        cmds,
+        name="root_jnt",
+        position=[0.0, 0.0, 0.0],
+    )
+
+    assert result["success"] is True, result
+    cmds.select.assert_called_once_with([], clear=True)
+
+
 def _rig_node_summary_mock(cmds: MagicMock, long_name: str = "|arm_ctrl", uuid: str = "uuid-arm-ctrl") -> None:
     def _ls(*args, **kwargs):
         if kwargs.get("uuid"):
