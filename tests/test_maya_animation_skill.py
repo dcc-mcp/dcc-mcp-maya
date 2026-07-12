@@ -21,8 +21,9 @@ def test_export_animation_curves_clears_with_an_empty_selection(tmp_path):
     )
 
     assert result["success"] is True, result
-    assert cmds.select.call_args_list[-1].args == ([],)
-    assert cmds.select.call_args_list[-1].kwargs == {"clear": True}
+    args, kwargs = cmds.select.call_args_list[-1]
+    assert args == ([],)
+    assert kwargs == {"clear": True}
 
 
 def test_import_animation_curves_disables_maya_import_prompts(tmp_path):
