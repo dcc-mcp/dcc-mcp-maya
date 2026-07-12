@@ -27,7 +27,7 @@ def select_by_type(object_type: str) -> dict:
         if objects:
             cmds.select(objects, replace=True)
         else:
-            cmds.select(clear=True)
+            cmds.select([], clear=True)
 
         return skill_success(
             "Selected {} '{}' object(s)".format(len(objects), object_type),
