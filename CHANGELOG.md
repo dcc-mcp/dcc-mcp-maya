@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.7](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.6...v0.9.7) (2026-07-12)
+
+
+### Bug Fixes
+
+* clear Maya selection with explicit targets ([#437](https://github.com/dcc-mcp/dcc-mcp-maya/issues/437)) ([6a0da67](https://github.com/dcc-mcp/dcc-mcp-maya/commit/6a0da6743563ceb077f7c77eb4948be780132d4b))
+
 ## [0.9.6](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.5...v0.9.6) (2026-07-08)
 
 
