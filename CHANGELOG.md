@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.11](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.10...v0.9.11) (2026-07-13)
+
+
+### Bug Fixes
+
+* remove legacy Maya module descriptor ([#445](https://github.com/dcc-mcp/dcc-mcp-maya/issues/445)) ([c351c0f](https://github.com/dcc-mcp/dcc-mcp-maya/commit/c351c0ff20631ae643ee1e33907a2671650a97e3))
+
 ## [0.9.10](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.9...v0.9.10) (2026-07-13)
 
 
