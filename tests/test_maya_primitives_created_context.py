@@ -9,6 +9,9 @@ from tests.conftest import load_skill_script
 
 
 class _PrimitiveCmds:
+    def __init__(self):
+        self.poly_cylinder_kwargs = {}
+
     def polyCube(self, **_kwargs):  # noqa: N802
         return ["pCube1", "polyCube1"]
 
@@ -16,6 +19,7 @@ class _PrimitiveCmds:
         return ["pSphere1", "polySphere1"]
 
     def polyCylinder(self, **_kwargs):  # noqa: N802
+        self.poly_cylinder_kwargs = _kwargs
         return ["pCylinder1", "polyCylinder1"]
 
     def polyPlane(self, **_kwargs):  # noqa: N802
@@ -84,3 +88,15 @@ def test_primitive_create_tools_return_rich_node_context():
             assert context["node_ref"]["uuid"] == "uuid-{}".format(kwargs["name"])
             assert context["node_ref"]["exists"] is True
             assert context["node_ref"]["stale"] is False
+
+
+def test_create_cylinder_honors_declared_subdivisions_axis():
+    cmds = _PrimitiveCmds()
+    with patch.dict("sys.modules", {"maya": types.ModuleType("maya"), "maya.cmds": cmds}):
+        mod = load_skill_script("maya-primitives", "create_cylinder")
+
+        result = mod.create_cylinder(name="radialEngine", subdivisions_axis=32)
+
+    assert result["success"] is True
+    assert result["context"]["subdivisions_axis"] == 32
+    assert cmds.poly_cylinder_kwargs["subdivisionsAxis"] == 32
