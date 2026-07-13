@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.10](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.9...v0.9.10) (2026-07-13)
+
+
+### Bug Fixes
+
+* parse Maya module version in installer ([695de42](https://github.com/dcc-mcp/dcc-mcp-maya/commit/695de42bff7d8c29ef5af6a2bbe963763cd8b60b))
+
 ## [0.9.9](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.8...v0.9.9) (2026-07-13)
 
 
