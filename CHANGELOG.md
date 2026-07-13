@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.9.9](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.8...v0.9.9) (2026-07-13)
+
+
+### Bug Fixes
+
+* align material value schema ([ca888a8](https://github.com/dcc-mcp/dcc-mcp-maya/commit/ca888a83df04c65109fe4c974bd3576e2feaa698))
+* apply ruff format for Linux CI compatibility ([72aa22b](https://github.com/dcc-mcp/dcc-mcp-maya/commit/72aa22b595847e35599b906e102ccef0401bbbac))
+* apply ruff format to test_maya_materials_skill.py ([653ac9a](https://github.com/dcc-mcp/dcc-mcp-maya/commit/653ac9af8fac1c12c64a7b8b5be082a293b0c378))
+* honor cylinder subdivision schema ([d3681d9](https://github.com/dcc-mcp/dcc-mcp-maya/commit/d3681d955124078b4b6375e3a3339c56a7af513f))
+
 ## [0.9.8](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.7...v0.9.8) (2026-07-13)
 
 
