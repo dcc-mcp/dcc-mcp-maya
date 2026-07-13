@@ -30,6 +30,7 @@ _FILE_EXT_RE = re.compile(r"\.(?:py|json|md|txt|yaml|yml|toml|cfg|ini|conf|xml|h
 _COUNT_RE = re.compile(r"\b(\d+)(\+?)\s+(?:typed\s+)?(?:Maya\s+)?tools?\b", re.IGNORECASE)
 _FENCE_RE = re.compile(r"^(?:```|~~~)")
 _SKIP_DIRS = {".git", ".hg", ".svn", ".tox", ".venv", "build", "dist", "node_modules", "__pycache__", ".pytest_cache", ".codebuddy"}
+_SKIP_FILES = {"CHANGELOG.md"}
 
 
 @dataclass(frozen=True)
@@ -64,7 +65,7 @@ def _is_skipped(path: Path) -> bool:
 def _iter_markdown_files(repo_root: Path) -> Iterable[Path]:
     for path in sorted(repo_root.rglob("*.md")):
         rel = path.relative_to(repo_root)
-        if _is_skipped(rel):
+        if _is_skipped(rel) or rel.name in _SKIP_FILES:
             continue
         yield path
 
