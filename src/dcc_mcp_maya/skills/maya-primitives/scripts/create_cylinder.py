@@ -15,6 +15,7 @@ from dcc_mcp_maya.api import created_object_context, maya_error, maya_from_excep
 def create_cylinder(
     radius: float = 1.0,
     height: float = 2.0,
+    subdivisions_axis: int = 20,
     name: Optional[str] = None,
 ) -> dict:
     """Create a polygon cylinder.
@@ -22,6 +23,7 @@ def create_cylinder(
     Args:
         radius: Cylinder radius. Default: 1.0.
         height: Cylinder height. Default: 2.0.
+        subdivisions_axis: Number of radial subdivisions. Default: 20.
         name: Optional name for the created object.
 
     Returns:
@@ -32,9 +34,19 @@ def create_cylinder(
         import maya.cmds as cmds  # noqa: PLC0415
 
         context = created_object_context(
-            cmds, cmds.polyCylinder(radius=radius, height=height, subdivisionsAxis=20), name
+            cmds,
+            cmds.polyCylinder(
+                radius=radius,
+                height=height,
+                subdivisionsAxis=subdivisions_axis,
+            ),
+            name,
         )
-        context.update(radius=radius, height=height)
+        context.update(
+            radius=radius,
+            height=height,
+            subdivisions_axis=subdivisions_axis,
+        )
         return maya_success(
             "Created cylinder: {}".format(context["object_name"]),
             prompt="Use set_transform to position or assign_material to shade.",
