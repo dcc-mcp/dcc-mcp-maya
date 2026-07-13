@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from unittest.mock import MagicMock
 
+import yaml
 from conftest import load_and_call
 
 
@@ -56,3 +58,19 @@ def test_set_material_attribute_keeps_existing_attribute():
     assert result["context"]["attribute"] == "color"
     assert result["context"]["attribute_alias_applied"] is False
     cmds.setAttr.assert_called_once_with("lambert1.color", 1.0, 0.0, 0.0, type="double3")
+
+
+def test_set_material_attribute_schema_accepts_rgb_arrays():
+    tools_path = (
+        Path(__file__).parents[1]
+        / "src"
+        / "dcc_mcp_maya"
+        / "skills"
+        / "maya-materials"
+        / "tools.yaml"
+    )
+    tools = yaml.safe_load(tools_path.read_text(encoding="utf-8"))["tools"]
+    tool = next(item for item in tools if item["name"] == "set_material_attribute")
+    value_schema = tool["input_schema"]["properties"]["value"]
+
+    assert any(option.get("type") == "array" for option in value_schema["oneOf"])
