@@ -117,7 +117,15 @@ tools:
       attribute:
         type: string
       value:
-        type: string
+        oneOf:
+        - type: boolean
+        - type: number
+        - type: string
+        - type: array
+          items:
+            type: number
+          minItems: 3
+          maxItems: 4
     required:
     - material_name
     - attribute
