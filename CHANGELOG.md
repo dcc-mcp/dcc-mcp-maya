@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.8](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.7...v0.9.8) (2026-07-13)
+
+
+### Bug Fixes
+
+* reload skills through Maya sidecar ([#439](https://github.com/dcc-mcp/dcc-mcp-maya/issues/439)) ([c84ca9a](https://github.com/dcc-mcp/dcc-mcp-maya/commit/c84ca9acf3a243dfee26a1a24bf1746f116720bc))
+
 ## [0.9.7](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.6...v0.9.7) (2026-07-12)
 
 
