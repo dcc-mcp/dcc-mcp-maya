@@ -23,6 +23,13 @@ REM -- Generate .mod with absolute path to Maya modules dir --
 set "MOD_DEST=%USERPROFILE%\Documents\maya\modules"
 if not exist "%MOD_DEST%" mkdir "%MOD_DEST%"
 
+REM -- Remove the legacy descriptor so Maya cannot resolve the old module first --
+set "LEGACY_MOD_FILE=%MOD_DEST%\dcc-mcp-maya.mod"
+if exist "%LEGACY_MOD_FILE%" (
+    del /q "%LEGACY_MOD_FILE%"
+    echo  Removed legacy module descriptor %LEGACY_MOD_FILE%
+)
+
 (
 for %%Y in (2022 2023 2024 2025 2026) do (
     echo + MAYAVERSION:%%Y PLATFORM:win64 dcc_mcp_maya %VERSION% %MODULE_DIR%
