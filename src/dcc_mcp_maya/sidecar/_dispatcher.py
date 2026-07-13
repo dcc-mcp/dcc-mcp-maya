@@ -9,7 +9,7 @@ Maya keeps only the host-specific hooks:
 * execute via :func:`dcc_mcp_maya._executor.execute_in_process` so
   ``tools.yaml`` affinity semantics remain unchanged.
 
-Built-in sidecar actions (``load_skill``, ``get_skill_info``) are server
+Built-in sidecar actions (``load_skill``, ``get_skill_info``, catalog reload) are server
 methods, not script-backed actions. They are handled directly in this
 module before delegating to ``SidecarActionDispatcher``.
 """
@@ -28,7 +28,7 @@ __all__ = ["dispatch_payload"]
 
 # Built-in sidecar actions that are not backed by skill scripts.
 # These are handled by calling server methods directly.
-_BUILTIN_SIDECAR_ACTIONS = frozenset({"load_skill", "get_skill_info"})
+_BUILTIN_SIDECAR_ACTIONS = frozenset({"load_skill", "get_skill_info", "dcc_admin__reload_skills"})
 
 
 def dispatch_payload(
@@ -38,7 +38,7 @@ def dispatch_payload(
 ) -> dict[str, Any]:
     """Dispatch a sidecar payload through the shared core helper.
 
-    Built-in actions (``load_skill``, ``get_skill_info``) are handled
+    Built-in actions (``load_skill``, ``get_skill_info``, catalog reload) are handled
     directly since they are server methods, not script-backed actions.
     All other actions delegate to the core ``SidecarActionDispatcher``.
 
@@ -100,6 +100,14 @@ def _dispatch_builtin_action(
             return _handle_load_skill(args, server, request_id)
         if action == "get_skill_info":
             return _handle_get_skill_info(args, server, request_id)
+        if action == "dcc_admin__reload_skills":
+            return {
+                "success": True,
+                "reloaded": True,
+                "skill_count": int(server.reload_skill_paths()),
+                "request_id": request_id or "",
+                "action": action,
+            }
     except Exception as exc:  # noqa: BLE001
         logger.warning("builtin sidecar action %r failed: %s", action, exc)
         return _error_envelope(

@@ -47,6 +47,7 @@ class _StubServer:
         self._actions = actions or []
         self._raise_on_list = raise_on_list
         self.list_actions_call_count = 0
+        self.reload_skill_paths_call_count = 0
         self._skills: dict[str, bool] = {}
 
     def list_actions(self) -> list[_StubAction]:
@@ -67,6 +68,10 @@ class _StubServer:
         if skill_name == "maya-scene":
             return {"name": "maya-scene", "tools": ["save_scene"], "loaded": False}
         return None
+
+    def reload_skill_paths(self) -> int:
+        self.reload_skill_paths_call_count += 1
+        return 3
 
 
 def _server_lookup_returning(server: Any) -> Callable[[], Any]:
@@ -381,3 +386,21 @@ class TestBuiltinActionsGetSkillInfo:
         )
         # list_actions() was called, proving the resolver path was used
         assert server.list_actions_call_count == 1
+
+
+def test_reload_skills_builtin_calls_server_catalog_refresh():
+    server = _StubServer()
+
+    envelope = dispatch_payload(
+        {"action": "dcc_admin__reload_skills", "args": {}, "request_id": "r-reload-1"},
+        server_lookup=_server_lookup_returning(server),
+    )
+
+    assert envelope == {
+        "success": True,
+        "reloaded": True,
+        "skill_count": 3,
+        "request_id": "r-reload-1",
+        "action": "dcc_admin__reload_skills",
+    }
+    assert server.reload_skill_paths_call_count == 1
