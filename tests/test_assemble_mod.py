@@ -326,6 +326,12 @@ class TestPackagingInstallers:
         token_index = int(token_match.group(1)) - 1
         assert generated_mod_line.split()[token_index] == "0.9.9"
 
+    def test_windows_installer_removes_legacy_module_descriptor(self):
+        installer = (PROJECT_ROOT / "packaging" / "install.bat").read_text(encoding="utf-8")
+
+        assert 'set "LEGACY_MOD_FILE=%MOD_DEST%\\dcc-mcp-maya.mod"' in installer
+        assert 'del /q "%LEGACY_MOD_FILE%"' in installer
+
 
 def _setup_project(tmp_path: Path) -> Path:
     project = tmp_path / "project"
