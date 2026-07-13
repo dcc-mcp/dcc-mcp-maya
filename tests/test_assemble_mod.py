@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib.util as _ilu
 import json
+import re
 import sys
 import zipfile
 from pathlib import Path
@@ -313,6 +314,17 @@ class TestPackagingReadmes:
             assert "DCC_MCP_SERVER_BIN" in text
             assert "DCC_MCP_MAYA_SIDECAR=0" in text
             assert "resolve_sidecar_binary" in text
+
+
+class TestPackagingInstallers:
+    def test_windows_installer_reads_version_from_generated_mod_contract(self):
+        installer = (PROJECT_ROOT / "packaging" / "install.bat").read_text(encoding="utf-8")
+        token_match = re.search(r'for /f "tokens=(\d+)" %%v', installer)
+
+        assert token_match is not None
+        generated_mod_line = "+ MAYAVERSION:2024 PLATFORM:win64 dcc_mcp_maya 0.9.9 ."
+        token_index = int(token_match.group(1)) - 1
+        assert generated_mod_line.split()[token_index] == "0.9.9"
 
 
 def _setup_project(tmp_path: Path) -> Path:

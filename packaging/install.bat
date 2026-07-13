@@ -12,7 +12,7 @@ if "%MODULE_DIR:~-1%"=="\" set "MODULE_DIR=%MODULE_DIR:~0,-1%"
 
 REM -- Read version from pre-generated .mod file --
 set "VERSION=unknown"
-for /f "tokens=4" %%v in ('findstr /r "^+ MAYAVERSION" "%MODULE_DIR%\dcc_mcp_maya.mod"') do (
+for /f "tokens=5" %%v in ('findstr /r "^+ MAYAVERSION" "%MODULE_DIR%\dcc_mcp_maya.mod"') do (
     set "VERSION=%%v"
 )
 echo  Version: %VERSION%
