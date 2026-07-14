@@ -348,8 +348,6 @@ def import_to_scene(  # noqa: PLR0913
         if namespace:
             import_kwargs["namespace"] = namespace
             import_kwargs["mergeNamespacesOnClash"] = bool(merge_namespaces)
-            if not merge_namespaces:
-                import_kwargs["renamingPrefix"] = namespace
 
         try:
             cmds.file(normalized, **import_kwargs)
