@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.12](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.11...v0.9.12) (2026-07-14)
+
+
+### Bug Fixes
+
+* avoid conflicting Maya import flags ([#447](https://github.com/dcc-mcp/dcc-mcp-maya/issues/447)) ([ccb8a64](https://github.com/dcc-mcp/dcc-mcp-maya/commit/ccb8a64d84fe54fe6a3e35bf47eb0b46c1d7f3a9))
+
 ## [0.9.11](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.10...v0.9.11) (2026-07-13)
 
 
