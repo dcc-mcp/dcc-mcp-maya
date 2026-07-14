@@ -470,6 +470,8 @@ def test_import_to_scene_namespace_passed_to_cmds_file(tmp_path):
     assert result["success"] is True
     _args, kwargs = cmds.file.call_args
     assert kwargs.get("namespace") == "hero_ns"
+    assert kwargs.get("mergeNamespacesOnClash") is False
+    assert "renamingPrefix" not in kwargs
 
 
 # ---------------------------------------------------------------------------
