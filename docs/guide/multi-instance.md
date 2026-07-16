@@ -36,33 +36,18 @@ For cross-machine HA deployments, see
 
 ## Launching N Instances
 
-The bundled `examples/multi-instance/userSetup.py` picks a free port
-from a reserved range and registers with `dcc_pid=os.getpid()`.  Drop
-it into your Maya `scripts/` directory and every new Maya will
-self-register on next launch:
+The bundled `examples/multi-instance/userSetup.py` leaves the instance port to
+core/OS assignment and registers with `dcc_pid=os.getpid()`. Drop it into your
+Maya `scripts/` directory and every new Maya self-registers on next launch,
+without a probe-then-bind port race:
 
 ```python
 # examples/multi-instance/userSetup.py  (abridged)
-from pathlib import Path
-import os, socket, logging
-
-PORT_RANGE = range(8765, 8776)      # 11 reserved slots
-
-
-def _pick_free_port(candidates):
-    for port in candidates:
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            try:
-                s.bind(("127.0.0.1", port))
-                return port
-            except OSError:
-                continue
-    return 0                          # OS-assigned fallback
+import os
 
 
 def _apply_multi_instance_env():
     os.environ.setdefault("DCC_MCP_GATEWAY_PORT", "9765")
-    os.environ["DCC_MCP_MAYA_PORT"] = str(_pick_free_port(PORT_RANGE))
     os.environ.setdefault("DCC_MCP_MAYA_DCC_PID", str(os.getpid()))
 ```
 
@@ -92,9 +77,9 @@ account, or they'll form separate registry islands.
 ┌────────────────────────────────────────────────────────────────┐
 │  workstation-01                                                │
 │                                                                │
-│  Maya 2025.0 (anim)     port=8765   dcc_pid=1234   minimal=1  │
-│  Maya 2025.1 (lookdev)  port=8766   dcc_pid=5678   minimal=0  │
-│  Maya 2025.2 (batch)    port=8767   dcc_pid=9012   minimal=1  │
+│  Maya 2025.0 (anim)     port=<OS A>  dcc_pid=1234   minimal=1 │
+│  Maya 2025.1 (lookdev)  port=<OS B>  dcc_pid=5678   minimal=0 │
+│  Maya 2025.2 (batch)    port=<OS C>  dcc_pid=9012   minimal=1 │
 │                              │                                 │
 │                              ▼                                 │
 │  shared FileRegistry ──► standalone gateway :9765             │

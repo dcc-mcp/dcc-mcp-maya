@@ -95,7 +95,7 @@ Or be more specific:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `DCC_MCP_MAYA_PORT` | `8765` | TCP port for the MCP server |
+| `DCC_MCP_MAYA_PORT` | OS-assigned | Optional fixed TCP port for the MCP instance |
 | `DCC_MCP_MAYA_SERVER_NAME` | `maya-mcp` | Name shown in MCP `initialize` response |
 | `DCC_MCP_MAYA_SKILL_PATHS` | _(empty)_ | Extra skill search roots (`;` on Windows, `:` on Unix); use a root like `{rez_root}/skills` whose children are skill packages |
 | `DCC_MCP_GATEWAY_PORT` | `9765` in plugin mode | Local gateway URL used by MCP hosts |
@@ -107,7 +107,7 @@ dcc_mcp_maya.stop_server()` if you started the Python server manually.
 
 ## Manual Direct Server
 
-Direct `start_server(port=8765)` is useful for debugging and `mayapy` scripts.
+Direct `start_server()` is useful for debugging and `mayapy` scripts.
 In Maya GUI, pass a UI dispatcher so `affinity: main` tools run on Maya's main
 thread:
 
@@ -117,12 +117,12 @@ import dcc_mcp_maya
 
 dispatcher = MayaUiDispatcher()
 MayaUiPump(dispatcher).install()
-handle = dcc_mcp_maya.start_server(port=8765, host_dispatcher=dispatcher)
-print(handle.mcp_url())   # http://127.0.0.1:8765/mcp
+handle = dcc_mcp_maya.start_server(host_dispatcher=dispatcher)
+print(handle.mcp_url())   # exact OS-assigned direct URL
 ```
 
-When using this manual path, configure your MCP host with
-`http://127.0.0.1:8765/mcp` instead of the gateway URL.
+Agents normally use the stable gateway on `http://127.0.0.1:9765/mcp`.
+Run `dcc-mcp-cli list` when the exact direct URL is required.
 
 ## Next Steps
 

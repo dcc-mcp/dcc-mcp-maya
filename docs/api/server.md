@@ -8,7 +8,7 @@ The `MayaMcpServer` class is the main entry point for embedding an MCP server in
 
 ```python
 dcc_mcp_maya.start_server(
-    port: int = 8765,
+    port: Optional[int] = None,
     server_name: str = "maya-mcp",
     register_builtins: bool = True,
     extra_skill_paths: Optional[List[str]] = None,
@@ -37,7 +37,7 @@ Start (or return the already-running) module-level singleton server.
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `port` | `int` | `8765` | TCP port. Use `0` for a random available port. |
+| `port` | `Optional[int]` | `None` | Optional fixed TCP port; core/env then the OS selects a free port. |
 | `server_name` | `str` | `"maya-mcp"` | Name shown in MCP `initialize` response. |
 | `register_builtins` | `bool` | `True` | Discover built-in skills during startup; concrete toolsets load on demand. |
 | `extra_skill_paths` | `List[str]` | `None` | Additional directories to scan for `SKILL.md` files. |
@@ -66,7 +66,7 @@ import dcc_mcp_maya
 
 # Basic start
 handle = dcc_mcp_maya.start_server()
-print(handle.mcp_url())  # http://127.0.0.1:8765/mcp
+print(handle.mcp_url())  # exact OS-assigned instance URL
 
 # Custom port + extra skills
 handle = dcc_mcp_maya.start_server(
@@ -98,7 +98,7 @@ from dcc_mcp_maya.server import MayaMcpServer
 
 ```python
 MayaMcpServer(
-    port: int = 8765,
+    port: Optional[int] = None,
     server_name: str = "maya-mcp",
     server_version: str = "0.9.12",  # x-release-please-version
     gateway_port: Optional[int] = None,
@@ -163,7 +163,7 @@ Gracefully stop the server.
 from dcc_mcp_maya.server import MayaMcpServer
 
 # Create and configure
-server = MayaMcpServer(port=8765, server_name="hero-maya")
+server = MayaMcpServer(server_name="hero-maya")
 server.register_builtin_actions(
     extra_skill_paths=["C:/pipeline/maya-actions"]
 )
@@ -192,7 +192,7 @@ Returned by `server.start()` and `start_server()`.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `DCC_MCP_MAYA_PORT` | `8765` | Default TCP port when you start the singleton server directly |
+| `DCC_MCP_MAYA_PORT` | OS-assigned | Optional fixed TCP port for direct instances |
 | `DCC_MCP_MAYA_SERVER_NAME` | `maya-mcp` | Default server name |
 | `DCC_MCP_MAYA_SKILL_PATHS` | — | Maya-specific skill search roots (`;` on Windows, `:` on Unix); each root may be one skill package or a parent of skill packages |
 | `DCC_MCP_SKILL_PATHS` | — | Global fallback skill search roots |

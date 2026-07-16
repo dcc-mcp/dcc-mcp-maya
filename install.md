@@ -49,10 +49,11 @@ Plugin sidecar mode usually exposes MCP at:
 http://127.0.0.1:9765/mcp
 ```
 
-Manual `start_server(port=8765)` mode uses:
+Manual `start_server()` prints its OS-assigned direct endpoint. Agents should
+normally keep using the stable gateway:
 
 ```text
-http://127.0.0.1:8765/mcp
+http://127.0.0.1:9765/mcp
 ```
 
 ## MCP Config

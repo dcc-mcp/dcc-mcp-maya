@@ -95,7 +95,7 @@ Agent 应先发现工具、加载需要的 skill（例如 `maya-primitives` 和
 
 | 变量 | 默认值 | 说明 |
 |------|--------|------|
-| `DCC_MCP_MAYA_PORT` | `8765` | MCP 服务器 TCP 端口 |
+| `DCC_MCP_MAYA_PORT` | 操作系统分配 | MCP 实例的可选固定 TCP 端口 |
 | `DCC_MCP_MAYA_SERVER_NAME` | `maya-mcp` | MCP `initialize` 响应中显示的名称 |
 | `DCC_MCP_MAYA_SKILL_PATHS` | _(空)_ | 额外 skill 搜索根目录（Windows 用 `;`，Unix 用 `:`）；Rez 可指向 `{root}/skills`，其子目录是各个 skill 包 |
 | `DCC_MCP_GATEWAY_PORT` | 插件模式为 `9765` | MCP 宿主连接的本机 gateway 端口 |
@@ -107,7 +107,7 @@ Agent 应先发现工具、加载需要的 skill（例如 `maya-primitives` 和
 
 ## 手动直连服务器
 
-`start_server(port=8765)` 适合调试和 `mayapy` 脚本。在 Maya GUI 中请显式
+`start_server()` 适合调试和 `mayapy` 脚本。在 Maya GUI 中请显式
 传入 UI dispatcher，确保 `affinity: main` 工具在 Maya 主线程执行：
 
 ```python
@@ -116,12 +116,12 @@ import dcc_mcp_maya
 
 dispatcher = MayaUiDispatcher()
 MayaUiPump(dispatcher).install()
-handle = dcc_mcp_maya.start_server(port=8765, host_dispatcher=dispatcher)
-print(handle.mcp_url())   # http://127.0.0.1:8765/mcp
+handle = dcc_mcp_maya.start_server(host_dispatcher=dispatcher)
+print(handle.mcp_url())   # 操作系统分配的实例直连地址
 ```
 
-使用手动直连模式时，MCP 宿主配置 `http://127.0.0.1:8765/mcp`，而不是
-gateway URL。
+Agent 通常连接稳定网关 `http://127.0.0.1:9765/mcp`；需要实例直连地址时运行
+`dcc-mcp-cli list`。
 
 ## 下一步
 

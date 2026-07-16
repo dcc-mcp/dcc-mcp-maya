@@ -4,7 +4,7 @@
 
 - **Maya**: 2020+ (tested with Maya 2022 through 2026 module packages)
 - **Python**: 3.7 – 3.12 (embedded in Maya)
-- **dcc-mcp-core**: ≥ 0.18.21 (auto-installed as dependency)
+- **dcc-mcp-core**: ≥ 0.19.45 (auto-installed as dependency)
 - **dcc-mcp-server**: ≥ 0.18.21 (auto-installed as dependency for the default sidecar gateway)
 
 ## Method 1 — pip into mayapy
@@ -109,9 +109,9 @@ maya.utils.executeDeferred(_load_dcc_mcp_maya, lowestPriority=True)
 - Windows: `%USERPROFILE%\Documents\maya\scripts\userSetup.py`
 - macOS: `~/Library/Preferences/Autodesk/maya/scripts/userSetup.py`
 
-Avoid calling plain `dcc_mcp_maya.start_server(port=8765)` from Maya GUI
-startup code. GUI sessions need a Maya UI dispatcher for `affinity: main` tools;
-the plugin installs it for you.
+Avoid calling plain `dcc_mcp_maya.start_server()` from Maya GUI startup code.
+GUI sessions need a Maya UI dispatcher for `affinity: main` tools; the plugin
+installs it for you.
 
 ## Method 5 — direct start_server for debugging
 
@@ -124,13 +124,14 @@ import dcc_mcp_maya
 
 dispatcher = MayaUiDispatcher()
 MayaUiPump(dispatcher).install()
-handle = dcc_mcp_maya.start_server(port=8765, host_dispatcher=dispatcher)
-print(handle.mcp_url())  # http://127.0.0.1:8765/mcp
+handle = dcc_mcp_maya.start_server(host_dispatcher=dispatcher)
+print(handle.mcp_url())  # exact OS-assigned direct URL
 ```
 
-When using direct mode, configure the MCP host with
-`http://127.0.0.1:8765/mcp`. In plugin mode, use the gateway URL
-`http://127.0.0.1:9765/mcp`.
+When using direct mode, configure the MCP host with the URL returned by
+`handle.mcp_url()`. In plugin mode, use the stable gateway URL
+`http://127.0.0.1:9765/mcp`; `dcc-mcp-cli list` reports every registered
+instance and its exact bound URL.
 
 ## Multiple Maya Versions
 
@@ -150,30 +151,18 @@ Each Maya version has its own Python interpreter. Install separately per version
 If running multiple Maya instances simultaneously, plugin gateway mode is
 simpler: every instance registers behind `http://127.0.0.1:9765/mcp`.
 
-If you deliberately run direct mode, use different ports:
+Direct servers also bind independent OS-assigned ports, so no manual port range
+or pre-bind probe is needed:
 
 ```python
-# Maya 2022 instance
-handle = dcc_mcp_maya.start_server(port=8762)
-
-# Maya 2024 instance
-handle = dcc_mcp_maya.start_server(port=8764)
-
-# Maya 2025 instance
-handle = dcc_mcp_maya.start_server(port=8765)
+# Run this independently inside each Maya process.
+handle = dcc_mcp_maya.start_server()
+print(handle.mcp_url())
 ```
 
-Then configure each as a separate MCP server in your host:
-
-```json
-{
-  "mcpServers": {
-    "maya-2022": { "url": "http://127.0.0.1:8762/mcp" },
-    "maya-2024": { "url": "http://127.0.0.1:8764/mcp" },
-    "maya-2025": { "url": "http://127.0.0.1:8765/mcp" }
-  }
-}
-```
+In normal multi-process use, let every process register with the gateway and
+select the target instance through discovery metadata rather than copying
+these transient direct URLs into a persistent client configuration.
 
 ## Upgrading
 

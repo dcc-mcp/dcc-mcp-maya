@@ -96,7 +96,7 @@ def _log_dispatcher_shutdown(dcc_name: str, signalled: Any) -> None:
 class MayaServerOptions:
     """Maya adapter options collapsed for the core 0.17.31 server contract."""
 
-    port: int = 8765
+    port: Optional[int] = None
     server_name: str = "maya-mcp"
     server_version: str = DEFAULT_SERVER_VERSION
     gateway_port: Optional[int] = None
@@ -154,16 +154,16 @@ class MayaMcpServer(DccServerBase):
 
     Example::
 
-        server = MayaMcpServer(port=8765)
+        server = MayaMcpServer()
         server.register_builtin_actions()
         handle = server.start()
-        print(handle.mcp_url())    # http://127.0.0.1:8765/mcp
+        print(handle.mcp_url())    # exact OS-assigned instance endpoint
         handle.shutdown()
     """
 
     def __init__(
         self,
-        port: int = 8765,
+        port: Optional[int] = None,
         server_name: str = "maya-mcp",
         server_version: str = DEFAULT_SERVER_VERSION,
         gateway_port: Optional[int] = None,
@@ -931,7 +931,7 @@ _server_instance: Optional[MayaMcpServer] = None
 
 
 def start_server(
-    port: int = 8765,
+    port: Optional[int] = None,
     register_builtins: bool = True,
     extra_skill_paths: Optional[List[str]] = None,
     include_bundled: bool = True,

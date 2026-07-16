@@ -19,7 +19,7 @@ The Maya plugin starts a Rust `dcc-mcp-server` sidecar by default, so HTTP and g
 [![Python](https://img.shields.io/pypi/pyversions/dcc-mcp-maya?label=Python)](https://pypi.org/project/dcc-mcp-maya/)
 [![Maya](https://img.shields.io/badge/Maya-2020%2B-37A5CC)](https://www.autodesk.com/products/maya/overview)
 [![MCP](https://img.shields.io/badge/MCP-Streamable%20HTTP-6f42c1)](https://modelcontextprotocol.io/)
-[![dcc-mcp-core](https://img.shields.io/badge/dcc--mcp--core-%3E%3D0.19.4%2C%3C0.19.5-blue)](https://github.com/loonghao/dcc-mcp-core)
+[![dcc-mcp-core](https://img.shields.io/badge/dcc--mcp--core-%3E%3D0.19.45%2C%3C0.20-blue)](https://github.com/dcc-mcp/dcc-mcp-core)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 ## Why Use It
@@ -81,8 +81,8 @@ For auto-start, copy or source the bundled `maya/userSetup.py`. It defers
 plugin loading until Maya is idle and uses the same gateway path as the
 Plug-in Manager.
 
-Direct `start_server(port=8765)` is mainly for debugging and `mayapy` scripts.
-In Maya GUI, pass a UI dispatcher explicitly:
+Direct `start_server()` uses an OS-assigned instance port. In Maya GUI, pass a
+UI dispatcher explicitly:
 
 ```python
 from dcc_mcp_maya.dispatcher import MayaUiDispatcher, MayaUiPump
@@ -90,12 +90,12 @@ import dcc_mcp_maya
 
 dispatcher = MayaUiDispatcher()
 MayaUiPump(dispatcher).install()
-handle = dcc_mcp_maya.start_server(port=8765, host_dispatcher=dispatcher)
-print(handle.mcp_url())  # http://127.0.0.1:8765/mcp
+handle = dcc_mcp_maya.start_server(host_dispatcher=dispatcher)
+print(handle.mcp_url())  # Exact direct endpoint selected by the OS
 ```
 
-If you start the Python server manually this way, point your MCP host at
-`http://127.0.0.1:8765/mcp` instead.
+Connect through the stable gateway on `9765`, or use the printed URL for an
+explicit direct debugging connection.
 
 ## Architecture
 
@@ -204,13 +204,13 @@ Useful plugin defaults:
 |---|---|
 | Plugin standalone gateway | `http://127.0.0.1:9765/mcp` |
 | Optional LAN gateway | `http://<this-machine-lan-ip>:59765/mcp` |
-| Direct `start_server(port=8765)` | `http://127.0.0.1:8765/mcp` |
+| Direct `start_server()` | OS-assigned; inspect `handle.mcp_url()` |
 
 ## Configuration
 
 | Environment variable | Default | Description |
 |---|---|---|
-| `DCC_MCP_MAYA_PORT` | `8765` direct, `0` plugin | TCP port for the in-process Maya server. Plugin mode uses an OS-assigned instance port by default. |
+| `DCC_MCP_MAYA_PORT` | `0` | TCP instance port; `0` lets the OS choose. |
 | `DCC_MCP_MAYA_SERVER_NAME` | `maya-mcp` | Name shown in MCP `initialize`. |
 | `DCC_MCP_MAYA_SKILL_PATHS` | none | Maya-specific skill search roots (`;` on Windows, `:` on Unix); each root can be a single skill package or contain child skill packages. |
 | `DCC_MCP_SKILL_PATHS` | none | Global fallback skill search roots for all DCC adapters. |
@@ -368,7 +368,7 @@ Windows symlinks require Developer Mode or an elevated shell. If symlinks are un
 
 - Autodesk Maya 2020+
 - Python 3.7+
-- `dcc-mcp-core>=0.19.4,<0.19.5`
+- `dcc-mcp-core>=0.19.45,<0.20.0`
 - Standard sidecar binary for plugin mode: `dcc-mcp-server>=0.18.21`
 
 ## License

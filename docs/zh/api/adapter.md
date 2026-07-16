@@ -12,7 +12,7 @@ from dcc_mcp_maya.server import MayaMcpServer
 
 ```python
 MayaMcpServer(
-    port: int = 8765,
+    port: Optional[int] = None,
     server_name: str = "maya-mcp",
     server_version: str = "0.3.0",
     gateway_port: Optional[int] = None,
@@ -25,7 +25,7 @@ MayaMcpServer(
 
 | 参数 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
-| `port` | int | `8765` | TCP 端口，使用 `0` 随机选择可用端口 |
+| `port` | int \| None | `None` | 可选固定 TCP 端口；未指定时由 core/环境变量和操作系统分配 |
 | `server_name` | str | `"maya-mcp"` | MCP `initialize` 响应中显示的名称 |
 | `server_version` | str | `"0.3.0"` | MCP `initialize` 响应中显示的版本 |
 | `gateway_port` | int \| None | `None` | 多实例发现所用的网关选举端口 |
@@ -61,7 +61,7 @@ server.register_builtin_actions(extra_skill_paths=["/my/skills"])
 
 ```python
 handle = server.start()
-print(handle.mcp_url())   # http://127.0.0.1:8765/mcp
+print(handle.mcp_url())   # 操作系统分配的实例地址
 ```
 
 返回：`McpServerHandle`，包含 `.mcp_url()`、`.port`、`.shutdown()`
@@ -82,12 +82,12 @@ print(handle.mcp_url())   # http://127.0.0.1:8765/mcp
 ```python
 from dcc_mcp_maya.server import MayaMcpServer
 
-server = MayaMcpServer(port=8765, server_name="my-maya")
+server = MayaMcpServer(server_name="my-maya")
 server.register_builtin_actions(extra_skill_paths=["/studio/skills"])
 handle = server.start()
 
-print(handle.mcp_url())   # http://127.0.0.1:8765/mcp
-print(handle.port)        # 8765
+print(handle.mcp_url())   # 操作系统分配的实例地址
+print(handle.port)        # 实际选择的空闲端口
 
 server.stop()
 ```
@@ -102,7 +102,6 @@ server.stop()
 import dcc_mcp_maya
 
 handle = dcc_mcp_maya.start_server(
-    port=8765,
     server_name="maya-mcp",
     register_builtins=True,
     extra_skill_paths=None,
@@ -118,7 +117,7 @@ handle = dcc_mcp_maya.start_server(
 
 | 参数 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
-| `port` | int | `8765` | TCP 端口 |
+| `port` | int \| None | `None` | 可选固定 TCP 端口；省略时由 core/环境变量和操作系统分配 |
 | `server_name` | str | `"maya-mcp"` | MCP 服务器名称 |
 | `register_builtins` | bool | `True` | 启动时发现内置技能；工具集按需加载 |
 | `extra_skill_paths` | list[str] | `None` | 额外技能路径 |

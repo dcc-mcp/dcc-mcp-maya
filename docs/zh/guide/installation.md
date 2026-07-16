@@ -4,7 +4,7 @@
 
 - **Maya**：2020+（模块包覆盖 Maya 2022 至 2026）
 - **Python**：3.7 – 3.12（Maya 内嵌）
-- **dcc-mcp-core**：≥ 0.18.21（作为依赖自动安装）
+- **dcc-mcp-core**：≥ 0.19.45（作为依赖自动安装）
 - **dcc-mcp-server**：≥ 0.18.21（默认 sidecar gateway 运行时，作为依赖自动安装）
 
 ## 方式一 — pip 安装到 mayapy
@@ -101,7 +101,7 @@ maya.utils.executeDeferred(_load_dcc_mcp_maya, lowestPriority=True)
 - macOS：`~/Library/Preferences/Autodesk/maya/scripts/userSetup.py`
 
 避免在 Maya GUI 启动代码里直接调用普通的
-`dcc_mcp_maya.start_server(port=8765)`。GUI 会话需要 Maya UI dispatcher
+`dcc_mcp_maya.start_server()`。GUI 会话需要 Maya UI dispatcher
 才能执行 `affinity: main` 工具；插件会自动安装它。
 
 ## 方式五 — 调试用 direct start_server
@@ -115,12 +115,13 @@ import dcc_mcp_maya
 
 dispatcher = MayaUiDispatcher()
 MayaUiPump(dispatcher).install()
-handle = dcc_mcp_maya.start_server(port=8765, host_dispatcher=dispatcher)
-print(handle.mcp_url())  # http://127.0.0.1:8765/mcp
+handle = dcc_mcp_maya.start_server(host_dispatcher=dispatcher)
+print(handle.mcp_url())  # 实际由操作系统分配的直连 URL
 ```
 
-使用直连模式时，MCP 宿主填写 `http://127.0.0.1:8765/mcp`。插件模式请使用
-gateway URL：`http://127.0.0.1:9765/mcp`。
+使用直连模式时，MCP 宿主填写 `handle.mcp_url()` 返回的 URL。插件模式请使用
+稳定的 gateway URL：`http://127.0.0.1:9765/mcp`；`dcc-mcp-cli list`
+会列出每个已注册实例及其实际绑定 URL。
 
 ## 多 Maya 版本
 
@@ -140,30 +141,17 @@ gateway URL：`http://127.0.0.1:9765/mcp`。
 同时运行多个 Maya 实例时，插件 gateway 模式更简单：所有实例都会注册到
 `http://127.0.0.1:9765/mcp` 后面。
 
-如果你明确要使用直连模式，请为每个实例使用不同端口：
+直连 server 也会各自绑定操作系统分配的端口，不再需要手工维护端口范围或先探测
+再绑定：
 
 ```python
-# Maya 2022 实例
-handle = dcc_mcp_maya.start_server(port=8762)
-
-# Maya 2024 实例
-handle = dcc_mcp_maya.start_server(port=8764)
-
-# Maya 2025 实例
-handle = dcc_mcp_maya.start_server(port=8765)
+# 在每个 Maya 进程内分别执行。
+handle = dcc_mcp_maya.start_server()
+print(handle.mcp_url())
 ```
 
-在宿主中分别配置：
-
-```json
-{
-  "mcpServers": {
-    "maya-2022": { "url": "http://127.0.0.1:8762/mcp" },
-    "maya-2024": { "url": "http://127.0.0.1:8764/mcp" },
-    "maya-2025": { "url": "http://127.0.0.1:8765/mcp" }
-  }
-}
-```
+正常的多进程场景应让所有进程注册到 gateway，并通过发现元数据选择目标实例，
+不要把这些临时直连 URL 固化进客户端配置。
 
 ## 升级
 

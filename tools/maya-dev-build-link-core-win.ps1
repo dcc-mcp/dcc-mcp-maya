@@ -215,8 +215,7 @@ Write-Host "   ✅ $ModFile" -ForegroundColor Green
 Write-Host ""
 Write-Host "Done. Start Maya $MayaVersion — PYTHONPATH includes live dcc_mcp_core + dcc_mcp_maya." -ForegroundColor Cyan
 Write-Host ""
-Write-Host "MCP (Streamable HTTP, default per-Maya):" -ForegroundColor Cyan
-Write-Host "   http://127.0.0.1:8765/mcp"
+Write-Host "MCP instance (Streamable HTTP): OS-assigned; inspect startup logs or dcc-mcp-cli list" -ForegroundColor Cyan
 Write-Host "MCP via elected gateway (multi-instance, if enabled):" -ForegroundColor Cyan
 Write-Host "   http://127.0.0.1:9765/mcp"
 Write-Host "Docs: docs/guide/local-mcp-debug.md | examples/mcp/cursor-maya-streamable-http.json" -ForegroundColor Gray

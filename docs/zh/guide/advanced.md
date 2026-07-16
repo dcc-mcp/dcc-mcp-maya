@@ -69,7 +69,6 @@ def main(
 import dcc_mcp_maya
 
 handle = dcc_mcp_maya.start_server(
-    port=8765,
     extra_skill_paths=[
         "/path/to/my-skills-folder",
         "/another/skills/directory",
@@ -154,7 +153,7 @@ print(handle.mcp_url())   # http://127.0.0.1:9000/mcp
 ```python
 from dcc_mcp_maya.server import MayaMcpServer
 
-server = MayaMcpServer(port=8765, server_name="maya-mcp")
+server = MayaMcpServer(server_name="maya-mcp")
 server.register_builtin_actions(extra_skill_paths=["/my/custom/skills"])
 handle = server.start()
 
@@ -310,8 +309,7 @@ def _start_mcp_if_enabled():
     if os.environ.get("DCC_MCP_MAYA_AUTOSTART", "1") == "0":
         return
     import dcc_mcp_maya
-    port = int(os.environ.get("DCC_MCP_MAYA_PORT", "8765"))
-    handle = dcc_mcp_maya.start_server(port=port)
+    handle = dcc_mcp_maya.start_server()
     print(f"[studio] Maya MCP: {handle.mcp_url()}")
 
 maya.utils.executeDeferred(_start_mcp_if_enabled)

@@ -16,14 +16,16 @@ your existing `userSetup.py`):
 
 On every Maya launch:
 
-1. Picks the first free port from `range(8765, 8776)` (11 slots).
+1. Leaves the instance port unset so `dcc-mcp-core` binds port `0`; the
+   operating system assigns a free port atomically and the exact URL is
+   published to discovery.
 2. Exports `DCC_MCP_MAYA_DCC_PID=<os.getpid()>` so `diagnostics__*`
    tools route to the correct Maya.
 3. Exports `DCC_MCP_GATEWAY_PORT=9765` so every instance shares the
    same gateway election.
 4. Loads the `dcc_mcp_maya_plugin` via `executeDeferred`.
 
-The helper functions (`pick_free_port`, `apply_multi_instance_env`) are
-unit-tested in `tests/test_multi_instance_example.py`; see the full
+The `apply_multi_instance_env` helper is unit-tested in
+`tests/test_multi_instance_example.py`; see the full
 deployment guide at
 [`docs/guide/multi-instance.md`](../../docs/guide/multi-instance.md).

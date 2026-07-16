@@ -10,7 +10,7 @@
 `dcc-mcp-maya` embeds a standards-compliant MCP Streamable HTTP server directly inside Autodesk Maya. It exposes 72+ Maya operations as MCP tools that any AI agent (Claude, Cursor, Gemini, etc.) can call over HTTP — no external gateway, no subprocess bridge.
 
 **Current version:** 0.9.12 <!-- x-release-please-version -->
-**Core dependency:** `dcc-mcp-core>=0.19.4,<0.19.5`
+**Core dependency:** `dcc-mcp-core>=0.19.45,<0.20.0`
 **Python:** 3.7+
 **Maya:** 2020+
 
@@ -20,8 +20,8 @@
 
 ```python
 import dcc_mcp_maya
-handle = dcc_mcp_maya.start_server(port=8765)
-# MCP client connects to http://127.0.0.1:8765/mcp
+handle = dcc_mcp_maya.start_server()
+# MCP client connects through http://127.0.0.1:9765/mcp
 ```
 
 Or load the Maya plugin (`dcc_mcp_maya_plugin.py`) and the server starts automatically.
@@ -369,7 +369,7 @@ All other skills appear as `__skill__<name>` stubs (default behavior). Call `loa
 ### Environment Variables
 | Variable | Default | Purpose |
 |----------|---------|---------|
-| `DCC_MCP_MAYA_PORT` | `8765` | TCP port for MCP HTTP server. |
+| `DCC_MCP_MAYA_PORT` | `0` | MCP instance port (`0` lets the OS choose). |
 | `DCC_MCP_MAYA_SERVER_NAME` | `maya-mcp` | Name in MCP `initialize` response. |
 | `DCC_MCP_MAYA_SKILL_PATHS` | — | Maya skill search roots (`;` on Windows, `:` on Unix); Rez packages usually append `{root}/skills` whose children are skill packages. |
 | `DCC_MCP_MINIMAL` | `1` | `0` = full mode; `1` = minimal mode. |

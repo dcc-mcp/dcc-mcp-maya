@@ -8,7 +8,7 @@
 
 ```python
 dcc_mcp_maya.start_server(
-    port: int = 8765,
+    port: Optional[int] = None,
     server_name: str = "maya-mcp",
     register_builtins: bool = True,
     extra_skill_paths: Optional[List[str]] = None,
@@ -37,7 +37,7 @@ dcc_mcp_maya.start_server(
 
 | 参数 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
-| `port` | `int` | `8765` | TCP 端口。使用 `0` 随机分配可用端口。 |
+| `port` | `Optional[int]` | `None` | 可选固定 TCP 端口；未指定时由 core/环境变量和操作系统分配。 |
 | `server_name` | `str` | `"maya-mcp"` | MCP `initialize` 响应中显示的名称。 |
 | `register_builtins` | `bool` | `True` | 启动时发现内置技能；具体工具集按需加载。 |
 | `extra_skill_paths` | `List[str]` | `None` | 额外扫描 `SKILL.md` 文件的目录列表。 |
@@ -66,7 +66,7 @@ import dcc_mcp_maya
 
 # 基本启动
 handle = dcc_mcp_maya.start_server()
-print(handle.mcp_url())  # http://127.0.0.1:8765/mcp
+print(handle.mcp_url())  # 操作系统分配的实例地址
 
 # 自定义端口 + 额外技能
 handle = dcc_mcp_maya.start_server(
@@ -98,7 +98,7 @@ from dcc_mcp_maya.server import MayaMcpServer
 
 ```python
 MayaMcpServer(
-    port: int = 8765,
+    port: Optional[int] = None,
     server_name: str = "maya-mcp",
     server_version: str = "0.3.0",
     gateway_port: Optional[int] = None,
@@ -162,7 +162,7 @@ server.stop() -> None
 ```python
 from dcc_mcp_maya.server import MayaMcpServer
 
-server = MayaMcpServer(port=8765, server_name="hero-maya")
+server = MayaMcpServer(server_name="hero-maya")
 server.register_builtin_actions(
     extra_skill_paths=["C:/pipeline/maya-actions"]
 )
@@ -179,7 +179,7 @@ server.stop()
 
 | 变量 | 默认值 | 说明 |
 |------|--------|------|
-| `DCC_MCP_MAYA_PORT` | `8765` | 直接启动单例服务器时的默认 TCP 端口 |
+| `DCC_MCP_MAYA_PORT` | 操作系统分配 | 直连实例的可选固定 TCP 端口 |
 | `DCC_MCP_MAYA_SERVER_NAME` | `maya-mcp` | 默认服务器名称 |
 | `DCC_MCP_MAYA_SKILL_PATHS` | — | Maya 专用 skill 搜索根目录（Windows 用 `;`，Unix 用 `:`）；每个根目录可以是单个 skill 包或多个子 skill 包的父目录 |
 | `DCC_MCP_SKILL_PATHS` | — | 全局回退 skill 搜索根目录 |

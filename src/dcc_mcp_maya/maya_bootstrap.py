@@ -29,7 +29,6 @@ def _maya_is_background() -> bool:
 
 
 def _server_kwargs() -> Dict[str, Any]:
-    port = int(os.environ.get("DCC_MCP_MAYA_PORT", "8765"))
     gateway_raw = os.environ.get("DCC_MCP_GATEWAY_PORT", "0")
     try:
         gateway_port: Optional[int] = int(gateway_raw)
@@ -38,7 +37,6 @@ def _server_kwargs() -> Dict[str, Any]:
     if gateway_port is not None and gateway_port <= 0:
         gateway_port = None
     return {
-        "port": port,
         "gateway_port": gateway_port,
         "registry_dir": os.environ.get("DCC_MCP_REGISTRY_DIR") or None,
     }

@@ -8,8 +8,8 @@ Use this after a **dev link** (`just maya-dev-build-link-core-win` / `just maya-
 2. Load **`dcc_mcp_maya`** in **Windows → Settings/Preferences → Plug-in Manager** (auto-load if you want it every session).
 3. Confirm the gateway URL in the Script Editor / stdout (usually **`http://127.0.0.1:9765/mcp`** in plugin sidecar mode).
 
-Use **`http://127.0.0.1:8765/mcp`** only when you deliberately start a direct
-Python server with `start_server(port=8765)`.
+For a deliberately direct Python server, use the exact URL returned by
+`start_server().mcp_url()`; its instance port is OS-assigned by default.
 
 ## 2. Connect Cursor (Streamable HTTP MCP)
 
@@ -92,7 +92,7 @@ The rest of `maya-dev` works without it, and `maya_dev__start_debugpy` reports `
 
 | Check | Action |
 |-------|--------|
-| MCP 404 / connection refused | Plugin loaded? Correct port (`8765` vs `9765`)? |
+| MCP 404 / connection refused | Plugin loaded? Use gateway `9765`, or the exact direct URL reported at startup. |
 | Tools missing | Minimal mode: call `load_skill("…")` first (see AGENTS.md). |
 | `debugpy_missing` | Optional: install debugpy into the matching `mayapy`, then restart Maya to unlock stronger IDE attach debugging. |
 | `port_in_use` | Pick another port or stop the process already listening there. |

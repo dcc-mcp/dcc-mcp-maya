@@ -17,13 +17,16 @@ Start the standalone service:
 mayapy examples/standalone/run_maya_mcp.py
 ```
 
-The default MCP URL is:
+The instance port is assigned by the operating system. The script prints the
+exact MCP URL after startup, for example:
 
 ```text
-http://127.0.0.1:8765/mcp
+[dcc-mcp-maya] standalone MCP: http://127.0.0.1:<assigned-port>/mcp
 ```
 
-Point Cursor, Claude Desktop, or another Streamable HTTP MCP host at that URL.
+Point a direct Streamable HTTP MCP host at the printed URL. For normal plugin
+deployments, use the stable gateway at `http://127.0.0.1:9765/mcp` and inspect
+instances with `dcc-mcp-cli list` instead of hardcoding an instance port.
 
 ## Custom skill example
 

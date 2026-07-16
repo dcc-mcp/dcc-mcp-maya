@@ -18,7 +18,7 @@ In Cursor Settings → MCP Servers, add:
 ```json
 {
   "maya": {
-    "url": "http://127.0.0.1:8765/mcp"
+    "url": "http://127.0.0.1:9765/mcp"
   }
 }
 ```

@@ -17,7 +17,7 @@ Autodesk Maya 的 [DCC Model Context Protocol](https://github.com/loonghao/dcc-m
 │  Maya (embedded Python)                                  │
 │                                                          │
 │  import dcc_mcp_maya                                    │
-│  handle = dcc_mcp_maya.start_server(port=8765)          │
+│  handle = dcc_mcp_maya.start_server()                   │
 │                                                          │
 │  ┌─────────────────────────────────────────────────┐   │
 │  │  McpHttpServer  (dcc-mcp-core / Rust/axum)      │   │
@@ -25,7 +25,7 @@ Autodesk Maya 的 [DCC Model Context Protocol](https://github.com/loonghao/dcc-m
 │  │  GET  /mcp  ──►  SSE stream                     │   │
 │  └─────────────────────────────────────────────────┘   │
 └─────────────────────────────┬───────────────────────────┘
-                               │  http://127.0.0.1:8765/mcp
+                               │  http://127.0.0.1:9765/mcp（稳定网关）
 ┌─────────────────────────────▼───────────────────────────┐
 │  MCP Host  (Claude Desktop / OpenClaw / Cursor / …)      │
 └─────────────────────────────────────────────────────────┘
@@ -68,8 +68,8 @@ Agent 应先阅读
 ```python
 import dcc_mcp_maya
 
-handle = dcc_mcp_maya.start_server(port=8765)
-print(handle.mcp_url())   # http://127.0.0.1:8765/mcp
+handle = dcc_mcp_maya.start_server()
+print(handle.mcp_url())   # 操作系统分配的实例直连地址
 ```
 
 将 MCP 客户端指向上述 URL。
@@ -83,7 +83,7 @@ print(handle.mcp_url())   # http://127.0.0.1:8765/mcp
 
 | 环境变量 | 默认值 | 说明 |
 |---|---|---|
-| `DCC_MCP_MAYA_PORT` | `8765` | MCP 服务器的 TCP 端口 |
+| `DCC_MCP_MAYA_PORT` | 操作系统分配 | 可选固定的 MCP 实例 TCP 端口 |
 | `DCC_MCP_MAYA_SERVER_NAME` | `maya-mcp` | MCP initialize 中显示的名称 |
 | `DCC_MCP_MAYA_SKILL_PATHS` | _(无)_ | Maya 专用 skill 搜索根目录（Windows 用分号分隔，Unix 用冒号）；每个根目录可以是单个 skill 包，也可以包含多个子 skill 包 |
 | `DCC_MCP_SKILL_PATHS` | _(无)_ | 所有 DCC 适配器的全局回退 skill 搜索根目录 |
@@ -152,7 +152,7 @@ export DCC_MCP_MINIMAL=0
 
 ```python
 # 或以编程方式
-server = MayaMcpServer(port=8765)
+server = MayaMcpServer()
 server.register_builtin_actions(minimal=False)
 handle = server.start()
 ```
@@ -327,7 +327,7 @@ lint 在 `Lint Skills` CI 作业中运行，因此添加新工具而没有这些
 {
   "mcpServers": {
     "maya": {
-      "url": "http://127.0.0.1:8765/mcp"
+      "url": "http://127.0.0.1:9765/mcp"
     }
   }
 }
