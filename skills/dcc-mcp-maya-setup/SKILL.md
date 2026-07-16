@@ -84,8 +84,8 @@ Plugin sidecar mode is the preferred default. Configure the MCP host with:
 }
 ```
 
-Use `http://127.0.0.1:8765/mcp` only when the user explicitly starts the
-server manually with `dcc_mcp_maya.start_server(port=8765)`.
+For an explicit direct connection, run `dcc-mcp-cli list` and use the exact
+instance URL published there; do not hardcode an instance port.
 
 When editing an existing MCP config, preserve unrelated servers. Merge only the
 `maya` server entry unless the user asks for a different server name.
@@ -130,7 +130,7 @@ Expected behavior:
 - `mayapy` not found: ask for the exact Maya version and mayapy path.
 - Pip bootstrap fails: run `mayapy -m ensurepip --upgrade`, then repeat install.
 - MCP connection refused: Maya is not running, the plugin is not loaded, or the
-  host is pointing at `8765` while plugin sidecar mode is on `9765`.
+  host cached a stale direct URL; use gateway `9765` or refresh with `dcc-mcp-cli list`.
 - Tool missing: call `dcc_capability_manifest` or `search_skills`, then
   `load_skill("<skill-name>")`.
 - Plugin loaded but hangs: check Script Editor output, firewall/localhost

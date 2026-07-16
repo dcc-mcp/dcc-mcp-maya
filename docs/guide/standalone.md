@@ -16,10 +16,11 @@ The bundled bootstrap is the shortest path:
 mayapy maya_bootstrap.py
 ```
 
-By default it listens on:
+By default the OS assigns a free instance port. Copy the URL printed by the
+bootstrap (or run `dcc-mcp-cli list`), for example:
 
 ```text
-http://127.0.0.1:8765/mcp
+http://127.0.0.1:<assigned-port>/mcp
 ```
 
 Configure your MCP host with that direct URL:
@@ -28,7 +29,7 @@ Configure your MCP host with that direct URL:
 {
   "mcpServers": {
     "maya-standalone": {
-      "url": "http://127.0.0.1:8765/mcp"
+      "url": "http://127.0.0.1:<assigned-port>/mcp"
     }
   }
 }
@@ -38,7 +39,7 @@ Useful environment variables:
 
 | Variable | Default | Use |
 |---|---|---|
-| `DCC_MCP_MAYA_PORT` | `8765` | Direct MCP port for this `mayapy` process. |
+| `DCC_MCP_MAYA_PORT` | OS-assigned | Optional fixed direct MCP port for this `mayapy` process. |
 | `DCC_MCP_GATEWAY_PORT` | `0` in bootstrap | Set `9765` only when you intentionally want gateway registration. |
 | `DCC_MCP_MAYA_SKILL_PATHS` | none | Extra skill roots for custom standalone-safe skills. |
 
@@ -64,12 +65,11 @@ maya.standalone.initialize(name="python")
 
 dispatcher = MayaStandaloneDispatcher()
 handle = start_server(
-    port=8765,
     gateway_port=None,
     host_dispatcher=dispatcher,
 )
 
-print(handle.mcp_url())  # http://127.0.0.1:8765/mcp
+print(handle.mcp_url())  # exact OS-assigned direct URL
 threading.Event().wait()
 ```
 
@@ -156,7 +156,7 @@ The repo includes a complete example skill at
 
 | Symptom | Fix |
 |---|---|
-| MCP host cannot connect | Confirm the `mayapy` process is still running and the host points at `http://127.0.0.1:8765/mcp`. |
+| MCP host cannot connect | Confirm `mayapy` is running, then refresh the direct URL with `dcc-mcp-cli list`. |
 | Tool needs viewport or modelPanel | Use GUI plugin mode; headless Maya has no interactive viewport. |
 | Custom skill not found | Set `DCC_MCP_MAYA_SKILL_PATHS` to the parent directory of the skill package, then restart the standalone service. |
 | Concurrent calls corrupt scene state | Route all Maya-touching tools through `affinity: main`; `MayaStandaloneDispatcher` serializes them. |

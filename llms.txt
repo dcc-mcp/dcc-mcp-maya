@@ -20,8 +20,8 @@
 
 ```python
 import dcc_mcp_maya
-handle = dcc_mcp_maya.start_server(port=8765)
-# Direct MCP host → http://127.0.0.1:8765/mcp  |  Gateway / REST clients → http://127.0.0.1:9765/v1/* (search, describe, call, call_batch)
+handle = dcc_mcp_maya.start_server()
+# Direct MCP host → handle.mcp_url() (OS-assigned) | Gateway / REST clients → http://127.0.0.1:9765/v1/* (search, describe, call, call_batch)
 handle.shutdown()
 ```
 
@@ -35,7 +35,7 @@ Plugin mode: copy `maya/plugin/dcc_mcp_maya_plugin.py` to `MAYA_PLUG_IN_PATH` an
 
 ```python
 start_server(
-    port: int = 8765,
+    port: Optional[int] = None,
     server_name: str = "maya-mcp",
     register_builtins: bool = True,
     extra_skill_paths: Optional[List[str]] = None,
@@ -55,7 +55,7 @@ stop_server() -> None
 
 ```python
 MayaMcpServer(
-    port: int = 8765,
+    port: Optional[int] = None,
     server_name: str = "maya-mcp",
     server_version: str = "0.9.12",  # x-release-please-version
     gateway_port: Optional[int] = None,
@@ -87,7 +87,7 @@ from dcc_mcp_maya import (
 )
 
 # Option 1 — programmatic access
-server = MayaMcpServer(port=8765)
+server = MayaMcpServer()
 server.register_builtin_actions(minimal=True)
 manifest = server.build_capability_manifest()
 # {'schema_version': '1', 'dcc_type': 'maya', 'metadata': {...},
@@ -185,7 +185,7 @@ Tool naming: `{skill_name.replace("-","_")}__{script_stem}` (e.g. `maya_scene__n
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `DCC_MCP_MAYA_PORT` | `8765` | TCP port |
+| `DCC_MCP_MAYA_PORT` | unset (`0`) | Optional fixed TCP port; unset/`0` lets the OS assign one |
 | `DCC_MCP_MAYA_SERVER_NAME` | `maya-mcp` | MCP init name |
 | `DCC_MCP_MAYA_SKILL_PATHS` | — | Maya skill search roots (`;` Win / `:` Unix); Rez packages usually append `{root}/skills` |
 | `DCC_MCP_SKILL_PATHS` | — | Global fallback skill search roots |

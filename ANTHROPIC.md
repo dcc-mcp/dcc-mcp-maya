@@ -20,7 +20,7 @@ See [CLAUDE.md](CLAUDE.md) for the exact `claude_desktop_config.json` snippet.
 Configure your MCP client with:
 
 ```
-Endpoint: http://127.0.0.1:8765/mcp
+Endpoint: http://127.0.0.1:9765/mcp
 Protocol: MCP Streamable HTTP (2025-03-26 spec)
 ```
 

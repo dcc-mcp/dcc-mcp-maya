@@ -4,7 +4,7 @@ Usage:
     mayapy examples/standalone/run_maya_mcp.py
 
 Environment:
-    DCC_MCP_MAYA_PORT=8765
+    DCC_MCP_MAYA_PORT=<optional fixed instance port>
     DCC_MCP_GATEWAY_PORT=0
     DCC_MCP_MAYA_SKILL_PATHS=/path/to/custom-skills
 """
@@ -20,7 +20,6 @@ import maya.standalone
 from dcc_mcp_maya import start_server, stop_server
 from dcc_mcp_maya.dispatcher import MayaStandaloneDispatcher
 
-
 stop_event = threading.Event()
 
 
@@ -32,13 +31,11 @@ def _handle_stop(_signum, _frame) -> None:
 def main() -> None:
     maya.standalone.initialize(name="python")
 
-    port = int(os.environ.get("DCC_MCP_MAYA_PORT", "8765"))
     gateway_raw = os.environ.get("DCC_MCP_GATEWAY_PORT", "0")
     gateway_port = int(gateway_raw) if gateway_raw and gateway_raw != "0" else None
 
     dispatcher = MayaStandaloneDispatcher()
     handle = start_server(
-        port=port,
         gateway_port=gateway_port,
         host_dispatcher=dispatcher,
     )

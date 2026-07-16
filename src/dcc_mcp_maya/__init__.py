@@ -7,8 +7,8 @@ required.
 Quickstart (inside Maya's Python interpreter)::
 
     import dcc_mcp_maya
-    handle = dcc_mcp_maya.start_server(port=8765)
-    # MCP host connects to http://127.0.0.1:8765/mcp
+    handle = dcc_mcp_maya.start_server()
+    # MCP host connects through http://127.0.0.1:9765/mcp
     handle.shutdown()
 
 Skill authoring helpers (for Maya skills developers)::

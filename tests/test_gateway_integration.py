@@ -52,6 +52,14 @@ class TestGatewayPortConfig:
 
         assert options.gateway.port == 9765
 
+    def test_explicit_zero_instance_port_overrides_env_var(self, monkeypatch):
+        srv_mod = _import_server()
+        monkeypatch.setenv("DCC_MCP_MAYA_PORT", "18765")
+
+        options = srv_mod.MayaServerOptions(port=0).to_core_options()
+
+        assert options.port == 0
+
     def test_dcc_type_set_to_maya_when_gateway_enabled(self):
         srv_mod = _import_server()
         options = srv_mod.MayaServerOptions(port=0, gateway_port=9765).to_core_options()

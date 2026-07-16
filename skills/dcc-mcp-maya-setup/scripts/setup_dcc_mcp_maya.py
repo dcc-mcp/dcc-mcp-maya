@@ -13,7 +13,6 @@ from typing import Iterable, Optional
 
 
 DEFAULT_GATEWAY_URL = "http://127.0.0.1:9765/mcp"
-DEFAULT_DIRECT_URL = "http://127.0.0.1:8765/mcp"
 
 
 def run(command: list[str], cwd: Optional[Path] = None) -> None:
@@ -120,9 +119,6 @@ def write_json(path: Path, payload: dict) -> None:
 def write_mcp_snippets(out_dir: Path, server_name: str, mcp_url: str) -> None:
     payload = {"mcpServers": {server_name: {"url": mcp_url}}}
     write_json(out_dir / "mcp-streamable-http.json", payload)
-
-    direct_payload = {"mcpServers": {server_name: {"url": DEFAULT_DIRECT_URL}}}
-    write_json(out_dir / "mcp-direct-8765.json", direct_payload)
 
     smoke_prompt = """Use the Maya MCP server. First call dcc_capability_manifest with loaded_only=false.
 Then load the maya-primitives skill, create a sphere named mcp_setup_smoke_sphere

@@ -16,7 +16,7 @@
 If your OpenAI client (custom chat UI, agent framework, etc.) supports MCP:
 
 ```
-Endpoint: http://127.0.0.1:8765/mcp
+Endpoint: http://127.0.0.1:9765/mcp
 Protocol: MCP Streamable HTTP (2025-03-26 spec)
 ```
 

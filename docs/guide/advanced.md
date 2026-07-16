@@ -77,7 +77,6 @@ def main(
 import dcc_mcp_maya
 
 handle = dcc_mcp_maya.start_server(
-    port=8765,
     extra_skill_paths=[
         "/path/to/my-skills-folder",
         "/another/skills/directory",
@@ -166,7 +165,6 @@ For more control, use the class directly:
 from dcc_mcp_maya.server import MayaMcpServer
 
 server = MayaMcpServer(
-    port=8765,
     server_name="maya-mcp",
 )
 server.register_builtin_actions(
@@ -192,8 +190,8 @@ if _server_instance and _server_instance.is_running:
 Once the server is running, query the MCP endpoint:
 
 ```bash
-# List all available tools
-curl http://127.0.0.1:8765/mcp \
+# Set this from `dcc-mcp-cli list`, then list all available tools
+curl "$MCP_INSTANCE_URL" \
   -H "Content-Type: application/json" \
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'
 ```
@@ -374,8 +372,7 @@ def _start_mcp_if_enabled():
     if os.environ.get("DCC_MCP_MAYA_AUTOSTART", "1") == "0":
         return
     import dcc_mcp_maya
-    port = int(os.environ.get("DCC_MCP_MAYA_PORT", "8765"))
-    handle = dcc_mcp_maya.start_server(port=port)
+    handle = dcc_mcp_maya.start_server()
     print(f"[studio] Maya MCP: {handle.mcp_url()}")
 
 maya.utils.executeDeferred(_start_mcp_if_enabled)

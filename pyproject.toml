@@ -27,8 +27,8 @@ classifiers = [
 ]
 
 dependencies = [
-    # 0.19.16 restores native cp37 wheels for Maya 2022 / Python 3.7.
-    "dcc-mcp-core>=0.19.16,<0.20.0",
+    # 0.19.45 defaults instance listeners to operating-system-assigned ports.
+    "dcc-mcp-core>=0.19.45,<0.20.0",
     "dcc-mcp-server>=0.18.21,<1.0.0",
 ]
 

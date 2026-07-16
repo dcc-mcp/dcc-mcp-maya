@@ -25,13 +25,13 @@ Embeds a standards-compliant MCP Streamable HTTP server (2025-03-26 spec) direct
 import dcc_mcp_maya
 
 # Singleton helper
-handle = dcc_mcp_maya.start_server(port=8765)
-print(handle.mcp_url())   # http://127.0.0.1:8765/mcp
+handle = dcc_mcp_maya.start_server()
+print(handle.mcp_url())   # exact OS-assigned direct URL
 handle.shutdown()
 
 # Or full control
 from dcc_mcp_maya.server import MayaMcpServer
-server = MayaMcpServer(port=8765)
+server = MayaMcpServer()
 server.register_builtin_actions()
 handle = server.start()
 server.stop()
@@ -50,7 +50,7 @@ The server starts automatically when the plugin loads. In interactive mode a "DC
 
 ```python
 MayaMcpServer(
-    port: int = 8765,
+    port: Optional[int] = None,
     server_name: str = "maya-mcp",
     server_version: str = "0.9.12",  # x-release-please-version
     gateway_port: Optional[int] = None,
@@ -68,7 +68,7 @@ MayaMcpServer(
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `port` | `int` | `8765` | TCP port. Use `0` for OS-assigned. |
+| `port` | `Optional[int]` | `None` | Optional fixed TCP port; unset/`0` lets the OS assign one. |
 | `server_name` | `str` | `"maya-mcp"` | Name in MCP `initialize` response. |
 | `server_version` | `str` | `"0.9.12"` | Version reported in `initialize`. | <!-- x-release-please-version -->
 | `gateway_port` | `int \| None` | `None` | Multi-instance gateway port. `None` reads `DCC_MCP_GATEWAY_PORT`; `0` disables. |
@@ -158,7 +158,7 @@ Service discovery helpers (TransportManager wrappers).
 
 ```python
 start_server(
-    port: int = 8765,
+    port: Optional[int] = None,
     server_name: str = "maya-mcp",
     register_builtins: bool = True,
     extra_skill_paths: Optional[List[str]] = None,
@@ -442,7 +442,7 @@ tools:
 
 | Variable | Default | Scope | Description |
 |----------|---------|-------|-------------|
-| `DCC_MCP_MAYA_PORT` | `8765` | per-process | TCP port for MCP HTTP server. `0` = OS-assigned. |
+| `DCC_MCP_MAYA_PORT` | unset (`0`) | per-process | Optional fixed MCP HTTP port; unset/`0` = OS-assigned. |
 | `DCC_MCP_MAYA_SERVER_NAME` | `maya-mcp` | per-process | Name in MCP `initialize`. |
 | `DCC_MCP_MAYA_SKILL_PATHS` | — | per-process | Maya skill search roots (`;` Win, `:` Unix); each root may be one skill package or a parent such as Rez `{root}/skills`. |
 | `DCC_MCP_SKILL_PATHS` | — | global fallback | Global skill search roots for all DCC adapters. |
@@ -505,9 +505,9 @@ Run N Maya sessions on one workstation behind a single gateway:
 
 ```python
 # examples/multi-instance/userSetup.py
-PORT_RANGE = range(8765, 8776)
-# Picks first free port, sets DCC_MCP_GATEWAY_PORT=9765,
-# DCC_MCP_MAYA_DCC_PID=os.getpid(), then auto-starts server.
+# Leaves DCC_MCP_MAYA_PORT unset, sets DCC_MCP_GATEWAY_PORT=9765,
+# DCC_MCP_MAYA_DCC_PID=os.getpid(), then auto-starts the server. Core binds
+# port 0 atomically and publishes the exact URL through discovery.
 ```
 
 Gateway discovery uses `search_tools` / `describe_tool` / `call_tool` plus

@@ -12,7 +12,7 @@ from dcc_mcp_maya.server import MayaMcpServer
 
 ```python
 MayaMcpServer(
-    port: int = 8765,
+    port: Optional[int] = None,
     server_name: str = "maya-mcp",
     server_version: str = "0.9.12",  # x-release-please-version
     gateway_port: Optional[int] = None,
@@ -28,7 +28,7 @@ MayaMcpServer(
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `port` | int | `8765` | TCP port. Use `0` for a random available port. |
+| `port` | int \| None | `None` | Optional fixed TCP port; core/env then the OS selects a free port. |
 | `server_name` | str | `"maya-mcp"` | Name shown in MCP `initialize` response |
 | `server_version` | str | `"0.9.12"` | Version shown in MCP `initialize` response | <!-- x-release-please-version -->
 | `gateway_port` | int \| None | `None` | Gateway election port for multi-instance discovery |
@@ -67,7 +67,7 @@ Start the MCP HTTP server.
 
 ```python
 handle = server.start()
-print(handle.mcp_url())   # http://127.0.0.1:8765/mcp
+print(handle.mcp_url())   # exact OS-assigned instance URL
 ```
 
 Returns: `McpServerHandle` with `.mcp_url()`, `.port`, `.shutdown()`
@@ -92,12 +92,12 @@ server.stop()
 ```python
 from dcc_mcp_maya.server import MayaMcpServer
 
-server = MayaMcpServer(port=8765, server_name="my-maya")
+server = MayaMcpServer(server_name="my-maya")
 server.register_builtin_actions(extra_skill_paths=["/studio/skills"])
 handle = server.start()
 
-print(handle.mcp_url())   # http://127.0.0.1:8765/mcp
-print(handle.port)        # 8765
+print(handle.mcp_url())   # exact OS-assigned instance URL
+print(handle.port)        # selected free port
 
 # Later:
 server.stop()
@@ -113,7 +113,6 @@ Start (or return the already-running) Maya MCP server as a singleton.
 import dcc_mcp_maya
 
 handle = dcc_mcp_maya.start_server(
-    port=8765,
     server_name="maya-mcp",
     register_builtins=True,
     extra_skill_paths=None,
@@ -129,7 +128,7 @@ handle = dcc_mcp_maya.start_server(
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `port` | int | `8765` | TCP port |
+| `port` | int \| None | `None` | Optional fixed TCP port; omit for core/env then OS assignment |
 | `server_name` | str | `"maya-mcp"` | MCP server name |
 | `register_builtins` | bool | `True` | Discover built-in skills during startup; toolsets load on demand |
 | `extra_skill_paths` | list[str] | `None` | Additional skill paths |

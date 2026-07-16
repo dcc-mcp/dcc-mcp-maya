@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import importlib.util
 import os
-import socket
 import sys
 from pathlib import Path
 
@@ -46,36 +45,8 @@ def user_setup():
         sys.modules.pop(spec.name, None)
 
 
-def test_default_port_range_is_reserved_block(user_setup):
-    """The example ships with a fixed, documented port block."""
-    assert list(user_setup.PORT_RANGE) == list(range(8765, 8776))
+def test_gateway_port_remains_stable(user_setup):
     assert user_setup.DEFAULT_GATEWAY_PORT == 9765
-
-
-def test_pick_free_port_returns_available_port(user_setup):
-    """``pick_free_port`` must hand out a currently-bindable port."""
-    port = user_setup.pick_free_port(user_setup.PORT_RANGE)
-    # Either a port from the range, or the 0-fallback when everything is busy.
-    assert port == 0 or port in user_setup.PORT_RANGE
-
-
-def test_pick_free_port_skips_busy_port(user_setup):
-    """When the first candidate is taken, the second is chosen."""
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as busy:
-        try:
-            busy.bind(("127.0.0.1", 0))
-        except OSError:
-            pytest.skip("cannot bind an ephemeral port on this host")
-        taken_port = busy.getsockname()[1]
-        # Feed a two-element candidate list: [taken, free-in-range]
-        free_candidate = next(
-            (p for p in user_setup.PORT_RANGE if p != taken_port and user_setup._port_is_free(p)),
-            None,
-        )
-        if free_candidate is None:
-            pytest.skip("reserved multi-instance port range is busy on this host")
-        chosen = user_setup.pick_free_port([taken_port, free_candidate])
-        assert chosen == free_candidate
 
 
 def test_apply_multi_instance_env_sets_expected_keys(user_setup, monkeypatch):
@@ -87,20 +58,17 @@ def test_apply_multi_instance_env_sets_expected_keys(user_setup, monkeypatch):
 
     assert os.environ["DCC_MCP_MAYA_DCC_PID"] == "424242"
     assert os.environ["DCC_MCP_GATEWAY_PORT"] == str(user_setup.DEFAULT_GATEWAY_PORT)
-    # Port must be numeric and either 0 or in the reserved range.
-    port = int(os.environ["DCC_MCP_MAYA_PORT"])
-    assert port == 0 or port in user_setup.PORT_RANGE
+    assert "DCC_MCP_MAYA_PORT" not in os.environ
 
 
 def test_apply_multi_instance_env_preserves_operator_overrides(user_setup, monkeypatch):
     """An operator-set ``DCC_MCP_GATEWAY_PORT`` must not be clobbered."""
     monkeypatch.setenv("DCC_MCP_GATEWAY_PORT", "9999")
     monkeypatch.setenv("DCC_MCP_MAYA_DCC_PID", "12345")
-    monkeypatch.delenv("DCC_MCP_MAYA_PORT", raising=False)
+    monkeypatch.setenv("DCC_MCP_MAYA_PORT", "19001")
 
     user_setup.apply_multi_instance_env()
 
     assert os.environ["DCC_MCP_GATEWAY_PORT"] == "9999"
     assert os.environ["DCC_MCP_MAYA_DCC_PID"] == "12345"
-    # Port is always re-computed — env should contain a fresh value.
-    assert "DCC_MCP_MAYA_PORT" in os.environ
+    assert os.environ["DCC_MCP_MAYA_PORT"] == "19001"
