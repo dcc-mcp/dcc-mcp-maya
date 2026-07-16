@@ -3,6 +3,12 @@
 import pytest
 
 
+def test_default_port_contract():
+    from dcc_mcp_maya import DEFAULT_PORT
+
+    assert DEFAULT_PORT == 0
+
+
 def test_gateway_election_importable_from_core():
     """GatewayElection moved to dcc_mcp_core.gateway_election (DccGatewayElection)."""
     from dcc_mcp_core.gateway_election import DccGatewayElection

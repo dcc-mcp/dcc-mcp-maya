@@ -152,7 +152,7 @@ from dcc_mcp_maya.dispatcher import (
     create_pumped_dispatcher,
 )
 from dcc_mcp_maya.host import MayaCallableDispatcher, MayaHost
-from dcc_mcp_maya.server import MayaMcpServer, MayaServerOptions, start_server, stop_server
+from dcc_mcp_maya.server import DEFAULT_PORT, MayaMcpServer, MayaServerOptions, start_server, stop_server
 from dcc_mcp_maya.sidecar import (
     ENV_SIDECAR_BINARY,
     ENV_SIDECAR_MODE,
@@ -168,6 +168,7 @@ from dcc_mcp_maya.sidecar import (
 __all__ = [
     "__version__",
     # Server
+    "DEFAULT_PORT",
     "MayaMcpServer",
     "MayaServerOptions",
     "start_server",
