@@ -61,6 +61,7 @@ from dcc_mcp_maya.host import MayaCallableDispatcher
 
 logger = logging.getLogger(__name__)
 
+DEFAULT_PORT = 0
 DEFAULT_SERVER_VERSION = __version__
 
 #: Built-in skills directory shipped with this package.
