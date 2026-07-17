@@ -152,6 +152,8 @@ TOOL_OVERRIDES: Dict[Tuple[str, str], ExecAffinity] = {
     ("maya-xgen", "set_xgen_attribute"): ("sync", "main", None),
     # maya-bifrost fast meta ops
     ("maya-bifrost", "list_bifrost_graphs"): ("sync", "main", None),
+    ("maya-bifrost", "create_bifrost_graph"): ("sync", "main", None),
+    ("maya-bifrost", "create_bifrost_port"): ("sync", "main", None),
     ("maya-bifrost", "connect_bifrost_ports"): ("sync", "main", None),
     ("maya-bifrost", "set_bifrost_property"): ("sync", "main", None),
     ("maya-bifrost", "add_bifrost_node"): ("sync", "main", None),

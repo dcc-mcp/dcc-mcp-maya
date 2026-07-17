@@ -1,0 +1,11 @@
+groups:
+- name: graph
+  description: Inspect and author Bifrost graphs through typed VNN operations.
+  default_active: true
+  tools:
+  - list_bifrost_graphs
+  - create_bifrost_graph
+  - add_bifrost_node
+  - create_bifrost_port
+  - connect_bifrost_ports
+  - set_bifrost_property
