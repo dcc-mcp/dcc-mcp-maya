@@ -18,12 +18,40 @@ from dcc_mcp_maya.bifrost import (
     list_graphs,
     set_port_default,
 )
+from dcc_mcp_maya.procedural_house import (
+    HOUSE_STYLES,
+    HouseContractError,
+    build_house_graph,
+    design_house,
+    house_spec_to_dict,
+)
 
 
 def _bifrost_graph_cmds() -> MagicMock:
     cmds = MagicMock()
     cmds.objExists.return_value = True
     cmds.nodeType.return_value = "bifrostGraphShape"
+    return cmds
+
+
+def _house_cmds() -> MagicMock:
+    cmds = _bifrost_graph_cmds()
+    cmds.createNode.return_value = "houseShape"
+    cmds.listRelatives.return_value = ["|house"]
+    cmds.exactWorldBoundingBox.return_value = [-3.0, 0.0, -2.5, 3.0, 6.0, 2.5]
+    created_nodes = []
+
+    def vnn_compound(*_args, **kwargs):
+        if "addNode" in kwargs:
+            return [kwargs["addNode"].rsplit(",", 1)[-1]]
+        if "renameNode" in kwargs:
+            created_nodes.append(kwargs["renameNode"][1])
+            return [kwargs["renameNode"][1]]
+        if kwargs.get("listNodes"):
+            return ["input"] + created_nodes + ["output"]
+        return None
+
+    cmds.vnnCompound.side_effect = vnn_compound
     return cmds
 
 
@@ -161,3 +189,72 @@ def test_create_bifrost_graph_skill_loads_plugins_and_returns_typed_context() ->
     assert result["success"] is True, result
     assert result["context"]["graph"] == "houseShape"
     assert result["context"]["runtime"]["bifrost_version"] == "2.14.0"
+
+
+def test_house_design_is_seeded_and_supports_distinct_styles() -> None:
+    first = design_house(seed=42, style="random", position=(10, 0, -4))
+    second = design_house(seed=42, style="random", position=(10, 0, -4))
+
+    assert first == second
+    assert first.style in HOUSE_STYLES
+    assert house_spec_to_dict(first)["seed"] == 42
+    assert any(part.anchor[0] >= 10 for part in first.parts)
+    assert any(part.kind == "gable" for part in design_house(seed=7, style="cabin").parts)
+    assert all(part.kind == "cube" for part in design_house(seed=7, style="modern").parts)
+
+
+def test_house_design_rejects_invalid_style_and_position() -> None:
+    with pytest.raises(HouseContractError, match="style must be one of"):
+        design_house(seed=1, style="castle")
+    with pytest.raises(HouseContractError, match="exactly three"):
+        design_house(seed=1, position=(1, 2))
+
+
+def test_build_house_graph_uses_bifrost_primitives_array_and_merge() -> None:
+    cmds = _house_cmds()
+    spec = design_house(seed=11, style="cottage")
+
+    result = build_house_graph(cmds, spec, name="Demo House")
+
+    add_node_contracts = [call[1]["addNode"] for call in cmds.vnnCompound.call_args_list if "addNode" in call[1]]
+    assert "BifrostGraph,Modeling::Primitive,create_mesh_cube" in add_node_contracts
+    assert "BifrostGraph,Modeling::Primitive,create_mesh_cylinder" in add_node_contracts
+    assert "BifrostGraph,Modeling::Points,transform_points" in add_node_contracts
+    assert "BifrostGraph,Core::Array,build_array" in add_node_contracts
+    assert "BifrostGraph,Modeling::Common,merge_geometry" in add_node_contracts
+    assert result["name"] == "Demo_House"
+    assert result["style"] == "cottage"
+    assert result["part_count"] == len(spec.parts)
+    assert result["bounds"] == [-3.0, 0.0, -2.5, 3.0, 6.0, 2.5]
+    walls = spec.parts[0]
+    assert any(
+        call[0][1] == ".walls"
+        and call[1].get("setPortDefaultValues") == ("width", encode_default_value(walls.dimensions[0]))
+        for call in cmds.vnnNode.call_args_list
+    )
+    assert any(
+        call[0][1] == ".walls"
+        and call[1].get("setPortDefaultValues") == ("length", encode_default_value(walls.dimensions[2]))
+        for call in cmds.vnnNode.call_args_list
+    )
+    assert any(call[0][1:] == (".merge_house.merged", ".output.house") for call in cmds.vnnConnect.call_args_list)
+
+
+def test_generate_procedural_house_skill_returns_seed_and_graph() -> None:
+    cmds = _house_cmds()
+    cmds.pluginInfo.side_effect = lambda _plugin, **kwargs: "2.14.0" if kwargs.get("version") else True
+
+    result = load_and_call(
+        "maya-bifrost/scripts/generate_procedural_house.py",
+        cmds,
+        "main",
+        seed=123,
+        style="modern",
+        name="Modern Demo",
+    )
+
+    assert result["success"] is True, result
+    assert result["context"]["seed"] == 123
+    assert result["context"]["style"] == "modern"
+    assert result["context"]["graph"] == "houseShape"
+    cmds.select.assert_called_once_with("|house", replace=True)

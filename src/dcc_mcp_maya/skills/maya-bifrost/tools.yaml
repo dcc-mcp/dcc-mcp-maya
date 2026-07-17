@@ -1,4 +1,45 @@
 tools:
+- name: generate_procedural_house
+  description: Generate a deterministic random-style house as an evaluated Bifrost mesh
+    graph.
+  execution: async
+  affinity: main
+  timeout_hint_secs: 600
+  annotations:
+    read_only_hint: false
+    idempotent_hint: false
+  next-tools:
+    on-failure:
+    - dcc_diagnostics__screenshot
+    - dcc_diagnostics__audit_log
+  group: generators
+  input_schema:
+    type: object
+    properties:
+      seed:
+        type: integer
+        minimum: 0
+        maximum: 2147483647
+        description: Reuse the returned seed to reproduce the same house.
+      style:
+        type: string
+        enum:
+        - random
+        - cabin
+        - cottage
+        - modern
+        - townhouse
+        default: random
+      name:
+        type: string
+        description: Maya-safe base name; invalid characters are normalized.
+      position:
+        type: array
+        minItems: 3
+        maxItems: 3
+        items:
+          type: number
+        description: World-space XYZ origin for the generated house.
 - name: list_bifrost_graphs
   description: List Bifrost graph shapes and boards with optional node and port details.
   execution: sync
@@ -120,7 +161,8 @@ tools:
         - output
         default: input
 - name: set_bifrost_property
-  description: Set an unconnected Bifrost node input port default from a JSON-compatible value.
+  description: Set an unconnected Bifrost node input port default from a JSON-compatible
+    value.
   execution: sync
   affinity: main
   annotations:
