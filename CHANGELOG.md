@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.9.13](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.12...v0.9.13) (2026-07-17)
+
+
+### Bug Fixes
+
+* expose the dynamic default port ([#451](https://github.com/dcc-mcp/dcc-mcp-maya/issues/451)) ([519510c](https://github.com/dcc-mcp/dcc-mcp-maya/commit/519510c0d72d2f33e2849ea5a17156d645a52eff))
+* use OS-assigned MCP instance ports ([#449](https://github.com/dcc-mcp/dcc-mcp-maya/issues/449)) ([e8ecfe9](https://github.com/dcc-mcp/dcc-mcp-maya/commit/e8ecfe9401534264ee3998d7e8c4d0a489bcc547))
+
 ## [0.9.12](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.11...v0.9.12) (2026-07-14)
 
 
