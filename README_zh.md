@@ -198,7 +198,7 @@ server.register_builtin_actions(include_bundled=False)
 
 ## 可用的 MCP 工具
 
-`dcc-mcp-maya` 附带 **25 个内置技能包**和 **198 个 Maya MCP 工具**。
+`dcc-mcp-maya` 附带 **28 个内置技能包**和 **212 个 Maya MCP 工具**。
 在默认最小模式下，仅核心工具在启动时激活；其余通过 `load_skill` 渐进式加载。
 
 以下章节是代表性类别，而非详尽清单。
@@ -227,6 +227,17 @@ server.register_builtin_actions(include_bundled=False)
 | `set_transform` | 设置平移/旋转/缩放 |
 | `get_transform` | 查询平移/旋转/缩放 |
 | `rename_object` | 重命名对象 |
+
+### Bifrost 程序化图
+
+| 工具 | 说明 |
+|------|-------------|
+| `list_bifrost_graphs` | 列出 Bifrost 图、节点与可选端口 |
+| `create_bifrost_graph` | 创建 Bifrost Graph Shape 或 Board |
+| `add_bifrost_node` | 按完整类型名添加 Bifrost 节点 |
+| `create_bifrost_port` | 为兼容节点创建动态输入或输出端口 |
+| `set_bifrost_property` | 设置未连接输入端口的默认值 |
+| `connect_bifrost_ports` | 连接或断开 Bifrost 图端口 |
 
 ### 材质
 

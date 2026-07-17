@@ -1,0 +1,154 @@
+tools:
+- name: list_bifrost_graphs
+  description: List Bifrost graph shapes and boards with optional node and port details.
+  execution: sync
+  affinity: main
+  annotations:
+    read_only_hint: true
+    idempotent_hint: true
+  group: graph
+  input_schema:
+    type: object
+    properties:
+      include_nodes:
+        type: boolean
+        default: true
+      include_ports:
+        type: boolean
+        default: false
+- name: create_bifrost_graph
+  description: Create an empty Bifrost graph shape or board in the current Maya scene.
+  execution: sync
+  affinity: main
+  annotations:
+    read_only_hint: false
+    idempotent_hint: false
+  group: graph
+  input_schema:
+    type: object
+    properties:
+      name:
+        type: string
+      kind:
+        type: string
+        enum:
+        - graph_shape
+        - board
+        default: graph_shape
+- name: add_bifrost_node
+  description: Add a fully-qualified Bifrost node to an existing graph or compound.
+  execution: sync
+  affinity: main
+  annotations:
+    read_only_hint: false
+    idempotent_hint: false
+  group: graph
+  input_schema:
+    type: object
+    required:
+    - graph
+    - node_type
+    properties:
+      graph:
+        type: string
+      node_type:
+        type: string
+        description: Fully-qualified type such as Modeling::Primitive::create_mesh_cube.
+      name:
+        type: string
+      compound:
+        type: string
+        default: .
+- name: connect_bifrost_ports
+  description: Connect or disconnect two absolute-from-root ports in a Bifrost graph.
+  execution: sync
+  affinity: main
+  annotations:
+    read_only_hint: false
+    idempotent_hint: true
+  group: graph
+  input_schema:
+    type: object
+    required:
+    - graph
+    - source_port
+    - destination_port
+    properties:
+      graph:
+        type: string
+      source_port:
+        type: string
+        description: Source path such as .cube.cube_mesh.
+      destination_port:
+        type: string
+        description: Destination path such as .output.geometry.
+      disconnect:
+        type: boolean
+        default: false
+      copy_metadata:
+        type: boolean
+        default: false
+- name: create_bifrost_port
+  description: Create a dynamic input or output port on a compatible Bifrost node.
+  execution: sync
+  affinity: main
+  annotations:
+    read_only_hint: false
+    idempotent_hint: false
+  group: graph
+  input_schema:
+    type: object
+    required:
+    - graph
+    - node
+    - port
+    - data_type
+    properties:
+      graph:
+        type: string
+      node:
+        type: string
+      port:
+        type: string
+      data_type:
+        type: string
+        description: Bifrost type such as Object, float, or array<Object>.
+      direction:
+        type: string
+        enum:
+        - input
+        - output
+        default: input
+- name: set_bifrost_property
+  description: Set an unconnected Bifrost node input port default from a JSON-compatible value.
+  execution: sync
+  affinity: main
+  annotations:
+    read_only_hint: false
+    idempotent_hint: true
+  group: graph
+  input_schema:
+    type: object
+    required:
+    - graph
+    - node
+    - port
+    - value
+    properties:
+      graph:
+        type: string
+      node:
+        type: string
+      port:
+        type: string
+      value:
+        oneOf:
+        - type: string
+        - type: number
+        - type: boolean
+        - type: array
+          items:
+            oneOf:
+            - type: string
+            - type: number
+            - type: boolean

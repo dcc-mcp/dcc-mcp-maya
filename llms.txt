@@ -215,7 +215,7 @@ Tool naming: `{skill_name.replace("-","_")}__{script_stem}` (e.g. `maya_scene__n
 | `src/dcc_mcp_maya/api.py` | Skill authoring helpers (18 symbols) |
 | `src/dcc_mcp_maya/_recovery_dialog.py` | Qt-level crash/recovery dialog detector + status surfacing |
 | `src/dcc_mcp_maya/plugin.py` | Maya plugin entry point |
-| `src/dcc_mcp_maya/skills/` | 25 built-in skill packages (72+ typed MCP tools) |
+| `src/dcc_mcp_maya/skills/` | 28 built-in skill packages (212 typed MCP tools) |
 | `docs/` | VitePress docs (EN + ZH) |
 | `README.md` | Human overview |
 | `AGENTS.md` | Progressive disclosure map |
