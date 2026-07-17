@@ -283,47 +283,61 @@ def _build_cube(cmds: Any, graph: str, part: HousePart) -> str:
     return ".{}.cube_mesh".format(node)
 
 
-def _build_gable(cmds: Any, graph: str, part: HousePart) -> str:
-    primitive = add_node(cmds, graph, "Modeling::Primitive::create_mesh_cylinder", name=part.name)
+def _build_gable(cmds: Any, graph: str, part: HousePart) -> Tuple[str, str]:
+    """Build a pitched roof from nodes available in every supported Bifrost."""
     width, height, depth = part.dimensions
-    for port, value in (
-        ("radius", 1.0),
-        ("height", depth),
-        ("axis_segments", 3),
-        ("height_segments", 1),
-        ("position", (0.0, 0.0, 0.0)),
-        ("up_axis", (0.0, 0.0, 1.0)),
-    ):
-        set_port_default(cmds, graph, primitive, port, value)
-
-    orient = add_node(
-        cmds,
-        graph,
-        "Modeling::Points::transform_points",
-        name="{}_orient".format(part.name),
-    )
+    half_run = width / 2.0
+    slope_length = math.sqrt(half_run**2 + height**2)
+    slope_angle = math.atan2(height, half_run)
+    thickness = max(0.18, min(width, depth) * 0.04)
     x, base_y, z = part.anchor
-    matrix = (
-        width / math.sqrt(3.0),
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        -(height / 1.5),
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        1.0,
-        0.0,
-        x,
-        base_y + height / 3.0,
-        z,
-        1.0,
-    )
-    set_port_default(cmds, graph, orient, "transform", tuple(_rounded(value) for value in matrix))
-    connect_ports(cmds, graph, ".{}.out_mesh".format(primitive), ".{}.points".format(orient))
-    return ".{}.out_points".format(orient)
+    outputs = []
+    for side, direction in (("left", 1.0), ("right", -1.0)):
+        primitive = add_node(
+            cmds,
+            graph,
+            "Modeling::Primitive::create_mesh_cube",
+            name="{}_{}".format(part.name, side),
+        )
+        for port, value in (
+            ("length", depth),
+            ("width", slope_length),
+            ("height", thickness),
+            ("position", (0.0, 0.0, 0.0)),
+        ):
+            set_port_default(cmds, graph, primitive, port, value)
+
+        orient = add_node(
+            cmds,
+            graph,
+            "Modeling::Points::transform_points",
+            name="{}_{}_orient".format(part.name, side),
+        )
+        angle = slope_angle * direction
+        cosine = math.cos(angle)
+        sine = math.sin(angle)
+        matrix = (
+            cosine,
+            sine,
+            0.0,
+            0.0,
+            -sine,
+            cosine,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0,
+            0.0,
+            x - direction * width / 4.0,
+            base_y + height / 2.0,
+            z,
+            1.0,
+        )
+        set_port_default(cmds, graph, orient, "transform", tuple(_rounded(value) for value in matrix))
+        connect_ports(cmds, graph, ".{}.cube_mesh".format(primitive), ".{}.points".format(orient))
+        outputs.append(".{}.out_points".format(orient))
+    return outputs[0], outputs[1]
 
 
 def build_house_graph(cmds: Any, spec: HouseSpec, name: Optional[str] = None) -> Dict[str, Any]:
@@ -336,7 +350,7 @@ def build_house_graph(cmds: Any, spec: HouseSpec, name: Optional[str] = None) ->
         if part.kind == "cube":
             outputs.append(_build_cube(cmds, graph, part))
         elif part.kind == "gable":
-            outputs.append(_build_gable(cmds, graph, part))
+            outputs.extend(_build_gable(cmds, graph, part))
         else:
             raise HouseContractError("unsupported house part kind: {}".format(part.kind))
 
@@ -349,6 +363,8 @@ def build_house_graph(cmds: Any, spec: HouseSpec, name: Optional[str] = None) ->
     connect_ports(cmds, graph, ".{}.array".format(array_node), ".{}.geometry".format(merge_node))
     create_port(cmds, graph, "output", "house", "Object")
     connect_ports(cmds, graph, ".{}.merged".format(merge_node), ".output.house")
+    cmds.setAttr("{}.displayFinalInViewport".format(graph), False)
+    cmds.setAttr("{}.displayFinalInViewport".format(graph), True)
     cmds.dgdirty(graph)
 
     transform = graph_record.get("transform")

@@ -3,6 +3,7 @@ groups:
   description: Seed-driven procedural modeling generators built from typed Bifrost nodes.
   default_active: true
   tools:
+  - generate_procedural_house_showcase
   - generate_procedural_house
 - name: graph
   description: Inspect and author Bifrost graphs through typed VNN operations.
