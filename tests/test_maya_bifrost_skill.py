@@ -216,9 +216,7 @@ def test_build_house_graph_uses_bifrost_primitives_array_and_merge() -> None:
 
     result = build_house_graph(cmds, spec, name="Demo House")
 
-    add_node_contracts = [
-        call.kwargs["addNode"] for call in cmds.vnnCompound.call_args_list if "addNode" in call.kwargs
-    ]
+    add_node_contracts = [call[1]["addNode"] for call in cmds.vnnCompound.call_args_list if "addNode" in call[1]]
     assert "BifrostGraph,Modeling::Primitive,create_mesh_cube" in add_node_contracts
     assert "BifrostGraph,Modeling::Primitive,create_mesh_cylinder" in add_node_contracts
     assert "BifrostGraph,Modeling::Points,transform_points" in add_node_contracts
@@ -230,16 +228,16 @@ def test_build_house_graph_uses_bifrost_primitives_array_and_merge() -> None:
     assert result["bounds"] == [-3.0, 0.0, -2.5, 3.0, 6.0, 2.5]
     walls = spec.parts[0]
     assert any(
-        call.args[1] == ".walls"
-        and call.kwargs.get("setPortDefaultValues") == ("width", encode_default_value(walls.dimensions[0]))
+        call[0][1] == ".walls"
+        and call[1].get("setPortDefaultValues") == ("width", encode_default_value(walls.dimensions[0]))
         for call in cmds.vnnNode.call_args_list
     )
     assert any(
-        call.args[1] == ".walls"
-        and call.kwargs.get("setPortDefaultValues") == ("length", encode_default_value(walls.dimensions[2]))
+        call[0][1] == ".walls"
+        and call[1].get("setPortDefaultValues") == ("length", encode_default_value(walls.dimensions[2]))
         for call in cmds.vnnNode.call_args_list
     )
-    assert any(call.args[1:] == (".merge_house.merged", ".output.house") for call in cmds.vnnConnect.call_args_list)
+    assert any(call[0][1:] == (".merge_house.merged", ".output.house") for call in cmds.vnnConnect.call_args_list)
 
 
 def test_generate_procedural_house_skill_returns_seed_and_graph() -> None:
