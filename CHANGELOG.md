@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.9.14](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.13...v0.9.14) (2026-07-17)
+
+
+### Features
+
+* add GUI and standalone house showcase ([#455](https://github.com/dcc-mcp/dcc-mcp-maya/issues/455)) ([d18674f](https://github.com/dcc-mcp/dcc-mcp-maya/commit/d18674f0b36e5fe39eebb4b0cdd9d6414683b61c))
+* add procedural Bifrost house generator ([#454](https://github.com/dcc-mcp/dcc-mcp-maya/issues/454)) ([923d29d](https://github.com/dcc-mcp/dcc-mcp-maya/commit/923d29d8cf1b507ac4e9b3e7c55c3e8437bf73e6))
+* add typed Bifrost graph authoring tools ([#452](https://github.com/dcc-mcp/dcc-mcp-maya/issues/452)) ([e84e020](https://github.com/dcc-mcp/dcc-mcp-maya/commit/e84e0207df8020d1d44a98ca15197e408dba477c))
+
 ## [0.9.13](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.12...v0.9.13) (2026-07-17)
 
 
