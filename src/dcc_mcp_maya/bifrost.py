@@ -206,6 +206,7 @@ def create_graph(cmds: Any, name: Optional[str] = None, kind: str = "graph_shape
     graph = str(cmds.createNode(node_types[kind], **kwargs))
     parents = cmds.listRelatives(graph, parent=True, fullPath=True) or []
     if kind == "graph_shape":
+        cmds.setAttr("{}.displayFinalInViewport".format(graph), True)
         try:
             cmds.sets(graph, edit=True, forceElement="initialShadingGroup")
         except Exception:  # noqa: BLE001 - shading assignment is best-effort in batch mode
@@ -263,8 +264,17 @@ def create_port(
         raise BifrostContractError("data_type must be a non-empty Bifrost type")
     if direction not in ("input", "output"):
         raise BifrostContractError("direction must be 'input' or 'output'")
+    legacy_type_name = {
+        "Object": "Amino::Object",
+        "array<Object>": "array<Amino::Object>",
+    }.get(type_name, type_name)
     flag = "createInputPort" if direction == "input" else "createOutputPort"
-    cmds.vnnNode(graph_name, node_path(node), **{flag: (port_name, type_name)})
+    path = node_path(node)
+    cmds.vnnNode(graph_name, path, **{flag: (port_name, type_name)})
+    if legacy_type_name != type_name:
+        ports = [str(value).rsplit(".", 1)[-1] for value in (cmds.vnnNode(graph_name, path, listPorts=True) or [])]
+        if port_name not in ports:
+            cmds.vnnNode(graph_name, path, **{flag: (port_name, legacy_type_name)})
     return {
         "graph": graph_name,
         "node": node_path(node),

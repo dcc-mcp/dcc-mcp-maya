@@ -44,7 +44,7 @@ Full rationale: repo root `AGENTS.md` § *Bulk import, export, and naming*; exam
 | Task | Skill chain |
 |------|-------------|
 | Create N spheres with random transforms, add gravity/rigid bodies, bake bounce animation, export FBX, import in another Maya | Prefer **`load_skill`** chain: `maya-primitives` → `maya-dynamics` → `maya-animation` → `maya-geometry` (`export_fbx` / `import_fbx`). Use **one** `execute_python` only when round-trip count would dominate latency and you accept weaker validation |
-| Generate a seed-driven house or author a Bifrost graph | `maya-bifrost` (`generate_procedural_house`; or `list_bifrost_graphs` → `create_bifrost_graph` → `add_bifrost_node` → `create_bifrost_port` → `set_bifrost_property` → `connect_bifrost_ports`) |
+| Generate a seed-driven house/showcase or author a Bifrost graph | `maya-bifrost` (`generate_procedural_house`, `generate_procedural_house_showcase` → `maya-render.capture_playblast_sequence`; or `list_bifrost_graphs` → `create_bifrost_graph` → `add_bifrost_node` → `create_bifrost_port` → `set_bifrost_property` → `connect_bifrost_ports`) |
 | Build a rig, detect optional rig frameworks, copy skin weights, animate, and send to render farm | `maya-rigging` (`detect_rig_frameworks`, `create_rig_control`, `create_constraint`, `copy_skin_weights`) → `maya-animation` → `maya-render-farm` |
 | Look-dev a hero asset, save material preset | `maya-materials` → `maya-material-library` |
 | Publish an asset version | `maya-pipeline` (uses `maya-geometry` under the hood; declared in `depends`) |

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, call
 
 import pytest
 from conftest import load_and_call
@@ -63,6 +63,7 @@ def test_create_graph_returns_shape_and_transform() -> None:
     result = create_graph(cmds, name="houseShape", kind="graph_shape")
 
     cmds.createNode.assert_called_once_with("bifrostGraphShape", name="houseShape")
+    cmds.setAttr.assert_called_once_with("houseShape.displayFinalInViewport", True)
     cmds.sets.assert_called_once_with("houseShape", edit=True, forceElement="initialShadingGroup")
     assert result == {
         "graph": "houseShape",
@@ -132,6 +133,7 @@ def test_connect_ports_normalizes_paths_and_disconnects() -> None:
 
 def test_create_port_uses_direction_specific_vnn_flag() -> None:
     cmds = _bifrost_graph_cmds()
+    cmds.vnnNode.side_effect = [None, ["house_parts.part_0", "house_parts.array"]]
 
     result = create_port(
         cmds,
@@ -142,12 +144,24 @@ def test_create_port_uses_direction_specific_vnn_flag() -> None:
         direction="input",
     )
 
-    cmds.vnnNode.assert_called_once_with(
-        "houseShape",
-        ".house_parts",
-        createInputPort=("part_0", "Object"),
-    )
+    assert cmds.vnnNode.call_args_list == [
+        call("houseShape", ".house_parts", createInputPort=("part_0", "Object")),
+        call("houseShape", ".house_parts", listPorts=True),
+    ]
     assert result["direction"] == "input"
+
+
+def test_create_port_normalizes_object_array_for_legacy_vnn() -> None:
+    cmds = _bifrost_graph_cmds()
+    cmds.vnnNode.side_effect = [None, ["output.other"], None]
+
+    create_port(cmds, "houseShape", "output", "geometry", "array<Object>", direction="output")
+
+    assert cmds.vnnNode.call_args_list == [
+        call("houseShape", ".output", createOutputPort=("geometry", "array<Object>")),
+        call("houseShape", ".output", listPorts=True),
+        call("houseShape", ".output", createOutputPort=("geometry", "array<Amino::Object>")),
+    ]
 
 
 def test_list_graphs_includes_nodes_and_ports() -> None:
@@ -218,7 +232,7 @@ def test_build_house_graph_uses_bifrost_primitives_array_and_merge() -> None:
 
     add_node_contracts = [call[1]["addNode"] for call in cmds.vnnCompound.call_args_list if "addNode" in call[1]]
     assert "BifrostGraph,Modeling::Primitive,create_mesh_cube" in add_node_contracts
-    assert "BifrostGraph,Modeling::Primitive,create_mesh_cylinder" in add_node_contracts
+    assert add_node_contracts.count("BifrostGraph,Modeling::Primitive,create_mesh_cube") >= 3
     assert "BifrostGraph,Modeling::Points,transform_points" in add_node_contracts
     assert "BifrostGraph,Core::Array,build_array" in add_node_contracts
     assert "BifrostGraph,Modeling::Common,merge_geometry" in add_node_contracts
@@ -238,6 +252,10 @@ def test_build_house_graph_uses_bifrost_primitives_array_and_merge() -> None:
         for call in cmds.vnnNode.call_args_list
     )
     assert any(call[0][1:] == (".merge_house.merged", ".output.house") for call in cmds.vnnConnect.call_args_list)
+    assert cmds.setAttr.call_args_list[-2:] == [
+        call("houseShape.displayFinalInViewport", False),
+        call("houseShape.displayFinalInViewport", True),
+    ]
 
 
 def test_generate_procedural_house_skill_returns_seed_and_graph() -> None:
