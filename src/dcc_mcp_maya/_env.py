@@ -6,7 +6,7 @@ composition root in :mod:`dcc_mcp_maya.server` stays a thin orchestrator.
 All helpers are pure functions: they read :data:`os.environ` and return
 plain Python values; they never mutate global state.
 
-See: https://github.com/loonghao/dcc-mcp-maya/issues/127
+See: https://github.com/dcc-mcp/dcc-mcp-maya/issues/127
 """
 
 # Import future modules

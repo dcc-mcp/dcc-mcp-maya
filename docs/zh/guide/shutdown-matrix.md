@@ -1,6 +1,6 @@
 # 退出场景安全矩阵
 
-Issue [#186](https://github.com/loonghao/dcc-mcp-maya/issues/186) 强化了 Maya MCP 插件在
+Issue [#186](https://github.com/dcc-mcp/dcc-mcp-maya/issues/186) 强化了 Maya MCP 插件在
 **非协作式退出**（崩溃、`kill -9`、任务管理器结束进程等）下的清理能力，避免
 `FileRegistry` 条目长时间泄漏。运维同学常见的症状
 "Maya 退出后 plugin 服务好像没有退出"（`list_dcc_instances` 继续通告一个刚刚关闭的 Maya）

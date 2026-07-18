@@ -1,11 +1,11 @@
 # dcc-mcp-maya
 
-Autodesk Maya 的 [DCC Model Context Protocol](https://github.com/loonghao/dcc-mcp-core) (MCP) 生态系统插件。
+Autodesk Maya 的 [DCC Model Context Protocol](https://github.com/dcc-mcp/dcc-mcp-core) (MCP) 生态系统插件。
 
 将符合标准的 **MCP Streamable HTTP 服务器**（2025-03-26 规范）直接嵌入 Maya — 无需外部网关或单独的 IPC 进程。
 
-[![CI](https://github.com/loonghao/dcc-mcp-maya/actions/workflows/ci.yml/badge.svg)](https://github.com/loonghao/dcc-mcp-maya/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/gh/loonghao/dcc-mcp-maya/graph/badge.svg)](https://codecov.io/gh/loonghao/dcc-mcp-maya)
+[![CI](https://github.com/dcc-mcp/dcc-mcp-maya/actions/workflows/ci.yml/badge.svg)](https://github.com/dcc-mcp/dcc-mcp-maya/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/dcc-mcp/dcc-mcp-maya/graph/badge.svg)](https://codecov.io/gh/dcc-mcp/dcc-mcp-maya)
 [![PyPI](https://img.shields.io/pypi/v/dcc-mcp-maya)](https://pypi.org/project/dcc-mcp-maya/)
 [![Python](https://img.shields.io/pypi/pyversions/dcc-mcp-maya)](https://pypi.org/project/dcc-mcp-maya/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
@@ -55,12 +55,12 @@ mayapy -m pip install dcc-mcp-maya
 Maya 插件管理器里启用插件，可以直接对 agent 说：
 
 ```text
-帮我参考 https://github.com/loonghao/dcc-mcp-maya/blob/main/install.md 去安装
+帮我参考 https://github.com/dcc-mcp/dcc-mcp-maya/blob/main/install.md 去安装
 ```
 
 Agent 应先阅读
-[`install.md`](https://github.com/loonghao/dcc-mcp-maya/blob/main/install.md)，再按
-[`skills/dcc-mcp-maya-setup`](https://github.com/loonghao/dcc-mcp-maya/tree/main/skills/dcc-mcp-maya-setup)
+[`install.md`](https://github.com/dcc-mcp/dcc-mcp-maya/blob/main/install.md)，再按
+[`skills/dcc-mcp-maya-setup`](https://github.com/dcc-mcp/dcc-mcp-maya/tree/main/skills/dcc-mcp-maya-setup)
 中的 setup skill 完成安装、MCP 配置和 smoke prompt 测试。
 
 ### 选项 A — 从 Python 脚本面板
@@ -308,7 +308,7 @@ tools:
       idempotent_hint: true
 ```
 
-分类规则（参见 [issue #84](https://github.com/loonghao/dcc-mcp-maya/issues/84)）：
+分类规则（参见 [issue #84](https://github.com/dcc-mcp/dcc-mcp-maya/issues/84)）：
 
 | 字段 | 使用时机 | 说明 |
 |-------|-------------|-------|
@@ -347,7 +347,7 @@ lint 在 `Lint Skills` CI 作业中运行，因此添加新工具而没有这些
 ## 要求
 
 - Maya 2020+（Python 3.7+）
-- [`dcc-mcp-core`](https://github.com/loonghao/dcc-mcp-core) ≥ 0.17.31
+- [`dcc-mcp-core`](https://github.com/dcc-mcp/dcc-mcp-core) ≥ 0.17.31
 
 ## 技能脚本中的协作取消
 
@@ -376,7 +376,7 @@ def render_frames(frames):
 ### 克隆和安装
 
 ```bash
-git clone https://github.com/loonghao/dcc-mcp-maya
+git clone https://github.com/dcc-mcp/dcc-mcp-maya
 cd dcc-mcp-maya
 pip install -e ".[dev]"
 pytest tests/

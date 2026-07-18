@@ -27,7 +27,6 @@ metadata:
       USD library, locate asset, asset import source
     tools: tools.yaml
     groups: groups.yaml
-    depends: []
 ---
 # maya-asset-source (Pipeline stage)
 

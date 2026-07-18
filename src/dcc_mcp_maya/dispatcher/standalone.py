@@ -4,7 +4,7 @@ Synchronous dispatcher used outside the interactive Maya event loop:
 ``mayapy`` scripts, ``Render.exe``, ``maya -batch``.  No queue, no
 threads, no main-thread distinction.
 
-See: https://github.com/loonghao/dcc-mcp-maya/issues/128
+See: https://github.com/dcc-mcp/dcc-mcp-maya/issues/128
 """
 
 # Import future modules

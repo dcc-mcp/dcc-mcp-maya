@@ -3,7 +3,7 @@
 Validates that ``DCC_MCP_PYTHON_EXECUTABLE`` is auto-corrected when the user
 sets it to a DCC GUI binary instead of the headless Python sibling.
 
-See: https://github.com/loonghao/dcc-mcp-maya/issues/125
+See: https://github.com/dcc-mcp/dcc-mcp-maya/issues/125
 """
 
 # Import future modules

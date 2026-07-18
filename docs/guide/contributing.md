@@ -4,7 +4,7 @@
 alongside the built-ins — without touching the core package.
 
 Cross-repo maintenance checklist (frontmatter, I/O copy, reference wiring):
-[skill-maintenance.md](https://github.com/loonghao/dcc-mcp-core/blob/main/docs/guide/skill-maintenance.md)
+[skill-maintenance.md](https://github.com/dcc-mcp/dcc-mcp-core/blob/main/docs/guide/skill-maintenance.md)
 in **dcc-mcp-core**. Bundled reference skills live under
 `dcc-mcp-core/python/dcc_mcp_core/skills/`. Before opening a PR, run
 `python tools/lint_skills.py` from the **dcc-mcp-maya** repo root on your skill tree.

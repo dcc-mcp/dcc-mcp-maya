@@ -73,4 +73,4 @@ Troubleshooting
 - Check the Maya Script Editor output window for error messages.
 - Ensure the ZIP matches your platform (win64 / linux / macos).
 
-For more information: https://github.com/loonghao/dcc-mcp-maya
+For more information: https://github.com/dcc-mcp/dcc-mcp-maya

@@ -173,7 +173,7 @@ class _McpClient:
 
 
 class _RestClient:
-    """Thin wrapper for the per-DCC RESTful surface (PR loonghao/dcc-mcp-core#667).
+    """Thin wrapper for the per-DCC RESTful surface (PR dcc-mcp/dcc-mcp-core#667).
 
     Every call returns a ``(status, body)`` tuple; we never raise on
     non-2xx because endpoint absence and endpoint failure are distinct

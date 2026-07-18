@@ -1,0 +1,26 @@
+tools:
+- name: mock_async_sleep
+  description: Sleep for N seconds, reporting progress every 500 ms. Returns when done or cancelled.
+  source_file: scripts/mock_async_sleep.py
+  execution: async
+  affinity: any
+  timeout_hint_secs: 300
+  annotations:
+    read_only_hint: true
+    destructive_hint: false
+    idempotent_hint: true
+    open_world_hint: false
+  input_schema:
+    type: object
+    properties:
+      duration_secs:
+        type: number
+        minimum: 0
+        maximum: 300
+        default: 2.0
+      progress_interval_secs:
+        type: number
+        exclusiveMinimum: 0
+        maximum: 10
+        default: 0.5
+    additionalProperties: false

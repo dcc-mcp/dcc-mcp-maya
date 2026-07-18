@@ -14,7 +14,7 @@ hero:
       link: /guide/getting-started
     - theme: alt
       text: View on GitHub
-      link: https://github.com/loonghao/dcc-mcp-maya
+      link: https://github.com/dcc-mcp/dcc-mcp-maya
 
 features:
   - icon: 🤖

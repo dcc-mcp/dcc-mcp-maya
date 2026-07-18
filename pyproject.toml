@@ -49,10 +49,10 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/loonghao/dcc-mcp-maya"
-Repository = "https://github.com/loonghao/dcc-mcp-maya"
-Issues = "https://github.com/loonghao/dcc-mcp-maya/issues"
-Changelog = "https://github.com/loonghao/dcc-mcp-maya/releases"
+Homepage = "https://github.com/dcc-mcp/dcc-mcp-maya"
+Repository = "https://github.com/dcc-mcp/dcc-mcp-maya"
+Issues = "https://github.com/dcc-mcp/dcc-mcp-maya/issues"
+Changelog = "https://github.com/dcc-mcp/dcc-mcp-maya/releases"
 
 [project.entry-points."dcc_mcp.adapters"]
 maya = "dcc_mcp_maya:MayaMcpServer"

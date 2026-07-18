@@ -1,6 +1,6 @@
 # Shutdown Safety Matrix
 
-Issue [#186](https://github.com/loonghao/dcc-mcp-maya/issues/186) hardens the
+Issue [#186](https://github.com/dcc-mcp/dcc-mcp-maya/issues/186) hardens the
 Maya MCP plugin's shutdown behaviour so non-cooperative Maya exits stop
 leaking `FileRegistry` rows. The operator-visible symptom *"Maya 退出后
 plugin 服务好像没有退出"* — `list_dcc_instances` continuing to advertise a

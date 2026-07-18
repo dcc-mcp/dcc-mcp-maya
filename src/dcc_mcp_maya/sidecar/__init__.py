@@ -1,7 +1,7 @@
 """Out-of-process sidecar integration for dcc-mcp-maya (RFC #998).
 
 This sub-package wires Maya's plug-in into the ``dcc-mcp-server sidecar``
-binary that ships from ``dcc-mcp-core`` (see PRs loonghao/dcc-mcp-core#1003,
+binary that ships from ``dcc-mcp-core`` (see PRs dcc-mcp/dcc-mcp-core#1003,
 #1005, #1010, #1012). The sidecar runs as a **separate OS process**,
 supervised by the Maya plug-in's PID, and survives Maya's C++ aborts /
 Qt-modal crashes / non-cooperative shutdowns. When the DCC dies it

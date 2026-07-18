@@ -11,8 +11,8 @@ The :func:`create_dispatcher` / :func:`create_pumped_dispatcher` factory
 helpers also live here because they return ``(dispatcher, pump)`` pairs
 and need direct access to both pump constructors.
 
-See: https://github.com/loonghao/dcc-mcp-maya/issues/85,
-https://github.com/loonghao/dcc-mcp-maya/issues/128
+See: https://github.com/dcc-mcp/dcc-mcp-maya/issues/85,
+https://github.com/dcc-mcp/dcc-mcp-maya/issues/128
 """
 
 # Import future modules
