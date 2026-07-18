@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.9.15](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.14...v0.9.15) (2026-07-18)
+
+
+### Bug Fixes
+
+* schedule userSetup on Maya deferred queue ([#458](https://github.com/dcc-mcp/dcc-mcp-maya/issues/458)) ([db805a0](https://github.com/dcc-mcp/dcc-mcp-maya/commit/db805a0b34f553f2a2ba6a99986dba8902638587))
+
+
+### Code Refactoring
+
+* remove procedural house domain ([#456](https://github.com/dcc-mcp/dcc-mcp-maya/issues/456)) ([17da7c3](https://github.com/dcc-mcp/dcc-mcp-maya/commit/17da7c3110ec17918e81532a180fb011365a4941))
+
 ## [0.9.14](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.13...v0.9.14) (2026-07-17)
 
 
