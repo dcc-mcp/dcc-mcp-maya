@@ -121,8 +121,8 @@ def _load_dcc_mcp_maya():
 # ``start_server`` can run safely on the main thread without any cross-
 # thread synchronisation gymnastics.
 try:
-    import maya.utils
+    import maya.cmds as cmds
 
-    maya.utils.executeDeferred(_load_dcc_mcp_maya, lowestPriority=True)
+    cmds.evalDeferred(_load_dcc_mcp_maya, lowestPriority=True)
 except ImportError:
     pass

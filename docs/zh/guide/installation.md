@@ -87,13 +87,12 @@ Maya 空闲后再加载插件。
 ```python
 # userSetup.py
 import maya.cmds as cmds
-import maya.utils
 
 def _load_dcc_mcp_maya():
     if not cmds.pluginInfo("dcc_mcp_maya_plugin", query=True, loaded=True):
         cmds.loadPlugin("dcc_mcp_maya_plugin", quiet=True)
 
-maya.utils.executeDeferred(_load_dcc_mcp_maya, lowestPriority=True)
+cmds.evalDeferred(_load_dcc_mcp_maya, lowestPriority=True)
 ```
 
 **文件位置：**
