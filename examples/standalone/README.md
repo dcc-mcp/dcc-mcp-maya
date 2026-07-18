@@ -50,19 +50,3 @@ Load the standalone-scene-report skill and call standalone_scene_report__create_
 The skill imports `maya.cmds` inside the tool function, declares
 `affinity: main`, and avoids UI-only commands so it works in `mayapy` /
 `maya.standalone`.
-
-## Procedural Bifrost house showcase
-
-Build the same deterministic four-style scene used by the interactive
-`maya-bifrost` showcase tool, then save it as Maya ASCII:
-
-```bash
-mayapy examples/standalone/build_procedural_house_showcase.py \
-  --output house-showcase.ma \
-  --seed 20260718 \
-  --frames 72
-```
-
-This headless route creates the Bifrost graphs, materials, animation, and
-camera. For image-sequence or GIF capture, open the scene in Maya GUI and call
-`maya-render` → `capture_playblast_sequence` so VP2 has a visible model panel.
