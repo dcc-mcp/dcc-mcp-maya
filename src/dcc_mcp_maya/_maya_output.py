@@ -56,7 +56,7 @@ C++ callback bridge for a specific call site that has been
 established as safe (e.g. a unit test running in mayapy under a
 controlled scene).
 
-See: https://github.com/loonghao/dcc-mcp-maya/issues/151
+See: https://github.com/dcc-mcp/dcc-mcp-maya/issues/151
 """
 
 # Import future modules

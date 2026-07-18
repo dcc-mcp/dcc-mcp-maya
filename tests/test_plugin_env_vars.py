@@ -4,7 +4,7 @@ Verifies that ``_export_worker_env()`` in the Maya plugin correctly exports
 ``DCC_MCP_PYTHON_EXECUTABLE`` and ``DCC_MCP_PYTHON_INIT_SNIPPET`` so that
 skill worker subprocesses use the correct Maya Python interpreter.
 
-See: https://github.com/loonghao/dcc-mcp-maya/issues/63
+See: https://github.com/dcc-mcp/dcc-mcp-maya/issues/63
 """
 
 # Import future modules

@@ -3,6 +3,21 @@
 > Progressive disclosure: this file is a **map**, not an encyclopedia.
 > Follow the links for depth. Stay here for breadth.
 
+## Agent Control Path
+
+AI agent runtimes default to the shared gateway through the
+`dcc-cli-gateway` skill and `dcc-mcp-cli` REST commands:
+
+```bash
+dcc-mcp-cli search --query "<task>" --dcc-type maya
+dcc-mcp-cli describe <tool-slug>
+dcc-mcp-cli call <tool-slug> --json '{"key":"value"}'
+```
+
+Use `dcc-mcp-cli list` for live instances and `dcc-mcp-cli dcc-types` for
+release-catalog support. IDE users may continue to configure the gateway MCP
+endpoint; adapter-local Python start APIs are for host bootstrap and tests.
+
 ---
 
 ## 30-Second Summary
@@ -68,7 +83,7 @@ def create_sphere(radius: float = 1.0) -> dict:
 - **src/dcc_mcp_maya/dispatcher/** — `MayaUiDispatcher`, `MayaStandaloneDispatcher`, `MayaUiPump`, `check_maya_cancelled` (split into `job` / `cancel` / `ui` / `standalone` / `pump` submodules — public symbols re-exported from the package).
 - **maya/plugin/dcc_mcp_maya_plugin.py** — Maya plugin entry point (`initializePlugin`, `uninitializePlugin`, menu, gateway auto-config).
 - **tests/** — 50+ unit tests, E2E tests (tahv/mayapy 2022–2025), multi-instance gateway tests.
-- **Upstream `dcc-mcp-core` API reference** — https://github.com/loonghao/dcc-mcp-core/blob/main/llms.txt — authoritative one-page index of every public symbol re-used by this repo (`DccServerBase`, `MinimalModeConfig`, `HostExecutionBridge`, `BaseDccCallableDispatcher`, `is_gui_executable` / `correct_python_executable`, `FileRegistry`, `check_dcc_cancelled`, `JobHandle`, result-envelope factories, etc.). Always consult this first before adding a new helper locally — most "missing" utilities already exist upstream and are simply waiting to be wired in.
+- **Upstream `dcc-mcp-core` API reference** — https://github.com/dcc-mcp/dcc-mcp-core/blob/main/llms.txt — authoritative one-page index of every public symbol re-used by this repo (`DccServerBase`, `MinimalModeConfig`, `HostExecutionBridge`, `BaseDccCallableDispatcher`, `is_gui_executable` / `correct_python_executable`, `FileRegistry`, `check_dcc_cancelled`, `JobHandle`, result-envelope factories, etc.). Always consult this first before adding a new helper locally — most "missing" utilities already exist upstream and are simply waiting to be wired in.
 
 ### Layer 4 — You Are an AI Agent Reading This
 *Goal: Discover and use tools effectively inside a live Maya session.*
@@ -76,7 +91,7 @@ def create_sphere(radius: float = 1.0) -> dict:
 - **llms.txt** — Core API surface, environment variables, key files (fits in a small context window).
 - **llms-full.txt** — Complete public API signatures, all environment variables, bundled skill categories.
 - **`src/dcc_mcp_maya/skills/SKILLS_INDEX.md`** — **Cross-skill navigation map**: 5-stage taxonomy and ready-made task → skill chains. Read first before deciding which skill to load.
-- **Upstream core reference** — https://github.com/loonghao/dcc-mcp-core/blob/main/llms.txt (and the deeper [`llms-full.txt`](https://github.com/loonghao/dcc-mcp-core/blob/main/llms-full.txt)) — exhaustive `dcc_mcp_core` API surface; use it whenever a tool/skill needs to leverage core primitives that are not surfaced in this repo's own `llms.txt`.
+- **Upstream core reference** — https://github.com/dcc-mcp/dcc-mcp-core/blob/main/llms.txt (and the deeper [`llms-full.txt`](https://github.com/dcc-mcp/dcc-mcp-core/blob/main/llms-full.txt)) — exhaustive `dcc_mcp_core` API surface; use it whenever a tool/skill needs to leverage core primitives that are not surfaced in this repo's own `llms.txt`.
 - **Skill discovery workflow:**
   1. Prefer MCP `dcc_capability_manifest` with `{loaded_only: false}` for a **compact** index of actions (avoids paying full `inputSchema` cost for every skill up front).
   2. Alternatively: `search_skills` / `search_tools` → **`load_skill`** → optional `activate_group("extended")` → invoke the **typed** tool (validated `inputSchema`, e.g. `maya_mesh_ops__bevel_edge`). Treat `maya_scripting__execute_python` / `execute_mel` as **last resort** when no skill covers the task (bulk in-Maya loops, OpenMaya gaps, one-off experiments). Studios can hard-block arbitrary execution with `DCC_MCP_MAYA_DISABLE_EXECUTE_PYTHON`, `DCC_MCP_MAYA_DISABLE_EXECUTE_MEL`, or `DCC_MCP_MAYA_DISABLE_ARBITRARY_SCRIPT` (see `README.md` / `llms.txt`).
@@ -226,7 +241,7 @@ Support matrix + detailed breakdown in `docs/guide/shutdown-matrix.md` (EN) / `d
 | `maya-api://signatures/<class>`         | Public-method index for OpenMaya / OpenMayaAnim / OpenMayaUI classes.    |
 | `maya-project://current`                | Active workspace root + `fileRule` table.                                |
 
-[resource-handle]: https://github.com/loonghao/dcc-mcp-core/blob/main/llms.txt
+[resource-handle]: https://github.com/dcc-mcp/dcc-mcp-core/blob/main/llms.txt
 
 Key Python symbols:
 
@@ -416,7 +431,7 @@ A: Set ``DCC_MCP_MAYA_DISABLE_EXECUTE_PYTHON=1`` (Python only) or ``DCC_MCP_MAYA
 
 ## Gateway HTTP regression traces (VRS)
 
-Bugs that only reproduce through the **gateway REST** surface (`/v1/search`, `/v1/call`, …) — for example `execute_python` crashing the host after a handled Python error — should get a **JSONL replay trace** in **dcc-mcp-core** (`tests/vrs/traces/`), not only a pytest in this repo. Workflow, `just vrs-replay`, and naming rules live in upstream [`AGENTS.md`](https://github.com/loonghao/dcc-mcp-core/blob/main/AGENTS.md) (section **Verified Regression Suite (VRS)**) and [`tests/vrs/README.md`](https://github.com/loonghao/dcc-mcp-core/blob/main/tests/vrs/README.md). Reference trace: [`maya-215-execute-python-regression.jsonl`](https://github.com/loonghao/dcc-mcp-core/blob/main/tests/vrs/traces/maya-215-execute-python-regression.jsonl).
+Bugs that only reproduce through the **gateway REST** surface (`/v1/search`, `/v1/call`, …) — for example `execute_python` crashing the host after a handled Python error — should get a **JSONL replay trace** in **dcc-mcp-core** (`tests/vrs/traces/`), not only a pytest in this repo. Workflow, `just vrs-replay`, and naming rules live in upstream [`AGENTS.md`](https://github.com/dcc-mcp/dcc-mcp-core/blob/main/AGENTS.md) (section **Verified Regression Suite (VRS)**) and [`tests/vrs/README.md`](https://github.com/dcc-mcp/dcc-mcp-core/blob/main/tests/vrs/README.md). Reference trace: [`maya-215-execute-python-regression.jsonl`](https://github.com/dcc-mcp/dcc-mcp-core/blob/main/tests/vrs/traces/maya-215-execute-python-regression.jsonl).
 
 ---
 

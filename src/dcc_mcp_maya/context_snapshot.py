@@ -31,8 +31,8 @@ Usage::
     provider = MayaContextSnapshotProvider()
     server.set_context_snapshot_provider(provider)
 
-See: https://github.com/loonghao/dcc-mcp-maya/issues/163
-     https://github.com/loonghao/dcc-mcp-maya/issues/165
+See: https://github.com/dcc-mcp/dcc-mcp-maya/issues/163
+     https://github.com/dcc-mcp/dcc-mcp-maya/issues/165
 """
 
 from __future__ import annotations

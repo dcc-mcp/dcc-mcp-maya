@@ -1,6 +1,6 @@
 """Tests for MayaUiDispatcher, MayaStandaloneDispatcher, and MayaUiPump.
 
-See: https://github.com/loonghao/dcc-mcp-maya/issues/66
+See: https://github.com/dcc-mcp/dcc-mcp-maya/issues/66
 """
 
 # Import future modules

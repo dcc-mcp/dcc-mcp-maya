@@ -232,7 +232,7 @@ def test_http_post_initialize_and_list_tools(running_server, tmp_path):
     """Verify a vanilla ``urllib.request`` client can drive the server.
 
     The dynamic skill's action is registered and callable; ``tools/list``
-    may omit it (loonghao/dcc-mcp-core#702 tracks the advertisement gap),
+    may omit it (dcc-mcp/dcc-mcp-core#702 tracks the advertisement gap),
     so this test sticks to what MCP guarantees today: the handshake
     succeeds, ``tools/list`` returns a well-formed envelope, and the
     registry-qualified ``tools/call`` dispatches end-to-end.
@@ -284,7 +284,7 @@ def test_custom_skill_registered_and_callable_over_http(running_server, tmp_path
     """Create a skill on disk, start the server, call its tool via HTTP, assert side-effects.
 
     ``tools/list`` currently omits actions registered through
-    ``extra_skill_paths`` (tracked as loonghao/dcc-mcp-core#702). ``tools/call``
+    ``extra_skill_paths`` (tracked as dcc-mcp/dcc-mcp-core#702). ``tools/call``
     still works over the wire by either bare name or
     ``{skill_snake}__{tool}`` qualified name, so the contract this test
     locks in is: a custom skill *is* callable from a plain HTTP client
@@ -458,7 +458,7 @@ def test_malformed_skill_is_logged_and_does_not_poison_valid_skills(running_serv
 
     # Healthy skill still reaches the registry — ``tools/call`` by
     # qualified name must succeed even if ``tools/list`` hides it (see
-    # loonghao/dcc-mcp-core#702).
+    # dcc-mcp/dcc-mcp-core#702).
     qualified_ok = _qualified_action_name("maya-http-e2e-good", "http_good_ok")
     envelope = _extract_envelope(_tools_call(mcp_url, session, qualified_ok, {}))
     assert envelope["success"] is True
@@ -481,12 +481,12 @@ def test_malformed_skill_is_logged_and_does_not_poison_valid_skills(running_serv
 
     # The broken directory name must appear in *some* log line — the exact
     # logger varies by core version, so we search across everything caplog
-    # captured. Upstream tracking issue: loonghao/dcc-mcp-core#701.
+    # captured. Upstream tracking issue: dcc-mcp/dcc-mcp-core#701.
     captured = "\n".join(record.getMessage() for record in caplog.records)
     if "maya-http-e2e-broken" not in captured:
         pytest.xfail(
             "core scanner silently skipped the malformed skill without emitting a log line — "
-            "tracked as loonghao/dcc-mcp-core#701; flip to assert once core logs every rejection"
+            "tracked as dcc-mcp/dcc-mcp-core#701; flip to assert once core logs every rejection"
         )
 
 

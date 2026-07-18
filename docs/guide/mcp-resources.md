@@ -1,6 +1,6 @@
 # Maya MCP Resources
 
-Issue [#187](https://github.com/loonghao/dcc-mcp-maya/issues/187) wires
+Issue [#187](https://github.com/dcc-mcp/dcc-mcp-maya/issues/187) wires
 `dcc-mcp-maya` into the Rust [`ResourceRegistry`][resource-handle]
 shipped by `dcc-mcp-core` 0.15.0.  Out of the box, MCP clients now see:
 
@@ -19,7 +19,7 @@ shipped by `dcc-mcp-core` 0.15.0.  Out of the box, MCP clients now see:
 * **`maya-project://current`** — active workspace root + `fileRule`
   table for the running Maya session.
 
-[resource-handle]: https://github.com/loonghao/dcc-mcp-core/blob/main/llms.txt
+[resource-handle]: https://github.com/dcc-mcp/dcc-mcp-core/blob/main/llms.txt
 
 ## Quick check
 
@@ -169,7 +169,7 @@ code change required.
 
 ## See also
 
-* [`AGENTS.md`](https://github.com/loonghao/dcc-mcp-maya/blob/main/AGENTS.md) — overview of the SOLID binder
+* [`AGENTS.md`](https://github.com/dcc-mcp/dcc-mcp-maya/blob/main/AGENTS.md) — overview of the SOLID binder
   pattern (`ReadinessBinder`, `ProjectToolsIntegration`,
   `MayaResourceBinder`).
 * [`docs/guide/scene.md`](./scene.md) — the existing scene-info tool

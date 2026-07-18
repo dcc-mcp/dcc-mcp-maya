@@ -1,6 +1,6 @@
 # Maya MCP 资源
 
-Issue [#187](https://github.com/loonghao/dcc-mcp-maya/issues/187) 把
+Issue [#187](https://github.com/dcc-mcp/dcc-mcp-maya/issues/187) 把
 `dcc-mcp-maya` 接到 `dcc-mcp-core` 0.15.0 提供的 Rust
 [`ResourceRegistry`][resource-handle]。开箱后，MCP 客户端会看到：
 
@@ -18,7 +18,7 @@ Issue [#187](https://github.com/loonghao/dcc-mcp-maya/issues/187) 把
 * **`maya-project://current`** —— 当前 Maya workspace 的根目录与
   `fileRule` 列表。
 
-[resource-handle]: https://github.com/loonghao/dcc-mcp-core/blob/main/llms.txt
+[resource-handle]: https://github.com/dcc-mcp/dcc-mcp-core/blob/main/llms.txt
 
 ## 快速验证
 
@@ -156,7 +156,7 @@ core 0.15.0 已声明 `prompts: {listChanged: true}` 能力，
 
 ## 参考
 
-* [`AGENTS.md`](https://github.com/loonghao/dcc-mcp-maya/blob/main/AGENTS.md) —— SOLID binder 范式总览
+* [`AGENTS.md`](https://github.com/dcc-mcp/dcc-mcp-maya/blob/main/AGENTS.md) —— SOLID binder 范式总览
   （`ReadinessBinder` / `ProjectToolsIntegration` / `MayaResourceBinder`）。
 * [`docs/zh/guide/scene.md`](./scene.md) —— 现有的场景信息工具表面，
   与 `scene://current` 同源。

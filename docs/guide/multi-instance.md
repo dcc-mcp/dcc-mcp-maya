@@ -8,7 +8,7 @@ N Maya processes share the same machine, and gives a drop-in
 single MCP gateway.
 
 For cross-machine HA deployments, see
-[`dcc-mcp-core` production deployment guide](https://github.com/loonghao/dcc-mcp-core)
+[`dcc-mcp-core` production deployment guide](https://github.com/dcc-mcp/dcc-mcp-core)
 (core #330) — this page intentionally covers only the single-workstation case.
 
 ## Invariants
@@ -52,7 +52,7 @@ def _apply_multi_instance_env():
 ```
 
 The full, commented source is in
-[`examples/multi-instance/userSetup.py`](https://github.com/loonghao/dcc-mcp-maya/tree/main/examples/multi-instance).
+[`examples/multi-instance/userSetup.py`](https://github.com/dcc-mcp/dcc-mcp-maya/tree/main/examples/multi-instance).
 
 ## Environment Variable Reference
 
@@ -135,6 +135,6 @@ while the animation-pool launcher keeps the default (`=1`).
 ## Related
 
 - [Advanced Usage](./advanced) — custom skills, main-thread scheduling.
-- [`examples/multi-instance/`](https://github.com/loonghao/dcc-mcp-maya/tree/main/examples/multi-instance) — runnable `userSetup.py`.
-- Issue [#88](https://github.com/loonghao/dcc-mcp-maya/issues/88) — this
+- [`examples/multi-instance/`](https://github.com/dcc-mcp/dcc-mcp-maya/tree/main/examples/multi-instance) — runnable `userSetup.py`.
+- Issue [#88](https://github.com/dcc-mcp/dcc-mcp-maya/issues/88) — this
   document's source of truth for acceptance criteria.

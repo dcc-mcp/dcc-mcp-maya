@@ -22,7 +22,7 @@ whatever :class:`MayaContextSnapshotProvider`-shaped callable is installed
 on the server, so the code is safe in headless / test contexts.
 
 See:
-  * https://github.com/loonghao/dcc-mcp-maya/issues/163
+  * https://github.com/dcc-mcp/dcc-mcp-maya/issues/163
   * core llms.txt §2 Capability Index (`tool_slug` schema)
 """
 

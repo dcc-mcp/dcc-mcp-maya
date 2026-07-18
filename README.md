@@ -1,18 +1,41 @@
 # dcc-mcp-maya
 
+<p align="center">
+  <img src="docs/assets/dcc-mcp-maya.svg" alt="DCC-MCP · MAYA" width="600">
+</p>
+
+## Agent workflow
+
+AI agents should use the shared gateway through `dcc-mcp-cli`; IDE users may
+continue to use the MCP endpoint. Prefer typed skills and tools over raw scripts.
+
+```bash
+dcc-mcp-cli dcc-types
+dcc-mcp-cli list
+dcc-mcp-cli search --query "<task>" --dcc-type maya
+dcc-mcp-cli describe <tool-slug>
+dcc-mcp-cli call <tool-slug> --json '{"key":"value"}'
+```
+
+`dcc-types` reports release-catalog support; `list` reports live sessions. If a
+tool belongs to an inactive progressive skill, call `dcc-mcp-cli load-skill <skill-name> --dcc-type maya` before retrying. For post-task improvement,
+attach a stable session id with `--meta-json`, query `dcc-mcp-cli stats --range 24h --session-id <task-id>`, then pass the bounded evidence to the
+`review_skill_improvement` prompt from `dcc-mcp-skills-creator`.
+
+
 Bring Autodesk Maya to MCP-native AI agents.
 
 `dcc-mcp-maya` turns Maya into a standards-compliant **MCP Streamable HTTP** backend. Agents can inspect scenes, create geometry, edit materials, run animation and render workflows, export assets, and recover project state through typed tools instead of brittle ad-hoc scripts.
 
 The Maya plugin starts a Rust `dcc-mcp-server` sidecar by default, so HTTP and gateway traffic stay isolated from Maya's UI thread while actual Maya API work is routed through Maya-safe dispatchers.
 
-[![CI](https://github.com/loonghao/dcc-mcp-maya/actions/workflows/ci.yml/badge.svg)](https://github.com/loonghao/dcc-mcp-maya/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/gh/loonghao/dcc-mcp-maya/graph/badge.svg)](https://codecov.io/gh/loonghao/dcc-mcp-maya)
-[![GitHub release](https://img.shields.io/github/v/release/loonghao/dcc-mcp-maya?label=release)](https://github.com/loonghao/dcc-mcp-maya/releases)
-[![GitHub release date](https://img.shields.io/github/release-date/loonghao/dcc-mcp-maya?label=released)](https://github.com/loonghao/dcc-mcp-maya/releases)
-[![Last commit](https://img.shields.io/github/last-commit/loonghao/dcc-mcp-maya?label=last%20commit)](https://github.com/loonghao/dcc-mcp-maya/commits/main/)
-[![Issues](https://img.shields.io/github/issues/loonghao/dcc-mcp-maya?label=issues)](https://github.com/loonghao/dcc-mcp-maya/issues)
-[![Pull requests](https://img.shields.io/github/issues-pr/loonghao/dcc-mcp-maya?label=PRs)](https://github.com/loonghao/dcc-mcp-maya/pulls)
+[![CI](https://github.com/dcc-mcp/dcc-mcp-maya/actions/workflows/ci.yml/badge.svg)](https://github.com/dcc-mcp/dcc-mcp-maya/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/dcc-mcp/dcc-mcp-maya/graph/badge.svg)](https://codecov.io/gh/dcc-mcp/dcc-mcp-maya)
+[![GitHub release](https://img.shields.io/github/v/release/dcc-mcp/dcc-mcp-maya?label=release)](https://github.com/dcc-mcp/dcc-mcp-maya/releases)
+[![GitHub release date](https://img.shields.io/github/release-date/dcc-mcp/dcc-mcp-maya?label=released)](https://github.com/dcc-mcp/dcc-mcp-maya/releases)
+[![Last commit](https://img.shields.io/github/last-commit/dcc-mcp/dcc-mcp-maya?label=last%20commit)](https://github.com/dcc-mcp/dcc-mcp-maya/commits/main/)
+[![Issues](https://img.shields.io/github/issues/dcc-mcp/dcc-mcp-maya?label=issues)](https://github.com/dcc-mcp/dcc-mcp-maya/issues)
+[![Pull requests](https://img.shields.io/github/issues-pr/dcc-mcp/dcc-mcp-maya?label=PRs)](https://github.com/dcc-mcp/dcc-mcp-maya/pulls)
 [![PyPI](https://img.shields.io/pypi/v/dcc-mcp-maya?label=PyPI)](https://pypi.org/project/dcc-mcp-maya/)
 [![PyPI downloads](https://img.shields.io/pypi/dm/dcc-mcp-maya?label=downloads%2Fmonth)](https://pypistats.org/packages/dcc-mcp-maya)
 [![Downloads](https://static.pepy.tech/badge/dcc-mcp-maya)](https://pepy.tech/project/dcc-mcp-maya)
@@ -39,13 +62,13 @@ Maya-side dependencies, write MCP host config, and walk you through loading the
 plugin:
 
 ```text
-Help me install dcc-mcp-maya using https://github.com/loonghao/dcc-mcp-maya/blob/main/install.md.
+Help me install dcc-mcp-maya using https://github.com/dcc-mcp/dcc-mcp-maya/blob/main/install.md.
 ```
 
 The agent should follow
-[`install.md`](https://github.com/loonghao/dcc-mcp-maya/blob/main/install.md),
+[`install.md`](https://github.com/dcc-mcp/dcc-mcp-maya/blob/main/install.md),
 which delegates the setup workflow to
-[`skills/dcc-mcp-maya-setup`](https://github.com/loonghao/dcc-mcp-maya/tree/main/skills/dcc-mcp-maya-setup).
+[`skills/dcc-mcp-maya-setup`](https://github.com/dcc-mcp/dcc-mcp-maya/tree/main/skills/dcc-mcp-maya-setup).
 
 Install into Maya's Python. The normal install includes the standard
 `dcc-mcp-server` runtime used by the default gateway path:
@@ -338,7 +361,7 @@ def render_frames(frames):
 ## Development
 
 ```bash
-git clone https://github.com/loonghao/dcc-mcp-maya
+git clone https://github.com/dcc-mcp/dcc-mcp-maya
 cd dcc-mcp-maya
 pip install -e ".[dev]"
 pytest tests/

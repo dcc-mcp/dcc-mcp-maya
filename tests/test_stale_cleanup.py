@@ -2,7 +2,7 @@
 
 Validates the host-side stale FileRegistry detection and warning helper.
 
-See: https://github.com/loonghao/dcc-mcp-maya/issues/126
+See: https://github.com/dcc-mcp/dcc-mcp-maya/issues/126
 """
 
 # Import future modules

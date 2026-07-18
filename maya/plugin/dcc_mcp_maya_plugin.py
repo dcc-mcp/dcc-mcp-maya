@@ -489,7 +489,7 @@ def _export_worker_env() -> None:
         Initialises Maya standalone in the worker process.
 
     Uses ``setdefault`` so advanced users can still override.
-    See: https://github.com/loonghao/dcc-mcp-maya/issues/63, #108
+    See: https://github.com/dcc-mcp/dcc-mcp-maya/issues/63, #108
     """
     os.environ.setdefault("DCC_MCP_PYTHON_EXECUTABLE", sys.executable)
     os.environ.setdefault(

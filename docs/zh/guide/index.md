@@ -1,6 +1,6 @@
 # 简介
 
-**dcc-mcp-maya** 是 [DCC-MCP](https://github.com/loonghao/dcc-mcp-core) 生态系统的 Maya 专属集成层。
+**dcc-mcp-maya** 是 [DCC-MCP](https://github.com/dcc-mcp/dcc-mcp-core) 生态系统的 Maya 专属集成层。
 
 它让 Maya 通过符合标准的 **MCP Streamable HTTP** 表面对外服务。插件部署默认使用 Rust `dcc-mcp-server` sidecar 作为标准运行时：HTTP 与 gateway 工作留在 Maya 进程外，场景操作再通过 Maya-safe Qt bridge 调度回 Maya。
 

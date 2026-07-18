@@ -19,7 +19,7 @@ This re-export layer is **zero-overhead**: every name binds to the same
 object as the originating submodule.  External callers do not need to
 update their imports.
 
-See: https://github.com/loonghao/dcc-mcp-maya/issues/128
+See: https://github.com/dcc-mcp/dcc-mcp-maya/issues/128
 """
 
 # Import future modules

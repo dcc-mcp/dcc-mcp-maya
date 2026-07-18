@@ -1,15 +1,14 @@
 ---
 name: maya-mock-async
 description: "Synthetic async skill for gateway integration tests. Sleeps for N seconds and reports progress every 500 ms. No actual Maya installation required — uses MayaStandaloneDispatcher."
-dcc: maya
-version: "1.0.0"
 license: "MIT"
 compatibility: "Python>=3.7"
-tags: ["testing", "async", "mock"]
-tools:
-  - name: mock_async_sleep
-    description: "Sleep for N seconds, reporting progress every 500 ms. Returns when done or cancelled."
-    source_file: scripts/mock_async_sleep.py
+metadata:
+  dcc-mcp:
+    dcc: maya
+    version: "1.0.0"
+    tags: ["testing", "async", "mock"]
+    tools: tools.yaml
 ---
 
 # maya-mock-async

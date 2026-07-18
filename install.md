@@ -1,11 +1,11 @@
 # dcc-mcp-maya Agent Install
 
 Use this page when an agent is asked to install or configure
-`loonghao/dcc-mcp-maya` for Autodesk Maya.
+`dcc-mcp/dcc-mcp-maya` for Autodesk Maya.
 
 ## Agent Instruction
 
-If the user says "帮我参考 loonghao/dcc-mcp-maya/install.md 去安装",
+If the user says "帮我参考 dcc-mcp/dcc-mcp-maya/install.md 去安装",
 do this:
 
 1. Read `skills/dcc-mcp-maya-setup/SKILL.md`.
