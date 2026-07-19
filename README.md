@@ -9,6 +9,30 @@
 AI agents should use the shared gateway through `dcc-mcp-cli`; IDE users may
 continue to use the MCP endpoint. Prefer typed skills and tools over raw scripts.
 
+### Install or update the CLI
+
+`dcc-mcp-cli` is the preferred control path for every shell-capable agent. If
+it is missing, ask the user before installing the latest official release:
+
+```bash
+# Linux/macOS
+curl -fsSL https://raw.githubusercontent.com/dcc-mcp/dcc-mcp-core/main/scripts/install-cli.sh | sh
+
+# Windows PowerShell
+powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/dcc-mcp/dcc-mcp-core/main/scripts/install-cli.ps1 | iex"
+```
+
+Keep an official build current through the release manifest:
+
+```bash
+dcc-mcp-cli update check
+dcc-mcp-cli update apply
+```
+
+`update apply` downloads and stages the latest CLI for the next launch. It
+does not update a running `dcc-mcp-server`; update that server in its own
+environment.
+
 ```bash
 dcc-mcp-cli dcc-types
 dcc-mcp-cli list
