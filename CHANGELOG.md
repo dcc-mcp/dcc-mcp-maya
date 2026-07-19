@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.16](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.15...v0.9.16) (2026-07-19)
+
+
+### Bug Fixes
+
+* align adapter contracts and branding ([b4142c2](https://github.com/dcc-mcp/dcc-mcp-maya/commit/b4142c26fdbc87c07ab1e6078d61d37a23dd83f6))
+
 ## [0.9.15](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.14...v0.9.15) (2026-07-18)
 
 
