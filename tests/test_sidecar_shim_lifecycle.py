@@ -306,10 +306,14 @@ class TestSidecarLifecycle:
         try:
             entry = wait_for_sidecar_registry_row(isolated_registry_dir, timeout=5.0, require_dialable_port=False)
             assert entry["dcc_type"] == "maya"
-            assert entry["pid"] == parent_surrogate.pid, (
-                "FileRegistry row's pid must equal the parent we asked the "
-                "sidecar to watch — that lets sweepers correlate dead Maya "
-                "PIDs with their orphaned sidecar rows."
+            # ServiceEntry.pid is the sidecar process PID;
+            # ServiceEntry.host_pid is the watched DCC host PID (Maya).
+            host_pid = entry.get("host_pid")
+            assert host_pid == parent_surrogate.pid, (
+                "FileRegistry row's host_pid must equal the parent we asked "
+                "the sidecar to watch — that lets sweepers correlate dead "
+                "Maya PIDs with their orphaned sidecar rows. "
+                f"host_pid={host_pid!r}, expected={parent_surrogate.pid}"
             )
             metadata = entry.get("metadata") or {}
             assert metadata.get("dcc_mcp_role") == "per-dcc-sidecar"
