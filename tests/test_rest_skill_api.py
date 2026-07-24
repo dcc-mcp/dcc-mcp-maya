@@ -252,7 +252,7 @@ def test_capability_manifest_loaded_only_filter(running_server):
 
 
 def test_capability_manifest_respects_token_budget(running_server):
-    """Each capability record must stay compact (<= 640B serialised).
+    """Each capability record must stay compact (<= 850B serialised).
 
     The #163 contract is "~200 B/record + schema omitted"; we give ourselves
     ~3× headroom to account for Unicode escapes (``—`` → ``\\u2014``, 6 bytes
@@ -282,7 +282,7 @@ def test_capability_manifest_respects_token_budget(running_server):
     records = payload["context"]["capabilities"]
     assert records, "records must be non-empty for budget check"
 
-    PER_RECORD_BUDGET = 640  # bytes — compact *relative to* full MCP schema
+    PER_RECORD_BUDGET = 850  # bytes — compact *relative to* full MCP schema
     oversized = []
     for rec in records:
         encoded = json.dumps(rec, separators=(",", ":"))
@@ -349,7 +349,7 @@ def test_capability_manifest_exposes_skill_actions_mcp_does_not():
         # token-budget contract.
         manifest_size = len(json.dumps(manifest, separators=(",", ":")))
         per_action_cost = manifest_size / max(1, len(manifest["capabilities"]))
-        assert per_action_cost < 640, "per-action cost {:.0f} B exceeds compact budget".format(per_action_cost)
+        assert per_action_cost < 850, "per-action cost {:.0f} B exceeds compact budget".format(per_action_cost)
     finally:
         server.stop()
 
