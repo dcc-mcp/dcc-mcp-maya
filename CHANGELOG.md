@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.9.17](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.16...v0.9.17) (2026-07-24)
+
+
+### Features
+
+* unify Maya menu with Copy Instance ID, Server Info, and About ([79e97f6](https://github.com/dcc-mcp/dcc-mcp-maya/commit/79e97f6d30c1bd89e621af48fd324ff500c40b2e))
+
+
+### Bug Fixes
+
+* raise __skill__ stub budget from 1KB to 1.25KB ([0581dc8](https://github.com/dcc-mcp/dcc-mcp-maya/commit/0581dc864e04e173b2af04d43ebe36de2ac9cd61))
+* raise capability manifest per-record budget from 640B to 850B ([ef17fd4](https://github.com/dcc-mcp/dcc-mcp-maya/commit/ef17fd41b48ab3ff2e8c64a942c1d86fdf0cf9e1))
+* use host_pid instead of pid for sidecar registry assertion ([97f1583](https://github.com/dcc-mcp/dcc-mcp-maya/commit/97f1583d617de4c1ab7c9b8188678334ae420d3a))
+
+
+### Documentation
+
+* document CLI install and updates ([4d8fb1a](https://github.com/dcc-mcp/dcc-mcp-maya/commit/4d8fb1afb97816f0b1feb4925f143662fad7f869))
+
 ## [0.9.16](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.15...v0.9.16) (2026-07-19)
 
 

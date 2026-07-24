@@ -38,7 +38,7 @@ a running server.
 
 `dcc-mcp-maya` embeds a standards-compliant MCP Streamable HTTP server directly inside Autodesk Maya. It exposes 212 Maya operations as MCP tools that any AI agent (Claude, Cursor, Gemini, etc.) can call over HTTP — no external gateway, no subprocess bridge.
 
-**Current version:** 0.9.16 <!-- x-release-please-version -->
+**Current version:** 0.9.17 <!-- x-release-please-version -->
 **Core dependency:** `dcc-mcp-core>=0.19.45,<0.20.0`
 **Python:** 3.7+
 **Maya:** 2020+
