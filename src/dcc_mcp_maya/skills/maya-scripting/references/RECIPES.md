@@ -90,10 +90,10 @@ geo = cmds.ls("*geo*", type="transform", long=True)
 cmds.select("myCube.vtx[0:3]")
 verts = cmds.ls(sl=True, flatten=True)  # flatten=True expands ranges
 
+
 # Filter selection to only mesh transforms
 def selected_meshes():
-    return [t for t in cmds.ls(sl=True, long=True)
-            if cmds.listRelatives(t, shapes=True, type="mesh")]
+    return [t for t in cmds.ls(sl=True, long=True) if cmds.listRelatives(t, shapes=True, type="mesh")]
 ```
 
 ---
@@ -110,17 +110,17 @@ cmds.parent("myChild", "myParent")
 cmds.parent("myChild", world=True)
 
 # List immediate children (transforms only, full paths)
-children = cmds.listRelatives("myParent", children=True,
-                               type="transform", fullPath=True) or []
+children = cmds.listRelatives("myParent", children=True, type="transform", fullPath=True) or []
 
 # List all descendants
-descendants = cmds.listRelatives("myParent", allDescendents=True,
-                                  fullPath=True) or []
+descendants = cmds.listRelatives("myParent", allDescendents=True, fullPath=True) or []
+
 
 # Walk up to root
 def get_root(node):
     parents = cmds.listRelatives(node, parent=True, fullPath=True)
     return get_root(parents[0]) if parents else node
+
 
 # DAG vs dependency graph: listRelatives is DAG only.
 # For dependency graph connections use listConnections (see attributes section).
@@ -152,15 +152,13 @@ cmds.setAttr("myNode.notes", "my note", type="string")
 cmds.setAttr("myCube.scaleX", lock=True)
 
 # Add custom float attribute
-cmds.addAttr("myCube", longName="myFloat", attributeType="float",
-             defaultValue=0.0, keyable=True)
+cmds.addAttr("myCube", longName="myFloat", attributeType="float", defaultValue=0.0, keyable=True)
 
 # Connect attributes (drive B with A)
 cmds.connectAttr("myCube.translateX", "mySphere.translateX", force=True)
 
 # List incoming connections to a node
-conns = cmds.listConnections("myCube", source=True, destination=False,
-                               plugs=True, connections=True) or []
+conns = cmds.listConnections("myCube", source=True, destination=False, plugs=True, connections=True) or []
 
 # Query attribute type
 attr_type = cmds.attributeQuery("translate", node="myCube", attributeType=True)
@@ -179,12 +177,14 @@ cmds.namespace(add="myRig")
 # List all namespaces (excludes UI/system namespaces)
 ns_list = cmds.namespaceInfo(listOnlyNamespaces=True, recurse=True) or []
 
+
 # Rename all nodes to use a new namespace prefix
 def move_to_namespace(nodes, new_ns):
     cmds.namespace(add=new_ns, parent=":")
     for node in nodes:
         short = node.split(":")[-1]
         cmds.rename(node, "{}:{}".format(new_ns, short))
+
 
 # Safe delete namespace (merge objects into root)
 cmds.namespace(removeNamespace=":myRig", mergeNamespaceWithParent=True)
@@ -238,8 +238,7 @@ import maya.cmds as cmds
 
 # Create Lambert material + shading engine
 mat = cmds.shadingNode("lambert", asShader=True, name="myMat")
-sg = cmds.sets(renderable=True, noSurfaceShader=True,
-               empty=True, name="myMatSG")
+sg = cmds.sets(renderable=True, noSurfaceShader=True, empty=True, name="myMatSG")
 cmds.connectAttr(mat + ".outColor", sg + ".surfaceShader", force=True)
 
 # Set color
@@ -247,6 +246,7 @@ cmds.setAttr(mat + ".color", 1.0, 0.2, 0.2, type="double3")
 
 # Assign material to objects
 cmds.sets("myCube", edit=True, forceElement=sg)
+
 
 # Query which material is on an object
 def get_material(obj):
@@ -259,11 +259,11 @@ def get_material(obj):
                 return mats[0]
     return None
 
+
 # Create aiStandardSurface (Arnold) — same pattern
 if cmds.pluginInfo("mtoa", q=True, loaded=True):
     ai_mat = cmds.shadingNode("aiStandardSurface", asShader=True)
-    ai_sg  = cmds.sets(renderable=True, noSurfaceShader=True, empty=True,
-                       name=ai_mat + "SG")
+    ai_sg = cmds.sets(renderable=True, noSurfaceShader=True, empty=True, name=ai_mat + "SG")
     cmds.connectAttr(ai_mat + ".outColor", ai_sg + ".surfaceShader", force=True)
 ```
 
@@ -322,8 +322,7 @@ times = cmds.keyframe("mySphere.translateY", q=True, timeChange=True) or []
 values = cmds.keyframe("mySphere.translateY", q=True, valueChange=True) or []
 
 # Set tangent type (flat, auto, linear, spline, step)
-cmds.keyTangent("mySphere.translateY", time=(10, 10),
-                inTangentType="flat", outTangentType="flat")
+cmds.keyTangent("mySphere.translateY", time=(10, 10), inTangentType="flat", outTangentType="flat")
 
 # Bake simulation to keyframes
 cmds.bakeSimulation(
@@ -335,7 +334,7 @@ cmds.bakeSimulation(
 
 # Query time range of the scene
 start = cmds.playbackOptions(q=True, minTime=True)
-end   = cmds.playbackOptions(q=True, maxTime=True)
+end = cmds.playbackOptions(q=True, maxTime=True)
 ```
 
 ---
@@ -418,9 +417,12 @@ finally:
 
 import maya.utils
 
+
 def my_main_thread_work():
     import maya.cmds as cmds
+
     return cmds.ls(sl=True)
+
 
 # executeDeferred queues the callable on the main thread (fire-and-forget)
 maya.utils.executeDeferred(my_main_thread_work)
@@ -456,12 +458,14 @@ result = maya.utils.executeInMainThreadWithResult(my_main_thread_work)
 
 import maya.cmds as cmds
 
+
 def safe_get_attr(node, attr, default=None):
     """Return attribute value or default if node/attr does not exist."""
     full = "{}.{}".format(node, attr)
     if cmds.objExists(full):
         return cmds.getAttr(full)
     return default
+
 
 def safe_set_attr(node, attr, *value, **kwargs):
     """Set attribute only if it exists and is not locked."""
@@ -492,6 +496,7 @@ def safe_set_attr(node, attr, *value, **kwargs):
 ```python
 import maya.cmds as cmds
 
+
 def maya_major_version() -> int:
     """Return the Maya major version as an integer (2022, 2023, ...)."""
     ver = cmds.about(version=True)  # e.g. "2022.3"
@@ -512,6 +517,7 @@ calling `cmds.polyReduce(keepQuads=True)` raises `RuntimeError`.
 ```python
 import maya.cmds as cmds
 
+
 def safe_poly_reduce(mesh, percentage=50, keep_quads=True):
     """Apply polyReduce, skipping keepQuads on Maya 2022."""
     flags = {"percentage": percentage}
@@ -529,6 +535,7 @@ In Maya 2022, `cmds.lattice(localInfluence=True)` raises `RuntimeError`.
 
 ```python
 import maya.cmds as cmds
+
 
 def safe_lattice(objects, divisions=(2, 2, 2), local_influence=True):
     """Create a lattice deformer, skipping localInfluence on Maya 2022."""
@@ -559,6 +566,7 @@ Orient mode strings accepted: `"xyz"`, `"yzx"`, `"zxy"`, `"xzy"`, `"yxz"`,
 ```python
 import maya.cmds as cmds
 
+
 def safe_joint(name=None, position=(0, 0, 0), orient="xyz"):
     """Create a joint with explicit orient, consistent across Maya versions.
 
@@ -588,8 +596,8 @@ Later MtoA versions (5.2+, Maya 2023+) accept both `-c` and `-camera`.
 import maya.cmds as cmds
 import maya.mel as mel
 
-def safe_arnold_render(camera="persp", width=1920, height=1080,
-                       start_frame=None, end_frame=None):
+
+def safe_arnold_render(camera="persp", width=1920, height=1080, start_frame=None, end_frame=None):
     """Call arnoldRender with the correct camera flag for the Maya version.
 
     Uses -camera on MtoA < 5.2 (Maya 2022); uses -c on MtoA >= 5.2 or when
@@ -609,9 +617,9 @@ def safe_arnold_render(camera="persp", width=1920, height=1080,
     else:
         cam_flag = "-c"
 
-    cmd = 'arnoldRender {} {} -x {} -y {}'.format(cam_flag, camera, width, height)
+    cmd = "arnoldRender {} {} -x {} -y {}".format(cam_flag, camera, width, height)
     if start_frame is not None and end_frame is not None:
-        cmd += ' -s {} -e {}'.format(start_frame, end_frame)
+        cmd += " -s {} -e {}".format(start_frame, end_frame)
 
     return mel.eval(cmd)
 ```
@@ -632,16 +640,15 @@ agents trained on newer docs frequently hit this footgun.
 ```python
 import maya.cmds as cmds
 
+
 def set_skydome_texture(skydome_light, image_path):
     """Connect a file texture node to aiSkyDomeLight.color for HDR lighting."""
     # Create file node and load texture
-    file_node = cmds.shadingNode("file", asTexture=True,
-                                  name="{}_file".format(skydome_light))
+    file_node = cmds.shadingNode("file", asTexture=True, name="{}_file".format(skydome_light))
     cmds.setAttr(file_node + ".fileTextureName", image_path, type="string")
 
     # Connect file.outColor → aiSkyDomeLight.color
-    cmds.connectAttr(file_node + ".outColor",
-                     skydome_light + ".color", force=True)
+    cmds.connectAttr(file_node + ".outColor", skydome_light + ".color", force=True)
     return file_node
 ```
 
@@ -660,15 +667,12 @@ def set_skydome_solid_color(skydome_light, r=0.5, g=0.7, b=1.0):
 ```python
 def create_skydome_with_hdri(image_path, intensity=1.0, name="skydomeLight"):
     """Create an aiSkyDomeLight pre-wired to an HDR file texture."""
-    light_shape = cmds.shadingNode("aiSkyDomeLight", asLight=True,
-                                    name=name + "Shape")
+    light_shape = cmds.shadingNode("aiSkyDomeLight", asLight=True, name=name + "Shape")
     light_xform = cmds.listRelatives(light_shape, parent=True, fullPath=True)[0]
 
-    file_node = cmds.shadingNode("file", asTexture=True,
-                                  name=light_xform + "_file")
+    file_node = cmds.shadingNode("file", asTexture=True, name=light_xform + "_file")
     cmds.setAttr(file_node + ".fileTextureName", image_path, type="string")
-    cmds.connectAttr(file_node + ".outColor",
-                     light_shape + ".color", force=True)
+    cmds.connectAttr(file_node + ".outColor", light_shape + ".color", force=True)
     cmds.setAttr(light_shape + ".intensity", intensity)
 
     return light_xform
@@ -680,6 +684,7 @@ def create_skydome_with_hdri(image_path, intensity=1.0, name="skydomeLight"):
 def mtoa_version_tuple():
     """Return (major, minor) for the loaded MtoA plugin, or (0, 0)."""
     import maya.cmds as cmds
+
     try:
         if cmds.pluginInfo("mtoa", q=True, loaded=True):
             ver_str = cmds.pluginInfo("mtoa", q=True, version=True) or "0"
