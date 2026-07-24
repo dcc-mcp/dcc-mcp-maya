@@ -1364,10 +1364,15 @@ def _add_menu() -> None:
         cmds.menuItem(label="OpenAPI Docs", command=lambda *_: _open_openapi_docs())
         cmds.menuItem(label="Admin Panel", command=lambda *_: _open_admin_panel())
         cmds.menuItem(divider=True)
+        cmds.menuItem(label="Copy Instance ID", command=lambda *_: _copy_instance_id())
+        cmds.menuItem(label="Server Info", command=lambda *_: _show_server_info())
+        cmds.menuItem(divider=True)
         cmds.menuItem(label="Restart MCP Server", command=lambda *_: _restart_deferred())
         cmds.menuItem(label="Stop MCP Server", command=lambda *_: _stop_blocking())
         cmds.menuItem(divider=True)
         cmds.menuItem(label="Enable/Disable Hot Reload", command=lambda *_: _toggle_hot_reload())
+        cmds.menuItem(divider=True)
+        cmds.menuItem(label="About DCC MCP", command=lambda *_: _show_about())
     except Exception as exc:
         logger.warning("Could not add DCC MCP menu: %s", exc)
 
@@ -1530,3 +1535,104 @@ def _toggle_hot_reload() -> None:
     except Exception as exc:
         logger.error("Hot-reload toggle error: %s", exc)
         cmds.warning(f"Error toggling hot-reload: {exc}")
+
+
+# ── clipboard helper ────────────────────────────────────────────────────────
+
+
+def _set_clipboard_text(text: str) -> None:
+    """Set the system clipboard text, trying PySide2 then PySide6."""
+    for binding in ("PySide2", "PySide6"):
+        try:
+            mod = __import__(binding)
+            app = mod.QtWidgets.QApplication.instance()
+            if app is not None:
+                app.clipboard().setText(text)
+                return
+        except Exception:
+            continue
+    raise RuntimeError("Unable to access system clipboard (no PySide binding available)")
+
+
+# ── new menu actions ─────────────────────────────────────────────────────────
+
+
+def _copy_instance_id() -> None:
+    """Copy the DCC MCP instance UUID to the system clipboard."""
+    instance_id = _resolve_instance_id()
+    if not instance_id:
+        cmds.warning("DCC MCP: Instance ID not available. Is the server running?")
+        return
+    try:
+        _set_clipboard_text(instance_id)
+    except RuntimeError as exc:
+        cmds.warning(str(exc))
+        return
+    print(f"DCC MCP: Instance ID copied to clipboard: {instance_id}")  # noqa: T201
+    if _is_interactive():
+        try:
+            cmds.inViewMessage(
+                amg="DCC MCP: Instance ID <b>copied</b> to clipboard",
+                pos="topCenter",
+                fade=True,
+                fadeStayTime=2000,
+            )
+        except Exception:
+            pass
+
+
+def _show_server_info() -> None:
+    """Show server status information in a dialog."""
+    instance_id = _resolve_instance_id()
+    instance_url = _server_url()
+
+    dcc_version = "unknown"
+    try:
+        dcc_version = str(cmds.about(version=True))
+    except Exception:
+        pass
+
+    gateway_port_str = os.environ.get("DCC_MCP_GATEWAY_PORT", str(_DEFAULT_GATEWAY_PORT))
+    try:
+        gp = int(gateway_port_str)
+    except ValueError:
+        gp = _DEFAULT_GATEWAY_PORT
+    gateway_display = "disabled" if gp <= 0 else str(gp)
+
+    core_version = "unknown"
+    try:
+        from dcc_mcp_core.server_base import _package_version  # noqa: PLC0415
+
+        core_version = _package_version() or "unknown"
+    except Exception:
+        pass
+
+    msg = (
+        f"Instance UUID: {instance_id or 'N/A'}\n"
+        f"DCC: Maya {dcc_version}\n"
+        f"PID: {os.getpid()}\n"
+        f"MCP URL: {instance_url}\n"
+        f"Gateway Port: {gateway_display}\n"
+        f"Core Version: {core_version}\n"
+        f"Adapter Version: {VERSION}\n"
+        f"Python: {sys.version.split()[0]}"
+    )
+    cmds.confirmDialog(title="DCC MCP — Server Info", message=msg, button=["OK"])
+
+
+def _show_about() -> None:
+    """Show about dialog with version information."""
+    dcc_version = "unknown"
+    try:
+        dcc_version = str(cmds.about(version=True))
+    except Exception:
+        pass
+
+    msg = (
+        f"dcc-mcp-maya v{VERSION}\n"
+        f"Maya {dcc_version}\n"
+        f"Python {sys.version.split()[0]}\n\n"
+        "DCC MCP — AI-driven DCC automation.\n"
+        "https://github.com/dcc-mcp/dcc-mcp-maya"
+    )
+    cmds.confirmDialog(title="About DCC MCP", message=msg, button=["OK"])
