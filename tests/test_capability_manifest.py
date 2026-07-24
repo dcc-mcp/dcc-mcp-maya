@@ -508,7 +508,7 @@ def test_unloaded_records_preserve_callable_id_exact_match():
     assert record.tool_slug == "maya.instance.maya_geometry__export_fbx"
     assert record.load_hint["arguments"]["skill_name"] == "maya-geometry"
     # Serialisation keeps load_hint but drops the duplicate callable_id to
-    # respect the 640 B / record manifest budget.
+    # respect the 850 B / record manifest budget.
     dumped = record.to_dict()
     assert dumped["load_hint"]["arguments"]["skill_name"] == "maya-geometry"
     assert "callable_id" not in dumped
