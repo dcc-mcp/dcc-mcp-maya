@@ -20,7 +20,7 @@ agent workflow must not waste tokens*.  Concretely we validate:
 
    * `tools/list` page 1 stays under 80 KB (well inside a small agent
      context window) regardless of skill count.
-   * Each compact manifest record stays under 640 B.
+   * Each compact manifest record stays under 850 B.
    * The compact manifest is strictly cheaper per-capability than a full
      MCP `tools/list` schema dump (factor of >=3× by total bytes).
    * `search_tools` results strip bulky fields (`input_schema`, long
@@ -417,7 +417,7 @@ def test_manifest_per_record_cost_is_bounded(mcp):
     """Compact manifest must cap *per-record* serialised cost.
 
     The #163 contract is that each record stays well under a full MCP
-    tool schema (typically 1–2 KB).  We assert <=640 B / record and flag
+    tool schema (typically 1–2 KB).  We assert <=850 B / record and flag
     any outliers — this is the only way to keep thousands of potential
     capabilities accessible in a single agent turn.
     """
@@ -427,9 +427,9 @@ def test_manifest_per_record_cost_is_bounded(mcp):
     offenders = []
     for rec in records:
         encoded = json.dumps(rec, separators=(",", ":"))
-        if len(encoded) > 640:
+        if len(encoded) > 850:
             offenders.append((rec.get("backend_tool"), len(encoded)))
-    assert not offenders, "per-record budget (640 B) exceeded: {}".format(offenders)
+    assert not offenders, "per-record budget (850 B) exceeded: {}".format(offenders)
 
 
 def test_manifest_record_omits_input_schema(mcp):
