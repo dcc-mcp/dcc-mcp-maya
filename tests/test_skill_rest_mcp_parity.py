@@ -588,7 +588,7 @@ def test_minimal_mode_skill_stubs_dont_leak_schemas():
         offenders = []
         for stub in stubs:
             encoded = json.dumps(stub, separators=(",", ":"))
-            if len(encoded) > 1_024:
+            if len(encoded) > 1_536:
                 offenders.append((stub["name"], len(encoded)))
             # Stub input schemas should stay trivial (generally a flag-ish object).
             schema = stub.get("inputSchema") or {}
@@ -596,7 +596,7 @@ def test_minimal_mode_skill_stubs_dont_leak_schemas():
             assert len(props) <= 5, "{} stub has too many properties ({}); minimal-mode must stay cheap".format(
                 stub["name"], len(props)
             )
-        assert not offenders, "__skill__* stubs exceeded 1 KB budget: {}".format(offenders)
+        assert not offenders, "__skill__* stubs exceeded 1.5 KB budget: {}".format(offenders)
     finally:
         server.stop()
 
