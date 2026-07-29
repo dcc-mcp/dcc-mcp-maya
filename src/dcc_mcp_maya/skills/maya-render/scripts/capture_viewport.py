@@ -40,7 +40,8 @@ def _apply_view_fit(cmds) -> bool:
     try:
         panel = _active_model_panel(cmds)
         if panel:
-            cmds.viewFit(panel, allObjects=True, animate=False)
+            camera = cmds.modelPanel(panel, query=True, camera=True)
+            cmds.viewFit(camera, allObjects=True, animate=False)
             return True
         cmds.viewFit(allObjects=True, animate=False)
         return True

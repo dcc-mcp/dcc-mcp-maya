@@ -101,6 +101,26 @@ def test_capture_viewport_forces_offscreen_when_view_fit_fails():
     assert result["context"]["viewport_renderer"] == "vp2Renderer"
 
 
+def test_capture_viewport_fits_the_panel_camera():
+    cmds = MagicMock()
+    cmds.currentTime.return_value = 1.0
+    _configure_model_panel(cmds)
+    cmds.modelPanel.return_value = "persp"
+    cmds.playblast.side_effect = _write_playblast_bytes(b"png-bytes")
+
+    result = load_and_call(
+        "maya-render/scripts/capture_viewport.py",
+        cmds,
+        "main",
+        width=320,
+        height=200,
+        view_fit=True,
+    )
+
+    assert result["success"] is True, result
+    cmds.viewFit.assert_called_once_with("persp", allObjects=True, animate=False)
+
+
 def test_capture_viewport_reports_zero_byte_playblast():
     cmds = MagicMock()
     cmds.currentTime.return_value = 1.0
@@ -231,7 +251,7 @@ def test_capture_playblast_sequence_writes_paths_and_camera_metadata(tmp_path):
     assert playblast_kwargs["editorPanelName"] == "modelPanel4"
     cmds.lookThru.assert_any_call("modelPanel4", "shotCam")
     cmds.lookThru.assert_any_call("modelPanel4", "persp")
-    cmds.viewFit.assert_called_once_with("modelPanel4", allObjects=True, animate=False)
+    cmds.viewFit.assert_called_once_with("persp", allObjects=True, animate=False)
 
 
 def test_render_frame_uses_cmds_render_and_returns_nonempty_file(tmp_path):
