@@ -27,7 +27,7 @@ def test_import_file_loads_required_plugin_before_import(tmp_path):
     path.write_bytes(b"abc")
     cmds = MagicMock()
     cmds.pluginInfo.return_value = False
-    cmds.ls.return_value = ["cacheRoot"]
+    cmds.file.return_value = ["cacheRoot"]
 
     result = load_and_call("maya-geometry/scripts/import_file.py", cmds, "main", file_path=str(path))
 
@@ -37,6 +37,9 @@ def test_import_file_loads_required_plugin_before_import(tmp_path):
     args, kwargs = cmds.file.call_args
     assert args[0] == str(path).replace("\\", "/")
     assert kwargs["i"] is True
+    assert kwargs["returnNewNodes"] is True
+    assert result["context"]["imported_nodes"] == ["cacheRoot"]
+    cmds.ls.assert_not_called()
     assert result["context"]["loaded_plugins"] == ["AbcImport"]
 
 

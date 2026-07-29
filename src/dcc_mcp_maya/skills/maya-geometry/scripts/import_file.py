@@ -80,8 +80,7 @@ def import_file(
         if merge_namespaces:
             kwargs["mergeNamespacesOnClash"] = True
 
-        cmds.file(normalized, **kwargs)
-        imported = cmds.ls(importedNodes=True) or []
+        imported = cmds.file(normalized, returnNewNodes=True, **kwargs) or []
         return skill_success(
             "Imported {} node(s) from {}".format(len(imported), normalized),
             file_path=normalized,

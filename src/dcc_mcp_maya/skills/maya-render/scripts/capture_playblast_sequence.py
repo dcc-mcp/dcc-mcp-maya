@@ -119,8 +119,9 @@ def _restore_camera(cmds: Any, panel: Optional[str], previous_camera: Optional[s
 
 def _apply_view_fit(cmds: Any, panel: Optional[str]) -> bool:
     try:
-        if panel:
-            cmds.viewFit(panel, allObjects=True, animate=False)
+        camera = _camera_from_panel(cmds, panel)
+        if camera:
+            cmds.viewFit(camera, allObjects=True, animate=False)
         else:
             cmds.viewFit(allObjects=True, animate=False)
         return True
