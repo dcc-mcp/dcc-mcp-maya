@@ -71,9 +71,9 @@ The Maya plugin starts a Rust `dcc-mcp-server` sidecar by default, so HTTP and g
 
 ## Showcase
 
-![Five-million-face Fantasy Dragon imported from ZBrush into Maya and framed in the viewport](docs/images/zbrush-maya-fantasy-dragon-showcase.png)
+![ZRemeshed Fantasy Dragon imported from ZBrush into Maya with wireframe-on-shaded topology](docs/images/zbrush-maya-fantasy-dragon-showcase.png)
 
-Real Maya 2026 evidence from a typed ZBrush-to-Maya round trip: **2,499,970 vertices / 5,000,000 faces**, imported into an isolated namespace and verified before saving the scene. Fantasy Dragon model by [Artec 3D](https://www.artec3d.com/3d-models/fantasy-dragon), used under CC BY 4.0; the source model is not included in this repository. See the [full workflow and copyable prompt](https://dcc-mcp.github.io/showcase#zbrush-maya-roundtrip).
+Real Maya 2026 evidence from a typed ZBrush-to-Maya round trip: the **2,499,970-vertex / 5,000,000-face** source was verified, then its **115,336-vertex / 115,364-face** ZRemesh was imported into an isolated namespace and displayed wireframe-on-shaded before saving the scene. Fantasy Dragon model by [Artec 3D](https://www.artec3d.com/3d-models/fantasy-dragon), used under CC BY 4.0; the source model is not included in this repository. See the [full workflow and copyable prompt](https://dcc-mcp.github.io/showcase#zbrush-maya-roundtrip).
 
 ## Why Use It
 
