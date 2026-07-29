@@ -10,6 +10,12 @@ Autodesk Maya 的 [DCC Model Context Protocol](https://github.com/dcc-mcp/dcc-mc
 [![Python](https://img.shields.io/pypi/pyversions/dcc-mcp-maya)](https://pypi.org/project/dcc-mcp-maya/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
+## Showcase
+
+![从 ZBrush 导入 Maya 并在视口中取景的 500 万面 Fantasy Dragon](docs/images/zbrush-maya-fantasy-dragon-showcase.png)
+
+这是 Maya 2026 中真实的类型化 ZBrush→Maya 联调证据：导入独立 Namespace 后严格核对 **2,499,970 个顶点 / 5,000,000 个面**，再保存场景。Fantasy Dragon 模型由 [Artec 3D](https://www.artec3d.com/3d-models/fantasy-dragon) 提供，按 CC BY 4.0 使用；本仓库不包含源模型。查看[完整流程和可复制提示词](https://dcc-mcp.github.io/showcase#zbrush-maya-roundtrip)。
+
 ## 架构
 
 ```
