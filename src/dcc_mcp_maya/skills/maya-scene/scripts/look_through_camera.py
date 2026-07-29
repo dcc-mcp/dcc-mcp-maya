@@ -55,7 +55,7 @@ def look_through_camera(camera: str, panel: Optional[str] = None, view_fit: bool
         view_fit_applied = False
         if view_fit:
             try:
-                cmds.viewFit(target_panel, allObjects=True, animate=False)
+                cmds.viewFit(camera, allObjects=True, animate=False)
                 view_fit_applied = True
             except Exception:  # noqa: BLE001
                 view_fit_applied = False
