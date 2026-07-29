@@ -241,7 +241,7 @@ def test_look_through_camera_uses_focused_panel_and_view_fit():
 
     assert result["success"] is True, result
     cmds.lookThru.assert_called_once_with("modelPanel4", "shotCam")
-    cmds.viewFit.assert_called_once_with("modelPanel4", allObjects=True, animate=False)
+    cmds.viewFit.assert_called_once_with("shotCam", allObjects=True, animate=False)
     assert result["context"]["previous_camera"] == "persp"
 
 
