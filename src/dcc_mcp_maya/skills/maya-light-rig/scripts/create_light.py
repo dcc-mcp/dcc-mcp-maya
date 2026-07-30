@@ -72,7 +72,8 @@ def create_light(
             if parent
             else cmds.createNode("transform", name=name)
         )
-        shape = cmds.createNode(light_type, name="{}Shape".format(transform), parent=transform)
+        cmds.shadingNode(light_type, asLight=True, name="{}Shape".format(transform), parent=transform)
+        shape = cmds.listRelatives(transform, shapes=True, type=light_type, fullPath=False)[0]
 
         rgb = _as_float3(color, [1.0, 1.0, 1.0])
         position_values = _as_float3(position, [0.0, 0.0, 0.0])

@@ -11,6 +11,7 @@ from tests.conftest import load_skill_script
 class _PrimitiveCmds:
     def __init__(self):
         self.poly_cylinder_kwargs = {}
+        self.poly_plane_kwargs = {}
 
     def polyCube(self, **_kwargs):  # noqa: N802
         return ["pCube1", "polyCube1"]
@@ -23,6 +24,7 @@ class _PrimitiveCmds:
         return ["pCylinder1", "polyCylinder1"]
 
     def polyPlane(self, **_kwargs):  # noqa: N802
+        self.poly_plane_kwargs = _kwargs
         return ["pPlane1", "polyPlane1"]
 
     def rename(self, _old, new):
@@ -100,3 +102,16 @@ def test_create_cylinder_honors_declared_subdivisions_axis():
     assert result["success"] is True
     assert result["context"]["subdivisions_axis"] == 32
     assert cmds.poly_cylinder_kwargs["subdivisionsAxis"] == 32
+
+
+def test_create_plane_honors_declared_subdivisions():
+    cmds = _PrimitiveCmds()
+    with patch.dict("sys.modules", {"maya": types.ModuleType("maya"), "maya.cmds": cmds}):
+        mod = load_skill_script("maya-primitives", "create_plane")
+
+        result = mod.create_plane(name="grid", subdivisions_x=4, subdivisions_y=3)
+
+    assert result["success"] is True
+    assert result["context"]["subdivisions_x"] == 4
+    assert cmds.poly_plane_kwargs["subdivisionsX"] == 4
+    assert cmds.poly_plane_kwargs["subdivisionsY"] == 3

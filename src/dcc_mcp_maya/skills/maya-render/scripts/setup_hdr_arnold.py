@@ -74,7 +74,18 @@ def setup_hdr_arnold(
         if mtoa_loaded:
             # Create Arnold aiSkyDomeLight
             dome_transform = cmds.createNode("transform", name=node_name)
-            dome_shape = cmds.createNode("aiSkyDomeLight", name="{}_Shape".format(node_name), parent=dome_transform)
+            cmds.shadingNode(
+                "aiSkyDomeLight",
+                asLight=True,
+                name="{}_Shape".format(node_name),
+                parent=dome_transform,
+            )
+            dome_shape = cmds.listRelatives(
+                dome_transform,
+                shapes=True,
+                type="aiSkyDomeLight",
+                fullPath=False,
+            )[0]
             cmds.setAttr("{}.intensity".format(dome_shape), intensity)
             cmds.setAttr("{}.rotateY".format(dome_transform), rotation)
 
@@ -126,7 +137,18 @@ def setup_hdr_arnold(
         else:
             # Fallback: ambient light approximation
             dome_transform = cmds.createNode("transform", name=node_name)
-            dome_shape = cmds.createNode("ambientLight", name="{}_Shape".format(node_name), parent=dome_transform)
+            cmds.shadingNode(
+                "ambientLight",
+                asLight=True,
+                name="{}_Shape".format(node_name),
+                parent=dome_transform,
+            )
+            dome_shape = cmds.listRelatives(
+                dome_transform,
+                shapes=True,
+                type="ambientLight",
+                fullPath=False,
+            )[0]
             cmds.setAttr("{}.intensity".format(dome_shape), intensity)
             file_node = cmds.createNode("file", name="{}_texture".format(node_name))
             cmds.setAttr("{}.fileTextureName".format(file_node), hdri_path, type="string")

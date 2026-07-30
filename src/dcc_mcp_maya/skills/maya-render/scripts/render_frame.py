@@ -171,6 +171,7 @@ def render_frame(
         previous_height = _get_attr_or_none(cmds, "defaultResolution.height")
         previous_format = _get_attr_or_none(cmds, "defaultRenderGlobals.imageFormat")
         previous_prefix = _get_attr_or_none(cmds, "defaultRenderGlobals.imageFilePrefix")
+        previous_arnold_driver = _get_attr_or_none(cmds, "defaultArnoldDriver.aiTranslator")
 
         target_width = _clamp_dimension(width, int(previous_width or 1920))
         target_height = _clamp_dimension(height, int(previous_height or 1080))
@@ -201,6 +202,8 @@ def render_frame(
             _set_string_attr(cmds, "defaultRenderGlobals.imageFilePrefix", prefix)
 
             if renderer == "arnold":
+                if previous_arnold_driver is not None:
+                    _set_string_attr(cmds, "defaultArnoldDriver.aiTranslator", "png")
                 try:
                     mtoa_loaded = bool(cmds.pluginInfo("mtoa", q=True, loaded=True))
                 except Exception:
@@ -235,6 +238,8 @@ def render_frame(
                     cmds.setAttr("defaultRenderGlobals.imageFormat", previous_format)
                 if previous_prefix is not None:
                     _set_string_attr(cmds, "defaultRenderGlobals.imageFilePrefix", previous_prefix or "")
+                if previous_arnold_driver is not None:
+                    _set_string_attr(cmds, "defaultArnoldDriver.aiTranslator", previous_arnold_driver)
                 cmds.currentTime(previous_frame)
             except Exception:
                 pass

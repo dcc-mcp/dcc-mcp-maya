@@ -1,4 +1,77 @@
 tools:
+- name: configure_color_management
+  description: Configure Maya with an OCIO config, rendering space, display/view pair,
+    and renderer output transform.
+  execution: async
+  affinity: main
+  timeout_hint_secs: 600
+  annotations:
+    read_only_hint: false
+    destructive_hint: false
+    idempotent_hint: true
+    open_world_hint: false
+  group: rendering
+  input_schema:
+    type: object
+    required:
+    - config_file_path
+    properties:
+      config_file_path:
+        type: string
+        minLength: 1
+        description: Absolute path to an existing OCIO config file.
+      rendering_space_name:
+        type: string
+        default: ACEScg
+      display_name:
+        type: string
+        default: Rec.1886 Rec.709 - Display
+      view_name:
+        type: string
+        default: ACES 1.0 - SDR Video
+      apply_output_transform:
+        type: boolean
+        default: true
+- name: setup_hdr_arnold
+  description: Load MtoA and create an Arnold HDR skydome environment for look-development
+    rendering.
+  execution: async
+  affinity: main
+  timeout_hint_secs: 600
+  annotations:
+    read_only_hint: false
+    destructive_hint: false
+    idempotent_hint: false
+    open_world_hint: false
+  group: rendering
+  input_schema:
+    type: object
+    required:
+    - hdri_path
+    properties:
+      hdri_path:
+        type: string
+        minLength: 1
+      name:
+        type: string
+      intensity:
+        type: number
+        default: 1.0
+      rotation:
+        type: number
+        default: 0.0
+      visible_in_diffuse:
+        type: boolean
+        default: true
+      visible_in_specular:
+        type: boolean
+        default: true
+      set_renderer:
+        type: boolean
+        default: true
+      exposure:
+        type: number
+        default: 0.0
 - name: capture_playblast_sequence
   description: Capture a playblast image sequence to disk and return paths plus camera
     metadata.
@@ -61,7 +134,8 @@ tools:
         type: boolean
         default: true
 - name: capture_viewport
-  description: 'Capture the active Maya viewport as a base64 PNG. Off-screen rendering auto-enables when Maya is minimized or in batch mode.'
+  description: Capture the active Maya viewport as a base64 PNG. Off-screen rendering
+    auto-enables when Maya is minimized or in batch mode.
   execution: async
   affinity: main
   timeout_hint_secs: 600
@@ -97,8 +171,8 @@ tools:
         description: When true, runs cmds.viewFit(allObjects=True, animate=False) on
           the active model panel before capture. Prefer this over raw viewFit in execute_python.
 - name: debug_scene_snapshot
-  description: Collect a compact scene debug snapshot with DAG summary, optional
-    render_frame preview, and optional full Maya UI capture.
+  description: Collect a compact scene debug snapshot with DAG summary, optional render_frame
+    preview, and optional full Maya UI capture.
   execution: async
   affinity: main
   timeout_hint_secs: 600
@@ -143,7 +217,8 @@ tools:
         type: string
         description: Optional Qt objectName/windowTitle for the UI capture.
 - name: get_render_settings
-  description: Query current render settings (resolution, renderer, frame range, format, output path).
+  description: Query current render settings (resolution, renderer, frame range, format,
+    output path).
   execution: sync
   affinity: main
   annotations:
@@ -154,7 +229,8 @@ tools:
     type: object
     properties: {}
 - name: get_scene_render_stats
-  description: Get scene render statistics including quality attributes without modifying the Maya scene.
+  description: Get scene render statistics including quality attributes without modifying
+    the Maya scene.
   execution: sync
   affinity: main
   annotations:
@@ -211,8 +287,8 @@ tools:
         maximum: 100
         default: 100
 - name: playblast_to_mp4
-  description: Capture a playblast sequence and encode to MP4 with
-    ffmpeg. Use for animation previews; requires ffmpeg on PATH.
+  description: Capture a playblast sequence and encode to MP4 with ffmpeg. Use for animation
+    previews; requires ffmpeg on PATH.
   execution: async
   affinity: main
   timeout_hint_secs: 600
@@ -268,9 +344,8 @@ tools:
         type: boolean
         default: true
 - name: render_frame
-  description: Render one frame to disk with the active renderer and
-    optional base64 output. Uses Arnold when available, falls back
-    to cmds.render.
+  description: Render one frame to disk with the active renderer and optional base64
+    output. Uses Arnold when available, falls back to cmds.render.
   execution: async
   affinity: main
   timeout_hint_secs: 600
@@ -302,8 +377,8 @@ tools:
         description: Optional render height override.
       output_dir:
         type: string
-        description: Directory for rendered output. Defaults to the workspace images rule
-          or a temporary directory.
+        description: Directory for rendered output. Defaults to the workspace images
+          rule or a temporary directory.
       output_name:
         type: string
         description: Output filename prefix; sanitized before use.
@@ -311,8 +386,48 @@ tools:
         type: boolean
         default: true
         description: Include base64 image bytes in context.image_base64.
+- name: render_sequence
+  description: Render an inclusive frame range by reusing the active renderer's verified
+    single-frame path.
+  execution: async
+  affinity: main
+  timeout_hint_secs: 600
+  annotations:
+    read_only_hint: false
+    destructive_hint: false
+    idempotent_hint: false
+    open_world_hint: false
+  group: rendering
+  input_schema:
+    type: object
+    required:
+    - camera
+    - output_dir
+    properties:
+      camera:
+        type: string
+      output_dir:
+        type: string
+      start_frame:
+        type: integer
+        default: 1
+      end_frame:
+        type: integer
+        default: 360
+      width:
+        type: integer
+        minimum: 1
+        maximum: 8192
+      height:
+        type: integer
+        minimum: 1
+        maximum: 8192
+      output_prefix:
+        type: string
+        default: maya_lookdev
 - name: set_render_quality
-  description: Apply a render quality preset (low/medium/high) to the Maya defaultRenderQuality node.
+  description: Apply a render quality preset (low/medium/high) to the Maya defaultRenderQuality
+    node.
   execution: sync
   affinity: main
   annotations:
@@ -329,7 +444,8 @@ tools:
         - high
         default: medium
 - name: set_render_settings
-  description: Set render parameters (resolution, frame range, renderer, image format, output path).
+  description: Set render parameters (resolution, frame range, renderer, image format,
+    output path).
   execution: sync
   affinity: main
   annotations:

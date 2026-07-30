@@ -15,6 +15,8 @@ from dcc_mcp_maya.api import created_object_context, maya_error, maya_from_excep
 def create_plane(
     width: float = 1.0,
     height: float = 1.0,
+    subdivisions_x: int = 1,
+    subdivisions_y: int = 1,
     name: Optional[str] = None,
 ) -> dict:
     """Create a polygon plane.
@@ -22,6 +24,8 @@ def create_plane(
     Args:
         width: Plane width. Default: 1.0.
         height: Plane height. Default: 1.0.
+        subdivisions_x: Width subdivisions. Default: 1.
+        subdivisions_y: Height subdivisions. Default: 1.
         name: Optional name for the created object.
 
     Returns:
@@ -32,9 +36,21 @@ def create_plane(
         import maya.cmds as cmds  # noqa: PLC0415
 
         context = created_object_context(
-            cmds, cmds.polyPlane(width=width, height=height, subdivisionsX=1, subdivisionsY=1), name
+            cmds,
+            cmds.polyPlane(
+                width=width,
+                height=height,
+                subdivisionsX=subdivisions_x,
+                subdivisionsY=subdivisions_y,
+            ),
+            name,
         )
-        context.update(width=width, height=height)
+        context.update(
+            width=width,
+            height=height,
+            subdivisions_x=subdivisions_x,
+            subdivisions_y=subdivisions_y,
+        )
         return maya_success(
             "Created plane: {}".format(context["object_name"]),
             prompt="Use set_transform to position or assign_material to shade.",
