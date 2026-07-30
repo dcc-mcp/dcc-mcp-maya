@@ -49,7 +49,13 @@ def create_three_point_rig(
 
         def _make_light(light_name, intensity, color, rx, ry):
             transform = cmds.createNode("transform", name=light_name, parent=rig_grp)
-            shape = cmds.createNode(light_type, name="{}_Shape".format(light_name), parent=transform)
+            cmds.shadingNode(
+                light_type,
+                asLight=True,
+                name="{}_Shape".format(light_name),
+                parent=transform,
+            )
+            shape = cmds.listRelatives(transform, shapes=True, type=light_type, fullPath=False)[0]
             cmds.setAttr("{}.intensity".format(shape), intensity)
             cmds.setAttr("{}.color".format(shape), *color[:3], type="double3")
             cmds.setAttr("{}.rotateX".format(transform), rx)

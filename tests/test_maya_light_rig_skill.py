@@ -16,6 +16,8 @@ def test_create_light_returns_transform_and_shape_without_directional_command():
         return kwargs["name"]
 
     cmds.createNode.side_effect = _create_node
+    cmds.shadingNode.side_effect = _create_node
+    cmds.listRelatives.return_value = ["key_lightShape"]
 
     result = load_and_call(
         "maya-light-rig/scripts/create_light.py",
@@ -33,7 +35,12 @@ def test_create_light_returns_transform_and_shape_without_directional_command():
     assert result["context"]["transform"] == "key_light"
     assert result["context"]["shape"] == "key_lightShape"
     cmds.createNode.assert_any_call("transform", name="key_light")
-    cmds.createNode.assert_any_call("directionalLight", name="key_lightShape", parent="key_light")
+    cmds.shadingNode.assert_called_once_with(
+        "directionalLight",
+        asLight=True,
+        name="key_lightShape",
+        parent="key_light",
+    )
     cmds.setAttr.assert_any_call("key_light.translate", 1.0, 2.0, 3.0, type="double3")
     cmds.setAttr.assert_any_call("key_light.rotate", 10.0, 20.0, 30.0, type="double3")
     assert not cmds.directionalLight.called

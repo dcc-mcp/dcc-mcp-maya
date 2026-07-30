@@ -73,8 +73,20 @@ def set_render_settings(
                 "tga": 19,
                 "bmp": 20,
             }
-            fmt_code = _fmt_map.get(image_format.lower(), 32)
+            format_name = image_format.lower()
+            fmt_code = _fmt_map.get(format_name, 32)
             cmds.setAttr("defaultRenderGlobals.imageFormat", fmt_code)
+            active_renderer = renderer or cmds.getAttr("defaultRenderGlobals.currentRenderer")
+            arnold_driver = {
+                "png": "png",
+                "exr": "exr",
+                "jpg": "jpeg",
+                "jpeg": "jpeg",
+                "tif": "tiff",
+                "tiff": "tiff",
+            }.get(format_name)
+            if active_renderer == "arnold" and arnold_driver:
+                cmds.setAttr("defaultArnoldDriver.aiTranslator", arnold_driver, type="string")
             applied["image_format"] = image_format
         if output_path is not None:
             cmds.setAttr("defaultRenderGlobals.imageFilePrefix", output_path, type="string")

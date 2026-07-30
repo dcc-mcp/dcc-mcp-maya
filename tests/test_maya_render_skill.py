@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib.util
 from pathlib import Path
 from unittest.mock import MagicMock
 
@@ -72,6 +73,76 @@ def _configure_model_panel(cmds, panel="modelPanel4", renderer="vp2Renderer"):
 
     cmds.getPanel.side_effect = _get_panel
     cmds.modelEditor.return_value = renderer
+
+
+def test_configure_color_management_applies_and_reads_back_ocio(tmp_path):
+    config = tmp_path / "studio.ocio"
+    config.write_text("ocio_profile_version: 2.4\n", encoding="utf-8")
+    cmds = MagicMock()
+
+    def _prefs(**kwargs):
+        if not kwargs.get("query"):
+            return None
+        for key, value in {
+            "configFilePath": str(config.resolve()),
+            "renderingSpaceName": "ACEScg",
+            "displayName": "Rec.1886 Rec.709 - Display",
+            "viewName": "ACES 1.0 - SDR Video",
+            "ociov2Enabled": True,
+            "outputTransformEnabled": True,
+        }.items():
+            if kwargs.get(key):
+                return value
+        return None
+
+    cmds.colorManagementPrefs.side_effect = _prefs
+    result = load_and_call(
+        "maya-render/scripts/configure_color_management.py",
+        cmds,
+        "main",
+        config_file_path=str(config),
+    )
+
+    assert result["success"] is True
+    assert result["context"]["ocio_v2_enabled"] is True
+    cmds.colorManagementPrefs.assert_any_call(edit=True, configFilePath=str(config.resolve()))
+    cmds.colorManagementPrefs.assert_any_call(edit=True, renderingSpaceName="ACEScg")
+    cmds.colorManagementPrefs.assert_any_call(edit=True, displayName="Rec.1886 Rec.709 - Display")
+    cmds.colorManagementPrefs.assert_any_call(edit=True, viewName="ACES 1.0 - SDR Video")
+    cmds.colorManagementPrefs.assert_any_call(
+        edit=True,
+        outputTarget="renderer",
+        outputUseViewTransform=True,
+        outputTransformEnabled=True,
+    )
+
+
+def test_setup_hdr_arnold_loads_mtoa_and_creates_skydome():
+    cmds = MagicMock()
+    cmds.pluginInfo.side_effect = [False, True]
+    cmds.createNode.side_effect = ["LookdevHDRI", "LookdevHDRITexture"]
+    cmds.shadingNode.return_value = "LookdevHDRIShape"
+    cmds.listRelatives.return_value = ["LookdevHDRIShape"]
+    cmds.attributeQuery.return_value = True
+
+    result = load_and_call(
+        "maya-render/scripts/setup_hdr_arnold.py",
+        cmds,
+        "main",
+        hdri_path="P:/assets/studio.hdr",
+        name="LookdevHDRI",
+    )
+
+    assert result["success"] is True
+    assert result["context"]["mtoa_loaded"] is True
+    cmds.loadPlugin.assert_called_once_with("mtoa", quiet=True)
+    cmds.shadingNode.assert_called_once_with(
+        "aiSkyDomeLight",
+        asLight=True,
+        name="LookdevHDRI_Shape",
+        parent="LookdevHDRI",
+    )
+    cmds.setAttr.assert_any_call("defaultRenderGlobals.currentRenderer", "arnold", type="string")
 
 
 def test_capture_viewport_forces_offscreen_when_view_fit_fails():
@@ -292,6 +363,10 @@ def test_render_frame_uses_arnold_mel_when_current_renderer_is_arnold(tmp_path):
     mel = MagicMock()
     prefix_holder = _configure_render_cmds(cmds, renderer="arnold", current_frame=1.0)
     cmds.pluginInfo.return_value = True
+    original_get_attr = cmds.getAttr.side_effect
+    cmds.getAttr.side_effect = lambda attr: (
+        "exr" if attr == "defaultArnoldDriver.aiTranslator" else original_get_attr(attr)
+    )
 
     def _mel_eval(_command):
         path = "{}.png".format(prefix_holder["prefix"])
@@ -314,6 +389,8 @@ def test_render_frame_uses_arnold_mel_when_current_renderer_is_arnold(tmp_path):
     assert result["context"]["renderer"] == "arnold"
     assert result["context"]["image_base64"] is None
     mel.eval.assert_called_once_with('arnoldRender -camera "persp" -frame 5.0')
+    assert cmds.setAttr.call_args_list.count((("defaultArnoldDriver.aiTranslator", "png"), {"type": "string"})) == 1
+    assert cmds.setAttr.call_args_list.count((("defaultArnoldDriver.aiTranslator", "exr"), {"type": "string"})) == 1
 
 
 def test_render_frame_rejects_zero_byte_output(tmp_path):
@@ -337,6 +414,33 @@ def test_render_frame_rejects_zero_byte_output(tmp_path):
     assert result["success"] is False
     assert result["context"]["error_code"] == "EMPTY_RENDER"
     assert result["context"]["empty_paths"]
+
+
+def test_render_sequence_reuses_render_frame_for_inclusive_range(tmp_path, monkeypatch):
+    script = Path(__file__).parents[1] / "src/dcc_mcp_maya/skills/maya-render/scripts/render_sequence.py"
+    spec = importlib.util.spec_from_file_location("maya_render_sequence_test", script)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    calls = []
+    cancellation_checks = []
+
+    def _render_frame(**kwargs):
+        calls.append(kwargs)
+        return {"success": True, "context": {"output_path": str(tmp_path / (kwargs["output_name"] + ".png"))}}
+
+    monkeypatch.setattr(module, "_render_frame_function", lambda: _render_frame)
+    monkeypatch.setattr(module, "check_maya_cancelled", lambda: cancellation_checks.append(True))
+    result = module.render_sequence(
+        camera="shotCam",
+        output_dir=str(tmp_path),
+        start_frame=1,
+        end_frame=3,
+    )
+
+    assert result["context"]["frame_count"] == 3
+    assert [call["frame"] for call in calls] == [1, 2, 3]
+    assert all(call["return_base64"] is False for call in calls)
+    assert len(cancellation_checks) == 3
 
 
 def test_playblast_to_mp4_encodes_sequence(tmp_path, monkeypatch):
