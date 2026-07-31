@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.9.18](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.17...v0.9.18) (2026-07-31)
+
+
+### Features
+
+* add ocio lookdev rendering controls ([3117892](https://github.com/dcc-mcp/dcc-mcp-maya/commit/311789225f165156447b3ac544a5f9da36622067))
+
+
+### Bug Fixes
+
+* report imported nodes and frame viewport camera ([#465](https://github.com/dcc-mcp/dcc-mcp-maya/issues/465)) ([391f474](https://github.com/dcc-mcp/dcc-mcp-maya/commit/391f474635b92a0b7dcee45bed2d363e9d384c7e))
+* **scene:** fit the selected camera view ([#468](https://github.com/dcc-mcp/dcc-mcp-maya/issues/468)) ([c1bfb2c](https://github.com/dcc-mcp/dcc-mcp-maya/commit/c1bfb2cdc87a1ec832e1b5ff4d853bb7300efae7))
+
+
+### Documentation
+
+* add Maya round-trip showcase ([#467](https://github.com/dcc-mcp/dcc-mcp-maya/issues/467)) ([cc453d3](https://github.com/dcc-mcp/dcc-mcp-maya/commit/cc453d377ce7568583e60f33aa2275e18bd4d662))
+* show Dragon remesh wireframe ([#469](https://github.com/dcc-mcp/dcc-mcp-maya/issues/469)) ([5facf36](https://github.com/dcc-mcp/dcc-mcp-maya/commit/5facf36cadaac8e198407717d32a49ee37a6c173))
+
 ## [0.9.17](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.16...v0.9.17) (2026-07-24)
 
 
