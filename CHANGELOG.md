@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.20](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.19...v0.9.20) (2026-08-10)
+
+
+### Bug Fixes
+
+* ignore non-image Arnold render outputs ([#473](https://github.com/dcc-mcp/dcc-mcp-maya/issues/473)) ([ace7ebe](https://github.com/dcc-mcp/dcc-mcp-maya/commit/ace7ebecc664a23c7f909fd29406610cf88cd965))
+
 ## [0.9.19](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.18...v0.9.19) (2026-08-10)
 
 
