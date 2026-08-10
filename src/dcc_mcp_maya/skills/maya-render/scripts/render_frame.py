@@ -14,9 +14,7 @@ from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_
 
 _SAFE_NAME_RE = re.compile(r"[^A-Za-z0-9_.-]+")
 _PNG_FORMAT_CODE = 32
-_IMAGE_EXTENSIONS = frozenset(
-    {".bmp", ".exr", ".iff", ".jpeg", ".jpg", ".png", ".tga", ".tif", ".tiff"}
-)
+_IMAGE_EXTENSIONS = frozenset({".bmp", ".exr", ".iff", ".jpeg", ".jpg", ".png", ".tga", ".tif", ".tiff"})
 
 
 def _clamp_dimension(value: Optional[int], fallback: int) -> int:
