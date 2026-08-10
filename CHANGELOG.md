@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.21](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.20...v0.9.21) (2026-08-10)
+
+
+### Bug Fixes
+
+* accept typed Maya attribute values ([#476](https://github.com/dcc-mcp/dcc-mcp-maya/issues/476)) ([d154488](https://github.com/dcc-mcp/dcc-mcp-maya/commit/d154488406776f01fba3cc2bdf624e9b30b077e3))
+
 ## [0.9.20](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.19...v0.9.20) (2026-08-10)
 
 
