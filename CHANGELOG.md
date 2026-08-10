@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.19](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.18...v0.9.19) (2026-08-10)
+
+
+### Bug Fixes
+
+* support Arnold rendering in Maya 2026 ([#471](https://github.com/dcc-mcp/dcc-mcp-maya/issues/471)) ([af0195c](https://github.com/dcc-mcp/dcc-mcp-maya/commit/af0195c404de924da9e7c6b7ab49c062b0ff1200))
+
 ## [0.9.18](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.17...v0.9.18) (2026-07-31)
 
 
