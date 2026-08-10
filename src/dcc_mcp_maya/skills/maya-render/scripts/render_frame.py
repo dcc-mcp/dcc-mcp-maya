@@ -14,6 +14,9 @@ from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_
 
 _SAFE_NAME_RE = re.compile(r"[^A-Za-z0-9_.-]+")
 _PNG_FORMAT_CODE = 32
+_IMAGE_EXTENSIONS = frozenset(
+    {".bmp", ".exr", ".iff", ".jpeg", ".jpg", ".png", ".tga", ".tif", ".tiff"}
+)
 
 
 def _clamp_dimension(value: Optional[int], fallback: int) -> int:
@@ -106,6 +109,8 @@ def _candidate_paths(prefix: str, output_dir: str, render_result) -> List[str]:
         if not path:
             continue
         norm = os.path.abspath(path)
+        if os.path.splitext(norm)[1].lower() not in _IMAGE_EXTENSIONS:
+            continue
         if norm not in seen and os.path.isfile(norm):
             seen.add(norm)
             ordered.append(norm)

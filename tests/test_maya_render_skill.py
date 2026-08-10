@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+import os
 from pathlib import Path
 from unittest.mock import MagicMock
 
@@ -392,6 +393,37 @@ def test_render_frame_uses_arnold_mel_when_current_renderer_is_arnold(tmp_path):
     mel.eval.assert_called_once_with('arnoldRender -batch -camera "persp" -width 640 -height 360')
     assert cmds.setAttr.call_args_list.count((("defaultArnoldDriver.aiTranslator", "png"), {"type": "string"})) == 1
     assert cmds.setAttr.call_args_list.count((("defaultArnoldDriver.aiTranslator", "exr"), {"type": "string"})) == 1
+
+
+def test_render_frame_ignores_newer_arnold_log_output(tmp_path):
+    cmds = MagicMock()
+    mel = MagicMock()
+    prefix_holder = _configure_render_cmds(cmds, renderer="arnold", current_frame=1.0)
+    cmds.pluginInfo.return_value = True
+
+    def _mel_eval(_command):
+        image_path = Path("{}.png".format(prefix_holder["prefix"]))
+        log_path = Path("{}.log".format(prefix_holder["prefix"]))
+        image_path.write_bytes(b"arnold-image")
+        log_path.write_text("arnold diagnostics", encoding="utf-8")
+        newer = image_path.stat().st_mtime + 5.0
+        os.utime(log_path, (newer, newer))
+        return image_path
+
+    mel.eval.side_effect = _mel_eval
+
+    result = load_and_call_with_mel(
+        "maya-render/scripts/render_frame.py",
+        cmds,
+        mel,
+        output_dir=str(tmp_path),
+        camera="persp",
+        return_base64=False,
+    )
+
+    assert result["success"] is True, result
+    assert Path(result["context"]["output_path"]).suffix == ".png"
+    assert result["context"]["output_size"] == len(b"arnold-image")
 
 
 def test_render_scene_uses_current_time_instead_of_invalid_arnold_frame_flag(tmp_path):
