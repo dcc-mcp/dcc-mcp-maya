@@ -13,7 +13,7 @@ metadata:
     dcc: maya
     layer: domain
     stage: scene
-    version: 1.1.0
+    version: 1.2.0
     tags:
     - maya
     - attribute
@@ -37,7 +37,7 @@ validation, error classification, and idempotency hints.
 ## Scripts
 
 - `get_attribute` — Get the value of an attribute on a Maya node
-- `set_attribute` — Set the value of an attribute on a Maya node
+- `set_attribute` — Set boolean, numeric, string, or numeric-vector values on a Maya node
 - `add_attribute` — Add a custom attribute to a Maya node
 - `delete_attribute` — Delete a custom (user-defined) attribute from a Maya node
 - `list_attributes` — List attributes on a Maya node

@@ -98,7 +98,14 @@ tools:
       attribute:
         type: string
       value:
-        type: string
+        oneOf:
+        - type: boolean
+        - type: number
+        - type: string
+        - type: array
+          items:
+            type: number
+          minItems: 1
     required:
     - node_name
     - attribute
