@@ -331,9 +331,12 @@ def render_scene(
                 )
                 import maya.mel as mel  # noqa: PLC0415
 
-                command = 'arnoldRender -camera "{}" -frame {}'.format(
+                # Arnold renders the frame selected with cmds.currentTime().
+                # Maya 2026 rejects the legacy/nonexistent `-frame` flag.
+                command = 'arnoldRender -batch -camera "{}" -width {} -height {}'.format(
                     _escape_mel_string(camera_name),
-                    target_frame,
+                    target_width,
+                    target_height,
                 )
                 render_result = mel.eval(command)
             else:

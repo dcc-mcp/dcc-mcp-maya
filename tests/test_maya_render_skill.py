@@ -388,9 +388,39 @@ def test_render_frame_uses_arnold_mel_when_current_renderer_is_arnold(tmp_path):
     assert result["success"] is True, result
     assert result["context"]["renderer"] == "arnold"
     assert result["context"]["image_base64"] is None
-    mel.eval.assert_called_once_with('arnoldRender -camera "persp" -frame 5.0')
+    cmds.currentTime.assert_any_call(5.0)
+    mel.eval.assert_called_once_with('arnoldRender -batch -camera "persp" -width 640 -height 360')
     assert cmds.setAttr.call_args_list.count((("defaultArnoldDriver.aiTranslator", "png"), {"type": "string"})) == 1
     assert cmds.setAttr.call_args_list.count((("defaultArnoldDriver.aiTranslator", "exr"), {"type": "string"})) == 1
+
+
+def test_render_scene_uses_current_time_instead_of_invalid_arnold_frame_flag(tmp_path):
+    cmds = MagicMock()
+    mel = MagicMock()
+    prefix_holder = _configure_render_cmds(cmds, renderer="arnold", current_frame=1.0)
+    cmds.pluginInfo.return_value = True
+
+    def _mel_eval(_command):
+        path = "{}.png".format(prefix_holder["prefix"])
+        Path(path).write_bytes(b"arnold-scene-bytes")
+        return path
+
+    mel.eval.side_effect = _mel_eval
+
+    result = load_and_call_with_mel(
+        "maya-render/scripts/render_scene.py",
+        cmds,
+        mel,
+        output_dir=str(tmp_path),
+        camera="persp",
+        frame=7,
+        format="png",
+        return_base64=False,
+    )
+
+    assert result["success"] is True, result
+    cmds.currentTime.assert_any_call(7.0)
+    mel.eval.assert_called_once_with('arnoldRender -batch -camera "persp" -width 640 -height 360')
 
 
 def test_render_frame_rejects_zero_byte_output(tmp_path):
