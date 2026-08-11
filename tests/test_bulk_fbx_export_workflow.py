@@ -68,11 +68,11 @@ def test_ten_spheres_transform_select_export_fbx_mocked(tmp_path: Path) -> None:
         mel = MagicMock()
         cmds_exp.pluginInfo.return_value = False
 
-        def _write_file(path: str, **_kwargs: object) -> str:
-            Path(path).write_bytes(b"FBX")
-            return str(path)
+        def _mel_eval(command: str) -> None:
+            if command.startswith("FBXExport -f "):
+                fbx_path.write_bytes(b"FBX")
 
-        cmds_exp.file.side_effect = _write_file
+        mel.eval.side_effect = _mel_eval
 
         r_exp = load_and_call_with_mel(
             "maya-geometry/scripts/export_fbx.py",
