@@ -175,6 +175,11 @@ def _normalize_path(path: str) -> str:
     return expanded.replace("\\", "/")
 
 
+def _mel_quote(value: str) -> str:
+    """Quote one string argument for a MEL command."""
+    return '"{}"'.format(value.replace("\\", "\\\\").replace('"', '\\"'))
+
+
 def _verify_output(path: str) -> Tuple[bool, int]:
     """Return ``(exists, size_bytes)`` for the FBX path."""
     if not os.path.exists(path):
@@ -292,25 +297,15 @@ def export_fbx(  # noqa: PLR0913 — parameter set is the public contract
             instances=_coerce_bool_param(instances, "instances"),
             tangents_binormals=_coerce_bool_param(tangents_binormals, "tangents_binormals"),
         )
-
-        # ``cmds.file`` honours options string for legacy reasons; we
-        # already pushed everything through MEL globals so v=0 is fine.
-        export_kwargs: Dict[str, Any] = {
-            "force": True,
-            "options": "v=0;",
-            "type": "FBX export",
-        }
-        if selected_only:
-            export_kwargs["exportSelected"] = True
-        else:
-            export_kwargs["exportAll"] = True
         if ascii:
-            # Maya's FBX plugin recognises ``-ea`` via the type string.
-            export_kwargs["type"] = "FBX export"
             mel.eval("FBXExportInAscii -v true")
             applied["FBXExportInAscii"] = "true"
 
-        cmds.file(normalized, **export_kwargs)
+        # Use the FBX plugin's own export command. Maya 2026 no longer
+        # registers the historical ``FBX export`` file-type string used by
+        # cmds.file, while FBXExport remains the stable public contract.
+        selection_flag = " -s" if selected_only else ""
+        mel.eval("FBXExport -f {}{};".format(_mel_quote(normalized), selection_flag))
 
         exists, size_bytes = _verify_output(normalized)
         if not exists:
