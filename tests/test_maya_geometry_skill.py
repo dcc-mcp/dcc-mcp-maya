@@ -72,7 +72,7 @@ def test_import_file_skips_plugin_load_for_native_maya_file(tmp_path):
 
 def test_export_fbx_pushes_options_through_mel_and_verifies(tmp_path):
     """The MEL-driven rewrite pushes every FBXExport* option through
-    ``mel.eval`` before invoking ``cmds.file``, then verifies the
+    ``mel.eval`` before invoking the FBXExport command, then verifies the
     destination has non-zero size.
     """
     cmds = MagicMock()
@@ -80,11 +80,11 @@ def test_export_fbx_pushes_options_through_mel_and_verifies(tmp_path):
     cmds.pluginInfo.return_value = False
     out_path = tmp_path / "out.fbx"
 
-    def _write_file(path, **_kwargs):
-        out_path.write_bytes(b"FBX-bytes")
-        return str(out_path)
+    def _mel_eval(command):
+        if command.startswith("FBXExport -f "):
+            out_path.write_bytes(b"FBX-bytes")
 
-    cmds.file.side_effect = _write_file
+    mel.eval.side_effect = _mel_eval
 
     result = load_and_call_with_mel(
         "maya-geometry/scripts/export_fbx.py",
@@ -111,15 +111,49 @@ def test_export_fbx_pushes_options_through_mel_and_verifies(tmp_path):
     assert applied["FBXExportBakeComplexEnd"] == 10
     assert applied["FBXExportFileVersion"] == "FBX202000"
     assert applied["FBXExportUpAxis"] == "y"
-    # Plugin loaded; options reset before configuration; cmds.file selected-only.
-    cmds.pluginInfo.assert_called_with("fbxmaya", query=True, loaded=True)
+    # Plugin loaded; options reset before the selected-only FBX command.
+    cmds.pluginInfo.assert_any_call("fbxmaya", query=True, loaded=True)
     cmds.loadPlugin.assert_called_once_with("fbxmaya")
     mel.eval.assert_any_call("FBXResetExport")
-    cmds.file.assert_called_once()
-    file_args, file_kwargs = cmds.file.call_args
-    assert file_args[0] == str(out_path).replace("\\", "/")
-    assert file_kwargs.get("type") == "FBX export"
-    assert file_kwargs.get("exportSelected") is True
+    normalized = str(out_path).replace("\\", "/")
+    mel.eval.assert_any_call('FBXExport -f "{}" -s;'.format(normalized))
+    cmds.file.assert_not_called()
+
+
+def test_export_fbx_does_not_depend_on_maya_2026_translator_name(tmp_path):
+    """Maya 2026 exposes ``Fbx`` but FBXExport remains stable."""
+    cmds = MagicMock()
+    mel = MagicMock()
+    out_path = tmp_path / "maya2026.fbx"
+
+    def _plugin_info(_name, **kwargs):
+        if kwargs.get("loaded"):
+            return True
+        if kwargs.get("translator"):
+            return ["Fbx", "DAE_FBX", "DAE_FBX export"]
+        return None
+
+    cmds.pluginInfo.side_effect = _plugin_info
+
+    def _mel_eval(command):
+        if command.startswith("FBXExport -f "):
+            out_path.write_bytes(b"FBX-bytes")
+
+    mel.eval.side_effect = _mel_eval
+
+    result = load_and_call_with_mel(
+        "maya-geometry/scripts/export_fbx.py",
+        cmds,
+        mel,
+        "main",
+        path=str(out_path),
+        selected_only=True,
+        bake_animation=False,
+    )
+
+    assert result["success"] is True, result
+    mel.eval.assert_any_call('FBXExport -f "{}" -s;'.format(str(out_path).replace("\\", "/")))
+    cmds.file.assert_not_called()
 
 
 def test_export_fbx_reports_zero_byte_failure(tmp_path):
@@ -130,11 +164,11 @@ def test_export_fbx_reports_zero_byte_failure(tmp_path):
     cmds.pluginInfo.return_value = True
     out_path = tmp_path / "empty.fbx"
 
-    def _write_empty(path, **_kwargs):
-        out_path.write_bytes(b"")
-        return str(out_path)
+    def _mel_eval(command):
+        if command.startswith("FBXExport -f "):
+            out_path.write_bytes(b"")
 
-    cmds.file.side_effect = _write_empty
+    mel.eval.side_effect = _mel_eval
 
     result = load_and_call_with_mel(
         "maya-geometry/scripts/export_fbx.py",
@@ -164,7 +198,8 @@ def test_export_fbx_rejects_unknown_fbx_version(tmp_path):
     )
 
     assert result["success"] is False
-    # cmds.file must not be reached when the parameter validation fails.
+    # The export command must not be reached when parameter validation fails.
+    assert not any(str(call.args[0]).startswith("FBXExport -f ") for call in mel.eval.call_args_list)
     cmds.file.assert_not_called()
 
 
