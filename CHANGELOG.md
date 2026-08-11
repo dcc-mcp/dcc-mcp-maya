@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.22](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.21...v0.9.22) (2026-08-11)
+
+
+### Bug Fixes
+
+* support Maya 2026 FBX export ([#478](https://github.com/dcc-mcp/dcc-mcp-maya/issues/478)) ([1efd6d4](https://github.com/dcc-mcp/dcc-mcp-maya/commit/1efd6d4a688538d60bfeba0aa75b795f55f1b872))
+
 ## [0.9.21](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.20...v0.9.21) (2026-08-10)
 
 
