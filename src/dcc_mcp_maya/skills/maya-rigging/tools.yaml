@@ -194,6 +194,77 @@ tools:
       periodic:
         type: boolean
         default: false
+- name: create_guide_curve
+  description: >-
+    Create an editable open guide curve with bounded cluster metadata, one
+    solid RGB viewport color, root-to-tip ordering, arc-length validation, and
+    optional scalp-root projection distance.
+  execution: sync
+  affinity: main
+  group: rigging
+  input_schema:
+    type: object
+    additionalProperties: false
+    required:
+    - points
+    - cluster_id
+    - display_color_rgb
+    properties:
+      points:
+        type: array
+        minItems: 2
+        items:
+          type: array
+          items:
+            type: number
+          minItems: 3
+          maxItems: 3
+      cluster_id:
+        type: string
+        minLength: 1
+        maxLength: 64
+        pattern: ^[A-Za-z0-9][A-Za-z0-9_.-]*$
+      display_color_rgb:
+        type: array
+        minItems: 3
+        maxItems: 3
+        items:
+          type: number
+          minimum: 0.0
+          maximum: 1.0
+      name:
+        type: string
+        minLength: 1
+        maxLength: 128
+      degree:
+        type: integer
+        minimum: 1
+        maximum: 7
+        default: 3
+      root_to_tip:
+        type: boolean
+        enum:
+        - true
+        default: true
+      scalp_mesh:
+        type: string
+        minLength: 1
+        maxLength: 256
+      source_view:
+        type: string
+        minLength: 1
+        maxLength: 64
+        pattern: ^[A-Za-z0-9][A-Za-z0-9_.-]*$
+      dominant_clump:
+        type: string
+        minLength: 1
+        maxLength: 128
+        pattern: ^[A-Za-z0-9][A-Za-z0-9_.-]*$
+      length_tolerance_ratio:
+        type: number
+        exclusiveMinimum: 0.0
+        maximum: 0.1
+        default: 0.1
 - name: create_ik_handle
   description: Create an IK handle between two joints with configurable solver.
   execution: sync

@@ -78,6 +78,39 @@ class TestRiggingWorkflow:
         assert bs_result["success"] is True
         assert len(cmds.ls(type="blendShape")) > 0
 
+    def test_editable_guide_curve_contract(self):
+        """Create a colored guide and measure its root against an explicit scalp."""
+        guide_mod = _load_script("maya-rigging", "create_guide_curve")
+        cmds.polyPlane(name="guideScalp", width=10.0, height=10.0)
+
+        result = guide_mod.create_guide_curve(
+            points=[[0.0, 0.0, 0.0], [0.0, 2.0, 0.0], [0.0, 4.0, 0.0]],
+            cluster_id="crown_cyan",
+            display_color_rgb=[0.2, 1.0, 1.0],
+            name="crownGuide01",
+            degree=2,
+            scalp_mesh="guideScalp",
+            source_view="front",
+            dominant_clump="crown_flow",
+        )
+
+        assert result["success"] is True, result
+        typed = result["context"]["typed_result"]
+        assert typed["transform"] == "crownGuide01"
+        assert typed["cluster_id"] == "crown_cyan"
+        assert typed["root_to_tip"] is True
+        assert typed["root_position"] == [0.0, 0.0, 0.0]
+        assert typed["tip_position"] == [0.0, 4.0, 0.0]
+        assert typed["arc_length"] > 0.0
+        assert typed["root_projection_distance"] < 1e-6
+        assert cmds.getAttr("crownGuide01.dccGuideClusterId") == "crown_cyan"
+        shape = typed["shape"]
+        assert bool(cmds.getAttr("{}.overrideRGBColors".format(shape))) is True
+        assert all(
+            abs(actual - expected) < 1e-6
+            for actual, expected in zip(cmds.getAttr("{}.overrideColorRGB".format(shape))[0], [0.2, 1.0, 1.0])
+        )
+
 
 class TestAnimationWorkflow:
     """Multi-attribute keyframe sequences, timeline, bake, curve queries."""
