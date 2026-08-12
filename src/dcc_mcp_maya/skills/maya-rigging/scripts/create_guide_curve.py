@@ -1,12 +1,12 @@
 """Create an editable, cluster-tagged hair guide curve."""
 
 import math
-from dataclasses import dataclass
 from statistics import median
 from typing import List, Optional, Sequence, Tuple
 
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception
 
+from dcc_mcp_maya._guide_curve_types import GuideCurveResult
 from dcc_mcp_maya.api import maya_typed_success
 
 _ATTR_CLUSTER_ID = "dccGuideClusterId"
@@ -16,28 +16,6 @@ _ATTR_DOMINANT_CLUMP = "dccGuideDominantClump"
 _MAX_CLUSTER_ID_LENGTH = 64
 _MAX_SOURCE_VIEW_LENGTH = 64
 _MAX_DOMINANT_CLUMP_LENGTH = 128
-
-
-@dataclass(frozen=True)
-class GuideCurveResult:
-    """Machine-readable result for a created guide curve."""
-
-    transform: str
-    shape: str
-    degree: int
-    cv_count: int
-    cluster_id: str
-    display_color_rgb: List[float]
-    root_to_tip: bool
-    root_position: List[float]
-    tip_position: List[float]
-    arc_length: float
-    cluster_median_arc_length: float
-    length_deviation_ratio: float
-    root_projection_distance: Optional[float]
-    scalp_mesh: Optional[str]
-    source_view: Optional[str]
-    dominant_clump: Optional[str]
 
 
 def _validate_label(value: Optional[str], field: str, max_length: int, required: bool = False) -> Optional[str]:
