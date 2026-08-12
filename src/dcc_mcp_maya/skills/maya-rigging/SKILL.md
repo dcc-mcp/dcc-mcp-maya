@@ -12,7 +12,7 @@ metadata:
     dcc: maya
     layer: domain
     stage: authoring
-    version: 1.2.0
+    version: 1.3.0
     tags:
     - maya
     - rigging
@@ -22,20 +22,31 @@ metadata:
     - blend-shape
     - skin-weights
     - constraint
+    - hair
+    - guide-curve
     - mgear
     - rig-framework
     search-hint: |-
       build character rig, skeleton setup, IK chain, rig control, constraint,
       skin bind, skin weight copy, blendshape, control curve, mgear,
-      advanced skeleton, deformer, joint hierarchy, weight paint
+      advanced skeleton, deformer, joint hierarchy, weight paint, editable
+      hair guide curve, colored guide cluster, scalp root projection
     tools: tools.yaml
     groups: groups.yaml
 ---
 # maya-rigging (Authoring stage)
 
 Joint hierarchies, IK handles, constraints, skin clusters, skin-weight transfer,
-deformers, blend shapes, optional rig framework detection, and control curves.
-Seventeen scripts cover the typical rigging loop.
+deformers, blend shapes, optional rig framework detection, control curves, and
+editable hair guide curves. Eighteen scripts cover the typical rigging loop.
+
+`create_guide_curve` is the bounded guide-authoring contract: every open curve
+has one cluster ID, one solid RGB viewport color, root-to-tip CV order, arc
+length and cluster-median deviation metrics, and an optional measured root
+projection distance against an explicit scalp mesh. It accepts only named
+metadata fields (`source_view` and `dominant_clump`), never arbitrary script or
+metadata payloads. The general-purpose `create_curve` contract remains
+unchanged.
 
 ## Optional Frameworks
 

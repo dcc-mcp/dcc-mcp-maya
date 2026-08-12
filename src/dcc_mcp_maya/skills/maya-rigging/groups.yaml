@@ -9,6 +9,7 @@ groups:
   - copy_skin_weights
   - create_constraint
   - create_curve
+  - create_guide_curve
   - create_ik_handle
   - create_joint
   - create_rig_control
