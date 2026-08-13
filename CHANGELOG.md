@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.23](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.22...v0.9.23) (2026-08-12)
+
+
+### Features
+
+* add typed editable guide curves ([#481](https://github.com/dcc-mcp/dcc-mcp-maya/issues/481)) ([7420084](https://github.com/dcc-mcp/dcc-mcp-maya/commit/74200848504cfe11515b43dfbf92cfddaf1b5edf))
+
 ## [0.9.22](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.21...v0.9.22) (2026-08-11)
 
 
