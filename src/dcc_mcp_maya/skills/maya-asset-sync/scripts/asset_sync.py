@@ -104,11 +104,12 @@ def _scene_evidence(cmds: Any, new_nodes: Any) -> Dict[str, Any]:
             ]
         )
 
-    textures = cmds.ls(type="file") or []
+    textures = (cmds.ls(type="file") or []) + (cmds.ls(type="aiImage") or [])
     missing = []
     for texture in textures:
         try:
-            path = cmds.getAttr(texture + ".fileTextureName")
+            path_attr = "fileTextureName" if cmds.nodeType(texture) == "file" else "filename"
+            path = cmds.getAttr(texture + "." + path_attr)
             if path and not Path(path).is_file():
                 missing.append(texture)
         except Exception:
@@ -120,6 +121,32 @@ def _scene_evidence(cmds: Any, new_nodes: Any) -> Dict[str, Any]:
             bbox = [float(value) for value in cmds.exactWorldBoundingBox(dag)]
         except Exception:
             pass
+    pbr_materials = []
+    for material in cmds.ls(materials=True) or []:
+        if material not in new_set or cmds.nodeType(material) != "standardSurface":
+            continue
+        connection_pairs = (
+            cmds.listConnections(material, source=True, destination=False, plugs=True, connections=True) or []
+        )
+        connected_inputs = sorted(
+            {
+                connection_pairs[index].rsplit(".", 1)[-1]
+                for index in range(0, len(connection_pairs) - 1, 2)
+                if connection_pairs[index].startswith(material + ".")
+            }
+        )
+        pbr_materials.append(
+            {
+                "name": material,
+                "model": "Arnold standardSurface",
+                "metalness": float(cmds.getAttr(material + ".metalness")),
+                "specular_roughness": float(cmds.getAttr(material + ".specularRoughness")),
+                "specular_ior": float(cmds.getAttr(material + ".specularIOR")),
+                "transmission": float(cmds.getAttr(material + ".transmission")),
+                "coat": float(cmds.getAttr(material + ".coat")),
+                "connected_inputs": connected_inputs,
+            }
+        )
     return {
         "nodes": len(new_nodes),
         "transforms": count_type("transform"),
@@ -127,6 +154,8 @@ def _scene_evidence(cmds: Any, new_nodes: Any) -> Dict[str, Any]:
         "anim_curves": sum(count_type(t) for t in ("animCurveTA", "animCurveTL", "animCurveTT", "animCurveTU")),
         "nurbs_curves": count_type("nurbsCurve"),
         "materials": len(cmds.ls(materials=True) or []),
+        "arnold_standard_surface_materials": len(pbr_materials),
+        "pbr_materials": pbr_materials,
         "file_textures": len(textures),
         "missing_textures": missing,
         "world_bbox": bbox,

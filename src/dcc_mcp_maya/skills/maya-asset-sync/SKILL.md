@@ -26,5 +26,8 @@ Filesystem roots are operator-owned environment configuration.
   maximum USD composition fidelity for non-destructive layer edits.
 
 The result reports native animCurve, joint, NURBS curve, material, texture and
-bounding-box evidence so callers can verify what remained controllable.
-
+bounding-box evidence so callers can verify what remained controllable. Native
+material evidence also identifies imported Arnold `standardSurface` PBR
+materials, their metalness, specular roughness, IOR, transmission, coat, and
+connected shader inputs instead of treating a material count as proof of
+lookdev fidelity.

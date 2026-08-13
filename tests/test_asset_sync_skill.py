@@ -40,3 +40,12 @@ def test_sync_schema_exposes_deliberate_editability_modes() -> None:
     assert "source_name" in publish_properties
     assert "source_path" not in publish_properties
     assert "store_root" not in publish_properties
+
+
+def test_native_sync_reports_arnold_pbr_evidence() -> None:
+    source = (_SKILL / "scripts" / "asset_sync.py").read_text(encoding="utf-8")
+    assert '"preferredMaterial": "standardSurface"' in source
+    assert '"arnold_standard_surface_materials"' in source
+    assert '"pbr_materials"' in source
+    assert '"specular_ior"' in source
+    assert '"connected_inputs"' in source
