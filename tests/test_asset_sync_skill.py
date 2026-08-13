@@ -1,4 +1,5 @@
 """Contract tests for native-editable and fidelity-first Maya Asset Sync."""
+
 from __future__ import annotations
 
 import importlib.util
