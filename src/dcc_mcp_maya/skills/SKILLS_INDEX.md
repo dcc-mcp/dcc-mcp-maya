@@ -2,7 +2,7 @@
 
 > Cross-skill navigation map. Read this before deciding which skill to load.
 
-The 28 bundled skills are organised into **five stages** that match the
+The 29 bundled skills are organised into **five stages** that match the
 mental model of a Maya pipeline. Each skill carries the stage in its
 SKILL.md frontmatter under `metadata.dcc-mcp.stage`.
 
@@ -13,7 +13,7 @@ SKILL.md frontmatter under `metadata.dcc-mcp.stage`.
 | `bootstrap` | Escape hatch; arbitrary code only when no typed skill fits. | yes | `maya-scripting` |
 | `scene` | Scene file lifecycle, DAG navigation, attributes, node graph, viewport visibility. | partial (`maya-scene` only) | `maya-scene`, `maya-scene-assembly`, `maya-display`, `maya-attributes`, `maya-node-graph` |
 | `authoring` | Create / edit content: meshes, UVs, materials, rigs, animation, dynamics, Bifrost graphs, light rigs. | no | `maya-primitives`, `maya-mesh-ops`, `maya-uv-ops`, `maya-materials`, `maya-material-library`, `maya-texture-bake`, `maya-rigging`, `maya-animation`, `maya-dynamics`, `maya-bifrost`, `maya-pose-library`, `maya-expressions`, `maya-light-rig` |
-| `interchange` | Move geometry / scenes across DCCs (FBX, OBJ, presets, save). | no | `maya-geometry`, `maya-export-preset` |
+| `interchange` | Move geometry / scenes across DCCs (FBX, OBJ, USD revisions, presets, save). | no | `maya-geometry`, `maya-asset-sync`, `maya-export-preset` |
 | `pipeline` | Production pipeline: project, publish, shot export, render, render farm, asset import, development diagnostics. | no | `maya-dev`, `maya-pipeline`, `maya-shot-export`, `maya-render`, `maya-render-farm`, `maya-asset-source`, `maya-import-to-scene` |
 
 ## Deciding which skill to load
@@ -48,6 +48,7 @@ Full rationale: repo root `AGENTS.md` § *Bulk import, export, and naming*; exam
 | Build a rig, detect optional rig frameworks, copy skin weights, animate, and send to render farm | `maya-rigging` (`detect_rig_frameworks`, `create_rig_control`, `create_constraint`, `copy_skin_weights`) → `maya-animation` → `maya-render-farm` |
 | Look-dev a hero asset, save material preset | `maya-materials` → `maya-material-library` |
 | Publish an asset version | `maya-pipeline` (uses `maya-geometry` under the hood; declared in `depends`) |
+| Synchronize a revisioned Houdini asset | `maya-asset-sync` (`read_asset_head` → `sync_usd_revision(editability_mode="native")` for editable curves/joints/materials, or `usd_proxy` for composition fidelity) |
 | Bake AO maps from high-res to low-res | `maya-uv-ops` → `maya-texture-bake` |
 | Create a single light or three-point rig and tweak intensity | `maya-light-rig` (`create_light`, `create_three_point_rig`, `set_light_rig_intensity`) |
 | Render an image, snapshot the viewport, write an MP4 preview, or collect debug evidence | **Intent-driven:** `maya-render` (`render_frame` for final-frame output, `debug_scene_snapshot` for diagnostics, `playblast_to_mp4` for animation preview). See `maya-render/SKILL.md` § *Render intents → tool routing* and § *VP2 fallback flow* for error recovery when viewport is unavailable. |

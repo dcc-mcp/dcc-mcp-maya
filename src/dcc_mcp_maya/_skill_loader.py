@@ -145,7 +145,9 @@ def _read_stage(skill_dir: Path) -> Optional[str]:
         return None
     meta = parse_skill_md(str(skill_dir))
     if meta is None:
-        return None
+        # Keep progressive discovery available when an older Core parser skips
+        # a package that uses newer, otherwise-valid metadata fields.
+        return _extract_stage_from_skill_md(skill_dir)
     stage = getattr(meta, "stage", None)
     if isinstance(stage, str) and stage:
         return stage
