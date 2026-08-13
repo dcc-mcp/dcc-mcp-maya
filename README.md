@@ -66,10 +66,14 @@ The Maya plugin starts a Rust `dcc-mcp-server` sidecar by default, so HTTP and g
 [![Python](https://img.shields.io/pypi/pyversions/dcc-mcp-maya?label=Python)](https://pypi.org/project/dcc-mcp-maya/)
 [![Maya](https://img.shields.io/badge/Maya-2020%2B-37A5CC)](https://www.autodesk.com/products/maya/overview)
 [![MCP](https://img.shields.io/badge/MCP-Streamable%20HTTP-6f42c1)](https://modelcontextprotocol.io/)
-[![dcc-mcp-core](https://img.shields.io/badge/dcc--mcp--core-%3E%3D0.19.45%2C%3C0.20-blue)](https://github.com/dcc-mcp/dcc-mcp-core)
+[![dcc-mcp-core](https://img.shields.io/badge/dcc--mcp--core-%3E%3D0.19.45%2C%3C1.0-blue)](https://github.com/dcc-mcp/dcc-mcp-core)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 ## Showcase
+
+![Houdini honeybee animation synchronized into Maya and rendered with Arnold](docs/images/maya-asset-sync-arnold-showcase.gif)
+
+Real Maya 2026.3 / Arnold evidence from the revisioned Houdini-to-Maya Asset Sync workflow. The verified `native` import kept **614 editable Maya animation curves**, **39 materials**, and **32,293 editable groom/guide curve shapes** while preserving centimeter scale and the 96-frame timeline. The showcased lookdev uses editable Arnold `standardSurface` metal/rough PBR networks: procedural micro-normal breakup for chitin, IOR/coat/thin-film response for the eyes, and thin-walled transmission for the wings. The source revision contains transform animation rather than UsdSkel joints. `usd_proxy` mode remains available when USD composition fidelity is more important than native Maya editing.
 
 ![ZRemeshed Fantasy Dragon imported from ZBrush into Maya with wireframe-on-shaded topology](docs/images/zbrush-maya-fantasy-dragon-showcase.png)
 
@@ -79,7 +83,7 @@ Real Maya 2026 evidence from a typed ZBrush-to-Maya round trip: the **2,499,970-
 
 | What you get | Why it matters |
 |---|---|
-| **76+ discoverable typed Maya tools** across 28 bundled skill packages | Agents can call validated tools for scene, mesh, material, animation, rigging, Bifrost, dynamics, render, export, pipeline work, and live tool-development diagnostics. |
+| **79+ discoverable typed Maya tools** across 29 bundled skill packages | Agents can call validated tools for scene, mesh, material, animation, rigging, Bifrost, dynamics, render, revisioned Asset Sync, pipeline work, and live tool-development diagnostics. |
 | **Progressive loading** | Maya boots with a compact tool surface; agents discover unloaded capabilities and load only what they need. |
 | **Sidecar isolation by default** | HTTP/gateway runtime is out of Maya's UI thread, with a Qt dispatcher bridge back into Maya. |
 | **Multi-instance gateway** | Run several Maya sessions behind one local MCP URL, with optional LAN gateway exposure. |
@@ -174,7 +178,7 @@ Default startup is intentionally small: `maya-scripting` and the core `maya-scen
 | `bootstrap` | Escape hatch when no typed skill fits | `maya-scripting` |
 | `scene` | Scene lifecycle, DAG, attributes, node graph, viewport display | `maya-scene`, `maya-scene-assembly`, `maya-display`, `maya-attributes`, `maya-node-graph` |
 | `authoring` | Meshes, UVs, materials, rigs, animation, Bifrost, dynamics, expressions, lighting | `maya-primitives`, `maya-mesh-ops`, `maya-uv-ops`, `maya-materials`, `maya-material-library`, `maya-texture-bake`, `maya-rigging`, `maya-animation`, `maya-dynamics`, `maya-bifrost`, `maya-pose-library`, `maya-expressions`, `maya-light-rig` |
-| `interchange` | Geometry and scene I/O | `maya-geometry`, `maya-export-preset` |
+| `interchange` | Geometry, scene I/O, and revisioned cross-DCC sync | `maya-geometry`, `maya-asset-sync`, `maya-export-preset` |
 | `pipeline` | Project, publish, shot export, render, render farm, development diagnostics | `maya-dev`, `maya-pipeline`, `maya-shot-export`, `maya-render`, `maya-render-farm` |
 
 Typical agent flow:
@@ -421,7 +425,7 @@ Windows symlinks require Developer Mode or an elevated shell. If symlinks are un
 
 - Autodesk Maya 2020+
 - Python 3.7+
-- `dcc-mcp-core>=0.19.45,<0.20.0`
+- `dcc-mcp-core>=0.19.45,<1.0.0` (Asset Sync tools feature-detect `dcc_mcp_core.asset_sync` at call time)
 - Standard sidecar binary for plugin mode: `dcc-mcp-server>=0.18.21`
 
 ## License

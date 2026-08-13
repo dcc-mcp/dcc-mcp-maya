@@ -1,0 +1,122 @@
+tools:
+- name: publish_usd_revision
+  description: Publish an operator-rooted USD file as an immutable Asset Sync revision.
+  execution: sync
+  affinity: main
+  source_file: scripts/asset_sync.py
+  annotations:
+    read_only_hint: false
+    destructive_hint: false
+    idempotent_hint: true
+    open_world_hint: false
+  group: asset-sync
+  input_schema:
+    type: object
+    additionalProperties: false
+    required:
+    - channel_id
+    - asset_id
+    - source_name
+    - expected_head_revision
+    properties:
+      channel_id:
+        type: string
+        minLength: 1
+        maxLength: 128
+      asset_id:
+        type: string
+        minLength: 1
+        maxLength: 128
+      source_name:
+        type: string
+        minLength: 1
+        description: Safe relative USD path beneath DCC_MCP_MAYA_ASSET_SYNC_SOURCE_ROOT.
+      expected_head_revision:
+        type: integer
+        minimum: 0
+      source_instance_id:
+        type: string
+        maxLength: 128
+      metadata:
+        type: object
+        additionalProperties: true
+- name: read_asset_head
+  description: Read the path-free current Asset Sync head manifest.
+  execution: sync
+  affinity: main
+  source_file: scripts/asset_sync.py
+  annotations:
+    read_only_hint: true
+    destructive_hint: false
+    idempotent_hint: true
+    open_world_hint: false
+  group: asset-sync
+  input_schema:
+    type: object
+    additionalProperties: false
+    required:
+    - channel_id
+    - asset_id
+    properties:
+      channel_id:
+        type: string
+        minLength: 1
+        maxLength: 128
+      asset_id:
+        type: string
+        minLength: 1
+        maxLength: 128
+- name: sync_usd_revision
+  description: Materialize and import a verified USD revision as native Maya data or
+    a fidelity-first USD proxy.
+  execution: sync
+  affinity: main
+  source_file: scripts/asset_sync.py
+  annotations:
+    read_only_hint: false
+    destructive_hint: false
+    idempotent_hint: false
+    open_world_hint: false
+  group: asset-sync
+  input_schema:
+    type: object
+    additionalProperties: false
+    required:
+    - channel_id
+    - asset_id
+    properties:
+      channel_id:
+        type: string
+        minLength: 1
+        maxLength: 128
+      asset_id:
+        type: string
+        minLength: 1
+        maxLength: 128
+      editability_mode:
+        type: string
+        enum:
+        - native
+        - usd_proxy
+        default: native
+      namespace:
+        type: string
+        pattern: ^[A-Za-z_][A-Za-z0-9_]*$
+      subfolder:
+        type: string
+        default: ''
+      read_animation:
+        type: boolean
+        default: true
+      apply_euler_filter:
+        type: boolean
+        default: true
+      preserve_materials:
+        type: boolean
+        default: true
+      axis_and_unit_method:
+        type: string
+        enum:
+        - addTransform
+        - overwritePrefs
+        default: addTransform
