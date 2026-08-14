@@ -50,6 +50,222 @@ def test_native_sync_reports_arnold_pbr_evidence() -> None:
     assert '"pbr_materials"' in source
     assert '"specular_ior"' in source
     assert '"connected_inputs"' in source
+    assert '"image_textures"' in source
+    assert '"image_texture_evidence_truncated"' in source
+
+
+def test_image_texture_evidence_reports_paths_color_spaces_and_material_inputs(tmp_path: Path) -> None:
+    module = _module()
+    source_image = tmp_path / "sourceimages" / "bee" / "albedo.png"
+    source_image.parent.mkdir(parents=True)
+    source_image.write_bytes(b"texture")
+    normal_image = tmp_path / "normal.exr"
+    normal_image.write_bytes(b"texture")
+
+    class FakeCmds:
+        types = {
+            "BeeAlbedo": "file",
+            "BeeColorCorrect": "aiColorCorrect",
+            "BeeNormal": "aiImage",
+            "BeeNormalMap": "aiNormalMap",
+            "BeeMat": "standardSurface",
+        }
+        attrs = {
+            "BeeAlbedo.fileTextureName": "bee/albedo.png",
+            "BeeAlbedo.colorSpace": "sRGB",
+            "BeeNormal.filename": str(normal_image),
+            "BeeNormal.colorSpace": "Raw",
+        }
+        downstream = {
+            "BeeAlbedo": ["BeeAlbedo.outColor", "BeeColorCorrect.input"],
+            "BeeColorCorrect": ["BeeColorCorrect.outColor", "BeeMat.baseColor"],
+            "BeeNormal": ["BeeNormal.outColor", "BeeNormalMap.input"],
+            "BeeNormalMap": ["BeeNormalMap.outValue", "BeeMat.normalCamera"],
+        }
+
+        @classmethod
+        def ls(cls, materials=False, **_kwargs):
+            return ["BeeMat"] if materials else []
+
+        @classmethod
+        def nodeType(cls, node):
+            return cls.types[node]
+
+        @classmethod
+        def getAttr(cls, plug):
+            if plug not in cls.attrs:
+                raise RuntimeError(plug)
+            return cls.attrs[plug]
+
+        @classmethod
+        def workspace(cls, query=False, rootDirectory=False, fileRuleEntry=None):
+            if query and rootDirectory:
+                return str(tmp_path)
+            if fileRuleEntry == "sourceImages":
+                return "sourceimages"
+            raise AssertionError((query, rootDirectory, fileRuleEntry))
+
+        @classmethod
+        def listConnections(cls, node, **kwargs):
+            assert kwargs == {
+                "source": False,
+                "destination": True,
+                "plugs": True,
+                "connections": True,
+            }
+            return cls.downstream.get(node, [])
+
+        @classmethod
+        def objectType(cls, _node, isAType=None):
+            assert isAType == "dagNode"
+            return False
+
+    imported = {"BeeAlbedo", "BeeColorCorrect", "BeeNormal", "BeeNormalMap", "BeeMat"}
+    result = module._image_texture_evidence(FakeCmds, ["BeeNormal", "BeeAlbedo"], imported)
+
+    assert result == {
+        "records": [
+            {
+                "node": "BeeAlbedo",
+                "type": "file",
+                "path": "bee/albedo.png",
+                "path_attr": "fileTextureName",
+                "exists": True,
+                "color_space": "sRGB",
+                "is_absolute": False,
+                "workspace_relative_path": "sourceimages/bee/albedo.png",
+                "under_workspace": True,
+                "imported": True,
+                "connected_material_inputs": [
+                    {
+                        "material": "BeeMat",
+                        "input": "baseColor",
+                        "plug": "BeeMat.baseColor",
+                        "direct": False,
+                        "via": ["BeeColorCorrect"],
+                        "material_imported": True,
+                    }
+                ],
+                "connections_truncated": False,
+            },
+            {
+                "node": "BeeNormal",
+                "type": "aiImage",
+                "path": str(normal_image),
+                "path_attr": "filename",
+                "exists": True,
+                "color_space": "Raw",
+                "is_absolute": True,
+                "workspace_relative_path": "normal.exr",
+                "under_workspace": True,
+                "imported": True,
+                "connected_material_inputs": [
+                    {
+                        "material": "BeeMat",
+                        "input": "normalCamera",
+                        "plug": "BeeMat.normalCamera",
+                        "direct": False,
+                        "via": ["BeeNormalMap"],
+                        "material_imported": True,
+                    }
+                ],
+                "connections_truncated": False,
+            },
+        ],
+        "total": 2,
+        "limit": module._IMAGE_TEXTURE_EVIDENCE_LIMIT,
+        "truncated": False,
+    }
+
+
+def test_image_texture_evidence_is_bounded_and_prioritizes_imported_nodes(monkeypatch) -> None:
+    module = _module()
+    monkeypatch.setattr(module, "_IMAGE_TEXTURE_EVIDENCE_LIMIT", 2)
+
+    class FakeCmds:
+        @staticmethod
+        def ls(materials=False, **_kwargs):
+            return []
+
+        @staticmethod
+        def nodeType(_node):
+            return "file"
+
+        @staticmethod
+        def getAttr(plug):
+            if plug.endswith(".fileTextureName"):
+                return ""
+            if plug.endswith(".colorSpace"):
+                return "Raw"
+            raise RuntimeError(plug)
+
+        @staticmethod
+        def workspace(**_kwargs):
+            raise RuntimeError("workspace unavailable")
+
+        @staticmethod
+        def listConnections(_node, **_kwargs):
+            return []
+
+    result = module._image_texture_evidence(FakeCmds, ["OldB", "New", "OldA"], {"New"})
+
+    assert [record["node"] for record in result["records"]] == ["New", "OldA"]
+    assert result["total"] == 3
+    assert result["limit"] == 2
+    assert result["truncated"] is True
+
+
+def test_image_texture_evidence_marks_external_absolute_path_outside_workspace(tmp_path: Path) -> None:
+    module = _module()
+    external_root = tmp_path.parent / f"{tmp_path.name}_external"
+    external_root.mkdir()
+    external_texture = external_root / "normal.exr"
+    external_texture.write_bytes(b"texture")
+
+    class FakeCmds:
+        @staticmethod
+        def ls(materials=False, **_kwargs):
+            return []
+
+        @staticmethod
+        def nodeType(_node):
+            return "aiImage"
+
+        @staticmethod
+        def getAttr(plug):
+            if plug.endswith(".filename"):
+                return str(external_texture)
+            if plug.endswith(".colorSpace"):
+                return "Raw"
+            raise RuntimeError(plug)
+
+        @staticmethod
+        def workspace(query=False, rootDirectory=False, fileRuleEntry=None):
+            if query and rootDirectory:
+                return str(tmp_path)
+            if fileRuleEntry == "sourceImages":
+                return "sourceimages"
+            raise AssertionError((query, rootDirectory, fileRuleEntry))
+
+        @staticmethod
+        def listConnections(_node, **_kwargs):
+            return []
+
+    result = module._image_texture_evidence(FakeCmds, ["ExternalNormal"], {"ExternalNormal"})
+    record = result["records"][0]
+
+    assert record["exists"] is True
+    assert record["is_absolute"] is True
+    assert record["workspace_relative_path"] is None
+    assert record["under_workspace"] is False
+
+
+def test_texture_existence_accepts_common_udim_tokens(tmp_path: Path) -> None:
+    module = _module()
+    (tmp_path / "bee_albedo.1001.exr").write_bytes(b"texture")
+
+    assert module._path_or_sequence_exists(tmp_path / "bee_albedo.<UDIM>.exr") is True
+    assert module._path_or_sequence_exists(tmp_path / "missing.<UDIM>.exr") is False
 
 
 def test_native_sync_audits_standard_rig_preservation() -> None:
