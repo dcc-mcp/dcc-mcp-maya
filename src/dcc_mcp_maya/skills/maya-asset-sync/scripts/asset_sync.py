@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Dict, Mapping, Optional, Tuple
 
@@ -92,6 +93,27 @@ def _ensure_plugin(cmds: Any, name: str) -> None:
         cmds.loadPlugin(name)
 
 
+@contextmanager
+def _maya_namespace(cmds: Any, namespace: Optional[str]):
+    """Import into a Maya namespace without relying on an importer flag.
+
+    ``mayaUSDImport`` in Maya 2026 does not expose a ``namespace`` command
+    flag.  Maya's current namespace is the supported host-level contract and
+    applies consistently to both native USD imports and proxy creation.
+    """
+    if not namespace:
+        yield
+        return
+    previous = cmds.namespaceInfo(currentNamespace=True)
+    if not cmds.namespace(exists=namespace):
+        cmds.namespace(add=namespace)
+    try:
+        cmds.namespace(set=namespace)
+        yield
+    finally:
+        cmds.namespace(set=previous)
+
+
 def _scene_evidence(cmds: Any, new_nodes: Any) -> Dict[str, Any]:
     new_set = set(new_nodes)
 
@@ -151,6 +173,7 @@ def _scene_evidence(cmds: Any, new_nodes: Any) -> Dict[str, Any]:
         "nodes": len(new_nodes),
         "transforms": count_type("transform"),
         "joints": count_type("joint"),
+        "skin_clusters": count_type("skinCluster"),
         "anim_curves": sum(count_type(t) for t in ("animCurveTA", "animCurveTL", "animCurveTT", "animCurveTU")),
         "nurbs_curves": count_type("nurbsCurve"),
         "materials": len(cmds.ls(materials=True) or []),
@@ -160,6 +183,30 @@ def _scene_evidence(cmds: Any, new_nodes: Any) -> Dict[str, Any]:
         "missing_textures": missing,
         "world_bbox": bbox,
     }
+
+
+def _usd_rig_evidence(path: Path) -> Dict[str, int]:
+    """Read standard USD rig schemas before mutating the Maya scene."""
+    from pxr import Usd, UsdGeom, UsdSkel
+
+    stage = Usd.Stage.Open(str(path))
+    if not stage:
+        raise ValueError("Materialized USD revision could not be opened")
+    skeletons = 0
+    animations = 0
+    skinned_prims = 0
+    for prim in stage.Traverse():
+        if prim.IsA(UsdSkel.Skeleton):
+            skeletons += 1
+        elif prim.IsA(UsdSkel.Animation):
+            animations += 1
+        if (
+            prim.IsA(UsdGeom.Mesh)
+            and prim.HasAttribute("primvars:skel:jointIndices")
+            and prim.HasAttribute("primvars:skel:jointWeights")
+        ):
+            skinned_prims += 1
+    return {"skeletons": skeletons, "animations": animations, "skinned_prims": skinned_prims}
 
 
 def sync_usd_revision(
@@ -172,6 +219,7 @@ def sync_usd_revision(
     apply_euler_filter: bool = True,
     preserve_materials: bool = True,
     axis_and_unit_method: str = "addTransform",
+    rig_expectation: str = "auto",
 ) -> Dict[str, Any]:
     try:
         from maya import cmds
@@ -184,35 +232,63 @@ def sync_usd_revision(
         if head.format not in _USD_FORMATS:
             return skill_error("Unsupported revision format", "Maya Asset Sync currently requires USD")
         path = store.materialize(head, _configured_root("DCC_MCP_MAYA_ASSET_SYNC_CONSUMER_ROOT"), subfolder=subfolder)
+        source_rig = _usd_rig_evidence(path)
+        if rig_expectation in ("skeleton", "skinned") and not source_rig["skeletons"]:
+            return skill_error(
+                "USD revision has no standard skeleton",
+                "The requested rig contract requires UsdSkelSkeleton before Maya import",
+                source_rig=source_rig,
+            )
+        if rig_expectation == "skinned" and not source_rig["skinned_prims"]:
+            return skill_error(
+                "USD revision has no skin bindings",
+                "The requested rig contract requires joint indices and weights before Maya import",
+                source_rig=source_rig,
+            )
         _ensure_plugin(cmds, "mayaUsdPlugin")
         before = set(cmds.ls(long=True) or [])
-        if editability_mode == "usd_proxy":
-            transform = cmds.createNode("transform", name="{}_USD_SYNC".format(asset_id.replace("-", "_")))
-            shape = cmds.createNode("mayaUsdProxyShape", parent=transform, name=transform + "Shape")
-            cmds.setAttr(shape + ".filePath", str(path).replace("\\", "/"), type="string")
-        else:
-            kwargs = {
-                "file": str(path).replace("\\", "/"),
-                "primPath": "/",
-                "readAnimData": read_animation,
-                "applyEulerFilter": apply_euler_filter,
-                "upAxis": True,
-                "unit": True,
-                "axisAndUnitMethod": axis_and_unit_method,
-                "shadingMode": [["useRegistry", "UsdPreviewSurface"]]
-                if preserve_materials
-                else [["none", "defaultMaterial"]],
-                "preferredMaterial": "standardSurface",
-            }
-            if namespace:
-                kwargs["namespace"] = namespace
-            timeline = head.metadata.get("timeline", {})
-            if read_animation and "start" in timeline and "end" in timeline:
-                kwargs["frameRange"] = (timeline["start"], timeline["end"])
-            cmds.mayaUSDImport(**kwargs)
+        with _maya_namespace(cmds, namespace):
+            if editability_mode == "usd_proxy":
+                transform = cmds.createNode("transform", name="{}_USD_SYNC".format(asset_id.replace("-", "_")))
+                shape = cmds.createNode("mayaUsdProxyShape", parent=transform, name=transform + "Shape")
+                cmds.setAttr(shape + ".filePath", str(path).replace("\\", "/"), type="string")
+            else:
+                kwargs = {
+                    "file": str(path).replace("\\", "/"),
+                    "primPath": "/",
+                    "readAnimData": read_animation,
+                    "applyEulerFilter": apply_euler_filter,
+                    "upAxis": True,
+                    "unit": True,
+                    "axisAndUnitMethod": axis_and_unit_method,
+                    "shadingMode": [["useRegistry", "UsdPreviewSurface"]]
+                    if preserve_materials
+                    else [["none", "defaultMaterial"]],
+                    "preferredMaterial": "standardSurface",
+                }
+                timeline = head.metadata.get("timeline", {})
+                if read_animation and "start" in timeline and "end" in timeline:
+                    kwargs["frameRange"] = (timeline["start"], timeline["end"])
+                cmds.mayaUSDImport(**kwargs)
         after = set(cmds.ls(long=True) or [])
         new_nodes = sorted(after - before)
         evidence = _scene_evidence(cmds, new_nodes)
+        evidence["source_rig"] = source_rig
+        require_skeleton = rig_expectation in ("skeleton", "skinned") or (
+            rig_expectation == "auto" and source_rig["skeletons"] > 0
+        )
+        if editability_mode == "native" and require_skeleton and evidence["joints"] == 0:
+            return skill_error(
+                "Maya did not preserve the USD skeleton",
+                "The revision contains UsdSkel data but native import produced no Maya joints",
+                evidence=evidence,
+            )
+        if editability_mode == "native" and rig_expectation == "skinned" and evidence["skin_clusters"] == 0:
+            return skill_error(
+                "Maya did not preserve skin deformation",
+                "The revision contains skin bindings but native import produced no skinCluster nodes",
+                evidence=evidence,
+            )
         metadata_node = cmds.createNode("network", name="DCC_MCP_ASSET_SYNC_METADATA")
         for attr, value in (
             ("channelId", channel_id),

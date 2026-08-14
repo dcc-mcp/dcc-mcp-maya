@@ -31,3 +31,12 @@ material evidence also identifies imported Arnold `standardSurface` PBR
 materials, their metalness, specular roughness, IOR, transmission, coat, and
 connected shader inputs instead of treating a material count as proof of
 lookdev fidelity.
+
+`rig_expectation` makes rig preservation auditable instead of best-effort:
+
+- `auto` preflights the USD and requires Maya joints whenever a standard
+  `UsdSkelSkeleton` is present.
+- `skeleton` requires both source `UsdSkel` data and imported Maya joints.
+- `skinned` additionally requires authored joint indices/weights and imported
+  Maya `skinCluster` nodes.
+- `ignore` keeps the legacy permissive behavior for intentionally rigid assets.

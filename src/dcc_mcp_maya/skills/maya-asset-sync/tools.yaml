@@ -120,3 +120,12 @@ tools:
         - addTransform
         - overwritePrefs
         default: addTransform
+      rig_expectation:
+        type: string
+        enum:
+        - auto
+        - ignore
+        - skeleton
+        - skinned
+        default: auto
+        description: Preflight and verify standard UsdSkel preservation; skinned also requires Maya skinClusters.
