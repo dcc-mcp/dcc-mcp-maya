@@ -129,3 +129,14 @@ tools:
         - skinned
         default: auto
         description: Preflight and verify standard UsdSkel preservation; skinned also requires Maya skinClusters.
+      required_constrained_controller_roles:
+        type: array
+        maxItems: 64
+        uniqueItems: true
+        default: []
+        description: Optional dccMcpControllerRole values that must resolve to unique, native-editable NURBS controllers driving editable Maya constraints; an empty array preserves legacy behavior.
+        items:
+          type: string
+          minLength: 1
+          maxLength: 64
+          pattern: '^[A-Za-z][A-Za-z0-9_.:-]{0,63}$'

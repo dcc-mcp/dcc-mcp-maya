@@ -54,3 +54,28 @@ complete.
 - `skinned` additionally requires authored joint indices/weights and imported
   Maya `skinCluster` nodes.
 - `ignore` keeps the legacy permissive behavior for intentionally rigid assets.
+
+Native controller and constraint editability is reported additively under
+`evidence.rig_editability`; every legacy evidence field and `editable_set`
+retains its existing meaning. A transform counts as a controller only when it
+has a valid explicit `dccMcpControllerRole` string tag and a NURBS curve shape.
+This avoids guessing from node names or counting groom and guide curves as rig
+controls. Controller and native Maya constraint records are deterministically
+sorted and bounded; inspect each collection's `total`, `limit`, and `truncated`
+fields before treating the record list as complete.
+
+`required_constrained_controller_roles` is an optional fail-closed acceptance
+gate for `native` sync. Its default empty array preserves the legacy permissive
+behavior. When roles are supplied, every role must identify exactly one
+keyable, unlocked NURBS controller and that controller must drive at least one
+editable native Maya constraint. Missing, duplicate, locked, or unconstrained
+roles return a typed error with the same evidence block. Standard USD/UsdSkel
+does not itself guarantee Maya controller shapes or constraint graphs, so only
+use this gate when the authored/imported asset carries the explicit role tags
+and native rig data required by the pipeline contract.
+
+Constraint evidence preserves Maya's positional target-to-weight-alias mapping.
+A controller relation is editable only when its own weight alias can be read and
+is unlocked. The sampled weight and `active` flag remain diagnostic evidence;
+an unlocked animated weight at zero on the current frame does not make the rig
+non-editable.
