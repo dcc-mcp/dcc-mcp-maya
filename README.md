@@ -71,13 +71,21 @@ The Maya plugin starts a Rust `dcc-mcp-server` sidecar by default, so HTTP and g
 
 ## Showcase
 
-![Houdini honeybee animation synchronized into Maya and rendered with Arnold](docs/images/maya-asset-sync-arnold-showcase.gif)
+### Houdini → Maya AssetSync v2
 
-Real Maya 2026.3 / Arnold evidence rendered from `DCC_MCP_Real_Honeybee_AssetSync_v2.mb`. The verified `native` import keeps **614 editable Maya animation curves**, **39 imported materials**, and **32,293 editable groom/guide curve shapes** while preserving centimeter scale and the 96-frame timeline. The v2 lookdev adds three named Arnold hair materials and uses editable `standardSurface` metal/rough PBR assignments, per-curve Arnold width and color controls, an editable studio light rig, and an ACEScg-to-sRGB output transform. The source revision contains transform animation rather than UsdSkel joints. `usd_proxy` mode remains available when USD composition fidelity is more important than native Maya editing.
+![Houdini-authored honeybee model, groom, and animation synchronized into Maya with AssetSync v2 and rendered with Arnold](docs/images/maya-asset-sync-arnold-showcase.gif)
+
+- **Source:** The honeybee model, scene data, 96-frame animation, wing motion, and groom curves were authored in Houdini. Maya receives the asset through AssetSync v2 `native` mode; `usd_proxy` remains available when USD composition fidelity is more important than native editing.
+- **Processing:** Maya keeps the imported hierarchy and corrects the editable wing keys to the Houdini three-frame, opposite-phase flight contract. Arnold lookdev uses the marketplace `dcc-lookdev-turntable` skill v0.4.1 (`3121a34632e79ef130bf30675e092487b9821dc8`), its `insect_macro` preset, ACEScg-to-sRGB output, and the CC0 [Cloudy Vondelpark HDRI](https://polyhaven.com/a/cloudy_vondelpark) without stylized red/green tinting.
+- **Verified output:** A cold Maya 2026.3 / Arnold 7.4.3.2 batch render of `DCC_MCP_Real_Honeybee_AssetSync_v2.mb` retains **618 editable animation curves**, **43 materials**, and **32,293 editable NURBS groom/guide curves**. Two Arnold Curve Collectors render **19,250 gold** and **12,952 dark** fur curves with PBR `aiStandardHair`; wing veins and the leaf vein keep independent hair shaders. Geometry uses editable metal/rough `standardSurface` assignments, and all four wings retain per-channel Maya keys across frames 1–96.
+
+### ZBrush → Maya round trip
 
 ![ZRemeshed Fantasy Dragon imported from ZBrush into Maya with wireframe-on-shaded topology](docs/images/zbrush-maya-fantasy-dragon-showcase.png)
 
-Real Maya 2026 evidence from a typed ZBrush-to-Maya round trip: the **2,499,970-vertex / 5,000,000-face** source was verified, then its **115,336-vertex / 115,364-face** ZRemesh was imported into an isolated namespace and displayed wireframe-on-shaded before saving the scene. Fantasy Dragon model by [Artec 3D](https://www.artec3d.com/3d-models/fantasy-dragon), used under CC BY 4.0; the source model is not included in this repository. See the [full workflow and copyable prompt](https://dcc-mcp.github.io/showcase#zbrush-maya-roundtrip).
+- **Source:** [Artec 3D Fantasy Dragon](https://www.artec3d.com/3d-models/fantasy-dragon), used under CC BY 4.0; the source model is not included in this repository.
+- **Processing:** A typed ZBrush-to-Maya round trip verifies the **2,499,970-vertex / 5,000,000-face** source, imports its ZRemesh into an isolated namespace, and enables wireframe-on-shaded inspection.
+- **Verified output:** Real Maya 2026 evidence contains the **115,336-vertex / 115,364-face** ZRemesh and a saved scene. See the [full workflow and copyable prompt](https://dcc-mcp.github.io/showcase#zbrush-maya-roundtrip).
 
 ## Why Use It
 
