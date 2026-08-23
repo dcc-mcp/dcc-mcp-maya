@@ -61,6 +61,46 @@ MCP 宿主配置：
 }
 ```
 
+## 非交互 GUI bootstrap 诊断
+
+无人值守启动 Maya 2025 GUI 时，请使用 adapter 提供的固定 launcher，不要拼接
+MEL、Python 或 `-script` payload。使用已安装 `dcc-mcp-maya` 的同一个
+`mayapy` 执行：
+
+```bash
+# Windows
+"C:\Program Files\Autodesk\Maya2025\bin\mayapy.exe" -m dcc_mcp_maya.gui_bootstrap launch --maya-executable "C:\Program Files\Autodesk\Maya2025\bin\maya.exe" --timeout 120
+
+# macOS
+/Applications/Autodesk/maya2025/Maya.app/Contents/bin/mayapy -m dcc_mcp_maya.gui_bootstrap launch --maya-executable /Applications/Autodesk/maya2025/Maya.app/Contents/MacOS/Maya --timeout 120
+
+# Linux
+/usr/autodesk/maya2025/bin/mayapy -m dcc_mcp_maya.gui_bootstrap launch --maya-executable /usr/autodesk/maya2025/bin/maya --timeout 120
+```
+
+示例使用 Maya 2025；对于其他受支持的 Maya 版本，只需替换带版本号的可执行文件
+路径。命令和诊断契约本身不依赖具体版本。
+
+该命令只启动一次 Maya，并保持 GUI 运行，同时输出一条 JSON 诊断。退出码 `0`
+表示已找到与本次 Maya PID 匹配的 registry 记录；`10` 表示 bounded probe
+已定位启动阶段；`40` 表示启动参数或可执行文件无效。四个有限失败原因是
+`plugin_not_invoked`、`plugin_load_failed`、`sidecar_failed` 和
+`registry_registration_failed`；`next_action` 提供机器可读的恢复动作。
+
+返回的 `bootstrap_log` 是 JSONL 路径。按序阶段包括插件调用/解析/加载、
+adapter import、registry registration、sidecar spawn 和完成；只有这些阶段与
+目标 PID 的 registry 记录都满足后才报告 ready。如需在不启动第二个 Maya 的
+情况下重新检查同一次启动，请使用：
+
+```bash
+mayapy -m dcc_mcp_maya.gui_bootstrap probe --maya-pid <PID> --log-path <BOOTSTRAP_LOG> --timeout 30
+```
+
+仅当 Maya 使用相同的 `DCC_MCP_REGISTRY_DIR` base 时才传
+`--registry-dir`。该路径不会修改插件管理器中的**已加载**或**自动加载**状态，
+也不会执行调用方提供的 MEL/Python，更不会回退到 UI 自动化。真实 GUI 证明
+仍需要可用的 Maya 安装与许可证。
+
 ## 方式三 — mayapy bootstrap
 
 对于 headless E2E 或服务化运行，可以用自带的 bootstrap 启动 Maya：

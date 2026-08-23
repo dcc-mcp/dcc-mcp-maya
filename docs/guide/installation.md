@@ -70,6 +70,50 @@ Configure MCP clients with:
 }
 ```
 
+## Non-interactive GUI bootstrap diagnosis
+
+For unattended Maya 2025 GUI startup, use the adapter's fixed launcher instead
+of composing MEL, Python, or `-script` payloads. Run it with the same `mayapy`
+where `dcc-mcp-maya` is installed:
+
+```bash
+# Windows
+"C:\Program Files\Autodesk\Maya2025\bin\mayapy.exe" -m dcc_mcp_maya.gui_bootstrap launch --maya-executable "C:\Program Files\Autodesk\Maya2025\bin\maya.exe" --timeout 120
+
+# macOS
+/Applications/Autodesk/maya2025/Maya.app/Contents/bin/mayapy -m dcc_mcp_maya.gui_bootstrap launch --maya-executable /Applications/Autodesk/maya2025/Maya.app/Contents/MacOS/Maya --timeout 120
+
+# Linux
+/usr/autodesk/maya2025/bin/mayapy -m dcc_mcp_maya.gui_bootstrap launch --maya-executable /usr/autodesk/maya2025/bin/maya --timeout 120
+```
+
+The example uses Maya 2025; replace the versioned executable paths with any
+supported Maya installation. The command and diagnostic contract are
+version-independent.
+
+The command launches Maya once, leaves the GUI running, and prints one JSON
+diagnosis. Exit `0` means that the launched Maya PID has a matching registry
+row; exit `10` means that the bounded probe diagnosed a startup stage; exit
+`40` means the launch arguments or executable were invalid. The four bounded
+failure reasons are `plugin_not_invoked`, `plugin_load_failed`,
+`sidecar_failed`, and `registry_registration_failed`. `next_action` is the
+machine-readable recovery step.
+
+The JSONL path is returned as `bootstrap_log`. Its ordered stages cover plug-in
+invocation/resolution/load, adapter import, registry registration, sidecar
+spawn, and completion before readiness is declared. To inspect the same launch
+again without starting another Maya process, use:
+
+```bash
+mayapy -m dcc_mcp_maya.gui_bootstrap probe --maya-pid <PID> --log-path <BOOTSTRAP_LOG> --timeout 30
+```
+
+Pass `--registry-dir` only when Maya uses the matching
+`DCC_MCP_REGISTRY_DIR` base. This path does not change Plug-in Manager's
+**Loaded** or **Auto load** settings, and it never evaluates caller-supplied
+MEL/Python or falls back to UI automation. A live Maya installation and license
+are still required for the GUI proof.
+
 ## Method 3 — mayapy bootstrap
 
 For headless E2E or service-style runs, start Maya through the bundled bootstrap:
