@@ -9,8 +9,7 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
-from typing import Iterable, Optional
-
+from typing import Iterable, Optional, Tuple
 
 DEFAULT_GATEWAY_URL = "http://127.0.0.1:9765/mcp"
 
@@ -74,10 +73,21 @@ def find_repo_root() -> Path:
     return Path.cwd()
 
 
+def mayapy_python_version(mayapy: Path) -> Tuple[int, int]:
+    output = subprocess.check_output(
+        [str(mayapy), "-c", "import sys; print('%d.%d' % sys.version_info[:2])"],
+        universal_newlines=True,
+    )
+    major, minor = output.strip().splitlines()[-1].split(".", 1)
+    return int(major), int(minor)
+
+
 def install_package(mayapy: Path, source: str, repo_root: Path, skip_install: bool) -> None:
     if skip_install:
         print("Skipping pip install because --skip-install was passed.")
         return
+
+    pip_requirement = "pip<25" if mayapy_python_version(mayapy) < (3, 8) else "pip"
 
     run([str(mayapy), "-m", "ensurepip", "--upgrade"])
     run(
@@ -87,8 +97,7 @@ def install_package(mayapy: Path, source: str, repo_root: Path, skip_install: bo
             "pip",
             "install",
             "--upgrade",
-            "pip<25; python_version<'3.8'",
-            "pip; python_version>='3.8'",
+            pip_requirement,
         ]
     )
 
