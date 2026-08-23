@@ -93,7 +93,8 @@ tools:
   description: Import a generic Maya-recognised scene or geometry file into the current
     scene for interchange. Automatically checks and loads known required plug-ins for
     FBX (fbxmaya), OBJ (objExport), and Alembic (AbcImport) before import. Use import_fbx
-    when you need FBX-specific take, namespace, and diagnostics controls.
+    when you need FBX-specific take, namespace, and diagnostics controls. Imported node
+    names are bounded to 100 by default; include_all_nodes explicitly opts in to all names.
   execution: async
   affinity: main
   timeout_hint_secs: 300
@@ -115,6 +116,10 @@ tools:
         type: boolean
         default: false
         description: Merge into an existing namespace on clashes.
+      include_all_nodes:
+        type: boolean
+        default: false
+        description: Explicitly return every imported node name instead of the bounded first 100.
 - name: import_fbx
   description: 'Import an FBX file into the current scene. Returns the new node list
   

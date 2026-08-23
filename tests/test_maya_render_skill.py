@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import importlib.util
 import os
+import sys
 from pathlib import Path
-from unittest.mock import MagicMock
+from types import ModuleType
+from unittest.mock import MagicMock, patch
 
 from conftest import load_and_call, load_and_call_with_mel
 
@@ -102,6 +104,59 @@ def _configure_hidden_maya_window(cmds, panel="modelPanel4"):
     cmds.modelEditor.return_value = "vp2Renderer"
     cmds.modelPanel.return_value = "persp"
     cmds.about.return_value = False
+
+
+def test_set_render_settings_initializes_missing_arnold_defaults():
+    cmds = MagicMock()
+    created = {"value": False}
+    cmds.getAttr.return_value = "arnold"
+    cmds.objExists.side_effect = lambda name: created["value"] if name == "defaultArnoldDriver" else True
+    mtoa = ModuleType("mtoa")
+    mtoa_core = ModuleType("mtoa.core")
+
+    def _create_options():
+        created["value"] = True
+
+    mtoa_core.createOptions = _create_options
+    mtoa.core = mtoa_core
+
+    with patch.dict(sys.modules, {"mtoa": mtoa, "mtoa.core": mtoa_core}):
+        result = load_and_call(
+            "maya-render/scripts/set_render_settings.py",
+            cmds,
+            "main",
+            renderer="arnold",
+            image_format="png",
+        )
+
+    assert result["success"] is True, result
+    assert created["value"] is True
+    assert result["context"]["arnold_defaults_initialized"] is True
+    cmds.setAttr.assert_any_call("defaultArnoldDriver.aiTranslator", "png", type="string")
+
+
+def test_set_render_settings_fails_closed_when_arnold_defaults_cannot_initialize():
+    cmds = MagicMock()
+    cmds.objExists.return_value = False
+    mtoa = ModuleType("mtoa")
+    mtoa_core = ModuleType("mtoa.core")
+    mtoa_core.createOptions = MagicMock(side_effect=RuntimeError("MtoA startup failed"))
+    mtoa.core = mtoa_core
+
+    with patch.dict(sys.modules, {"mtoa": mtoa, "mtoa.core": mtoa_core}):
+        result = load_and_call(
+            "maya-render/scripts/set_render_settings.py",
+            cmds,
+            "main",
+            renderer="arnold",
+            image_format="exr",
+        )
+
+    assert result["success"] is False
+    assert result["error"] == "ARNOLD_DEFAULT_NODES_UNAVAILABLE"
+    assert result["context"]["code"] == "ARNOLD_DEFAULT_NODES_UNAVAILABLE"
+    assert "MtoA startup failed" in result["context"]["detail"]
+    cmds.setAttr.assert_not_called()
 
 
 def test_configure_color_management_applies_and_reads_back_ocio(tmp_path):

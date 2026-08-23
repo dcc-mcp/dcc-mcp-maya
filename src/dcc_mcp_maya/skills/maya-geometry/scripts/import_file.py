@@ -15,6 +15,7 @@ _PLUGIN_BY_EXTENSION = {
     ".fbx": ("fbxmaya",),
     ".obj": ("objExport",),
 }
+_DEFAULT_IMPORTED_NODE_LIMIT = 100
 
 
 def _normalize_path(path: str) -> str:
@@ -39,6 +40,7 @@ def import_file(
     file_path: str,
     namespace: Optional[str] = None,
     merge_namespaces: bool = False,
+    include_all_nodes: bool = False,
 ) -> dict:
     """Import a file into the current Maya scene.
 
@@ -49,6 +51,7 @@ def import_file(
         file_path: Absolute path to the file to import.
         namespace: Optional namespace to assign to imported nodes.
         merge_namespaces: If True, merge with existing namespaces.
+        include_all_nodes: Explicitly opt in to the complete imported-node list.
 
     Returns:
         ToolResult dict with ``context.imported_nodes`` list.
@@ -80,12 +83,16 @@ def import_file(
         if merge_namespaces:
             kwargs["mergeNamespacesOnClash"] = True
 
-        imported = cmds.file(normalized, returnNewNodes=True, **kwargs) or []
+        imported = list(cmds.file(normalized, returnNewNodes=True, **kwargs) or [])
+        returned_nodes = imported if include_all_nodes else imported[:_DEFAULT_IMPORTED_NODE_LIMIT]
         return skill_success(
             "Imported {} node(s) from {}".format(len(imported), normalized),
             file_path=normalized,
-            imported_nodes=imported,
+            imported_nodes=returned_nodes,
             count=len(imported),
+            returned_count=len(returned_nodes),
+            truncated=len(returned_nodes) < len(imported),
+            include_all_nodes=bool(include_all_nodes),
             required_plugins=required_plugins,
             loaded_plugins=loaded_plugins,
             prompt="Use get_scene_info or list_objects to inspect imported nodes.",

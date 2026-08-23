@@ -60,3 +60,21 @@ def test_create_light_rejects_unsupported_light_type():
     assert result["success"] is False
     assert "Unsupported" in result["message"]
     cmds.createNode.assert_not_called()
+
+
+def test_create_light_rejects_invalid_vector_before_scene_mutation():
+    cmds = MagicMock()
+
+    result = load_and_call(
+        "maya-light-rig/scripts/create_light.py",
+        cmds,
+        "main",
+        color=[1.0, 0.5],
+        position="1,2,3",
+    )
+
+    assert result["success"] is False
+    assert result["error"] == "INVALID_LIGHT_VECTOR"
+    assert result["context"]["field"] == "color"
+    cmds.createNode.assert_not_called()
+    cmds.shadingNode.assert_not_called()
