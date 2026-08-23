@@ -49,6 +49,19 @@ Plugin sidecar mode usually exposes MCP at:
 http://127.0.0.1:9765/mcp
 ```
 
+For a deterministic unattended Maya 2025 GUI launch and bounded readiness
+diagnosis, use the fixed module command with the installed `mayapy`:
+
+```bash
+"C:\Program Files\Autodesk\Maya2025\bin\mayapy.exe" -m dcc_mcp_maya.gui_bootstrap launch --maya-executable "C:\Program Files\Autodesk\Maya2025\bin\maya.exe" --timeout 120
+```
+
+Exit `0` is ready, `10` is a classified bootstrap failure, and `40` is a
+launch/input failure. Do not replace this fixed command with caller-provided
+MEL/Python or UI automation. It preserves the user's Plug-in Manager Auto Load
+setting. See `docs/guide/installation.md` for macOS/Linux commands, JSON stages,
+and probe-only usage.
+
 Manual `start_server()` prints its OS-assigned direct endpoint. Agents should
 normally keep using the stable gateway:
 
