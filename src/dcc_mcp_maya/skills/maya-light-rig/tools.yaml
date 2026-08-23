@@ -17,26 +17,23 @@ tools:
         type: number
         default: 1.0
       color:
-        oneOf:
-        - type: string
-        - type: array
-          items:
-            type: string
-          minItems: 1
+        type: array
+        items:
+          type: number
+        minItems: 3
+        maxItems: 3
       position:
-        oneOf:
-        - type: string
-        - type: array
-          items:
-            type: string
-          minItems: 1
+        type: array
+        items:
+          type: number
+        minItems: 3
+        maxItems: 3
       rotation:
-        oneOf:
-        - type: string
-        - type: array
-          items:
-            type: string
-          minItems: 1
+        type: array
+        items:
+          type: number
+        minItems: 3
+        maxItems: 3
       parent:
         type: string
       cone_angle:

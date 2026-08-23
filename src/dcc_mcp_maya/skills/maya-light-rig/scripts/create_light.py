@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from typing import Optional
 
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
@@ -17,16 +18,17 @@ _SUPPORTED_LIGHT_TYPES = {
 }
 
 
-def _as_float3(value, fallback):
+def _validated_float3(field: str, value, fallback):
     if value is None:
-        value = fallback
-    try:
-        values = [float(item) for item in value[:3]]
-    except Exception:
-        values = [float(item) for item in fallback[:3]]
-    while len(values) < 3:
-        values.append(0.0)
-    return values[:3]
+        return [float(item) for item in fallback]
+    if not isinstance(value, (list, tuple)) or len(value) != 3:
+        raise ValueError("{} must contain exactly three numbers".format(field))
+    if any(isinstance(item, bool) or not isinstance(item, (int, float)) for item in value):
+        raise ValueError("{} must contain only numbers".format(field))
+    values = [float(item) for item in value]
+    if not all(math.isfinite(item) for item in values):
+        raise ValueError("{} values must be finite".format(field))
+    return values
 
 
 def _safe_set_attr(cmds, plug: str, value) -> bool:
@@ -67,6 +69,19 @@ def create_light(
         if parent and not cmds.objExists(parent):
             return skill_error("Parent node not found", "The supplied parent transform does not exist.", parent=parent)
 
+        try:
+            rgb = _validated_float3("color", color, [1.0, 1.0, 1.0])
+            position_values = _validated_float3("position", position, [0.0, 0.0, 0.0])
+            rotation_values = _validated_float3("rotation", rotation, [0.0, 0.0, 0.0])
+        except ValueError as exc:
+            field = str(exc).split(" ", 1)[0]
+            return skill_error(
+                "Invalid light vector",
+                "INVALID_LIGHT_VECTOR",
+                field=field,
+                detail=str(exc),
+            )
+
         transform = (
             cmds.createNode("transform", name=name, parent=parent)
             if parent
@@ -74,10 +89,6 @@ def create_light(
         )
         cmds.shadingNode(light_type, asLight=True, name="{}Shape".format(transform), parent=transform)
         shape = cmds.listRelatives(transform, shapes=True, type=light_type, fullPath=False)[0]
-
-        rgb = _as_float3(color, [1.0, 1.0, 1.0])
-        position_values = _as_float3(position, [0.0, 0.0, 0.0])
-        rotation_values = _as_float3(rotation, [0.0, 0.0, 0.0])
 
         cmds.setAttr("{}.translate".format(transform), *position_values, type="double3")
         cmds.setAttr("{}.rotate".format(transform), *rotation_values, type="double3")

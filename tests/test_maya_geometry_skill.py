@@ -70,6 +70,46 @@ def test_import_file_skips_plugin_load_for_native_maya_file(tmp_path):
     cmds.loadPlugin.assert_not_called()
 
 
+def test_import_file_bounds_large_node_results_by_default(tmp_path):
+    path = tmp_path / "groom.abc"
+    path.write_bytes(b"abc")
+    imported = ["curve{}".format(index) for index in range(15_111)]
+    cmds = MagicMock()
+    cmds.pluginInfo.return_value = True
+    cmds.file.return_value = imported
+
+    result = load_and_call("maya-geometry/scripts/import_file.py", cmds, "main", file_path=str(path))
+
+    assert result["success"] is True, result
+    assert result["context"]["count"] == 15_111
+    assert result["context"]["imported_nodes"] == imported[:100]
+    assert result["context"]["returned_count"] == 100
+    assert result["context"]["truncated"] is True
+    assert result["context"]["include_all_nodes"] is False
+
+
+def test_import_file_can_explicitly_return_all_nodes(tmp_path):
+    path = tmp_path / "groom.abc"
+    path.write_bytes(b"abc")
+    imported = ["curve{}".format(index) for index in range(101)]
+    cmds = MagicMock()
+    cmds.pluginInfo.return_value = True
+    cmds.file.return_value = imported
+
+    result = load_and_call(
+        "maya-geometry/scripts/import_file.py",
+        cmds,
+        "main",
+        file_path=str(path),
+        include_all_nodes=True,
+    )
+
+    assert result["success"] is True, result
+    assert result["context"]["imported_nodes"] == imported
+    assert result["context"]["returned_count"] == 101
+    assert result["context"]["truncated"] is False
+
+
 def test_export_fbx_pushes_options_through_mel_and_verifies(tmp_path):
     """The MEL-driven rewrite pushes every FBXExport* option through
     ``mel.eval`` before invoking the FBXExport command, then verifies the
