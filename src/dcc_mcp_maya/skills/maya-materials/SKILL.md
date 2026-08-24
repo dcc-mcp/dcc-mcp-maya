@@ -36,5 +36,8 @@ validation in place.
 Arnold `aiStandardSurface`, such as accepting `metallic` and writing
 `metalness` when that is the available attribute.
 
+`assign_material` accepts at most 256 targets and reads shading-set membership
+back for every resolved object before reporting success.
+
 For sharing material presets across assets / shots, use
 `maya-material-library`.

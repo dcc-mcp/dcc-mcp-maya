@@ -3,6 +3,7 @@ groups:
   description: Geometry creation, editing, and UV tools
   default_active: false
   tools:
+  - auto_uv
   - copy_uvs
   - create_uv_set
   - delete_uv_set

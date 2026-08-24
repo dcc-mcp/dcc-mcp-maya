@@ -43,6 +43,7 @@ Full rationale: repo root `AGENTS.md` § *Bulk import, export, and naming*; exam
 
 | Task | Skill chain |
 |------|-------------|
+| Build a polygon asset without raw Python | `maya-primitives` for blockout → `maya-mesh-ops` (`loft_sections`, `lathe_profile`, `array_instances`, `set_pivot`, `mirror_mesh`) → `maya-uv-ops` (`auto_uv`) → `maya-materials` (`assign_material`) → `maya-scene` / `maya-node-graph` for verified freeze/history cleanup |
 | Create N spheres with random transforms, add gravity/rigid bodies, bake bounce animation, export FBX, import in another Maya | Prefer **`load_skill`** chain: `maya-primitives` → `maya-dynamics` → `maya-animation` → `maya-geometry` (`export_fbx` / `import_fbx`). Use **one** `execute_python` only when round-trip count would dominate latency and you accept weaker validation |
 | Author a typed Bifrost graph | `maya-bifrost` (`list_bifrost_graphs` → `create_bifrost_graph` → `add_bifrost_node` → `create_bifrost_port` → `set_bifrost_property` → `connect_bifrost_ports`) |
 | Build a rig, detect optional rig frameworks, copy skin weights, animate, and send to render farm | `maya-rigging` (`detect_rig_frameworks`, `create_rig_control`, `create_constraint`, `copy_skin_weights`) → `maya-animation` → `maya-render-farm` |

@@ -139,6 +139,116 @@ tools:
     properties:
       object_name:
         type: string
+- name: loft_sections
+  execution: sync
+  affinity: main
+  group: modeling
+  description: Create a polygon mesh by lofting two or more NURBS curve sections and verify the result.
+  input_schema:
+    type: object
+    additionalProperties: false
+    properties:
+      sections:
+        type: array
+        items:
+          type: string
+          minLength: 1
+        minItems: 2
+        maxItems: 64
+      name:
+        type: string
+        minLength: 1
+      degree:
+        type: integer
+        enum:
+        - 1
+        - 3
+        default: 3
+      close:
+        type: boolean
+        default: false
+    required:
+    - sections
+  output_schema:
+    type: object
+    required:
+    - object_name
+    - shape
+    - input_sections
+    properties:
+      object_name:
+        type: string
+      shape:
+        type: string
+      input_sections:
+        type: array
+        items:
+          type: string
+      history_node:
+        type:
+        - string
+        - 'null'
+- name: array_instances
+  execution: sync
+  affinity: main
+  group: modeling
+  description: Create a bounded linear array of Maya instances and verify every transform.
+  input_schema:
+    type: object
+    additionalProperties: false
+    properties:
+      object_name:
+        type: string
+        minLength: 1
+      count:
+        type: integer
+        minimum: 2
+        maximum: 128
+      translate_step:
+        type: array
+        items:
+          type: number
+        minItems: 3
+        maxItems: 3
+        default:
+        - 0.0
+        - 0.0
+        - 0.0
+      rotate_step:
+        type: array
+        items:
+          type: number
+        minItems: 3
+        maxItems: 3
+        default:
+        - 0.0
+        - 0.0
+        - 0.0
+      name_prefix:
+        type: string
+        minLength: 1
+    required:
+    - object_name
+    - count
+  output_schema:
+    type: object
+    required:
+    - source
+    - objects
+    - verified_count
+    properties:
+      source:
+        type: string
+      objects:
+        type: array
+        items:
+          type: string
+        minItems: 2
+        maxItems: 128
+      verified_count:
+        type: integer
+        minimum: 2
+        maximum: 128
 - name: merge_vertices
   execution: sync
   affinity: main
@@ -161,23 +271,117 @@ tools:
   description: Mirror mesh data in the current Maya scene.
   input_schema:
     type: object
+    additionalProperties: false
     properties:
       object_name:
         type: string
       axis:
         type: string
+        enum:
+        - x
+        - y
+        - z
         default: x
       cut_position:
         type: number
         default: 0.0
       merge_threshold:
         type: number
+        minimum: 0
         default: 0.001
       merge_border:
         type: boolean
         default: true
     required:
     - object_name
+  output_schema:
+    type: object
+    required:
+    - object_name
+    - axis
+    - faces_before
+    - faces_after
+    properties:
+      object_name:
+        type: string
+      axis:
+        type: string
+        enum:
+        - x
+        - y
+        - z
+      cut_position:
+        type: number
+      faces_before:
+        type: integer
+        minimum: 0
+      faces_after:
+        type: integer
+        minimum: 1
+- name: lathe_profile
+  execution: sync
+  affinity: main
+  group: modeling
+  description: Revolve one NURBS profile into a polygon mesh and verify the result.
+  input_schema:
+    type: object
+    additionalProperties: false
+    properties:
+      profile:
+        type: string
+        minLength: 1
+      name:
+        type: string
+        minLength: 1
+      axis:
+        type: string
+        enum:
+        - x
+        - y
+        - z
+        default: y
+      segments:
+        type: integer
+        minimum: 3
+        maximum: 256
+        default: 16
+      sweep_angle:
+        type: number
+        exclusiveMinimum: 0
+        maximum: 360
+        default: 360.0
+      degree:
+        type: integer
+        enum:
+        - 1
+        - 3
+        default: 3
+    required:
+    - profile
+  output_schema:
+    type: object
+    required:
+    - object_name
+    - shape
+    - profile
+    - axis
+    properties:
+      object_name:
+        type: string
+      shape:
+        type: string
+      profile:
+        type: string
+      axis:
+        type: string
+        enum:
+        - x
+        - y
+        - z
+      history_node:
+        type:
+        - string
+        - 'null'
 - name: select_by_material
   execution: sync
   affinity: main
@@ -190,6 +394,62 @@ tools:
         type: string
     required:
     - material_name
+- name: set_pivot
+  execution: sync
+  affinity: main
+  annotations:
+    idempotent_hint: true
+  group: modeling
+  description: Set and verify both rotate and scale pivots on a Maya transform.
+  input_schema:
+    type: object
+    additionalProperties: false
+    properties:
+      object_name:
+        type: string
+        minLength: 1
+      position:
+        type: array
+        items:
+          type: number
+        minItems: 3
+        maxItems: 3
+      space:
+        type: string
+        enum:
+        - world
+        - object
+        default: world
+    required:
+    - object_name
+    - position
+  output_schema:
+    type: object
+    required:
+    - object_name
+    - rotate_pivot
+    - scale_pivot
+    - space
+    properties:
+      object_name:
+        type: string
+      rotate_pivot:
+        type: array
+        items:
+          type: number
+        minItems: 3
+        maxItems: 3
+      scale_pivot:
+        type: array
+        items:
+          type: number
+        minItems: 3
+        maxItems: 3
+      space:
+        type: string
+        enum:
+        - world
+        - object
 - name: separate_mesh
   execution: sync
   affinity: main

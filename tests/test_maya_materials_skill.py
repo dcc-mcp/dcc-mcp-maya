@@ -67,3 +67,59 @@ def test_set_material_attribute_schema_accepts_rgb_arrays():
     value_schema = tool["input_schema"]["properties"]["value"]
 
     assert any(option.get("type") == "array" for option in value_schema["oneOf"])
+
+
+def test_assign_material_reads_back_every_requested_object():
+    cmds = MagicMock()
+    cmds.objectType.return_value = "shadingEngine"
+    cmds.ls.return_value = ["body", "rotor"]
+    cmds.sets.side_effect = [None, True, True]
+
+    result = load_and_call(
+        "maya-materials/scripts/assign_material.py",
+        cmds,
+        "main",
+        material_name="paintSG",
+        objects=["body", "rotor"],
+    )
+
+    assert result["success"] is True, result
+    assert result["context"]["verified_objects"] == ["body", "rotor"]
+    assert result["context"]["verified_count"] == 2
+
+
+def test_assign_material_fails_closed_on_missing_membership_readback():
+    cmds = MagicMock()
+    cmds.objectType.return_value = "shadingEngine"
+    cmds.ls.return_value = ["body"]
+    cmds.sets.side_effect = [None, False]
+    cmds.listRelatives.return_value = []
+
+    result = load_and_call(
+        "maya-materials/scripts/assign_material.py",
+        cmds,
+        "main",
+        material_name="paintSG",
+        objects=["body"],
+    )
+
+    assert result["success"] is False
+    assert result["context"]["unverified_objects"] == ["body"]
+
+
+def test_assign_material_rejects_a_partial_target_set_before_mutation():
+    cmds = MagicMock()
+    cmds.objExists.side_effect = lambda node: node != "missingRotor"
+    cmds.objectType.return_value = "shadingEngine"
+
+    result = load_and_call(
+        "maya-materials/scripts/assign_material.py",
+        cmds,
+        "main",
+        material_name="paintSG",
+        objects=["body", "missingRotor"],
+    )
+
+    assert result["success"] is False
+    assert result["context"]["missing_objects"] == ["missingRotor"]
+    cmds.sets.assert_not_called()

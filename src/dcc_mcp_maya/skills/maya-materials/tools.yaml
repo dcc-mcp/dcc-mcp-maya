@@ -8,6 +8,7 @@ tools:
   description: Assign a material in the current Maya scene.
   input_schema:
     type: object
+    additionalProperties: false
     properties:
       material_name:
         type: string
@@ -18,9 +19,36 @@ tools:
           items:
             type: string
           minItems: 1
+          maxItems: 256
     required:
     - material_name
     - objects
+  output_schema:
+    type: object
+    required:
+    - shading_group
+    - objects
+    - verified_objects
+    - verified_count
+    properties:
+      shading_group:
+        type: string
+      objects:
+        type: array
+        items:
+          type: string
+        minItems: 1
+        maxItems: 256
+      verified_objects:
+        type: array
+        items:
+          type: string
+        minItems: 1
+        maxItems: 256
+      verified_count:
+        type: integer
+        minimum: 1
+        maximum: 256
 - name: create_material
   execution: sync
   affinity: main

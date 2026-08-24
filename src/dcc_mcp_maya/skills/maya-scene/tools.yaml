@@ -100,11 +100,45 @@ tools:
   description: Freeze (apply) the transforms of an object, zeroing out translate/rotate and resetting scale to 1.
   input_schema:
     type: object
+    additionalProperties: false
     required:
     - object_name
     properties:
       object_name:
         type: string
+  output_schema:
+    type: object
+    required:
+    - object_name
+    - verified_transform
+    properties:
+      object_name:
+        type: string
+      verified_transform:
+        type: object
+        required:
+        - translate
+        - rotate
+        - scale
+        properties:
+          translate:
+            type: array
+            items:
+              type: number
+            minItems: 3
+            maxItems: 3
+          rotate:
+            type: array
+            items:
+              type: number
+            minItems: 3
+            maxItems: 3
+          scale:
+            type: array
+            items:
+              type: number
+            minItems: 3
+            maxItems: 3
 - name: get_bounding_box
   execution: sync
   affinity: main

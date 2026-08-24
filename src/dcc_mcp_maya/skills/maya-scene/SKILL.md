@@ -54,7 +54,7 @@ cameras, create/edit cameras, set frame rate, etc.
 - `parent_object` — Set or clear the parent of an object
 - `select_by_type` — Select all objects of a given Maya type
 - `duplicate_object` — Duplicate an object in the Maya scene
-- `freeze_transforms` — Freeze the transforms of an object
+- `freeze_transforms` — Freeze transforms and verify identity translate/rotate/scale readback
 - `center_pivot` — Center the pivot point of an object to its bounding box center
 - `get_bounding_box` — Query the world-space bounding box of an object
 - `set_visibility` — Show or hide an object

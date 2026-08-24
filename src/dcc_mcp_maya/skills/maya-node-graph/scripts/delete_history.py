@@ -33,11 +33,32 @@ def delete_history(
         if err:
             return err
 
+        full_shapes = [str(node) for node in (cmds.listRelatives(object_name, shapes=True, fullPath=True) or [])]
+        shapes = set(full_shapes)
+        shapes.update(node.rsplit("|", 1)[-1] for node in full_shapes)
+        history_before = [
+            str(node) for node in (cmds.listHistory(object_name) or []) if node != object_name and node not in shapes
+        ]
         cmds.delete(object_name, constructionHistory=True)
+
+        remaining_history = [
+            str(node) for node in (cmds.listHistory(object_name) or []) if node != object_name and node not in shapes
+        ]
+        if remaining_history:
+            return skill_error(
+                "Delete history verification failed",
+                "Maya still reports upstream construction-history nodes",
+                object_name=object_name,
+                history_before=history_before,
+                remaining_history=remaining_history,
+            )
 
         return skill_success(
             "Deleted construction history on '{}'".format(object_name),
             object_name=object_name,
+            removed_history=history_before,
+            removed_count=len(history_before),
+            remaining_history=[],
             prompt="Check the result with list_node_graph or use related actions to continue.",
         )
     except ImportError:

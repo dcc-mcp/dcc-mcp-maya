@@ -60,6 +60,7 @@ def mirror_mesh(
         if err:
             return err
 
+        faces_before = int(cmds.polyEvaluate(object_name, face=True) or 0)
         cmds.polyMirrorFace(
             object_name,
             constructionHistory=False,
@@ -73,11 +74,23 @@ def mirror_mesh(
             mergeThreshold=merge_threshold,
         )
 
+        faces_after = int(cmds.polyEvaluate(object_name, face=True) or 0)
+        if not cmds.objExists(object_name) or faces_after <= faces_before:
+            return skill_error(
+                "Mirror verification failed",
+                "Maya did not report additional polygon faces after mirroring",
+                object_name=object_name,
+                faces_before=faces_before,
+                faces_after=faces_after,
+            )
+
         return skill_success(
             "Mirrored '{}' along {} axis at {}".format(object_name, axis_lower, cut_position),
             object_name=object_name,
             axis=axis_lower,
             cut_position=cut_position,
+            faces_before=faces_before,
+            faces_after=faces_after,
         )
     except ImportError:
         return skill_error("Maya not available", "maya.cmds could not be imported")

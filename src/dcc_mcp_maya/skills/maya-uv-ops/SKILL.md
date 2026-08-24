@@ -26,5 +26,6 @@ metadata:
 ---
 # maya-uv-ops (Authoring stage)
 
-UV-set authoring tools. All eight scripts are main-thread-affine because
-they touch UV nodes through `maya.cmds`.
+UV-set authoring tools. All nine scripts are main-thread-affine because they
+touch UV nodes through `maya.cmds`. `auto_uv` bounds projection planes and
+only succeeds after Maya reports a positive UV-coordinate count.
