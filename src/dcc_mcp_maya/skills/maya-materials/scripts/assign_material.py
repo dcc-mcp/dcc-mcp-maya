@@ -10,6 +10,7 @@ from typing import List
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
 _SUPPORTED_SHADERS = ("lambert", "blinn", "phong", "phongE", "aiStandardSurface")
+_MAX_OBJECTS = 256
 
 
 def assign_material(material_name: str, objects: List[str]) -> dict:
@@ -22,8 +23,33 @@ def assign_material(material_name: str, objects: List[str]) -> dict:
     Returns:
         ToolResult dict.
     """
+    if isinstance(objects, str):
+        objects = [objects]
+    if not isinstance(objects, list) or not objects or len(objects) > _MAX_OBJECTS:
+        return skill_error(
+            "Invalid material targets",
+            "objects must contain between 1 and {} Maya node names".format(_MAX_OBJECTS),
+        )
+    if any(not isinstance(item, str) or not item for item in objects):
+        return skill_error("Invalid material targets", "Every object must be a non-empty string")
+
+    mutation_applied = False
     try:
         import maya.cmds as cmds  # noqa: PLC0415
+
+        if not cmds.objExists(material_name):
+            return skill_error(
+                "Material not found",
+                "'{}' does not exist".format(material_name),
+                material_name=material_name,
+            )
+        missing_objects = [item for item in objects if not cmds.objExists(item)]
+        if missing_objects:
+            return skill_error(
+                "Material targets not found",
+                "Every requested object must exist before assignment",
+                missing_objects=missing_objects,
+            )
 
         # Accept either SG or material name
         if cmds.objectType(material_name) != "shadingEngine":
@@ -48,16 +74,49 @@ def assign_material(material_name: str, objects: List[str]) -> dict:
             )
 
         cmds.sets(existing, edit=True, forceElement=sg)
+        mutation_applied = True
+        verified_objects = []
+        unverified_objects = []
+        for item in existing:
+            assigned = bool(cmds.sets(item, isMember=sg))
+            if not assigned:
+                shapes = cmds.listRelatives(item, shapes=True, noIntermediate=True, fullPath=True) or []
+                assigned = bool(shapes) and all(bool(cmds.sets(shape, isMember=sg)) for shape in shapes)
+            if assigned:
+                verified_objects.append(str(item))
+            else:
+                unverified_objects.append(str(item))
+
+        if unverified_objects:
+            return skill_error(
+                "Material assignment verification failed",
+                "Maya set membership does not include every requested object",
+                shading_group=sg,
+                verified_objects=verified_objects,
+                unverified_objects=unverified_objects,
+                mutation_applied=True,
+                rollback_attempted=False,
+                rollback_verified=False,
+            )
         return skill_success(
             "Assigned '{}' to {} object(s)".format(sg, len(existing)),
             shading_group=sg,
             objects=existing,
+            verified_objects=verified_objects,
+            verified_count=len(verified_objects),
             prompt="Use set_material_attribute to fine-tune the material properties.",
         )
     except ImportError:
         return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return skill_exception(exc, message="Failed to assign material")
+        context = {}
+        if mutation_applied:
+            context = {
+                "mutation_applied": True,
+                "rollback_attempted": False,
+                "rollback_verified": False,
+            }
+        return skill_exception(exc, message="Failed to assign material", **context)
 
 
 @skill_entry

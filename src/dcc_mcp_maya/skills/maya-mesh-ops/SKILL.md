@@ -1,8 +1,9 @@
 ---
 name: maya-mesh-ops
 description: |-
-  Authoring stage — polygon mesh editing: bevel, extrude, bridge, combine,
-  separate, cleanup, boolean. Use for modifying existing polygon topology.
+  Authoring stage — typed polygon construction and editing: loft, lathe,
+  instance arrays, pivots, mirror, combine, separate, and cleanup. Use for
+  creating or modifying polygon topology from explicit scene inputs.
   Not for primitive creation (use maya-primitives), construction-history or
   DG inspection (use maya-node-graph), UV layout (maya-uv-ops), or material
   assignment (maya-materials).
@@ -20,21 +21,29 @@ metadata:
     - polygon
     - geometry
     - topology
-    - bevel
-    - extrude
-    - boolean
+    - loft
+    - lathe
+    - instances
     search-hint: |-
-      edit mesh, modify polygons, bevel edge, extrude face, bridge, combine,
-      separate, cleanup, boolean, subdivide, smooth topology
+      edit mesh, modify polygons, loft sections, lathe profile, revolve curve,
+      instance array, set pivot, mirror, combine, separate, cleanup, subdivide
     tools: tools.yaml
     groups: groups.yaml
 ---
 # maya-mesh-ops (Authoring stage)
 
-Polygon mesh editing operations. Strictly **modifies existing polygon
-topology**; all creation primitives live in `maya-primitives`, while
-construction-history inspection belongs to `maya-node-graph`.
+Typed polygon construction and editing operations. `loft_sections` and
+`lathe_profile` accept existing NURBS curves and require a polygon-mesh
+readback. `array_instances` is capped at 128 objects and verifies every
+instance transform. `set_pivot` reads back both Maya pivots. Primitive
+creation remains in `maya-primitives`, while construction-history inspection
+belongs to `maya-node-graph`.
 
 Each tool declares `affinity: main` because every operation touches
 `maya.cmds`; the dispatcher schedules them on Maya's UI thread via
 `MayaUiDispatcher`.
+
+The `modeling` group is `default_active: false`; load this skill and activate
+that group only for authoring work. The existing `mirror_mesh` name remains
+the canonical backwards-compatible mirror verb and now verifies that polygon
+topology changed before returning success.

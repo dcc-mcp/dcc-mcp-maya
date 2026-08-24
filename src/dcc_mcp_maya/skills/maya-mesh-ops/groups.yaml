@@ -4,14 +4,18 @@ groups:
   default_active: false
   tools:
   - apply_subdivision
+  - array_instances
   - cleanup_mesh
   - combine_meshes
   - create_proxy_mesh
   - extract_faces
   - get_mesh_edge_info
   - get_poly_count
+  - lathe_profile
+  - loft_sections
   - merge_vertices
   - mirror_mesh
   - select_by_material
+  - set_pivot
   - separate_mesh
   - triangulate

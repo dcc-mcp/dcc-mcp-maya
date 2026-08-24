@@ -44,6 +44,6 @@ rather than polygon topology cleanup.
 - `get_dag_path` — Return the full DAG path of a Maya node
 - `smooth_mesh` — Apply construction-history smoothing; use maya-mesh-ops for topology cleanup
 - `list_history` — List construction history nodes for a Maya object
-- `delete_history` — Delete the construction history on a Maya object
+- `delete_history` — Delete history and fail if upstream construction nodes remain
 - `apply_symmetry` — Apply mesh symmetry to a polygon object
 - `transfer_attributes` — Transfer mesh attributes (UVs, normals, vertex colors) from one mesh to another

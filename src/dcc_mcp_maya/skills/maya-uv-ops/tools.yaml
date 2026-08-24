@@ -1,4 +1,63 @@
 tools:
+- name: auto_uv
+  execution: sync
+  affinity: main
+  group: modeling
+  description: Generate an automatic polygon UV projection and verify a positive UV count.
+  input_schema:
+    type: object
+    additionalProperties: false
+    properties:
+      object_name:
+        type: string
+        minLength: 1
+      planes:
+        type: integer
+        enum:
+        - 4
+        - 5
+        - 6
+        - 8
+        - 12
+        default: 6
+      percentage_space:
+        type: number
+        minimum: 0
+        maximum: 5
+        default: 0.2
+    required:
+    - object_name
+  output_schema:
+    type: object
+    required:
+    - object_name
+    - uv_set
+    - uv_count
+    - uv_digest
+    - changed
+    - planes
+    properties:
+      object_name:
+        type: string
+      uv_set:
+        type: string
+      uv_count:
+        type: integer
+        minimum: 1
+      uv_digest:
+        type: string
+        pattern: ^[0-9a-f]{64}$
+      changed:
+        type: boolean
+        const: true
+      planes:
+        type: integer
+        enum:
+        - 4
+        - 5
+        - 6
+        - 8
+        - 12
 - name: copy_uvs
   execution: sync
   affinity: main

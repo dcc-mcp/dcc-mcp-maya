@@ -69,11 +69,33 @@ tools:
   description: Delete node construction history in the current Maya scene.
   input_schema:
     type: object
+    additionalProperties: false
     properties:
       object_name:
         type: string
     required:
     - object_name
+  output_schema:
+    type: object
+    required:
+    - object_name
+    - remaining_history
+    - removed_count
+    properties:
+      object_name:
+        type: string
+      removed_history:
+        type: array
+        items:
+          type: string
+      removed_count:
+        type: integer
+        minimum: 0
+      remaining_history:
+        type: array
+        items:
+          type: string
+        maxItems: 0
 - name: delete_node
   description: Delete one or more Maya dependency graph or DAG nodes.
   execution: sync
