@@ -344,6 +344,42 @@ def test_probe_reports_ready_only_for_the_launched_maya_registry_row(tmp_path) -
     assert result["next_action"] == {"action": "use_registered_instance", "instance_id": "maya-4125"}
 
 
+def test_probe_ignores_malformed_registry_rows_instead_of_crashing(tmp_path) -> None:
+    log_path = tmp_path / "bootstrap.jsonl"
+    registry_dir = tmp_path / "registry"
+    registry_dir.mkdir()
+    record_bootstrap_stage(log_path, "bootstrap_complete", "succeeded")
+    (registry_dir / "services.json").write_text(
+        json.dumps(
+            [
+                {"dcc_type": None, "metadata": ["not", "a", "mapping"]},
+                {"dcc_type": "maya", "pid": [4125]},
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    result = probe_gui_readiness(
+        log_path=log_path,
+        registry_dir=registry_dir,
+        maya_pid=4125,
+        timeout_secs=0,
+    )
+
+    assert result["ready"] is False
+    assert result["failure_reason"] == "registry_registration_failed"
+
+
+def test_probe_rejects_non_finite_timeout(tmp_path) -> None:
+    with pytest.raises(ValueError, match="timeout_secs must be finite"):
+        probe_gui_readiness(
+            log_path=tmp_path / "bootstrap.jsonl",
+            registry_dir=tmp_path / "registry",
+            maya_pid=4125,
+            timeout_secs=float("nan"),
+        )
+
+
 def test_probe_waits_only_until_the_target_registry_row_becomes_ready(tmp_path) -> None:
     log_path = tmp_path / "bootstrap.jsonl"
     registry_dir = tmp_path / "registry"

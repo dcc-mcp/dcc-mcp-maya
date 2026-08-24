@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
 import subprocess
 import sys
@@ -47,6 +48,9 @@ def launch_maya_gui(
     log_path: Optional[PathLike] = None,
 ) -> Dict[str, Any]:
     """Launch Maya with the fixed bootstrap and return one bounded diagnosis."""
+    timeout = float(timeout_secs)
+    if not math.isfinite(timeout):
+        raise ValueError("timeout_secs must be finite")
     executable = Path(maya_executable).resolve()
     if not executable.is_file():
         raise FileNotFoundError("Maya executable not found: {}".format(executable))
@@ -69,7 +73,7 @@ def launch_maya_gui(
         log_path=resolved_log_path,
         registry_dir=_registry_directory(resolved_registry_base),
         maya_pid=process.pid,
-        timeout_secs=timeout_secs,
+        timeout_secs=timeout,
     )
     result["maya_pid"] = process.pid
     result["bootstrap_log"] = os.fspath(resolved_log_path)
@@ -210,10 +214,12 @@ def _matching_maya_entry(registry_dir: PathLike, maya_pid: int) -> Optional[Dict
         return None
     for entry in _iter_registry_entries(payload):
         metadata = entry.get("metadata") or {}
+        if not isinstance(metadata, dict):
+            continue
         dcc_type = entry.get("dcc_type") or metadata.get("dcc_type")
         host_pid = entry.get("host_pid") or metadata.get("host_pid")
         owner_pid = entry.get("pid")
-        if dcc_type == "maya" and int(maya_pid) in {owner_pid, host_pid}:
+        if dcc_type == "maya" and (owner_pid == int(maya_pid) or host_pid == int(maya_pid)):
             return entry
     return None
 
@@ -238,8 +244,14 @@ def probe_gui_readiness(
     poll_interval_secs: float = 0.1,
 ) -> Dict[str, Any]:
     """Return a bounded diagnosis for one non-interactive GUI launch."""
-    deadline = time.monotonic() + max(0.0, float(timeout_secs))
-    interval = max(0.001, float(poll_interval_secs))
+    timeout = float(timeout_secs)
+    interval = float(poll_interval_secs)
+    if not math.isfinite(timeout):
+        raise ValueError("timeout_secs must be finite")
+    if not math.isfinite(interval):
+        raise ValueError("poll_interval_secs must be finite")
+    deadline = time.monotonic() + max(0.0, timeout)
+    interval = max(0.001, interval)
     while True:
         result, terminal = _probe_gui_readiness_once(
             log_path=log_path,
