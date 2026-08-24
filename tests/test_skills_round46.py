@@ -113,7 +113,10 @@ class TestExecutorRegistration:
         server.attach_dispatcher(dispatcher)
         server._server.attach_dispatcher.assert_called_once_with(dispatcher)
         server.register_host_execution_bridge.assert_called_once()
-        bridge = server.register_host_execution_bridge.call_args.args[0]
+        # ``unittest.mock._Call.args`` is not a real tuple property in
+        # Maya 2022's Python 3.7; positional indexing works on every
+        # supported interpreter.
+        bridge = server.register_host_execution_bridge.call_args[0][0]
         assert isinstance(bridge, HostExecutionBridge)
         assert bridge.default_thread_affinity == "main"
 
