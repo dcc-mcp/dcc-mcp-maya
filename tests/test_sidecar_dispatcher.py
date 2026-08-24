@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import textwrap
+import uuid
 from pathlib import Path
 from typing import Any, Callable, Optional
 
 import pytest
+from dcc_mcp_core.feedback import clear_feedback, get_feedback_entries
 from dcc_mcp_core.sidecar import (
     ERROR_DISPATCH_FAILED,
     ERROR_NO_SOURCE_FILE,
@@ -76,6 +78,13 @@ class _StubServer:
 
 def _server_lookup_returning(server: Any) -> Callable[[], Any]:
     return lambda: server
+
+
+@pytest.fixture(autouse=True)
+def _reset_core_feedback_store():
+    clear_feedback()
+    yield
+    clear_feedback()
 
 
 @pytest.fixture
@@ -404,3 +413,63 @@ def test_reload_skills_builtin_calls_server_catalog_refresh():
         "action": "dcc_admin__reload_skills",
     }
     assert server.reload_skill_paths_call_count == 1
+
+
+def test_feedback_builtin_records_valid_report_without_a_source_file():
+    server = _StubServer(actions=[_StubAction("dcc_feedback__report", None)])
+
+    envelope = dispatch_payload(
+        {
+            "action": "dcc_feedback__report",
+            "args": {
+                "tool_name": "maya_render__capture_viewport",
+                "intent": "Capture the current model panel",
+                "attempt": "Called capture_viewport after scene setup",
+                "blocker": "The returned image was blank",
+                "severity": "blocked",
+                "request_id": "failed-call-1",
+            },
+            "request_id": "sidecar-call-1",
+        },
+        server_lookup=_server_lookup_returning(server),
+    )
+
+    assert envelope["success"] is True
+    assert envelope["action"] == "dcc_feedback__report"
+    assert envelope["request_id"] == "sidecar-call-1"
+    feedback_id = envelope["context"]["feedback_id"]
+    uuid.UUID(feedback_id)
+    assert server.list_actions_call_count == 0
+    entry = get_feedback_entries(limit=1)[0]
+    timestamp = entry.pop("timestamp")
+    assert timestamp > 0
+    assert entry == {
+        "id": feedback_id,
+        "tool_name": "maya_render__capture_viewport",
+        "intent": "Capture the current model panel",
+        "attempt": "Called capture_viewport after scene setup",
+        "blocker": "The returned image was blank",
+        "severity": "blocked",
+    }
+
+
+@pytest.mark.parametrize(
+    ("args", "reason"),
+    [
+        ({"tool_name": "x", "intent": "y", "blocker": "z", "severity": "urgent"}, "invalid-severity"),
+        ({"tool_name": "x", "intent": "y", "blocker": "z", "severity": "blocked", "extra": 1}, "unknown-fields"),
+        ({"tool_name": "x", "intent": "", "blocker": "z", "severity": "blocked"}, "invalid-intent"),
+    ],
+)
+def test_feedback_builtin_rejects_malformed_reports_without_recording(args, reason):
+    server = _StubServer()
+
+    envelope = dispatch_payload(
+        {"action": "dcc_feedback__report", "args": args, "request_id": "sidecar-bad"},
+        server_lookup=_server_lookup_returning(server),
+    )
+
+    assert envelope["success"] is False
+    assert envelope["error"] == "payload-malformed"
+    assert envelope["context"]["reason"] == reason
+    assert get_feedback_entries() == []

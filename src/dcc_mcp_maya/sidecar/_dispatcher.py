@@ -9,9 +9,9 @@ Maya keeps only the host-specific hooks:
 * execute via :func:`dcc_mcp_maya._executor.execute_in_process` so
   ``tools.yaml`` affinity semantics remain unchanged.
 
-Built-in sidecar actions (``load_skill``, ``get_skill_info``, catalog reload) are server
-methods, not script-backed actions. They are handled directly in this
-module before delegating to ``SidecarActionDispatcher``.
+Built-in sidecar actions (``load_skill``, ``get_skill_info``, feedback, catalog
+reload) are not script-backed actions. They are handled directly in this module
+before delegating to ``SidecarActionDispatcher``.
 """
 
 from __future__ import annotations
@@ -28,7 +28,20 @@ __all__ = ["dispatch_payload"]
 
 # Built-in sidecar actions that are not backed by skill scripts.
 # These are handled by calling server methods directly.
-_BUILTIN_SIDECAR_ACTIONS = frozenset({"load_skill", "get_skill_info", "dcc_admin__reload_skills"})
+_BUILTIN_SIDECAR_ACTIONS = frozenset(
+    {"load_skill", "get_skill_info", "dcc_feedback__report", "dcc_admin__reload_skills"}
+)
+_FEEDBACK_REQUIRED_FIELDS = frozenset({"tool_name", "intent", "blocker", "severity"})
+_FEEDBACK_OPTIONAL_FIELDS = frozenset({"attempt", "request_id", "job_id"})
+_FEEDBACK_TEXT_LIMITS = {
+    "tool_name": 256,
+    "intent": 4096,
+    "attempt": 4096,
+    "blocker": 4096,
+    "request_id": 256,
+    "job_id": 256,
+}
+_FEEDBACK_SEVERITIES = frozenset({"blocked", "workaround_found", "suggestion"})
 
 
 def dispatch_payload(
@@ -38,8 +51,8 @@ def dispatch_payload(
 ) -> dict[str, Any]:
     """Dispatch a sidecar payload through the shared core helper.
 
-    Built-in actions (``load_skill``, ``get_skill_info``, catalog reload) are handled
-    directly since they are server methods, not script-backed actions.
+    Built-in actions (``load_skill``, ``get_skill_info``, feedback, catalog
+    reload) are handled directly since they are not script-backed actions.
     All other actions delegate to the core ``SidecarActionDispatcher``.
 
     ``server_lookup`` remains injectable for tests and for the lightweight
@@ -100,6 +113,8 @@ def _dispatch_builtin_action(
             return _handle_load_skill(args, server, request_id)
         if action == "get_skill_info":
             return _handle_get_skill_info(args, server, request_id)
+        if action == "dcc_feedback__report":
+            return _handle_feedback_report(args, request_id)
         if action == "dcc_admin__reload_skills":
             return {
                 "success": True,
@@ -122,6 +137,82 @@ def _dispatch_builtin_action(
         message=f"Unknown built-in sidecar action: {action}",
         action=action,
         request_id=request_id,
+    )
+
+
+def _handle_feedback_report(
+    args: Mapping[str, Any],
+    request_id: Any,
+) -> dict[str, Any]:
+    """Use Core's compatibility handler when an older sidecar forwards feedback.
+
+    Current Core sidecars forward this tool directly to the gateway before host
+    RPC. This path keeps older sidecars functional without reimplementing Core's
+    storage or result-envelope ownership in the Maya adapter.
+    """
+    normalized = _validate_feedback_args(args, request_id=request_id)
+    if isinstance(normalized, dict) and normalized.get("success") is False:
+        return normalized
+
+    from dcc_mcp_core import feedback as core_feedback  # noqa: PLC0415
+
+    handler = getattr(core_feedback, "_handle_feedback_report", None)
+    if not callable(handler):
+        return _error_envelope(
+            code="feedback-handler-unavailable",
+            message="The installed Core does not expose its feedback compatibility handler",
+            action="dcc_feedback__report",
+            request_id=request_id,
+        )
+
+    payload = json.dumps(normalized, ensure_ascii=False, separators=(",", ":"))
+    raw_result = handler(payload)
+    result = json.loads(raw_result) if isinstance(raw_result, str) else raw_result
+    if not isinstance(result, Mapping):
+        return _error_envelope(
+            code="dispatch-failed",
+            message="Core returned an invalid feedback result",
+            action="dcc_feedback__report",
+            request_id=request_id,
+        )
+    enriched = dict(result)
+    enriched.setdefault("request_id", request_id or "")
+    enriched.setdefault("action", "dcc_feedback__report")
+    return enriched
+
+
+def _validate_feedback_args(args: Any, *, request_id: Any) -> dict[str, Any]:
+    if not isinstance(args, Mapping):
+        return _feedback_payload_error("invalid-args", request_id=request_id)
+
+    allowed = _FEEDBACK_REQUIRED_FIELDS | _FEEDBACK_OPTIONAL_FIELDS
+    unknown = sorted(str(field) for field in args if not isinstance(field, str) or field not in allowed)
+    if unknown:
+        return _feedback_payload_error("unknown-fields", request_id=request_id, fields=unknown)
+
+    normalized: dict[str, Any] = {}
+    for field in sorted(_FEEDBACK_REQUIRED_FIELDS | (set(args) & _FEEDBACK_OPTIONAL_FIELDS)):
+        value = args.get(field)
+        if not isinstance(value, str) or not value.strip():
+            return _feedback_payload_error(f"invalid-{field}", request_id=request_id)
+        limit = _FEEDBACK_TEXT_LIMITS.get(field)
+        if limit is not None and len(value) > limit:
+            return _feedback_payload_error(f"{field}-too-long", request_id=request_id)
+        normalized[field] = value
+
+    if normalized["severity"] not in _FEEDBACK_SEVERITIES:
+        return _feedback_payload_error("invalid-severity", request_id=request_id)
+    return normalized
+
+
+def _feedback_payload_error(reason: str, *, request_id: Any, **context: Any) -> dict[str, Any]:
+    return _error_envelope(
+        code="payload-malformed",
+        message="Invalid dcc_feedback__report arguments",
+        action="dcc_feedback__report",
+        request_id=request_id,
+        reason=reason,
+        **context,
     )
 
 
