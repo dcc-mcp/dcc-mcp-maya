@@ -13,6 +13,7 @@ from __future__ import annotations
 # Import built-in modules
 import importlib
 import importlib.util
+import json
 import logging
 import os
 import sys
@@ -347,8 +348,10 @@ class TestSidecarUsesCoreRegistryDefaults:
         _, kwargs = sidecar_pkg.start_sidecar.call_args
         assert "registry_dir" not in kwargs
 
-    def test_sidecar_spawn_failure_log_names_clean_machine_remedies(self, plugin_module, monkeypatch, caplog):
+    def test_sidecar_spawn_failure_log_names_clean_machine_remedies(self, plugin_module, monkeypatch, caplog, tmp_path):
         """A missing dcc-mcp-server binary should point operators at the external runtime."""
+        bootstrap_log = tmp_path / "bootstrap.jsonl"
+        monkeypatch.setenv("DCC_MCP_MAYA_BOOTSTRAP_LOG", str(bootstrap_log))
         sidecar_pkg = self._arm_plugin(plugin_module, monkeypatch)
         sidecar_pkg.start_sidecar.side_effect = sidecar_pkg.SidecarSpawnError("missing dcc-mcp-server")
 
@@ -360,6 +363,12 @@ class TestSidecarUsesCoreRegistryDefaults:
         assert "mayapy -m pip install dcc-mcp-server" in caplog.text
         assert "DCC_MCP_SERVER_BIN" in caplog.text
         assert "DCC_MCP_MAYA_SIDECAR=0" in caplog.text
+        events = [json.loads(line) for line in bootstrap_log.read_text(encoding="utf-8").splitlines()]
+        assert [(event["stage"], event["status"]) for event in events] == [
+            ("sidecar_spawn", "started"),
+            ("sidecar_spawn", "failed"),
+        ]
+        assert events[-1]["error_type"] == "SidecarSpawnError"
 
     def test_sidecar_passes_debug_identity_to_binary(self, plugin_module, monkeypatch):
         """Maya should label both the per-DCC sidecar and standalone gateway."""
@@ -568,6 +577,64 @@ class TestRestartStopsSidecar:
 
 class TestPluginDispatcherFallback:
     """Regression: plugin startup must not crash when core dispatchers are None."""
+
+    def test_start_records_import_registration_and_completion_stages(
+        self, plugin_module, mock_maya_modules, monkeypatch, tmp_path
+    ):
+        log_path = tmp_path / "bootstrap.jsonl"
+        monkeypatch.setenv("DCC_MCP_MAYA_BOOTSTRAP_LOG", str(log_path))
+        mock_maya_modules.cmds.about.side_effect = lambda **kwargs: True if kwargs.get("batch") else "2025"
+
+        startup = MagicMock()
+        startup.dispatcher = MagicMock()
+        startup.host = None
+        import dcc_mcp_maya
+
+        monkeypatch.setattr(dcc_mcp_maya, "start_server", MagicMock(return_value=MagicMock()))
+        monkeypatch.setattr(plugin_module, "_export_worker_env", MagicMock())
+        monkeypatch.setattr(plugin_module, "_enable_faulthandler_for_plugin", MagicMock())
+        monkeypatch.setattr(plugin_module, "_post_start", MagicMock())
+
+        with patch("dcc_mcp_maya._plugin_dispatcher.resolve_plugin_host_startup", return_value=startup), patch(
+            "dcc_mcp_maya._plugin_dispatcher.install_plugin_host_startup"
+        ):
+            plugin_module._start()
+
+        events = [json.loads(line) for line in log_path.read_text(encoding="utf-8").splitlines()]
+        assert [(event["stage"], event["status"]) for event in events] == [
+            ("adapter_import", "started"),
+            ("adapter_import", "succeeded"),
+            ("registry_registration", "started"),
+            ("registry_registration", "succeeded"),
+            ("bootstrap_complete", "succeeded"),
+        ]
+
+    def test_start_records_registry_failure_before_propagating(
+        self, plugin_module, mock_maya_modules, monkeypatch, tmp_path
+    ):
+        log_path = tmp_path / "bootstrap.jsonl"
+        monkeypatch.setenv("DCC_MCP_MAYA_BOOTSTRAP_LOG", str(log_path))
+        mock_maya_modules.cmds.about.side_effect = lambda **kwargs: True if kwargs.get("batch") else "2025"
+
+        startup = MagicMock()
+        startup.dispatcher = MagicMock()
+        startup.host = None
+        import dcc_mcp_maya
+
+        monkeypatch.setattr(dcc_mcp_maya, "start_server", MagicMock(side_effect=RuntimeError("bind failed")))
+        monkeypatch.setattr(plugin_module, "_export_worker_env", MagicMock())
+        monkeypatch.setattr(plugin_module, "_enable_faulthandler_for_plugin", MagicMock())
+
+        with patch("dcc_mcp_maya._plugin_dispatcher.resolve_plugin_host_startup", return_value=startup), patch(
+            "dcc_mcp_maya._plugin_dispatcher.install_plugin_host_startup"
+        ):
+            with pytest.raises(RuntimeError, match="bind failed"):
+                plugin_module._start()
+
+        events = [json.loads(line) for line in log_path.read_text(encoding="utf-8").splitlines()]
+        assert events[-1]["stage"] == "registry_registration"
+        assert events[-1]["status"] == "failed"
+        assert events[-1]["error_type"] == "RuntimeError"
 
     def test_start_falls_back_when_core_dispatchers_are_none(self, plugin_module, mock_maya_modules, monkeypatch):
         mock_maya_modules.cmds.about.side_effect = lambda **kwargs: False if kwargs.get("batch") else "2025"

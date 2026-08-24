@@ -132,6 +132,19 @@ _faulthandler_enabled_by_plugin = False
 _faulthandler_registered_signal = None
 
 
+def _record_bootstrap_stage(stage: str, status: str, **details) -> None:
+    """Best-effort stage telemetry for the fixed non-interactive GUI launch."""
+    log_path = os.environ.get("DCC_MCP_MAYA_BOOTSTRAP_LOG")
+    if not log_path:
+        return
+    try:
+        from dcc_mcp_maya.gui_bootstrap import record_bootstrap_stage  # noqa: PLC0415
+
+        record_bootstrap_stage(log_path, stage, status, **details)
+    except Exception as exc:  # noqa: BLE001 — diagnostics must not break Plug-in Manager loading
+        logger.error("dcc-mcp-maya: unable to write GUI bootstrap stage %s/%s: %s", stage, status, exc)
+
+
 # ── ensure dcc_mcp_maya package is importable ────────────────────────────────
 
 
@@ -514,15 +527,21 @@ def _export_worker_env() -> None:
 def _start() -> None:
     """Start the MCP server (called from Maya main thread)."""
     global _handle, _host, _host_dispatcher, _host_startup
-    from dcc_mcp_maya._plugin_dispatcher import (  # noqa: PLC0415
-        PluginDispatcherError,
-        install_plugin_host_startup,
-        resolve_plugin_host_startup,
-    )
 
+    _record_bootstrap_stage("adapter_import", "started")
     try:
         import dcc_mcp_maya  # noqa: PLC0415
+        from dcc_mcp_maya._plugin_dispatcher import (  # noqa: PLC0415
+            PluginDispatcherError,
+            install_plugin_host_startup,
+            resolve_plugin_host_startup,
+        )
+    except Exception as exc:
+        _record_bootstrap_stage("adapter_import", "failed", error_type=type(exc).__name__)
+        logger.error("Failed to import MCP server: %s", exc)
+        raise
 
+    try:
         _export_worker_env()
         _enable_faulthandler_for_plugin()
         # Issue #148 — defuse the modal commandPort security warning that
@@ -540,19 +559,31 @@ def _start() -> None:
         _host_dispatcher = _host_startup.dispatcher
         _host = _host_startup.host
         install_plugin_host_startup(_host_startup)
-        _handle = dcc_mcp_maya.start_server(host_dispatcher=_host_dispatcher, **cfg)
-        if _host is not None:
-            _host.start()
-        _post_start(cfg)
     except PluginDispatcherError as exc:
+        _record_bootstrap_stage("adapter_import", "failed", error_type=type(exc).__name__)
         detail = exc.as_dict()
         logger.error("Failed to start MCP server: %s", detail["message"])
         for remedy in detail["context"].get("possible_solutions") or []:
             logger.error("  -> %s", remedy)
         raise RuntimeError(detail["message"]) from exc
     except Exception as exc:
+        _record_bootstrap_stage("adapter_import", "failed", error_type=type(exc).__name__)
         logger.error("Failed to start MCP server: %s", exc)
         raise
+
+    _record_bootstrap_stage("adapter_import", "succeeded")
+    _record_bootstrap_stage("registry_registration", "started")
+    try:
+        _handle = dcc_mcp_maya.start_server(host_dispatcher=_host_dispatcher, **cfg)
+        if _host is not None:
+            _host.start()
+    except Exception as exc:
+        _record_bootstrap_stage("registry_registration", "failed", error_type=type(exc).__name__)
+        logger.error("Failed to start MCP server: %s", exc)
+        raise
+    _record_bootstrap_stage("registry_registration", "succeeded")
+    if _post_start(cfg) is not False:
+        _record_bootstrap_stage("bootstrap_complete", "succeeded")
 
 
 def _start_async() -> None:
@@ -619,7 +650,7 @@ def _start_async() -> None:
         raise
 
 
-def _post_start(cfg: dict) -> None:
+def _post_start(cfg: dict) -> bool:
     _print_startup_info(cfg)
     _install_shutdown_safety()
     _disable_autosave_for_session()
@@ -638,7 +669,7 @@ def _post_start(cfg: dict) -> None:
     except Exception as exc:  # noqa: BLE001
         logger.debug("stale-instance scan skipped: %s", exc)
 
-    _maybe_spawn_sidecar()
+    return _maybe_spawn_sidecar()
 
 
 def _faulthandler_opted_out() -> bool:
@@ -792,7 +823,7 @@ def _restore_autosave_for_session() -> None:
         _original_autosave_enabled = None
 
 
-def _maybe_spawn_sidecar() -> None:
+def _maybe_spawn_sidecar() -> bool:
     """Spawn the default ``dcc-mcp-server sidecar`` subprocess.
 
     Sidecar mode is the **strategic** direction for crash-isolated
@@ -824,14 +855,16 @@ def _maybe_spawn_sidecar() -> None:
         # Package unavailable (older dcc-mcp-maya wheel) — silent no-op.
         # The in-process server remains available when the sidecar package
         # is missing, so plug-in startup should not grow noisy here.
-        return
+        _record_bootstrap_stage("sidecar_spawn", "failed", error_type="ImportError")
+        return False
 
     if not is_sidecar_mode_enabled():
         # Feature explicitly disabled. Stay silent — no script-editor
         # output, no debug log. Users who want signal can grep their
         # log file for "DCC_MCP_MAYA_SIDECAR" or read the plug-in
         # docstring.
-        return
+        _record_bootstrap_stage("sidecar_spawn", "skipped", reason="disabled")
+        return True
 
     if _sidecar_handle is not None:
         logger.warning(
@@ -840,6 +873,7 @@ def _maybe_spawn_sidecar() -> None:
         )
         _stop_sidecar_if_running()
 
+    _record_bootstrap_stage("sidecar_spawn", "started")
     try:
         # dcc-mcp-server >= 0.17.9 uses the same default registry path as
         # GatewayRunner and also honours DCC_MCP_REGISTRY_DIR itself, so the
@@ -852,6 +886,7 @@ def _maybe_spawn_sidecar() -> None:
             instance_id=_resolve_instance_id(),
         )
     except SidecarSpawnError as exc:
+        _record_bootstrap_stage("sidecar_spawn", "failed", error_type=type(exc).__name__)
         logger.error(
             "dcc-mcp-maya: sidecar spawn failed; continuing with the in-process "
             "Maya server only. Default sidecar gateway startup requires the "
@@ -862,10 +897,16 @@ def _maybe_spawn_sidecar() -> None:
             exc,
         )
         _sidecar_handle = None
-        return
+        return False
 
+    _record_bootstrap_stage(
+        "sidecar_spawn",
+        "succeeded",
+        sidecar_pid=getattr(_sidecar_handle.proc, "pid", None),
+    )
     _print_sidecar_info(_sidecar_handle)
     _probe_gateway_health_deferred(_sidecar_handle)
+    return True
 
 
 def _print_sidecar_info(handle) -> None:  # noqa: ANN001
