@@ -173,12 +173,19 @@ tools:
     type: object
     required:
     - object_name
+    - object_uuid
     - shape
+    - shape_uuid
     - input_sections
+    - history_uuid
     properties:
       object_name:
         type: string
+      object_uuid:
+        type: string
       shape:
+        type: string
+      shape_uuid:
         type: string
       input_sections:
         type: array
@@ -188,6 +195,8 @@ tools:
         type:
         - string
         - 'null'
+      history_uuid:
+        type: string
 - name: array_instances
   execution: sync
   affinity: main
@@ -234,12 +243,22 @@ tools:
     type: object
     required:
     - source
+    - source_uuid
     - objects
+    - object_uuids
     - verified_count
     properties:
       source:
         type: string
+      source_uuid:
+        type: string
       objects:
+        type: array
+        items:
+          type: string
+        minItems: 2
+        maxItems: 128
+      object_uuids:
         type: array
         items:
           type: string
@@ -362,13 +381,20 @@ tools:
     type: object
     required:
     - object_name
+    - object_uuid
     - shape
+    - shape_uuid
     - profile
     - axis
+    - history_uuid
     properties:
       object_name:
         type: string
+      object_uuid:
+        type: string
       shape:
+        type: string
+      shape_uuid:
         type: string
       profile:
         type: string
@@ -382,6 +408,8 @@ tools:
         type:
         - string
         - 'null'
+      history_uuid:
+        type: string
 - name: select_by_material
   execution: sync
   affinity: main

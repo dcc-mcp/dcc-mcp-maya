@@ -53,6 +53,7 @@ def mirror_mesh(
     # polyMirrorFace axis indices: 0=X, 1=Y, 2=Z
     axis_index = {"x": 0, "y": 1, "z": 2}[axis_lower]
 
+    mutation_applied = False
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
@@ -73,6 +74,7 @@ def mirror_mesh(
             mergeThresholdType=1,
             mergeThreshold=merge_threshold,
         )
+        mutation_applied = True
 
         faces_after = int(cmds.polyEvaluate(object_name, face=True) or 0)
         if not cmds.objExists(object_name) or faces_after <= faces_before:
@@ -82,6 +84,9 @@ def mirror_mesh(
                 object_name=object_name,
                 faces_before=faces_before,
                 faces_after=faces_after,
+                mutation_applied=True,
+                rollback_attempted=False,
+                rollback_verified=False,
             )
 
         return skill_success(
@@ -95,7 +100,14 @@ def mirror_mesh(
     except ImportError:
         return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return skill_exception(exc, message="Failed to mirror mesh '{}'".format(object_name))
+        context = {}
+        if mutation_applied:
+            context = {
+                "mutation_applied": True,
+                "rollback_attempted": False,
+                "rollback_verified": False,
+            }
+        return skill_exception(exc, message="Failed to mirror mesh '{}'".format(object_name), **context)
 
 
 @skill_entry

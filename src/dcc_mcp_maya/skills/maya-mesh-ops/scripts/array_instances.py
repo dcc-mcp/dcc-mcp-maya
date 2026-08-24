@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya._mutation import MayaUndoChunk, node_uuid, shape_uuids, uuid_inventory
+
 _MAX_INSTANCES = 128
 _TOLERANCE = 1e-5
 
@@ -52,12 +54,22 @@ def array_instances(
     if name_prefix is not None and (not isinstance(name_prefix, str) or not name_prefix):
         return skill_error("Invalid array name", "name_prefix must be a non-empty string when provided")
 
-    created = []  # type: List[str]
+    transaction = None
+    before_uuids = None
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         if not cmds.objExists(object_name):
             return skill_error("Array source not found", "'{}' does not exist".format(object_name))
+
+        before_uuids = uuid_inventory(cmds)
+        source_uuid = node_uuid(cmds, object_name)
+        source_shape_uuids = shape_uuids(cmds, object_name)
+        if not source_shape_uuids:
+            return skill_error(
+                "Array source has no instanceable shape",
+                "object_name must resolve to a transform with at least one non-intermediate shape",
+            )
 
         source_translation = [
             float(value) for value in cmds.xform(object_name, query=True, objectSpace=True, translation=True)
@@ -66,14 +78,37 @@ def array_instances(
             float(value) for value in cmds.xform(object_name, query=True, objectSpace=True, rotation=True)
         ]
         objects = [object_name]
+        object_uuids = [source_uuid]
         prefix = name_prefix or "{}_instance".format(object_name.rsplit("|", 1)[-1])
+        transaction = MayaUndoChunk(cmds, "dcc_mcp_array_instances")
+        transaction.begin()
 
         for index in range(1, count):
             result = cmds.instance(object_name, name="{}_{:02d}".format(prefix, index))
             if not result:
-                raise RuntimeError("maya.cmds.instance returned no node at index {}".format(index))
+                receipt = transaction.rollback(lambda: uuid_inventory(cmds) == before_uuids)
+                return skill_error(
+                    "Array instance creation failed",
+                    "maya.cmds.instance returned no node",
+                    failed_index=index,
+                    **receipt,
+                )
             instance_name = str(result[0])
-            created.append(instance_name)
+            instance_uuid = node_uuid(cmds, instance_name)
+            instance_shape_uuids = shape_uuids(cmds, instance_name)
+            if (
+                instance_uuid in before_uuids
+                or instance_uuid in object_uuids
+                or instance_shape_uuids != source_shape_uuids
+            ):
+                receipt = transaction.rollback(lambda: uuid_inventory(cmds) == before_uuids)
+                return skill_error(
+                    "Array instance provenance verification failed",
+                    "Each result must be a new unique transform sharing the source shape UUID",
+                    failed_index=index,
+                    object_name=instance_name,
+                    **receipt,
+                )
             expected_translation = [source_translation[axis] + translate[axis] * index for axis in range(3)]
             expected_rotation = [source_rotation[axis] + rotate[axis] * index for axis in range(3)]
             cmds.xform(instance_name, objectSpace=True, translation=expected_translation)
@@ -86,20 +121,24 @@ def array_instances(
                 or not _matches(actual_translation, expected_translation)
                 or not _matches(actual_rotation, expected_rotation)
             ):
-                if created:
-                    cmds.delete(created)
+                receipt = transaction.rollback(lambda: uuid_inventory(cmds) == before_uuids)
                 return skill_error(
                     "Array instance verification failed",
                     "Instance {} did not preserve the requested transform".format(index),
                     failed_index=index,
                     object_name=instance_name,
+                    **receipt,
                 )
             objects.append(instance_name)
+            object_uuids.append(instance_uuid)
 
+        transaction.commit()
         return skill_success(
             "Created and verified {}-object instance array".format(count),
             source=object_name,
+            source_uuid=source_uuid,
             objects=objects,
+            object_uuids=object_uuids,
             verified_count=len(objects),
             translate_step=translate,
             rotate_step=rotate,
@@ -108,12 +147,10 @@ def array_instances(
     except ImportError:
         return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        try:
-            if created:
-                cmds.delete(created)
-        except Exception:
-            pass
-        return skill_exception(exc, message="Failed to create Maya instance array")
+        receipt = {}
+        if transaction is not None and before_uuids is not None:
+            receipt = transaction.rollback(lambda: uuid_inventory(cmds) == before_uuids)
+        return skill_exception(exc, message="Failed to create Maya instance array", **receipt)
 
 
 @skill_entry

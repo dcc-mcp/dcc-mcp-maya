@@ -105,6 +105,9 @@ def test_assign_material_fails_closed_on_missing_membership_readback():
 
     assert result["success"] is False
     assert result["context"]["unverified_objects"] == ["body"]
+    assert result["context"]["mutation_applied"] is True
+    assert result["context"]["rollback_attempted"] is False
+    assert result["context"]["rollback_verified"] is False
 
 
 def test_assign_material_rejects_a_partial_target_set_before_mutation():

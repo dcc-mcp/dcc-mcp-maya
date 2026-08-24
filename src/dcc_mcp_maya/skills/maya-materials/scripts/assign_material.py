@@ -33,6 +33,7 @@ def assign_material(material_name: str, objects: List[str]) -> dict:
     if any(not isinstance(item, str) or not item for item in objects):
         return skill_error("Invalid material targets", "Every object must be a non-empty string")
 
+    mutation_applied = False
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
@@ -73,6 +74,7 @@ def assign_material(material_name: str, objects: List[str]) -> dict:
             )
 
         cmds.sets(existing, edit=True, forceElement=sg)
+        mutation_applied = True
         verified_objects = []
         unverified_objects = []
         for item in existing:
@@ -92,6 +94,9 @@ def assign_material(material_name: str, objects: List[str]) -> dict:
                 shading_group=sg,
                 verified_objects=verified_objects,
                 unverified_objects=unverified_objects,
+                mutation_applied=True,
+                rollback_attempted=False,
+                rollback_verified=False,
             )
         return skill_success(
             "Assigned '{}' to {} object(s)".format(sg, len(existing)),
@@ -104,7 +109,14 @@ def assign_material(material_name: str, objects: List[str]) -> dict:
     except ImportError:
         return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return skill_exception(exc, message="Failed to assign material")
+        context = {}
+        if mutation_applied:
+            context = {
+                "mutation_applied": True,
+                "rollback_attempted": False,
+                "rollback_verified": False,
+            }
+        return skill_exception(exc, message="Failed to assign material", **context)
 
 
 @skill_entry

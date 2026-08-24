@@ -38,6 +38,7 @@ def freeze_transforms(object_name: str) -> dict:
         ToolResult dict.
     """
 
+    mutation_applied = False
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
@@ -46,6 +47,7 @@ def freeze_transforms(object_name: str) -> dict:
             return err
 
         cmds.makeIdentity(object_name, apply=True, translate=True, rotate=True, scale=True)
+        mutation_applied = True
         verified_transform = {
             "translate": _vector_attr(cmds, object_name, "translate"),
             "rotate": _vector_attr(cmds, object_name, "rotate"),
@@ -61,6 +63,9 @@ def freeze_transforms(object_name: str) -> dict:
                 "Maya did not report identity translate, rotate, and scale values",
                 object_name=object_name,
                 verified_transform=verified_transform,
+                mutation_applied=True,
+                rollback_attempted=False,
+                rollback_verified=False,
             )
         return skill_success(
             "Transforms frozen on '{}'".format(object_name),
@@ -71,7 +76,14 @@ def freeze_transforms(object_name: str) -> dict:
     except ImportError:
         return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return skill_exception(exc, message="Failed to freeze transforms on '{}'".format(object_name))
+        context = {}
+        if mutation_applied:
+            context = {
+                "mutation_applied": True,
+                "rollback_attempted": False,
+                "rollback_verified": False,
+            }
+        return skill_exception(exc, message="Failed to freeze transforms on '{}'".format(object_name), **context)
 
 
 @skill_entry

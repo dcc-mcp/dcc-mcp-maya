@@ -31,14 +31,25 @@ tools:
     type: object
     required:
     - object_name
+    - uv_set
     - uv_count
+    - uv_digest
+    - changed
     - planes
     properties:
       object_name:
         type: string
+      uv_set:
+        type: string
       uv_count:
         type: integer
         minimum: 1
+      uv_digest:
+        type: string
+        pattern: ^[0-9a-f]{64}$
+      changed:
+        type: boolean
+        const: true
       planes:
         type: integer
         enum:

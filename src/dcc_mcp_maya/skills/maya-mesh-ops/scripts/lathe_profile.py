@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya._mutation import MayaUndoChunk, node_uuid, uuid_inventory
+
 
 def _shape_of_type(cmds, node, node_type):
     # type: (...) -> Optional[str]
@@ -39,17 +41,24 @@ def lathe_profile(
     if name is not None and (not isinstance(name, str) or not name):
         return skill_error("Invalid output name", "name must be a non-empty string when provided")
 
+    transaction = None
+    before_uuids = None
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        if not cmds.objExists(profile) or _shape_of_type(cmds, profile, "nurbsCurve") is None:
+        profile_shape = _shape_of_type(cmds, profile, "nurbsCurve") if cmds.objExists(profile) else None
+        if profile_shape is None:
             return skill_error(
                 "Lathe profile is unavailable",
                 "profile must resolve to an existing NURBS curve",
                 profile=profile,
             )
+        profile_shape_uuid = node_uuid(cmds, profile_shape)
 
         axis_vector = {"x": (1.0, 0.0, 0.0), "y": (0.0, 1.0, 0.0), "z": (0.0, 0.0, 1.0)}[axis]
+        before_uuids = uuid_inventory(cmds)
+        transaction = MayaUndoChunk(cmds, "dcc_mcp_lathe_profile")
+        transaction.begin()
         result = cmds.revolve(
             profile,
             polygon=1,
@@ -60,35 +69,67 @@ def lathe_profile(
             degree=degree,
         )
         if not result:
-            return skill_error("Lathe produced no result", "maya.cmds.revolve returned no nodes")
+            receipt = transaction.rollback(lambda: uuid_inventory(cmds) == before_uuids)
+            return skill_error("Lathe produced no result", "maya.cmds.revolve returned no nodes", **receipt)
 
         object_name = str(result[0])
         if name:
             object_name = str(cmds.rename(object_name, name))
         shape = _shape_of_type(cmds, object_name, "mesh")
-        if not cmds.objExists(object_name) or shape is None:
+        history_node = str(result[1]) if len(result) > 1 else None
+        if not cmds.objExists(object_name) or shape is None or history_node is None:
+            receipt = transaction.rollback(lambda: uuid_inventory(cmds) == before_uuids)
             return skill_error(
                 "Lathe result verification failed",
-                "The result does not resolve to a polygon mesh",
+                "The result must resolve to a polygon mesh with construction history",
                 object_name=object_name,
+                **receipt,
             )
 
-        history_node = str(result[1]) if len(result) > 1 else None
+        object_uuid = node_uuid(cmds, object_name)
+        shape_uuid = node_uuid(cmds, shape)
+        history_uuid = node_uuid(cmds, history_node)
+        result_uuids = {object_uuid, shape_uuid, history_uuid}
+        history_nodes = cmds.listHistory(object_name) or []
+        history_uuids = {node_uuid(cmds, node) for node in history_nodes}
+        upstream_nodes = cmds.listConnections(history_node, source=True, destination=False, shapes=True) or []
+        upstream_uuids = {node_uuid(cmds, node) for node in upstream_nodes}
+        if (
+            len(result_uuids) != 3
+            or bool(result_uuids & before_uuids)
+            or history_uuid not in history_uuids
+            or profile_shape_uuid not in upstream_uuids
+        ):
+            receipt = transaction.rollback(lambda: uuid_inventory(cmds) == before_uuids)
+            return skill_error(
+                "Lathe provenance verification failed",
+                "Maya did not prove new transform, mesh, history, and profile ownership",
+                object_name=object_name,
+                **receipt,
+            )
+
+        transaction.commit()
         return skill_success(
             "Lathed '{}' into '{}'".format(profile, object_name),
             object_name=object_name,
+            object_uuid=object_uuid,
             shape=shape,
+            shape_uuid=shape_uuid,
             profile=profile,
             axis=axis,
             segments=segments,
             sweep_angle=float(sweep_angle),
             history_node=history_node,
+            history_uuid=history_uuid,
             prompt="Use set_pivot, auto_uv, or assign_material to continue the modeling workflow.",
         )
     except ImportError:
         return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return skill_exception(exc, message="Failed to lathe polygon profile")
+        receipt = {}
+        if transaction is not None and before_uuids is not None:
+            receipt = transaction.rollback(lambda: uuid_inventory(cmds) == before_uuids)
+        return skill_exception(exc, message="Failed to lathe polygon profile", **receipt)
 
 
 @skill_entry

@@ -26,6 +26,7 @@ def delete_history(
         ToolResult dict with ``context.object_name``.
     """
 
+    mutation_applied = False
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
@@ -40,6 +41,7 @@ def delete_history(
             str(node) for node in (cmds.listHistory(object_name) or []) if node != object_name and node not in shapes
         ]
         cmds.delete(object_name, constructionHistory=True)
+        mutation_applied = True
 
         remaining_history = [
             str(node) for node in (cmds.listHistory(object_name) or []) if node != object_name and node not in shapes
@@ -51,6 +53,9 @@ def delete_history(
                 object_name=object_name,
                 history_before=history_before,
                 remaining_history=remaining_history,
+                mutation_applied=True,
+                rollback_attempted=False,
+                rollback_verified=False,
             )
 
         return skill_success(
@@ -64,7 +69,14 @@ def delete_history(
     except ImportError:
         return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return skill_exception(exc, message="Failed to delete history for {}".format(object_name))
+        context = {}
+        if mutation_applied:
+            context = {
+                "mutation_applied": True,
+                "rollback_attempted": False,
+                "rollback_verified": False,
+            }
+        return skill_exception(exc, message="Failed to delete history for {}".format(object_name), **context)
 
 
 @skill_entry

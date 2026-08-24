@@ -21,6 +21,9 @@ def test_mirror_mesh_fails_when_polygon_topology_does_not_change():
 
     assert result["success"] is False
     assert "verification" in result["message"].lower()
+    assert result["context"]["mutation_applied"] is True
+    assert result["context"]["rollback_attempted"] is False
+    assert result["context"]["rollback_verified"] is False
 
 
 def test_freeze_transforms_reads_back_identity_values():
@@ -61,6 +64,9 @@ def test_freeze_transforms_fails_when_scale_is_not_identity():
 
     assert result["success"] is False
     assert "verification" in result["message"].lower()
+    assert result["context"]["mutation_applied"] is True
+    assert result["context"]["rollback_attempted"] is False
+    assert result["context"]["rollback_verified"] is False
 
 
 def test_delete_history_fails_when_upstream_nodes_remain():
@@ -81,6 +87,9 @@ def test_delete_history_fails_when_upstream_nodes_remain():
 
     assert result["success"] is False
     assert result["context"]["remaining_history"] == ["polyExtrude1"]
+    assert result["context"]["mutation_applied"] is True
+    assert result["context"]["rollback_attempted"] is False
+    assert result["context"]["rollback_verified"] is False
 
 
 def test_delete_history_ignores_shape_path_spelling_during_readback():

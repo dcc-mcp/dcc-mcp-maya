@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya._mutation import MayaUndoChunk, node_uuid, uuid_inventory
+
 _MAX_SECTIONS = 64
 
 
@@ -50,13 +52,19 @@ def loft_sections(
     if name is not None and (not isinstance(name, str) or not name):
         return skill_error("Invalid output name", "name must be a non-empty string when provided")
 
+    transaction = None
+    before_uuids = None
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
         invalid = []
+        section_shape_uuids = set()
         for section in sections:
-            if not cmds.objExists(section) or _curve_shape(cmds, section) is None:
+            shape = _curve_shape(cmds, section) if cmds.objExists(section) else None
+            if shape is None:
                 invalid.append(section)
+            else:
+                section_shape_uuids.add(node_uuid(cmds, shape))
         if invalid:
             return skill_error(
                 "Loft sections are unavailable",
@@ -64,6 +72,9 @@ def loft_sections(
                 invalid_sections=invalid,
             )
 
+        before_uuids = uuid_inventory(cmds)
+        transaction = MayaUndoChunk(cmds, "dcc_mcp_loft_sections")
+        transaction.begin()
         result = cmds.loft(
             *sections,
             polygon=1,
@@ -75,32 +86,64 @@ def loft_sections(
             sectionSpans=1,
         )
         if not result:
-            return skill_error("Loft produced no result", "maya.cmds.loft returned no nodes")
+            receipt = transaction.rollback(lambda: uuid_inventory(cmds) == before_uuids)
+            return skill_error("Loft produced no result", "maya.cmds.loft returned no nodes", **receipt)
 
         object_name = str(result[0])
         if name:
             object_name = str(cmds.rename(object_name, name))
         shape = _mesh_shape(cmds, object_name)
-        if not cmds.objExists(object_name) or shape is None:
+        history_node = str(result[1]) if len(result) > 1 else None
+        if not cmds.objExists(object_name) or shape is None or history_node is None:
+            receipt = transaction.rollback(lambda: uuid_inventory(cmds) == before_uuids)
             return skill_error(
                 "Loft result verification failed",
-                "The result does not resolve to a polygon mesh",
+                "The result must resolve to a polygon mesh with construction history",
                 object_name=object_name,
+                **receipt,
             )
 
-        history_node = str(result[1]) if len(result) > 1 else None
+        object_uuid = node_uuid(cmds, object_name)
+        shape_uuid = node_uuid(cmds, shape)
+        history_uuid = node_uuid(cmds, history_node)
+        result_uuids = {object_uuid, shape_uuid, history_uuid}
+        history_nodes = cmds.listHistory(object_name) or []
+        history_uuids = {node_uuid(cmds, node) for node in history_nodes}
+        upstream_nodes = cmds.listConnections(history_node, source=True, destination=False, shapes=True) or []
+        upstream_uuids = {node_uuid(cmds, node) for node in upstream_nodes}
+        if (
+            len(result_uuids) != 3
+            or bool(result_uuids & before_uuids)
+            or history_uuid not in history_uuids
+            or not section_shape_uuids.issubset(upstream_uuids)
+        ):
+            receipt = transaction.rollback(lambda: uuid_inventory(cmds) == before_uuids)
+            return skill_error(
+                "Loft provenance verification failed",
+                "Maya did not prove new transform, mesh, history, and input-section ownership",
+                object_name=object_name,
+                **receipt,
+            )
+
+        transaction.commit()
         return skill_success(
             "Lofted {} sections into '{}'".format(len(sections), object_name),
             object_name=object_name,
+            object_uuid=object_uuid,
             shape=shape,
+            shape_uuid=shape_uuid,
             input_sections=list(sections),
             history_node=history_node,
+            history_uuid=history_uuid,
             prompt="Use set_pivot, auto_uv, or assign_material to continue the modeling workflow.",
         )
     except ImportError:
         return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return skill_exception(exc, message="Failed to loft polygon sections")
+        receipt = {}
+        if transaction is not None and before_uuids is not None:
+            receipt = transaction.rollback(lambda: uuid_inventory(cmds) == before_uuids)
+        return skill_exception(exc, message="Failed to loft polygon sections", **receipt)
 
 
 @skill_entry
