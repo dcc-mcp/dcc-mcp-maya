@@ -31,6 +31,9 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e ".[dev]"
 
+      - name: Install lifecycle smoke
+        run: python -m pytest tests/test_install_lifecycle.py -q
+
       - name: Run tests
         env:
           DCC_MCP_ALLOW_AMBIENT_PYTHON: "1"

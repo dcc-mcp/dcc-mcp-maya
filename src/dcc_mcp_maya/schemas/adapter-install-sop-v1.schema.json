@@ -1,0 +1,73 @@
+{
+  "$id": "https://dcc-mcp.github.io/schemas/adapter-install-sop-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "file_edit": {
+      "properties": {
+        "action": {"enum": ["create", "update", "remove"], "type": "string"},
+        "content": {"type": "string"},
+        "path": {"minLength": 1, "type": "string"}
+      },
+      "required": ["path", "action"],
+      "type": "object"
+    },
+    "next_step": {
+      "oneOf": [{"required": ["command"]}, {"required": ["file_edit"]}],
+      "properties": {
+        "command": {"items": {"type": "string"}, "minItems": 1, "type": "array"},
+        "description": {"minLength": 1, "type": "string"},
+        "file_edit": {"$ref": "#/$defs/file_edit"},
+        "id": {"minLength": 1, "type": "string"},
+        "why": {"minLength": 1, "type": "string"}
+      },
+      "required": ["id", "description", "why"],
+      "type": "object"
+    },
+    "step": {
+      "properties": {
+        "description": {"type": "string"},
+        "id": {"minLength": 1, "type": "string"},
+        "message": {"type": "string"},
+        "status": {"minLength": 1, "type": "string"}
+      },
+      "required": ["id", "status"],
+      "type": "object"
+    },
+    "verify": {
+      "properties": {
+        "directly_usable": {"type": "boolean"},
+        "failure_reason": {"type": ["string", "null"]},
+        "failure_stage": {"type": ["string", "null"]}
+      },
+      "required": ["directly_usable", "failure_stage", "failure_reason"],
+      "type": "object"
+    }
+  },
+  "properties": {
+    "adapter_version": {"minLength": 1, "type": "string"},
+    "core_version": {"minLength": 1, "type": "string"},
+    "dcc_type": {"minLength": 1, "type": "string"},
+    "next_steps": {"items": {"$ref": "#/$defs/next_step"}, "type": "array"},
+    "receipt_path": {"type": ["string", "null"]},
+    "schema_version": {"const": 1, "type": "integer"},
+    "status": {
+      "enum": ["planned", "running", "ok", "failed", "partial", "requires_restart"],
+      "type": "string"
+    },
+    "steps": {"items": {"$ref": "#/$defs/step"}, "type": "array"},
+    "verify": {"$ref": "#/$defs/verify"}
+  },
+  "required": [
+    "schema_version",
+    "status",
+    "dcc_type",
+    "adapter_version",
+    "core_version",
+    "steps",
+    "next_steps",
+    "receipt_path",
+    "verify"
+  ],
+  "title": "DCC-MCP Adapter Install SOP v1 Result",
+  "type": "object"
+}

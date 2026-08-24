@@ -1,17 +1,7 @@
-"""Maya userSetup.py — auto-load the dcc-mcp-maya plugin.
+"""Maya userSetup.py -- auto-load the receipted dcc-mcp-maya module."""
 
-Copy this file to your Maya scripts directory:
-  - Windows:  %USERPROFILE%/Documents/maya/scripts/userSetup.py
-  - macOS:    ~/Library/Preferences/Autodesk/maya/scripts/userSetup.py
-  - Linux:    ~/maya/scripts/userSetup.py
-
-Or ``source`` it from your existing ``userSetup.py``.
-"""
-
-# Import future modules
 from __future__ import annotations
 
-# Import built-in modules
 import logging
 import os
 import sys
@@ -21,18 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 def _setup_module_paths() -> None:
-    """Ensure .mod module paths are on sys.path and MAYA_PLUG_IN_PATH.
-
-    Maya GUI mode processes ``.mod`` files and adds their ``PYTHONPATH+:=...``
-    and ``PLUG_IN_PATH+:=...`` entries automatically.  However, Maya standalone
-    and batch modes **do not** process these directives.
-
-    This helper scans the standard Maya module directories for the
-    ``dcc-mcp-maya`` module and configures both ``sys.path`` (for Python
-    package imports) and ``MAYA_PLUG_IN_PATH`` (for ``cmds.loadPlugin``) so
-    the plugin works in all Maya modes.
-    """
-    # If dcc_mcp_maya is already importable, nothing to do
+    """Expose the installed module in GUI, standalone, and batch modes."""
     try:
         import dcc_mcp_maya  # noqa: F401
 
@@ -40,86 +19,49 @@ def _setup_module_paths() -> None:
     except ImportError:
         pass
 
-    # Standard Maya module directories (per-platform)
     if sys.platform == "win32":
-        module_dirs = [
-            Path(os.environ.get("USERPROFILE", "")) / "Documents" / "maya" / "modules",
-        ]
+        module_dirs = [Path(os.environ.get("USERPROFILE", "")) / "Documents" / "maya" / "modules"]
     elif sys.platform == "darwin":
-        module_dirs = [
-            Path.home() / "Library" / "Preferences" / "Autodesk" / "maya" / "modules",
-        ]
+        module_dirs = [Path.home() / "Library" / "Preferences" / "Autodesk" / "maya" / "modules"]
     else:
-        module_dirs = [
-            Path.home() / "maya" / "modules",
-        ]
+        module_dirs = [Path.home() / "maya" / "modules"]
 
-    for mod_dir in module_dirs:
-        module_root = mod_dir / "dcc-mcp-maya"
+    for modules_dir in module_dirs:
+        module_root = modules_dir / "dcc-mcp-maya"
         if not module_root.is_dir():
             continue
-
-        # Add plug-ins/ to MAYA_PLUG_IN_PATH so loadPlugin can find the .py
         plugins_dir = module_root / "plug-ins"
         if plugins_dir.is_dir():
             current = os.environ.get("MAYA_PLUG_IN_PATH", "")
-            plugins_str = str(plugins_dir)
-            if plugins_str not in current:
-                sep = ";" if sys.platform == "win32" else ":"
-                os.environ["MAYA_PLUG_IN_PATH"] = f"{plugins_str}{sep}{current}" if current else plugins_str
-
+            plugins = str(plugins_dir)
+            if plugins not in current.split(os.pathsep):
+                os.environ["MAYA_PLUG_IN_PATH"] = plugins + (os.pathsep + current if current else "")
         python_dir = module_root / ("python37" if sys.version_info[:2] == (3, 7) else "python")
         if not python_dir.is_dir():
             python_dir = module_root / "python"
-        python_str = str(python_dir)
-        if python_dir.is_dir() and python_str not in sys.path:
-            sys.path.insert(0, python_str)
-            logger.debug("Added %s to sys.path for dcc-mcp-maya", python_str)
-
-        # One module root found — done
+        python_path = str(python_dir)
+        if python_dir.is_dir() and python_path not in sys.path:
+            sys.path.insert(0, python_path)
         break
 
 
 def _apply_default_env() -> None:
-    """Set dcc-mcp-maya defaults only if the user has not overridden them.
-
-    - ``DCC_MCP_MAYA_PORT=0``        OS-assigned port avoids conflicts when
-                                     multiple Maya versions run simultaneously.
-    - ``DCC_MCP_GATEWAY_PORT=9765``  Enable auto-gateway by default.
-    """
     os.environ.setdefault("DCC_MCP_MAYA_PORT", "0")
     os.environ.setdefault("DCC_MCP_GATEWAY_PORT", "9765")
 
 
-def _load_dcc_mcp_maya():
+def _load_dcc_mcp_maya() -> None:
+    """Run the fixed captured bootstrap after Maya's startup queue drains."""
     try:
-        import maya.cmds as cmds
-
         _apply_default_env()
         _setup_module_paths()
+        from dcc_mcp_maya.install import bootstrap_user_setup
 
-        if not cmds.pluginInfo("dcc_mcp_maya_plugin", query=True, loaded=True):
-            cmds.loadPlugin("dcc_mcp_maya_plugin", quiet=True)
-            logger.info("dcc-mcp-maya plugin loaded via userSetup.py")
+        bootstrap_user_setup(defer=False)
     except Exception as exc:
         logger.warning("dcc-mcp-maya auto-load failed: %s", exc)
 
 
-# Defer the plugin load until Maya's main-thread boot sequence is fully
-# drained. ``lowestPriority=True`` is critical here: without it the callback
-# fires at the FRONT of Maya's deferred queue — usually before other
-# ``userSetup.py`` deferred tasks, the autoload scene, and other plugins'
-# init code have completed. ``initializePlugin`` would then run while Maya
-# is still half-initialised, and any cross-thread hand-off the plugin
-# attempts (worker → main via ``executeInMainThreadWithResult``) deadlocks
-# because Maya 2022/2023 gate that channel on a state flag flipped only
-# after plugin-init completes.
-#
-# With ``lowestPriority=True`` the callback joins the *back* of the
-# deferred queue and only fires once Maya's UI is fully idle and
-# responsive. By that point ``cmds.loadPlugin`` → ``initializePlugin`` →
-# ``start_server`` can run safely on the main thread without any cross-
-# thread synchronisation gymnastics.
 try:
     import maya.cmds as cmds
 
