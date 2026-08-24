@@ -220,15 +220,24 @@ def test_reload_textures_reissues_native_paths_and_reports_disk_evidence(tmp_pat
     assert cmds.dirty == ["hero_base_file"]
 
 
-def test_reload_textures_reports_aggregate_udim_disk_evidence(tmp_path):
+def test_reload_textures_reports_aggregate_udim_disk_evidence(tmp_path, monkeypatch):
     tile_1001 = tmp_path / "hero_basecolor.1001.exr"
     tile_1002 = tmp_path / "hero_basecolor.1002.exr"
     tile_1001.write_bytes(b"tile-1001")
     tile_1002.write_bytes(b"tile-1002-more")
     pattern = tmp_path / "hero_basecolor.<UDIM>.exr"
+    expected_pattern = str(pattern.parent.resolve() / pattern.name)
+    original_resolve = Path.resolve
+
+    def reject_tokenized_resolve(path, *args, **kwargs):
+        if "<UDIM>" in path.name:
+            raise OSError("tokenized filenames cannot be resolved on older Windows Python")
+        return original_resolve(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "resolve", reject_tokenized_resolve)
     cmds = _TextureGraphCmds()
     cmds.node_types["hero_udim_file"] = "file"
-    cmds.attrs["hero_udim_file.fileTextureName"] = str(pattern.resolve())
+    cmds.attrs["hero_udim_file.fileTextureName"] = expected_pattern
     cmds.attrs["hero_udim_file.uvTilingMode"] = 3
 
     result = load_and_call(
