@@ -146,7 +146,11 @@ def _run_skill_script_untracked(script_path: str, params: Dict[str, Any]) -> Dic
     except SystemExit:
         pass
     except Exception as exc:  # noqa: BLE001
-        return skill_exception(exc, message="Error loading skill script: {}".format(script_path))
+        return skill_exception(
+            exc,
+            message="Error loading skill script: {}".format(script_path),
+            error_message=str(exc),
+        )
 
     if hasattr(mod, "__mcp_result__"):
         return mod.__mcp_result__  # type: ignore[return-value]
@@ -168,7 +172,7 @@ def _run_skill_script_untracked(script_path: str, params: Dict[str, Any]) -> Dic
     except SystemExit:
         return getattr(mod, "__mcp_result__", {"success": True, "message": "Script executed"})
     except Exception as exc:  # noqa: BLE001
-        return skill_exception(exc)
+        return skill_exception(exc, error_message=str(exc))
 
 
 def _normalize_dispatcher_result(result: Any, action_name: str) -> Dict[str, Any]:
@@ -235,6 +239,7 @@ def _run_via_main_thread_queue(script_path: str, params: Dict[str, Any], action_
         return skill_exception(
             exc,
             message="Main-thread queue failed to dispatch {}".format(action_name),
+            error_message=str(exc),
         )
 
 
@@ -295,6 +300,7 @@ def execute_in_process(
             return skill_exception(
                 exc,
                 message="Dispatcher failed to execute {}".format(action_name),
+                error_message=str(exc),
             )
         return _normalize_dispatcher_result(result, action_name)
 
