@@ -2,7 +2,14 @@
 
 from __future__ import annotations
 
-import dcc_mcp_core.qt_dispatcher as core_qt_dispatcher
+import importlib
+
+from dcc_mcp_core.qt_dispatcher import start_qt_server
+
+# Core 0.20.11 moved the Qt implementation behind the compatibility module.
+# Resolve the module that owns the exported function so this fixture patches
+# the real singleton on both sides of that public-module migration.
+core_qt_dispatcher = importlib.import_module(start_qt_server.__module__)
 
 
 class _Signal:
@@ -81,7 +88,7 @@ def test_core_qt_server_ping_dispatch_and_restart(monkeypatch):
 
     stopped = core_qt_dispatcher.stop_qt_server()
     assert stopped == {"stopped": True}
-    assert core_qt_dispatcher._singleton["server"] is None
+    assert core_qt_dispatcher.current_server() is None
 
     second = core_qt_dispatcher.start_qt_server(port=0)
     try:

@@ -28,6 +28,9 @@ def _make_server(with_dispatcher=False):
 
     server = object.__new__(MayaMcpServer)
     server._dcc_name = "maya"
+    server._dcc_pid = 0
+    server._dcc_window_handle = None
+    server._dcc_window_title = None
     server._config = MagicMock()
     server._handle = None
     server._maya_dispatcher = None
@@ -101,6 +104,9 @@ class TestExecutorRegistration:
 
         server = object.__new__(MayaMcpServer)
         server._dcc_name = "maya"
+        server._dcc_pid = 0
+        server._dcc_window_handle = None
+        server._dcc_window_title = None
         server._config = MagicMock(sandbox_policy=None)
         server._server = MagicMock()
         # Readiness binder created in ``__init__``; supply a stand-in
@@ -194,7 +200,8 @@ class TestRunSkillScript:
         """)
         result = self._run(script, {})
         assert result["success"] is False
-        assert "boom" in str(result.get("error", "") or result.get("message", ""))
+        error_message = result.get("_meta", {}).get("dcc.error", {}).get("message")
+        assert "boom" in str(error_message or result.get("error", "") or result.get("message", ""))
 
     def test_loader_error_returns_error(self, tmp_skill):
         """SyntaxError in script body must return error, not raise."""

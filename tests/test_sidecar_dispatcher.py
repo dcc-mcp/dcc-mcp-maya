@@ -212,7 +212,8 @@ class TestDispatchExecution:
 
         assert envelope["success"] is False
         assert "RuntimeError" in envelope["error"]
-        assert "boom" in envelope["error"]
+        error_message = envelope.get("_meta", {}).get("dcc.error", {}).get("message") or envelope["error"]
+        assert "boom" in error_message
         assert envelope["request_id"] == "r-fail"
         assert envelope["action"] == "exploder"
 
