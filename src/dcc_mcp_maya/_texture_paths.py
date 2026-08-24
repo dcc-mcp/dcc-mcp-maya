@@ -20,16 +20,18 @@ def _resolve_texture_files(texture_path: str, udim_mode: str) -> Tuple[Path, Lis
     if udim_mode not in {"off", "udim"}:
         raise ValueError("udim mode must be off or udim")
 
-    path = Path(texture_path).expanduser().resolve()
+    unresolved_path = Path(texture_path).expanduser()
     if udim_mode == "off":
+        path = unresolved_path.resolve()
         if "<UDIM>" in path.name:
             raise ValueError("udim_mode='off' cannot use a <UDIM> token")
         if not path.is_file():
             raise ValueError("texture file was not found")
         return path, [path]
 
-    if path.name.count("<UDIM>") != 1:
+    if unresolved_path.name.count("<UDIM>") != 1:
         raise ValueError("udim_mode='udim' requires exactly one <UDIM> token in the filename")
+    path = unresolved_path.parent.resolve() / unresolved_path.name
     if not path.parent.is_dir():
         raise ValueError("UDIM texture directory was not found")
     pattern = glob.escape(path.name).replace("<UDIM>", "[0-9][0-9][0-9][0-9]")

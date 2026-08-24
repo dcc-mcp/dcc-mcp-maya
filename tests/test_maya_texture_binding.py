@@ -134,11 +134,20 @@ def test_assign_texture_routes_raw_normal_map_through_arnold_normal_node(tmp_pat
     assert cmds.connections["heroMat.normalCamera"] == "heroMat_normal_normal.outValue"
 
 
-def test_assign_texture_binds_udim_pattern_and_reports_bounded_tiles(tmp_path):
+def test_assign_texture_binds_udim_pattern_without_resolving_the_tokenized_filename(tmp_path, monkeypatch):
     (tmp_path / "hero_basecolor.1001.exr").write_bytes(b"tile-1001")
     (tmp_path / "hero_basecolor.1002.exr").write_bytes(b"tile-1002")
     pattern = tmp_path / "hero_basecolor.<UDIM>.exr"
+    expected_pattern = str(pattern.parent.resolve() / pattern.name)
     cmds = _TextureGraphCmds()
+    original_resolve = Path.resolve
+
+    def reject_tokenized_resolve(path, *args, **kwargs):
+        if "<UDIM>" in path.name:
+            raise OSError("tokenized filenames cannot be resolved on older Windows Python")
+        return original_resolve(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "resolve", reject_tokenized_resolve)
 
     result = load_and_call(
         "maya-material-library/scripts/assign_texture.py",
@@ -155,7 +164,7 @@ def test_assign_texture_binds_udim_pattern_and_reports_bounded_tiles(tmp_path):
     assert result["context"]["udim_mode"] == "udim"
     assert result["context"]["tile_count"] == 2
     assert cmds.attrs["heroMat_base_color_file.uvTilingMode"] == 3
-    assert cmds.attrs["heroMat_base_color_file.fileTextureName"] == str(pattern.resolve())
+    assert cmds.attrs["heroMat_base_color_file.fileTextureName"] == expected_pattern
 
 
 def test_assign_texture_fails_before_mutation_when_slot_is_already_connected(tmp_path):
