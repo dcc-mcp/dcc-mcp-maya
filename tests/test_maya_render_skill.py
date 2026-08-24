@@ -76,6 +76,34 @@ def _configure_model_panel(cmds, panel="modelPanel4", renderer="vp2Renderer"):
     cmds.modelEditor.return_value = renderer
 
 
+def _configure_hidden_maya_window(cmds, panel="modelPanel4"):
+    """Model the #488 state: MayaWindow exists but no panel is visible."""
+
+    def _window(_name, **kwargs):
+        if kwargs.get("exists"):
+            return True
+        if kwargs.get("query") and kwargs.get("visible"):
+            return False
+        raise AssertionError("capture must not edit or show MayaWindow")
+
+    def _get_panel(*_args, **kwargs):
+        if kwargs.get("withFocus"):
+            return panel
+        if kwargs.get("typeOf") == panel:
+            return "modelPanel"
+        if kwargs.get("type") == "modelPanel":
+            return [panel]
+        if kwargs.get("visiblePanels"):
+            return []
+        return None
+
+    cmds.window.side_effect = _window
+    cmds.getPanel.side_effect = _get_panel
+    cmds.modelEditor.return_value = "vp2Renderer"
+    cmds.modelPanel.return_value = "persp"
+    cmds.about.return_value = False
+
+
 def test_configure_color_management_applies_and_reads_back_ocio(tmp_path):
     config = tmp_path / "studio.ocio"
     config.write_text("ocio_profile_version: 2.4\n", encoding="utf-8")
@@ -171,6 +199,52 @@ def test_capture_viewport_forces_offscreen_when_view_fit_fails():
     assert kwargs["offScreen"] is True
     assert kwargs["editorPanelName"] == "modelPanel4"
     assert result["context"]["viewport_renderer"] == "vp2Renderer"
+
+
+def test_capture_viewport_fails_before_playblast_when_maya_window_is_hidden():
+    cmds = MagicMock()
+    cmds.currentTime.return_value = 1.0
+    _configure_hidden_maya_window(cmds)
+    cmds.playblast.side_effect = _write_playblast_bytes(b"solid-white-png")
+
+    result = load_and_call(
+        "maya-render/scripts/capture_viewport.py",
+        cmds,
+        "main",
+        width=320,
+        height=200,
+        off_screen=True,
+    )
+
+    assert result["success"] is False
+    assert result["context"]["error_code"] == "MAYA_VIEWPORT_UNAVAILABLE"
+    assert result["context"]["reason"] == "maya_window_hidden"
+    assert result["context"]["maya_window_visible"] is False
+    assert result["context"]["visible_model_panels"] == []
+    cmds.playblast.assert_not_called()
+
+
+def test_capture_viewport_preserves_batch_offscreen_without_a_window():
+    cmds = MagicMock()
+    cmds.currentTime.return_value = 1.0
+    cmds.about.return_value = True
+    cmds.window.return_value = False
+    cmds.getPanel.side_effect = lambda *_args, **_kwargs: None
+    cmds.playblast.side_effect = _write_playblast_bytes(b"batch-png")
+
+    result = load_and_call(
+        "maya-render/scripts/capture_viewport.py",
+        cmds,
+        "main",
+        width=320,
+        height=200,
+    )
+
+    assert result["success"] is True, result
+    assert result["context"]["off_screen"] is True
+    assert result["context"]["visible_model_panels"] == []
+    _args, kwargs = cmds.playblast.call_args
+    assert kwargs["offScreen"] is True
 
 
 def test_capture_viewport_fits_the_panel_camera():
@@ -324,6 +398,31 @@ def test_capture_playblast_sequence_writes_paths_and_camera_metadata(tmp_path):
     cmds.lookThru.assert_any_call("modelPanel4", "shotCam")
     cmds.lookThru.assert_any_call("modelPanel4", "persp")
     cmds.viewFit.assert_called_once_with("persp", allObjects=True, animate=False)
+
+
+def test_capture_playblast_sequence_fails_without_writing_when_maya_window_is_hidden(tmp_path):
+    cmds = MagicMock()
+    _configure_hidden_maya_window(cmds)
+    output_dir = tmp_path / "must-not-be-created"
+
+    result = load_and_call(
+        "maya-render/scripts/capture_playblast_sequence.py",
+        cmds,
+        "main",
+        output_dir=str(output_dir),
+        start_frame=1,
+        end_frame=1,
+        off_screen=True,
+    )
+
+    assert result["success"] is False
+    assert result["context"]["error_code"] == "MAYA_VIEWPORT_UNAVAILABLE"
+    assert result["context"]["reason"] == "maya_window_hidden"
+    assert result["context"]["maya_window_visible"] is False
+    assert result["context"]["visible_model_panels"] == []
+    assert output_dir.exists() is False
+    cmds.playblast.assert_not_called()
+    cmds.lookThru.assert_not_called()
 
 
 def test_render_frame_uses_cmds_render_and_returns_nonempty_file(tmp_path):
