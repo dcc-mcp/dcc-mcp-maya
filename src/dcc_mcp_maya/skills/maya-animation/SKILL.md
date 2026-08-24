@@ -12,7 +12,7 @@ metadata:
     dcc: maya
     layer: domain
     stage: authoring
-    version: 1.1.0
+    version: 1.2.0
     tags:
     - maya
     - animation
@@ -29,11 +29,12 @@ metadata:
 # maya-animation (Authoring stage)
 
 Keyframes, timeline, curves, constraint / simulation baking, and
-animation curve I/O. Fourteen scripts in three logical clusters:
+animation curve I/O. Sixteen scripts in three logical clusters:
 
 1. **Frame / time queries** — `get_current_time`, `set_current_time`,
    `set_timeline`, `get_frame_range`, `query_scene_time_info`.
-2. **Key editing** — `set_keyframe`, `get_keyframes`, `delete_keyframes`,
+2. **Key editing** — `set_keyframe`, `set_keyframes`, `get_keyframes`,
+   `get_anim_curves`, `delete_keyframes`,
    `list_animation_curves`, `set_animation_curve_tangent`.
 3. **Bake + persistence** — `bake_simulation`, `bake_constraints`,
    `export_animation_curves`, `import_animation_curves`.
@@ -41,7 +42,9 @@ animation curve I/O. Fourteen scripts in three logical clusters:
 ## Scripts
 
 - `set_keyframe` — Set a keyframe on an object at the given time
+- `set_keyframes` — Set and verify one bounded multi-object animation curve
 - `get_keyframes` — Get all keyframe times for an object / attribute
+- `get_anim_curves` — Read values, tangents, infinity, and counts in `dcc-mcp/anim-curves@1`
 - `set_timeline` — Set the playback and animation timeline range
 - `get_current_time` — Get the current frame number
 - `set_current_time` — Set the current frame number

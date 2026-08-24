@@ -125,6 +125,114 @@ tools:
   input_schema:
     type: object
     additionalProperties: false
+- name: get_anim_curves
+  description: Read bounded animation curves with values, tangents, infinity modes,
+    and redundant key counts.
+  execution: async
+  affinity: main
+  timeout_hint_secs: 30
+  annotations:
+    read_only_hint: true
+    destructive_hint: false
+    idempotent_hint: true
+    open_world_hint: false
+  group: animation
+  input_schema:
+    type: object
+    additionalProperties: false
+    required:
+    - targets
+    properties:
+      targets:
+        type: array
+        minItems: 1
+        maxItems: 128
+        uniqueItems: true
+        items:
+          type: string
+          minLength: 3
+          maxLength: 385
+          pattern: ^[^.]+\.[^.]+$
+  output_schema:
+    type: object
+    additionalProperties: false
+    required:
+    - schema
+    - fps
+    - curves
+    - curve_count
+    - total_key_count
+    properties:
+      schema:
+        type: string
+        const: dcc-mcp/anim-curves@1
+      fps:
+        type: number
+        exclusiveMinimum: 0
+      curves:
+        type: array
+        minItems: 1
+        maxItems: 256
+        items:
+          type: object
+          additionalProperties: false
+          required:
+          - target
+          - keys
+          - pre_infinity
+          - post_infinity
+          - key_count
+          properties:
+            target:
+              type: string
+            keys:
+              type: array
+              maxItems: 4096
+              items:
+                type: object
+                additionalProperties: false
+                required:
+                - t
+                - v
+                - in
+                - out
+                properties:
+                  t:
+                    type: number
+                  v:
+                    type: number
+                  in:
+                    type: string
+                  out:
+                    type: string
+            pre_infinity:
+              type: string
+              enum:
+              - constant
+              - linear
+              - cycle
+              - cycle_relative
+              - oscillate
+            post_infinity:
+              type: string
+              enum:
+              - constant
+              - linear
+              - cycle
+              - cycle_relative
+              - oscillate
+            key_count:
+              type: integer
+              minimum: 0
+              maximum: 4096
+      curve_count:
+        type: integer
+        minimum: 1
+        maximum: 256
+      total_key_count:
+        type: integer
+        minimum: 0
+        maximum: 65536
 - name: get_frame_range
   execution: sync
   affinity: main
@@ -267,6 +375,166 @@ tools:
         type: number
     required:
     - object_name
+- name: set_keyframes
+  description: Set one bounded animation curve on multiple objects and verify every
+    key value and requested tangent.
+  execution: async
+  affinity: main
+  timeout_hint_secs: 60
+  annotations:
+    read_only_hint: false
+    destructive_hint: true
+    idempotent_hint: true
+    open_world_hint: false
+  group: animation
+  input_schema:
+    type: object
+    additionalProperties: false
+    required:
+    - objects
+    - attribute
+    - keys
+    properties:
+      objects:
+        type: array
+        minItems: 1
+        maxItems: 32
+        uniqueItems: true
+        items:
+          type: string
+          minLength: 1
+          maxLength: 256
+      attribute:
+        type: string
+        minLength: 1
+        maxLength: 128
+        pattern: ^[A-Za-z_][A-Za-z0-9_]*$
+      keys:
+        type: array
+        minItems: 1
+        maxItems: 512
+        items:
+          type: object
+          additionalProperties: false
+          required:
+          - time
+          - value
+          properties:
+            time:
+              type: number
+            value:
+              type: number
+            in_tangent:
+              type: string
+              enum:
+              - auto
+              - clamped
+              - fast
+              - fixed
+              - flat
+              - linear
+              - plateau
+              - slow
+              - smooth
+              - spline
+              - step
+              - stepnext
+            out_tangent:
+              type: string
+              enum:
+              - auto
+              - clamped
+              - fast
+              - fixed
+              - flat
+              - linear
+              - plateau
+              - slow
+              - smooth
+              - spline
+              - step
+              - stepnext
+  output_schema:
+    type: object
+    additionalProperties: false
+    required:
+    - schema
+    - fps
+    - curves
+    - curve_count
+    - verified_key_count
+    properties:
+      schema:
+        type: string
+        const: dcc-mcp/anim-curves@1
+      fps:
+        type: number
+        exclusiveMinimum: 0
+      curves:
+        type: array
+        minItems: 1
+        maxItems: 32
+        items:
+          type: object
+          additionalProperties: false
+          required:
+          - target
+          - keys
+          - pre_infinity
+          - post_infinity
+          - key_count
+          properties:
+            target:
+              type: string
+            keys:
+              type: array
+              minItems: 1
+              maxItems: 512
+              items:
+                type: object
+                additionalProperties: false
+                required:
+                - t
+                - v
+                - in
+                - out
+                properties:
+                  t:
+                    type: number
+                  v:
+                    type: number
+                  in:
+                    type: string
+                  out:
+                    type: string
+            pre_infinity:
+              type: string
+              enum:
+              - constant
+              - linear
+              - cycle
+              - cycle_relative
+              - oscillate
+            post_infinity:
+              type: string
+              enum:
+              - constant
+              - linear
+              - cycle
+              - cycle_relative
+              - oscillate
+            key_count:
+              type: integer
+              minimum: 1
+              maximum: 512
+      curve_count:
+        type: integer
+        minimum: 1
+        maximum: 32
+      verified_key_count:
+        type: integer
+        minimum: 1
+        maximum: 4096
 - name: set_timeline
   description: Set the playback and animation timeline range
   execution: sync

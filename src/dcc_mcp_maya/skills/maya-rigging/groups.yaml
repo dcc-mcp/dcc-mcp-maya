@@ -14,10 +14,13 @@ groups:
   - create_joint
   - create_rig_control
   - detect_rig_frameworks
+  - export_rig_state
+  - get_skin_weights
   - mirror_joints
   - query_skin_cluster
   - set_driven_key
   - set_ik_fk_blend
   - set_joint_limit
   - set_joint_orient
+  - set_skin_weights
   - skin_cluster_bind
