@@ -211,8 +211,8 @@ class TestDispatchExecution:
         )
 
         assert envelope["success"] is False
-        assert "RuntimeError" in envelope["error"]
-        assert "boom" in envelope["error"]
+        assert envelope["context"]["error_type"] == "RuntimeError"
+        assert envelope["context"]["error_message"] == "boom"
         assert envelope["request_id"] == "r-fail"
         assert envelope["action"] == "exploder"
 

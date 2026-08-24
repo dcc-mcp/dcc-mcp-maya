@@ -97,19 +97,28 @@ class TestExecutorRegistration:
         server._server.register_handler.assert_not_called()
 
     def test_attach_dispatcher_installs_core_dispatcher_and_executor(self):
+        from dcc_mcp_core import HostExecutionBridge
+
         from dcc_mcp_maya.server import MayaMcpServer
 
         server = object.__new__(MayaMcpServer)
         server._dcc_name = "maya"
         server._config = MagicMock(sandbox_policy=None)
         server._server = MagicMock()
+        server.register_host_execution_bridge = MagicMock()
         # Readiness binder created in ``__init__``; supply a stand-in
         # so ``attach_dispatcher`` can re-bind without crashing.
         server._readiness = MagicMock()
         dispatcher = MagicMock()
         server.attach_dispatcher(dispatcher)
         server._server.attach_dispatcher.assert_called_once_with(dispatcher)
-        server._server.set_in_process_executor.assert_called_once()
+        server.register_host_execution_bridge.assert_called_once()
+        # ``unittest.mock._Call.args`` is not a real tuple property in
+        # Maya 2022's Python 3.7; positional indexing works on every
+        # supported interpreter.
+        bridge = server.register_host_execution_bridge.call_args[0][0]
+        assert isinstance(bridge, HostExecutionBridge)
+        assert bridge.default_thread_affinity == "main"
 
 
 # ---------------------------------------------------------------------------
@@ -194,7 +203,8 @@ class TestRunSkillScript:
         """)
         result = self._run(script, {})
         assert result["success"] is False
-        assert "boom" in str(result.get("error", "") or result.get("message", ""))
+        assert result["context"]["error_type"] == "ValueError"
+        assert result["context"]["error_message"] == "boom"
 
     def test_loader_error_returns_error(self, tmp_skill):
         """SyntaxError in script body must return error, not raise."""

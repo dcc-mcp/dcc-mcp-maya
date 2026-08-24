@@ -191,7 +191,8 @@ def test_maya_from_exception_captures_message():
     result = maya_from_exception(exc, "operation failed")
     assert result["success"] is False
     assert result["message"] == "operation failed"
-    assert "bad value" in result["error"]
+    assert result["context"]["error_type"] == "ValueError"
+    assert result["context"]["error_message"] == "bad value"
 
 
 def test_maya_from_exception_default_message():
@@ -315,7 +316,8 @@ def test_with_maya_general_exception():
     result = explodes()
     assert result["success"] is False
     assert "explodes" in result["message"]
-    assert "boom" in result["error"]
+    assert result["context"]["error_type"] == "RuntimeError"
+    assert result["context"]["error_message"] == "boom"
 
 
 def test_with_maya_success_path():

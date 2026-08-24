@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import sys
+from types import ModuleType
+
 import dcc_mcp_core.qt_dispatcher as core_qt_dispatcher
 
 
@@ -45,24 +48,27 @@ class _FakeTimer:
         self.running = False
 
 
-class _FakeQtCore:
-    QTimer = _FakeTimer
-
-
-class _FakeQtNetwork:
-    QTcpServer = _FakeTcpServer
-    QHostAddress = str
+def _install_fake_pyside6(monkeypatch):
+    """Expose a minimal Qt binding through Python's public import surface."""
+    package = ModuleType("PySide6")
+    qt_core = ModuleType("PySide6.QtCore")
+    qt_network = ModuleType("PySide6.QtNetwork")
+    qt_core.QTimer = _FakeTimer
+    qt_network.QTcpServer = _FakeTcpServer
+    qt_network.QHostAddress = str
+    package.QtCore = qt_core
+    package.QtNetwork = qt_network
+    monkeypatch.setitem(sys.modules, "PySide6", package)
+    monkeypatch.setitem(sys.modules, "PySide6.QtCore", qt_core)
+    monkeypatch.setitem(sys.modules, "PySide6.QtNetwork", qt_network)
 
 
 def test_core_qt_server_ping_dispatch_and_restart(monkeypatch):
-    """Menu restart still works through the core singleton."""
+    """Menu restart uses only Core's public singleton lifecycle."""
 
-    monkeypatch.setattr(core_qt_dispatcher, "_singleton", {"server": None})
-    monkeypatch.setattr(
-        core_qt_dispatcher,
-        "_import_qt",
-        lambda: (_FakeQtCore, _FakeQtNetwork, "fake-qt"),
-    )
+    core_qt_dispatcher.stop_qt_server()
+    assert core_qt_dispatcher.current_server() is None
+    _install_fake_pyside6(monkeypatch)
 
     first = core_qt_dispatcher.start_qt_server(
         port=0,
@@ -71,6 +77,7 @@ def test_core_qt_server_ping_dispatch_and_restart(monkeypatch):
     assert first["port"] == 55123
     assert first["url"] == "qtserver://127.0.0.1:55123"
     assert first["reused"] is False
+    assert core_qt_dispatcher.current_server() is first.server
 
     assert first.server.registry.dispatch("ping", {}) == {
         "result": {"pong": True, "version": core_qt_dispatcher.DISPATCHER_VERSION},
@@ -81,7 +88,7 @@ def test_core_qt_server_ping_dispatch_and_restart(monkeypatch):
 
     stopped = core_qt_dispatcher.stop_qt_server()
     assert stopped == {"stopped": True}
-    assert core_qt_dispatcher._singleton["server"] is None
+    assert core_qt_dispatcher.current_server() is None
 
     second = core_qt_dispatcher.start_qt_server(port=0)
     try:

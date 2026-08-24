@@ -304,6 +304,7 @@ def maya_from_exception(
     context.setdefault("error_code", classify_maya_exception(exc))
     context.setdefault("canonical_message_en", canonical_maya_exception_message(exc))
     context.setdefault("error_type", type(exc).__name__)
+    context.setdefault("error_message", str(exc))
     result = skill_exception(
         exc,
         message=message,
