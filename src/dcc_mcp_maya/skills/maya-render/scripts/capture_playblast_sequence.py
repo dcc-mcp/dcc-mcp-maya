@@ -10,6 +10,8 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya._viewport_capture import viewport_capture_preflight
+
 _MAX_PLAYBLAST_DIM = 8192
 _SAFE_PREFIX_RE = re.compile(r"[^A-Za-z0-9_.-]+")
 
@@ -41,15 +43,6 @@ def _frame_range(cmds: Any, start_frame: Optional[float], end_frame: Optional[fl
     if f1 < f0:
         f0, f1 = f1, f0
     return f0, f1
-
-
-def _no_visible_panel(cmds: Any) -> bool:
-    try:
-        panels = cmds.getPanel(type="modelPanel") or []
-        visible = cmds.getPanel(visiblePanels=True) or []
-        return not any(panel in visible for panel in panels)
-    except Exception:  # noqa: BLE001
-        return False
 
 
 def _active_model_panel(cmds: Any) -> Optional[str]:
@@ -240,13 +233,6 @@ def capture_playblast_sequence(
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        created_temp_dir = False
-        if output_dir is None:
-            output_dir = tempfile.mkdtemp(prefix="dcc_mcp_maya_playblast_")
-            created_temp_dir = True
-        out_dir = Path(os.path.expandvars(os.path.expanduser(str(output_dir))))
-        out_dir.mkdir(parents=True, exist_ok=True)
-
         safe_prefix = _safe_prefix(prefix)
         width, height = _clamp_playblast_dims(width, height)
         percent = max(1, min(int(percent), 100))
@@ -258,6 +244,17 @@ def capture_playblast_sequence(
                 compression=compression,
             )
 
+        preflight_error = viewport_capture_preflight(cmds)
+        if preflight_error is not None:
+            return preflight_error
+
+        created_temp_dir = False
+        if output_dir is None:
+            output_dir = tempfile.mkdtemp(prefix="dcc_mcp_maya_playblast_")
+            created_temp_dir = True
+        out_dir = Path(os.path.expandvars(os.path.expanduser(str(output_dir))))
+        out_dir.mkdir(parents=True, exist_ok=True)
+
         f0, f1 = _frame_range(cmds, start_frame, end_frame)
         panel = _active_model_panel(cmds)
         viewport_renderer = _viewport_renderer(cmds, panel)
@@ -268,7 +265,7 @@ def capture_playblast_sequence(
         if view_fit:
             view_fit_applied = _apply_view_fit(cmds, panel)
         if off_screen is None:
-            off_screen = bool(cmds.about(batch=True)) or _no_visible_panel(cmds)
+            off_screen = bool(cmds.about(batch=True))
         if view_fit and not view_fit_applied:
             off_screen = True
 
@@ -315,7 +312,7 @@ def capture_playblast_sequence(
                     "viewport_renderer": viewport_renderer,
                     "visible_model_panels": visible_panels,
                     "possible_solutions": [
-                        "Use maya_render__render_frame for preview frames when Maya is minimized or playblast is unavailable.",
+                        "Use maya_render__render_frame for preview frames when the viewport is unavailable.",
                         "Bring Maya to the foreground and ensure a model panel is visible before recording viewport previews.",
                     ],
                 }

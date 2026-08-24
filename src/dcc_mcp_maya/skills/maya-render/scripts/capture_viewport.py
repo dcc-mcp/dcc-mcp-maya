@@ -12,6 +12,8 @@ from typing import Optional, Tuple
 # Import local modules
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+from dcc_mcp_maya._viewport_capture import viewport_capture_preflight
+
 _MAX_PLAYBLAST_DIM = 8192
 
 
@@ -106,17 +108,16 @@ def capture_viewport(
     Uses ``cmds.playblast`` to render the active viewport into a temporary
     PNG file and returns the image bytes as a Base64 string.  Unlike the
     OS-level ``diagnostics__screenshot`` tool, playblast renders directly
-    from Maya's render context and works even when the Maya window is
-    minimized, hidden behind another window, or running in batch mode
-    (issue #152).
+    from Maya's render context. Interactive capture requires a visible Maya
+    main window and model panel; batch capture may use the off-screen path.
 
     Args:
         width: Image width in pixels.  Default: 1920.
         height: Image height in pixels.  Default: 1080.
         frame: Frame to capture.  Defaults to the current frame.
-        off_screen: When ``True`` (or when running in batch mode / no
-            visible Maya window) render off-screen via Maya's offscreen
-            framebuffer.  Default: auto-detect.
+        off_screen: When ``True`` (or when running in batch mode) render
+            off-screen via Maya's framebuffer. This does not override the
+            interactive-window visibility preflight. Default: auto-detect.
         view_fit: When ``True``, run ``viewFit`` with ``allObjects=True`` on the
             active model panel before capture (never use the invalid ``all=True``
             flag in ad-hoc scripts).
@@ -134,6 +135,9 @@ def capture_viewport(
         tmp_path: Optional[str] = None
         img_path: Optional[str] = None
         f0: Optional[int] = None
+        preflight_error = viewport_capture_preflight(cmds)
+        if preflight_error is not None:
+            return preflight_error
         if frame is None:
             frame = cmds.currentTime(query=True)
 
@@ -147,12 +151,10 @@ def capture_viewport(
         if view_fit:
             view_fit_applied = _apply_view_fit(cmds)
 
-        # Auto-enable off-screen rendering when Maya is running in batch
-        # mode (mayapy) or when no model panel is currently focusable —
-        # both are situations where on-screen capture would silently
-        # produce a black frame or raise (issue #152).
+        # Batch Maya has no interactive window, so retain its off-screen path.
+        # Interactive Maya already passed the visible-window/panel preflight.
         if off_screen is None:
-            off_screen = bool(cmds.about(batch=True)) or _no_visible_panel(cmds)
+            off_screen = bool(cmds.about(batch=True))
         if view_fit and not view_fit_applied:
             off_screen = True
 
@@ -216,8 +218,7 @@ def capture_viewport(
             "Viewport capture produced an empty image",
             "Maya playblast wrote a 0-byte PNG",
             possible_solutions=[
-                "Use maya_render__render_frame with preview-sized dimensions when Maya is minimized or playblast is unavailable.",
-                "Pass off_screen=True if Maya is minimized or running in batch mode.",
+                "Use maya_render__render_frame with preview-sized dimensions when the viewport is unavailable.",
                 "Ensure a model panel is visible before capturing.",
                 "Retry after using view_fit=True so the camera frames scene content.",
             ],
@@ -245,26 +246,10 @@ def capture_viewport(
             exc,
             message="Failed to capture viewport",
             possible_solutions=[
-                "Pass off_screen=True if Maya is minimized or running in batch mode.",
+                "Use maya_render__render_frame when the interactive viewport is unavailable.",
                 "Verify a model panel exists (cmds.getPanel(visiblePanels=True)).",
             ],
         )
-
-
-def _no_visible_panel(cmds) -> bool:
-    """Best-effort check for a usable model panel.
-
-    Returns ``True`` when no visible model panel is detected, in which
-    case playblast must run with ``offScreen=True`` to avoid hitting
-    the on-screen framebuffer (which is empty for hidden / minimized
-    Maya windows — issue #152).
-    """
-    try:
-        panels = cmds.getPanel(type="modelPanel") or []
-        visible = cmds.getPanel(visiblePanels=True) or []
-        return not any(p in visible for p in panels)
-    except Exception:  # noqa: BLE001
-        return False
 
 
 @skill_entry
