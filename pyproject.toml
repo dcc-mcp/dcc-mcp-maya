@@ -57,8 +57,15 @@ Changelog = "https://github.com/dcc-mcp/dcc-mcp-maya/releases"
 [project.entry-points."dcc_mcp.adapters"]
 maya = "dcc_mcp_maya:MayaMcpServer"
 
+[project.scripts]
+dcc-mcp-maya = "dcc_mcp_maya.install:main"
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/dcc_mcp_maya"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"maya/plugin/dcc_mcp_maya_plugin.py" = "dcc_mcp_maya/install_assets/maya/plugin/dcc_mcp_maya_plugin.py"
+"maya/userSetup.py" = "dcc_mcp_maya/install_assets/maya/userSetup.py"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
