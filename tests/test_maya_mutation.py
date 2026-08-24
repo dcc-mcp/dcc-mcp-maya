@@ -17,7 +17,9 @@ def test_undo_chunk_refuses_mutation_when_maya_undo_is_disabled():
     with pytest.raises(RuntimeError, match="undo must be enabled"):
         transaction.begin()
 
-    assert not any(call.kwargs.get("openChunk") for call in cmds.undoInfo.call_args_list)
+    # ``call.kwargs`` was added after Python 3.7. Maya 2022's unittest.mock
+    # otherwise treats that attribute access as another truthy mock call.
+    assert not any(call[1].get("openChunk") for call in cmds.undoInfo.call_args_list)
 
     receipt = transaction.rollback(lambda: True)
 
