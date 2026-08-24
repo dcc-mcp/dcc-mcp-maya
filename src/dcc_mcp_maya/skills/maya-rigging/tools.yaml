@@ -379,6 +379,413 @@ tools:
       include_unavailable:
         type: boolean
         default: false
+- name: export_rig_state
+  description: Export a bounded deterministic hierarchy, constraint, control, and skin-health
+    snapshot.
+  execution: async
+  affinity: main
+  timeout_hint_secs: 60
+  annotations:
+    read_only_hint: true
+    destructive_hint: false
+    idempotent_hint: true
+    open_world_hint: false
+  group: rigging
+  input_schema:
+    type: object
+    additionalProperties: false
+    properties:
+      joints:
+        type: array
+        maxItems: 4096
+        uniqueItems: true
+        items:
+          type: string
+          minLength: 1
+          maxLength: 512
+      skin_clusters:
+        type: array
+        maxItems: 128
+        uniqueItems: true
+        items:
+          type: string
+          minLength: 1
+          maxLength: 512
+      controls:
+        type: array
+        maxItems: 256
+        uniqueItems: true
+        items:
+          type: string
+          minLength: 1
+          maxLength: 512
+      normalization_tolerance:
+        type: number
+        exclusiveMinimum: 0
+        maximum: 0.1
+        default: 0.0001
+  output_schema:
+    $schema: https://json-schema.org/draft/2020-12/schema
+    type: object
+    additionalProperties: false
+    required:
+    - success
+    - message
+    - error
+    - prompt
+    - context
+    properties:
+      success:
+        type: boolean
+      message:
+        type: string
+      error:
+        type:
+        - string
+        - 'null'
+      prompt:
+        type:
+        - string
+        - 'null'
+      context:
+        type: object
+    allOf:
+    - if:
+        properties:
+          success:
+            const: true
+        required:
+        - success
+      then:
+        properties:
+          error:
+            type: 'null'
+          context:
+            type: object
+            additionalProperties: false
+            required:
+            - schema
+            - joints
+            - constraints
+            - skins
+            - controls
+            - normalization_tolerance
+            properties:
+              schema:
+                type: string
+                const: dcc-mcp/rig-state@1
+              joints:
+                type: object
+                additionalProperties: false
+                required:
+                - count
+                - nodes
+                properties:
+                  count:
+                    type: integer
+                    minimum: 0
+                    maximum: 4096
+                  nodes:
+                    type: array
+                    maxItems: 4096
+                    items:
+                      type: object
+                      additionalProperties: false
+                      required:
+                      - name
+                      - parent
+                      properties:
+                        name:
+                          type: string
+                        parent:
+                          type:
+                          - string
+                          - 'null'
+              constraints:
+                type: object
+                additionalProperties: false
+                required:
+                - count
+                - nodes
+                properties:
+                  count:
+                    type: integer
+                    minimum: 0
+                    maximum: 1024
+                  nodes:
+                    type: array
+                    maxItems: 1024
+                    items:
+                      type: object
+                      additionalProperties: false
+                      required:
+                      - name
+                      - type
+                      - targets
+                      properties:
+                        name:
+                          type: string
+                        type:
+                          type: string
+                          enum:
+                          - parentConstraint
+                          - pointConstraint
+                          - orientConstraint
+                          - scaleConstraint
+                          - aimConstraint
+                          - poleVectorConstraint
+                        targets:
+                          type: array
+                          maxItems: 256
+                          items:
+                            type: string
+              skins:
+                type: array
+                maxItems: 128
+                items:
+                  type: object
+                  additionalProperties: false
+                  required:
+                  - skin_cluster
+                  - mesh
+                  - influences
+                  - influence_count
+                  - vertex_count
+                  - unnormalized_vertices
+                  properties:
+                    skin_cluster:
+                      type: string
+                    mesh:
+                      type: string
+                    influences:
+                      type: array
+                      minItems: 1
+                      maxItems: 256
+                      items:
+                        type: string
+                    influence_count:
+                      type: integer
+                      minimum: 1
+                      maximum: 256
+                    vertex_count:
+                      type: integer
+                      minimum: 1
+                      maximum: 4096
+                    unnormalized_vertices:
+                      type: integer
+                      minimum: 0
+                      maximum: 4096
+              controls:
+                type: object
+                additionalProperties: false
+                required:
+                - count
+                - nodes
+                properties:
+                  count:
+                    type: integer
+                    minimum: 0
+                    maximum: 256
+                  nodes:
+                    type: array
+                    maxItems: 256
+                    items:
+                      type: object
+                      additionalProperties: false
+                      required:
+                      - name
+                      - shapes
+                      properties:
+                        name:
+                          type: string
+                        shapes:
+                          type: array
+                          minItems: 1
+                          maxItems: 256
+                          items:
+                            type: string
+              normalization_tolerance:
+                type: number
+                exclusiveMinimum: 0
+                maximum: 0.1
+    - if:
+        properties:
+          success:
+            const: false
+        required:
+        - success
+      then:
+        properties:
+          error:
+            type: string
+            minLength: 1
+- name: get_skin_weights
+  description: Read a bounded per-vertex skin-weight snapshot with normalization evidence.
+  execution: async
+  affinity: main
+  timeout_hint_secs: 60
+  annotations:
+    read_only_hint: true
+    destructive_hint: false
+    idempotent_hint: true
+    open_world_hint: false
+  group: rigging
+  input_schema:
+    type: object
+    additionalProperties: false
+    required:
+    - mesh
+    properties:
+      mesh:
+        type: string
+        minLength: 1
+        maxLength: 256
+      skin_cluster:
+        type: string
+        minLength: 1
+        maxLength: 256
+      vertices:
+        type: array
+        minItems: 1
+        maxItems: 4096
+        uniqueItems: true
+        items:
+          type: integer
+          minimum: 0
+      normalization_tolerance:
+        type: number
+        exclusiveMinimum: 0
+        maximum: 0.1
+        default: 0.0001
+  output_schema:
+    $schema: https://json-schema.org/draft/2020-12/schema
+    type: object
+    additionalProperties: false
+    required:
+    - success
+    - message
+    - error
+    - prompt
+    - context
+    properties:
+      success:
+        type: boolean
+      message:
+        type: string
+      error:
+        type:
+        - string
+        - 'null'
+      prompt:
+        type:
+        - string
+        - 'null'
+      context:
+        type: object
+    allOf:
+    - if:
+        properties:
+          success:
+            const: true
+        required:
+        - success
+      then:
+        properties:
+          error:
+            type: 'null'
+          context:
+            type: object
+            additionalProperties: false
+            required:
+            - schema
+            - mesh
+            - skin_cluster
+            - influences
+            - influence_count
+            - vertices
+            - vertex_count
+            - mesh_vertex_count
+            - unnormalized_vertices
+            - normalization_tolerance
+            properties:
+              schema:
+                type: string
+                const: dcc-mcp/skin-weights@1
+              mesh:
+                type: string
+              skin_cluster:
+                type: string
+              influences:
+                type: array
+                minItems: 1
+                maxItems: 256
+                items:
+                  type: string
+              influence_count:
+                type: integer
+                minimum: 1
+                maximum: 256
+              vertices:
+                type: array
+                minItems: 1
+                maxItems: 4096
+                items:
+                  type: object
+                  additionalProperties: false
+                  required:
+                  - vertex
+                  - weights
+                  - total_weight
+                  properties:
+                    vertex:
+                      type: integer
+                      minimum: 0
+                    weights:
+                      type: array
+                      minItems: 1
+                      maxItems: 256
+                      items:
+                        type: object
+                        additionalProperties: false
+                        required:
+                        - influence
+                        - weight
+                        properties:
+                          influence:
+                            type: string
+                          weight:
+                            type: number
+                            minimum: 0
+                            maximum: 1
+                    total_weight:
+                      type: number
+                      minimum: 0
+              vertex_count:
+                type: integer
+                minimum: 1
+                maximum: 4096
+              mesh_vertex_count:
+                type: integer
+                minimum: 1
+              unnormalized_vertices:
+                type: integer
+                minimum: 0
+                maximum: 4096
+              normalization_tolerance:
+                type: number
+                exclusiveMinimum: 0
+                maximum: 0.1
+    - if:
+        properties:
+          success:
+            const: false
+        required:
+        - success
+      then:
+        properties:
+          error:
+            type: string
+            minLength: 1
 - name: mirror_joints
   description: Mirror a joint chain across an axis plane with optional search/replace renaming.
   execution: sync
@@ -534,6 +941,206 @@ tools:
       zero_scale_orient:
         type: boolean
         default: false
+- name: set_skin_weights
+  description: Replace bounded complete skin-weight rows and verify every native readback.
+  execution: async
+  affinity: main
+  timeout_hint_secs: 60
+  annotations:
+    read_only_hint: false
+    destructive_hint: true
+    idempotent_hint: true
+    open_world_hint: false
+  group: rigging
+  input_schema:
+    type: object
+    additionalProperties: false
+    required:
+    - mesh
+    - vertices
+    properties:
+      mesh:
+        type: string
+        minLength: 1
+        maxLength: 256
+      skin_cluster:
+        type: string
+        minLength: 1
+        maxLength: 256
+      vertices:
+        type: array
+        minItems: 1
+        maxItems: 4096
+        items:
+          type: object
+          additionalProperties: false
+          required:
+          - vertex
+          - weights
+          properties:
+            vertex:
+              type: integer
+              minimum: 0
+            weights:
+              type: array
+              minItems: 1
+              maxItems: 256
+              items:
+                type: object
+                additionalProperties: false
+                required:
+                - influence
+                - weight
+                properties:
+                  influence:
+                    type: string
+                    minLength: 1
+                    maxLength: 256
+                  weight:
+                    type: number
+                    minimum: 0
+                    maximum: 1
+            total_weight:
+              description: Read-only normalization evidence accepted from get_skin_weights.
+              type: number
+      normalization_tolerance:
+        type: number
+        exclusiveMinimum: 0
+        maximum: 0.1
+        default: 0.0001
+  output_schema:
+    $schema: https://json-schema.org/draft/2020-12/schema
+    type: object
+    additionalProperties: false
+    required:
+    - success
+    - message
+    - error
+    - prompt
+    - context
+    properties:
+      success:
+        type: boolean
+      message:
+        type: string
+      error:
+        type:
+        - string
+        - 'null'
+      prompt:
+        type:
+        - string
+        - 'null'
+      context:
+        type: object
+    allOf:
+    - if:
+        properties:
+          success:
+            const: true
+        required:
+        - success
+      then:
+        properties:
+          error:
+            type: 'null'
+          context:
+            type: object
+            additionalProperties: false
+            required:
+            - schema
+            - mesh
+            - skin_cluster
+            - influences
+            - influence_count
+            - vertices
+            - vertex_count
+            - mesh_vertex_count
+            - verified_vertex_count
+            - unnormalized_vertices
+            - normalization_tolerance
+            properties:
+              schema:
+                type: string
+                const: dcc-mcp/skin-weights@1
+              mesh:
+                type: string
+              skin_cluster:
+                type: string
+              influences:
+                type: array
+                minItems: 1
+                maxItems: 256
+                items:
+                  type: string
+              influence_count:
+                type: integer
+                minimum: 1
+                maximum: 256
+              vertices:
+                type: array
+                minItems: 1
+                maxItems: 4096
+                items:
+                  type: object
+                  additionalProperties: false
+                  required:
+                  - vertex
+                  - weights
+                  - total_weight
+                  properties:
+                    vertex:
+                      type: integer
+                      minimum: 0
+                    weights:
+                      type: array
+                      minItems: 1
+                      maxItems: 256
+                      items:
+                        type: object
+                        additionalProperties: false
+                        required:
+                        - influence
+                        - weight
+                        properties:
+                          influence:
+                            type: string
+                          weight:
+                            type: number
+                            minimum: 0
+                            maximum: 1
+                    total_weight:
+                      type: number
+                      minimum: 0
+              vertex_count:
+                type: integer
+                minimum: 1
+                maximum: 4096
+              mesh_vertex_count:
+                type: integer
+                minimum: 1
+              verified_vertex_count:
+                type: integer
+                minimum: 1
+                maximum: 4096
+              unnormalized_vertices:
+                type: integer
+                const: 0
+              normalization_tolerance:
+                type: number
+                exclusiveMinimum: 0
+                maximum: 0.1
+    - if:
+        properties:
+          success:
+            const: false
+        required:
+        - success
+      then:
+        properties:
+          error:
+            type: string
+            minLength: 1
 - name: skin_cluster_bind
   description: Bind a mesh to a set of joints using a skin cluster.
   execution: sync
