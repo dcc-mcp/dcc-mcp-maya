@@ -44,8 +44,8 @@ def test_loft_sections_is_discoverable_and_verifies_a_polygon_mesh():
     assert result["context"]["shape"] == "bodyLoftShape"
     assert result["context"]["input_sections"] == ["sectionA", "sectionB"]
     cmds.loft.assert_called_once()
-    assert cmds.loft.call_args.args == ("sectionA", "sectionB")
-    assert cmds.loft.call_args.kwargs["polygon"] == 1
+    assert cmds.loft.call_args[0] == ("sectionA", "sectionB")
+    assert cmds.loft.call_args[1]["polygon"] == 1
     cmds.rename.assert_called_once_with("loftedMesh", "bodyLoft")
 
 
@@ -93,9 +93,9 @@ def test_lathe_profile_verifies_the_polygon_result():
     assert result["context"]["object_name"] == "lathedBody"
     assert result["context"]["shape"] == "lathedBodyShape"
     assert result["context"]["axis"] == "y"
-    assert cmds.revolve.call_args.kwargs["polygon"] == 1
-    assert cmds.revolve.call_args.kwargs["endSweep"] == 360.0
-    assert "sweep" not in cmds.revolve.call_args.kwargs
+    assert cmds.revolve.call_args[1]["polygon"] == 1
+    assert cmds.revolve.call_args[1]["endSweep"] == 360.0
+    assert "sweep" not in cmds.revolve.call_args[1]
 
 
 def test_array_instances_reads_back_every_requested_transform():
