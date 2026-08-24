@@ -89,6 +89,11 @@ tools:
       rim_intensity:
         type: number
         default: 0.75
+      arnold_exposure:
+        type: number
+        minimum: -20.0
+        maximum: 20.0
+        default: 3.0
       light_type:
         type: string
         default: directionalLight
@@ -113,6 +118,59 @@ tools:
           items:
             type: string
           minItems: 1
+  output_schema:
+    type: object
+    additionalProperties: false
+    required:
+    - rig_group
+    - key_light
+    - fill_light
+    - rim_light
+    - light_type
+    - arnold_exposure
+    - lights
+    - verified
+    properties:
+      rig_group:
+        type: string
+      key_light:
+        type: string
+      fill_light:
+        type: string
+      rim_light:
+        type: string
+      light_type:
+        type: string
+      arnold_exposure:
+        type: number
+        minimum: -20.0
+        maximum: 20.0
+      lights:
+        type: array
+        minItems: 3
+        maxItems: 3
+        items:
+          type: object
+          additionalProperties: false
+          required:
+          - transform
+          - shape
+          - intensity
+          - exposure
+          properties:
+            transform:
+              type: string
+            shape:
+              type: string
+            intensity:
+              type: number
+            exposure:
+              type: number
+              minimum: -20.0
+              maximum: 20.0
+      verified:
+        type: boolean
+        const: true
 - name: list_light_rigs
   execution: sync
   affinity: main

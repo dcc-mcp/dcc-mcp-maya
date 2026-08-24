@@ -13,25 +13,77 @@ tools:
   group: rendering
   input_schema:
     type: object
+    additionalProperties: false
     required:
     - config_file_path
     properties:
       config_file_path:
         type: string
         minLength: 1
+        maxLength: 4096
         description: Absolute path to an existing OCIO config file.
       rendering_space_name:
         type: string
+        minLength: 1
+        maxLength: 256
         default: ACEScg
       display_name:
         type: string
+        minLength: 1
+        maxLength: 256
         default: Rec.1886 Rec.709 - Display
       view_name:
         type: string
+        minLength: 1
+        maxLength: 256
         default: ACES 1.0 - SDR Video
       apply_output_transform:
         type: boolean
         default: true
+  output_schema:
+    type: object
+    additionalProperties: false
+    required:
+    - config_file_path
+    - rendering_space_name
+    - display_name
+    - view_name
+    - ocio_v2_enabled
+    - output_transform_enabled
+    - input_color_spaces
+    - rendering_spaces
+    - output_transforms
+    properties:
+      config_file_path:
+        type: string
+      rendering_space_name:
+        type: string
+      display_name:
+        type: string
+      view_name:
+        type: string
+      ocio_v2_enabled:
+        type: boolean
+      output_transform_enabled:
+        type: boolean
+      input_color_spaces:
+        type: array
+        maxItems: 512
+        items:
+          type: string
+          maxLength: 256
+      rendering_spaces:
+        type: array
+        maxItems: 512
+        items:
+          type: string
+          maxLength: 256
+      output_transforms:
+        type: array
+        maxItems: 512
+        items:
+          type: string
+          maxLength: 256
 - name: setup_hdr_arnold
   description: Load MtoA and create an Arnold HDR skydome environment for look-development
     rendering.
@@ -386,6 +438,57 @@ tools:
         type: boolean
         default: true
         description: Include base64 image bytes in context.image_base64.
+  output_schema:
+    type: object
+    required:
+    - renderer
+    - view_transform
+    - camera
+    - frame
+    - width
+    - height
+    - path
+    - output_path
+    - output_size
+    - log_summary
+    properties:
+      renderer:
+        type: string
+      view_transform:
+        type: string
+        minLength: 1
+      camera:
+        type: string
+      frame:
+        type: number
+      width:
+        type: integer
+        minimum: 1
+        maximum: 8192
+      height:
+        type: integer
+        minimum: 1
+        maximum: 8192
+      path:
+        type: string
+      output_path:
+        type: string
+      output_size:
+        type: integer
+        minimum: 1
+      log_summary:
+        type: object
+        additionalProperties: false
+        required:
+        - captured
+        - reason
+        properties:
+          captured:
+            type: boolean
+            const: false
+          reason:
+            type: string
+            const: renderer_log_not_captured
 - name: render_sequence
   description: Render an inclusive frame range by reusing the active renderer's verified
     single-frame path.
@@ -425,6 +528,155 @@ tools:
       output_prefix:
         type: string
         default: maya_lookdev
+- name: set_aov
+  description: Add, list, or remove one bounded Arnold AOV and return exact native
+    AOV readback.
+  execution: sync
+  affinity: main
+  annotations:
+    read_only_hint: false
+    destructive_hint: true
+    idempotent_hint: false
+    open_world_hint: false
+  group: rendering
+  input_schema:
+    type: object
+    additionalProperties: false
+    required:
+    - action
+    properties:
+      action:
+        type: string
+        enum:
+        - add
+        - list
+        - remove
+      name:
+        type: string
+        minLength: 1
+        maxLength: 64
+        pattern: ^[A-Za-z][A-Za-z0-9_]*$
+      data_type:
+        type: string
+        enum:
+        - rgba
+        - rgb
+        - float
+        - int
+        - bool
+        - vector
+        - point
+        - point2
+        default: rgba
+  output_schema:
+    type: object
+    additionalProperties: false
+    required:
+    - action
+    - changed
+    - aovs
+    - count
+    properties:
+      action:
+        type: string
+        enum:
+        - add
+        - list
+        - remove
+      changed:
+        type: boolean
+      aov:
+        $ref: '#/$defs/aov'
+      removed:
+        $ref: '#/$defs/aov'
+      aovs:
+        type: array
+        maxItems: 64
+        items:
+          $ref: '#/$defs/aov'
+      count:
+        type: integer
+        minimum: 0
+        maximum: 64
+    $defs:
+      aov:
+        type: object
+        additionalProperties: false
+        required:
+        - name
+        - node
+        - data_type
+        - enabled
+        properties:
+          name:
+            type: string
+          node:
+            type: string
+          data_type:
+            type: string
+            enum:
+            - rgba
+            - rgb
+            - float
+            - int
+            - bool
+            - vector
+            - point
+            - point2
+          enabled:
+            type: boolean
+- name: set_exposure
+  description: Set bounded Arnold exposure on one camera or light and verify the
+    exact native aiExposure readback.
+  execution: sync
+  affinity: main
+  annotations:
+    read_only_hint: false
+    destructive_hint: true
+    idempotent_hint: true
+    open_world_hint: false
+  group: rendering
+  input_schema:
+    type: object
+    additionalProperties: false
+    required:
+    - target
+    - exposure
+    properties:
+      target:
+        type: string
+        minLength: 1
+        maxLength: 512
+      exposure:
+        type: number
+        minimum: -20.0
+        maximum: 20.0
+  output_schema:
+    type: object
+    additionalProperties: false
+    required:
+    - target
+    - node
+    - node_type
+    - previous_exposure
+    - exposure
+    - verified
+    properties:
+      target:
+        type: string
+      node:
+        type: string
+      node_type:
+        type: string
+      previous_exposure:
+        type: number
+      exposure:
+        type: number
+        minimum: -20.0
+        maximum: 20.0
+      verified:
+        type: boolean
+        const: true
 - name: set_render_quality
   description: Apply a render quality preset (low/medium/high) to the Maya defaultRenderQuality
     node.
@@ -453,27 +705,128 @@ tools:
   group: rendering
   input_schema:
     type: object
+    additionalProperties: false
     properties:
       width:
         type: integer
         minimum: 1
+        maximum: 8192
         description: Render width in pixels.
       height:
         type: integer
         minimum: 1
+        maximum: 8192
         description: Render height in pixels.
       start_frame:
         type: number
+        minimum: -1000000
+        maximum: 1000000
         description: Animation start frame.
       end_frame:
         type: number
+        minimum: -1000000
+        maximum: 1000000
         description: Animation end frame.
       renderer:
         type: string
+        minLength: 1
+        maxLength: 128
         description: Render engine name (e.g. mayaSoftware, arnold, vray).
       image_format:
         type: string
+        enum:
+        - gif
+        - soft
+        - rla
+        - tiff
+        - sgi
+        - jpg
+        - jpeg
+        - eps
+        - iff
+        - png
+        - maya16iff
+        - exr
+        - tga
+        - bmp
         description: Image format (e.g. png, exr, jpg, tiff).
       output_path:
         type: string
+        minLength: 1
+        maxLength: 4096
         description: Output directory path for rendered images.
+      aa_samples:
+        type: integer
+        minimum: 0
+        maximum: 20
+      diffuse_samples:
+        type: integer
+        minimum: 0
+        maximum: 20
+      specular_samples:
+        type: integer
+        minimum: 0
+        maximum: 20
+      transmission_samples:
+        type: integer
+        minimum: 0
+        maximum: 20
+      sss_samples:
+        type: integer
+        minimum: 0
+        maximum: 20
+      volume_samples:
+        type: integer
+        minimum: 0
+        maximum: 20
+  output_schema:
+    type: object
+    additionalProperties: false
+    required:
+    - verified
+    properties:
+      width:
+        type: integer
+        minimum: 1
+        maximum: 8192
+      height:
+        type: integer
+        minimum: 1
+        maximum: 8192
+      start_frame:
+        type: number
+      end_frame:
+        type: number
+      renderer:
+        type: string
+      image_format:
+        type: string
+      output_path:
+        type: string
+      aa_samples:
+        type: integer
+        minimum: 0
+        maximum: 20
+      diffuse_samples:
+        type: integer
+        minimum: 0
+        maximum: 20
+      specular_samples:
+        type: integer
+        minimum: 0
+        maximum: 20
+      transmission_samples:
+        type: integer
+        minimum: 0
+        maximum: 20
+      sss_samples:
+        type: integer
+        minimum: 0
+        maximum: 20
+      volume_samples:
+        type: integer
+        minimum: 0
+        maximum: 20
+      verified:
+        type: boolean
+        const: true

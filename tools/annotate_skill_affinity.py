@@ -136,6 +136,8 @@ TOOL_OVERRIDES: Dict[Tuple[str, str], ExecAffinity] = {
     # maya-render long-running overrides (playblast/capture hit render engine)
     ("maya-render", "get_render_settings"): ("sync", "main", None),
     ("maya-render", "set_render_settings"): ("sync", "main", None),
+    ("maya-render", "set_aov"): ("sync", "main", None),
+    ("maya-render", "set_exposure"): ("sync", "main", None),
     ("maya-render", "set_render_quality"): ("sync", "main", None),
     ("maya-render", "get_scene_render_stats"): ("sync", "main", None),
     # maya-render-farm — all async

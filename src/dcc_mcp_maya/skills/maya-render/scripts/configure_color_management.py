@@ -6,6 +6,18 @@ from pathlib import Path
 
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
+_MAX_COLOR_NAMES = 512
+_MAX_COLOR_NAME_LENGTH = 256
+
+
+def _bounded_names(values, label: str):
+    names = sorted({str(value) for value in (values or []) if str(value)})
+    if len(names) > _MAX_COLOR_NAMES:
+        raise ValueError("{} returned more than {} entries".format(label, _MAX_COLOR_NAMES))
+    if any(len(name) > _MAX_COLOR_NAME_LENGTH for name in names):
+        raise ValueError("{} returned an overlong entry".format(label))
+    return names
+
 
 @skill_entry
 def main(
@@ -54,6 +66,18 @@ def main(
                     outputTarget="renderer",
                     outputTransformEnabled=True,
                 )
+            ),
+            "input_color_spaces": _bounded_names(
+                cmds.colorManagementPrefs(query=True, inputColorSpaceNames=True),
+                "input color spaces",
+            ),
+            "rendering_spaces": _bounded_names(
+                cmds.colorManagementPrefs(query=True, renderingSpaceNames=True),
+                "rendering spaces",
+            ),
+            "output_transforms": _bounded_names(
+                cmds.colorManagementPrefs(query=True, outputTransformNames=True),
+                "output transforms",
             ),
         }
         expected = {

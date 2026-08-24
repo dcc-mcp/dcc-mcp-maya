@@ -149,6 +149,18 @@ def _set_string_attr(cmds, attr: str, value: str) -> None:
     cmds.setAttr(attr, value, type="string")
 
 
+def _query_view_transform(cmds) -> str:
+    """Return the active color-management view without hiding query failures."""
+
+    try:
+        value = cmds.colorManagementPrefs(query=True, viewName=True)
+    except Exception:
+        return "unavailable"
+    if isinstance(value, str) and value.strip():
+        return value.strip()
+    return "unavailable"
+
+
 def render_frame(
     camera: Optional[str] = None,
     frame: Optional[float] = None,
@@ -273,16 +285,22 @@ def render_frame(
         image_base64 = _read_optional_base64(output_path, return_base64)
         context = {
             "renderer": renderer,
+            "view_transform": _query_view_transform(cmds),
             "camera": camera_name,
             "camera_shape": camera_shape,
             "camera_source": camera_source,
             "frame": target_frame,
             "width": target_width,
             "height": target_height,
+            "path": output_path,
             "output_path": output_path,
             "output_size": os.path.getsize(output_path),
             "output_prefix": prefix,
             "image_base64": image_base64,
+            "log_summary": {
+                "captured": False,
+                "reason": "renderer_log_not_captured",
+            },
         }
         if render_result is not None:
             context["render_result"] = render_result

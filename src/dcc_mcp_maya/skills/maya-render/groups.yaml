@@ -14,6 +14,8 @@ groups:
   - render_frame
   - render_sequence
   - render_scene
+  - set_aov
+  - set_exposure
   - set_render_quality
   - set_render_settings
   - setup_hdr_arnold

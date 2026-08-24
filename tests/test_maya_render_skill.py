@@ -359,6 +359,62 @@ def test_render_frame_uses_cmds_render_and_returns_nonempty_file(tmp_path):
     assert Path(context["output_path"]).name == "shot_01.png"
 
 
+def test_render_frame_reports_the_active_view_transform(tmp_path):
+    cmds = MagicMock()
+    prefix_holder = _configure_render_cmds(cmds, renderer="mayaSoftware", current_frame=12.0)
+
+    def _render(camera, **_kwargs):
+        path = "{}.png".format(prefix_holder["prefix"])
+        Path(path).write_bytes(b"render-bytes")
+        return path
+
+    def _color_management(**kwargs):
+        if kwargs.get("query") and kwargs.get("viewName"):
+            return "ACES 1.0 - SDR Video"
+        return None
+
+    cmds.render.side_effect = _render
+    cmds.colorManagementPrefs.side_effect = _color_management
+
+    result = load_and_call(
+        "maya-render/scripts/render_frame.py",
+        cmds,
+        "main",
+        output_dir=str(tmp_path),
+        return_base64=False,
+    )
+
+    assert result["success"] is True, result
+    assert result["context"]["view_transform"] == "ACES 1.0 - SDR Video"
+
+
+def test_render_frame_declares_path_and_bounded_log_summary(tmp_path):
+    cmds = MagicMock()
+    prefix_holder = _configure_render_cmds(cmds, renderer="mayaSoftware", current_frame=1.0)
+
+    def _render(camera, **_kwargs):
+        path = "{}.png".format(prefix_holder["prefix"])
+        Path(path).write_bytes(b"render-bytes")
+        return path
+
+    cmds.render.side_effect = _render
+
+    result = load_and_call(
+        "maya-render/scripts/render_frame.py",
+        cmds,
+        "main",
+        output_dir=str(tmp_path),
+        return_base64=False,
+    )
+
+    assert result["success"] is True, result
+    assert result["context"]["path"] == result["context"]["output_path"]
+    assert result["context"]["log_summary"] == {
+        "captured": False,
+        "reason": "renderer_log_not_captured",
+    }
+
+
 def test_render_frame_uses_arnold_mel_when_current_renderer_is_arnold(tmp_path):
     cmds = MagicMock()
     mel = MagicMock()

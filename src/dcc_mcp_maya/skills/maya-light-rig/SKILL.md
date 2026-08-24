@@ -13,7 +13,7 @@ metadata:
     dcc: maya
     layer: domain
     stage: authoring
-    version: 1.1.0
+    version: 1.2.0
     tags:
     - maya
     - lighting
@@ -37,7 +37,7 @@ returning a shape node.
 ## Scripts
 
 - `create_light` — Create one typed light and return transform + shape
-- `create_three_point_rig` — Create a standard key/fill/rim three-point light rig
+- `create_three_point_rig` — Create a standard key/fill/rim three-point light rig with a shared bounded Arnold exposure, exact readback, and rollback on partial creation failure
 - `create_hdri_dome` — Create a skydome/environment light from an HDR image
 - `list_light_rigs` — List all lights grouped under rig transform nodes
 - `set_light_rig_intensity` — Scale intensity of all lights within a named rig
