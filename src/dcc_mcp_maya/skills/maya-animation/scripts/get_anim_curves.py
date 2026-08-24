@@ -54,13 +54,26 @@ def _infinity_name(value) -> str:
     return _INFINITY_BY_VALUE[number]
 
 
-def _curve_row(cmds, curve: str, target: str) -> Dict:
+def _native_key_count(cmds, curve: str) -> int:
+    raw = cmds.keyframe(curve, query=True, keyframeCount=True)
+    if isinstance(raw, bool):
+        raise RuntimeError("Maya returned an invalid key count for {}".format(curve))
+    try:
+        count = int(raw)
+    except (TypeError, ValueError):
+        raise RuntimeError("Maya returned an invalid key count for {}".format(curve))
+    if count < 0 or count != raw:
+        raise RuntimeError("Maya returned an invalid key count for {}".format(curve))
+    return count
+
+
+def _curve_row(cmds, curve: str, target: str, expected_key_count: int) -> Dict:
     times = cmds.keyframe(curve, query=True, timeChange=True) or []
     values = cmds.keyframe(curve, query=True, valueChange=True) or []
     in_tangents = cmds.keyTangent(curve, query=True, inTangentType=True) or []
     out_tangents = cmds.keyTangent(curve, query=True, outTangentType=True) or []
     lengths = {len(times), len(values), len(in_tangents), len(out_tangents)}
-    if len(lengths) != 1:
+    if len(lengths) != 1 or len(times) != expected_key_count:
         raise RuntimeError("Maya returned misaligned curve arrays for {}".format(curve))
     keys = []
     for time, value, in_tangent, out_tangent in zip(times, values, in_tangents, out_tangents):
@@ -76,8 +89,6 @@ def _curve_row(cmds, curve: str, target: str) -> Dict:
                 "out": str(out_tangent),
             }
         )
-    if len(keys) > MAX_KEYS_PER_CURVE:
-        raise ValueError("Animation curve {} exceeds the {} key limit".format(curve, MAX_KEYS_PER_CURVE))
     return {
         "target": target,
         "keys": keys,
@@ -117,16 +128,26 @@ def get_anim_curves(targets: List[str]) -> dict:
         if len(curve_targets) > MAX_CURVES:
             return skill_error("Too many animation curves", "curve count exceeds {}".format(MAX_CURVES))
 
-        curves = []
+        curve_counts = []
         total_keys = 0
         for curve, target in curve_targets:
-            row = _curve_row(cmds, curve, target)
-            total_keys += row["key_count"]
+            key_count = _native_key_count(cmds, curve)
+            if key_count > MAX_KEYS_PER_CURVE:
+                return skill_error(
+                    "Too many animation keys",
+                    "Animation curve {} exceeds the {} key limit".format(curve, MAX_KEYS_PER_CURVE),
+                )
+            total_keys += key_count
             if total_keys > MAX_TOTAL_KEYS:
                 return skill_error(
                     "Too many animation keys",
                     "key count exceeds {}".format(MAX_TOTAL_KEYS),
                 )
+            curve_counts.append(key_count)
+
+        curves = []
+        for (curve, target), key_count in zip(curve_targets, curve_counts):
+            row = _curve_row(cmds, curve, target, key_count)
             curves.append(row)
         return skill_success(
             "Read {} animation curve(s)".format(len(curves)),

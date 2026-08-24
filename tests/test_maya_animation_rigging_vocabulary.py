@@ -1,12 +1,17 @@
 # Import built-in modules
+import sys
 from pathlib import Path
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
-# Import third-party modules
 import yaml
 
 # Import local modules
 from conftest import load_and_call
+
+# Import third-party modules
+from jsonschema import Draft202012Validator
+
+from dcc_mcp_maya import _executor
 
 SKILLS_ROOT = Path(__file__).parent.parent / "src" / "dcc_mcp_maya" / "skills"
 
@@ -15,6 +20,285 @@ def _tool(skill_name, tool_name):
     tools_path = SKILLS_ROOT / skill_name / "tools.yaml"
     tools = yaml.safe_load(tools_path.read_text(encoding="utf-8"))["tools"]
     return next(tool for tool in tools if tool["name"] == tool_name)
+
+
+def _dispatch_skill_script(skill_name, script_name, cmds, **params):
+    mock_maya = MagicMock()
+    mock_maya.cmds = cmds
+    script_path = SKILLS_ROOT / skill_name / "scripts" / "{}.py".format(script_name)
+    tool_name = "{}__{}".format(skill_name.replace("-", "_"), script_name)
+    with patch.dict(sys.modules, {"maya": mock_maya, "maya.cmds": cmds}):
+        return _executor.execute_in_process(MagicMock(spec=[]), str(script_path), params, tool_name)
+
+
+def _static_tangent_state(key_count, tangent_type="linear"):
+    def _key_tangent(_target, **kwargs):
+        if kwargs.get("edit"):
+            return []
+        result_count = 1 if kwargs.get("time") else key_count
+        if kwargs.get("inTangentType") or kwargs.get("outTangentType"):
+            return [tangent_type] * result_count
+        if kwargs.get("inAngle") or kwargs.get("outAngle"):
+            return [0.0] * result_count
+        if kwargs.get("inWeight") or kwargs.get("outWeight"):
+            return [1.0] * result_count
+        if kwargs.get("lock") or kwargs.get("weightLock"):
+            return [False] * result_count
+        if kwargs.get("weightedTangents"):
+            return [False]
+        return []
+
+    return _key_tangent
+
+
+def test_get_anim_curves_output_schema_validates_real_dispatch_success_and_failure():
+    schema = _tool("maya-animation", "get_anim_curves")["output_schema"]
+    Draft202012Validator.check_schema(schema)
+    validator = Draft202012Validator(schema)
+
+    success_cmds = MagicMock()
+    success_cmds.objExists.return_value = True
+    success_cmds.currentUnit.return_value = "film"
+
+    def _keyframe(_target, **kwargs):
+        if kwargs.get("name"):
+            return ["rotorA_rotateY"]
+        if kwargs.get("keyframeCount"):
+            return 1
+        if kwargs.get("timeChange"):
+            return [1.0]
+        if kwargs.get("valueChange"):
+            return [90.0]
+        return []
+
+    success_cmds.keyframe.side_effect = _keyframe
+    success_cmds.keyTangent.return_value = ["linear"]
+    success_cmds.getAttr.return_value = 0
+    success = _dispatch_skill_script(
+        "maya-animation",
+        "get_anim_curves",
+        success_cmds,
+        targets=["rotorA.rotateY"],
+    )
+
+    failure_cmds = MagicMock()
+    failure_cmds.objExists.return_value = False
+    failure = _dispatch_skill_script(
+        "maya-animation",
+        "get_anim_curves",
+        failure_cmds,
+        targets=["missing.rotateY"],
+    )
+
+    assert success["success"] is True, success
+    assert failure["success"] is False, failure
+    validator.validate(success)
+    validator.validate(failure)
+
+
+def test_set_keyframes_output_schema_validates_real_dispatch_success_and_failure():
+    schema = _tool("maya-animation", "set_keyframes")["output_schema"]
+    Draft202012Validator.check_schema(schema)
+    validator = Draft202012Validator(schema)
+
+    success_cmds = MagicMock()
+    success_cmds.objExists.return_value = True
+    success_cmds.currentUnit.return_value = "film"
+
+    def _keyframe(_target, **kwargs):
+        if kwargs.get("name"):
+            return ["rotorA_rotateY"]
+        if kwargs.get("keyframeCount"):
+            return 1
+        if kwargs.get("timeChange"):
+            return [1.0]
+        if kwargs.get("valueChange"):
+            return [90.0]
+        return []
+
+    success_cmds.keyframe.side_effect = _keyframe
+    success_cmds.keyTangent.side_effect = _static_tangent_state(1)
+    success_cmds.getAttr.return_value = 0
+    success = _dispatch_skill_script(
+        "maya-animation",
+        "set_keyframes",
+        success_cmds,
+        objects=["rotorA"],
+        attribute="rotateY",
+        keys=[{"time": 1.0, "value": 90.0}],
+    )
+
+    failure_cmds = MagicMock()
+    failure_cmds.objExists.return_value = False
+    failure = _dispatch_skill_script(
+        "maya-animation",
+        "set_keyframes",
+        failure_cmds,
+        objects=["missing"],
+        attribute="rotateY",
+        keys=[{"time": 1.0, "value": 90.0}],
+    )
+
+    assert success["success"] is True, success
+    assert failure["success"] is False, failure
+    validator.validate(success)
+    validator.validate(failure)
+
+
+def test_get_skin_weights_output_schema_validates_real_dispatch_success_and_failure():
+    schema = _tool("maya-rigging", "get_skin_weights")["output_schema"]
+    Draft202012Validator.check_schema(schema)
+    validator = Draft202012Validator(schema)
+
+    success_cmds = MagicMock()
+    success_cmds.objExists.return_value = True
+    success_cmds.listHistory.return_value = ["bodySkin"]
+    success_cmds.ls.return_value = ["bodySkin"]
+    success_cmds.skinCluster.return_value = ["root_jnt", "tip_jnt"]
+    success_cmds.polyEvaluate.return_value = 1
+    success_cmds.skinPercent.return_value = [0.75, 0.25]
+    success = _dispatch_skill_script(
+        "maya-rigging",
+        "get_skin_weights",
+        success_cmds,
+        mesh="body_geo",
+        vertices=[0],
+    )
+
+    failure_cmds = MagicMock()
+    failure_cmds.objExists.return_value = False
+    failure = _dispatch_skill_script(
+        "maya-rigging",
+        "get_skin_weights",
+        failure_cmds,
+        mesh="missing_geo",
+    )
+
+    assert success["success"] is True, success
+    assert failure["success"] is False, failure
+    validator.validate(success)
+    validator.validate(failure)
+
+
+def test_set_skin_weights_output_schema_validates_real_dispatch_success_and_failure():
+    schema = _tool("maya-rigging", "set_skin_weights")["output_schema"]
+    Draft202012Validator.check_schema(schema)
+    validator = Draft202012Validator(schema)
+
+    success_cmds = MagicMock()
+    success_cmds.objExists.return_value = True
+    success_cmds.listHistory.return_value = ["bodySkin"]
+    success_cmds.ls.return_value = ["bodySkin"]
+    success_cmds.skinCluster.return_value = ["root_jnt", "tip_jnt"]
+    success_cmds.polyEvaluate.return_value = 1
+    success_cmds.undoInfo.return_value = True
+    success_cmds.skinPercent.return_value = [0.75, 0.25]
+    vertices = [
+        {
+            "vertex": 0,
+            "weights": [
+                {"influence": "root_jnt", "weight": 0.75},
+                {"influence": "tip_jnt", "weight": 0.25},
+            ],
+        }
+    ]
+    success = _dispatch_skill_script(
+        "maya-rigging",
+        "set_skin_weights",
+        success_cmds,
+        mesh="body_geo",
+        vertices=vertices,
+    )
+
+    failure_cmds = MagicMock()
+    failure_cmds.objExists.return_value = False
+    failure = _dispatch_skill_script(
+        "maya-rigging",
+        "set_skin_weights",
+        failure_cmds,
+        mesh="missing_geo",
+        vertices=vertices,
+    )
+
+    assert success["success"] is True, success
+    assert failure["success"] is False, failure
+    validator.validate(success)
+    validator.validate(failure)
+
+
+def test_export_rig_state_output_schema_validates_real_dispatch_success_and_failure():
+    schema = _tool("maya-rigging", "export_rig_state")["output_schema"]
+    Draft202012Validator.check_schema(schema)
+    validator = Draft202012Validator(schema)
+
+    success_cmds = MagicMock()
+    success_cmds.ls.return_value = []
+    success = _dispatch_skill_script(
+        "maya-rigging",
+        "export_rig_state",
+        success_cmds,
+        joints=[],
+        skin_clusters=[],
+        controls=[],
+    )
+    failure = _dispatch_skill_script(
+        "maya-rigging",
+        "export_rig_state",
+        MagicMock(),
+        normalization_tolerance=0.0,
+    )
+
+    assert success["success"] is True, success
+    assert failure["success"] is False, failure
+    validator.validate(success)
+    validator.validate(failure)
+
+
+def test_skin_weight_get_set_get_roundtrip_accepts_total_weight_evidence():
+    cmds = MagicMock()
+    cmds.objExists.return_value = True
+    cmds.listHistory.return_value = ["bodySkin"]
+    cmds.ls.return_value = ["bodySkin"]
+    cmds.skinCluster.return_value = ["root_jnt", "tip_jnt"]
+    cmds.polyEvaluate.return_value = 1
+    cmds.undoInfo.return_value = True
+    state = [0.75, 0.25]
+
+    def _skin_percent(_cluster, _component, **kwargs):
+        if kwargs.get("query") and kwargs.get("value"):
+            return list(state)
+        if "transformValue" in kwargs:
+            requested = dict(kwargs["transformValue"])
+            state[:] = [requested.get("root_jnt", 0.0), requested.get("tip_jnt", 0.0)]
+        return None
+
+    cmds.skinPercent.side_effect = _skin_percent
+    first = _dispatch_skill_script(
+        "maya-rigging",
+        "get_skin_weights",
+        cmds,
+        mesh="body_geo",
+        vertices=[0],
+    )
+    written = _dispatch_skill_script(
+        "maya-rigging",
+        "set_skin_weights",
+        cmds,
+        mesh="body_geo",
+        vertices=first["context"]["vertices"],
+    )
+    second = _dispatch_skill_script(
+        "maya-rigging",
+        "get_skin_weights",
+        cmds,
+        mesh="body_geo",
+        vertices=[0],
+    )
+
+    assert first["success"] is True, first
+    assert written["success"] is True, written
+    assert second["success"] is True, second
+    assert second["context"]["vertices"] == first["context"]["vertices"]
 
 
 def test_typed_animation_and_rigging_tools_declare_complete_execution_contracts():
@@ -48,6 +332,8 @@ def test_set_keyframes_batches_multiple_objects_and_reads_back_values():
     def _keyframe(_target, **kwargs):
         if kwargs.get("name"):
             return ["{}_rotateY".format(_target.split(".")[0])]
+        if kwargs.get("keyframeCount"):
+            return 2
         if kwargs.get("query") and kwargs.get("timeChange"):
             return [1.0, 24.0]
         if kwargs.get("query") and kwargs.get("valueChange"):
@@ -55,7 +341,7 @@ def test_set_keyframes_batches_multiple_objects_and_reads_back_values():
         return []
 
     cmds.keyframe.side_effect = _keyframe
-    cmds.keyTangent.side_effect = lambda _target, **kwargs: ["linear"] if kwargs.get("time") else ["linear", "linear"]
+    cmds.keyTangent.side_effect = _static_tangent_state(2)
     cmds.getAttr.return_value = 0
 
     result = load_and_call(
@@ -87,8 +373,20 @@ def test_set_keyframes_fails_closed_when_native_readback_differs():
     cmds.objExists.return_value = True
     cmds.currentUnit.return_value = "film"
     cmds.undoInfo.return_value = True
-    cmds.keyframe.side_effect = lambda _target, **kwargs: [1.0] if kwargs.get("timeChange") else [2.0]
-    cmds.keyTangent.return_value = ["linear"]
+
+    def _keyframe(_target, **kwargs):
+        if kwargs.get("name"):
+            return ["rotorA_rotateY"]
+        if kwargs.get("keyframeCount"):
+            return 1
+        if kwargs.get("timeChange"):
+            return [1.0]
+        if kwargs.get("valueChange"):
+            return [2.0]
+        return []
+
+    cmds.keyframe.side_effect = _keyframe
+    cmds.keyTangent.side_effect = _static_tangent_state(1)
     cmds.getAttr.return_value = 0
 
     result = load_and_call(
@@ -111,6 +409,8 @@ def test_set_keyframes_fails_closed_on_non_finite_native_readback():
     def _keyframe(_target, **kwargs):
         if kwargs.get("name"):
             return ["rotorA_rotateY"]
+        if kwargs.get("keyframeCount"):
+            return 1
         if kwargs.get("timeChange"):
             return [1.0]
         if kwargs.get("valueChange"):
@@ -118,7 +418,7 @@ def test_set_keyframes_fails_closed_on_non_finite_native_readback():
         return []
 
     cmds.keyframe.side_effect = _keyframe
-    cmds.keyTangent.return_value = ["linear"]
+    cmds.keyTangent.side_effect = _static_tangent_state(1)
     cmds.getAttr.return_value = 0
 
     result = load_and_call(
@@ -145,6 +445,8 @@ def test_get_anim_curves_returns_values_tangents_and_infinity():
     def _keyframe(_target, **kwargs):
         if kwargs.get("name"):
             return ["rotorA_rotateY"]
+        if kwargs.get("keyframeCount"):
+            return 2
         if kwargs.get("timeChange"):
             return [1.0, 24.0]
         if kwargs.get("valueChange"):
@@ -193,6 +495,8 @@ def test_get_anim_curves_fails_closed_on_misaligned_native_arrays():
     def _keyframe(_target, **kwargs):
         if kwargs.get("name"):
             return ["rotorA_rotateY"]
+        if kwargs.get("keyframeCount"):
+            return 2
         if kwargs.get("timeChange"):
             return [1.0, 24.0]
         if kwargs.get("valueChange"):
@@ -221,6 +525,8 @@ def test_get_anim_curves_fails_closed_on_non_finite_native_values():
     def _keyframe(_target, **kwargs):
         if kwargs.get("name"):
             return ["rotorA_rotateY"]
+        if kwargs.get("keyframeCount"):
+            return 1
         if kwargs.get("timeChange"):
             return [1.0]
         if kwargs.get("valueChange"):
@@ -442,10 +748,15 @@ def test_export_rig_state_reports_hierarchy_constraints_controls_and_skin_health
 
     cmds = MagicMock()
 
-    def _ls(*_args, **kwargs):
+    def _ls(*args, **kwargs):
+        if args and kwargs.get("long"):
+            return {
+                "root_jnt": ["|rig|root_jnt"],
+                "tip_jnt": ["|rig|root_jnt|tip_jnt"],
+            }.get(args[0], [])
         node_type = kwargs.get("type")
         return {
-            "joint": ["root_jnt", "tip_jnt"],
+            "joint": ["|rig|root_jnt", "|rig|root_jnt|tip_jnt"],
             "skinCluster": ["bodySkin"],
             "parentConstraint": ["hand_parentConstraint"],
             "pointConstraint": [],
@@ -458,7 +769,7 @@ def test_export_rig_state_reports_hierarchy_constraints_controls_and_skin_health
 
     def _relatives(node, **kwargs):
         if kwargs.get("parent") and kwargs.get("type") == "joint":
-            return ["root_jnt"] if node == "tip_jnt" else []
+            return ["|rig|root_jnt"] if node == "|rig|root_jnt|tip_jnt" else []
         if kwargs.get("parent") and node == "hand_ctrlShape":
             return ["hand_ctrl"]
         if kwargs.get("shapes") and node == "hand_ctrl":
@@ -490,7 +801,7 @@ def test_export_rig_state_reports_hierarchy_constraints_controls_and_skin_health
     state = result["context"]
     assert state["schema"] == "dcc-mcp/rig-state@1"
     assert state["joints"]["count"] == 2
-    assert state["joints"]["nodes"][1]["parent"] == "root_jnt"
-    assert state["constraints"]["nodes"][0]["targets"] == ["root_jnt"]
+    assert state["joints"]["nodes"][1]["parent"] == "|rig|root_jnt"
+    assert state["constraints"]["nodes"][0]["targets"] == ["|rig|root_jnt"]
     assert state["controls"]["nodes"] == [{"name": "hand_ctrl", "shapes": ["hand_ctrlShape"]}]
     assert state["skins"][0]["unnormalized_vertices"] == 0

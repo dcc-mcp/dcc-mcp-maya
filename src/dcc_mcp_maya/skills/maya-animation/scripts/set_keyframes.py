@@ -122,40 +122,119 @@ def _read_values(cmds, plug: str) -> Dict[float, float]:
     return output
 
 
-def _curve_snapshot(cmds, plug: str) -> Dict:
+def _native_key_count(cmds, plug: str) -> int:
+    raw = cmds.keyframe(plug, query=True, keyframeCount=True)
+    if isinstance(raw, bool):
+        raise RuntimeError("Maya returned an invalid key count for {}".format(plug))
+    try:
+        count = int(raw)
+    except (TypeError, ValueError):
+        raise RuntimeError("Maya returned an invalid key count for {}".format(plug))
+    if count < 0 or count != raw:
+        raise RuntimeError("Maya returned an invalid key count for {}".format(plug))
+    return count
+
+
+def _curve_preflight(cmds, plug: str):
     curves = [str(item) for item in (cmds.keyframe(plug, query=True, name=True) or [])]
     if len(curves) > 1:
         raise _LayeredCurveError("{} has multiple animation curves".format(plug))
     if not curves:
-        return {"curve": None, "keys": ()}
+        return None, 0
+    key_count = _native_key_count(cmds, plug)
+    if key_count > MAX_SNAPSHOT_KEYS:
+        raise ValueError("{} exceeds the {} snapshot-key limit".format(plug, MAX_SNAPSHOT_KEYS))
+    return curves[0], key_count
 
-    curve = curves[0]
+
+def _curve_snapshot(cmds, plug: str, curve, expected_key_count: int) -> Dict:
+    if curve is None:
+        return {"curve": None, "keys": ()}
     times = cmds.keyframe(plug, query=True, timeChange=True) or []
     values = cmds.keyframe(plug, query=True, valueChange=True) or []
     in_tangents = cmds.keyTangent(plug, query=True, inTangentType=True) or []
     out_tangents = cmds.keyTangent(plug, query=True, outTangentType=True) or []
-    if len({len(times), len(values), len(in_tangents), len(out_tangents)}) != 1:
+    in_angles = cmds.keyTangent(plug, query=True, inAngle=True) or []
+    out_angles = cmds.keyTangent(plug, query=True, outAngle=True) or []
+    in_weights = cmds.keyTangent(plug, query=True, inWeight=True) or []
+    out_weights = cmds.keyTangent(plug, query=True, outWeight=True) or []
+    tangent_locks = cmds.keyTangent(plug, query=True, lock=True) or []
+    weight_locks = cmds.keyTangent(plug, query=True, weightLock=True) or []
+    arrays = (
+        times,
+        values,
+        in_tangents,
+        out_tangents,
+        in_angles,
+        out_angles,
+        in_weights,
+        out_weights,
+        tangent_locks,
+        weight_locks,
+    )
+    if len({len(items) for items in arrays}) != 1 or len(times) != expected_key_count:
         raise RuntimeError("Maya returned misaligned curve arrays for {}".format(plug))
-    if len(times) > MAX_SNAPSHOT_KEYS:
-        raise ValueError("{} exceeds the {} snapshot-key limit".format(plug, MAX_SNAPSHOT_KEYS))
+    weighted_raw = cmds.keyTangent(plug, query=True, weightedTangents=True)
+    weighted_values = list(weighted_raw) if isinstance(weighted_raw, (list, tuple)) else [weighted_raw]
+    if not weighted_values or any(value not in (True, False, 0, 1) for value in weighted_values):
+        raise RuntimeError("Maya returned invalid weighted tangent state for {}".format(plug))
+    if any(bool(value) != bool(weighted_values[0]) for value in weighted_values):
+        raise RuntimeError("Maya returned inconsistent weighted tangent state for {}".format(plug))
+    weighted_tangents = bool(weighted_values[0])
 
     keys = []
-    for time, value, in_tangent, out_tangent in zip(times, values, in_tangents, out_tangents):
+    for (
+        time,
+        value,
+        in_tangent,
+        out_tangent,
+        in_angle,
+        out_angle,
+        in_weight,
+        out_weight,
+        tangent_lock,
+        weight_lock,
+    ) in zip(*arrays):
         numeric_time = float(time)
         numeric_value = float(value)
-        if not math.isfinite(numeric_time) or not math.isfinite(numeric_value):
+        numeric_tangent_values = tuple(float(item) for item in (in_angle, out_angle, in_weight, out_weight))
+        if (
+            not math.isfinite(numeric_time)
+            or not math.isfinite(numeric_value)
+            or any(not math.isfinite(item) for item in numeric_tangent_values)
+        ):
             raise RuntimeError("Maya returned a non-finite key for {}".format(plug))
-        keys.append((numeric_time, numeric_value, str(in_tangent), str(out_tangent)))
+        if tangent_lock not in (True, False, 0, 1) or weight_lock not in (True, False, 0, 1):
+            raise RuntimeError("Maya returned invalid tangent lock state for {}".format(plug))
+        keys.append(
+            (
+                numeric_time,
+                numeric_value,
+                str(in_tangent),
+                str(out_tangent),
+                numeric_tangent_values[0],
+                numeric_tangent_values[1],
+                numeric_tangent_values[2],
+                numeric_tangent_values[3],
+                bool(tangent_lock),
+                bool(weight_lock),
+            )
+        )
     return {
         "curve": curve,
         "keys": tuple(keys),
+        "weighted_tangents": weighted_tangents,
         "pre_infinity": _read_infinity(cmds, curve, "preInfinity"),
         "post_infinity": _read_infinity(cmds, curve, "postInfinity"),
     }
 
 
 def _curve_batch_matches(cmds, snapshots: Dict[str, Dict]) -> bool:
-    return all(_curve_snapshot(cmds, plug) == snapshot for plug, snapshot in snapshots.items())
+    for plug, snapshot in snapshots.items():
+        curve, key_count = _curve_preflight(cmds, plug)
+        if _curve_snapshot(cmds, plug, curve, key_count) != snapshot:
+            return False
+    return True
 
 
 def _read_tangent(cmds, plug: str, time: float, query_flag: str) -> str:
@@ -215,11 +294,11 @@ def set_keyframes(objects: List[str], attribute: str, keys: List[Dict]) -> dict:
         if missing:
             return skill_error("Animation targets were not found", "Missing Maya plugs: {}".format(", ".join(missing)))
 
-        before_by_plug = {}
+        preflights = {}
         snapshot_key_count = 0
         for plug in plugs:
             try:
-                snapshot = _curve_snapshot(cmds, plug)
+                curve, key_count = _curve_preflight(cmds, plug)
             except _LayeredCurveError as exc:
                 return skill_error(
                     "Layered animation target is ambiguous",
@@ -227,13 +306,17 @@ def set_keyframes(objects: List[str], attribute: str, keys: List[Dict]) -> dict:
                 )
             except ValueError as exc:
                 return skill_error("Animation snapshot is too large", str(exc))
-            before_by_plug[plug] = snapshot
-            snapshot_key_count += len(snapshot["keys"])
+            preflights[plug] = (curve, key_count)
+            snapshot_key_count += key_count
             if snapshot_key_count > MAX_SNAPSHOT_KEYS:
                 return skill_error(
                     "Animation snapshot is too large",
                     "existing key count exceeds {}".format(MAX_SNAPSHOT_KEYS),
                 )
+
+        before_by_plug = {
+            plug: _curve_snapshot(cmds, plug, curve, key_count) for plug, (curve, key_count) in preflights.items()
+        }
 
         frame_rate = _fps(cmds)
         transaction = MayaUndoChunk(cmds, "dcc_mcp_set_keyframes")

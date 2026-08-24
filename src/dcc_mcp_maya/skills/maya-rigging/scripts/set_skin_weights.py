@@ -46,8 +46,11 @@ def _validate_rows(
     seen_vertices = set()
     validated = []
     for row in rows:
-        if not isinstance(row, dict) or set(row) != {"vertex", "weights"}:
-            raise ValueError("each vertex row must contain only vertex and weights")
+        if not isinstance(row, dict) or set(row) not in (
+            {"vertex", "weights"},
+            {"vertex", "weights", "total_weight"},
+        ):
+            raise ValueError("each vertex row must contain vertex, weights, and optional total_weight evidence")
         vertex = row["vertex"]
         if isinstance(vertex, bool) or not isinstance(vertex, int):
             raise ValueError("vertex indices must be integers")
@@ -73,8 +76,16 @@ def _validate_rows(
             if not math.isfinite(value) or value < 0.0 or value > 1.0:
                 raise ValueError("weights must be finite numbers between 0 and 1")
             pairs.append((influence, value))
-        if abs(sum(value for _influence, value in pairs) - 1.0) > tolerance:
+        total = sum(value for _influence, value in pairs)
+        if abs(total - 1.0) > tolerance:
             raise ValueError("each vertex row must sum to 1 within normalization_tolerance")
+        if "total_weight" in row:
+            evidence = row["total_weight"]
+            if isinstance(evidence, bool) or not isinstance(evidence, Real):
+                raise ValueError("total_weight evidence must be a finite number")
+            evidence_value = float(evidence)
+            if not math.isfinite(evidence_value) or abs(evidence_value - total) > tolerance:
+                raise ValueError("total_weight evidence must match the supplied weights")
         validated.append((vertex, pairs))
     return validated
 

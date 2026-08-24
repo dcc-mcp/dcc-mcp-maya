@@ -30,7 +30,14 @@ CONSTRAINT_COMMANDS = (
 )
 
 
-def _bounded_nodes(cmds, explicit, node_type: str, limit: int, label: str):
+def _canonical_dag_node(cmds, node: str, label: str) -> str:
+    matches = sorted({str(item) for item in (cmds.ls(node, long=True) or [])})
+    if len(matches) != 1:
+        raise ValueError("{} must resolve to exactly one DAG node: {}".format(label, node))
+    return matches[0]
+
+
+def _bounded_nodes(cmds, explicit, node_type: str, limit: int, label: str, canonical_dag: bool = False):
     if explicit is None:
         nodes = [str(item) for item in (cmds.ls(type=node_type, long=True) or [])]
     else:
@@ -40,9 +47,10 @@ def _bounded_nodes(cmds, explicit, node_type: str, limit: int, label: str):
         for item in explicit:
             if not isinstance(item, str) or not item or len(item) > 512:
                 raise ValueError("{} entries must be non-empty Maya node names".format(label))
-            if not cmds.objExists(item) or cmds.nodeType(item) != node_type:
+            node = _canonical_dag_node(cmds, item, label) if canonical_dag else item
+            if not cmds.objExists(node) or cmds.nodeType(node) != node_type:
                 raise ValueError("{} is not a Maya {}".format(item, node_type))
-            nodes.append(item)
+            nodes.append(node)
     nodes = sorted(set(nodes))
     if len(nodes) > limit:
         raise ValueError("{} exceeds the {} node limit".format(label, limit))
@@ -75,7 +83,8 @@ def _constraint_snapshot(cmds):
             targets = [str(item) for item in (command(node, query=True, targetList=True) or [])]
             if len(targets) > MAX_CONSTRAINT_TARGETS:
                 raise ValueError("{} exceeds the {} constraint-target limit".format(node, MAX_CONSTRAINT_TARGETS))
-            rows.append({"name": node, "type": node_type, "targets": targets})
+            canonical_targets = [_canonical_dag_node(cmds, target, "constraint target") for target in targets]
+            rows.append({"name": node, "type": node_type, "targets": canonical_targets})
     rows.sort(key=lambda item: (item["type"], item["name"]))
     return {"count": len(rows), "nodes": rows}
 
@@ -147,7 +156,7 @@ def _control_snapshot(cmds, controls):
         for control in controls:
             if not isinstance(control, str) or not control or not cmds.objExists(control):
                 raise ValueError("controls entries must be existing Maya nodes")
-            control_names.append(control)
+            control_names.append(_canonical_dag_node(cmds, control, "controls"))
         control_names = sorted(set(control_names))
     if len(control_names) > MAX_CONTROLS:
         raise ValueError("controls exceeds the {} node limit".format(MAX_CONTROLS))
@@ -181,7 +190,7 @@ def export_rig_state(
         if not math.isfinite(tolerance) or tolerance <= 0.0 or tolerance > 0.1:
             return skill_error("Invalid tolerance", "normalization_tolerance must be greater than 0 and at most 0.1")
         try:
-            joint_nodes = _bounded_nodes(cmds, joints, "joint", MAX_JOINTS, "joints")
+            joint_nodes = _bounded_nodes(cmds, joints, "joint", MAX_JOINTS, "joints", canonical_dag=True)
             skin_nodes = _bounded_nodes(cmds, skin_clusters, "skinCluster", MAX_SKIN_CLUSTERS, "skin_clusters")
             joint_state = _joint_snapshot(cmds, joint_nodes)
             constraint_state = _constraint_snapshot(cmds)
