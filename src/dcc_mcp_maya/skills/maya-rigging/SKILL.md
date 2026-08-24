@@ -12,7 +12,7 @@ metadata:
     dcc: maya
     layer: domain
     stage: authoring
-    version: 1.3.0
+    version: 1.4.0
     tags:
     - maya
     - rigging
@@ -38,7 +38,17 @@ metadata:
 
 Joint hierarchies, IK handles, constraints, skin clusters, skin-weight transfer,
 deformers, blend shapes, optional rig framework detection, control curves, and
-editable hair guide curves. Eighteen scripts cover the typical rigging loop.
+editable hair guide curves. Twenty-one scripts cover the typical rigging loop.
+
+`get_skin_weights` reads an explicit bounded vertex subset (or the whole mesh
+when it fits the limit) and reports per-vertex totals plus an
+`unnormalized_vertices` count. It never silently truncates a large mesh.
+`set_skin_weights` accepts only complete normalized rows for known influences,
+clears omitted influence values on those vertices, and verifies every effective
+native value before reporting success.
+`export_rig_state` deterministically reports bounded joint hierarchy,
+constraints, NURBS controls, and per-skin normalization health. Large rigs fail
+closed instead of returning a partial snapshot.
 
 `create_guide_curve` is the bounded guide-authoring contract: every open curve
 has one cluster ID, one solid RGB viewport color, root-to-tip CV order, arc

@@ -119,6 +119,13 @@ SKILL_DEFAULTS: Dict[str, ExecAffinity] = {
 # Per-tool overrides (skill, tool) -> (execution, affinity, timeout_hint_secs).
 # Used when the skill default is not right for a specific verb.
 TOOL_OVERRIDES: Dict[Tuple[str, str], ExecAffinity] = {
+    # Typed animation and rig-state scans can reach their declared aggregate
+    # bounds, so submit them through Core's observable job contract.
+    ("maya-animation", "set_keyframes"): ("async", "main", 60),
+    ("maya-animation", "get_anim_curves"): ("async", "main", 30),
+    ("maya-rigging", "get_skin_weights"): ("async", "main", 60),
+    ("maya-rigging", "set_skin_weights"): ("async", "main", 60),
+    ("maya-rigging", "export_rig_state"): ("async", "main", 60),
     # maya-scene long-running I/O
     ("maya-scene", "save_scene"): ("async", "main", 120),
     ("maya-scene", "open_scene"): ("async", "main", 300),

@@ -8,6 +8,7 @@ groups:
   - delete_keyframes
   - export_animation_curves
   - get_current_time
+  - get_anim_curves
   - get_frame_range
   - get_keyframes
   - import_animation_curves
@@ -16,4 +17,5 @@ groups:
   - set_animation_curve_tangent
   - set_current_time
   - set_keyframe
+  - set_keyframes
   - set_timeline
