@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import re
-from pathlib import Path
 
 from dcc_mcp_core.skill import skill_entry, skill_error, skill_exception, skill_success
 
@@ -128,13 +127,15 @@ def assign_texture(
         cmds.connectAttr(source, destination, force=False)
 
         actual_path = str(cmds.getAttr("{}.fileTextureName".format(texture_node)))
+        actual_resolved_path, actual_tile_count = resolve_texture_path(actual_path, udim_mode)
         actual_color_space = str(cmds.getAttr("{}.colorSpace".format(texture_node)))
         actual_tiling = cmds.getAttr("{}.uvTilingMode".format(texture_node))
         actual_alpha_is_luminance = (
             bool(cmds.getAttr("{}.alphaIsLuminance".format(texture_node))) if alpha_is_luminance else False
         )
         if (
-            Path(actual_path).resolve() != path
+            actual_resolved_path != path
+            or actual_tile_count != tile_count
             or actual_color_space != resolved_color_space
             or actual_tiling != tiling_mode
             or actual_alpha_is_luminance != alpha_is_luminance
