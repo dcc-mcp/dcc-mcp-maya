@@ -3,7 +3,10 @@ groups:
   description: Materials, shading, lighting, and environment tools
   default_active: false
   tools:
+  - assign_texture
   - delete_material_preset
   - list_material_presets
   - load_material
+  - reload_textures
+  - repath_textures
   - save_material
