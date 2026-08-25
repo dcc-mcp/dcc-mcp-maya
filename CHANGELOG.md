@@ -6,7 +6,7 @@
 ### Features
 
 * add Maya install lifecycle ([#499](https://github.com/dcc-mcp/dcc-mcp-maya/issues/499)) ([f2171b7](https://github.com/dcc-mcp/dcc-mcp-maya/commit/f2171b7d25f8368022172218c0f25fd3e36be74e))
-* add typed Maya animation and rigging vocabulary ([6e83dea](https://github.com/dcc-mcp/dcc-mcp-maya/commit/6e83dea44d3e09954d40480dacad044ae3911cb7)), closes [#493](https://github.com/dcc-mcp/dcc-mcp-maya/issues/493)
+* add typed Maya animation and rigging vocabulary ([6e83dea](https://github.com/dcc-mcp/dcc-mcp-maya/commit/6e83dea44d3e09954d40480dacad044ae3911cb7)), Refs [#493](https://github.com/dcc-mcp/dcc-mcp-maya/issues/493)
 * add typed polygon modeling vocabulary ([#500](https://github.com/dcc-mcp/dcc-mcp-maya/issues/500)) ([851e892](https://github.com/dcc-mcp/dcc-mcp-maya/commit/851e89286704c4d6e7f61a3386e6aff9ad9ff9e1))
 
 
