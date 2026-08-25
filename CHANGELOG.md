@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.9.24](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.23...v0.9.24) (2026-08-25)
+
+
+### Features
+
+* add Maya install lifecycle ([#499](https://github.com/dcc-mcp/dcc-mcp-maya/issues/499)) ([f2171b7](https://github.com/dcc-mcp/dcc-mcp-maya/commit/f2171b7d25f8368022172218c0f25fd3e36be74e))
+* add typed Maya animation and rigging vocabulary ([6e83dea](https://github.com/dcc-mcp/dcc-mcp-maya/commit/6e83dea44d3e09954d40480dacad044ae3911cb7)), closes [#493](https://github.com/dcc-mcp/dcc-mcp-maya/issues/493)
+* add typed polygon modeling vocabulary ([#500](https://github.com/dcc-mcp/dcc-mcp-maya/issues/500)) ([851e892](https://github.com/dcc-mcp/dcc-mcp-maya/commit/851e89286704c4d6e7f61a3386e6aff9ad9ff9e1))
+
+
+### Bug Fixes
+
+* diagnose Maya GUI bootstrap readiness ([#498](https://github.com/dcc-mcp/dcc-mcp-maya/issues/498)) ([81736ed](https://github.com/dcc-mcp/dcc-mcp-maya/commit/81736ed5702cd8c91b88bd2f2d26c4d920dda955))
+* dispatch Maya sidecar feedback builtin ([#504](https://github.com/dcc-mcp/dcc-mcp-maya/issues/504)) ([7f2cc7e](https://github.com/dcc-mcp/dcc-mcp-maya/commit/7f2cc7e407204316f8f0cc848316aa296c0dc43f))
+* reject unavailable Maya viewports ([#505](https://github.com/dcc-mcp/dcc-mcp-maya/issues/505)) ([242d406](https://github.com/dcc-mcp/dcc-mcp-maya/commit/242d4064c392ee3f8d163e623556e9c78e68b29c))
+* restore Core 0.20 compatibility ([#507](https://github.com/dcc-mcp/dcc-mcp-maya/issues/507)) ([53e1902](https://github.com/dcc-mcp/dcc-mcp-maya/commit/53e19027d69709d973fb60ba154c5d0b80fd5557))
+* select compatible pip bootstrap requirement ([8b4b9d1](https://github.com/dcc-mcp/dcc-mcp-maya/commit/8b4b9d1286e5cc1538c8ca9767daeb78616f8342))
+
 ## [0.9.23](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.22...v0.9.23) (2026-08-12)
 
 
