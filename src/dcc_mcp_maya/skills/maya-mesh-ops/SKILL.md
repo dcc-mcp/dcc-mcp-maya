@@ -55,6 +55,9 @@ The sibling `references/RECIPES.yaml` publishes four bounded Maya plans through
 Core's `recipes__search`, `recipes__validate`, and `recipes__apply` tools. An
 apply call returns validated inputs, ordered typed-tool steps, and an output
 contract; execute those typed steps in order and validate the observed tool
-result against the contract. `auto_uv_for_export` is intentionally one mesh per
-application so every export mesh must independently produce a positive UV count
-and digest.
+result against the contract. Core does not substitute one step's Maya return
+value into a later step, so recipes only chain steps whose identities come from
+the validated inputs. `mirror_assembly` therefore mirrors one named mesh in
+place and does not promise a preserved original or a separately named copy.
+`auto_uv_for_export` is intentionally one mesh per application so every export
+mesh must independently produce a positive UV count and digest.
