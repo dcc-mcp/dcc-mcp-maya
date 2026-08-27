@@ -292,6 +292,7 @@ class TestGenerateModuleInfo:
     def test_module_info(self):
         content = assemble_mod.generate_module_info(
             "0.2.2",
+            project_root=PROJECT_ROOT,
             embedded_core_version="0.19.4",
             bundled_server_version="0.18.21",
         )
@@ -301,8 +302,18 @@ class TestGenerateModuleInfo:
         assert info["adapter_version"] == "0.2.2"
         assert info["embedded_core_version"] == "0.19.4"
         assert info["bundled_server_version"] == "0.18.21"
+        assert info["min_core_version"] == "0.19.45"
+        assert info["max_core_version_exclusive"] == "1.0.0"
         assert info["has_python37"] is True
         assert info["supported_maya_versions"] == ["2022", "2023", "2024", "2025", "2026"]
+
+    def test_module_info_derives_exact_core_bounds_from_pyproject(self, tmp_path):
+        _make_fake_pyproject(tmp_path, "0.19.45", "1.0.0")
+
+        info = json.loads(assemble_mod.generate_module_info("0.2.2", project_root=tmp_path))
+
+        assert info["min_core_version"] == "0.19.45"
+        assert info["max_core_version_exclusive"] == "1.0.0"
 
 
 class TestPackagingReadmes:
@@ -417,6 +428,8 @@ class TestAssemble:
         assert info["adapter_version"] == "0.2.2"
         assert info["embedded_core_version"] == "0.15.0"
         assert info["bundled_server_version"] == "0.15.0"
+        assert info["min_core_version"] == "0.15.0"
+        assert info["max_core_version_exclusive"] == "1.0.0"
 
         mod_content = (result / "dcc_mcp_maya.mod").read_text(encoding="utf-8")
         assert "MAYAVERSION:2022" in mod_content
@@ -500,6 +513,8 @@ class TestAssemblePipeline:
         assert info["bundled_server_version"] == "0.15.0"
         assert info["supported_maya_versions"] == ["2022", "2023", "2024", "2025", "2026"]
         assert info["has_python37"] is True
+        assert info["min_core_version"] == "0.15.0"
+        assert info["max_core_version_exclusive"] == "1.0.0"
         assert (result / "README-pipeline.txt").exists()
         assert not (result / "install.bat").exists()
         assert not (result / "install.sh").exists()
@@ -543,6 +558,8 @@ class TestMain:
             assert info["adapter_version"] == "0.2.2"
             assert info["embedded_core_version"] == "0.15.0"
             assert info["bundled_server_version"] == "0.15.0"
+            assert info["min_core_version"] == "0.15.0"
+            assert info["max_core_version_exclusive"] == "1.0.0"
 
 
 @pytest.mark.packaging

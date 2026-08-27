@@ -22,6 +22,8 @@ from typing import Optional
 
 import dcc_mcp_core
 from dcc_mcp_core.install_lifecycle import inspect_install_root, safe_remove_tree, wait_for_sidecar_ready
+from packaging.specifiers import SpecifierSet
+from packaging.version import InvalidVersion, Version
 
 from dcc_mcp_maya.__version__ import __version__
 
@@ -62,6 +64,9 @@ except ImportError:
 DCC_TYPE = "maya"
 COMMAND = "dcc-mcp-maya"
 MIN_CORE_VERSION = "0.19.45"
+MAX_CORE_VERSION = "1.0.0"
+CORE_VERSION_REQUIREMENT = "dcc-mcp-core>=%s,<%s" % (MIN_CORE_VERSION, MAX_CORE_VERSION)
+CORE_VERSION_SPECIFIER = SpecifierSet(CORE_VERSION_REQUIREMENT[len("dcc-mcp-core") :])
 MIN_MAYA_VERSION = 2020
 MAX_MAYA_VERSION = 2027
 LIFECYCLE_COMMANDS = ("install", "status", "verify", "uninstall", "upgrade")
@@ -106,7 +111,16 @@ def _version_tuple(value):
     match = re.search(r"\d+(?:\.\d+)*", str(value))
     if match is None:
         return ()
-    return tuple(int(part) for part in match.group(0).split("."))
+    parts = tuple(int(part) for part in match.group(0).split("."))
+    return parts + (0,) * max(0, 3 - len(parts))
+
+
+def _pep440_version(value):
+    """Parse one complete PEP 440 version or return ``None``."""
+    try:
+        return Version(str(value))
+    except InvalidVersion:
+        return None
 
 
 def _probe_target(python_path):
@@ -277,12 +291,13 @@ def _resolve_context(dcc_path, python_path, environ, module_zip=None):
             "unsupported_python_version",
             "The selected mayapy must use Python 3.7 or newer.",
         )
-    if _version_tuple(probe.get("core_version", "")) < _version_tuple(MIN_CORE_VERSION):
+    core_version = _pep440_version(probe.get("core_version", ""))
+    if core_version is None or core_version not in CORE_VERSION_SPECIFIER:
         raise LifecycleError(
             INSTALL_EXIT_PREFLIGHT,
             "core_version",
             "core_version_unsupported",
-            "dcc-mcp-core>=%s is required in the selected mayapy." % MIN_CORE_VERSION,
+            "%s is required in the selected mayapy." % CORE_VERSION_REQUIREMENT,
         )
     maya_root = _default_maya_root()
     modules_dir = Path(environ.get("DCC_MCP_MAYA_MODULES_DIR", str(maya_root / "modules"))).expanduser().resolve()
@@ -701,6 +716,17 @@ def _validate_module_zip(payload):
             "module_zip_version_mismatch",
             "The module ZIP adapter version does not match the installed lifecycle command.",
         )
+    expected_core_contract = {
+        "min_core_version": MIN_CORE_VERSION,
+        "max_core_version_exclusive": MAX_CORE_VERSION,
+    }
+    if any(module_info.get(key) != value for key, value in expected_core_contract.items()):
+        raise LifecycleError(
+            INSTALL_EXIT_ACQUIRE,
+            "acquire",
+            "module_zip_core_contract_mismatch",
+            "The module ZIP Core dependency bounds do not match the lifecycle command.",
+        )
     return normalized
 
 
@@ -737,6 +763,7 @@ def _stage_module_tree(stage, ctx):
                 "name": "dcc_mcp_maya",
                 "adapter_version": __version__,
                 "min_core_version": MIN_CORE_VERSION,
+                "max_core_version_exclusive": MAX_CORE_VERSION,
                 "supported_maya_versions": list(range(MIN_MAYA_VERSION, MAX_MAYA_VERSION + 1)),
             },
             indent=2,

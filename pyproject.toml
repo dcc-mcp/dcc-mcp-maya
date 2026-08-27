@@ -30,6 +30,7 @@ dependencies = [
     # 0.19.45 defaults instance listeners to operating-system-assigned ports.
     "dcc-mcp-core>=0.19.45,<1.0.0",
     "dcc-mcp-server>=0.18.21,<1.0.0",
+    "packaging>=21.3",
 ]
 
 [project.optional-dependencies]

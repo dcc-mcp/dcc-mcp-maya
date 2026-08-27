@@ -8,7 +8,7 @@ catalog route is
 
 - Autodesk Maya and its exact `mayapy` interpreter.
 - `dcc-mcp-maya` installed in that interpreter, with
-  `dcc-mcp-core>=0.19.45`.
+  `dcc-mcp-core>=0.19.45,<1.0.0`.
 - Write access to the selected Maya user profile.
 - Close Maya before replacing or removing a loaded module on Windows.
 
