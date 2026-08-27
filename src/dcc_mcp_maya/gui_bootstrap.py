@@ -36,8 +36,9 @@ def build_maya_launch_args(maya_executable: PathLike) -> List[str]:
 def _registry_directory(registry_base: Optional[PathLike] = None) -> Path:
     from dcc_mcp_maya._stale_cleanup import registry_path
 
-    explicit_base = os.fspath(registry_base) if registry_base is not None else None
-    return registry_path(explicit_base).resolve().parent
+    if registry_base is not None:
+        return Path(registry_base).resolve()
+    return registry_path().resolve().parent
 
 
 def launch_maya_gui(
