@@ -29,6 +29,7 @@ metadata:
       instance array, set pivot, mirror, combine, separate, cleanup, subdivide
     tools: tools.yaml
     groups: groups.yaml
+    recipes: references/RECIPES.yaml
 ---
 # maya-mesh-ops (Authoring stage)
 
@@ -47,3 +48,13 @@ The `modeling` group is `default_active: false`; load this skill and activate
 that group only for authoring work. The existing `mirror_mesh` name remains
 the canonical backwards-compatible mirror verb and now verifies that polygon
 topology changed before returning success.
+
+## Modeling recipes
+
+The sibling `references/RECIPES.yaml` publishes four bounded Maya plans through
+Core's `recipes__search`, `recipes__validate`, and `recipes__apply` tools. An
+apply call returns validated inputs, ordered typed-tool steps, and an output
+contract; execute those typed steps in order and validate the observed tool
+result against the contract. `auto_uv_for_export` is intentionally one mesh per
+application so every export mesh must independently produce a positive UV count
+and digest.
