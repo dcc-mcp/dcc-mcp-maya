@@ -3,6 +3,7 @@
 import re
 import unicodedata
 from pathlib import Path
+from typing import List
 from urllib.parse import unquote
 
 import pytest
@@ -52,7 +53,7 @@ def _normalize_surface(content: str) -> str:
     return CORE_PACKAGE_SPELLING.sub("dcc-mcp-core", decoded)
 
 
-def _unparsed_core_claims(content: str) -> list[str]:
+def _unparsed_core_claims(content: str) -> List[str]:
     claims = []
     for line in content.splitlines():
         names = list(CORE_NAME.finditer(line))
