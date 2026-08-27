@@ -52,23 +52,7 @@ def _resolve_dependency_version(project_root: Path, package_name: str) -> str:
     the latest compatible version. Falls back to the minimum version when
     PyPI is unreachable.
     """
-    import re
-
-    toml_path = project_root / "pyproject.toml"
-    content = toml_path.read_text(encoding="utf-8")
-    escaped = re.escape(package_name)
-    m = re.search(rf'"{escaped}(?P<spec>[^"]+)"', content)
-    if not m:
-        raise RuntimeError(f"Cannot find {package_name} version in pyproject.toml")
-    spec = m.group("spec")
-
-    min_match = re.search(r">=\s*([\d.]+)", spec)
-    if not min_match:
-        raise RuntimeError(f"Cannot find {package_name} minimum version in pyproject.toml")
-    min_version = min_match.group(1)
-
-    max_match = re.search(r"<\s*([\d.]+)", spec)
-    max_version = max_match.group(1) if max_match else None
+    min_version, max_version = dependency_bounds(project_root, package_name)
 
     # Try to get the latest compatible version from PyPI so we download
     # a version that actually has compiled wheels for all platforms.
@@ -95,6 +79,21 @@ def _resolve_dependency_version(project_root: Path, package_name: str) -> str:
         print(f"  Warning: could not query PyPI for latest {package_name} ({exc}), using minimum {min_version}")
 
     return min_version
+
+
+def dependency_bounds(project_root: Path, package_name: str) -> Tuple[str, str]:
+    """Read the canonical inclusive-minimum/exclusive-maximum package range."""
+    import re
+
+    content = (project_root / "pyproject.toml").read_text(encoding="utf-8")
+    escaped = re.escape(package_name)
+    match = re.search(rf'"{escaped}(?P<spec>[^"]+)"', content)
+    if not match:
+        raise RuntimeError(f"Cannot find {package_name} version in pyproject.toml")
+    bounds = re.fullmatch(r"\s*>=\s*(\d+(?:\.\d+)*)\s*,\s*<\s*(\d+(?:\.\d+)*)\s*", match.group("spec"))
+    if not bounds:
+        raise RuntimeError(f"{package_name} must have exactly one >= minimum and < maximum in pyproject.toml")
+    return bounds.group(1), bounds.group(2)
 
 
 def _version_key(ver: str) -> Tuple[int, ...]:
@@ -306,16 +305,23 @@ def generate_module_info(
     version: str,
     platform: str = "win64",
     *,
+    project_root: Optional[Path] = None,
     embedded_core_version: Optional[str] = None,
     bundled_server_version: Optional[str] = None,
 ) -> str:
     """Generate module-info.json content with build metadata."""
+    minimum_core, maximum_core = dependency_bounds(
+        project_root or Path(__file__).resolve().parents[1],
+        "dcc-mcp-core",
+    )
     info = {
         "name": "dcc_mcp_maya",
         "version": version,
         "adapter_version": version,
         "embedded_core_version": embedded_core_version,
         "bundled_server_version": bundled_server_version,
+        "min_core_version": minimum_core,
+        "max_core_version_exclusive": maximum_core,
         "supported_maya_versions": supported_maya_versions(platform),
         "has_python37": platform in PLATFORMS_WITH_CP37_WHEELS,
     }
@@ -404,6 +410,7 @@ def assemble(project_root: Path, version: str, platform: str, output: Path) -> P
     info_content = generate_module_info(
         version,
         platform,
+        project_root=project_root,
         embedded_core_version=core_version,
         bundled_server_version=server_version,
     )

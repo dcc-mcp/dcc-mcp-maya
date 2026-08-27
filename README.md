@@ -66,7 +66,7 @@ The Maya plugin starts a Rust `dcc-mcp-server` sidecar by default, so HTTP and g
 [![Python](https://img.shields.io/pypi/pyversions/dcc-mcp-maya?label=Python)](https://pypi.org/project/dcc-mcp-maya/)
 [![Maya](https://img.shields.io/badge/Maya-2020%2B-37A5CC)](https://www.autodesk.com/products/maya/overview)
 [![MCP](https://img.shields.io/badge/MCP-Streamable%20HTTP-6f42c1)](https://modelcontextprotocol.io/)
-[![dcc-mcp-core](https://img.shields.io/badge/dcc--mcp--core-%3E%3D0.19.45%2C%3C1.0-blue)](https://github.com/dcc-mcp/dcc-mcp-core)
+[![dcc-mcp-core](https://img.shields.io/badge/dcc--mcp--core-%3E%3D0.19.45%2C%3C1.0.0-blue)](https://github.com/dcc-mcp/dcc-mcp-core)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 ## Showcase

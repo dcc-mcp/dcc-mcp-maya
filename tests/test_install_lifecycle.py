@@ -266,6 +266,23 @@ def test_preflight_rejects_unsupported_maya_and_core_before_writes(tmp_path, mon
     )
     assert json.loads(capsys.readouterr().out)["verify"]["failure_reason"] == "core_version_unsupported"
 
+    for unsupported_core in ("1.0", "1.0.0"):
+        monkeypatch.setattr(
+            install,
+            "_probe_target",
+            lambda _python, version=unsupported_core: {
+                "maya_version": "2027",
+                "python_version": "3.11",
+                "core_version": version,
+                "adapter_version": install.__version__,
+            },
+        )
+        assert (
+            install.main(["install", "--dry-run", "--json", "--dcc-path", str(maya_root), "--python", sys.executable])
+            == install.INSTALL_EXIT_PREFLIGHT
+        )
+        assert json.loads(capsys.readouterr().out)["verify"]["failure_reason"] == "core_version_unsupported"
+
     monkeypatch.setattr(
         install,
         "_probe_target",
@@ -281,6 +298,59 @@ def test_preflight_rejects_unsupported_maya_and_core_before_writes(tmp_path, mon
         == install.INSTALL_EXIT_PREFLIGHT
     )
     assert json.loads(capsys.readouterr().out)["verify"]["failure_reason"] == "unsupported_python_version"
+
+
+@pytest.mark.parametrize(
+    ("core_version", "expected_exit"),
+    (
+        ("garbage 0.19.45", 10),
+        ("0.19.45garbage", 10),
+        ("0..19.45", 10),
+        ("", 10),
+        ("0.19.44", 10),
+        ("1.0.0rc1", 10),
+        ("1.0.0.dev1", 10),
+        ("1.0.0", 10),
+        ("0.19.45", 0),
+        ("0.19.45.0", 0),
+        ("0.19.45+local", 0),
+        ("0.19.91", 0),
+    ),
+)
+def test_operator_dry_run_strictly_validates_complete_core_version_before_writes(
+    core_version, expected_exit, tmp_path, monkeypatch, capsys
+):
+    from dcc_mcp_maya import install
+
+    maya_root = tmp_path / "Maya2025"
+    maya_root.mkdir()
+    modules_dir = tmp_path / "profile" / "modules"
+    scripts_dir = tmp_path / "profile" / "scripts"
+    receipt = tmp_path / "receipts" / "maya.json"
+    monkeypatch.setenv("DCC_MCP_MAYA_MODULES_DIR", str(modules_dir))
+    monkeypatch.setenv("DCC_MCP_MAYA_SCRIPTS_DIR", str(scripts_dir))
+    monkeypatch.setenv("DCC_MCP_MAYA_RECEIPT", str(receipt))
+    monkeypatch.setattr(
+        install,
+        "_probe_target",
+        lambda _python: {
+            "maya_version": "2025",
+            "python_version": "3.11.9",
+            "core_version": core_version,
+            "adapter_version": install.__version__,
+        },
+    )
+
+    exit_code = install.main(
+        ["install", "--dry-run", "--json", "--dcc-path", str(maya_root), "--python", sys.executable]
+    )
+    report = json.loads(capsys.readouterr().out)
+
+    assert exit_code == expected_exit
+    assert report["status"] == ("planned" if expected_exit == 0 else "failed")
+    assert not modules_dir.exists()
+    assert not scripts_dir.exists()
+    assert not receipt.exists()
 
 
 def test_public_reports_use_shared_schema_and_stable_exit_codes():
@@ -359,7 +429,14 @@ def test_module_zip_payload_is_bounded_receipted_and_installed(tmp_path, monkeyp
         archive.writestr("dcc-mcp-maya/dcc_mcp_maya.mod", "+ placeholder\n")
         archive.writestr(
             "dcc-mcp-maya/module-info.json",
-            json.dumps({"name": "dcc_mcp_maya", "adapter_version": install.__version__}),
+            json.dumps(
+                {
+                    "name": "dcc_mcp_maya",
+                    "adapter_version": install.__version__,
+                    "min_core_version": install.MIN_CORE_VERSION,
+                    "max_core_version_exclusive": install.MAX_CORE_VERSION,
+                }
+            ),
         )
     monkeypatch.setattr(install, "wait_for_sidecar_ready", lambda *_args, **_kwargs: {"success": False})
 
@@ -423,6 +500,51 @@ def test_module_zip_rejects_path_traversal_before_profile_writes(tmp_path, monke
     report = json.loads(capsys.readouterr().out)
     assert report["verify"]["failure_reason"] == "unsafe_module_zip"
     assert not modules_dir.exists()
+
+
+@pytest.mark.parametrize(
+    "metadata_patch",
+    (
+        {},
+        {"min_core_version": "0.19.44", "max_core_version_exclusive": "1.0.0"},
+        {"min_core_version": "0.19.45", "max_core_version_exclusive": "1.0"},
+    ),
+)
+def test_module_zip_rejects_missing_or_mismatched_core_bounds_before_writes(
+    metadata_patch, tmp_path, monkeypatch, capsys
+):
+    from dcc_mcp_maya import install
+
+    maya_root, modules_dir, scripts_dir, receipt = _configure_fake_maya(install, tmp_path, monkeypatch)
+    payload = tmp_path / "contract-drift.zip"
+    metadata = {"name": "dcc_mcp_maya", "adapter_version": install.__version__}
+    metadata.update(metadata_patch)
+    with zipfile.ZipFile(str(payload), "w") as archive:
+        archive.writestr("dcc-mcp-maya/python/dcc_mcp_maya/__init__.py", "")
+        archive.writestr("dcc-mcp-maya/plug-ins/dcc_mcp_maya_plugin.py", "")
+        archive.writestr("dcc-mcp-maya/scripts/userSetup.py", "")
+        archive.writestr("dcc-mcp-maya/module-info.json", json.dumps(metadata))
+
+    exit_code = install.main(
+        [
+            "install",
+            "--yes",
+            "--json",
+            "--dcc-path",
+            str(maya_root),
+            "--python",
+            sys.executable,
+            "--module-zip",
+            str(payload),
+        ]
+    )
+    report = json.loads(capsys.readouterr().out)
+
+    assert exit_code == install.INSTALL_EXIT_ACQUIRE
+    assert report["verify"]["failure_reason"] == "module_zip_core_contract_mismatch"
+    assert not modules_dir.exists()
+    assert not scripts_dir.exists()
+    assert not receipt.exists()
     assert not (tmp_path / "escape.py").exists()
 
 
