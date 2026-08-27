@@ -7,6 +7,7 @@ from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
+from conftest import load_and_call
 from dcc_mcp_core import scan_and_load_strict, yaml_loads
 from dcc_mcp_core.recipes import register_recipes_tools
 from jsonschema import Draft202012Validator, ValidationError
@@ -29,6 +30,37 @@ def _recipe_handlers():
     server.register_handler.side_effect = lambda name, handler: handlers.__setitem__(name, handler)
     register_recipes_tools(server, skills=loaded, dcc_name="maya")
     return handlers
+
+
+def _materialize_arguments(arguments, inputs):
+    materialized = {}
+    for name, value in arguments.items():
+        if isinstance(value, str) and value.startswith("${") and value.endswith("}"):
+            materialized[name] = inputs[value[2:-1]]
+        else:
+            materialized[name] = value
+    return materialized
+
+
+def _execute_typed_test_step(step, inputs, cmds):
+    """Compose a real application-plan step with its published tool and script contracts.
+
+    Core deliberately returns a plan rather than executing it. This helper is test-only:
+    it validates the materialized arguments against the registered schema, then invokes
+    the actual bundled skill entry point with Maya mocked only at the licensed-host edge.
+    """
+    skill_slug, action = step["tool"].split("__", 1)
+    skill_name = skill_slug.replace("_", "-")
+    manifest = yaml_loads((SKILLS_ROOT / skill_name / "tools.yaml").read_text(encoding="utf-8"))
+    contract = next(item for item in manifest["tools"] if item["name"] == action)
+    arguments = _materialize_arguments(step["arguments"], inputs)
+    Draft202012Validator(contract["input_schema"]).validate(arguments)
+    return load_and_call(
+        "{}/scripts/{}.py".format(skill_name, action),
+        cmds,
+        "main",
+        **arguments,
+    )
 
 
 def test_loft_recipe_is_discoverable_and_materializes_typed_step_plan():
@@ -126,7 +158,7 @@ def test_auto_uv_recipe_requires_deterministic_inputs_and_redacts_invalid_values
     assert sensitive_value not in json.dumps(invalid)
 
 
-def test_mirror_assembly_combines_named_parts_before_mirroring_and_renaming():
+def test_mirror_assembly_publishes_only_the_safe_in_place_mirror_contract():
     handlers = _recipe_handlers()
 
     applied = handlers["recipes__apply"](
@@ -135,24 +167,148 @@ def test_mirror_assembly_combines_named_parts_before_mirroring_and_renaming():
                 "skill": "maya-mesh-ops",
                 "recipe": "mirror_assembly",
                 "inputs": {
-                    "objects": ["left_pylon", "left_mount"],
-                    "combined_name": "left_pylon_assembly",
-                    "mirrored_name": "right_pylon_assembly",
+                    "object_name": "pylon_assembly",
                     "axis": "x",
                 },
             },
         ),
     )
     assert applied["success"] is True
-    assert [step["tool"] for step in applied["context"]["steps"]] == [
-        "maya_mesh_ops__combine_meshes",
-        "maya_mesh_ops__mirror_mesh",
-        "maya_primitives__rename_object",
+    assert applied["context"]["steps"] == [
+        {
+            "tool": "maya_mesh_ops__mirror_mesh",
+            "arguments": {"object_name": "${object_name}", "axis": "${axis}"},
+        },
     ]
-    assert applied["context"]["steps"][0]["arguments"] == {
-        "objects": "${objects}",
-        "name": "${combined_name}",
+
+    listed = handlers["recipes__list"](json.dumps({"skill": "maya-mesh-ops"}))
+    recipe = next(item for item in listed["context"]["recipes"] if item["name"] == "mirror_assembly")
+    assert recipe["inputs_schema"]["required"] == ["object_name", "axis"]
+    assert "does not create or preserve a separate original" in recipe["description"].lower()
+
+
+def test_mirror_recipe_output_is_the_registered_final_tool_receipt():
+    handlers = _recipe_handlers()
+    listed = handlers["recipes__list"](json.dumps({"skill": "maya-mesh-ops"}))
+    recipe = next(item for item in listed["context"]["recipes"] if item["name"] == "mirror_assembly")
+
+    manifest = yaml_loads((SKILLS_ROOT / "maya-mesh-ops" / "tools.yaml").read_text(encoding="utf-8"))
+    mirror_tool = next(item for item in manifest["tools"] if item["name"] == "mirror_mesh")
+
+    assert recipe["output_contract"] == mirror_tool["output_schema"]
+
+
+def test_mirror_recipe_executes_in_place_and_rejects_legacy_name_dataflow():
+    handlers = _recipe_handlers()
+    legacy = handlers["recipes__apply"](
+        json.dumps(
+            {
+                "skill": "maya-mesh-ops",
+                "recipe": "mirror_assembly",
+                "inputs": {
+                    "objects": ["only_one_part"],
+                    "combined_name": "assembly",
+                    "mirrored_name": "already_taken",
+                    "axis": "x",
+                },
+            },
+        ),
+    )
+    assert legacy["success"] is False
+    assert "only_one_part" not in json.dumps(legacy)
+    assert "already_taken" not in json.dumps(legacy)
+
+    inputs = {"object_name": "assembly", "axis": "x"}
+    applied = handlers["recipes__apply"](
+        json.dumps({"skill": "maya-mesh-ops", "recipe": "mirror_assembly", "inputs": inputs}),
+    )
+    assert applied["success"] is True
+
+    cmds = MagicMock()
+    cmds.objExists.side_effect = lambda name: name in {"assembly", "already_taken"}
+    cmds.polyEvaluate.side_effect = [12, 24]
+    result = _execute_typed_test_step(applied["context"]["steps"][0], inputs, cmds)
+
+    assert result["success"] is True, result
+    assert result["context"]["object_name"] == "assembly"
+    assert result["context"]["faces_before"] == 12
+    assert result["context"]["faces_after"] == 24
+    Draft202012Validator(applied["context"]["output_contract"]).validate(result["context"])
+    cmds.polyUnite.assert_not_called()
+    cmds.rename.assert_not_called()
+
+
+def test_radial_array_executes_verified_world_pivot_before_bounded_instances():
+    handlers = _recipe_handlers()
+    inputs = {
+        "object_name": "rotor_blade",
+        "count": 3,
+        "pivot": [1.0, 2.0, 3.0],
+        "rotate_step": [0.0, 120.0, 0.0],
+        "name_prefix": "rotor_blade",
     }
+    applied = handlers["recipes__apply"](
+        json.dumps({"skill": "maya-mesh-ops", "recipe": "radial_array", "inputs": inputs}),
+    )
+    assert applied["success"] is True
+    assert [step["tool"] for step in applied["context"]["steps"]] == [
+        "maya_mesh_ops__set_pivot",
+        "maya_mesh_ops__array_instances",
+    ]
+
+    pivot_cmds = MagicMock()
+    pivot_cmds.objExists.return_value = True
+    pivot_cmds.undoInfo.return_value = True
+    pivot_cmds.xform.side_effect = [
+        [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        None,
+        [1.0, 2.0, 3.0, 1.0, 2.0, 3.0],
+    ]
+    pivot_result = _execute_typed_test_step(applied["context"]["steps"][0], inputs, pivot_cmds)
+    assert pivot_result["success"] is True, pivot_result
+    assert pivot_result["context"]["rotate_pivot"] == inputs["pivot"]
+    assert pivot_result["context"]["scale_pivot"] == inputs["pivot"]
+
+    array_cmds = MagicMock()
+    array_cmds.objExists.return_value = True
+    array_cmds.undoInfo.return_value = True
+    array_cmds.instance.side_effect = [["rotor_blade_01"], ["rotor_blade_02"]]
+    array_cmds.listRelatives.return_value = ["rotor_bladeShape"]
+    uuid_by_node = {
+        "rotor_blade": "transform-source",
+        "rotor_bladeShape": "shape-source",
+        "rotor_blade_01": "transform-01",
+        "rotor_blade_02": "transform-02",
+    }
+
+    def _ls(*args, **kwargs):
+        if not kwargs.get("uuid"):
+            return list(args)
+        if args:
+            return [uuid_by_node[str(args[0])]]
+        return ["transform-source", "shape-source"]
+
+    rotations = {
+        "rotor_blade": [0.0, 0.0, 0.0],
+        "rotor_blade_01": [0.0, 120.0, 0.0],
+        "rotor_blade_02": [0.0, 240.0, 0.0],
+    }
+
+    def _xform(node, **kwargs):
+        if kwargs.get("query") and kwargs.get("translation"):
+            return [0.0, 0.0, 0.0]
+        if kwargs.get("query") and kwargs.get("rotation"):
+            return rotations[node]
+        return None
+
+    array_cmds.ls.side_effect = _ls
+    array_cmds.xform.side_effect = _xform
+    array_result = _execute_typed_test_step(applied["context"]["steps"][1], inputs, array_cmds)
+
+    assert array_result["success"] is True, array_result
+    assert array_result["context"]["verified_count"] == 3
+    assert array_result["context"]["rotate_step"] == inputs["rotate_step"]
+    Draft202012Validator(applied["context"]["output_contract"]).validate(array_result["context"])
 
 
 def test_published_schemas_are_valid_and_uv_contract_fails_without_verified_uvs():

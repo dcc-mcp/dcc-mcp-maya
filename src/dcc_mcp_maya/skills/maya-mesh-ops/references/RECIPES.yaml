@@ -52,27 +52,15 @@ recipes:
 
   - name: mirror_assembly
     dcc: maya
-    description: Combine named polygon parts, mirror the assembly across a world axis, and assign a deterministic result name.
+    description: Mirror one polygon assembly in place across a world axis; this mutates the named mesh and does not create or preserve a separate original.
     inputs_schema:
       type: object
       additionalProperties: false
       required:
-        - objects
-        - combined_name
-        - mirrored_name
+        - object_name
         - axis
       properties:
-        objects:
-          type: array
-          items:
-            type: string
-            minLength: 1
-          minItems: 1
-          maxItems: 64
-        combined_name:
-          type: string
-          minLength: 1
-        mirrored_name:
+        object_name:
           type: string
           minLength: 1
         axis:
@@ -82,18 +70,10 @@ recipes:
             - y
             - z
     steps:
-      - tool: maya_mesh_ops__combine_meshes
-        arguments:
-          objects: ${objects}
-          name: ${combined_name}
       - tool: maya_mesh_ops__mirror_mesh
         arguments:
-          object_name: ${combined_name}
+          object_name: ${object_name}
           axis: ${axis}
-      - tool: maya_primitives__rename_object
-        arguments:
-          object_name: ${combined_name}
-          new_name: ${mirrored_name}
     output_contract:
       type: object
       required:
@@ -110,6 +90,8 @@ recipes:
             - x
             - y
             - z
+        cut_position:
+          type: number
         faces_before:
           type: integer
           minimum: 0
