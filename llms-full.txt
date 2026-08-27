@@ -219,7 +219,7 @@ dispatcher = MayaStandaloneDispatcher()
 result = dispatcher.submit_callable(request_id="x", task=..., affinity="main")
 ```
 
-### PyPumpedDispatcher (Rust-backed, dcc-mcp-core 0.14.14+)
+### PyPumpedDispatcher (Rust-backed, Core 0.14.14+)
 
 High-performance dispatcher backed by Rust core. Uses string-payload dispatch for better performance:
 
