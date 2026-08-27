@@ -142,9 +142,8 @@ def test_launch_maya_gui_passes_only_fixed_command_and_waits_for_target_registry
         record_bootstrap_stage(log_path, "plugin_invoked", "started")
         record_bootstrap_stage(log_path, "plugin_load", "succeeded")
         record_bootstrap_stage(log_path, "bootstrap_complete", "succeeded")
-        registry_dir = registry_base / "dcc-mcp-registry"
-        registry_dir.mkdir(parents=True)
-        (registry_dir / "services.json").write_text(
+        registry_base.mkdir(parents=True)
+        (registry_base / "services.json").write_text(
             json.dumps([{"instance_id": "maya-gui", "dcc_type": "maya", "pid": 4125}]),
             encoding="utf-8",
         )
@@ -186,6 +185,35 @@ def test_cli_prints_one_json_diagnosis_and_uses_stable_not_ready_exit(monkeypatc
     assert payload["schema_version"] == 1
     assert payload["ready"] is False
     assert payload["failure_reason"] == "plugin_not_invoked"
+
+
+def test_cli_probe_without_explicit_registry_dir_uses_core_default(tmp_path, monkeypatch, capsys) -> None:
+    log_path = tmp_path / "bootstrap.jsonl"
+    registry_dir = tmp_path / "dcc-mcp-registry"
+    registry_dir.mkdir()
+    monkeypatch.setenv("DCC_MCP_REGISTRY_DIR", str(tmp_path))
+    record_bootstrap_stage(log_path, "bootstrap_complete", "succeeded")
+    (registry_dir / "services.json").write_text(
+        json.dumps([{"instance_id": "maya-default", "dcc_type": "maya", "host_pid": 4125}]),
+        encoding="utf-8",
+    )
+
+    exit_code = main(
+        [
+            "probe",
+            "--maya-pid",
+            "4125",
+            "--log-path",
+            str(log_path),
+            "--timeout",
+            "0",
+        ]
+    )
+
+    assert exit_code == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["ready"] is True
+    assert payload["instance"]["instance_id"] == "maya-default"
 
 
 def test_probe_reports_plugin_not_invoked_when_maya_never_writes_a_stage(tmp_path) -> None:
@@ -344,6 +372,28 @@ def test_probe_reports_ready_only_for_the_launched_maya_registry_row(tmp_path) -
     assert result["next_action"] == {"action": "use_registered_instance", "instance_id": "maya-4125"}
 
 
+def test_probe_rejects_a_registry_row_for_a_different_maya_pid(tmp_path) -> None:
+    log_path = tmp_path / "bootstrap.jsonl"
+    registry_dir = tmp_path / "registry"
+    registry_dir.mkdir()
+    record_bootstrap_stage(log_path, "bootstrap_complete", "succeeded")
+    (registry_dir / "services.json").write_text(
+        json.dumps([{"instance_id": "other-maya", "dcc_type": "maya", "host_pid": 9000}]),
+        encoding="utf-8",
+    )
+
+    result = probe_gui_readiness(
+        log_path=log_path,
+        registry_dir=registry_dir,
+        maya_pid=4125,
+        timeout_secs=0,
+    )
+
+    assert result["ready"] is False
+    assert result["failure_reason"] == "registry_registration_failed"
+    assert result["next_action"]["maya_pid"] == 4125
+
+
 def test_probe_ignores_malformed_registry_rows_instead_of_crashing(tmp_path) -> None:
     log_path = tmp_path / "bootstrap.jsonl"
     registry_dir = tmp_path / "registry"
@@ -358,6 +408,24 @@ def test_probe_ignores_malformed_registry_rows_instead_of_crashing(tmp_path) -> 
         ),
         encoding="utf-8",
     )
+
+    result = probe_gui_readiness(
+        log_path=log_path,
+        registry_dir=registry_dir,
+        maya_pid=4125,
+        timeout_secs=0,
+    )
+
+    assert result["ready"] is False
+    assert result["failure_reason"] == "registry_registration_failed"
+
+
+def test_probe_treats_invalid_registry_json_as_not_registered(tmp_path) -> None:
+    log_path = tmp_path / "bootstrap.jsonl"
+    registry_dir = tmp_path / "registry"
+    registry_dir.mkdir()
+    record_bootstrap_stage(log_path, "bootstrap_complete", "succeeded")
+    (registry_dir / "services.json").write_text("{not-json", encoding="utf-8")
 
     result = probe_gui_readiness(
         log_path=log_path,
