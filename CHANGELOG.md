@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.9.25](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.24...v0.9.25) (2026-08-27)
+
+
+### Features
+
+* add Maya modeling recipe pack ([365b4d8](https://github.com/dcc-mcp/dcc-mcp-maya/commit/365b4d84323754a7d353a2bf663d1f39cdf964cc))
+
+
+### Bug Fixes
+
+* harden large-scene handoff contracts ([a98ce50](https://github.com/dcc-mcp/dcc-mcp-maya/commit/a98ce504a8a2a639a6f36da5fbb94e992092c51d))
+* honor explicit GUI registry path ([e97107c](https://github.com/dcc-mcp/dcc-mcp-maya/commit/e97107cb5f0b6ad8a6bc3f0cafc73338cd57bedc))
+* make mirror recipe contract truthful ([5f2c30d](https://github.com/dcc-mcp/dcc-mcp-maya/commit/5f2c30dc41d5eaa0a39fb84b3b3c3c02a7b1a8a4))
+
 ## [0.9.24](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.23...v0.9.24) (2026-08-25)
 
 
