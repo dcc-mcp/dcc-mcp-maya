@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
+import os
 import sys
 import zipfile
 from pathlib import Path
@@ -10,6 +12,69 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).parent.parent
+
+
+def _provenance_record(path, content):
+    return {"path": path, "sha256": hashlib.sha256(content).hexdigest(), "size": len(content)}
+
+
+def _write_provenanced_module_zip(install, payload, *, mutate=None, python37_content=None, extra_entries=None):
+    core_path = "python/dcc_mcp_core/__init__.py"
+    core_content = b'__version__ = "0.19.45"\n'
+    metadata_path = "python/dcc_mcp_core-0.19.45.dist-info/METADATA"
+    metadata_content = b"Metadata-Version: 2.1\nName: dcc-mcp-core\nVersion: 0.19.45\n"
+    provenance = {
+        "schema_version": 1,
+        "name": "dcc-mcp-core",
+        "version": install.MIN_CORE_VERSION,
+        "source_wheels": [{"filename": "dcc_mcp_core-0.19.45-cp38-abi3-win_amd64.whl", "sha256": "a" * 64}],
+        "roots": {
+            "python": {
+                "metadata": _provenance_record(metadata_path, metadata_content),
+                "files": [_provenance_record(core_path, core_content)],
+            }
+        },
+    }
+    entries = {
+        "python/dcc_mcp_maya/__init__.py": b"",
+        core_path: core_content,
+        metadata_path: metadata_content,
+        "plug-ins/dcc_mcp_maya_plugin.py": b"",
+        "scripts/userSetup.py": b"",
+    }
+    if python37_content is not None:
+        python37_path = "python37/dcc_mcp_core/_core.pyd"
+        python37_metadata_path = "python37/dcc_mcp_core-0.19.45.dist-info/METADATA"
+        entries[python37_path] = python37_content
+        entries[python37_metadata_path] = metadata_content
+        provenance["roots"]["python37"] = {
+            "metadata": _provenance_record(python37_metadata_path, metadata_content),
+            "files": [_provenance_record(python37_path, python37_content)],
+        }
+    if extra_entries:
+        entries.update(extra_entries)
+    if mutate is not None:
+        mutate(entries, provenance)
+    provenance_content = (json.dumps(provenance, sort_keys=True) + "\n").encode()
+    entries["core-provenance.json"] = provenance_content
+    entries["module-info.json"] = json.dumps(
+        {
+            "name": "dcc_mcp_maya",
+            "adapter_version": install.__version__,
+            "embedded_core_version": install.MIN_CORE_VERSION,
+            "min_core_version": install.MIN_CORE_VERSION,
+            "max_core_version_exclusive": install.MAX_CORE_VERSION,
+            "has_python37": python37_content is not None,
+            "core_provenance": {
+                "path": "core-provenance.json",
+                "sha256": hashlib.sha256(provenance_content).hexdigest(),
+            },
+        }
+    ).encode()
+    with zipfile.ZipFile(str(payload), "w") as archive:
+        for path, content in entries.items():
+            archive.writestr("dcc-mcp-maya/" + path, content)
+    return entries, provenance
 
 
 def _configure_fake_maya(install, tmp_path, monkeypatch, version="2025"):
@@ -189,10 +254,10 @@ def test_receipt_commit_failure_rolls_back_all_previous_artifacts(tmp_path, monk
     }
     real_replace = install._replace_path
 
-    def fail_receipt(source, destination):
+    def fail_receipt(source, destination, publication_contract=None):
         if destination == receipt_path and ".stage-" in source.name:
             raise OSError("simulated receipt commit failure")
-        return real_replace(source, destination)
+        return real_replace(source, destination, publication_contract)
 
     monkeypatch.setattr(install, "_replace_path", fail_receipt)
     assert install.main(["upgrade", "--yes", *common]) == install.INSTALL_EXIT_INSTALL
@@ -202,6 +267,189 @@ def test_receipt_commit_failure_rolls_back_all_previous_artifacts(tmp_path, monk
     assert descriptor.read_bytes() == before["descriptor"]
     assert user_setup.read_bytes() == before["user_setup"]
     assert receipt_path.read_bytes() == before["receipt"]
+    assert not list(tmp_path.rglob("*.stage-*"))
+    assert not list(tmp_path.rglob("*.backup-*"))
+
+
+def test_install_commit_boundary_positive_control_matches_receipt(tmp_path, monkeypatch, capsys):
+    from dcc_mcp_maya import install
+
+    maya_root, modules_dir, scripts_dir, receipt_path = _configure_fake_maya(install, tmp_path, monkeypatch)
+    monkeypatch.setattr(install, "wait_for_sidecar_ready", lambda *_args, **_kwargs: {"success": False})
+    common = ["--json", "--dcc-path", str(maya_root), "--python", sys.executable]
+
+    assert install.main(["install", "--yes", *common]) == install.INSTALL_EXIT_VERIFY
+    capsys.readouterr()
+    receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+    actual = {
+        "tree": install._tree_sha256(modules_dir / "dcc-mcp-maya"),
+        "file": install._sha256(modules_dir / "dcc_mcp_maya.mod"),
+        "user_setup": install._sha256(scripts_dir / "userSetup.py"),
+    }
+    assert {entry["kind"]: entry["sha256"] for entry in receipt["artifacts"]} == actual
+
+
+@pytest.mark.parametrize("drift", ["same_object_bytes", "same_path_new_object", "same_bytes_new_object"])
+def test_install_commit_boundary_drift_rolls_back_before_receipt_publish(drift, tmp_path, monkeypatch, capsys):
+    from dcc_mcp_maya import install
+
+    maya_root, modules_dir, scripts_dir, receipt_path = _configure_fake_maya(install, tmp_path, monkeypatch)
+    monkeypatch.setattr(install, "wait_for_sidecar_ready", lambda *_args, **_kwargs: {"success": False})
+    common = ["--json", "--dcc-path", str(maya_root), "--python", sys.executable]
+    assert install.main(["install", "--yes", *common]) == install.INSTALL_EXIT_VERIFY
+    capsys.readouterr()
+    module_root = modules_dir / "dcc-mcp-maya"
+    descriptor = modules_dir / "dcc_mcp_maya.mod"
+    user_setup = scripts_dir / "userSetup.py"
+    before = {
+        "module": install._tree_sha256(module_root),
+        "descriptor": descriptor.read_bytes(),
+        "user_setup": user_setup.read_bytes(),
+        "receipt": receipt_path.read_bytes(),
+    }
+    real_replace = install._replace_path
+    drifted = False
+
+    def drift_at_module_publish(source, destination, publication_contract=None):
+        nonlocal drifted
+        if not drifted and destination == module_root and ".stage-" in source.name:
+            target = source / "python" / "dcc_mcp_maya" / "__init__.py"
+            content = b"MALICIOUS_COMMIT_BOUNDARY_REPLACEMENT = True\n"
+            if drift == "same_object_bytes":
+                target.write_bytes(content)
+            elif drift == "same_path_new_object":
+                replacement = target.with_name("replacement.py")
+                replacement.write_bytes(content)
+                replacement.replace(target)
+            else:
+                replacement = target.with_name("replacement.py")
+                replacement.write_bytes(target.read_bytes())
+                replacement.replace(target)
+            drifted = True
+        return real_replace(source, destination, publication_contract)
+
+    monkeypatch.setattr(install, "_replace_path", drift_at_module_publish)
+    assert install.main(["upgrade", "--yes", *common]) == install.INSTALL_EXIT_INSTALL
+    failed = json.loads(capsys.readouterr().out)
+    assert failed["verify"]["failure_reason"] == "stage_publication_mismatch"
+    assert drifted
+    assert install._tree_sha256(module_root) == before["module"]
+    assert descriptor.read_bytes() == before["descriptor"]
+    assert user_setup.read_bytes() == before["user_setup"]
+    assert receipt_path.read_bytes() == before["receipt"]
+    assert not list(tmp_path.rglob("*.stage-*"))
+    assert not list(tmp_path.rglob("*.backup-*"))
+
+
+def test_install_adoption_seam_same_bytes_new_object_rolls_back(tmp_path, monkeypatch, capsys):
+    from dcc_mcp_maya import install
+
+    maya_root, modules_dir, scripts_dir, receipt_path = _configure_fake_maya(install, tmp_path, monkeypatch)
+    monkeypatch.setattr(install, "wait_for_sidecar_ready", lambda *_args, **_kwargs: {"success": False})
+    common = ["--json", "--dcc-path", str(maya_root), "--python", sys.executable]
+    assert install.main(["install", "--yes", *common]) == install.INSTALL_EXIT_VERIFY
+    capsys.readouterr()
+    module_root = modules_dir / "dcc-mcp-maya"
+    descriptor = modules_dir / "dcc_mcp_maya.mod"
+    user_setup = scripts_dir / "userSetup.py"
+    before = {
+        "module": install._tree_sha256(module_root),
+        "descriptor": descriptor.read_bytes(),
+        "user_setup": user_setup.read_bytes(),
+        "receipt": receipt_path.read_bytes(),
+    }
+    real_os_replace = install.os.replace
+    drifted = False
+
+    def swap_inside_adoption(source, destination):
+        nonlocal drifted
+        source_path = Path(source)
+        destination_path = Path(destination)
+        if not drifted and destination_path == module_root and ".stage-" in source_path.name:
+            target = source_path / "python" / "dcc_mcp_maya" / "__init__.py"
+            replacement = target.with_name("replacement.py")
+            replacement.write_bytes(target.read_bytes())
+            real_os_replace(str(replacement), str(target))
+            drifted = True
+        return real_os_replace(source, destination)
+
+    monkeypatch.setattr(install.os, "replace", swap_inside_adoption)
+    assert install.main(["upgrade", "--yes", *common]) == install.INSTALL_EXIT_INSTALL
+    failed = json.loads(capsys.readouterr().out)
+    assert failed["verify"]["failure_reason"] == "stage_publication_mismatch"
+    assert drifted
+    assert install._tree_sha256(module_root) == before["module"]
+    assert descriptor.read_bytes() == before["descriptor"]
+    assert user_setup.read_bytes() == before["user_setup"]
+    assert receipt_path.read_bytes() == before["receipt"]
+    assert not list(tmp_path.rglob("*.stage-*"))
+    assert not list(tmp_path.rglob("*.backup-*"))
+
+
+@pytest.mark.parametrize("artifact", ["module", "descriptor", "user_setup", "receipt"])
+@pytest.mark.parametrize("mutation", ["external_hardlink", "same_bytes_new_object", "unchanged"])
+def test_install_adoption_owns_each_published_artifact(artifact, mutation, tmp_path, monkeypatch, capsys):
+    """Real adoption must reject aliases without losing prior state or foreign bytes."""
+    from dcc_mcp_maya import install
+
+    maya_root, modules_dir, scripts_dir, receipt_path = _configure_fake_maya(install, tmp_path, monkeypatch)
+    payload = tmp_path / "module.zip"
+    _write_provenanced_module_zip(install, payload, python37_content=b"native-cp37")
+    monkeypatch.setattr(install, "wait_for_sidecar_ready", lambda *_args, **_kwargs: {"success": False})
+    common = ["--yes", "--json", "--dcc-path", str(maya_root), "--python", sys.executable, "--module-zip", str(payload)]
+    assert install.main(["install", *common]) == install.INSTALL_EXIT_VERIFY
+    capsys.readouterr()
+    destinations = {
+        "module": modules_dir / "dcc-mcp-maya",
+        "descriptor": modules_dir / "dcc_mcp_maya.mod",
+        "user_setup": scripts_dir / "userSetup.py",
+        "receipt": receipt_path,
+    }
+
+    def installed_bytes():
+        files = [item for item in destinations["module"].rglob("*") if item.is_file()]
+        files.extend(destinations[name] for name in ("descriptor", "user_setup", "receipt"))
+        return {item.relative_to(tmp_path).as_posix(): item.read_bytes() for item in files}
+
+    prior = installed_bytes()
+    real_replace = os.replace
+    alias = tmp_path / "foreign-alias"
+    adopted_bytes = []
+
+    def inject_at_real_adoption(source, destination):
+        source_path = Path(source)
+        if not adopted_bytes and Path(destination) == destinations[artifact] and ".stage-" in source_path.name:
+            target = source_path / "python/dcc_mcp_core/__init__.py" if artifact == "module" else source_path
+            adopted_bytes.append(target.read_bytes())
+            if mutation == "external_hardlink":
+                os.link(str(target), str(alias))
+            elif mutation == "same_bytes_new_object":
+                replacement = tmp_path / "same-byte-replacement"
+                replacement.write_bytes(adopted_bytes[0])
+                real_replace(str(replacement), str(target))
+        return real_replace(source, destination)
+
+    monkeypatch.setattr(install.os, "replace", inject_at_real_adoption)
+    exit_code = install.main(["upgrade", *common])
+    report = json.loads(capsys.readouterr().out)
+    assert adopted_bytes, "the actual adoption boundary must be exercised"
+    if mutation == "unchanged":
+        assert exit_code == install.INSTALL_EXIT_VERIFY
+        assert report["verify"]["failure_reason"] == "sidecar_unavailable"
+        receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+        for entry in receipt["artifacts"]:
+            path = Path(entry["path"])
+            actual = install._tree_sha256(path) if entry["kind"] == "tree" else install._sha256(path)
+            assert actual == entry["sha256"]
+    else:
+        assert exit_code == install.INSTALL_EXIT_INSTALL
+        assert report["verify"]["failure_reason"] == "stage_publication_mismatch"
+        assert installed_bytes() == prior
+        if mutation == "external_hardlink":
+            assert alias.read_bytes() == adopted_bytes[0]
+            assert alias.stat().st_nlink == 1
+            alias.write_bytes(b"external owner writes after rollback\n")
+            assert installed_bytes() == prior
     assert not list(tmp_path.rglob("*.stage-*"))
     assert not list(tmp_path.rglob("*.backup-*"))
 
@@ -421,23 +669,17 @@ def test_module_zip_payload_is_bounded_receipted_and_installed(tmp_path, monkeyp
 
     maya_root, modules_dir, _scripts, receipt_path = _configure_fake_maya(install, tmp_path, monkeypatch)
     payload = tmp_path / "dcc-mcp-maya.zip"
-    with zipfile.ZipFile(str(payload), "w") as archive:
-        archive.writestr("dcc-mcp-maya/python/dcc_mcp_maya/__init__.py", "ZIP_PAYLOAD = True\n")
-        archive.writestr("dcc-mcp-maya/python37/dcc_mcp_core/_core.pyd", b"native-cp37")
-        archive.writestr("dcc-mcp-maya/plug-ins/dcc_mcp_maya_plugin.py", "# plugin\n")
-        archive.writestr("dcc-mcp-maya/scripts/userSetup.py", "# setup\n")
-        archive.writestr("dcc-mcp-maya/dcc_mcp_maya.mod", "+ placeholder\n")
-        archive.writestr(
-            "dcc-mcp-maya/module-info.json",
-            json.dumps(
-                {
-                    "name": "dcc_mcp_maya",
-                    "adapter_version": install.__version__,
-                    "min_core_version": install.MIN_CORE_VERSION,
-                    "max_core_version_exclusive": install.MAX_CORE_VERSION,
-                }
-            ),
-        )
+    _write_provenanced_module_zip(
+        install,
+        payload,
+        python37_content=b"native-cp37",
+        extra_entries={
+            "python/dcc_mcp_maya/__init__.py": b"ZIP_PAYLOAD = True\n",
+            "plug-ins/dcc_mcp_maya_plugin.py": b"# plugin\n",
+            "scripts/userSetup.py": b"# setup\n",
+            "dcc_mcp_maya.mod": b"+ placeholder\n",
+        },
+    )
     monkeypatch.setattr(install, "wait_for_sidecar_ready", lambda *_args, **_kwargs: {"success": False})
 
     assert (
@@ -546,6 +788,297 @@ def test_module_zip_rejects_missing_or_mismatched_core_bounds_before_writes(
     assert not scripts_dir.exists()
     assert not receipt.exists()
     assert not (tmp_path / "escape.py").exists()
+
+
+@pytest.mark.parametrize("embedded_core_version", (None, "0.19.44", "1.0", "1.0.0"))
+def test_module_zip_rejects_invalid_embedded_core_version_before_writes(
+    embedded_core_version, tmp_path, monkeypatch, capsys
+):
+    from dcc_mcp_maya import install
+
+    maya_root, modules_dir, scripts_dir, receipt = _configure_fake_maya(install, tmp_path, monkeypatch)
+    payload = tmp_path / "embedded-core-drift.zip"
+    metadata = {
+        "name": "dcc_mcp_maya",
+        "adapter_version": install.__version__,
+        "min_core_version": install.MIN_CORE_VERSION,
+        "max_core_version_exclusive": install.MAX_CORE_VERSION,
+    }
+    if embedded_core_version is not None:
+        metadata["embedded_core_version"] = embedded_core_version
+    payload_version = embedded_core_version or install.MIN_CORE_VERSION
+    with zipfile.ZipFile(str(payload), "w") as archive:
+        archive.writestr("dcc-mcp-maya/python/dcc_mcp_maya/__init__.py", "")
+        archive.writestr("dcc-mcp-maya/plug-ins/dcc_mcp_maya_plugin.py", "")
+        archive.writestr("dcc-mcp-maya/scripts/userSetup.py", "")
+        archive.writestr("dcc-mcp-maya/module-info.json", json.dumps(metadata))
+        archive.writestr(
+            "dcc-mcp-maya/python/dcc_mcp_core-%s.dist-info/METADATA" % payload_version,
+            "Metadata-Version: 2.1\nName: dcc-mcp-core\nVersion: %s\n" % payload_version,
+        )
+
+    exit_code = install.main(
+        [
+            "install",
+            "--yes",
+            "--json",
+            "--dcc-path",
+            str(maya_root),
+            "--python",
+            sys.executable,
+            "--module-zip",
+            str(payload),
+        ]
+    )
+    report = json.loads(capsys.readouterr().out)
+
+    assert exit_code == install.INSTALL_EXIT_ACQUIRE
+    assert report["verify"]["failure_reason"] == "module_zip_embedded_core_invalid"
+    assert not modules_dir.exists()
+    assert not scripts_dir.exists()
+    assert not receipt.exists()
+
+
+def test_module_zip_rejects_embedded_core_payload_version_mismatch_before_writes(tmp_path, monkeypatch, capsys):
+    from dcc_mcp_maya import install
+
+    maya_root, modules_dir, scripts_dir, receipt = _configure_fake_maya(install, tmp_path, monkeypatch)
+    payload = tmp_path / "embedded-core-payload-mismatch.zip"
+    metadata = {
+        "name": "dcc_mcp_maya",
+        "adapter_version": install.__version__,
+        "min_core_version": install.MIN_CORE_VERSION,
+        "max_core_version_exclusive": install.MAX_CORE_VERSION,
+        "embedded_core_version": install.MIN_CORE_VERSION,
+    }
+    with zipfile.ZipFile(str(payload), "w") as archive:
+        archive.writestr("dcc-mcp-maya/python/dcc_mcp_maya/__init__.py", "")
+        archive.writestr("dcc-mcp-maya/plug-ins/dcc_mcp_maya_plugin.py", "")
+        archive.writestr("dcc-mcp-maya/scripts/userSetup.py", "")
+        archive.writestr("dcc-mcp-maya/module-info.json", json.dumps(metadata))
+        archive.writestr(
+            "dcc-mcp-maya/python/dcc_mcp_core-0.19.46.dist-info/METADATA",
+            "Metadata-Version: 2.1\nName: dcc-mcp-core\nVersion: 0.19.46\n",
+        )
+
+    exit_code = install.main(
+        [
+            "install",
+            "--yes",
+            "--json",
+            "--dcc-path",
+            str(maya_root),
+            "--python",
+            sys.executable,
+            "--module-zip",
+            str(payload),
+        ]
+    )
+    report = json.loads(capsys.readouterr().out)
+
+    assert exit_code == install.INSTALL_EXIT_ACQUIRE
+    assert report["verify"]["failure_reason"] == "module_zip_embedded_core_mismatch"
+    assert not modules_dir.exists()
+    assert not scripts_dir.exists()
+    assert not receipt.exists()
+
+
+def test_module_zip_rejects_duplicate_same_version_core_identity_before_writes(tmp_path):
+    from dcc_mcp_maya import install
+
+    payload = tmp_path / "duplicate-core-identity.zip"
+
+    def duplicate(entries, _provenance):
+        entries["vendor/dcc_mcp_core-copy.dist-info/METADATA"] = (
+            b"Metadata-Version: 2.1\nName: dcc_mcp_core\nVersion: 0.19.45\n"
+        )
+
+    _write_provenanced_module_zip(install, payload, mutate=duplicate)
+
+    with pytest.raises(install.LifecycleError) as caught:
+        install._validate_module_zip(payload)
+    assert caught.value.reason == "module_zip_core_provenance_mismatch"
+
+
+@pytest.mark.parametrize("root_name", ("python", "python37"))
+def test_module_zip_rejects_conflicting_core_metadata_headers_per_root(root_name, tmp_path):
+    from dcc_mcp_maya import install
+
+    payload = tmp_path / ("conflicting-core-metadata-%s.zip" % root_name)
+
+    def conflicting_headers(entries, provenance):
+        metadata_path = "%s/dcc_mcp_core-0.19.45.dist-info/METADATA" % root_name
+        metadata_content = (
+            b"Metadata-Version: 2.1\nName: dcc-mcp-core\nName: attacker-core\nVersion: 0.19.45\nVersion: 9.9.9\n"
+        )
+        entries[metadata_path] = metadata_content
+        provenance["roots"][root_name]["metadata"] = _provenance_record(metadata_path, metadata_content)
+
+    _write_provenanced_module_zip(
+        install,
+        payload,
+        mutate=conflicting_headers,
+        python37_content=b"native-cp37" if root_name == "python37" else None,
+    )
+
+    with pytest.raises(install.LifecycleError) as caught:
+        install._validate_module_zip(payload)
+    assert caught.value.reason == "module_zip_core_provenance_mismatch"
+
+
+@pytest.mark.parametrize("drift", ("same_path_new_object", "same_object_bytes"))
+def test_module_zip_extraction_rejects_source_drift_after_validation(drift, tmp_path, monkeypatch):
+    from dcc_mcp_maya import install
+
+    payload = tmp_path / "module.zip"
+    replacement = tmp_path / "replacement.zip"
+    _write_provenanced_module_zip(install, payload)
+    _write_provenanced_module_zip(
+        install,
+        replacement,
+        extra_entries={"python/dcc_mcp_maya/__init__.py": b"MALICIOUS_REPLACEMENT = True\n"},
+    )
+    replacement_bytes = replacement.read_bytes()
+    original_validate = install._validate_module_zip
+
+    def validate_then_drift(path):
+        result = original_validate(path)
+        if drift == "same_path_new_object":
+            replacement.replace(path)
+        else:
+            path.write_bytes(replacement_bytes)
+        return result
+
+    monkeypatch.setattr(install, "_validate_module_zip", validate_then_drift)
+    stage = tmp_path / "stage"
+
+    with pytest.raises(install.LifecycleError):
+        install._extract_module_zip(payload, stage)
+    assert not stage.exists() or not any(stage.rglob("*"))
+
+
+def test_module_zip_rejects_hardlinked_source_before_validation(tmp_path):
+    from dcc_mcp_maya import install
+
+    original = tmp_path / "original.zip"
+    payload = tmp_path / "hardlinked.zip"
+    _write_provenanced_module_zip(install, original)
+    os.link(original, payload)
+
+    with pytest.raises(install.LifecycleError) as caught:
+        install._validate_module_zip(payload)
+    assert caught.value.reason == "unsafe_module_zip_source"
+
+
+def test_module_zip_rejects_reparse_source_before_validation(tmp_path, monkeypatch):
+    from dcc_mcp_maya import install
+
+    payload = tmp_path / "reparse.zip"
+    _write_provenanced_module_zip(install, payload)
+    original_lstat = Path.lstat
+
+    class ReparseStat:
+        def __init__(self, stat_result):
+            self._stat_result = stat_result
+            self.st_file_attributes = getattr(stat_result, "st_file_attributes", 0) | 0x400
+
+        def __getattr__(self, name):
+            return getattr(self._stat_result, name)
+
+    def reparse_lstat(path):
+        result = original_lstat(path)
+        return ReparseStat(result) if path == payload else result
+
+    monkeypatch.setattr(Path, "lstat", reparse_lstat)
+
+    with pytest.raises(install.LifecycleError) as caught:
+        install._validate_module_zip(payload)
+    assert caught.value.reason == "unsafe_module_zip_source"
+
+
+def test_module_zip_extraction_revalidates_published_stage_readback(tmp_path, monkeypatch):
+    from dcc_mcp_maya import install
+
+    payload = tmp_path / "module.zip"
+    stage = tmp_path / "stage"
+    _write_provenanced_module_zip(install, payload)
+    real_replace = install._replace_path
+
+    def replace_then_tamper(source, destination):
+        real_replace(source, destination)
+        if destination == stage:
+            (stage / "python" / "dcc_mcp_maya" / "__init__.py").write_bytes(b"TAMPERED_AFTER_PUBLICATION = True\n")
+
+    monkeypatch.setattr(install, "_replace_path", replace_then_tamper)
+
+    with pytest.raises(install.LifecycleError) as caught:
+        install._extract_module_zip(payload, stage)
+    assert caught.value.reason == "module_zip_publication_mismatch"
+    assert not stage.exists()
+
+
+def test_module_zip_readback_rejects_same_bytes_new_object_race(tmp_path, monkeypatch):
+    from dcc_mcp_maya import install
+
+    payload = tmp_path / "module.zip"
+    stage = tmp_path / "stage"
+    target = stage / "python" / "dcc_mcp_maya" / "__init__.py"
+    _write_provenanced_module_zip(install, payload)
+    original_open = Path.open
+    replaced = False
+
+    def replace_before_read(path, *args, **kwargs):
+        nonlocal replaced
+        mode = args[0] if args else kwargs.get("mode", "r")
+        if path == target and mode == "rb" and not replaced:
+            replacement = target.with_name("replacement.py")
+            original_open(replacement, "wb").close()
+            replacement.replace(target)
+            replaced = True
+        return original_open(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "open", replace_before_read)
+
+    with pytest.raises(install.LifecycleError) as caught:
+        install._extract_module_zip(payload, stage)
+    assert replaced
+    assert caught.value.reason == "module_zip_publication_mismatch"
+    assert not stage.exists()
+
+
+@pytest.mark.parametrize(
+    "drift",
+    ("payload", "digest", "size", "path", "identity", "metadata_digest", "metadata_size", "metadata_path"),
+)
+def test_module_zip_rejects_core_provenance_drift_before_writes(drift, tmp_path):
+    from dcc_mcp_maya import install
+
+    payload = tmp_path / ("core-provenance-%s.zip" % drift)
+
+    def mutate(entries, provenance):
+        record = provenance["roots"]["python"]["files"][0]
+        if drift == "payload":
+            entries[record["path"]] = b'raise RuntimeError("replaced")\n'
+        elif drift == "digest":
+            record["sha256"] = "0" * 64
+        elif drift == "size":
+            record["size"] += 1
+        elif drift == "path":
+            record["path"] = "python/dcc_mcp_core/replaced.py"
+        elif drift == "identity":
+            provenance["name"] = "dcc_mcp_core"
+        elif drift == "metadata_digest":
+            provenance["roots"]["python"]["metadata"]["sha256"] = "0" * 64
+        elif drift == "metadata_size":
+            provenance["roots"]["python"]["metadata"]["size"] += 1
+        elif drift == "metadata_path":
+            provenance["roots"]["python"]["metadata"]["path"] = "python/vendor/METADATA"
+
+    _write_provenanced_module_zip(install, payload, mutate=mutate)
+
+    with pytest.raises(install.LifecycleError) as caught:
+        install._validate_module_zip(payload)
+    assert caught.value.reason == "module_zip_core_provenance_mismatch"
 
 
 def test_module_zip_rejects_adapter_version_drift_before_writes(tmp_path, monkeypatch, capsys):

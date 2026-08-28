@@ -120,7 +120,7 @@ jobs:
           python-version: "3.14"
 
       - name: Install assemble dependencies
-        run: pip install dcc-mcp-core
+        run: pip install dcc-mcp-core "packaging>=21.3"
 
       - name: Assemble .mod module
         run: |
