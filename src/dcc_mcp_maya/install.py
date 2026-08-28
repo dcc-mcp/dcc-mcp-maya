@@ -6,24 +6,26 @@ import argparse
 import base64
 import binascii
 import hashlib
+import io
 import json
 import os
 import re
 import shutil
+import stat
 import subprocess
 import sys
 import time
 import uuid
 import zipfile
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from email.parser import Parser
 from pathlib import Path
 from typing import Optional
 
 import dcc_mcp_core
 from dcc_mcp_core.install_lifecycle import inspect_install_root, safe_remove_tree, wait_for_sidecar_ready
-from packaging.specifiers import SpecifierSet
-from packaging.version import InvalidVersion, Version
 
 from dcc_mcp_maya.__version__ import __version__
 
@@ -66,7 +68,6 @@ COMMAND = "dcc-mcp-maya"
 MIN_CORE_VERSION = "0.19.45"
 MAX_CORE_VERSION = "1.0.0"
 CORE_VERSION_REQUIREMENT = "dcc-mcp-core>=%s,<%s" % (MIN_CORE_VERSION, MAX_CORE_VERSION)
-CORE_VERSION_SPECIFIER = SpecifierSet(CORE_VERSION_REQUIREMENT[len("dcc-mcp-core") :])
 MIN_MAYA_VERSION = 2020
 MAX_MAYA_VERSION = 2027
 LIFECYCLE_COMMANDS = ("install", "status", "verify", "uninstall", "upgrade")
@@ -75,6 +76,7 @@ USER_SETUP_BEGIN = "# >>> dcc-mcp-maya Install SOP v1 >>>"
 USER_SETUP_END = "# <<< dcc-mcp-maya Install SOP v1 <<<"
 MAX_MODULE_ZIP_FILES = 20000
 MAX_MODULE_ZIP_BYTES = 512 * 1024 * 1024
+CORE_PROVENANCE_PATH = "core-provenance.json"
 
 
 class LifecycleError(RuntimeError):
@@ -107,6 +109,23 @@ class InstallContext:
     module_zip: Optional[Path]
 
 
+@dataclass(frozen=True)
+class ValidatedModuleZip(Mapping):
+    entries: dict
+    payload_bytes: bytes
+    source_fingerprint: tuple
+    source_sha256: str
+
+    def __getitem__(self, key):
+        return self.entries[key]
+
+    def __iter__(self):
+        return iter(self.entries)
+
+    def __len__(self):
+        return len(self.entries)
+
+
 def _version_tuple(value):
     match = re.search(r"\d+(?:\.\d+)*", str(value))
     if match is None:
@@ -117,10 +136,19 @@ def _version_tuple(value):
 
 def _pep440_version(value):
     """Parse one complete PEP 440 version or return ``None``."""
+    from packaging.version import InvalidVersion, Version
+
     try:
         return Version(str(value))
     except InvalidVersion:
         return None
+
+
+def _core_version_specifier():
+    """Keep lifecycle dependencies out of the offline userSetup import path."""
+    from packaging.specifiers import SpecifierSet
+
+    return SpecifierSet(CORE_VERSION_REQUIREMENT[len("dcc-mcp-core") :])
 
 
 def _probe_target(python_path):
@@ -292,7 +320,7 @@ def _resolve_context(dcc_path, python_path, environ, module_zip=None):
             "The selected mayapy must use Python 3.7 or newer.",
         )
     core_version = _pep440_version(probe.get("core_version", ""))
-    if core_version is None or core_version not in CORE_VERSION_SPECIFIER:
+    if core_version is None or core_version not in _core_version_specifier():
         raise LifecycleError(
             INSTALL_EXIT_PREFLIGHT,
             "core_version",
@@ -411,6 +439,144 @@ def _sha256(path):
     return digest.hexdigest()
 
 
+def _stat_fingerprint(stat_result):
+    return (
+        stat_result.st_dev,
+        stat_result.st_ino,
+        stat_result.st_size,
+        getattr(stat_result, "st_mtime_ns", int(stat_result.st_mtime * 1_000_000_000)),
+    )
+
+
+def _object_identity(stat_result):
+    return (stat_result.st_dev, stat_result.st_ino)
+
+
+def _assert_safe_module_zip_stat(stat_result):
+    is_reparse = bool(getattr(stat_result, "st_file_attributes", 0) & 0x400)
+    if not stat.S_ISREG(stat_result.st_mode) or getattr(stat_result, "st_nlink", 1) != 1 or is_reparse:
+        raise LifecycleError(
+            INSTALL_EXIT_ACQUIRE,
+            "acquire",
+            "unsafe_module_zip_source",
+            "The Maya module ZIP source must be one regular, unlinked, non-reparse filesystem object.",
+        )
+
+
+def _capture_module_zip_source(payload):
+    path = Path(payload)
+    try:
+        path_before = path.lstat()
+        _assert_safe_module_zip_stat(path_before)
+        with path.open("rb") as stream:
+            before = os.fstat(stream.fileno())
+            _assert_safe_module_zip_stat(before)
+            content = stream.read()
+            after = os.fstat(stream.fileno())
+            _assert_safe_module_zip_stat(after)
+        current = path.lstat()
+        _assert_safe_module_zip_stat(current)
+    except OSError as exc:
+        raise LifecycleError(
+            INSTALL_EXIT_ACQUIRE,
+            "acquire",
+            "invalid_module_zip",
+            "The Maya module ZIP cannot be read consistently: %s" % exc,
+        ) from exc
+    fingerprint = _stat_fingerprint(before)
+    if (
+        fingerprint != _stat_fingerprint(path_before)
+        or fingerprint != _stat_fingerprint(after)
+        or fingerprint != _stat_fingerprint(current)
+    ):
+        raise LifecycleError(
+            INSTALL_EXIT_ACQUIRE,
+            "acquire",
+            "module_zip_source_changed",
+            "The Maya module ZIP changed while it was being acquired.",
+        )
+    return content, fingerprint, hashlib.sha256(content).hexdigest()
+
+
+def _assert_module_zip_source_unchanged(payload, validated):
+    _content, fingerprint, digest = _capture_module_zip_source(payload)
+    if fingerprint != validated.source_fingerprint or digest != validated.source_sha256:
+        raise LifecycleError(
+            INSTALL_EXIT_ACQUIRE,
+            "acquire",
+            "module_zip_source_changed",
+            "The Maya module ZIP changed after validation.",
+        )
+
+
+def _module_zip_publication_failure(message):
+    raise LifecycleError(
+        INSTALL_EXIT_INSTALL,
+        "stage",
+        "module_zip_publication_mismatch",
+        message,
+    )
+
+
+def _assert_safe_published_module_stat(stat_result):
+    is_reparse = bool(getattr(stat_result, "st_file_attributes", 0) & 0x400)
+    if not stat.S_ISREG(stat_result.st_mode) or getattr(stat_result, "st_nlink", 1) != 1 or is_reparse:
+        _module_zip_publication_failure("The published Maya module ZIP contains an unsafe file object.")
+
+
+def _capture_published_module_file(path):
+    try:
+        path_before = path.lstat()
+        _assert_safe_published_module_stat(path_before)
+        with path.open("rb") as stream:
+            before = os.fstat(stream.fileno())
+            _assert_safe_published_module_stat(before)
+            content = stream.read()
+            after = os.fstat(stream.fileno())
+            _assert_safe_published_module_stat(after)
+        current = path.lstat()
+        _assert_safe_published_module_stat(current)
+    except OSError as exc:
+        _module_zip_publication_failure("The published Maya module ZIP cannot be read back safely: %s" % exc)
+    fingerprint = _stat_fingerprint(before)
+    if (
+        fingerprint != _stat_fingerprint(path_before)
+        or fingerprint != _stat_fingerprint(after)
+        or fingerprint != _stat_fingerprint(current)
+    ):
+        _module_zip_publication_failure("The published Maya module ZIP changed during readback.")
+    return len(content), hashlib.sha256(content).hexdigest()
+
+
+def _validate_module_zip_publication(stage, validated):
+    expected = {}
+    with zipfile.ZipFile(io.BytesIO(validated.payload_bytes)) as archive:
+        for relative_path, member_name in validated.items():
+            content = archive.read(member_name)
+            expected[relative_path] = (len(content), hashlib.sha256(content).hexdigest())
+
+    actual = set()
+    try:
+        for candidate in stage.rglob("*"):
+            candidate_stat = candidate.lstat()
+            if bool(getattr(candidate_stat, "st_file_attributes", 0) & 0x400) or candidate.is_symlink():
+                _module_zip_publication_failure("The published Maya module ZIP contains a link or reparse point.")
+            if candidate.is_dir():
+                continue
+            _assert_safe_published_module_stat(candidate_stat)
+            relative_path = candidate.relative_to(stage).as_posix()
+            actual.add(relative_path)
+            expected_record = expected.get(relative_path)
+            if expected_record is None:
+                _module_zip_publication_failure("The published Maya module ZIP contains an undeclared file.")
+            if _capture_published_module_file(candidate) != expected_record:
+                _module_zip_publication_failure("The published Maya module ZIP failed its size or digest readback.")
+    except OSError as exc:
+        _module_zip_publication_failure("The published Maya module ZIP cannot be read back safely: %s" % exc)
+    if actual != set(expected):
+        _module_zip_publication_failure("The published Maya module ZIP root set does not match the validated snapshot.")
+
+
 def _tree_sha256(path):
     digest = hashlib.sha256()
     for item in sorted((candidate for candidate in path.rglob("*") if candidate.is_file()), key=lambda p: p.as_posix()):
@@ -457,6 +623,82 @@ def _artifact_digest(entry):
     return _sha256(path) if path.is_file() else None
 
 
+def _install_publication_mismatch():
+    raise LifecycleError(
+        INSTALL_EXIT_INSTALL,
+        "install",
+        "stage_publication_mismatch",
+        "The staged Maya install artifact changed at the commit boundary.",
+    )
+
+
+def _assert_safe_install_stat(snapshot, directory=False):
+    is_reparse = bool(getattr(snapshot, "st_file_attributes", 0) & 0x400)
+    valid_kind = stat.S_ISDIR(snapshot.st_mode) if directory else stat.S_ISREG(snapshot.st_mode)
+    if is_reparse or not valid_kind or (not directory and snapshot.st_nlink != 1):
+        _install_publication_mismatch()
+
+
+def _capture_install_file(path):
+    try:
+        path_before = path.lstat()
+        _assert_safe_install_stat(path_before)
+        with path.open("rb") as stream:
+            before = os.fstat(stream.fileno())
+            _assert_safe_install_stat(before)
+            content = stream.read()
+            after = os.fstat(stream.fileno())
+            _assert_safe_install_stat(after)
+        current = path.lstat()
+        _assert_safe_install_stat(current)
+    except OSError:
+        _install_publication_mismatch()
+    fingerprint = _stat_fingerprint(before)
+    if any(_stat_fingerprint(item) != fingerprint for item in (path_before, after, current)):
+        _install_publication_mismatch()
+    return hashlib.sha256(content).hexdigest(), _object_identity(before)
+
+
+def _capture_install_publication(path, kind):
+    if kind != "tree":
+        return _capture_install_file(path)
+    try:
+        root_before = path.lstat()
+        _assert_safe_install_stat(root_before, directory=True)
+        records = []
+        digest = hashlib.sha256()
+        for item in sorted(path.rglob("*"), key=lambda candidate: candidate.as_posix()):
+            relative = item.relative_to(path).as_posix()
+            item_stat = item.lstat()
+            _assert_safe_install_stat(item_stat, directory=stat.S_ISDIR(item_stat.st_mode))
+            if stat.S_ISDIR(item_stat.st_mode):
+                records.append((relative, "directory", _object_identity(item_stat)))
+                continue
+            if not stat.S_ISREG(item_stat.st_mode):
+                _install_publication_mismatch()
+            file_digest, fingerprint = _capture_install_file(item)
+            records.append((relative, "file", fingerprint))
+            encoded = relative.encode("utf-8")
+            digest.update(len(encoded).to_bytes(4, "big"))
+            digest.update(encoded)
+            digest.update(bytes.fromhex(file_digest))
+        root_after = path.lstat()
+        _assert_safe_install_stat(root_after, directory=True)
+    except OSError:
+        _install_publication_mismatch()
+    root_fingerprint = _stat_fingerprint(root_before)
+    if _stat_fingerprint(root_after) != root_fingerprint:
+        _install_publication_mismatch()
+    return digest.hexdigest(), (_object_identity(root_before), tuple(records))
+
+
+def _assert_install_publication(path, kind, expected_sha256, expected_identity=None):
+    actual_sha256, actual_identity = _capture_install_publication(path, kind)
+    if actual_sha256 != expected_sha256 or (expected_identity is not None and actual_identity != expected_identity):
+        _install_publication_mismatch()
+    return actual_identity
+
+
 def _inspect_state(receipt_path, module_root, descriptor_path, user_setup_path):
     if not receipt_path.is_file():
         if module_root.exists() or descriptor_path.exists():
@@ -496,8 +738,13 @@ def _inspect_state(receipt_path, module_root, descriptor_path, user_setup_path):
     return ("current" if receipt.get("adapter_version") == __version__ else "upgrade"), "", ""
 
 
-def _replace_path(source, destination):
+def _replace_path(source, destination, publication_contract=None):
+    if publication_contract is not None:
+        kind, expected_sha256, expected_identity = publication_contract
+        _assert_install_publication(source, kind, expected_sha256, expected_identity)
     os.replace(str(source), str(destination))
+    if publication_contract is not None:
+        _assert_install_publication(destination, kind, expected_sha256, expected_identity)
 
 
 def _remove_path(path):
@@ -609,10 +856,206 @@ def bootstrap_user_setup(defer=True):
         load_plugin()
 
 
-def _validate_module_zip(payload):
+def _core_provenance_failure(message):
+    raise LifecycleError(
+        INSTALL_EXIT_ACQUIRE,
+        "acquire",
+        "module_zip_core_provenance_mismatch",
+        message,
+    )
+
+
+def _parse_unique_core_metadata(metadata_content):
+    from packaging.utils import canonicalize_name
+    from packaging.version import InvalidVersion, Version
+
     try:
-        archive = zipfile.ZipFile(str(payload))
-    except (OSError, zipfile.BadZipFile) as exc:
+        package_metadata = Parser().parsestr(metadata_content.decode("utf-8"))
+        names = package_metadata.get_all("Name", [])
+        versions = package_metadata.get_all("Version", [])
+        if len(names) != 1 or len(versions) != 1:
+            raise ValueError("ambiguous identity headers")
+        name = names[0].strip()
+        version = Version(versions[0].strip())
+    except (UnicodeDecodeError, InvalidVersion, ValueError, TypeError):
+        _core_provenance_failure("The bundled Core METADATA is invalid or ambiguous.")
+    if canonicalize_name(name) != "dcc-mcp-core":
+        _core_provenance_failure("The bundled Core METADATA identity is not canonical.")
+    return name, version
+
+
+def _validate_provenance_record(archive, normalized, record, expected_prefix=None):
+    if not isinstance(record, dict) or set(record) != {"path", "sha256", "size"}:
+        _core_provenance_failure("The bundled Core provenance record is invalid.")
+    path = record.get("path")
+    digest = record.get("sha256")
+    size = record.get("size")
+    if (
+        not isinstance(path, str)
+        or (expected_prefix is not None and not path.startswith(expected_prefix))
+        or path not in normalized
+        or not isinstance(digest, str)
+        or re.fullmatch(r"[0-9a-f]{64}", digest) is None
+        or not isinstance(size, int)
+        or isinstance(size, bool)
+        or size < 0
+    ):
+        _core_provenance_failure("The bundled Core provenance record has invalid identity, path, or digest fields.")
+    content = archive.read(normalized[path])
+    if len(content) != size or hashlib.sha256(content).hexdigest() != digest:
+        _core_provenance_failure("The bundled Core payload does not match its assembly provenance.")
+    return path, content
+
+
+def _validate_module_zip_core_provenance(archive, normalized, module_info, embedded_core_version):
+    from packaging.utils import canonicalize_name
+    from packaging.version import InvalidVersion, Version
+
+    identities = []
+    for relative_path, member_name in normalized.items():
+        if not relative_path.casefold().endswith(".dist-info/metadata"):
+            continue
+        metadata_dir = relative_path.rsplit("/", 2)[-2]
+        core_looking_path = re.match(r"dcc[-_.]mcp[-_.]core[-_.]", metadata_dir, re.IGNORECASE) is not None
+        metadata_content = archive.read(member_name)
+        try:
+            package_metadata = Parser().parsestr(metadata_content.decode("utf-8"))
+        except (UnicodeDecodeError, ValueError):
+            if core_looking_path:
+                _core_provenance_failure("A Core-looking METADATA identity is invalid.")
+            continue
+        names = package_metadata.get_all("Name", [])
+        if core_looking_path or any(canonicalize_name(name) == "dcc-mcp-core" for name in names):
+            _name, identity_version = _parse_unique_core_metadata(metadata_content)
+            canonical_name = "dcc-mcp-core"
+        else:
+            canonical_name = canonicalize_name(package_metadata.get("Name", ""))
+        if canonical_name != "dcc-mcp-core":
+            if core_looking_path:
+                _core_provenance_failure("A Core-looking METADATA path has a mismatched package identity.")
+            continue
+        identities.append((relative_path, package_metadata, identity_version))
+    if not identities or any(version != embedded_core_version for _path, _metadata, version in identities):
+        raise LifecycleError(
+            INSTALL_EXIT_ACQUIRE,
+            "acquire",
+            "module_zip_embedded_core_mismatch",
+            "The bundled Core payload version does not match module-info.json.",
+        )
+
+    reference = module_info.get("core_provenance")
+    if not isinstance(reference, dict) or set(reference) != {"path", "sha256"}:
+        _core_provenance_failure("The module ZIP is missing its Core provenance reference.")
+    provenance_path = reference.get("path")
+    provenance_digest = reference.get("sha256")
+    if (
+        provenance_path != CORE_PROVENANCE_PATH
+        or provenance_path not in normalized
+        or not isinstance(provenance_digest, str)
+        or re.fullmatch(r"[0-9a-f]{64}", provenance_digest) is None
+    ):
+        _core_provenance_failure("The module ZIP Core provenance reference is invalid.")
+    provenance_content = archive.read(normalized[provenance_path])
+    if hashlib.sha256(provenance_content).hexdigest() != provenance_digest:
+        _core_provenance_failure("The module ZIP Core provenance manifest digest does not match.")
+    try:
+        provenance = json.loads(provenance_content.decode("utf-8"))
+    except (UnicodeDecodeError, ValueError) as exc:
+        raise LifecycleError(
+            INSTALL_EXIT_ACQUIRE,
+            "acquire",
+            "module_zip_core_provenance_mismatch",
+            "The module ZIP Core provenance manifest is invalid.",
+        ) from exc
+    if (
+        not isinstance(provenance, dict)
+        or provenance.get("schema_version") != 1
+        or provenance.get("name") != "dcc-mcp-core"
+        or not isinstance(provenance.get("version"), str)
+    ):
+        _core_provenance_failure("The module ZIP Core provenance identity is invalid.")
+    try:
+        provenance_version = Version(provenance["version"])
+    except InvalidVersion:
+        _core_provenance_failure("The module ZIP Core provenance version is invalid.")
+    if provenance_version != embedded_core_version:
+        _core_provenance_failure("The module ZIP Core provenance version does not match module-info.json.")
+
+    source_wheels = provenance.get("source_wheels")
+    if not isinstance(source_wheels, list) or not source_wheels:
+        _core_provenance_failure("The module ZIP has no selected Core wheel provenance.")
+    wheel_filenames = set()
+    wheel_digests = set()
+    for wheel in source_wheels:
+        if (
+            not isinstance(wheel, dict)
+            or set(wheel) != {"filename", "sha256"}
+            or not isinstance(wheel.get("filename"), str)
+            or not wheel["filename"].endswith(".whl")
+            or not isinstance(wheel.get("sha256"), str)
+            or re.fullmatch(r"[0-9a-f]{64}", wheel["sha256"]) is None
+        ):
+            _core_provenance_failure("The selected Core wheel provenance is invalid.")
+        if wheel["filename"] in wheel_filenames or wheel["sha256"] in wheel_digests:
+            _core_provenance_failure("The selected Core wheel provenance is ambiguous.")
+        wheel_filenames.add(wheel["filename"])
+        wheel_digests.add(wheel["sha256"])
+
+    actual_files_by_root = {}
+    for relative_path in normalized:
+        parts = relative_path.split("/")
+        if len(parts) >= 3 and parts[0] in ("python", "python37") and parts[1] == "dcc_mcp_core":
+            actual_files_by_root.setdefault(parts[0], set()).add(relative_path)
+    expected_roots = {"python"}
+    has_python37 = module_info.get("has_python37", False)
+    if not isinstance(has_python37, bool):
+        _core_provenance_failure("The module ZIP Python runtime contract is invalid.")
+    if has_python37:
+        expected_roots.add("python37")
+    roots = provenance.get("roots")
+    if not isinstance(roots, dict) or set(roots) != expected_roots or set(actual_files_by_root) != expected_roots:
+        _core_provenance_failure("The bundled Core runtime roots do not match their provenance manifest.")
+
+    expected_metadata_paths = set()
+    for root_name, root in roots.items():
+        if not isinstance(root, dict) or set(root) != {"metadata", "files"}:
+            _core_provenance_failure("The bundled Core runtime provenance is invalid.")
+        metadata_path, metadata_content = _validate_provenance_record(archive, normalized, root["metadata"])
+        expected_metadata_path = "%s/dcc_mcp_core-%s.dist-info/METADATA" % (root_name, provenance["version"])
+        if metadata_path != expected_metadata_path:
+            _core_provenance_failure("The bundled Core METADATA path is ambiguous.")
+        expected_metadata_paths.add(metadata_path)
+        metadata_name, metadata_version = _parse_unique_core_metadata(metadata_content)
+        if metadata_name != "dcc-mcp-core":
+            _core_provenance_failure("The bundled Core METADATA identity is not canonical.")
+        if metadata_version != embedded_core_version:
+            _core_provenance_failure("The bundled Core METADATA version does not match module-info.json.")
+
+        records = root.get("files")
+        if not isinstance(records, list) or not records:
+            _core_provenance_failure("The bundled Core runtime has no bound payload files.")
+        declared_paths = set()
+        expected_prefix = root_name + "/dcc_mcp_core/"
+        for record in records:
+            path, _content = _validate_provenance_record(archive, normalized, record, expected_prefix)
+            if path in declared_paths:
+                _core_provenance_failure("The bundled Core payload provenance is ambiguous.")
+            declared_paths.add(path)
+        if declared_paths != actual_files_by_root[root_name]:
+            _core_provenance_failure("The bundled Core payload paths do not match their provenance manifest.")
+
+    identity_paths = {path for path, _metadata, _version in identities}
+    if identity_paths != expected_metadata_paths or len(identities) != len(expected_metadata_paths):
+        _core_provenance_failure("The bundled Core METADATA identities are missing, duplicated, or ambiguous.")
+
+
+def _validate_module_zip(payload):
+    from packaging.version import InvalidVersion, Version
+
+    try:
+        payload_bytes, source_fingerprint, source_sha256 = _capture_module_zip_source(payload)
+        archive = zipfile.ZipFile(io.BytesIO(payload_bytes))
+    except zipfile.BadZipFile as exc:
         raise LifecycleError(
             INSTALL_EXIT_ACQUIRE,
             "acquire",
@@ -692,7 +1135,7 @@ def _validate_module_zip(payload):
             "module_zip_contract_missing",
             "The Maya module ZIP is missing its package, plug-in, or userSetup payload.",
         )
-    with zipfile.ZipFile(str(payload)) as archive:
+    with zipfile.ZipFile(io.BytesIO(payload_bytes)) as archive:
         try:
             module_info = json.loads(archive.read(normalized["module-info.json"]).decode("utf-8"))
         except (KeyError, UnicodeDecodeError, ValueError) as exc:
@@ -727,24 +1170,60 @@ def _validate_module_zip(payload):
             "module_zip_core_contract_mismatch",
             "The module ZIP Core dependency bounds do not match the lifecycle command.",
         )
-    return normalized
+    embedded_core_raw = module_info.get("embedded_core_version")
+    try:
+        embedded_core_version = Version(embedded_core_raw) if isinstance(embedded_core_raw, str) else None
+    except InvalidVersion:
+        embedded_core_version = None
+    if embedded_core_version is None or embedded_core_version not in _core_version_specifier():
+        raise LifecycleError(
+            INSTALL_EXIT_ACQUIRE,
+            "acquire",
+            "module_zip_embedded_core_invalid",
+            "The module ZIP embedded Core version is missing, invalid, or outside the supported range.",
+        )
+    with zipfile.ZipFile(io.BytesIO(payload_bytes)) as archive:
+        _validate_module_zip_core_provenance(archive, normalized, module_info, embedded_core_version)
+    return ValidatedModuleZip(normalized, payload_bytes, source_fingerprint, source_sha256)
 
 
-def _extract_module_zip(payload, stage):
-    validated_entries = _validate_module_zip(payload)
-    with zipfile.ZipFile(str(payload)) as archive:
-        for relative_path, member_name in validated_entries.items():
-            info = archive.getinfo(member_name)
-            destination = stage.joinpath(*relative_path.split("/"))
-            destination.parent.mkdir(parents=True, exist_ok=True)
-            with archive.open(info) as source, destination.open("wb") as target:
-                shutil.copyfileobj(source, target, length=1024 * 1024)
+def _extract_module_zip(payload, stage, validated=None):
+    validated_payload = validated or _validate_module_zip(payload)
+    _assert_module_zip_source_unchanged(payload, validated_payload)
+    extraction = stage.with_name(".%s.extract-%s" % (stage.name, uuid.uuid4().hex))
+    published = False
+    try:
+        extraction.mkdir()
+        with zipfile.ZipFile(io.BytesIO(validated_payload.payload_bytes)) as archive:
+            for relative_path, member_name in validated_payload.items():
+                info = archive.getinfo(member_name)
+                destination = extraction.joinpath(*relative_path.split("/"))
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                with archive.open(info) as source, destination.open("wb") as target:
+                    shutil.copyfileobj(source, target, length=1024 * 1024)
+        _assert_module_zip_source_unchanged(payload, validated_payload)
+        if stage.exists():
+            raise LifecycleError(
+                INSTALL_EXIT_INSTALL,
+                "stage",
+                "module_zip_stage_collision",
+                "The Maya module ZIP stage already exists.",
+            )
+        _replace_path(extraction, stage)
+        published = True
+        _validate_module_zip_publication(stage, validated_payload)
+        _assert_module_zip_source_unchanged(payload, validated_payload)
+    except BaseException:
+        if extraction.exists():
+            _remove_path(extraction)
+        if published and stage.exists():
+            _remove_path(stage)
+        raise
 
 
-def _stage_module_tree(stage, ctx):
+def _stage_module_tree(stage, ctx, validated_module_zip=None):
     if ctx.module_zip is not None:
-        stage.mkdir()
-        _extract_module_zip(ctx.module_zip, stage)
+        _extract_module_zip(ctx.module_zip, stage, validated_module_zip)
         return (stage / "python37").is_dir()
     (stage / "python").mkdir(parents=True)
     package_source = Path(__file__).resolve().parent
@@ -821,11 +1300,19 @@ def _previous_user_setup_payload(ctx, previous_receipt, prior_user_setup):
     }
 
 
-def _receipt_payload(ctx, module_stage, descriptor_stage, user_setup_stage, previous_receipt, prior_user_setup):
+def _receipt_payload(
+    ctx,
+    module_stage,
+    descriptor_stage,
+    user_setup_stage,
+    previous_receipt,
+    prior_user_setup,
+    module_zip_sha256=None,
+):
     previous_user_setup = _previous_user_setup_payload(ctx, previous_receipt, prior_user_setup)
     installed_at = time.time()
     source = (
-        {"kind": "module_zip", "path": str(ctx.module_zip), "sha256": _sha256(ctx.module_zip)}
+        {"kind": "module_zip", "path": str(ctx.module_zip), "sha256": module_zip_sha256 or _sha256(ctx.module_zip)}
         if ctx.module_zip is not None
         else {"kind": "installed_package", "path": str(Path(__file__).resolve().parent)}
     )
@@ -860,8 +1347,7 @@ def _rollback_path(current, backup, existed_before):
 def _install_transaction(ctx):
     previous_receipt = _read_receipt(ctx.receipt_path)
     token = uuid.uuid4().hex
-    if ctx.module_zip is not None:
-        _validate_module_zip(ctx.module_zip)
+    validated_module_zip = _validate_module_zip(ctx.module_zip) if ctx.module_zip is not None else None
     for parent in (ctx.modules_dir, ctx.scripts_dir, ctx.receipt_path.parent):
         parent.mkdir(parents=True, exist_ok=True)
     paths = [ctx.module_root, ctx.descriptor_path, ctx.user_setup_path, ctx.receipt_path]
@@ -871,7 +1357,7 @@ def _install_transaction(ctx):
     prior_user_setup = ctx.user_setup_path.read_bytes() if ctx.user_setup_path.is_file() else b""
     committed = [False, False, False, False]
     try:
-        has_python37 = _stage_module_tree(stages[0], ctx)
+        has_python37 = _stage_module_tree(stages[0], ctx, validated_module_zip)
         descriptor = _render_descriptor(ctx.module_root, has_python37=has_python37)
         (stages[0] / "dcc_mcp_maya.mod").write_text(descriptor, encoding="utf-8")
         stages[1].write_text(descriptor, encoding="utf-8")
@@ -880,8 +1366,23 @@ def _install_transaction(ctx):
             _render_user_setup(current_user_setup, ctx.receipt_path.parent / "bootstrap-errors"),
             encoding="utf-8",
         )
-        receipt = _receipt_payload(ctx, stages[0], stages[1], stages[2], previous_receipt, prior_user_setup)
+        receipt = _receipt_payload(
+            ctx,
+            stages[0],
+            stages[1],
+            stages[2],
+            previous_receipt,
+            prior_user_setup,
+            validated_module_zip.source_sha256 if validated_module_zip is not None else None,
+        )
         stages[3].write_text(json.dumps(receipt, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        publication_values = [(entry["kind"], entry["sha256"]) for entry in receipt["artifacts"]] + [
+            ("receipt", _sha256(stages[3]))
+        ]
+        publication_contracts = [
+            (kind, expected_sha256, _assert_install_publication(stage, kind, expected_sha256))
+            for stage, (kind, expected_sha256) in zip(stages, publication_values)
+        ]
 
         inspection = inspect_install_root(ctx.module_root)
         if inspection.get("requires_restart"):
@@ -892,10 +1393,24 @@ def _install_transaction(ctx):
                 str(inspection.get("recommended_next_action") or "Maya must restart."),
             )
         for index, (current, stage, backup, had_current) in enumerate(zip(paths, stages, backups, existed)):
+            kind, expected_sha256, expected_identity = publication_contracts[index]
+            _assert_install_publication(stage, kind, expected_sha256, expected_identity)
             if had_current:
                 _replace_path(current, backup)
-            _replace_path(stage, current)
+            _assert_install_publication(stage, kind, expected_sha256, expected_identity)
+            if index == 3:
+                for published, (published_kind, published_sha256, published_identity) in zip(
+                    paths[:3], publication_contracts[:3]
+                ):
+                    _assert_install_publication(published, published_kind, published_sha256, published_identity)
             committed[index] = True
+            _replace_path(stage, current, publication_contracts[index])
+            _assert_install_publication(current, kind, expected_sha256, expected_identity)
+            if index == 3:
+                for published, (published_kind, published_sha256, published_identity) in zip(
+                    paths[:3], publication_contracts[:3]
+                ):
+                    _assert_install_publication(published, published_kind, published_sha256, published_identity)
     except BaseException:
         try:
             for current, backup, had_current, was_committed in reversed(list(zip(paths, backups, existed, committed))):

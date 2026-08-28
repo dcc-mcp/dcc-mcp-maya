@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Iterable, Optional, Tuple
 
 DEFAULT_GATEWAY_URL = "http://127.0.0.1:9765/mcp"
+CORE_REQUIREMENT = "dcc-mcp-core>=0.19.45,<1.0.0"
 
 
 def run(command: list[str], cwd: Optional[Path] = None) -> None:
@@ -111,10 +112,24 @@ def install_package(mayapy: Path, source: str, repo_root: Path, skip_install: bo
 
 def verify_import(mayapy: Path) -> None:
     code = (
-        "import dcc_mcp_maya; "
-        "print('dcc-mcp-maya', dcc_mcp_maya.__version__); "
-        "import dcc_mcp_core; "
-        "print('dcc-mcp-core import ok')"
+        """\
+from packaging.requirements import Requirement
+from packaging.version import InvalidVersion, Version
+
+import dcc_mcp_core
+import dcc_mcp_maya
+
+requirement = Requirement(%r)
+try:
+    core_version = Version(str(dcc_mcp_core.__version__))
+except InvalidVersion as exc:
+    raise SystemExit("Invalid dcc-mcp-core version: %%s" %% exc)
+if core_version not in requirement.specifier:
+    raise SystemExit("Unsupported dcc-mcp-core %%s; required %%s" %% (core_version, requirement.specifier))
+print("dcc-mcp-maya", dcc_mcp_maya.__version__)
+print("dcc-mcp-core", core_version)
+"""
+        % CORE_REQUIREMENT
     )
     run([str(mayapy), "-c", code])
 
@@ -166,7 +181,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument(
         "--skip-install",
         action="store_true",
-        help="Only verify imports and write MCP snippets.",
+        help="Only verify imports and the supported Core version, then write MCP snippets.",
     )
     return parser.parse_args(argv)
 

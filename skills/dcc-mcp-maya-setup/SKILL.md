@@ -55,7 +55,8 @@ The script:
    or common Autodesk install locations.
 2. Installs this checkout into Maya with the sidecar extra:
    `mayapy -m pip install -e ".[sidecar]"`.
-3. Verifies `import dcc_mcp_maya`.
+3. Verifies adapter imports and requires the installed Core version to satisfy
+   `dcc-mcp-core>=0.19.45,<1.0.0`.
 4. Writes reusable MCP JSON snippets under `.dcc-mcp/agent-setup/`.
 
 Use PyPI instead of the local checkout when setting up an end-user machine:

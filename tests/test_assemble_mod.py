@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
+import base64
+import hashlib
 import importlib.util as _ilu
 import json
+import os
 import re
+import subprocess
 import sys
 import zipfile
 from pathlib import Path
@@ -29,6 +33,28 @@ def _make_fake_wheel(dest: Path, name: str, files: dict[str, bytes]) -> Path:
         if not any(f.startswith(dist_info_prefix) for f in files):
             zf.writestr(f"{dist_info_prefix}METADATA", "Metadata-Version: 2.1\nName: dcc-mcp-core\n")
     return wheel_path
+
+
+def _make_recorded_core_wheel(
+    dest: Path,
+    version: str,
+    tag: str,
+    files: dict[str, bytes],
+    metadata_content: bytes | None = None,
+) -> Path:
+    """Create a Core wheel whose payload is bound by a real wheel RECORD."""
+    dist_info = f"dcc_mcp_core-{version}.dist-info"
+    entries = dict(files)
+    entries[f"{dist_info}/METADATA"] = metadata_content or (
+        f"Metadata-Version: 2.1\nName: dcc-mcp-core\nVersion: {version}\n".encode()
+    )
+    record_rows = []
+    for path, content in sorted(entries.items()):
+        digest = base64.urlsafe_b64encode(hashlib.sha256(content).digest()).rstrip(b"=").decode()
+        record_rows.append(f"{path},sha256={digest},{len(content)}")
+    record_rows.append(f"{dist_info}/RECORD,,")
+    entries[f"{dist_info}/RECORD"] = ("\n".join(record_rows) + "\n").encode()
+    return _make_fake_wheel(dest, f"dcc_mcp_core-{version}-{tag}.whl", entries)
 
 
 def _make_fake_pyproject(dest: Path, core_version: str = "0.15.7", core_upper: str = "1.0.0") -> Path:
@@ -266,6 +292,28 @@ class TestExtractWheel:
         assert (dest / "scripts" / "dcc-mcp-server.exe").read_bytes() == b"server-bin"
 
 
+@pytest.mark.parametrize(
+    "metadata_content",
+    (
+        b"Metadata-Version: 2.1\nName: dcc-mcp-core\nName: attacker-core\nVersion: 0.19.45\n",
+        b"Metadata-Version: 2.1\nName: dcc-mcp-core\nVersion: 0.19.45\nVersion: 9.9.9\n",
+        b"Metadata-Version: 2.1\nName: dcc-mcp-core\nVersion: not-a-version\n",
+        b"Metadata-Version: 2.1\nName: dcc-mcp-core\nVersion: 0.19.45\n 9.9.9\n",
+    ),
+)
+def test_verify_core_wheel_rejects_ambiguous_or_invalid_identity_headers(tmp_path, metadata_content):
+    wheel = _make_recorded_core_wheel(
+        tmp_path,
+        "0.19.45",
+        "cp38-abi3-win_amd64",
+        {"dcc_mcp_core/__init__.py": b"# core\n"},
+        metadata_content=metadata_content,
+    )
+
+    with pytest.raises(RuntimeError, match="METADATA|identity"):
+        assemble_mod.verify_core_wheel(wheel, "0.19.45")
+
+
 class TestGenerateModFile:
     def test_win64_relative_path(self):
         content = assemble_mod.generate_mod_file("0.2.2", "win64", path=".")
@@ -344,10 +392,10 @@ class TestPackagingInstallers:
         assert 'del /q "%LEGACY_MOD_FILE%"' in installer
 
 
-def _setup_project(tmp_path: Path) -> Path:
+def _setup_project(tmp_path: Path, core_version: str = "0.15.0") -> Path:
     project = tmp_path / "project"
     project.mkdir()
-    _make_fake_pyproject(project, "0.15.0")
+    _make_fake_pyproject(project, core_version)
 
     plugin_dir = project / "maya" / "plugin"
     plugin_dir.mkdir(parents=True)
@@ -376,14 +424,15 @@ def _mock_download_and_resolve(_project: Path, _tmp_path: Path):
     abi3_files = {
         "dcc_mcp_core/__init__.py": b"# abi3 init",
         "dcc_mcp_core/_core.pyd": b"\x00abi3_core",
+        "dcc_mcp_core/nested/payload.py": b"NESTED_VERIFIED_CORE = True\n",
         "dcc_mcp_core/skill.py": b"class Skill: pass",
     }
 
     def fake_download(version, _platform, dest):
         cp37_files = dict(abi3_files)
         cp37_files["dcc_mcp_core/_core.pyd"] = b"\x00cp37_core"
-        _make_fake_wheel(dest, f"dcc_mcp_core-{version}-cp37-cp37m-win_amd64.whl", cp37_files)
-        _make_fake_wheel(dest, f"dcc_mcp_core-{version}-cp38-abi3-win_amd64.whl", abi3_files)
+        _make_recorded_core_wheel(dest, version, "cp37-cp37m-win_amd64", cp37_files)
+        _make_recorded_core_wheel(dest, version, "cp38-abi3-win_amd64", abi3_files)
         return list(dest.glob("dcc_mcp_core-*.whl"))
 
     return fake_download
@@ -400,7 +449,311 @@ def _mock_server_download(version, _platform, dest):
     )
 
 
+def _replace_with_directory_link(source: Path, preserved: Path) -> None:
+    source.replace(preserved)
+    if os.name == "nt":
+        result = subprocess.run(
+            ["cmd.exe", "/d", "/c", "mklink", "/J", str(source), str(preserved)],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        assert result.returncode == 0, result.stderr or result.stdout
+    else:
+        source.symlink_to(preserved, target_is_directory=True)
+
+
 class TestAssemble:
+    def test_capture_rejects_file_symlink_without_mutating_target(self, tmp_path):
+        target = tmp_path / "target.py"
+        target.write_bytes(b"TRUSTED_TARGET = True\n")
+        link = tmp_path / "linked.py"
+        link.symlink_to(target)
+
+        with pytest.raises(RuntimeError, match="non-reparse single-link regular file"):
+            assemble_mod._capture_assembled_file(link)
+
+        assert target.read_bytes() == b"TRUSTED_TARGET = True\n"
+
+    @pytest.mark.parametrize("replace_after_verify", [False, True], ids=["positive-control", "path-swap"])
+    def test_assemble_packages_exact_verified_core_bytes(self, tmp_path, replace_after_verify):
+        project = _setup_project(tmp_path)
+        output = tmp_path / "output"
+        output.mkdir()
+        foreign_dir = tmp_path / "foreign"
+        foreign_dir.mkdir()
+        version = "0.15.0"
+        original_source = b"ORIGINAL_VERIFIED_CORE = True\n"
+        foreign_source = b"FOREIGN_REPLACEMENT_CORE = True\n"
+        foreign_wheel = _make_recorded_core_wheel(
+            foreign_dir,
+            version,
+            "cp38-abi3-win_amd64",
+            {
+                "dcc_mcp_core/__init__.py": foreign_source,
+                "dcc_mcp_core/_core.pyd": b"\x00foreign_core",
+            },
+        )
+        original_wheel_bytes = {}
+
+        def fake_download(core_version, _platform, dest):
+            cp37 = _make_recorded_core_wheel(
+                dest,
+                core_version,
+                "cp37-cp37m-win_amd64",
+                {
+                    "dcc_mcp_core/__init__.py": original_source,
+                    "dcc_mcp_core/_core.pyd": b"\x00cp37_core",
+                },
+            )
+            abi3 = _make_recorded_core_wheel(
+                dest,
+                core_version,
+                "cp38-abi3-win_amd64",
+                {
+                    "dcc_mcp_core/__init__.py": original_source,
+                    "dcc_mcp_core/_core.pyd": b"\x00abi3_core",
+                },
+            )
+            original_wheel_bytes[abi3.name] = abi3.read_bytes()
+            return [cp37, abi3]
+
+        real_verify = assemble_mod.verify_core_wheel
+
+        def verify_then_replace(wheel, expected_version):
+            verified = real_verify(wheel, expected_version)
+            if replace_after_verify and "abi3" in wheel.name:
+                wheel.write_bytes(foreign_wheel.read_bytes())
+            return verified
+
+        with patch.object(assemble_mod, "resolve_core_version", return_value=version), patch.object(
+            assemble_mod, "download_core_wheels", side_effect=fake_download
+        ), patch.object(assemble_mod, "verify_core_wheel", side_effect=verify_then_replace), patch.object(
+            assemble_mod, "resolve_server_version", return_value=version
+        ), patch.object(assemble_mod, "download_server_wheel", side_effect=_mock_server_download):
+            result = assemble_mod.assemble(project, "0.2.2", "win64", output)
+
+        assert (result / "python" / "dcc_mcp_core" / "__init__.py").read_bytes() == original_source
+        provenance = json.loads((result / assemble_mod.CORE_PROVENANCE_PATH).read_text(encoding="utf-8"))
+        abi3_record = next(item for item in provenance["source_wheels"] if "abi3" in item["filename"])
+        assert abi3_record["sha256"] == hashlib.sha256(original_wheel_bytes[abi3_record["filename"]]).hexdigest()
+
+    def test_assemble_rejects_core_payload_drift_after_extraction(self, tmp_path):
+        project = _setup_project(tmp_path)
+        output = tmp_path / "output"
+        output.mkdir()
+        fake_download = _mock_download_and_resolve(project, tmp_path)
+        real_write_provenance = assemble_mod._write_core_provenance
+
+        def drift_before_provenance(module_dir, *args, **kwargs):
+            for root_name in ("python", "python37"):
+                target = module_dir / root_name / "dcc_mcp_core" / "__init__.py"
+                if target.is_file():
+                    target.write_bytes(b"FOREIGN_POST_EXTRACTION_CORE = True\n")
+            return real_write_provenance(module_dir, *args, **kwargs)
+
+        with patch.object(assemble_mod, "resolve_core_version", return_value="0.15.0"), patch.object(
+            assemble_mod, "download_core_wheels", side_effect=fake_download
+        ), patch.object(assemble_mod, "resolve_server_version", return_value="0.15.0"), patch.object(
+            assemble_mod, "download_server_wheel", side_effect=_mock_server_download
+        ), patch.object(assemble_mod, "_write_core_provenance", side_effect=drift_before_provenance):
+            with pytest.raises(RuntimeError, match="Core payload changed after verified wheel extraction"):
+                assemble_mod.assemble(project, "0.2.2", "win64", output)
+
+    @pytest.mark.parametrize("root_name", ["python", "python37"])
+    def test_assemble_rejects_same_bytes_new_core_object_after_extraction(self, tmp_path, root_name):
+        project = _setup_project(tmp_path)
+        output = tmp_path / "output"
+        output.mkdir()
+        fake_download = _mock_download_and_resolve(project, tmp_path)
+        real_write_provenance = assemble_mod._write_core_provenance
+
+        def replace_before_provenance(module_dir, *args, **kwargs):
+            target = module_dir / root_name / "dcc_mcp_core" / "__init__.py"
+            replacement = target.with_name("replacement.py")
+            replacement.write_bytes(target.read_bytes())
+            replacement.replace(target)
+            return real_write_provenance(module_dir, *args, **kwargs)
+
+        with patch.object(assemble_mod, "resolve_core_version", return_value="0.15.0"), patch.object(
+            assemble_mod, "download_core_wheels", side_effect=fake_download
+        ), patch.object(assemble_mod, "resolve_server_version", return_value="0.15.0"), patch.object(
+            assemble_mod, "download_server_wheel", side_effect=_mock_server_download
+        ), patch.object(assemble_mod, "_write_core_provenance", side_effect=replace_before_provenance):
+            with pytest.raises(RuntimeError, match="Core payload object changed after verified wheel extraction"):
+                assemble_mod.assemble(project, "0.2.2", "win64", output)
+
+    @pytest.mark.parametrize("root_name", ["python", "python37"])
+    def test_assemble_rejects_hardlink_before_first_core_identity_binding(self, tmp_path, root_name):
+        project = _setup_project(tmp_path)
+        output = tmp_path / "output"
+        output.mkdir()
+        fake_download = _mock_download_and_resolve(project, tmp_path)
+        real_bind = assemble_mod._bind_extracted_core_objects
+        alias = tmp_path / f"{root_name}-external-alias.py"
+
+        def hardlink_before_bind(module_dir, expected_roots):
+            target = module_dir / root_name / "dcc_mcp_core" / "__init__.py"
+            os.link(target, alias)
+            return real_bind(module_dir, expected_roots)
+
+        with patch.object(assemble_mod, "resolve_core_version", return_value="0.15.0"), patch.object(
+            assemble_mod, "download_core_wheels", side_effect=fake_download
+        ), patch.object(assemble_mod, "resolve_server_version", return_value="0.15.0"), patch.object(
+            assemble_mod, "download_server_wheel", side_effect=_mock_server_download
+        ), patch.object(assemble_mod, "_bind_extracted_core_objects", side_effect=hardlink_before_bind):
+            with pytest.raises(RuntimeError, match="single-link regular file"):
+                assemble_mod.assemble(project, "0.2.2", "win64", output)
+
+        assert alias.is_file()
+
+    @pytest.mark.parametrize("root_name", ["python", "python37"])
+    def test_assemble_rejects_reparse_core_directory_before_identity_binding(self, tmp_path, root_name):
+        project = _setup_project(tmp_path)
+        output = tmp_path / "output"
+        output.mkdir()
+        fake_download = _mock_download_and_resolve(project, tmp_path)
+        real_bind = assemble_mod._bind_extracted_core_objects
+        preserved = tmp_path / f"{root_name}-preserved-core"
+
+        def replace_root_with_directory_link(module_dir, expected_roots):
+            core_root = module_dir / root_name / "dcc_mcp_core"
+            core_root.replace(preserved)
+            if os.name == "nt":
+                result = subprocess.run(
+                    ["cmd.exe", "/d", "/c", "mklink", "/J", str(core_root), str(preserved)],
+                    check=False,
+                    capture_output=True,
+                    text=True,
+                )
+                assert result.returncode == 0, result.stderr or result.stdout
+            else:
+                core_root.symlink_to(preserved, target_is_directory=True)
+            return real_bind(module_dir, expected_roots)
+
+        with patch.object(assemble_mod, "resolve_core_version", return_value="0.15.0"), patch.object(
+            assemble_mod, "download_core_wheels", side_effect=fake_download
+        ), patch.object(assemble_mod, "resolve_server_version", return_value="0.15.0"), patch.object(
+            assemble_mod, "download_server_wheel", side_effect=_mock_server_download
+        ), patch.object(assemble_mod, "_bind_extracted_core_objects", side_effect=replace_root_with_directory_link):
+            with pytest.raises(RuntimeError, match="directory must not be a link or reparse point"):
+                assemble_mod.assemble(project, "0.2.2", "win64", output)
+
+        assert (preserved / "__init__.py").is_file()
+
+    @pytest.mark.parametrize("root_name", ["python", "python37"])
+    def test_assemble_rejects_nested_directory_link_before_first_identity_binding(self, tmp_path, root_name):
+        project = _setup_project(tmp_path)
+        output = tmp_path / "output"
+        output.mkdir()
+        fake_download = _mock_download_and_resolve(project, tmp_path)
+        real_bind = assemble_mod._bind_extracted_core_objects
+        preserved = tmp_path / f"{root_name}-preserved-nested-before-bind"
+
+        def replace_nested_before_bind(module_dir, expected_roots):
+            nested = module_dir / root_name / "dcc_mcp_core" / "nested"
+            _replace_with_directory_link(nested, preserved)
+            return real_bind(module_dir, expected_roots)
+
+        with patch.object(assemble_mod, "resolve_core_version", return_value="0.15.0"), patch.object(
+            assemble_mod, "download_core_wheels", side_effect=fake_download
+        ), patch.object(assemble_mod, "resolve_server_version", return_value="0.15.0"), patch.object(
+            assemble_mod, "download_server_wheel", side_effect=_mock_server_download
+        ), patch.object(assemble_mod, "_bind_extracted_core_objects", side_effect=replace_nested_before_bind):
+            with pytest.raises(RuntimeError, match="directory must not be a link or reparse point"):
+                assemble_mod.assemble(project, "0.2.2", "win64", output)
+
+        assert (preserved / "payload.py").read_bytes() == b"NESTED_VERIFIED_CORE = True\n"
+
+    @pytest.mark.parametrize("root_name", ["python", "python37"])
+    def test_bound_core_objects_rejects_nested_directory_link_on_recapture(self, tmp_path, root_name):
+        project = _setup_project(tmp_path)
+        output = tmp_path / "output"
+        output.mkdir()
+        fake_download = _mock_download_and_resolve(project, tmp_path)
+
+        with patch.object(assemble_mod, "resolve_core_version", return_value="0.15.0"), patch.object(
+            assemble_mod, "download_core_wheels", side_effect=fake_download
+        ), patch.object(assemble_mod, "resolve_server_version", return_value="0.15.0"), patch.object(
+            assemble_mod, "download_server_wheel", side_effect=_mock_server_download
+        ):
+            module_dir, expected_roots = assemble_mod.assemble(
+                project, "0.2.2", "win64", output, _with_core_contract=True
+            )
+
+        nested = module_dir / root_name / "dcc_mcp_core" / "nested"
+        preserved = tmp_path / f"{root_name}-preserved-nested-recapture"
+        _replace_with_directory_link(nested, preserved)
+
+        with pytest.raises(RuntimeError, match="directory must not be a link or reparse point"):
+            assemble_mod._assert_bound_core_objects(module_dir, expected_roots)
+
+        assert (preserved / "payload.py").read_bytes() == b"NESTED_VERIFIED_CORE = True\n"
+
+    @pytest.mark.parametrize("root_name", ["python", "python37"])
+    def test_archive_rejects_nested_directory_link_before_consumption(self, tmp_path, root_name):
+        project = _setup_project(tmp_path)
+        output = tmp_path / "output"
+        output.mkdir()
+        fake_download = _mock_download_and_resolve(project, tmp_path)
+
+        with patch.object(assemble_mod, "resolve_core_version", return_value="0.15.0"), patch.object(
+            assemble_mod, "download_core_wheels", side_effect=fake_download
+        ), patch.object(assemble_mod, "resolve_server_version", return_value="0.15.0"), patch.object(
+            assemble_mod, "download_server_wheel", side_effect=_mock_server_download
+        ):
+            module_dir, expected_roots = assemble_mod.assemble(
+                project, "0.2.2", "win64", output, _with_core_contract=True
+            )
+
+        nested = module_dir / root_name / "dcc_mcp_core" / "nested"
+        preserved = tmp_path / f"{root_name}-preserved-nested-before-archive"
+        _replace_with_directory_link(nested, preserved)
+
+        with pytest.raises(RuntimeError, match="Core payload changed during archive consumption"):
+            assemble_mod._make_bound_archive(output / "nested-before", output, module_dir.name, expected_roots)
+
+        assert (preserved / "payload.py").read_bytes() == b"NESTED_VERIFIED_CORE = True\n"
+
+    @pytest.mark.parametrize("root_name", ["python", "python37"])
+    @pytest.mark.parametrize("mutation_timing", ["before", "after"])
+    def test_archive_rejects_nested_directory_link_during_consumption(self, tmp_path, root_name, mutation_timing):
+        project = _setup_project(tmp_path)
+        output = tmp_path / "output"
+        output.mkdir()
+        fake_download = _mock_download_and_resolve(project, tmp_path)
+
+        with patch.object(assemble_mod, "resolve_core_version", return_value="0.15.0"), patch.object(
+            assemble_mod, "download_core_wheels", side_effect=fake_download
+        ), patch.object(assemble_mod, "resolve_server_version", return_value="0.15.0"), patch.object(
+            assemble_mod, "download_server_wheel", side_effect=_mock_server_download
+        ):
+            module_dir, expected_roots = assemble_mod.assemble(
+                project, "0.2.2", "win64", output, _with_core_contract=True
+            )
+
+        real_make_archive = assemble_mod.shutil.make_archive
+        preserved = tmp_path / f"{root_name}-preserved-nested-archive-{mutation_timing}"
+        mutated = False
+
+        def mutate_around_archive(*args, **kwargs):
+            nonlocal mutated
+            nested = module_dir / root_name / "dcc_mcp_core" / "nested"
+            if mutation_timing == "before":
+                _replace_with_directory_link(nested, preserved)
+            archive_path = real_make_archive(*args, **kwargs)
+            if mutation_timing == "after":
+                _replace_with_directory_link(nested, preserved)
+            mutated = True
+            return archive_path
+
+        with patch.object(assemble_mod.shutil, "make_archive", side_effect=mutate_around_archive):
+            with pytest.raises(RuntimeError, match="Core payload changed during archive consumption"):
+                assemble_mod._make_bound_archive(output / "nested-window", output, module_dir.name, expected_roots)
+
+        assert mutated
+        assert (preserved / "payload.py").read_bytes() == b"NESTED_VERIFIED_CORE = True\n"
+
     def test_win64_creates_python_and_python37(self, tmp_path):
         project = _setup_project(tmp_path)
         output = tmp_path / "output"
@@ -560,6 +913,106 @@ class TestMain:
             assert info["bundled_server_version"] == "0.15.0"
             assert info["min_core_version"] == "0.15.0"
             assert info["max_core_version_exclusive"] == "1.0.0"
+
+    @pytest.mark.parametrize("root_name", ["python", "python37"])
+    def test_archive_rejects_external_hardlink_mutation_window(self, tmp_path, root_name):
+        project = _setup_project(tmp_path)
+        output = tmp_path / "output"
+        fake_download = _mock_download_and_resolve(project, tmp_path)
+        real_make_archive = assemble_mod.shutil.make_archive
+        alias = tmp_path / f"{root_name}-archive-window-alias.py"
+        foreign = b"FOREIGN_ARCHIVE_WINDOW_PAYLOAD = True\n"
+        mutated = False
+
+        def mutate_inside_archive(*args, **kwargs):
+            nonlocal mutated
+            if not mutated:
+                module_dir = Path(kwargs["root_dir"]) / kwargs["base_dir"]
+                target = module_dir / root_name / "dcc_mcp_core" / "__init__.py"
+                os.link(target, alias)
+                alias.write_bytes(foreign)
+                mutated = True
+            return real_make_archive(*args, **kwargs)
+
+        with patch.object(assemble_mod, "resolve_core_version", return_value="0.15.0"), patch.object(
+            assemble_mod, "download_core_wheels", side_effect=fake_download
+        ), patch.object(assemble_mod, "resolve_server_version", return_value="0.15.0"), patch.object(
+            assemble_mod, "download_server_wheel", side_effect=_mock_server_download
+        ), patch.object(assemble_mod.shutil, "make_archive", side_effect=mutate_inside_archive):
+            old_argv = sys.argv
+            try:
+                sys.argv = [
+                    "assemble_mod.py",
+                    "--version",
+                    "0.2.2",
+                    "--platform",
+                    "win64",
+                    "--output",
+                    str(output),
+                    "--project-root",
+                    str(project),
+                ]
+                with pytest.raises(RuntimeError, match="Core payload changed during archive consumption"):
+                    assemble_mod.main()
+            finally:
+                sys.argv = old_argv
+
+        assert mutated
+        assert alias.read_bytes() == foreign
+
+    def test_both_release_zips_preserve_core_provenance_and_validate(self, tmp_path):
+        from dcc_mcp_maya import install
+
+        project = _setup_project(tmp_path, install.MIN_CORE_VERSION)
+        output = tmp_path / "output"
+
+        def recorded_download(version, _platform, dest):
+            common = {
+                "dcc_mcp_core/__init__.py": b"# recorded core\n",
+                "dcc_mcp_core/skill.py": b"class Skill: pass\n",
+            }
+            cp37 = dict(common)
+            cp37["dcc_mcp_core/_core.pyd"] = b"cp37-core"
+            abi3 = dict(common)
+            abi3["dcc_mcp_core/_core.pyd"] = b"abi3-core"
+            return [
+                _make_recorded_core_wheel(dest, version, "cp37-cp37m-win_amd64", cp37),
+                _make_recorded_core_wheel(dest, version, "cp38-abi3-win_amd64", abi3),
+            ]
+
+        with patch.object(assemble_mod, "resolve_core_version", return_value=install.MIN_CORE_VERSION), patch.object(
+            assemble_mod, "download_core_wheels", side_effect=recorded_download
+        ), patch.object(assemble_mod, "resolve_server_version", return_value=install.MIN_CORE_VERSION), patch.object(
+            assemble_mod, "download_server_wheel", side_effect=_mock_server_download
+        ):
+            old_argv = sys.argv
+            try:
+                sys.argv = [
+                    "assemble_mod.py",
+                    "--version",
+                    install.__version__,
+                    "--platform",
+                    "win64",
+                    "--output",
+                    str(output),
+                    "--project-root",
+                    str(project),
+                ]
+                assemble_mod.main()
+            finally:
+                sys.argv = old_argv
+
+        zip_files = sorted(output.rglob("*.zip"))
+        assert len(zip_files) == 2
+        for zip_file in zip_files:
+            normalized = install._validate_module_zip(zip_file)
+            assert "core-provenance.json" in normalized
+            with zipfile.ZipFile(zip_file) as archive:
+                provenance = json.loads(archive.read("dcc-mcp-maya/core-provenance.json"))
+            assert provenance["name"] == "dcc-mcp-core"
+            assert provenance["version"] == install.MIN_CORE_VERSION
+            assert set(provenance["roots"]) == {"python", "python37"}
+            assert all(root["files"] for root in provenance["roots"].values())
 
 
 @pytest.mark.packaging
