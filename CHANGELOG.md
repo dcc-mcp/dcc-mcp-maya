@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.9.26](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.25...v0.9.26) (2026-08-29)
+
+
+### Features
+
+* add AssetSync controller editability evidence ([f5f5fca](https://github.com/dcc-mcp/dcc-mcp-maya/commit/f5f5fcab9bae64c8cd35ad5ad9794e0061f8b035))
+* add AssetSync texture dependency evidence ([5580457](https://github.com/dcc-mcp/dcc-mcp-maya/commit/5580457eb9eb9a8d977f8765aa8c3740134a4962))
+* preserve AssetSync skeleton editability ([1fa59b6](https://github.com/dcc-mcp/dcc-mcp-maya/commit/1fa59b635e9b9f594eba5c7394d24aabf01f1e2e))
+
+
+### Bug Fixes
+
+* improve AssetSync Arnold lookdev ([12caf48](https://github.com/dcc-mcp/dcc-mcp-maya/commit/12caf48456740753ff89cb63a3f6faaf0dc5a352))
+* refine AssetSync v2 fur lookdev ([69433b1](https://github.com/dcc-mcp/dcc-mcp-maya/commit/69433b1fec4acb3292492f30b208cfe60abf9d5d))
+* render AssetSync v2 showcase with Arnold ([76f2ac3](https://github.com/dcc-mcp/dcc-mcp-maya/commit/76f2ac313168631038e43f847e1a6dd522bbfad2))
+* restore AssetSync v2 wings and fur ([4f8e880](https://github.com/dcc-mcp/dcc-mcp-maya/commit/4f8e880f5a914f175c1224427edc8457d207fc1d))
+
+
+### Documentation
+
+* add editable wing controls showcase ([f1f4588](https://github.com/dcc-mcp/dcc-mcp-maya/commit/f1f45885b49a8a5412b44feaeca000f4925102eb))
+* update Arnold honeybee showcase ([30ae793](https://github.com/dcc-mcp/dcc-mcp-maya/commit/30ae7930c235fc9dee9afdf75dec49b0065fb2be))
+
 ## [0.9.25](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.24...v0.9.25) (2026-08-27)
 
 
