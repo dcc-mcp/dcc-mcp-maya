@@ -5,7 +5,9 @@ from __future__ import annotations
 
 # Import built-in modules
 from pathlib import Path
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, call
+
+import pytest
 
 # Import local modules
 from conftest import load_and_call, load_and_call_with_mel
@@ -108,6 +110,55 @@ def test_import_file_can_explicitly_return_all_nodes(tmp_path):
     assert result["context"]["imported_nodes"] == imported
     assert result["context"]["returned_count"] == 101
     assert result["context"]["truncated"] is False
+
+
+@pytest.mark.parametrize("extension", ["usd", "usda", "usdc", "USD"])
+def test_import_file_prepares_native_usd_translator(tmp_path, extension):
+    path = tmp_path / ("tree." + extension)
+    path.write_bytes(b"fixture")
+    cmds = MagicMock()
+    cmds.pluginInfo.return_value = False
+    cmds.file.return_value = ["tree", "treeShape"]
+    result = load_and_call("maya-geometry/scripts/import_file.py", cmds, file_path=str(path), namespace="treeAsset")
+    assert result["success"], result
+    cmds.loadPlugin.assert_called_once_with("mayaUsdPlugin")
+    assert cmds.method_calls.index(call.loadPlugin("mayaUsdPlugin")) < next(
+        i for i, invoked in enumerate(cmds.method_calls) if invoked[0] == "file"
+    )
+    assert cmds.file.call_args.kwargs["type"] == "USD Import"
+    assert cmds.file.call_args.kwargs["namespace"] == "treeAsset"
+    assert result["context"]["required_plugins"] == ["mayaUsdPlugin"]
+
+
+def test_import_file_missing_usd_plugin_does_not_mutate_scene(tmp_path):
+    path = tmp_path / "tree.usda"
+    path.write_bytes(b"fixture")
+    cmds = MagicMock()
+    cmds.pluginInfo.return_value = False
+    cmds.loadPlugin.side_effect = RuntimeError("plugin is not installed")
+    result = load_and_call("maya-geometry/scripts/import_file.py", cmds, file_path=str(path))
+    assert not result["success"]
+    assert result["context"]["required_plugins"] == ["mayaUsdPlugin"]
+    cmds.file.assert_not_called()
+
+
+@pytest.mark.parametrize("extension,translator", [("fbx", "FBX"), ("obj", "OBJ"), ("abc", "Alembic")])
+def test_import_file_selects_known_translator(tmp_path, extension, translator):
+    path = tmp_path / ("asset." + extension)
+    path.write_bytes(b"fixture")
+    cmds = MagicMock()
+    cmds.file.return_value = ["asset"]
+    result = load_and_call("maya-geometry/scripts/import_file.py", cmds, file_path=str(path))
+    assert result["success"], result
+    assert cmds.file.call_args.kwargs["type"] == translator
+
+
+def test_import_file_rejects_directory_before_plugin_loading(tmp_path):
+    cmds = MagicMock()
+    result = load_and_call("maya-geometry/scripts/import_file.py", cmds, file_path=str(tmp_path))
+    assert not result["success"]
+    cmds.loadPlugin.assert_not_called()
+    cmds.file.assert_not_called()
 
 
 def test_export_fbx_pushes_options_through_mel_and_verifies(tmp_path):

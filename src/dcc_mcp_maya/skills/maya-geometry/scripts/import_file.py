@@ -14,6 +14,17 @@ _PLUGIN_BY_EXTENSION = {
     ".abc": ("AbcImport",),
     ".fbx": ("fbxmaya",),
     ".obj": ("objExport",),
+    ".usd": ("mayaUsdPlugin",),
+    ".usda": ("mayaUsdPlugin",),
+    ".usdc": ("mayaUsdPlugin",),
+}
+_FILE_TYPE_BY_EXTENSION = {
+    ".fbx": "FBX",
+    ".obj": "OBJ",
+    ".abc": "Alembic",
+    ".usd": "USD Import",
+    ".usda": "USD Import",
+    ".usdc": "USD Import",
 }
 _DEFAULT_IMPORTED_NODE_LIMIT = 100
 
@@ -44,7 +55,7 @@ def import_file(
 ) -> dict:
     """Import a file into the current Maya scene.
 
-    Supports any format Maya recognises (FBX, OBJ, Alembic, Maya ASCII/Binary,
+    Supports any format Maya recognises (FBX, OBJ, Alembic, USD, Maya ASCII/Binary,
     etc.).
 
     Args:
@@ -63,7 +74,7 @@ def import_file(
         if not file_path:
             return skill_error("Missing file_path", "file_path is required")
         normalized = _normalize_path(file_path)
-        if not os.path.exists(normalized):
+        if not os.path.isfile(normalized):
             return skill_error("File not found", "{} does not exist on disk".format(normalized), file_path=normalized)
 
         required_plugins = _required_plugins(normalized)
@@ -78,6 +89,11 @@ def import_file(
             )
 
         kwargs = {"i": True, "prompt": False}  # type: dict
+        # Select the known import translator explicitly. USD uses native
+        # import, not a proxy stage.
+        file_type = _FILE_TYPE_BY_EXTENSION.get(os.path.splitext(normalized)[1].lower())
+        if file_type:
+            kwargs["type"] = file_type
         if namespace:
             kwargs["namespace"] = namespace
         if merge_namespaces:
@@ -95,6 +111,7 @@ def import_file(
             include_all_nodes=bool(include_all_nodes),
             required_plugins=required_plugins,
             loaded_plugins=loaded_plugins,
+            file_type=kwargs.get("type", "auto"),
             prompt="Use get_scene_info or list_objects to inspect imported nodes.",
         )
     except ImportError:
