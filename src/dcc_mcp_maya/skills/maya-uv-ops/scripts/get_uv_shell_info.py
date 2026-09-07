@@ -25,7 +25,7 @@ def get_uv_shell_info(object_name: str, uv_set: Optional[str] = None) -> dict:
     Returns:
         ToolResult dict with ``context.shell_count``,
         ``context.shells`` (list of dicts with ``u_min``, ``v_min``,
-        ``u_max``, ``v_max``, ``uv_indices``).
+        ``u_max``, ``v_max``, ``uv_count``).
     """
 
     try:
@@ -43,23 +43,43 @@ def get_uv_shell_info(object_name: str, uv_set: Optional[str] = None) -> dict:
                     "UV set '{}' not found on '{}'".format(uv_set, object_name),
                     "Available UV sets: {}".format(existing),
                 )
-            cmds.polyUVSet(object_name, currentUVSet=True, uvSet=uv_set)
-
-        active_set = cmds.polyUVSet(object_name, query=True, currentUVSet=True)
+        active_set = uv_set or cmds.polyUVSet(object_name, query=True, currentUVSet=True)
         if isinstance(active_set, list):
-            active_set = active_set[0] if active_set else "map1"
+            active_set = active_set[0] if active_set else None
+        if not active_set:
+            return skill_success(
+                "Mesh has no active UV set", object_name=object_name, uv_set=None, shell_count=0, shells=[]
+            )
 
-        # Query UV shell IDs per UV component
-        shell_ids = cmds.polyEvaluate(object_name, uvShellsIds=True) or []
+        # The commands layer treats uvSetName as a boolean when polyEditUV
+        # is queried. OpenMaya reads a named set without changing the active
+        # set and preserves UV-index correspondence across both arrays.
+        from maya.api import OpenMaya as om
+
+        selection = om.MSelectionList()
+        selection.add(object_name)
+        dag_path = selection.getDagPath(0)
+        if dag_path.node().hasFn(om.MFn.kTransform):
+            dag_path.extendToShape()
+        mesh = om.MFnMesh(dag_path)
+        _shell_count, shell_ids = mesh.getUvShellsIds(active_set)
+        u_vals, v_vals = mesh.getUVs(active_set)
 
         # Build shell groups: shell_id -> list of UV component indices
         shell_map = {}
         for i, sid in enumerate(shell_ids):
             shell_map.setdefault(int(sid), []).append(i)
 
-        # Query all U and V coordinates
-        u_vals = cmds.polyEditUV("{}.map[*]".format(object_name), query=True, uValue=True) or []
-        v_vals = cmds.polyEditUV("{}.map[*]".format(object_name), query=True, vValue=True) or []
+        if len(u_vals) != len(shell_ids) or len(v_vals) != len(shell_ids):
+            return skill_error(
+                "Inconsistent UV readback",
+                "UV coordinates and shell ids have different lengths",
+                object_name=object_name,
+                uv_set=active_set,
+                u_count=len(u_vals),
+                v_count=len(v_vals),
+                shell_id_count=len(shell_ids),
+            )
 
         shells = []
         for sid in sorted(shell_map.keys()):
