@@ -1,4 +1,4 @@
-"""Query UV sets and coordinates on a polygon mesh."""
+"""Query UV sets and counts on a polygon mesh without changing the active set."""
 
 # Import future modules
 from __future__ import annotations
@@ -13,16 +13,15 @@ from dcc_mcp_maya.api import validate_node_exists
 
 
 def get_uv_info(object_name: str, uv_set: Optional[str] = None) -> dict:
-    """Query UV sets and coordinates on a polygon mesh.
+    """Query UV sets and counts on a polygon mesh.
 
     Args:
         object_name: Transform or mesh shape name.
-        uv_set: UV set name to query coordinates from.  If None, returns
-            info about all UV sets without coordinate data.
+        uv_set: UV set name to count. If None, returns set metadata only.
 
     Returns:
         ToolResult dict with ``context.uv_sets``, ``context.current_uv_set``,
-        and optionally ``context.uv_count`` / ``context.uvs``.
+        and optionally ``context.uv_count``.
     """
 
     try:
@@ -46,9 +45,7 @@ def get_uv_info(object_name: str, uv_set: Optional[str] = None) -> dict:
         if uv_set:
             if uv_set not in uv_sets:
                 return skill_error("UV set '{}' not found on '{}'".format(uv_set, object_name))
-            u_coords = cmds.polyEditUV("{}.map[*]".format(object_name), query=True, uValue=True) or []
-            _ = cmds.polyEditUV("{}.map[*]".format(object_name), query=True, vValue=True) or []
-            result_kwargs["uv_count"] = len(u_coords)
+            result_kwargs["uv_count"] = int(cmds.polyEvaluate(object_name, uvcoord=True, uvSetName=uv_set))
             result_kwargs["queried_uv_set"] = uv_set
 
         return skill_success(
