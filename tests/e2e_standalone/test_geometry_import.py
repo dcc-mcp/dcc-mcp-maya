@@ -30,6 +30,15 @@ def Xform "Asset"
 @pytest.mark.parametrize("extension", ["obj", "usda"])
 def test_import_file_reads_native_mesh(tmp_path, extension):
     _new_scene()
+    if extension == "usda":
+        try:
+            cmds.loadPlugin("mayaUsdPlugin", quiet=True)
+        except RuntimeError as exc:
+            # Maya USD is optional in the mayapy container images. A present
+            # plugin that fails for another reason must still fail this test.
+            if "was not found on MAYA_PLUG_IN_PATH" in str(exc):
+                pytest.skip("Maya USD plugin is not installed in this host")
+            raise
     path = tmp_path / ("asset." + extension)
     source = _USD_TRIANGLE if extension == "usda" else "o Triangle\nv 0 0 0\nv 1 0 0\nv 0 2 0\nf 1 2 3\n"
     path.write_text(source, encoding="utf-8")
