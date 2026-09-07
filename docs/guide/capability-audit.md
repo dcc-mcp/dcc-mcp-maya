@@ -20,12 +20,12 @@ versions and open issues before reusing the assessment.
 | Scene and object discovery | `maya-scene`: hierarchy, selection, type/pattern search, node references, transforms, bounds, cameras | Hierarchy result is unbounded; several failed field queries silently default. Verify duplicate leaf names, instances, references, and very large scenes. |
 | Parameters and dependency graph | `maya-attributes` CRUD; `maya-node-graph` describe/create/connect/disconnect/history; `maya-cmds://` and `maya-api://` resource discovery | Attribute type/lock/connection constraints need per-type tests. Introspection or arbitrary execution is not typed command coverage. |
 | Polygon / NURBS authoring | Primitives; loft/lathe, arrays, pivots, mirror, merge/separate/combine, cleanup, subdivision; freeze/history cleanup | #492 remains open. Typed extrude/bevel/inset/boolean/edge-loop actions are absent from the audited declarations. Re-run the modeling benchmark; historical raw-script percentages are not current results. |
-| UVs | Create/delete/copy sets, projection/unfold/normalization, auto UV, UV and shell queries | `get_uv_info(uv_set=...)` does not target that set and counts coordinate scalars. Fix readback before accepting textured imports. Multi-set/empty-set and UDIM tests needed. |
+| UVs | Create/delete/copy sets, projection/unfold/normalization, auto UV, UV and shell queries | Baseline UV queries used the wrong set/count and mutated the active set. PR #514 fixes count and shell readback with non-current/empty-set native tests. UDIM and multi-shape tests remain. |
 | Materials and textures | Material create/assign/readback, attributes, shading group queries, presets | #495: no typed `assign_texture`, reload or repath. Bake code still defaults to mentalRay and does not establish Arnold bake output. File textures, colorspaces, UDIM and missing dependencies need assertions. |
 | Animation | Batch keys, values/tangents readback, JSON curve import/export, timeline, bake | #493 partially implemented. Verify multi-object curves, weighted tangents and infinity round trips. Native bake calls are monolithic. |
 | Rigging / skin | Joints/controls/constraints, IK, deformers, get/set skin weights, rig-state export, pose library | #493: no joint-chain batch action or general weight-file IO declared. Verify non-normalized weights, bind state, references and pose failure recovery. |
 | Dynamics / Bifrost | Legacy rigid body/fields; typed Bifrost graph/node/port/property/connection operations | No typed Nucleus/nCloth/nParticle/cache status suite. Bifrost requires its plugin; graph edits do not establish successful evaluation or cache output. |
-| Interchange | Generic import, FBX import/export, OBJ export, Alembic export; USD revision sync and native asset import | Generic USD plugin/type preparation missing at baseline (fixed in this batch). AssetDescriptor import lacks Alembic. Per-format dependency/unit/axis/material fidelity and SpeedTree inputs still require acceptance. |
+| Interchange | Generic import, FBX import/export, OBJ export, Alembic export; USD revision sync and native asset import | Generic USD plugin/type preparation missing at baseline (fixed in this batch). AssetDescriptor import lacks Alembic. SpeedTree geometry round trips passed in the combined source checkout; unit/axis and material fidelity gaps remain (below). |
 | Rendering / capture | Frame/sequence render, settings, HDR Arnold setup, color management, viewport/playblast | #494 partially implemented. Typed AOV lifecycle/exposure and uniform-frame checks are not established. Arnold plugin and render license plus GUI/VP2 availability are separate gates. |
 | Pipeline | Projects, metadata, publishing, shot export, assemblies, asset discovery, Deadline job submission/status | Validate external service availability, credentials, file artifacts and failure/partial-write states. Submission acknowledgement is not a rendered deliverable. |
 | Jobs / cancellation | Core job persistence/status, adapter dispatchers and cancellation helper | `async` alone does not permit native-call interruption. Only a small subset of scripts checks cancellation. Test terminal status, inner failure, transport loss and no duplicate retry. Main-thread vs inline standalone dispatch needs real-host comparison. |
@@ -51,10 +51,10 @@ Maya 2026 standalone (3/11/9/3 returned nodes respectively). The same FBX
 fixture returned zero nodes through `MayaStandaloneDispatcher`; dedicated
 FBX import also raised a boolean-flag error on `cmds.ls(long=True)` there.
 This is a runtime dispatch gap, not evidence of successful FBX import on
-the default inline path. GUI acceptance and SpeedTree producer assets remain
-unverified. Tests include native OBJ/USD mesh face/vertex readback.
+the default inline path. GUI acceptance remains unverified. Tests include
+native OBJ/USD mesh face/vertex readback.
 
-## SpeedTree acceptance matrix (pending producer handoff)
+## SpeedTree acceptance matrix
 
 The producer handoff must include absolute source paths, hashes, export
 settings, source dimensions/units/up axis, textures, expected meshes/materials,
@@ -72,6 +72,40 @@ then inspect the inner tool result and run read-only checks. Preserve failures
 and plugin versions. Save/reopen representative outputs before claiming
 artifact acceptance. A synthetic mesh is a translator smoke, not SpeedTree
 acceptance; an opened PR or green CI is not licensed GUI acceptance.
+
+## Real SpeedTree acceptance (2026-09-07)
+
+Validated a shared palm source export and all 157 manifest-listed files by
+size and SHA-256. The producer used a Blender export preset; the manifest
+labels all exports centimeters and enables Y/Z swap only for Alembic.
+The combined PR #513/#514 source checkout was tested through typed CLI calls
+in Maya 2026 with the manually pumped dispatcher described above.
+
+All four formats produced one mesh, 6,081 vertices, 8,498 triangular faces,
+and 6,109 UVs per set. Saved Maya ASCII scenes reopened with the same face
+counts and declare centimeter units. This establishes geometry persistence,
+not full material, coordinate, wind or LOD fidelity.
+
+| Format | UV sets | XYZ bounds size (cm, rounded) | Material / dependency observations |
+|---|---|---|---|
+| FBX | `uv0`, `blend_ao` | 730.34, 1234.38, 752.98 | Six materials; 18 file nodes: 17 relative paths exist beside the export and one is empty. Maya/render path resolution remains unverified. |
+| OBJ | `map1` | 23.96, 24.70, 40.50 | Six materials; six valid absolute color paths and six invalid paths equal to `1`. |
+| Alembic | `map1` | 23.96, 24.70, 40.50 | Six shading groups all use one default shader; no file texture nodes. |
+| USD (native) | `st` | 730.34, 1234.38, 752.98 | Six materials; all 23 file texture paths exist. Render appearance remains unverified. |
+
+FBX/USD agree; OBJ/Alembic have a roughly 30.48 scale difference and exchanged
+Y/Z extents compared with them. Do not automatically normalize without an
+authoritative source dimension/up-axis contract. No animation-curve,
+AlembicNode or lodGroup nodes were reported; bounds at frames 1 and 24 matched.
+Those checks do not establish the absence of all animation or procedural wind.
+A producer motion/LOD sample and expected frame range are still required.
+
+Local affected unit/schema checks and four Maya 2026 native tests passed.
+CI has not passed: observed failures include shared job-storage ownership
+locks and the CLI installer's dcc-cua manifest rejection before skills lint.
+These remain merge gates; source-host results do not establish packaged release
+or GUI acceptance. Detailed manifests, CLI envelopes and saved scenes are kept
+as local evidence, not committed source assets.
 
 ## Official references
 
