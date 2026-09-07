@@ -1,8 +1,8 @@
 ---
 name: maya-geometry
 description: |-
-  Interchange stage — FBX / OBJ geometry interchange. Round-trip geometry
-  through FBX or OBJ; scene save is owned by maya-scene. The FBX export
+  Interchange stage — FBX / OBJ / Alembic / USD geometry interchange. Import
+  native USD nodes with Maya USD; scene save is owned by maya-scene. The FBX export
   tool drives every FBXExport* option through the FBX plugin's MEL globals,
   bakes animation by default, and verifies the output file. Use for cross-DCC
   handoff. Not for primitive creation (maya-primitives) or shot packaging
@@ -21,10 +21,12 @@ metadata:
     - interchange
     - fbx
     - obj
+    - usd
+    - alembic
     - export
     - import
     search-hint: |-
-      export FBX, import FBX, export OBJ, file_exists, geometry round trip,
+      export FBX, import FBX OBJ Alembic USD, SpeedTree geometry, file_exists, geometry round trip,
       scene interchange, FBXExport options, bake animation FBX. Use
       maya-scene save_scene for .ma/.mb scene saves.
     tools: tools.yaml
@@ -65,6 +67,27 @@ When handing FBX to **another Maya year** or a different DCC, treat these fields
 | `up_axis` | Set `y` or `z` explicitly when your pipeline requires a fixed world orientation. |
 
 The `export_fbx` script resets the FBX plugin option store (`FBXResetExport`) before export and returns `applied_options` plus `size_bytes` in the success envelope for audit and regression triage.
+
+## Import acceptance
+
+`import_file` loads the required translator plugin for FBX (`fbxmaya`), OBJ
+(`objExport`), Alembic (`AbcImport`), and USD/USDA/USDC (`mayaUsdPlugin`).
+Missing plugins return an error before import. USD creates native Maya nodes;
+use `maya-asset-sync` when a USD proxy stage is required.
+
+Import jobs are asynchronous. Use CLI `call --wait`, or query the returned
+core job id with `jobs_get_status` until terminal, then inspect the inner
+result's `success` and `context.imported_nodes`. A queued job or completed
+transport is insufficient. These native translators are monolithic:
+cancellation does not pre-empt a running native import. After a timeout,
+query the existing job before retrying to avoid duplicate imports.
+
+Read back imported geometry using `list_objects`, `get_bounding_box`,
+`get_poly_count`, `get_uv_info`, and `get_shader_assignment`. Compare with
+the source asset manifest. Node creation alone does not verify material
+textures, source units/axis, LOD switching, or wind animation. See
+[`docs/guide/capability-audit.md`](../../../../docs/guide/capability-audit.md)
+for the remaining acceptance gaps.
 
 ## Bulk and multi-file export (agents)
 
