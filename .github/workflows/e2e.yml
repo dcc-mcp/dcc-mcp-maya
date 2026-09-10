@@ -47,6 +47,8 @@ jobs:
       image: tahv/mayapy:${{ matrix.maya-version }}
     env:
       MAYA_LANG: ${{ matrix.maya-lang }}
+      DCC_MCP_DISABLE_JOB_PERSISTENCE: "1"
+      DCC_MCP_MAYA_JOB_STORAGE: ""
 
     steps:
       - name: Checkout

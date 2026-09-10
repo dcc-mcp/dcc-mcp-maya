@@ -12,6 +12,9 @@ jobs:
   test:
     name: Test (Python ${{ matrix.python-version }} / ${{ matrix.os }})
     runs-on: ${{ matrix.os }}
+    env:
+      DCC_MCP_DISABLE_JOB_PERSISTENCE: "1"
+      DCC_MCP_MAYA_JOB_STORAGE: ""
     strategy:
       fail-fast: false
       matrix:
@@ -61,6 +64,8 @@ jobs:
     env:
       DCC_MCP_ALLOW_AMBIENT_PYTHON: "1"
       DCC_MCP_DISABLE_FILE_LOGGING: "1"
+      DCC_MCP_DISABLE_JOB_PERSISTENCE: "1"
+      DCC_MCP_MAYA_JOB_STORAGE: ""
 
     steps:
       - uses: actions/checkout@v6
@@ -174,6 +179,19 @@ jobs:
 
       - name: Run ruff format check
         run: ruff format --check src/ tests/
+
+      - uses: actions/checkout@v6
+        with:
+          repository: dcc-mcp/dcc-mcp-agent-plugins
+          ref: 54b9d46a9fcefab1ed3a6aafc18da6ab4198ad25
+          path: .agent-plugins
+
+      - name: Check Agent quickstart
+        run: >-
+          python .agent-plugins/scripts/sync_adapter_readme.py
+          --repository ${{ github.event.repository.name }}
+          --readme README.md
+          --check
 
   lint-skills:
     name: Lint Skills
