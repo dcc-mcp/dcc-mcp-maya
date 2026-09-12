@@ -21,6 +21,7 @@ _RAW_SLOTS = {"roughness", "metalness", "metallic", "normal", "bump"}
 
 
 def _first_existing(cmds, material_name: str, candidates):
+    """Return the first material attribute that exists among ``candidates``."""
     for candidate in candidates:
         try:
             if cmds.objExists("{}.{}".format(material_name, candidate)):
@@ -31,6 +32,7 @@ def _first_existing(cmds, material_name: str, candidates):
 
 
 def _connect_place2d(cmds, place_node: str, file_node: str) -> None:
+    """Connect Maya's placement controls and UV outputs to a file node."""
     for source, target in (
         ("coverage", "coverage"),
         ("translateFrame", "translateFrame"),
@@ -48,6 +50,8 @@ def _connect_place2d(cmds, place_node: str, file_node: str) -> None:
         ("vertexUvTwo", "vertexUvTwo"),
         ("vertexUvThree", "vertexUvThree"),
         ("vertexCameraOne", "vertexCameraOne"),
+        ("outUV", "uvCoord"),
+        ("outUvFilterSize", "uvFilterSize"),
     ):
         try:
             cmds.connectAttr("{}.{}".format(place_node, source), "{}.{}".format(file_node, target), force=True)
@@ -104,11 +108,11 @@ def assign_texture(
         conversion_node = None
         if slot_key in {"normal", "bump"}:
             conversion_node = cmds.shadingNode("bump2d", asUtility=True, name="{}_bump2d".format(stem))
-            cmds.setAttr("{}.bumpInterp".format(conversion_node), 1)
+            cmds.setAttr("{}.bumpInterp".format(conversion_node), 0 if slot_key == "bump" else 1)
             cmds.connectAttr("{}.outAlpha".format(file_node), "{}.bumpValue".format(conversion_node), force=True)
             source_plug = "{}.outNormal".format(conversion_node)
         elif slot_key in _RAW_SLOTS:
-            source_plug = "{}.outAlpha".format(file_node)
+            source_plug = "{}.outColorR".format(file_node)
         destination_plug = "{}.{}".format(material_name, material_attr)
         cmds.connectAttr(source_plug, destination_plug, force=True)
 
@@ -150,6 +154,7 @@ def assign_texture(
 
 @skill_entry
 def main(**kwargs) -> dict:
+    """Dispatch the typed texture-assignment entry point."""
     return assign_texture(**kwargs)
 
 

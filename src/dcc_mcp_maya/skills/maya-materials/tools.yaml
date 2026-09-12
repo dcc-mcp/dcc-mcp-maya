@@ -3,7 +3,7 @@ tools:
   execution: sync
   affinity: main
   annotations:
-    idempotent_hint: true
+    destructive_hint: false
   group: shading-lighting
   description: Bind a file texture to a material slot with colorspace and UDIM support.
   input_schema:
