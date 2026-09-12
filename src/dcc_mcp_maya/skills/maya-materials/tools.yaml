@@ -1,4 +1,37 @@
 tools:
+- name: assign_texture
+  execution: sync
+  affinity: main
+  annotations:
+    idempotent_hint: true
+  group: shading-lighting
+  description: Bind a file texture to a material slot with colorspace and UDIM support.
+  input_schema:
+    type: object
+    properties:
+      material_name:
+        type: string
+      texture_path:
+        type: string
+      slot:
+        type: string
+        enum:
+        - base_color
+        - roughness
+        - metalness
+        - normal
+        - bump
+        default: base_color
+      color_space:
+        type: string
+      use_udim:
+        type: boolean
+        default: false
+      file_node_name:
+        type: string
+    required:
+    - material_name
+    - texture_path
 - name: assign_material
   execution: sync
   affinity: main
