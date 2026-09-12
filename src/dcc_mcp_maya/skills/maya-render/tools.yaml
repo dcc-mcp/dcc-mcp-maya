@@ -386,6 +386,69 @@ tools:
         type: boolean
         default: true
         description: Include base64 image bytes in context.image_base64.
+- name: render_scene
+  description: Render one scene frame with explicit image format and optional Arnold sampling overrides.
+  execution: async
+  affinity: main
+  timeout_hint_secs: 600
+  annotations:
+    read_only_hint: false
+    destructive_hint: false
+    idempotent_hint: false
+    open_world_hint: false
+  group: rendering
+  input_schema:
+    type: object
+    properties:
+      camera:
+        type: string
+        description: Camera transform or shape; defaults to the first renderable camera.
+      frame:
+        type: number
+        description: Frame number; defaults to the current frame.
+      width:
+        type: integer
+        minimum: 1
+        maximum: 8192
+      height:
+        type: integer
+        minimum: 1
+        maximum: 8192
+      output_dir:
+        type: string
+        description: Output directory; defaults to the workspace images rule.
+      output_name:
+        type: string
+        description: Sanitized output filename prefix.
+      format:
+        type: string
+        enum:
+        - exr
+        - png
+        - jpg
+        - tif
+        default: exr
+      aa_samples:
+        type: integer
+        minimum: 0
+      diffuse_samples:
+        type: integer
+        minimum: 0
+      specular_samples:
+        type: integer
+        minimum: 0
+      transmission_samples:
+        type: integer
+        minimum: 0
+      sss_samples:
+        type: integer
+        minimum: 0
+      volume_samples:
+        type: integer
+        minimum: 0
+      return_base64:
+        type: boolean
+        default: false
 - name: render_sequence
   description: Render an inclusive frame range by reusing the active renderer's verified
     single-frame path.

@@ -9,6 +9,7 @@ from pathlib import Path
 from types import ModuleType
 from unittest.mock import MagicMock, patch
 
+import yaml
 from conftest import load_and_call, load_and_call_with_mel
 
 
@@ -607,6 +608,18 @@ def test_render_scene_uses_current_time_instead_of_invalid_arnold_frame_flag(tmp
     assert result["success"] is True, result
     cmds.currentTime.assert_any_call(7.0)
     mel.eval.assert_called_once_with('arnoldRender -batch -camera "persp" -width 640 -height 360')
+
+
+def test_render_scene_is_registered_with_complete_metadata():
+    tools_path = Path(__file__).parents[1] / "src" / "dcc_mcp_maya" / "skills" / "maya-render" / "tools.yaml"
+    tools = yaml.safe_load(tools_path.read_text(encoding="utf-8"))["tools"]
+    tool = next(item for item in tools if item["name"] == "render_scene")
+
+    assert tool["execution"] == "async"
+    assert tool["affinity"] == "main"
+    assert tool["timeout_hint_secs"] == 600
+    assert tool["input_schema"]["type"] == "object"
+    assert {"format", "aa_samples", "return_base64"}.issubset(tool["input_schema"]["properties"])
 
 
 def test_render_frame_rejects_zero_byte_output(tmp_path):
