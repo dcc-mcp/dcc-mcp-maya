@@ -71,6 +71,15 @@ def bake_textures(
         if err:
             return err
 
+        renderer_attr = "defaultRenderGlobals.currentRenderer"
+        cmds.setAttr(renderer_attr, renderer, type="string")
+        active_renderer = cmds.getAttr(renderer_attr)
+        if active_renderer != renderer:
+            return skill_error(
+                "Could not activate renderer: {}".format(renderer),
+                "Maya reports the active renderer as {!r}.".format(active_renderer),
+            )
+
         bake_type_map = {
             "diffuse": "diffuse",
             "full_render": "fullRender",
