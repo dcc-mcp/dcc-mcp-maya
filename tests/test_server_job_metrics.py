@@ -236,15 +236,22 @@ class TestGatewayJobRouting:
         db_a = str(tmp_path / "jobs_a.db")
         db_b = str(tmp_path / "jobs_b.db")
 
+        # These are direct backend instances; gateway election can restart an
+        # already-started server while the test still holds its old handle URL.
+        # Disable election so the handle remains stable across mayapy startup.
         server_a = srv_mod.MayaMcpServer(
             port=0,
             job_storage_path=db_a,
             server_name="maya-a",
+            enable_gateway_failover=False,
+            gateway_port=0,
         )
         server_b = srv_mod.MayaMcpServer(
             port=0,
             job_storage_path=db_b,
             server_name="maya-b",
+            enable_gateway_failover=False,
+            gateway_port=0,
         )
         server_a.register_builtin_actions(extra_skill_paths=[_builtin_skills_dir()])
         server_b.register_builtin_actions(extra_skill_paths=[_builtin_skills_dir()])
