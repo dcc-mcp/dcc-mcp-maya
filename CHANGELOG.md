@@ -1,5 +1,32 @@
 # Changelog
 
+## [0.9.27](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.26...v0.9.27) (2026-09-12)
+
+
+### Features
+
+* add typed texture binding ([e4316f5](https://github.com/dcc-mcp/dcc-mcp-maya/commit/e4316f5412d20641ad206e8cac39f44e29392301))
+
+
+### Bug Fixes
+
+* activate renderer before texture baking ([567d413](https://github.com/dcc-mcp/dcc-mcp-maya/commit/567d413dfcf20a8ee11bfa3358c40464bc572e44))
+* address texture binding review ([286081a](https://github.com/dcc-mcp/dcc-mcp-maya/commit/286081a574a9a016c78b91f1dcfbf47874e94463))
+* default texture baking to Arnold ([6d45e58](https://github.com/dcc-mcp/dcc-mcp-maya/commit/6d45e5857011348b2d28a605fef97f0c563f3198))
+* harden geometry import skill contract ([c17d4fd](https://github.com/dcc-mcp/dcc-mcp-maya/commit/c17d4fd20f7e5c839b1e4b5c0fca6e46f18d753f))
+* keep audit docs and tests py37 compatible ([545a6a6](https://github.com/dcc-mcp/dcc-mcp-maya/commit/545a6a660096fd3ce9f8f7aa3ea3f3e9109c3d9b))
+* prepare native geometry import translators ([fad9c3c](https://github.com/dcc-mcp/dcc-mcp-maya/commit/fad9c3c66790a503624b28d094dc223a2a1b8e28))
+* query UV sets without mutating scene state ([d5390d4](https://github.com/dcc-mcp/dcc-mcp-maya/commit/d5390d49aadda28385fe2ebc93d82d644eac38ed))
+* register scene render tool ([8c69a2e](https://github.com/dcc-mcp/dcc-mcp-maya/commit/8c69a2ecffd3f7bcf0b1421a5f2c3715f9203537))
+* stabilize backend job routing tests ([9d15eee](https://github.com/dcc-mcp/dcc-mcp-maya/commit/9d15eee9add65e89b628ff9cd97dfaec0fffe03f))
+
+
+### Documentation
+
+* add canonical agent quickstart ([#516](https://github.com/dcc-mcp/dcc-mcp-maya/issues/516)) ([fd2a4da](https://github.com/dcc-mcp/dcc-mcp-maya/commit/fd2a4daf9092cd09478cc109a557d6f36902f282))
+* record SpeedTree import acceptance gaps ([71d63f9](https://github.com/dcc-mcp/dcc-mcp-maya/commit/71d63f94288bc2799bcfee66f68669316e0e0faf))
+* **rigging:** guide mesh-informed joint placement and orientation ([793d1ba](https://github.com/dcc-mcp/dcc-mcp-maya/commit/793d1ba7b48cfd593be00d72cabce63635e5974e))
+
 ## [0.9.26](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.25...v0.9.26) (2026-08-29)
 
 
