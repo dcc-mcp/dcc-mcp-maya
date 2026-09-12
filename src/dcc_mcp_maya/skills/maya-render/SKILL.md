@@ -118,6 +118,10 @@ result = maya_render__render_frame(camera="persp", frame=1, return_base64=True)
   Independent of model panels and playblast — works when Maya is minimized or in batch mode.
   Supports Arnold render via MEL invocations (`arnoldRender`) and Maya Software via `cmds.render`.
   Returns output path + optional base64 image payload in `context.image_base64`.
+- `render_scene` — Render a single frame with an explicit output format and temporary Arnold
+  sampling overrides; restores render settings after completion and verifies a non-empty output.
+- `setup_hdr_arnold` — Create an Arnold HDR skydome (or an ambient fallback when MtoA is unavailable)
+  from an HDRI path for look-development renders.
   See **VP2 fallback flow** above for error recovery patterns.
 - `capture_playblast_sequence` — Capture a playblast image sequence to disk
 - `playblast_to_mp4` — Capture a viewport animation preview and encode it to MP4 with ffmpeg.
