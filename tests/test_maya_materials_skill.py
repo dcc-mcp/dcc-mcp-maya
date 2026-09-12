@@ -130,7 +130,7 @@ def test_assign_material_rejects_a_partial_target_set_before_mutation():
 
 def test_assign_texture_binds_base_color_and_verifies_connection():
     cmds = MagicMock()
-    cmds.objExists.side_effect = lambda plug: plug in {"carPaint", "carPaint.baseColor", "file.colorSpace"}
+    cmds.objExists.side_effect = lambda plug: plug in {"carPaint", "carPaint.baseColor", "carPaint_file.colorSpace"}
     cmds.shadingNode.side_effect = ["carPaint_file", "carPaint_file_place2d"]
     cmds.isConnected.return_value = True
 
@@ -149,12 +149,15 @@ def test_assign_texture_binds_base_color_and_verifies_connection():
     assert verified is True
     assert result["context"]["color_space"] == "sRGB"
     cmds.setAttr.assert_any_call("carPaint_file.uvTilingMode", 3)
+    cmds.setAttr.assert_any_call("carPaint_file.colorSpace", "sRGB", type="string")
     cmds.connectAttr.assert_any_call("carPaint_file.outColor", "carPaint.baseColor", force=True)
+    cmds.connectAttr.assert_any_call("carPaint_file_place2d.outUV", "carPaint_file.uvCoord", force=True)
+    cmds.connectAttr.assert_any_call("carPaint_file_place2d.outUvFilterSize", "carPaint_file.uvFilterSize", force=True)
 
 
 def test_assign_texture_uses_bump_conversion_for_normal_maps():
     cmds = MagicMock()
-    cmds.objExists.side_effect = lambda plug: plug in {"carPaint", "carPaint.normalCamera", "file.colorSpace"}
+    cmds.objExists.side_effect = lambda plug: plug in {"carPaint", "carPaint.normalCamera", "normal_file.colorSpace"}
     cmds.shadingNode.side_effect = ["normal_file", "normal_file_place2d", "normal_file_bump2d"]
     cmds.isConnected.return_value = True
 
@@ -169,4 +172,45 @@ def test_assign_texture_uses_bump_conversion_for_normal_maps():
 
     assert result["success"] is True, result
     assert result["context"]["color_space"] == "Raw"
+    cmds.setAttr.assert_any_call("normal_file.colorSpace", "Raw", type="string")
+    cmds.setAttr.assert_any_call("normal_file_bump2d.bumpInterp", 1)
     cmds.connectAttr.assert_any_call("normal_file_bump2d.outNormal", "carPaint.normalCamera", force=True)
+
+
+def test_assign_texture_uses_color_red_channel_for_scalar_maps():
+    cmds = MagicMock()
+    cmds.objExists.side_effect = lambda plug: plug in {"carPaint", "carPaint.roughness", "rough_file.colorSpace"}
+    cmds.shadingNode.side_effect = ["rough_file", "rough_file_place2d"]
+    cmds.isConnected.return_value = True
+
+    result = load_and_call(
+        "maya-materials/scripts/assign_texture.py",
+        cmds,
+        "main",
+        material_name="carPaint",
+        texture_path="textures/body_roughness.exr",
+        slot="roughness",
+    )
+
+    assert result["success"] is True, result
+    assert result["context"]["source_plug"] == "rough_file.outColorR"
+    cmds.connectAttr.assert_any_call("rough_file.outColorR", "carPaint.roughness", force=True)
+
+
+def test_assign_texture_uses_height_interpretation_for_bump_maps():
+    cmds = MagicMock()
+    cmds.objExists.side_effect = lambda plug: plug in {"carPaint", "carPaint.normalCamera", "bump_file.colorSpace"}
+    cmds.shadingNode.side_effect = ["bump_file", "bump_file_place2d", "bump_file_bump2d"]
+    cmds.isConnected.return_value = True
+
+    result = load_and_call(
+        "maya-materials/scripts/assign_texture.py",
+        cmds,
+        "main",
+        material_name="carPaint",
+        texture_path="textures/body_bump.exr",
+        slot="bump",
+    )
+
+    assert result["success"] is True, result
+    cmds.setAttr.assert_any_call("bump_file_bump2d.bumpInterp", 0)
