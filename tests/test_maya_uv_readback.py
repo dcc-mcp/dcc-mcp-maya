@@ -33,7 +33,7 @@ def test_uv_count_uses_requested_set_without_fetching_coordinates(count):
     assert result["context"]["current_uv_set"] == "map1"
     cmds.polyEvaluate.assert_called_once_with("mesh", uvcoord=True, uvSetName="lightmap")
     cmds.polyEditUV.assert_not_called()
-    assert all(call.kwargs.get("query") for call in cmds.polyUVSet.call_args_list)
+    assert all(invoked[1].get("query") for invoked in cmds.polyUVSet.call_args_list)
 
 
 def test_shell_bounds_use_named_coordinates_without_switching_set(mesh_api):
@@ -56,7 +56,7 @@ def test_shell_bounds_use_named_coordinates_without_switching_set(mesh_api):
     mesh_api.getUvShellsIds.assert_called_once_with("lightmap")
     mesh_api.getUVs.assert_called_once_with("lightmap")
     cmds.polyEditUV.assert_not_called()
-    assert all(call.kwargs.get("query") for call in cmds.polyUVSet.call_args_list)
+    assert all(invoked[1].get("query") for invoked in cmds.polyUVSet.call_args_list)
 
 
 def test_shell_read_failure_does_not_change_active_set(mesh_api):
@@ -64,7 +64,7 @@ def test_shell_read_failure_does_not_change_active_set(mesh_api):
     mesh_api.getUvShellsIds.side_effect = RuntimeError("mesh read failed")
     result = load_and_call("maya-uv-ops/scripts/get_uv_shell_info.py", cmds, object_name="mesh", uv_set="lightmap")
     assert not result["success"]
-    assert all(call.kwargs.get("query") for call in cmds.polyUVSet.call_args_list)
+    assert all(invoked[1].get("query") for invoked in cmds.polyUVSet.call_args_list)
 
 
 def test_shell_readback_rejects_misaligned_coordinates(mesh_api):

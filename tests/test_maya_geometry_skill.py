@@ -125,8 +125,9 @@ def test_import_file_prepares_native_usd_translator(tmp_path, extension):
     assert cmds.method_calls.index(call.loadPlugin("mayaUsdPlugin")) < next(
         i for i, invoked in enumerate(cmds.method_calls) if invoked[0] == "file"
     )
-    assert cmds.file.call_args.kwargs["type"] == "USD Import"
-    assert cmds.file.call_args.kwargs["namespace"] == "treeAsset"
+    file_kwargs = cmds.file.call_args[1]
+    assert file_kwargs["type"] == "USD Import"
+    assert file_kwargs["namespace"] == "treeAsset"
     assert result["context"]["required_plugins"] == ["mayaUsdPlugin"]
 
 
@@ -150,7 +151,7 @@ def test_import_file_selects_known_translator(tmp_path, extension, translator):
     cmds.file.return_value = ["asset"]
     result = load_and_call("maya-geometry/scripts/import_file.py", cmds, file_path=str(path))
     assert result["success"], result
-    assert cmds.file.call_args.kwargs["type"] == translator
+    assert cmds.file.call_args[1]["type"] == translator
 
 
 def test_import_file_rejects_directory_before_plugin_loading(tmp_path):
