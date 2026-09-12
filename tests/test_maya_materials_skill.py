@@ -126,3 +126,46 @@ def test_assign_material_rejects_a_partial_target_set_before_mutation():
     assert result["success"] is False
     assert result["context"]["missing_objects"] == ["missingRotor"]
     cmds.sets.assert_not_called()
+
+
+def test_assign_texture_binds_base_color_and_verifies_connection():
+    cmds = MagicMock()
+    cmds.objExists.side_effect = lambda plug: plug in {"carPaint", "carPaint.baseColor", "file.colorSpace"}
+    cmds.shadingNode.side_effect = ["carPaint_file", "carPaint_file_place2d"]
+    cmds.isConnected.return_value = True
+
+    result = load_and_call(
+        "maya-materials/scripts/assign_texture.py",
+        cmds,
+        "main",
+        material_name="carPaint",
+        texture_path="textures/body_basecolor.<UDIM>.exr",
+        slot="base_color",
+        use_udim=True,
+    )
+
+    assert result["success"] is True, result
+    assert result["postcondition"]["verified"] is True
+    assert result["context"]["color_space"] == "sRGB"
+    cmds.setAttr.assert_any_call("carPaint_file.uvTilingMode", 3)
+    cmds.connectAttr.assert_any_call("carPaint_file.outColor", "carPaint.baseColor", force=True)
+
+
+def test_assign_texture_uses_bump_conversion_for_normal_maps():
+    cmds = MagicMock()
+    cmds.objExists.side_effect = lambda plug: plug in {"carPaint", "carPaint.normalCamera", "file.colorSpace"}
+    cmds.shadingNode.side_effect = ["normal_file", "normal_file_place2d", "normal_file_bump2d"]
+    cmds.isConnected.return_value = True
+
+    result = load_and_call(
+        "maya-materials/scripts/assign_texture.py",
+        cmds,
+        "main",
+        material_name="carPaint",
+        texture_path="textures/body_normal.exr",
+        slot="normal",
+    )
+
+    assert result["success"] is True, result
+    assert result["context"]["color_space"] == "Raw"
+    cmds.connectAttr.assert_any_call("normal_file_bump2d.outNormal", "carPaint.normalCamera", force=True)
