@@ -43,7 +43,8 @@ def test_bake_textures_activates_requested_renderer_before_conversion() -> None:
     cmds.objExists.return_value = True
     active_renderer = ["mayaSoftware"]
 
-    def _get_active_renderer(_attribute):
+    def _get_active_renderer(attribute):
+        assert attribute == "defaultRenderGlobals.currentRenderer"
         return "arnold" if cmds.setAttr.called else active_renderer[0]
 
     cmds.getAttr.side_effect = _get_active_renderer
@@ -58,8 +59,9 @@ def test_bake_textures_activates_requested_renderer_before_conversion() -> None:
 
     assert result["success"] is True, result
     cmds.setAttr.assert_called_once_with("defaultRenderGlobals.currentRenderer", "arnold", type="string")
+    cmds.getAttr.assert_called_once_with("defaultRenderGlobals.currentRenderer")
     calls = [call[0] for call in cmds.mock_calls]
-    assert calls.index("setAttr") < calls.index("convertSolidTx")
+    assert calls.index("setAttr") < calls.index("getAttr") < calls.index("convertSolidTx")
     cmds.convertSolidTx.assert_called_once()
 
 
