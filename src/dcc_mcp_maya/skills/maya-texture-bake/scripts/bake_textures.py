@@ -20,7 +20,7 @@ def bake_textures(
     file_path: str,
     resolution: int = 512,
     bake_type: str = "diffuse",
-    renderer: str = "mentalRay",
+    renderer: str = "arnold",
     overscan: int = 3,
 ) -> dict:
     """Bake lighting or texture to a UV map.
@@ -31,8 +31,9 @@ def bake_textures(
         resolution: Output texture resolution in pixels.  Default: 512.
         bake_type: Bake type — ``"diffuse"``, ``"full_render"``,
             ``"normals"``, ``"ao"``.  Default: ``"diffuse"``.
-        renderer: Renderer to use for baking — ``"mentalRay"`` or
-            ``"arnold"``.  Default: ``"mentalRay"``.
+        renderer: Renderer to use for baking. Maya 2017 and later use
+            Arnold; the removed mentalRay renderer is rejected. Default:
+            ``"arnold"``.
         overscan: Anti-alias overscan in pixels.  Default: 3.
 
     Returns:
@@ -47,7 +48,7 @@ def bake_textures(
             "Use one of: {}".format(", ".join(valid_types)),
         )
 
-    valid_renderers = ("mentalRay", "arnold")
+    valid_renderers = ("arnold",)
     if renderer not in valid_renderers:
         return skill_error(
             "Invalid renderer: {}".format(renderer),

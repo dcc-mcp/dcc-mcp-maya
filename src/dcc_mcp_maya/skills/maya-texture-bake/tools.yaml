@@ -87,7 +87,9 @@ tools:
         default: diffuse
       renderer:
         type: string
-        default: mentalRay
+        enum:
+        - arnold
+        default: arnold
       overscan:
         type: integer
         default: 3
