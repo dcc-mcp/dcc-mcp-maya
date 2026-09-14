@@ -30,7 +30,8 @@ metadata:
       build character rig, skeleton setup, IK chain, rig control, constraint,
       skin bind, skin weight copy, blendshape, control curve, mgear,
       advanced skeleton, deformer, joint hierarchy, weight paint, editable
-      hair guide curve, colored guide cluster, scalp root projection
+      hair guide curve, colored guide cluster, scalp root projection, joint
+      orientation, local rotation axes, aim axis, joint roll, bend plane
     tools: tools.yaml
     groups: groups.yaml
 ---
@@ -60,45 +61,75 @@ unchanged.
 
 ## Joint Placement and Orientation
 
-When reviewing or editing joints, distinguish **pivot placement**, **joint
-orientation (including roll)**, and the rotate tool's display mode. A gizmo in
-World or Object mode is not sufficient evidence that a joint will bend correctly.
-Inspect local rotation axes and test the intended motion; zeroing rotation
-channels alone does not repair an incorrect pivot or `jointOrient`.
+Treat joint orientation as the design of a local coordinate frame, not as a
+cosmetic cleanup operation. Keep these concepts separate:
 
-- Inspect the mesh and joint in multiple views. Place a hinge at the intended
-  articulation center, using anatomical landmarks or a mechanical joint's
-  geometry rather than the mesh bounding-box center. Do not move a correctly
-  placed pivot merely to change its axes.
-- Aiming at the next joint establishes a length direction, but does not resolve
-  roll around that direction. Check the intended bend plane against the mesh,
-  not only the existing joint chain. Mesh cross-section centers or other clear
-  landmarks can help, but uneven sampling and asymmetry can bias them. A straight
-  centerline does not uniquely define a bend plane: request a reference or user
-  clarification instead of guessing.
-- Respect the rig's aim/curl-axis conventions. Do not assume a universal world
-  axis, naming scheme, finger-length percentage, or left/right rotation sign.
-  Check each joint and mirrored side independently; thumbs and terminal joints
-  may need different references from the other fingers.
-- For a requested correction, explain whether placement, orientation, or both
-  will change. Save a recoverable scene checkpoint before editing. Validate one
-  representative joint with the user before repeating an uncertain correction
-  across a chain. A request to inspect is not permission to rebuild joints.
-- On an existing rig, inspect skin bindings, bind-pose records, animation,
-  constraints, and child transforms before changing placement or orientation.
-  Do not blindly freeze transforms, delete/recreate joints, detach skin, or
-  reset bind records. Use a method appropriate to that rig that preserves the
-  intended rest shape, skin weights, hierarchy, and child world transforms;
-  stop and explain if those invariants cannot be maintained safely. Do not
-  silently change the bind state of a posed or animated rig.
-- Verify with a small isolated bend around the intended local axis, then return
-  to the original pose and time. Check the motion against the mesh's bend plane,
-  descendant positions, and skin deformation—not just a static gizmo screenshot.
-  Confirm that weights and the rest shape remain intact after the edit. If the
-  result is wrong, restore the checkpoint or undo and reassess the reference
-  rather than repeatedly applying guessed orientations. Report what changed,
-  what was verified, and any uncertainty; separate remaining weight-painting
-  problems from placement or orientation problems.
+- **Position** places the pivot where rotation should occur.
+- **Aim** points one chosen local axis toward the primary child.
+- **Roll** rotates the remaining two axes around the aim axis and determines the
+  bend plane.
+- **`jointOrient`** stores the rest orientation; animation normally belongs in
+  `rotate`. Non-zero `jointOrient` values are expected and are not an error.
+- The rotate manipulator's World or Object display mode is not evidence of the
+  joint's local rotation axes.
+
+Use this decision process whenever creating, reviewing, or repairing a chain:
+
+1. **Establish context before editing.** Inspect the hierarchy, transforms,
+   local rotation axes, constraints, animation, skin clusters, and bind-pose
+   records. An inspection request is not permission to rebuild a chain. On an
+   established rig, make a recoverable checkpoint and identify the state that
+   must be preserved.
+2. **Identify the intended motion.** Determine each pivot, the primary child,
+   the expected degrees of freedom, and any intended bend plane. Derive this
+   from the asset, rig specification, or user-provided reference. A perfectly
+   straight chain does not define a stable bend direction; do not invent one.
+3. **Choose or discover the convention.** Record the aim axis, secondary axis,
+   axis sign, handedness, and mirror behavior. Existing rig conventions take
+   precedence. There is no universal Maya axis or Euler-sign convention, but a
+   continuous chain should use one documented convention consistently unless a
+   deliberate exception is required.
+4. **Place pivots first.** Position joints at the intended articulation centers
+   and inspect them from multiple views. Do not move a correct pivot merely to
+   repair its axes. Give solver-driven hinge chains a small intentional pre-bend
+   in their expected plane when the design permits it.
+5. **Solve aim and roll separately.** Aim the parent at its primary child, then
+   resolve roll from a stable secondary-axis reference or known bend plane.
+   Aiming alone cannot determine roll. At a branching joint, aim toward the
+   designated primary child; orient each branch from its own requirements.
+6. **Store a clean rest state.** Put the rest orientation in `jointOrient` and
+   keep `rotate` at zero. Keep `rotateAxis` and scale at their neutral values
+   unless the rig explicitly uses them. Do not blindly freeze transforms,
+   delete and recreate joints, detach skin, or rewrite bind records to obtain
+   zero channels.
+7. **Handle terminal and mirrored joints deliberately.** A terminal joint has no
+   child from which to derive an aim; match a documented parent/world convention
+   or leave its orientation neutral. Validate mirrored behavior by equivalent
+   motion, not by assuming both sides must have identical Euler values.
+
+Validate the result with independent evidence:
+
+- Confirm the hierarchy, primary-child choices, pivot positions, and absence of
+  accidental duplicate or coincident joints.
+- Confirm rest `rotate` values are zero and scales are neutral, except for
+  intentional, documented rig features.
+- In an aim-axis-aligned chain, each child's local translation should lie almost
+  entirely on the chosen aim axis with a consistent sign. Off-axis values should
+  be explainable by an intentional exception.
+- Display local rotation axes and compare neighboring frames for unexpected
+  flips or roll discontinuities.
+- Apply small isolated rotations around each intended local axis, observe the
+  pivot, bend plane, descendants, and deformation, then restore the original
+  pose and time. For solver-driven chains, also run a minimal IK and pole-vector
+  test.
+- On an existing rig, verify that child world transforms, rest shape, weights,
+  constraints, animation, and bind state remain unchanged except where the task
+  explicitly required a change.
+
+If evidence conflicts, stop and report the ambiguity instead of repeatedly
+applying guessed orientations. Report the convention used, what changed, the
+checks performed, and any remaining uncertainty. Keep orientation defects
+separate from pivot-placement, solver, and skin-weight problems.
 
 ## Optional Frameworks
 
