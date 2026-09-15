@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.28](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.27...v0.9.28) (2026-09-15)
+
+
+### Documentation
+
+* **rigging:** generalize joint orientation workflow ([f50f65c](https://github.com/dcc-mcp/dcc-mcp-maya/commit/f50f65ca265f23fee9805e5080dfc28ab5a1c122))
+
 ## [0.9.27](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.26...v0.9.27) (2026-09-12)
 
 
