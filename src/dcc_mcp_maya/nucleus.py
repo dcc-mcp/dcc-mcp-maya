@@ -355,7 +355,10 @@ def validate_compound_value(key: str, value: Any) -> List[float]:
     """
     if not isinstance(value, (list, tuple)):
         raise NucleusContractError("{} expects a 3-element [x, y, z] list, got a single value".format(key))
-    components = [float(item) for item in value]
+    try:
+        components = [float(item) for item in value]
+    except (TypeError, ValueError) as exc:
+        raise NucleusContractError("{} expects numeric [x, y, z] components, got {}".format(key, value)) from exc
     if len(components) != 3:
         raise NucleusContractError("{} expects a 3-element [x, y, z] list, got {}".format(key, len(components)))
     return components
@@ -366,39 +369,39 @@ def _plug_value(value: Any) -> Any:
     if isinstance(value, bool):
         return value
     if isinstance(value, (list, tuple)):
-        return [float(item) for item in value]
+        try:
+            return [float(item) for item in value]
+        except (TypeError, ValueError) as exc:
+            raise NucleusContractError("expected numeric components, got {}".format(value)) from exc
     if isinstance(value, (int, float)):
         return value
     return value
 
 
-def set_node_attrs(
-    cmds: Any,
-    node: str,
+def plan_node_attrs(
     attrs: Mapping[str, Any],
     attr_map: Mapping[str, str],
     compound: Sequence[str] = (),
-) -> Dict[str, Any]:
-    """Set the recognised attributes on ``node`` and return what was applied.
+    label: str = "",
+) -> List[Tuple[str, str, Any]]:
+    """Validate a whole payload and return ``(key, attr_name, value)`` plans.
 
-    Unknown keys raise :class:`NucleusContractError` with the supported key list
-    so an agent immediately sees the typo instead of getting a silent no-op.
-
-    ``compound`` names the keys of ``attr_map`` whose Maya attribute takes
-    three components (:data:`FIELD_COMPOUND_ATTRS` for fields,
-    :data:`NUCLEUS_COMPOUND_ATTRS` for the solver).  Those are validated by
+    ``compound`` names the keys of ``attr_map`` whose Maya attribute takes three
+    components (:data:`FIELD_COMPOUND_ATTRS` for fields,
+    :data:`NUCLEUS_COMPOUND_ATTRS` for the solver); those go through
     :func:`validate_compound_value`, which rejects a scalar - the case Maya
-    reports as an opaque "error reading data element number 2" - and always
-    written with an explicit ``type="double3"``.
+    reports as an opaque "error reading data element number 2".
 
-    Every value is validated before the first ``setAttr`` so a rejected payload
-    cannot leave the node half-edited.
+    Splitting planning from :func:`apply_node_attrs` is what makes the
+    validate-then-write rule enforceable: a caller can plan its payload, create
+    the node, and only then write - so a rejected payload cannot leave a node
+    half-edited or an orphan node behind.  Nothing is written by this function.
     """
     unknown = [key for key in attrs if key not in attr_map]
     if unknown:
         raise NucleusContractError(
             "Unsupported attribute(s) for {}: {}. Supported: {}".format(
-                node,
+                label or "this node",
                 ", ".join(sorted(unknown)),
                 ", ".join(sorted(attr_map)),
             )
@@ -410,15 +413,30 @@ def set_node_attrs(
         if raw is None:
             continue
         if key in compound:
-            planned.append((key, attr_map[key], validate_compound_value(key, raw)))
+            value: Any = validate_compound_value(key, raw)
         else:
-            planned.append((key, attr_map[key], _plug_value(raw)))
+            value = _plug_value(raw)
+            if isinstance(value, list) and len(value) != 3:
+                raise NucleusContractError("{} expects 3 components, got {}".format(key, len(value)))
+        planned.append((key, attr_map[key], value))
+    return planned
 
+
+def apply_node_attrs(
+    cmds: Any,
+    node: str,
+    planned: Sequence[Tuple[str, str, Any]],
+    attrs: Mapping[str, Any],
+) -> Dict[str, Any]:
+    """Write a plan from :func:`plan_node_attrs` to ``node``.
+
+    ``planned`` is trusted to be validated: compound values carry three
+    components and reach ``setAttr`` with an explicit ``type="double3"`` (also
+    correct for the solver's ``float3`` plugs).
+    """
     applied: Dict[str, Any] = {}
     for key, attr_name, value in planned:
         if isinstance(value, list):
-            if len(value) != 3:
-                raise NucleusContractError("{} expects 3 components, got {}".format(key, len(value)))
             cmds.setAttr(
                 "{}.{}".format(node, attr_name),
                 value[0],
@@ -430,6 +448,23 @@ def set_node_attrs(
             cmds.setAttr("{}.{}".format(node, attr_name), value)
         applied[key] = attrs[key]
     return applied
+
+
+def set_node_attrs(
+    cmds: Any,
+    node: str,
+    attrs: Mapping[str, Any],
+    attr_map: Mapping[str, str],
+    compound: Sequence[str] = (),
+) -> Dict[str, Any]:
+    """Validate then set the recognised attributes on ``node``.
+
+    Unknown keys raise :class:`NucleusContractError` with the supported key list
+    so an agent immediately sees the typo instead of getting a silent no-op,
+    and every value is validated before the first ``setAttr`` so a rejected
+    payload cannot leave the node half-edited.
+    """
+    return apply_node_attrs(cmds, node, plan_node_attrs(attrs, attr_map, compound, node), attrs)
 
 
 def resolve_shape(cmds: Any, node: str, expected_types: Sequence[str]) -> str:
@@ -463,6 +498,10 @@ def create_ncloth(
 ) -> Dict[str, Any]:
     """Create one nCloth node per target mesh and return their identities."""
     targets = validate_targets(cmds, objects)
+    # Validate the property payload before any node exists, so a rejected key
+    # cannot leave orphan nCloth shapes behind.
+    payload = properties or {}
+    planned = plan_node_attrs(payload, NCLOTH_ATTRS, label="nCloth")
     before_cloth = snapshot_nodes(cmds, (NCLOTH_NODE_TYPE,))
     before_solver = snapshot_nodes(cmds, (NUCLEUS_NODE_TYPE,))
 
@@ -483,9 +522,7 @@ def create_ncloth(
 
     for index, cloth in enumerate(created_cloth):
         target = targets[index] if index < len(targets) else None
-        applied: Dict[str, Any] = {}
-        if properties:
-            applied = set_node_attrs(cmds, cloth, properties, NCLOTH_ATTRS)
+        applied: Dict[str, Any] = apply_node_attrs(cmds, cloth, planned, payload)
         results.append(
             {
                 "ncloth": cloth,
@@ -534,6 +571,10 @@ def create_nrigid(
 ) -> Dict[str, Any]:
     """Turn meshes into passive Nucleus collision objects (``nRigid``)."""
     targets = validate_targets(cmds, objects)
+    # Same rule as create_ncloth / create_nucleus_solver: reject the payload
+    # before the first node is created.
+    payload = properties or {}
+    planned = plan_node_attrs(payload, NCLOTH_ATTRS, label="nRigid")
     before = snapshot_nodes(cmds, (NRIGID_NODE_TYPE,))
 
     results: List[Dict[str, Any]] = []
@@ -546,9 +587,7 @@ def create_nrigid(
 
     created = new_nodes(before, cmds, (NRIGID_NODE_TYPE,))
     for index, rigid in enumerate(created):
-        applied: Dict[str, Any] = {}
-        if properties:
-            applied = set_node_attrs(cmds, rigid, properties, NCLOTH_ATTRS)
+        applied: Dict[str, Any] = apply_node_attrs(cmds, rigid, planned, payload)
         results.append(
             {
                 "nrigid": rigid,
@@ -611,10 +650,13 @@ def create_nucleus_solver(
     requested = str(name or "").strip()
     if requested:
         kwargs["name"] = requested
+    # Plan (and reject) before the node exists: an orphan solver is worse than
+    # a dirty scene - first_nucleus() would happily return it later and every
+    # solver-less set_nucleus_properties call would silently retarget that node.
+    payload = properties or {}
+    planned = plan_node_attrs(payload, NUCLEUS_ATTRS, NUCLEUS_COMPOUND_ATTRS, "nucleus solver")
     solver = str(cmds.nucleus(**kwargs))
-    applied: Dict[str, Any] = {}
-    if properties:
-        applied = set_node_attrs(cmds, solver, properties, NUCLEUS_ATTRS, NUCLEUS_COMPOUND_ATTRS)
+    applied: Dict[str, Any] = apply_node_attrs(cmds, solver, planned, payload)
     return {"nucleus": solver, "properties": applied}
 
 
@@ -720,8 +762,9 @@ def create_field(
 
     kwargs, post_create_attrs = _field_create_kwargs(ftype, settings)
     # Validate ``position`` here, before the factory runs: a rejected payload
-    # must not leave an orphan field node behind.
-    triple = validate_compound_value("position", position) if position else None
+    # must not leave an orphan field node behind.  ``None`` means "not given";
+    # an empty list is a caller mistake and is reported as one.
+    triple = validate_compound_value("position", position) if position is not None else None
     requested = str(name or "").strip()
     if requested:
         kwargs["name"] = requested
