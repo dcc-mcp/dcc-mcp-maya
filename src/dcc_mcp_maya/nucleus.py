@@ -198,8 +198,9 @@ FIELD_DIRECTION_FLAGS: Dict[str, Tuple[str, str, str]] = {
 #: which Maya silently ignores and then reports success for.
 #:
 #: Every entry must name a key of :data:`FIELD_CREATE_FLAGS` (or
-#: ``direction``); ``tests/test_maya_nucleus.py::test_field_flag_whitelist``
-#: asserts that, and ``test_field_create_flags_exist_in_maya`` re-checks the
+#: ``direction``);
+#: ``tests/test_maya_nucleus.py::test_field_flag_whitelist_covers_every_field_type``
+#: asserts that, and ``test_field_tables_match_a_real_maya`` re-checks the
 #: whole table against ``cmds.help()`` when a real Maya is available.
 FIELD_SUPPORTED_FLAGS: Dict[str, Tuple[str, ...]] = {
     "air": ("magnitude", "attenuation", "max_distance", "apply_per_vertex", "speed", "direction"),
@@ -254,10 +255,21 @@ FIELD_POST_CREATE_ATTRS: Dict[str, str] = {
     "trap_inside": "trapInside",
 }
 
-#: Post-create settings whose node attribute is a ``double3``. A scalar reaches
-#: ``setAttr`` as one component and Maya then fails with an opaque "error
-#: reading data element number 2", so reject it with a usable message.
-FIELD_COMPOUND_POST_CREATE: Tuple[str, ...] = ("turbulence_frequency",)
+#: Field settings whose node attribute is a compound: ``volumeAxis`` exposes
+#: ``turbulenceFrequency`` as a ``double3`` while the other fields expose
+#: ``direction`` as a ``TdataCompound`` - both take three components.  A scalar
+#: reaches ``setAttr`` as a single component and Maya then fails with an opaque
+#: "error reading data element number 2", so the create and the edit path both
+#: route these through :func:`validate_compound_value` and reject them with a
+#: usable message.  Verified against a live Maya 2026 scene.
+FIELD_COMPOUND_ATTRS: Tuple[str, ...] = ("direction", "turbulence_frequency")
+
+#: Nucleus solver settings that are compounds (``float3`` on the node, so the
+#: same "error reading data element number 2" awaits a scalar value).
+NUCLEUS_COMPOUND_ATTRS: Tuple[str, ...] = ("gravity_direction", "wind_direction")
+
+#: Maya attribute types that take three components rather than a scalar.
+COMPOUND_ATTR_TYPES: Tuple[str, ...] = ("double3", "float3", "TdataCompound")
 
 #: Settings that used to be accepted but are neither a create flag nor a node
 #: attribute in any Maya build we could check.  They stay recognised so an
@@ -332,6 +344,23 @@ def parent_transforms(cmds: Any, nodes: Sequence[str]) -> List[str]:
     return transforms
 
 
+def validate_compound_value(key: str, value: Any) -> List[float]:
+    """Validate a three-component (``double3`` / ``float3``) value.
+
+    Maya needs ``type="double3"`` plus exactly three components.  A scalar or a
+    short list fails inside ``setAttr`` with an opaque "error reading data
+    element number 2", so every entry point validates first - and on the create
+    path that means *before* the node exists, otherwise a rejected payload
+    leaves an orphan node behind.
+    """
+    if not isinstance(value, (list, tuple)):
+        raise NucleusContractError("{} expects a 3-element [x, y, z] list, got a single value".format(key))
+    components = [float(item) for item in value]
+    if len(components) != 3:
+        raise NucleusContractError("{} expects a 3-element [x, y, z] list, got {}".format(key, len(components)))
+    return components
+
+
 def _plug_value(value: Any) -> Any:
     """Coerce a tool value into something ``cmds.setAttr`` accepts."""
     if isinstance(value, bool):
@@ -343,13 +372,28 @@ def _plug_value(value: Any) -> Any:
     return value
 
 
-def set_node_attrs(cmds: Any, node: str, attrs: Mapping[str, Any], attr_map: Mapping[str, str]) -> Dict[str, Any]:
+def set_node_attrs(
+    cmds: Any,
+    node: str,
+    attrs: Mapping[str, Any],
+    attr_map: Mapping[str, str],
+    compound: Sequence[str] = (),
+) -> Dict[str, Any]:
     """Set the recognised attributes on ``node`` and return what was applied.
 
     Unknown keys raise :class:`NucleusContractError` with the supported key list
     so an agent immediately sees the typo instead of getting a silent no-op.
+
+    ``compound`` names the keys of ``attr_map`` whose Maya attribute takes
+    three components (:data:`FIELD_COMPOUND_ATTRS` for fields,
+    :data:`NUCLEUS_COMPOUND_ATTRS` for the solver).  Those are validated by
+    :func:`validate_compound_value`, which rejects a scalar - the case Maya
+    reports as an opaque "error reading data element number 2" - and always
+    written with an explicit ``type="double3"``.
+
+    Every value is validated before the first ``setAttr`` so a rejected payload
+    cannot leave the node half-edited.
     """
-    applied: Dict[str, Any] = {}
     unknown = [key for key in attrs if key not in attr_map]
     if unknown:
         raise NucleusContractError(
@@ -359,12 +403,19 @@ def set_node_attrs(cmds: Any, node: str, attrs: Mapping[str, Any], attr_map: Map
                 ", ".join(sorted(attr_map)),
             )
         )
+
+    planned: List[Tuple[str, str, Any]] = []
     for key in sorted(attrs):
         raw = attrs[key]
         if raw is None:
             continue
-        attr_name = attr_map[key]
-        value = _plug_value(raw)
+        if key in compound:
+            planned.append((key, attr_map[key], validate_compound_value(key, raw)))
+        else:
+            planned.append((key, attr_map[key], _plug_value(raw)))
+
+    applied: Dict[str, Any] = {}
+    for key, attr_name, value in planned:
         if isinstance(value, list):
             if len(value) != 3:
                 raise NucleusContractError("{} expects 3 components, got {}".format(key, len(value)))
@@ -377,7 +428,7 @@ def set_node_attrs(cmds: Any, node: str, attrs: Mapping[str, Any], attr_map: Map
             )
         else:
             cmds.setAttr("{}.{}".format(node, attr_name), value)
-        applied[key] = raw
+        applied[key] = attrs[key]
     return applied
 
 
@@ -563,7 +614,7 @@ def create_nucleus_solver(
     solver = str(cmds.nucleus(**kwargs))
     applied: Dict[str, Any] = {}
     if properties:
-        applied = set_node_attrs(cmds, solver, properties, NUCLEUS_ATTRS)
+        applied = set_node_attrs(cmds, solver, properties, NUCLEUS_ATTRS, NUCLEUS_COMPOUND_ATTRS)
     return {"nucleus": solver, "properties": applied}
 
 
@@ -583,7 +634,7 @@ def set_nucleus_properties(
         name = detected
     if not cmds.objExists(name):
         raise NucleusContractError("Nucleus solver does not exist: {}".format(name))
-    applied = set_node_attrs(cmds, name, properties, NUCLEUS_ATTRS)
+    applied = set_node_attrs(cmds, name, properties, NUCLEUS_ATTRS, NUCLEUS_COMPOUND_ATTRS)
     return {"nucleus": name, "properties": applied}
 
 
@@ -633,16 +684,16 @@ def _field_create_kwargs(
         if key in FIELD_RETIRED_SETTINGS:
             raise NucleusContractError("{}: {}".format(key, FIELD_RETIRED_SETTINGS[key]))
         if key == "direction":
-            direction = [float(item) for item in value]
-            if len(direction) != 3:
-                raise NucleusContractError("direction expects 3 components, got {}".format(len(direction)))
-            for flag_name, component in zip(direction_flags, direction):
+            for flag_name, component in zip(direction_flags, validate_compound_value(key, value)):
                 create_kwargs[flag_name] = component
             continue
         if key in FIELD_POST_CREATE_ATTRS:
-            value = _plug_value(value)
-            if key in FIELD_COMPOUND_POST_CREATE and not isinstance(value, list):
-                raise NucleusContractError("{} expects a 3-element [x, y, z] list, got a single value".format(key))
+            # Both checks run before the node exists: a rejected payload must
+            # not leave an orphan field behind.
+            if key in FIELD_COMPOUND_ATTRS:
+                value = validate_compound_value(key, value)
+            else:
+                value = _plug_value(value)
             post_create[FIELD_POST_CREATE_ATTRS[key]] = value
             continue
         create_kwargs[FIELD_CREATE_FLAGS[key]] = _plug_value(value)
@@ -668,6 +719,9 @@ def create_field(
         raise NucleusContractError("maya.cmds.{} is not available in this Maya build".format(factory_name))
 
     kwargs, post_create_attrs = _field_create_kwargs(ftype, settings)
+    # Validate ``position`` here, before the factory runs: a rejected payload
+    # must not leave an orphan field node behind.
+    triple = validate_compound_value("position", position) if position else None
     requested = str(name or "").strip()
     if requested:
         kwargs["name"] = requested
@@ -693,12 +747,10 @@ def create_field(
             field_node,
             {inverse[attr]: value for attr, value in post_create_attrs.items()},
             FIELD_POST_CREATE_ATTRS,
+            FIELD_COMPOUND_ATTRS,
         )
 
-    if position:
-        triple = [float(item) for item in position]
-        if len(triple) != 3:
-            raise NucleusContractError("position expects 3 components, got {}".format(len(triple)))
+    if triple:
         if field_node:
             parents = cmds.listRelatives(field_node, parent=True, fullPath=True) or []
             anchor = str(parents[0]) if parents else field_node
@@ -743,7 +795,7 @@ def set_field_properties(
         name = str(node or "").strip()
         if not cmds.objExists(name):
             raise NucleusContractError("Field node does not exist: {}".format(name))
-        applied = set_node_attrs(cmds, name, properties, FIELD_ATTRS)
+        applied = set_node_attrs(cmds, name, properties, FIELD_ATTRS, FIELD_COMPOUND_ATTRS)
         updated.append({"field": name, "properties": applied})
     if not updated:
         raise NucleusContractError("fields must name at least one dynamic field node")

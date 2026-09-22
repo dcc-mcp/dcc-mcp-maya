@@ -55,6 +55,7 @@ def set_field_properties(
             str(exc),
             possible_solutions=[
                 "Supported keys: " + ", ".join(sorted(FIELD_ATTRS)),
+                "direction and turbulence_frequency take a 3-element [x, y, z] list.",
                 "Use list_dynamics to enumerate the fields present in the scene.",
             ],
         )
