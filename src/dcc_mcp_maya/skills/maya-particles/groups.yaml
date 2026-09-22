@@ -1,0 +1,11 @@
+groups:
+- name: particles
+  description: Particle systems, emitters and geometry instancing
+  default_active: false
+  tools:
+  - create_particle_system
+  - create_emitter
+  - create_particle_instancer
+  - list_particles
+  - set_emitter_properties
+  - set_particle_properties

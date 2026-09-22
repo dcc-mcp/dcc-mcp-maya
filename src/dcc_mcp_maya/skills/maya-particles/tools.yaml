@@ -1,0 +1,382 @@
+tools:
+- name: create_particle_system
+  description: Create an nParticle or classic particle system with optional look and
+    physics defaults.
+  execution: sync
+  affinity: main
+  group: particles
+  input_schema:
+    type: object
+    properties:
+      kind:
+        type: string
+        enum:
+        - nparticle
+        - classic
+        default: nparticle
+      name:
+        type: string
+      position:
+        type: array
+        items:
+          type: number
+        minItems: 3
+        maxItems: 3
+      lifespan_mode:
+        type: integer
+      lifespan:
+        type: number
+      lifespan_random:
+        type: number
+      particle_render_type:
+        type: string
+      radius:
+        type: number
+      conserve:
+        type: number
+      drag:
+        type: number
+      damp:
+        type: number
+      mass:
+        type: number
+      bounce:
+        type: number
+      friction:
+        type: number
+      collide:
+        type: boolean
+      self_collide:
+        type: boolean
+      opacity:
+        type: number
+      is_dynamic:
+        type: boolean
+      dynamics_weight:
+        type: number
+      level_of_detail:
+        type: integer
+      random_seed:
+        type: integer
+- name: create_emitter
+  description: Create an omni, directional, surface, curve or volume emitter and optionally
+    connect it to particles.
+  execution: sync
+  affinity: main
+  group: particles
+  input_schema:
+    type: object
+    properties:
+      emitter_type:
+        type: string
+        enum:
+        - omni
+        - directional
+        - surface
+        - curve
+        - volume
+        default: omni
+      targets:
+        oneOf:
+        - type: string
+        - type: array
+          items:
+            type: string
+          minItems: 1
+      name:
+        type: string
+      position:
+        type: array
+        items:
+          type: number
+        minItems: 3
+        maxItems: 3
+      rate:
+        type: number
+      speed:
+        type: number
+      speed_random:
+        type: number
+      tangent_speed:
+        type: number
+      normal_speed:
+        type: number
+      spread:
+        type: number
+      random_direction:
+        type: boolean
+      direction:
+        type: array
+        items:
+          type: number
+        minItems: 3
+        maxItems: 3
+      scale_rate_by_object_size:
+        type: boolean
+      need_parent_uv:
+        type: boolean
+      cycle_emission:
+        type: boolean
+      cycle_interval:
+        type: number
+      scale_speed_by_size:
+        type: boolean
+      use_distance:
+        type: boolean
+      min_distance:
+        type: number
+      max_distance:
+        type: number
+      inward_speed:
+        type: number
+      along_axis:
+        type: number
+      around_axis:
+        type: number
+      away_from_center:
+        type: number
+      away_from_axis:
+        type: number
+      volume_shape:
+        type: string
+      volume_offset:
+        type: array
+        items:
+          type: number
+        minItems: 3
+        maxItems: 3
+      volume_sweep:
+        type: number
+      section_radius:
+        type: number
+      die_on_emission_volume_exit:
+        type: boolean
+      random_seed:
+        type: integer
+- name: set_emitter_properties
+  description: Edit rate, speed, spread and other attributes on existing emitters.
+  execution: sync
+  affinity: main
+  annotations:
+    idempotent_hint: true
+  group: particles
+  input_schema:
+    type: object
+    properties:
+      emitters:
+        oneOf:
+        - type: string
+        - type: array
+          items:
+            type: string
+          minItems: 1
+      along_axis:
+        type: number
+      around_axis:
+        type: number
+      away_from_axis:
+        type: number
+      away_from_center:
+        type: number
+      cycle_emission:
+        type: boolean
+      cycle_interval:
+        type: number
+      die_on_emission_volume_exit:
+        type: boolean
+      direction:
+        type: array
+        items:
+          type: number
+        minItems: 3
+        maxItems: 3
+      direction_rate:
+        type: number
+      display_speed:
+        type: number
+      emitter_type:
+        type: string
+      inward_speed:
+        type: number
+      max_distance:
+        type: number
+      min_distance:
+        type: number
+      need_parent_uv:
+        type: boolean
+      normal_speed:
+        type: number
+      particle_type:
+        type: string
+      random_direction:
+        type: boolean
+      random_seed:
+        type: integer
+      rate:
+        type: number
+      scale_rate_by_object_size:
+        type: boolean
+      scale_speed_by_size:
+        type: boolean
+      section_radius:
+        type: number
+      speed:
+        type: number
+      speed_random:
+        type: number
+      spread:
+        type: number
+      tangent_speed:
+        type: number
+      use_distance:
+        type: boolean
+      volume_offset:
+        type: array
+        items:
+          type: number
+        minItems: 3
+        maxItems: 3
+      volume_shape:
+        type: string
+      volume_sweep:
+        type: number
+- name: set_particle_properties
+  description: Edit lifespan, render type, radius, colour and collision attributes on
+    particle shapes.
+  execution: sync
+  affinity: main
+  annotations:
+    idempotent_hint: true
+  group: particles
+  input_schema:
+    type: object
+    properties:
+      particles:
+        oneOf:
+        - type: string
+        - type: array
+          items:
+            type: string
+          minItems: 1
+      bounce:
+        type: number
+      collide:
+        type: boolean
+      collide_width_scale:
+        type: number
+      color_blue:
+        type: number
+      color_green:
+        type: number
+      color_red:
+        type: number
+      conserve:
+        type: number
+      count:
+        type: number
+      damp:
+        type: number
+      drag:
+        type: number
+      dynamics_weight:
+        type: number
+      friction:
+        type: number
+      goal_smoothness:
+        type: number
+      goal_weight:
+        type: number
+      incandescence_blue:
+        type: number
+      incandescence_green:
+        type: number
+      incandescence_red:
+        type: number
+      inherit_factor:
+        type: number
+      is_dynamic:
+        type: boolean
+      level_of_detail:
+        type: integer
+      lifespan:
+        type: number
+      lifespan_mode:
+        type: integer
+      lifespan_random:
+        type: number
+      mass:
+        type: number
+      max_count:
+        type: integer
+      max_trail_size:
+        type: number
+      opacity:
+        type: number
+      particle_render_type:
+        type: string
+      radius:
+        type: number
+      radius_scale:
+        type: number
+      radius_scale_random:
+        type: number
+      random_seed:
+        type: integer
+      self_collide:
+        type: boolean
+      self_collide_width_scale:
+        type: number
+- name: create_particle_instancer
+  description: Instance source geometry onto a particle system, optionally cycling between
+    sources.
+  execution: sync
+  affinity: main
+  group: particles
+  input_schema:
+    type: object
+    properties:
+      particle:
+        type: string
+      objects:
+        oneOf:
+        - type: string
+        - type: array
+          items:
+            type: string
+          minItems: 1
+      name:
+        type: string
+      cycle:
+        type: string
+        enum:
+        - none
+        - sequential
+        - random
+        default: none
+      rotation_units:
+        type: string
+        default: Degrees
+      level_of_detail:
+        type: string
+        default: Geometry
+    required:
+    - particle
+    - objects
+- name: list_particles
+  description: List every nParticle / classic particle system, emitter and instancer
+    in the scene.
+  execution: sync
+  affinity: main
+  annotations:
+    read_only_hint: true
+    idempotent_hint: true
+  group: particles
+  input_schema:
+    type: object
+    properties:
+      include_emitters:
+        type: boolean
+        default: true
+      include_instancers:
+        type: boolean
+        default: true

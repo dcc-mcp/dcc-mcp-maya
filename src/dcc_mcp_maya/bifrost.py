@@ -12,6 +12,12 @@ from typing import Any, Dict, List, Optional, Tuple
 BIFROST_GRAPH_TYPES: Tuple[str, ...] = ("bifrostGraphShape", "bifrostBoard")
 BIFROST_PLUGINS: Tuple[str, ...] = ("mayaVnnPlugin", "bifrostGraph")
 
+#: ``cmds.convertBifrostToPolygons -mode`` values.
+CONVERT_MODES: Tuple[str, ...] = ("triangulate", "quad", "voronoi")
+
+#: Cache file formats accepted by ``cmds.cacheFile``.
+CACHE_FORMATS: Tuple[str, ...] = ("OneFile", "OneFilePerFrame")
+
 
 class BifrostContractError(ValueError):
     """Raised when a requested Bifrost graph operation is malformed."""
@@ -282,6 +288,140 @@ def create_port(
         "data_type": type_name,
         "direction": direction,
     }
+
+
+def convert_to_polygons(
+    cmds: Any,
+    graph: str,
+    out_mesh: Optional[str] = None,
+    name: Optional[str] = None,
+    blend: float = 1.0,
+    threshold: float = 0.0,
+    mode: str = "triangulate",
+) -> Dict[str, Any]:
+    """Bake a Bifrost graph's volumetric / mesh output into a Maya polygon mesh.
+
+    ``cmds.convertBifrostToPolygons`` reads the graph's output surface (foam,
+    liquid, aero iso-surface, point clouds converted to a surface) and produces
+    a real ``mesh`` node that downstream modelling, UV and export skills can
+    consume. This is the standard bridge from a Bifrost simulation back into
+    the ordinary Maya DAG.
+    """
+    graph_name = require_graph(cmds, graph)
+    mode_name = str(mode or "triangulate").strip()
+    if mode_name not in CONVERT_MODES:
+        raise BifrostContractError("mode must be one of: {}".format(", ".join(CONVERT_MODES)))
+
+    kwargs: Dict[str, Any] = {
+        "outMesh": str(out_mesh or ""),
+        "blend": float(blend),
+        "threshold": float(threshold),
+        "mode": mode_name,
+    }
+    if mode_name == "quad":
+        kwargs["quad"] = True
+    requested = str(name or "").strip()
+    if requested:
+        kwargs["name"] = requested
+
+    created = cmds.convertBifrostToPolygons(graph_name, **kwargs)
+    names: List[str] = []
+    if isinstance(created, (list, tuple)):
+        names = [str(item) for item in created]
+    elif created:
+        names = [str(created)]
+
+    meshes: List[str] = []
+    for item in names:
+        try:
+            if str(cmds.nodeType(item)) == "mesh":
+                meshes.append(item)
+        except Exception:  # noqa: BLE001 - a name may not resolve in batch mode
+            continue
+    if not meshes:
+        meshes = names
+    transforms = []
+    for item in meshes:
+        parents = cmds.listRelatives(item, parent=True, fullPath=True) or []
+        if parents:
+            transforms.append(str(parents[0]))
+    return {
+        "graph": graph_name,
+        "meshes": meshes,
+        "transforms": transforms,
+        "blend": float(blend),
+        "threshold": float(threshold),
+        "mode": mode_name,
+    }
+
+
+def write_simulation_cache(
+    cmds: Any,
+    graph: str,
+    directory: str,
+    file_name: Optional[str] = None,
+    start_frame: Optional[int] = None,
+    end_frame: Optional[int] = None,
+    cache_format: str = "OneFile",
+) -> Dict[str, Any]:
+    """Attach a geometry cache to a Bifrost graph's output transform.
+
+    Bifrost graphs evaluate procedurally, which makes them expensive to scrub
+    and unusable for farm rendering without a cache. This wraps
+    ``cmds.cacheFile`` so the evaluated output over ``start_frame`` ..
+    ``end_frame`` is written to disk and attached, exactly like an nCache.
+    """
+    graph_name = require_graph(cmds, graph)
+    cache_dir = str(directory or "").strip()
+    if not cache_dir:
+        raise BifrostContractError("directory is required to cache a Bifrost simulation")
+    if cache_format not in CACHE_FORMATS:
+        raise BifrostContractError("cache_format must be one of: {}".format(", ".join(CACHE_FORMATS)))
+
+    parents = cmds.listRelatives(graph_name, parent=True, fullPath=True) or []
+    target = str(parents[0]) if parents else graph_name
+
+    start, end = _resolve_frame_range(cmds, start_frame, end_frame)
+    base = str(file_name or "").strip() or target.rsplit("|", 1)[-1].rsplit(":", 1)[-1]
+
+    kwargs: Dict[str, Any] = {
+        "fileName": base,
+        "directory": cache_dir,
+        "format": cache_format,
+        "startTime": start,
+        "endTime": end,
+        "points": target,
+    }
+    created = cmds.cacheFile(**kwargs)
+    names: List[str] = []
+    if isinstance(created, (list, tuple)):
+        names = [str(item) for item in created]
+    elif created:
+        names = [str(created)]
+
+    return {
+        "graph": graph_name,
+        "cache_node": names[0] if names else None,
+        "file_name": base,
+        "directory": cache_dir,
+        "frame_range": [start, end],
+    }
+
+
+def _resolve_frame_range(
+    cmds: Any,
+    start_frame: Optional[int],
+    end_frame: Optional[int],
+) -> Tuple[Any, Any]:
+    """Resolve an explicit or scene-derived playback range."""
+    if start_frame is None or end_frame is None:
+        scene_start = cmds.playbackOptions(query=True, minTime=True)
+        scene_end = cmds.playbackOptions(query=True, maxTime=True)
+    start = start_frame if start_frame is not None else scene_start
+    end = end_frame if end_frame is not None else scene_end
+    if float(end) < float(start):
+        raise BifrostContractError("end_frame ({}) must be >= start_frame ({})".format(end, start))
+    return start, end
 
 
 def set_port_default(cmds: Any, graph: str, node: str, port: str, value: Any) -> Dict[str, Any]:

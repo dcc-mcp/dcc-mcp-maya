@@ -8,3 +8,31 @@ groups:
   - list_dynamics
   - make_rigid_body
   - set_rigid_body_properties
+- name: nucleus
+  description: Nucleus solver, nCloth, passive colliders and Nucleus constraints
+  default_active: false
+  tools:
+  - create_ncloth
+  - create_nrigid
+  - create_nconstraint
+  - create_nucleus
+  - set_ncloth_properties
+  - set_nucleus_properties
+- name: fields
+  description: Dynamic force fields (air, drag, gravity, newton, radial, turbulence,
+    uniform, vortex, volume axis)
+  default_active: false
+  tools:
+  - create_dynamic_field
+  - set_field_properties
+- name: constraints
+  description: Classic rigid-body constraints (nail, pin, hinge, spring, barrier)
+  default_active: false
+  tools:
+  - create_rigid_constraint
+- name: cache
+  description: Write and remove geometry / nCache files for simulated output
+  default_active: false
+  tools:
+  - create_ncache
+  - delete_ncache

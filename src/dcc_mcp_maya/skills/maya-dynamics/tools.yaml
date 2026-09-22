@@ -25,6 +25,98 @@ tools:
       disconnect:
         type: boolean
         default: false
+- name: create_dynamic_field
+  description: Create any Maya dynamic field (air, drag, gravity, newton, radial, turbulence,
+    uniform, vortex, volume axis).
+  execution: sync
+  affinity: main
+  group: fields
+  input_schema:
+    type: object
+    properties:
+      field_type:
+        type: string
+        enum:
+        - air
+        - drag
+        - gravity
+        - newton
+        - radial
+        - turbulence
+        - uniform
+        - volume_axis
+        - vortex
+        default: air
+      targets:
+        oneOf:
+        - type: string
+        - type: array
+          items:
+            type: string
+          minItems: 1
+      name:
+        type: string
+      position:
+        type: array
+        items:
+          type: number
+        minItems: 3
+        maxItems: 3
+      connect:
+        type: boolean
+        default: true
+      magnitude:
+        type: number
+      attenuation:
+        type: number
+      max_distance:
+        type: number
+      apply_per_vertex:
+        type: boolean
+      frequency:
+        type: number
+      phase:
+        type: number
+      speed:
+        type: number
+      use_direction:
+        type: boolean
+      along_axis:
+        type: number
+      around_axis:
+        type: number
+      away_from_center:
+        type: number
+      away_from_axis:
+        type: number
+      directional_speed:
+        type: number
+      directional_strength:
+        type: number
+      turbulence:
+        type: number
+      turbulence_speed:
+        type: number
+      turbulence_frequency:
+        type: number
+      detail_turbulence:
+        type: number
+      section_radius:
+        type: number
+      trap_inside:
+        type: boolean
+      volume_shape:
+        type: string
+      invert_attenuation:
+        type: boolean
+      direction:
+        type: array
+        items:
+          type: number
+        minItems: 3
+        maxItems: 3
+    required:
+    - field_type
 - name: create_gravity_field
   description: Create a gravity field and optionally connect it to dynamic targets.
   execution: async
@@ -69,6 +161,277 @@ tools:
       connect:
         type: boolean
         default: true
+- name: create_ncache
+  description: Write geometry / nCache files for Nucleus or deformable output over a
+    frame range.
+  execution: async
+  affinity: main
+  timeout_hint_secs: 600
+  group: cache
+  input_schema:
+    type: object
+    properties:
+      objects:
+        oneOf:
+        - type: string
+        - type: array
+          items:
+            type: string
+          minItems: 1
+      directory:
+        type: string
+      file_name:
+        type: string
+      start_frame:
+        type: number
+      end_frame:
+        type: number
+      cache_format:
+        type: string
+        enum:
+        - OneFile
+        - OneFilePerFrame
+        default: OneFile
+      data_format:
+        type: string
+        enum:
+        - mcc
+        - mcx
+        default: mcc
+      world_space:
+        type: boolean
+        default: false
+    required:
+    - objects
+    - directory
+- name: create_ncloth
+  description: Convert polygon meshes into Nucleus nCloth objects with optional physical
+    properties.
+  execution: sync
+  affinity: main
+  group: nucleus
+  input_schema:
+    type: object
+    properties:
+      objects:
+        oneOf:
+        - type: string
+        - type: array
+          items:
+            type: string
+          minItems: 1
+      name:
+        type: string
+      local_space_output:
+        type: boolean
+        default: false
+      thickness:
+        type: number
+      bounce:
+        type: number
+      friction:
+        type: number
+      damp:
+        type: number
+      mass:
+        type: number
+      lift:
+        type: number
+      drag:
+        type: number
+      tangential_drag:
+        type: number
+      stretch_resistance:
+        type: number
+      compression_resistance:
+        type: number
+      bend_resistance:
+        type: number
+      shear_resistance:
+        type: number
+      self_collide:
+        type: boolean
+      push_out:
+        type: number
+      input_mesh_attract:
+        type: number
+      collision_layer:
+        type: integer
+    required:
+    - objects
+- name: create_nconstraint
+  description: Create a Nucleus constraint (transform, weld, force field, ...) from
+    driven nodes to an optional driver.
+  execution: async
+  affinity: main
+  timeout_hint_secs: 600
+  group: nucleus
+  input_schema:
+    type: object
+    properties:
+      objects:
+        oneOf:
+        - type: string
+        - type: array
+          items:
+            type: string
+          minItems: 1
+      constraint_type:
+        type: string
+        enum:
+        - transform
+        - componentToComponent
+        - pointToPoint
+        - weld
+        - slideOnSurface
+        - forceField
+        - attractToMatchingMesh
+        - tearableSurface
+        - disableCollision
+        - excludeCollisionPairs
+        default: transform
+      target:
+        type: string
+      name:
+        type: string
+- name: create_nrigid
+  description: Turn meshes into passive Nucleus collision objects so nCloth and hair
+    can collide with them.
+  execution: sync
+  affinity: main
+  group: nucleus
+  input_schema:
+    type: object
+    properties:
+      objects:
+        oneOf:
+        - type: string
+        - type: array
+          items:
+            type: string
+          minItems: 1
+      name:
+        type: string
+      thickness:
+        type: number
+      bounce:
+        type: number
+      friction:
+        type: number
+      damp:
+        type: number
+      collision_layer:
+        type: integer
+      push_out:
+        type: number
+    required:
+    - objects
+- name: create_nucleus
+  description: Create a standalone Nucleus solver node and optionally seed its global
+    settings.
+  execution: sync
+  affinity: main
+  group: nucleus
+  input_schema:
+    type: object
+    properties:
+      name:
+        type: string
+      gravity:
+        type: number
+      gravity_direction:
+        type: array
+        items:
+          type: number
+        minItems: 3
+        maxItems: 3
+      wind_speed:
+        type: number
+      wind_direction:
+        type: array
+        items:
+          type: number
+        minItems: 3
+        maxItems: 3
+      wind_noise:
+        type: number
+      air_density:
+        type: number
+      substeps:
+        type: integer
+      max_collision_iterations:
+        type: integer
+      collision_tolerance:
+        type: number
+      space_scale:
+        type: number
+      time_scale:
+        type: number
+      start_frame:
+        type: integer
+      solver_method:
+        type: string
+      use_plane:
+        type: boolean
+      plane_wireframe:
+        type: boolean
+- name: create_rigid_constraint
+  description: Constrain two or more classic rigid bodies together (nail, pin, hinge,
+    spring, barrier).
+  execution: async
+  affinity: main
+  timeout_hint_secs: 600
+  group: constraints
+  input_schema:
+    type: object
+    properties:
+      objects:
+        oneOf:
+        - type: string
+        - type: array
+          items:
+            type: string
+          minItems: 1
+      constraint_type:
+        type: string
+        enum:
+        - nail
+        - pin
+        - hinge
+        - spring
+        - barrier
+        default: nail
+      name:
+        type: string
+    required:
+    - objects
+- name: delete_ncache
+  description: Detach and delete cacheFile nodes, optionally deleting the cache files
+    on disk.
+  execution: async
+  affinity: main
+  timeout_hint_secs: 600
+  group: cache
+  input_schema:
+    type: object
+    properties:
+      cache_nodes:
+        oneOf:
+        - type: string
+        - type: array
+          items:
+            type: string
+          minItems: 1
+      scene_nodes:
+        oneOf:
+        - type: string
+        - type: array
+          items:
+            type: string
+          minItems: 1
+      delete_files:
+        type: boolean
+        default: false
 - name: list_dynamics
   description: List rigid bodies, dynamic fields, and rigid constraints.
   execution: sync
@@ -125,6 +488,198 @@ tools:
       collisions:
         type: boolean
         default: true
+- name: set_field_properties
+  description: Edit magnitude, attenuation, turbulence and other attributes on existing
+    dynamic field nodes.
+  execution: async
+  affinity: main
+  timeout_hint_secs: 600
+  annotations:
+    idempotent_hint: true
+  group: fields
+  input_schema:
+    type: object
+    properties:
+      fields:
+        oneOf:
+        - type: string
+        - type: array
+          items:
+            type: string
+          minItems: 1
+      along_axis:
+        type: number
+      apply_per_vertex:
+        type: boolean
+      around_axis:
+        type: number
+      attenuation:
+        type: number
+      away_from_axis:
+        type: number
+      away_from_center:
+        type: number
+      detail_turbulence:
+        type: number
+      direction:
+        type: array
+        items:
+          type: number
+        minItems: 3
+        maxItems: 3
+      directional_speed:
+        type: number
+      directional_strength:
+        type: number
+      frequency:
+        type: number
+      invert_attenuation:
+        type: boolean
+      magnitude:
+        type: number
+      max_distance:
+        type: number
+      phase:
+        type: number
+      section_radius:
+        type: number
+      speed:
+        type: number
+      trap_inside:
+        type: boolean
+      turbulence:
+        type: number
+      turbulence_frequency:
+        type: number
+      turbulence_speed:
+        type: number
+      use_direction:
+        type: boolean
+      volume_shape:
+        type: string
+- name: set_ncloth_properties
+  description: Edit physical properties on existing nCloth or nRigid shapes; only supplied
+    attributes change.
+  execution: async
+  affinity: main
+  timeout_hint_secs: 600
+  annotations:
+    idempotent_hint: true
+  group: nucleus
+  input_schema:
+    type: object
+    properties:
+      nodes:
+        oneOf:
+        - type: string
+        - type: array
+          items:
+            type: string
+          minItems: 1
+      bend_angle_dropoff:
+        type: number
+      bend_angle_scale:
+        type: number
+      bend_resistance:
+        type: number
+      bounce:
+        type: number
+      collision_layer:
+        type: integer
+      compression_resistance:
+        type: number
+      damp:
+        type: number
+      drag:
+        type: number
+      friction:
+        type: number
+      input_mesh_attract:
+        type: number
+      lift:
+        type: number
+      mass:
+        type: number
+      push_out:
+        type: number
+      push_out_radius:
+        type: number
+      rest_iterations:
+        type: integer
+      self_collide:
+        type: boolean
+      self_collision_softness:
+        type: number
+      self_collision_width_scale:
+        type: number
+      shear_angle_dropoff:
+        type: number
+      shear_resistance:
+        type: number
+      stretch_angle_scale:
+        type: number
+      stretch_damp:
+        type: number
+      stretch_resistance:
+        type: number
+      tangential_drag:
+        type: number
+      thickness:
+        type: number
+      wrinkling:
+        type: number
+- name: set_nucleus_properties
+  description: Edit gravity, wind, substeps, space scale and other settings on a Nucleus
+    solver.
+  execution: async
+  affinity: main
+  timeout_hint_secs: 600
+  annotations:
+    idempotent_hint: true
+  group: nucleus
+  input_schema:
+    type: object
+    properties:
+      solver:
+        type: string
+      air_density:
+        type: number
+      collision_tolerance:
+        type: number
+      gravity:
+        type: number
+      gravity_direction:
+        type: array
+        items:
+          type: number
+        minItems: 3
+        maxItems: 3
+      max_collision_iterations:
+        type: integer
+      plane_wireframe:
+        type: boolean
+      solver_method:
+        type: string
+      space_scale:
+        type: number
+      start_frame:
+        type: integer
+      substeps:
+        type: integer
+      time_scale:
+        type: number
+      use_plane:
+        type: boolean
+      wind_direction:
+        type: array
+        items:
+          type: number
+        minItems: 3
+        maxItems: 3
+      wind_noise:
+        type: number
+      wind_speed:
+        type: number
 - name: set_rigid_body_properties
   description: Edit common physical properties on existing rigid body nodes.
   execution: async
