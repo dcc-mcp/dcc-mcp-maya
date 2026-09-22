@@ -114,12 +114,17 @@ def main() -> None:
     errors = [p for p in all_problems if p[0] != "WARNING"]
     warnings = [p for p in all_problems if p[0] == "WARNING"]
 
-    for rule, msg in all_problems:
+    # --error-only means "stay silent unless something is actually wrong", so
+    # warnings are filtered out of the report rather than only out of the exit
+    # code: CI gates on errors and should not be scrolled past advice.
+    report = errors if options.error_only else all_problems
+    for rule, msg in report:
         severity = "ERROR" if rule != "WARNING" else "WARNING"
         print(f"{severity} [{rule}] {msg}")
 
-    if options.error_only and errors:
-        sys.exit(1)
+    if not options.error_only:
+        print(f"\n{len(errors)} error(s), {len(warnings)} warning(s)")
+
     if errors:
         sys.exit(1)
 

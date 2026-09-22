@@ -57,7 +57,7 @@ FIELD_COMMANDS: Dict[str, str] = {
     "volume_axis": "volumeAxis",
 }
 
-#: Cache file formats accepted by ``cmds.cacheFile``.
+#: Maya node type that ``cmds.cacheFile`` creates to own an nCache.
 CACHE_NODE_TYPE = "cacheFile"
 
 #: Cache file formats accepted by ``cmds.cacheFile``.
@@ -117,6 +117,11 @@ NUCLEUS_ATTRS: Dict[str, str] = {
     "plane_wireframe": "planeWireframe",
 }
 
+#: Setting -> Maya node attribute, used by ``set_field_properties`` (setAttr).
+#: These are the names the field NODES expose, which differ from the create
+#: flags in :data:`FIELD_CREATE_FLAGS` - notably ``applyPerVertex`` here vs
+#: ``perVertex`` there, and ``sectionRadius`` here vs ``torusSectionRadius``
+#: there. Both were verified against a live Maya 2020-2026 scene.
 FIELD_ATTRS: Dict[str, str] = {
     "magnitude": "magnitude",
     "attenuation": "attenuation",
@@ -131,7 +136,6 @@ FIELD_ATTRS: Dict[str, str] = {
     "away_from_center": "awayFromCenter",
     "away_from_axis": "awayFromAxis",
     "directional_speed": "directionalSpeed",
-    "directional_strength": "directionalStrength",
     "turbulence": "turbulence",
     "turbulence_speed": "turbulenceSpeed",
     "turbulence_frequency": "turbulenceFrequency",
@@ -143,9 +147,60 @@ FIELD_ATTRS: Dict[str, str] = {
     "direction": "direction",
 }
 
+#: Create-flag name for each setting, i.e. what ``cmds.<field>(**flags)``
+#: accepts.  This is NOT the same vocabulary as :data:`FIELD_ATTRS`: Maya's
+#: field *commands* and the nodes they create disagree on several names, and
+#: the commands reject what the nodes expose.  Verified against
+#: ``cmds.help("<field>")`` on Maya 2020-2026 (identical tables):
+#:
+#: * ``apply_per_vertex`` is created with ``-perVertex``; the node attribute is
+#:   ``applyPerVertex``.  Passing ``applyPerVertex`` to the command raises
+#:   ``TypeError: invalid flag 'applyPerVertex'``.
+#: * ``vortex`` creates its axis with ``axisX/axisY/axisZ``; it has no
+#:   ``directionX/Y/Z`` flag at all.
+#: * ``volumeAxis`` creates the section radius with ``torusSectionRadius``
+#:   while the node exposes ``sectionRadius``.
+#:
+#: Settings absent from this map (``directional_strength``, ``trap_inside``,
+#: ``turbulence_frequency``) are node attributes only: no field command
+#: accepts them, so they are edited with ``set_field_properties`` instead.
+FIELD_CREATE_FLAGS: Dict[str, str] = {
+    "magnitude": "magnitude",
+    "attenuation": "attenuation",
+    "max_distance": "maxDistance",
+    "apply_per_vertex": "perVertex",
+    "speed": "speed",
+    "use_direction": "useDirection",
+    "frequency": "frequency",
+    "phase": "phase",
+    "along_axis": "alongAxis",
+    "around_axis": "aroundAxis",
+    "away_from_center": "awayFromCenter",
+    "away_from_axis": "awayFromAxis",
+    "directional_speed": "directionalSpeed",
+    "turbulence": "turbulence",
+    "turbulence_speed": "turbulenceSpeed",
+    "detail_turbulence": "detailTurbulence",
+    "section_radius": "torusSectionRadius",
+    "volume_shape": "volumeShape",
+    "invert_attenuation": "invertAttenuation",
+}
+
+#: The three create flags ``direction`` expands into.  ``vortex`` is the one
+#: field command that names them differently.
+DEFAULT_DIRECTION_FLAGS: Tuple[str, str, str] = ("directionX", "directionY", "directionZ")
+FIELD_DIRECTION_FLAGS: Dict[str, Tuple[str, str, str]] = {
+    "vortex": ("axisX", "axisY", "axisZ"),
+}
+
 #: Per-field-type allowlist of the create flags that actually apply.  Keeping
 #: this explicit stops agents from passing e.g. ``frequency`` to ``gravity``,
 #: which Maya silently ignores and then reports success for.
+#:
+#: Every entry must name a key of :data:`FIELD_CREATE_FLAGS` (or
+#: ``direction``); ``tests/test_maya_nucleus.py::test_field_flag_whitelist``
+#: asserts that, and ``test_field_create_flags_exist_in_maya`` re-checks the
+#: whole table against ``cmds.help()`` when a real Maya is available.
 FIELD_SUPPORTED_FLAGS: Dict[str, Tuple[str, ...]] = {
     "air": ("magnitude", "attenuation", "max_distance", "apply_per_vertex", "speed", "direction"),
     "drag": (
@@ -180,7 +235,6 @@ FIELD_SUPPORTED_FLAGS: Dict[str, Tuple[str, ...]] = {
         "away_from_center",
         "away_from_axis",
         "directional_speed",
-        "directional_strength",
         "turbulence",
         "turbulence_speed",
         "turbulence_frequency",
@@ -190,6 +244,27 @@ FIELD_SUPPORTED_FLAGS: Dict[str, Tuple[str, ...]] = {
         "volume_shape",
         "invert_attenuation",
     ),
+}
+
+#: Setting -> Maya node attribute, for settings that a field command cannot
+#: accept at create time.  ``create_field`` applies these after the node
+#: exists so an agent gets the same knobs whether it creates or edits.
+FIELD_POST_CREATE_ATTRS: Dict[str, str] = {
+    "turbulence_frequency": "turbulenceFrequency",
+    "trap_inside": "trapInside",
+}
+
+#: Post-create settings whose node attribute is a ``double3``. A scalar reaches
+#: ``setAttr`` as one component and Maya then fails with an opaque "error
+#: reading data element number 2", so reject it with a usable message.
+FIELD_COMPOUND_POST_CREATE: Tuple[str, ...] = ("turbulence_frequency",)
+
+#: Settings that used to be accepted but are neither a create flag nor a node
+#: attribute in any Maya build we could check.  They stay recognised so an
+#: agent gets an explanation instead of a bare "unsupported key" error.
+FIELD_RETIRED_SETTINGS: Dict[str, str] = {
+    "directional_strength": "no Maya field command or field node exposes 'directionalStrength'; use "
+    "directional_speed for the along-axis push",
 }
 
 #: Cache geometry targets accepted by ``cmds.cacheFile -points``.  Restricting
@@ -520,8 +595,23 @@ def set_nucleus_properties(
 def _field_create_kwargs(
     field_type: str,
     settings: Mapping[str, Any],
-) -> Dict[str, Any]:
-    """Translate the tool's snake_case settings into ``cmds`` create flags."""
+) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+    """Split tool settings into ``cmds`` create flags and post-create attrs.
+
+    Returns ``(create_kwargs, post_create_attrs)``.  The split matters because
+    Maya's field *commands* and the field *nodes* they create use different
+    flag vocabularies - see :data:`FIELD_CREATE_FLAGS`.  Passing a node
+    attribute name to a create command raises ``TypeError`` at runtime, which
+    no fake-``cmds`` unit test can catch; the whitelist plus the meta-test in
+    ``tests/test_maya_nucleus.py`` is what keeps the two in step.
+    """
+    # Retired settings are checked first: they are absent from the whitelist,
+    # so the generic message below would otherwise fire and bury the guidance.
+    retired = sorted(key for key in settings if key in FIELD_RETIRED_SETTINGS)
+    if retired:
+        key = retired[0]
+        raise NucleusContractError("{}: {}".format(key, FIELD_RETIRED_SETTINGS[key]))
+
     supported = FIELD_SUPPORTED_FLAGS.get(field_type, ())
     unsupported = [key for key in settings if key not in supported]
     if unsupported:
@@ -533,21 +623,30 @@ def _field_create_kwargs(
             )
         )
 
-    kwargs: Dict[str, Any] = {}
+    direction_flags = FIELD_DIRECTION_FLAGS.get(field_type, DEFAULT_DIRECTION_FLAGS)
+    create_kwargs: Dict[str, Any] = {}
+    post_create: Dict[str, Any] = {}
     for key in sorted(settings):
         value = settings[key]
         if value is None:
             continue
+        if key in FIELD_RETIRED_SETTINGS:
+            raise NucleusContractError("{}: {}".format(key, FIELD_RETIRED_SETTINGS[key]))
         if key == "direction":
             direction = [float(item) for item in value]
             if len(direction) != 3:
                 raise NucleusContractError("direction expects 3 components, got {}".format(len(direction)))
-            kwargs["directionX"] = direction[0]
-            kwargs["directionY"] = direction[1]
-            kwargs["directionZ"] = direction[2]
+            for flag_name, component in zip(direction_flags, direction):
+                create_kwargs[flag_name] = component
             continue
-        kwargs[FIELD_ATTRS[key]] = _plug_value(value)
-    return kwargs
+        if key in FIELD_POST_CREATE_ATTRS:
+            value = _plug_value(value)
+            if key in FIELD_COMPOUND_POST_CREATE and not isinstance(value, list):
+                raise NucleusContractError("{} expects a 3-element [x, y, z] list, got a single value".format(key))
+            post_create[FIELD_POST_CREATE_ATTRS[key]] = value
+            continue
+        create_kwargs[FIELD_CREATE_FLAGS[key]] = _plug_value(value)
+    return create_kwargs, post_create
 
 
 def create_field(
@@ -568,7 +667,7 @@ def create_field(
     if factory is None:
         raise NucleusContractError("maya.cmds.{} is not available in this Maya build".format(factory_name))
 
-    kwargs = _field_create_kwargs(ftype, settings)
+    kwargs, post_create_attrs = _field_create_kwargs(ftype, settings)
     requested = str(name or "").strip()
     if requested:
         kwargs["name"] = requested
@@ -583,6 +682,18 @@ def create_field(
         (item for item in names if str(cmds.nodeType(item)).endswith("Field")),
         names[0] if names else None,
     )
+
+    applied_attrs: Dict[str, Any] = {}
+    if field_node and post_create_attrs:
+        # Reuse the edit path so compound plugs (``turbulenceFrequency`` is a
+        # double3, not a scalar) are set with the right ``type`` argument.
+        inverse = {attr: key for key, attr in FIELD_POST_CREATE_ATTRS.items()}
+        applied_attrs = set_node_attrs(
+            cmds,
+            field_node,
+            {inverse[attr]: value for attr, value in post_create_attrs.items()},
+            FIELD_POST_CREATE_ATTRS,
+        )
 
     if position:
         triple = [float(item) for item in position]
@@ -603,6 +714,7 @@ def create_field(
         "created": names,
         "targets": connected,
         "settings": dict(settings),
+        "post_create_attrs": applied_attrs,
     }
 
 
@@ -738,12 +850,19 @@ def write_cache(
     return {"caches": written, "count": len(written), "frame_range": list(frame_range)}
 
 
-def _find_cache_node(cmds: Any, shape: str, file_name: str) -> Optional[str]:
-    """Best-effort lookup of the cacheFile node attached to ``shape``."""
+def _find_cache_node(cmds: Any, shape: str, file_name: str, *, strict: bool = False) -> Optional[str]:
+    """Best-effort lookup of the cacheFile node attached to ``shape``.
+
+    With ``strict=True`` a miss raises :class:`NucleusContractError` naming the
+    reason (ambiguous cacheName vs. no cache at all) instead of returning
+    ``None``.  Deletion needs that distinction: ``None`` used to surface as
+    "No cacheFile nodes found; pass cache_nodes or scene_nodes", which tells an
+    agent to repeat the call it just made even though caches do exist.
+    """
     history = cmds.listHistory(shape) or []
     for node in history:
         try:
-            if str(cmds.nodeType(node)) == "cacheFile":
+            if str(cmds.nodeType(node)) == CACHE_NODE_TYPE:
                 return str(node)
         except Exception:  # noqa: BLE001 - listHistory can name stale nodes
             continue
@@ -761,7 +880,26 @@ def _find_cache_node(cmds: Any, shape: str, file_name: str) -> Optional[str]:
             matched.append(node)
     if len(matched) == 1:
         return matched[0]
-    return None
+    if not strict:
+        return None
+    if len(matched) > 1:
+        raise NucleusContractError(
+            "{} cacheFile nodes declare cacheName '{}' ({}); the cache to delete is ambiguous. "
+            "Pass cache_nodes with the exact cacheFile node instead of scene_nodes.".format(
+                len(matched), file_name, ", ".join(sorted(matched))
+            )
+        )
+    if candidates:
+        raise NucleusContractError(
+            "No cacheFile node in {}'s history and none of the scene's {} cacheFile node(s) declares "
+            "cacheName '{}'. Pass cache_nodes with the exact cacheFile node, or create the cache first.".format(
+                shape, len(candidates), file_name
+            )
+        )
+    raise NucleusContractError(
+        "This scene has no cacheFile nodes and {}'s history holds none either; "
+        "there is nothing to delete for '{}'.".format(shape, file_name)
+    )
 
 
 def resolve_frame_range(
@@ -846,7 +984,7 @@ def delete_cache(
     for node in as_str_list(scene_nodes):
         if not cmds.objExists(node):
             raise NucleusContractError("Node does not exist: {}".format(node))
-        found = _find_cache_node(cmds, node, node.rsplit("|", 1)[-1].rsplit(":", 1)[-1])
+        found = _find_cache_node(cmds, node, node.rsplit("|", 1)[-1].rsplit(":", 1)[-1], strict=True)
         if found:
             derived.append(found)
 
@@ -857,7 +995,9 @@ def delete_cache(
     if not targets:
         raise NucleusContractError("No cacheFile nodes found; pass cache_nodes or scene_nodes")
 
-    removed_files: List[str] = []
+    # Phase 1 - validate every target before the scene is touched.  Deleting a
+    # cacheFile node is irreversible, so a list whose second entry is illegal
+    # must not leave the first one already deleted: validate all, then delete.
     for node in targets:
         if not cmds.objExists(node):
             raise NucleusContractError("Cache node does not exist: {}".format(node))
@@ -869,6 +1009,10 @@ def delete_cache(
                     node, node_type, CACHE_NODE_TYPE
                 )
             )
+
+    # Phase 2 - every target is a real cacheFile node, so it is safe to delete.
+    removed_files: List[str] = []
+    for node in targets:
         if delete_files:
             removed_files.extend(_delete_cache_files(cmds, node))
         cmds.delete(node)

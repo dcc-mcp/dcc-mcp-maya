@@ -10,6 +10,7 @@ Uses :func:`typing.get_type_hints` because the scripts carry
 
 from __future__ import annotations
 
+import argparse
 import importlib.util
 import inspect
 import sys
@@ -119,7 +120,8 @@ def _schema(tool):
     return {"type": "object", "properties": properties, "required": required}
 
 
-def main():
+def build_tools():
+    """Return the tool records the manifest should contain."""
     tools = []
     for tool, (execution, affinity, group, tool_annotations) in SPEC.items():
         tools.append(
@@ -133,16 +135,52 @@ def main():
                 "input_schema": _schema(tool),
             }
         )
-    target = SKILL_ROOT / "tools.yaml"
-    target.write_text(
-        yaml.safe_dump({"tools": tools}, sort_keys=False, width=100, default_flow_style=False),
-        encoding="utf-8",
+    return tools
+
+
+def render():
+    """Return the exact text ``tools.yaml`` should contain.
+
+    Separated from :func:`main` so the drift test can compare the generated
+    manifest against the committed one without writing anything.
+    """
+    tools = build_tools()
+    return yaml.safe_dump({"tools": tools}, sort_keys=False, width=100, default_flow_style=False)
+
+
+def target_path() -> Path:
+    return SKILL_ROOT / "tools.yaml"
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="Fail if the committed tools.yaml differs from the generated one; write nothing.",
     )
-    print("wrote {} ({} tools)".format(target, len(tools)))
-    for tool in tools:
+    options = parser.parse_args()
+
+    text = render()
+    target = target_path()
+
+    if options.check:
+        committed = target.read_text(encoding="utf-8")
+        if committed == text:
+            print("{} is up to date ({} tools)".format(target, len(build_tools())))
+            return 0
+        sys.stderr.write(
+            "{} is out of date. Re-run 'python tools/_gen_render_tools.py' and commit the result.\n".format(target)
+        )
+        return 1
+
+    target.write_text(text, encoding="utf-8")
+    print("wrote {} ({} tools)".format(target, len(build_tools())))
+    for tool in build_tools():
         props = tool["input_schema"]["properties"]
         print("  {:26s} {}".format(tool["name"], {k: v.get("type") for k, v in props.items()}))
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

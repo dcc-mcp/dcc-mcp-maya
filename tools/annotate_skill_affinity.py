@@ -133,6 +133,11 @@ TOOL_OVERRIDES: Dict[Tuple[str, str], ExecAffinity] = {
     # maya-scene-assembly definition is fast; create/add can be slow
     ("maya-scene-assembly", "create_assembly_definition"): ("async", "main", 120),
     ("maya-scene-assembly", "create_assembly_reference"): ("async", "main", 120),
+    # maya-render-setup: planning comp outputs only composes path strings, so
+    # it must not queue behind Maya's UI pump. Keep this in step with
+    # SPEC["plan_comp_outputs"] in tools/_gen_render_tools.py - the drift test
+    # tests/test_gen_render_tools.py fails when the two disagree.
+    ("maya-render-setup", "plan_comp_outputs"): ("sync", "any", None),
     # maya-render long-running overrides (playblast/capture hit render engine)
     ("maya-render", "get_render_settings"): ("sync", "main", None),
     ("maya-render", "set_render_settings"): ("sync", "main", None),

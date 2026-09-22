@@ -65,6 +65,20 @@ AOV_TYPES: Dict[str, int] = {
 AOV_TYPE_MIN = 1
 AOV_TYPE_MAX = 11
 
+#: Hard ceiling for the ``aovList`` element scan.  The scan stops as soon as
+#: every connection is accounted for; this only bounds the pathological case
+#: where a connection is wired to an element the scan cannot reach, so a
+#: broken scene degrades to "some AOVs invisible" instead of never returning.
+AOV_SCAN_LIMIT = 4096
+
+#: Empty slots to probe after the last hit before the scan gives up.  Stopping
+#: the instant the connection count is satisfied assumes ``listConnections``
+#: reports one entry per occupied slot. It does on Maya 2020-2026 - a source
+#: wired to slots 0 and 4 is listed twice - but if a build ever de-duplicated
+#: them, the count would be satisfied by slot 0 alone and slot 4 would go
+#: unseen. The trailing window keeps that hypothetical from losing an AOV.
+AOV_TRAILING_EMPTY_SLOTS = 8
+
 RENDER_SETUP_UNAVAILABLE_HINT = (
     "maya.app.renderSetup.model.renderSetup could not be imported; "
     "load the renderSetup plug-in (cmds.loadPlugin('renderSetup')) first."
@@ -494,11 +508,20 @@ def _occupied_aov_indices(cmds: Any) -> List[int]:
     # it cannot reveal which element index each AOV occupies. Probe the
     # elements directly: a populated slot returns its node, a hole returns
     # empty. Verified on Maya 2025.
+    #
+    # The scan cannot stop at ``len(connected)``: each hole pushes the real
+    # occupancy one slot further up, so a range built up front (as this once
+    # was) misses every index above it - five AOVs with four removed leaves
+    # index 4 live while the range only reached 1. Instead keep probing until
+    # every connection is accounted for, then stop once the cursor is past the
+    # highest hit; further connections cannot exist below that point.
     indices: List[int] = []
     connected = cmds.listConnections(_aov_list_plug(), source=True, destination=False) or []
     if not connected:
         return []
-    for slot in range(len(connected) + len(indices) + 1):
+    slot = 0
+    empty_run = 0
+    while slot < AOV_SCAN_LIMIT:
         plug = "{}[{}]".format(_aov_list_plug(), slot)
         try:
             sources = cmds.listConnections(plug, source=True, destination=False) or []
@@ -506,6 +529,15 @@ def _occupied_aov_indices(cmds: Any) -> List[int]:
             sources = []
         if sources:
             indices.append(slot)
+            empty_run = 0
+        else:
+            empty_run += 1
+        slot += 1
+        # ``>=`` not ``==``: slots can outnumber the reported sources when two
+        # elements share one source node. The trailing empty run is what lets a
+        # later slot still be found once the count looks satisfied.
+        if indices and len(indices) >= len(connected) and empty_run >= AOV_TRAILING_EMPTY_SLOTS:
+            break
     return sorted(set(indices))
 
 
