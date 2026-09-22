@@ -177,6 +177,37 @@ def _setattr(cmds):
     return {call[1]: call[2] for call in cmds.calls if call[0] == "setAttr"}
 
 
+def _live_cmds():
+    """Return a real ``maya.cmds``, or skip the test.
+
+    The field commands (``air``, ``gravity``, ...) are not registered until
+    Maya is initialised, so importing ``maya.cmds`` is not enough: under
+    mayapy the flag tables stay empty until ``maya.standalone.initialize()``
+    runs. Booting standalone here is what makes these meta-tests meaningful in
+    the mayapy CI job, which is the only place a fake ``cmds`` cannot hide a
+    wrong flag name.
+    """
+    cmds = pytest.importorskip("maya.cmds")
+
+    if getattr(cmds, "about", None) is not None:
+        try:
+            if not cmds.about(batch=True):
+                pytest.skip("interactive Maya session; refusing to initialise standalone")
+        except Exception:  # noqa: BLE001 - older/uninitialised builds raise here
+            pass
+
+    standalone = pytest.importorskip("maya.standalone")
+    try:
+        standalone.initialize()
+    except Exception as exc:  # noqa: BLE001 - already initialised is the common case
+        if "already" not in str(exc).lower():
+            pytest.skip("maya.standalone.initialize() failed: {}".format(exc))
+
+    if getattr(cmds, "air", None) is None:
+        pytest.skip("field commands are not registered in this Maya interpreter")
+    return cmds
+
+
 def _maya_flag_names(cmds, command_name):
     """Long flag names Maya reports for a command, from ``cmds.help()``.
 
@@ -513,7 +544,7 @@ def test_field_create_flags_exist_in_maya():
     ``cmds.help()`` and is skipped when no Maya interpreter is available - it
     runs in the mayapy CI job, which is where the guarantee actually matters.
     """
-    cmds = pytest.importorskip("maya.cmds")
+    cmds = _live_cmds()
 
     for field_type, settings in sorted(FIELD_SUPPORTED_FLAGS.items()):
         command_name = FIELD_COMMANDS[field_type]
@@ -543,7 +574,7 @@ def test_field_attrs_exist_on_maya_nodes():
     used to be advertised here while no Maya field node has that attribute.
     Skipped when no Maya interpreter is available.
     """
-    cmds = pytest.importorskip("maya.cmds")
+    cmds = _live_cmds()
 
     # ``vortex`` exposes no directionX/Y/Z, so compare against the union of
     # attributes the field family offers rather than any single node.
