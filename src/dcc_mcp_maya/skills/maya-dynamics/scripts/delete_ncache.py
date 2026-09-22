@@ -36,11 +36,16 @@ def delete_ncache(
             scene_nodes=scene_nodes,
             delete_files=delete_files,
         )
+        removed_files = result.get("removed_files") or []
+        message = "Deleted {} cache node(s)".format(result["count"])
+        if result["delete_files"]:
+            message += ", removed {} cache file(s)".format(len(removed_files))
         return maya_success(
-            "Deleted {} cache node(s)".format(result["count"]),
+            message,
             deleted=result["deleted"],
             count=result["count"],
             delete_files=result["delete_files"],
+            removed_files=removed_files,
             prompt="With the cache gone the simulation re-evaluates live; re-cache with create_ncache.",
         )
     except NucleusContractError as exc:

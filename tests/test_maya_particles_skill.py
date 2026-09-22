@@ -363,6 +363,40 @@ def test_skill_list_particles_reports_counts():
     assert result["context"]["counts"]["particle_systems"] == 1
 
 
+def test_skill_instancer_error_never_suggests_random_cycle():
+    """A suggested-but-rejected value makes an agent retry forever."""
+    cmds = _FakeCmds(existing={"nParticleShape1": "nParticle", "pRock1": "transform"})
+
+    result = load_and_call(
+        "maya-particles/scripts/create_particle_instancer.py",
+        cmds,
+        "main",
+        particle="nParticleShape1",
+        objects=["pRock1"],
+        cycle="random",
+    )
+
+    assert result["success"] is False
+    blob = result["error"] + " ".join(result.get("possible_solutions") or [])
+    assert "random" not in blob.lower()
+    assert "sequential" in blob
+
+
+def test_skill_instancer_accepts_sequential_cycle():
+    cmds = _FakeCmds(existing={"nParticleShape1": "nParticle", "pRock1": "transform"})
+
+    result = load_and_call(
+        "maya-particles/scripts/create_particle_instancer.py",
+        cmds,
+        "main",
+        particle="nParticleShape1",
+        objects=["pRock1"],
+        cycle="sequential",
+    )
+
+    assert result["success"] is True, result
+
+
 def test_skill_create_emitter_requires_existing_target():
     result = load_and_call(
         "maya-particles/scripts/create_emitter.py",

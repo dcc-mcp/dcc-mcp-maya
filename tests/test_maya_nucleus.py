@@ -21,6 +21,7 @@ from dcc_mcp_maya.nucleus import (
     NUCLEUS_ATTRS,
     NucleusContractError,
     _cache_file_paths,
+    _find_cache_node,
     create_field,
     create_ncloth,
     create_nconstraint,
@@ -526,8 +527,21 @@ def test_delete_cache_requires_a_target():
 
 
 def test_delete_cache_removes_onefile_and_perframe_files(tmp_path):
-    """Real-filesystem check: both Maya cache layouts are removed."""
-    for name in ("hero.mcx", "hero.xml", "heroFrame1.mcx", "heroFrame2.mcx", "unrelated.mcx"):
+    """Real-filesystem check: both Maya cache layouts are removed.
+
+    The neighbour cache deliberately SHARES THE PREFIX ("heroine" starts with
+    "hero") so a naive prefix glob would silently delete it.
+    """
+    for name in (
+        "hero.mcx",
+        "hero.xml",
+        "heroFrame1.mcx",
+        "heroFrame2.mcx",
+        "heroine.mcx",
+        "heroine.xml",
+        "heroineFrame1.mcx",
+        "hero_v2.mcx",
+    ):
         (tmp_path / name).write_text("x", encoding="utf-8")
     cmds = _FakeCmds(existing={"cacheFile1": "cacheFile"})
     cmds.getAttr = lambda plug: str(tmp_path) + "/" if plug.endswith("cachePath") else "hero"
@@ -537,7 +551,9 @@ def test_delete_cache_removes_onefile_and_perframe_files(tmp_path):
     assert result["delete_files"] is True
     removed = {pathlib.Path(p).name for p in result["removed_files"]}
     assert removed == {"hero.mcx", "hero.xml", "heroFrame1.mcx", "heroFrame2.mcx"}
-    assert (tmp_path / "unrelated.mcx").exists()
+    # Same-prefix neighbours must survive.
+    for survivor in ("heroine.mcx", "heroine.xml", "heroineFrame1.mcx", "hero_v2.mcx"):
+        assert (tmp_path / survivor).exists(), survivor
 
 
 def test_delete_cache_keeps_files_when_not_requested(tmp_path):
@@ -583,6 +599,56 @@ def test_cache_file_paths_escapes_glob_metacharacters(tmp_path):
     paths = _cache_file_paths(str(tmp_path), "a[1]")
 
     assert {pathlib.Path(p).name for p in paths} == {"a[1].mcx", "a[1].xml"}
+
+
+def test_delete_cache_refuses_non_cachefile_nodes():
+    """Deleting a mesh transform by mistake must fail, not delete the mesh."""
+    cmds = _FakeCmds(existing={"pCube1": "mesh"})
+
+    with pytest.raises(NucleusContractError, match="pCube1 is a mesh"):
+        delete_cache(cmds, cache_nodes=["pCube1"])
+
+    assert _calls(cmds, "delete") == []
+
+
+def test_delete_cache_reports_actual_type_when_refusing():
+    cmds = _FakeCmds(existing={"group1": "transform"})
+
+    with pytest.raises(NucleusContractError, match="is a transform.*only cacheFile nodes"):
+        delete_cache(cmds, cache_nodes=["group1"], delete_files=True)
+
+    assert _calls(cmds, "delete") == []
+
+
+def test_find_cache_node_does_not_guess_when_scene_has_other_caches():
+    """Never delete an unrelated cacheFile node just because one exists."""
+    cmds = _FakeCmds(existing={"pCube1": "mesh"})
+    cmds.listHistory = lambda node: []  # no cache in this node's history
+
+    def _ls(**kwargs):
+        return ["cacheFile1", "cacheFile2"] if kwargs.get("type") == "cacheFile" else []
+
+    cmds.ls = _ls
+    cmds.getAttr = lambda plug: "other" if plug.startswith("cacheFile") else None
+
+    assert _find_cache_node(cmds, "pCube1", "pCube1") is None
+    with pytest.raises(NucleusContractError, match="No cacheFile nodes found"):
+        delete_cache(cmds, scene_nodes=["pCube1"])
+
+
+def test_find_cache_node_matches_by_declared_cache_name():
+    cmds = _FakeCmds(existing={"nClothShape1": "nCloth"})
+    cmds.listHistory = lambda node: []
+
+    def _ls(**kwargs):
+        return ["heroCache1", "heroineCache1"] if kwargs.get("type") == "cacheFile" else []
+
+    cmds.ls = _ls
+    names = {"heroCache1.cacheName": "hero", "heroineCache1.cacheName": "heroine"}
+    cmds.getAttr = lambda plug: names.get(plug)
+
+    # Exactly one node declares the name -> resolved; the look-alike is ignored.
+    assert _find_cache_node(cmds, "nClothShape1", "hero") == "heroCache1"
 
 
 def test_delete_cache_tolerates_nodes_without_cache_plugs():
@@ -679,6 +745,41 @@ def test_skill_delete_ncache_removes_cache_nodes():
 
     assert result["success"] is True, result
     assert result["context"]["deleted"] == ["cacheFile1"]
+
+
+def test_skill_delete_ncache_surfaces_removed_files(tmp_path):
+    """A tool that deletes files must tell the caller which ones."""
+    (tmp_path / "hero.mcx").write_text("x", encoding="utf-8")
+    (tmp_path / "hero.xml").write_text("x", encoding="utf-8")
+    cmds = _FakeCmds(existing={"cacheFile1": "cacheFile"})
+    cmds.getAttr = lambda plug: str(tmp_path) + "/" if plug.endswith("cachePath") else "hero"
+
+    result = load_and_call(
+        "maya-dynamics/scripts/delete_ncache.py",
+        cmds,
+        "main",
+        cache_nodes=["cacheFile1"],
+        delete_files=True,
+    )
+
+    assert result["success"] is True, result
+    removed = {pathlib.Path(p).name for p in result["context"]["removed_files"]}
+    assert removed == {"hero.mcx", "hero.xml"}
+    assert "removed 2 cache file(s)" in result["message"]
+
+
+def test_skill_delete_ncache_refuses_a_non_cachefile_node():
+    cmds = _FakeCmds(existing={"pCube1": "mesh"})
+
+    result = load_and_call(
+        "maya-dynamics/scripts/delete_ncache.py",
+        cmds,
+        "main",
+        cache_nodes=["pCube1"],
+    )
+
+    assert result["success"] is False
+    assert _calls(cmds, "delete") == []
 
 
 def test_skill_set_ncloth_properties_edits_shapes():

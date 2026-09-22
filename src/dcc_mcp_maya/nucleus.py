@@ -58,6 +58,9 @@ FIELD_COMMANDS: Dict[str, str] = {
 }
 
 #: Cache file formats accepted by ``cmds.cacheFile``.
+CACHE_NODE_TYPE = "cacheFile"
+
+#: Cache file formats accepted by ``cmds.cacheFile``.
 CACHE_FORMATS: Tuple[str, ...] = ("OneFile", "OneFilePerFrame")
 CACHE_DATA_FORMATS: Tuple[str, ...] = ("mcc", "mcx")
 
@@ -744,11 +747,21 @@ def _find_cache_node(cmds: Any, shape: str, file_name: str) -> Optional[str]:
                 return str(node)
         except Exception:  # noqa: BLE001 - listHistory can name stale nodes
             continue
-    candidates = [str(item) for item in (cmds.ls(type="cacheFile", long=True) or [])]
+    # Fall back to the scene-wide cache nodes, but only accept one that
+    # actually declares this cache name. Never guess: picking an arbitrary
+    # cacheFile node would delete an unrelated cache, which is unrecoverable.
+    candidates = [str(item) for item in (cmds.ls(type=CACHE_NODE_TYPE, long=True) or [])]
+    matched: List[str] = []
     for node in candidates:
-        if file_name in node:
-            return node
-    return candidates[0] if candidates else None
+        try:
+            declared = str(cmds.getAttr("{}.cacheName".format(node))).strip()
+        except Exception:  # noqa: BLE001 - a listed node may not expose the plug
+            continue
+        if declared == file_name:
+            matched.append(node)
+    if len(matched) == 1:
+        return matched[0]
+    return None
 
 
 def resolve_frame_range(
@@ -848,6 +861,14 @@ def delete_cache(
     for node in targets:
         if not cmds.objExists(node):
             raise NucleusContractError("Cache node does not exist: {}".format(node))
+        node_type = str(cmds.nodeType(node))
+        if node_type != CACHE_NODE_TYPE:
+            raise NucleusContractError(
+                "{} is a {}; only {} nodes can be deleted. Pass cache_nodes with a "
+                "cacheFile node, or scene_nodes with the geometry that carries the cache.".format(
+                    node, node_type, CACHE_NODE_TYPE
+                )
+            )
         if delete_files:
             removed_files.extend(_delete_cache_files(cmds, node))
         cmds.delete(node)

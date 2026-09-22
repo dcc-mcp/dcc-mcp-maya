@@ -7,10 +7,8 @@ from typing import List, Optional
 from dcc_mcp_core.skill import skill_entry
 
 from dcc_mcp_maya.api import maya_error, maya_from_exception, maya_success
-from dcc_mcp_maya.particles import ParticleContractError
+from dcc_mcp_maya.particles import CYCLE_MODES, ParticleContractError
 from dcc_mcp_maya.particles import create_particle_instancer as _create_particle_instancer
-
-CYCLE_MODES = ("none", "sequential", "random")
 
 
 def create_particle_instancer(
@@ -36,7 +34,9 @@ def create_particle_instancer(
             return maya_error(
                 "No source objects for instancing",
                 "Provide objects or select the geometry to instance.",
-                possible_solutions=["Pass objects=['pSphere1', 'pCube1'] for random variety."],
+                possible_solutions=[
+                    "Pass objects=['pSphere1', 'pCube1'] and cycle='sequential' to vary instances across sources."
+                ],
             )
 
         result = _create_particle_instancer(
