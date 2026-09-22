@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.9.28](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.27...v0.9.28) (2026-09-22)
+
+
+### Features
+
+* **dynamics:** add maya-particles skill, Nucleus nCloth/nCache tools and Bifrost simulation cache ([2979a76](https://github.com/dcc-mcp/dcc-mcp-maya/commit/2979a768edd3d22d289c8e4ddf39608d0074d481))
+* **dynamics:** add nParticle skill, Nucleus nCloth/nCache tools and Bifrost simulation cache ([06847b7](https://github.com/dcc-mcp/dcc-mcp-maya/commit/06847b7a200db76a193cfbed4f8696157f841deb))
+* **render:** add maya-render-setup skill for render layers, AOVs and comp output planning ([1c25de2](https://github.com/dcc-mcp/dcc-mcp-maya/commit/1c25de20f4b50d16d33fd5356b72ed6b3cddeafd))
+
+
+### Bug Fixes
+
+* **dynamics:** use real Maya cache flags and drop unsupported instancer cycle ([526aaf1](https://github.com/dcc-mcp/dcc-mcp-maya/commit/526aaf145db8813cfddb6844dad97dbd2b06b7b1))
+* **nucleus:** make cache deletion refuse to guess nodes or files ([da13903](https://github.com/dcc-mcp/dcc-mcp-maya/commit/da139033f7fb1458d6c1359c003d0d05cce9498c))
+* **nucleus:** match exact cache file names when deleting cached files ([b2d1cec](https://github.com/dcc-mcp/dcc-mcp-maya/commit/b2d1cec62a4e7b42291b499659501c77aceeaff8))
+* **tests:** avoid staticmethod factory call in class body for Python 3.7-3.9 ([cce9c17](https://github.com/dcc-mcp/dcc-mcp-maya/commit/cce9c178adbf8c4cd15e707af5fcfb9f27e70580))
+
+
+### Documentation
+
+* **dynamics:** document gravity tool split and keep create_gravity_field ([f6d3211](https://github.com/dcc-mcp/dcc-mcp-maya/commit/f6d3211602947cedf9fb5b274081cc779fba291c))
+* **rigging:** generalize joint orientation workflow ([f50f65c](https://github.com/dcc-mcp/dcc-mcp-maya/commit/f50f65ca265f23fee9805e5080dfc28ab5a1c122))
+
 ## [0.9.27](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.26...v0.9.27) (2026-09-12)
 
 
