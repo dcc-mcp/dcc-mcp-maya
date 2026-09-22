@@ -20,6 +20,7 @@ from dcc_mcp_maya.nucleus import (
     NCONSTRAINT_TYPES,
     NUCLEUS_ATTRS,
     NucleusContractError,
+    _cache_file_paths,
     create_field,
     create_ncloth,
     create_nconstraint,
@@ -547,6 +548,41 @@ def test_delete_cache_keeps_files_when_not_requested(tmp_path):
     delete_cache(cmds, cache_nodes=["cacheFile1"])
 
     assert (tmp_path / "hero.mcx").exists()
+
+
+def test_delete_cache_does_not_touch_same_prefix_caches(tmp_path):
+    """A cache named `hero` must not delete an unrelated `heroine` cache."""
+    for name in (
+        "hero.mcx",
+        "hero.xml",
+        "heroFrame1.mcx",
+        "heroFrame2.mcx",
+        # Same prefix, different cache - must survive.
+        "heroine.mcx",
+        "heroine.xml",
+        "heroineFrame1.mcx",
+        "heroBackup.mcx",
+    ):
+        (tmp_path / name).write_text("x", encoding="utf-8")
+    cmds = _FakeCmds(existing={"cacheFile1": "cacheFile"})
+    cmds.getAttr = lambda plug: str(tmp_path) + "/" if plug.endswith("cachePath") else "hero"
+
+    result = delete_cache(cmds, cache_nodes=["cacheFile1"], delete_files=True)
+
+    removed = {pathlib.Path(p).name for p in result["removed_files"]}
+    assert removed == {"hero.mcx", "hero.xml", "heroFrame1.mcx", "heroFrame2.mcx"}
+    for survivor in ("heroine.mcx", "heroine.xml", "heroineFrame1.mcx", "heroBackup.mcx"):
+        assert (tmp_path / survivor).exists(), survivor
+
+
+def test_cache_file_paths_escapes_glob_metacharacters(tmp_path):
+    """Cache names containing glob wildcards must be matched literally."""
+    for name in ("a[1].mcx", "a[1].xml", "a1.mcx"):
+        (tmp_path / name).write_text("x", encoding="utf-8")
+
+    paths = _cache_file_paths(str(tmp_path), "a[1]")
+
+    assert {pathlib.Path(p).name for p in paths} == {"a[1].mcx", "a[1].xml"}
 
 
 def test_delete_cache_tolerates_nodes_without_cache_plugs():

@@ -767,14 +767,41 @@ def resolve_frame_range(
     return start, end
 
 
+def _cache_file_paths(cache_path: str, cache_name: str) -> List[str]:
+    """Return the exact on-disk paths Maya writes for one cache.
+
+    Maya emits exactly two layouts for a cache called ``<name>``:
+
+    * ``OneFile``         — ``<name>.mcx`` and ``<name>.xml``
+    * ``OneFilePerFrame`` — ``<name>Frame<N>.mcx`` for each frame, plus ``<name>.xml``
+
+    Matching these names exactly (rather than a ``<name>*`` prefix) matters:
+    a prefix glob for ``hero`` would also match an unrelated ``heroine.mcx``
+    and delete another cache's data. Glob metacharacters in the cache name are
+    escaped, and a numeric wildcard matches only ``Frame<digits>``.
+    """
+    escaped = glob.escape(cache_name)
+    patterns = (
+        "{}.mcx".format(escaped),
+        "{}.xml".format(escaped),
+        "{}Frame[0-9]*.mcx".format(escaped),
+    )
+    found: List[str] = []
+    for pattern in patterns:
+        for path in glob.glob(os.path.join(glob.escape(cache_path), pattern)):
+            if os.path.isfile(path) and path not in found:
+                found.append(path)
+    return sorted(found)
+
+
 def _delete_cache_files(cmds: Any, node: str) -> List[str]:
     """Delete the on-disk files belonging to a ``cacheFile`` node.
 
-    A ``cacheFile`` node stores its location in ``cachePath`` + ``cacheName``,
-    and Maya writes either ``<name>.mcx`` + ``<name>.xml`` (OneFile) or
-    ``<name>Frame<N>.mcx`` + ``<name>.xml`` (OneFilePerFrame). Matching on the
-    ``<name>*`` prefix covers both layouts. Missing files are skipped so a
-    partially-written cache cannot fail the delete.
+    A ``cacheFile`` node stores its location in ``cachePath`` + ``cacheName``.
+    Only the file names Maya actually writes are removed, so a cache whose
+    name is a prefix of another cache cannot take the other one with it.
+    Missing files are skipped so a partially-written cache cannot fail the
+    delete.
     """
     try:
         cache_path = str(cmds.getAttr("{}.cachePath".format(node))).strip()
@@ -785,9 +812,7 @@ def _delete_cache_files(cmds: Any, node: str) -> List[str]:
         return []
 
     removed: List[str] = []
-    for path in sorted(glob.glob(os.path.join(cache_path, cache_name + "*"))):
-        if not os.path.isfile(path):
-            continue
+    for path in _cache_file_paths(cache_path, cache_name):
         try:
             os.remove(path)
         except OSError:  # noqa: BLE001 - best effort; report what we could not remove
