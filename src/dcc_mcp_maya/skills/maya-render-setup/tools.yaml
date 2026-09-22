@@ -62,8 +62,7 @@ tools:
         default: render_setup
     required: []
 - name: create_render_collection
-  description: Create a renderSetup collection, or replace an existing collection's
-    members.
+  description: Create a renderSetup collection, or replace an existing collection's members.
   execution: sync
   affinity: main
   annotations:
@@ -221,7 +220,7 @@ tools:
 - name: plan_comp_outputs
   description: Plan per-layer and per-AOV output paths for a compositing hand-off.
   execution: sync
-  affinity: main
+  affinity: any
   annotations:
     read_only_hint: true
     idempotent_hint: true

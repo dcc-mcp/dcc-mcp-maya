@@ -21,6 +21,7 @@ from dcc_mcp_maya.render_setup import (
     OVERRIDE_TYPES,
     RENDER_SETUP_MODULE,
     RenderSetupContractError,
+    _occupied_aov_indices,
     add_aov,
     build_output_paths,
     create_collection,
@@ -745,6 +746,38 @@ def test_add_aov_does_not_replace_a_live_aov():
     names = {record["name"] for record in list_aovs(cmds)["aovs"]}
     assert names == {"a", "c", "d"}, "a live AOV was replaced"
     assert cmds.aov_slots[2] == "aiAOV_c", "index 2 must still hold the original AOV"
+
+
+def test_occupied_aov_indices_finds_slots_above_the_connection_count():
+    """Regression: the scan bound must grow past holes.
+
+    Five AOVs with four removed leaves a single connection at index 4. A range
+    built once up front from ``len(connected)`` only reached index 1, so the
+    live AOV was invisible to ``_occupied_aov_indices``.
+    """
+    cmds = _FakeCmds(options_exists=True)
+    for name in ("a", "b", "c", "d", "e"):
+        add_aov(cmds, name=name)
+    for name in ("a", "b", "c", "d"):
+        remove_aov(cmds, name)
+
+    assert cmds.aov_slots == {4: "aiAOV_e"}
+    assert _occupied_aov_indices(cmds) == [4]
+
+
+def test_add_aov_after_bulk_removal_does_not_collide():
+    """The next index must still be a genuinely free slot after a bulk removal."""
+    cmds = _FakeCmds(options_exists=True)
+    for name in ("a", "b", "c", "d", "e"):
+        add_aov(cmds, name=name)
+    for name in ("a", "b", "c", "d"):
+        remove_aov(cmds, name)
+
+    result = add_aov(cmds, name="f")
+
+    assert result["index"] == 0
+    assert cmds.aov_slots == {0: "aiAOV_f", 4: "aiAOV_e"}
+    assert {record["name"] for record in list_aovs(cmds)["aovs"]} == {"e", "f"}
 
 
 def test_remove_aov_deletes_only_the_requested_node():

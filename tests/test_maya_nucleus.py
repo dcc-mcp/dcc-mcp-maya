@@ -16,7 +16,13 @@ from conftest import load_and_call
 from dcc_mcp_maya import nucleus as nucleus_mod
 from dcc_mcp_maya.nucleus import (
     CACHEABLE_NODE_TYPES,
+    DEFAULT_DIRECTION_FLAGS,
+    FIELD_ATTRS,
     FIELD_COMMANDS,
+    FIELD_CREATE_FLAGS,
+    FIELD_DIRECTION_FLAGS,
+    FIELD_POST_CREATE_ATTRS,
+    FIELD_SUPPORTED_FLAGS,
     NCONSTRAINT_TYPES,
     NUCLEUS_ATTRS,
     NucleusContractError,
@@ -169,6 +175,18 @@ def _patch_cache_files(removed):
 
 def _setattr(cmds):
     return {call[1]: call[2] for call in cmds.calls if call[0] == "setAttr"}
+
+
+def _maya_flag_names(cmds, command_name):
+    """Long flag names Maya reports for a command, from ``cmds.help()``.
+
+    ``cmds.help("gravity")`` prints lines like ``" -pv -perVertex  on|off"``;
+    the long name is the second token. Only used by the Maya-hosted meta-test.
+    """
+    import re
+
+    text = cmds.help(command_name, language="python") or ""
+    return set(re.findall(r"^\s*-\w+\s+-(\w+)\s", text, re.M))
 
 
 # ---------------------------------------------------------------------------
@@ -375,6 +393,179 @@ def test_field_commands_cover_the_full_create_surface():
         "volume_axis",
     }
     assert FIELD_COMMANDS["volume_axis"] == "volumeAxis"
+
+
+def test_field_flag_whitelist_covers_every_field_type():
+    """The whitelist is the only thing standing between an agent's settings
+    and ``cmds.<field>(**flags)``, so it must cover every field type.
+
+    A field type missing from the whitelist would reject *all* settings
+    (``FIELD_SUPPORTED_FLAGS.get`` falls back to ``()``) - fail loudly here
+    instead of shipping a tool whose every flag errors.
+    """
+    assert set(FIELD_SUPPORTED_FLAGS) == set(FIELD_COMMANDS)
+    for field_type, flags in FIELD_SUPPORTED_FLAGS.items():
+        assert flags, "{} whitelists no flags at all".format(field_type)
+        assert len(set(flags)) == len(flags), "{} whitelists duplicates".format(field_type)
+
+
+def test_field_flag_whitelist_only_names_known_settings():
+    """Every whitelisted setting must resolve to a create flag.
+
+    ``direction`` expands into component flags and is handled separately; the
+    rest must be in :data:`FIELD_CREATE_FLAGS` or the post-create map.
+    """
+    for field_type, flags in FIELD_SUPPORTED_FLAGS.items():
+        for key in flags:
+            assert key == "direction" or key in FIELD_CREATE_FLAGS or key in FIELD_POST_CREATE_ATTRS, (
+                "{} whitelists '{}', which maps to no create flag".format(field_type, key)
+            )
+
+
+def test_field_create_flags_are_a_subset_of_the_property_vocabulary():
+    """The create surface and the edit surface must use the same key names.
+
+    Agents pass snake_case settings to both ``create_dynamic_field`` and
+    ``set_field_properties``; a key that exists on one side only is confusing
+    and is usually a typo. ``section_radius`` is the one deliberate difference:
+    the create flag is ``-torusSectionRadius`` while the node exposes
+    ``sectionRadius``.
+    """
+    create_keys = set(FIELD_CREATE_FLAGS) | set(FIELD_POST_CREATE_ATTRS)
+    assert create_keys <= set(FIELD_ATTRS)
+
+
+def test_field_attrs_and_create_flags_differ_only_where_maya_does():
+    """The two maps must agree except for the names Maya itself splits.
+
+    Most settings carry the same name on the command and on the node. A new
+    divergence is either a typo or a Maya quirk that needs a comment, so pin
+    the known exceptions.
+    """
+    known_splits = {"apply_per_vertex", "section_radius"}
+    diverged = {
+        key
+        for key in set(FIELD_CREATE_FLAGS) & set(FIELD_ATTRS)
+        if FIELD_CREATE_FLAGS[key] != FIELD_ATTRS[key]
+    }
+    assert diverged == known_splits
+
+
+def test_field_direction_flags_are_per_field_type():
+    """``vortex`` is the one field command that names its axis flags differently."""
+    assert FIELD_DIRECTION_FLAGS["vortex"] == ("axisX", "axisY", "axisZ")
+    for field_type in FIELD_DIRECTION_FLAGS:
+        assert field_type in FIELD_COMMANDS, "direction override for an unknown field type"
+        assert len(FIELD_DIRECTION_FLAGS[field_type]) == 3
+    assert len(DEFAULT_DIRECTION_FLAGS) == 3
+
+
+def test_create_field_uses_per_field_direction_flags():
+    """``vortex`` must emit ``axis*``; real ``cmds.vortex`` has no ``direction*``."""
+    cmds = _FakeCmds()
+
+    create_field(cmds, field_type="vortex", direction=[0.0, 1.0, 0.0])
+
+    kwargs = _calls(cmds, "vortex")[0][1]
+    assert (kwargs["axisX"], kwargs["axisY"], kwargs["axisZ"]) == (0.0, 1.0, 0.0)
+    assert "directionX" not in kwargs
+
+
+def test_create_field_uses_pervertex_flag_not_the_node_attribute():
+    """Regression: ``applyPerVertex`` is a node attribute, not a create flag.
+
+    ``cmds.gravity(applyPerVertex=True)`` raises ``TypeError: invalid flag`` on
+    real Maya. The fake ``cmds`` accepted it, so only this whitelist keeps the
+    two vocabularies apart.
+    """
+    cmds = _FakeCmds()
+
+    create_field(cmds, field_type="gravity", apply_per_vertex=True)
+
+    kwargs = _calls(cmds, "gravity")[0][1]
+    assert kwargs["perVertex"] is True
+    assert "applyPerVertex" not in kwargs
+
+
+def test_create_field_applies_node_only_settings_after_the_node_exists():
+    """``trap_inside`` / ``turbulence_frequency`` are attributes, not flags."""
+    cmds = _FakeCmds()
+
+    create_field(cmds, field_type="volume_axis", trap_inside=False, turbulence_frequency=2.0)
+
+    kwargs = _calls(cmds, "volumeAxis")[0][1]
+    assert "trapInside" not in kwargs
+    assert "turbulenceFrequency" not in kwargs
+    applied = _setattr(cmds)
+    assert applied["volumeAxisField1.trapInside"] == (False,)
+    assert applied["volumeAxisField1.turbulenceFrequency"] == (2.0,)
+
+
+def test_create_field_explains_retired_settings():
+    """A setting no Maya build exposes gets guidance, not a bare rejection."""
+    with pytest.raises(NucleusContractError, match="directional_strength.*directional_speed"):
+        create_field(_FakeCmds(), field_type="volume_axis", directional_strength=0.5)
+
+
+def test_field_create_flags_exist_in_maya():
+    """Meta-test: the whitelist must match Maya's real flag table.
+
+    Unit tests run against a fake ``cmds`` that swallows every keyword, so they
+    cannot catch a flag Maya rejects. This check replays the whitelist against
+    ``cmds.help()`` and is skipped when no Maya interpreter is available - it
+    runs in the mayapy CI job, which is where the guarantee actually matters.
+    """
+    cmds = pytest.importorskip("maya.cmds")
+
+    for field_type, settings in sorted(FIELD_SUPPORTED_FLAGS.items()):
+        command_name = FIELD_COMMANDS[field_type]
+        command = getattr(cmds, command_name, None)
+        assert command is not None, "maya.cmds.{} is missing".format(command_name)
+
+        flags = _maya_flag_names(cmds, command_name)
+        for key in settings:
+            if key in FIELD_POST_CREATE_ATTRS:
+                # Deliberately not a create flag - applied with setAttr after.
+                continue
+            if key == "direction":
+                expected = list(FIELD_DIRECTION_FLAGS.get(field_type, DEFAULT_DIRECTION_FLAGS))
+            else:
+                expected = [FIELD_CREATE_FLAGS[key]]
+            for flag_name in expected:
+                assert flag_name in flags, (
+                    "cmds.{} has no -{} flag (whitelisted for '{}')".format(command_name, flag_name, field_type)
+                )
+
+
+def test_field_attrs_exist_on_maya_nodes():
+    """Meta-test: every entry of ``FIELD_ATTRS`` must be a real node attribute.
+
+    ``FIELD_ATTRS`` feeds ``setAttr``, and a fake ``cmds`` swallows any plug
+    name, so a typo here only surfaces on a live scene. ``directional_strength``
+    used to be advertised here while no Maya field node has that attribute.
+    Skipped when no Maya interpreter is available.
+    """
+    cmds = pytest.importorskip("maya.cmds")
+
+    # ``vortex`` exposes no directionX/Y/Z, so compare against the union of
+    # attributes the field family offers rather than any single node.
+    available = set()
+    for field_type, command_name in sorted(FIELD_COMMANDS.items()):
+        command = getattr(cmds, command_name, None)
+        if command is None:
+            pytest.skip("maya.cmds.{} unavailable in this interpreter".format(command_name))
+        node = command()
+        try:
+            available.update(cmds.listAttr(node) or [])
+        finally:
+            cmds.delete(node)
+
+    missing = sorted({
+        attr
+        for key, attr in FIELD_ATTRS.items()
+        if key not in ("direction", "speed", "phase") and attr not in available
+    })
+    assert not missing, "FIELD_ATTRS names attributes no field node exposes: {}".format(missing)
 
 
 def test_set_field_properties_edits_only_supplied_values():
@@ -632,8 +823,53 @@ def test_find_cache_node_does_not_guess_when_scene_has_other_caches():
     cmds.getAttr = lambda plug: "other" if plug.startswith("cacheFile") else None
 
     assert _find_cache_node(cmds, "pCube1", "pCube1") is None
-    with pytest.raises(NucleusContractError, match="No cacheFile nodes found"):
+    with pytest.raises(NucleusContractError, match="No cacheFile node in pCube1's history"):
         delete_cache(cmds, scene_nodes=["pCube1"])
+
+
+def test_delete_cache_names_the_ambiguous_caches_instead_of_blaming_the_caller():
+    """Two caches sharing a cacheName must not report "no cacheFile nodes".
+
+    The agent did pass ``scene_nodes`` and the scene plainly does hold caches,
+    so telling it to "pass cache_nodes or scene_nodes" sends it in a circle.
+    """
+    cmds = _FakeCmds(existing={"nClothShape1": "nCloth"})
+    cmds.listHistory = lambda node: []
+
+    def _ls(**kwargs):
+        return ["heroCache1", "heroCache2"] if kwargs.get("type") == "cacheFile" else []
+
+    cmds.ls = _ls
+    cmds.getAttr = lambda plug: "nClothShape1" if plug.startswith("heroCache") else None
+
+    with pytest.raises(NucleusContractError, match="2 cacheFile nodes declare cacheName 'nClothShape1'"):
+        delete_cache(cmds, scene_nodes=["nClothShape1"])
+
+    assert _calls(cmds, "delete") == []
+
+
+def test_delete_cache_reports_an_empty_scene_as_such():
+    """No caches anywhere is a different story from "I could not tell which"."""
+    cmds = _FakeCmds(existing={"nClothShape1": "nCloth"})
+    cmds.listHistory = lambda node: []
+    cmds.ls = lambda **kwargs: []
+
+    with pytest.raises(NucleusContractError, match="This scene has no cacheFile nodes"):
+        delete_cache(cmds, scene_nodes=["nClothShape1"])
+
+
+def test_delete_cache_validates_every_target_before_deleting_any():
+    """A partially-invalid target list must not delete anything.
+
+    Deleting one legal cache and then failing on an illegal one is a partial
+    success the caller cannot undo, so validation has to finish first.
+    """
+    cmds = _FakeCmds(existing={"cacheFile1": "cacheFile", "pCube1": "mesh"})
+
+    with pytest.raises(NucleusContractError, match="pCube1 is a mesh"):
+        delete_cache(cmds, cache_nodes=["cacheFile1", "pCube1"])
+
+    assert _calls(cmds, "delete") == []
 
 
 def test_find_cache_node_matches_by_declared_cache_name():
