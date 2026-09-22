@@ -1,0 +1,233 @@
+tools:
+- name: create_image_reader
+  description: Create a file node that reads rendered imagery from disk.
+  execution: sync
+  affinity: main
+  annotations:
+    idempotent_hint: false
+  group: inputs
+  input_schema:
+    type: object
+    properties:
+      file_path:
+        type:
+        - string
+        - 'null'
+        default: null
+      name:
+        type:
+        - string
+        - 'null'
+        default: null
+      use_frame_extension:
+        type: boolean
+        default: false
+      frame_offset:
+        type: integer
+        default: 0
+      color_space:
+        type:
+        - string
+        - 'null'
+        default: null
+    required: []
+- name: create_layer_stack
+  description: Create an empty layeredTexture stack to composite layers into.
+  execution: sync
+  affinity: main
+  annotations:
+    idempotent_hint: false
+  group: stacks
+  input_schema:
+    type: object
+    properties:
+      name:
+        type:
+        - string
+        - 'null'
+        default: null
+    required: []
+- name: add_comp_layer
+  description: Connect a source into the next free layer of a comp stack.
+  execution: sync
+  affinity: main
+  annotations:
+    idempotent_hint: false
+  group: stacks
+  input_schema:
+    type: object
+    properties:
+      stack:
+        type:
+        - string
+        - 'null'
+        default: null
+      source:
+        type:
+        - string
+        - 'null'
+        default: null
+      blend_mode:
+        type: string
+        enum:
+        - None
+        - Over
+        - In
+        - Out
+        - Add
+        - Subtract
+        - Multiply
+        - Difference
+        - Lighten
+        - Darken
+        - Saturate
+        - Desaturate
+        - Illuminate
+        - CPV Modulate
+        default: None
+      opacity:
+        type: number
+        default: 1.0
+      visible:
+        type: boolean
+        default: true
+    required: []
+- name: list_comp_layers
+  description: List the layers currently connected into a comp stack.
+  execution: sync
+  affinity: main
+  annotations:
+    read_only_hint: true
+    idempotent_hint: true
+  group: stacks
+  input_schema:
+    type: object
+    properties:
+      stack:
+        type:
+        - string
+        - 'null'
+        default: null
+    required: []
+- name: remove_comp_layer
+  description: Disconnect one layer from a comp stack, keeping its source node.
+  execution: sync
+  affinity: main
+  annotations:
+    idempotent_hint: false
+  group: stacks
+  input_schema:
+    type: object
+    properties:
+      stack:
+        type:
+        - string
+        - 'null'
+        default: null
+      index:
+        type:
+        - integer
+        - 'null'
+        default: null
+    required: []
+- name: merge_comp_layers
+  description: Combine two or more sources into a single comp output.
+  execution: sync
+  affinity: main
+  annotations:
+    idempotent_hint: false
+  group: merge
+  input_schema:
+    type: object
+    properties:
+      sources:
+        type:
+        - array
+        - 'null'
+        items:
+          type: string
+        minItems: 1
+        default: null
+      operation:
+        type: string
+        enum:
+        - blend
+        - over
+        - add
+        - multiply
+        - subtract
+        - difference
+        default: blend
+      name:
+        type:
+        - string
+        - 'null'
+        default: null
+      blend_amount:
+        type: number
+        default: 0.5
+    required: []
+- name: create_comp_node
+  description: Create a reverse / multiplyDivide / luminance / clamp / setRange node.
+  execution: sync
+  affinity: main
+  annotations:
+    idempotent_hint: false
+  group: utility
+  input_schema:
+    type: object
+    properties:
+      node_type:
+        type:
+        - string
+        - 'null'
+        enum:
+        - reverse
+        - multiplyDivide
+        - plusMinusAverage
+        - luminance
+        - clamp
+        - setRange
+        - null
+        default: null
+      name:
+        type:
+        - string
+        - 'null'
+        default: null
+      operation:
+        type:
+        - string
+        - 'null'
+        enum:
+        - none
+        - multiply
+        - divide
+        - power
+        - null
+        default: null
+    required: []
+- name: connect_comp_nodes
+  description: Wire two comp nodes together.
+  execution: sync
+  affinity: main
+  annotations:
+    idempotent_hint: false
+  group: utility
+  input_schema:
+    type: object
+    properties:
+      source:
+        type:
+        - string
+        - 'null'
+        default: null
+      destination:
+        type:
+        - string
+        - 'null'
+        default: null
+      source_attr:
+        type: string
+        default: outColor
+    required: []

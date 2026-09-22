@@ -1,0 +1,25 @@
+groups:
+- name: inputs
+  description: Read rendered imagery from disk into the scene
+  default_active: false
+  tools:
+  - create_image_reader
+- name: stacks
+  description: Build and inspect a layeredTexture layer stack
+  default_active: false
+  tools:
+  - create_layer_stack
+  - add_comp_layer
+  - list_comp_layers
+  - remove_comp_layer
+- name: merge
+  description: Combine sources with a blend or a layered blend mode
+  default_active: false
+  tools:
+  - merge_comp_layers
+- name: utility
+  description: Colour and maths utility nodes, and the wiring between them
+  default_active: false
+  tools:
+  - create_comp_node
+  - connect_comp_nodes

@@ -1,0 +1,18 @@
+groups:
+- name: inventory
+  description: Enumerate the plug-ins Maya knows about and their load state
+  default_active: false
+  tools:
+  - list_plugins
+- name: lifecycle
+  description: Load and unload plug-ins
+  default_active: false
+  tools:
+  - load_plugin
+  - unload_plugin
+- name: diagnostics
+  description: Explain why a plug-in is or is not usable, and where Maya looks for it
+  default_active: false
+  tools:
+  - diagnose_plugin
+  - get_plugin_path
