@@ -446,6 +446,59 @@ def test_diagnose_flags_a_file_that_maya_never_registered(tmp_path):
     assert any("not registered" in problem for problem in result["problems"])
 
 
+class _RegisteredWithoutFile(_FakeCmds):
+    """Maya registered the plug-in this session, but its file is not on the
+    search path - e.g. it was loaded and then the directory was removed.
+
+    ``registered`` is an always-valid flag and answers True here, while the
+    path enumeration reports the plug-in as unknown.
+    """
+
+    def __init__(self):
+        super().__init__(known=set(), loaded=set())
+        self.registered = {"orphan"}
+
+    def pluginInfo(self, plugin=None, **kwargs):
+        if kwargs.get("query") and kwargs.get("registered"):
+            return plugin in self.registered
+        return super().pluginInfo(plugin, **kwargs)
+
+
+def test_diagnose_does_not_claim_never_registered_when_it_is():
+    """A false "never registered" is indistinguishable from a true one if the
+    wording depends on ``known`` rather than Maya's registration state."""
+    empty = {
+        "env_var": PLUGIN_PATH_ENV,
+        "raw": "",
+        "entries": [],
+        "count": 0,
+        "missing": [],
+    }
+
+    result = diagnose_plugin(_RegisteredWithoutFile(), "orphan", search_path=empty)
+
+    assert result["known"] is False
+    assert result["file_found"] is False
+    assert result["registered"] is True
+    assert all("never registered" not in item for item in result["suggestions"])
+
+
+def test_diagnose_keeps_never_registered_when_it_is_true():
+    """Control case: the claim must still appear when it is actually true."""
+    empty = {
+        "env_var": PLUGIN_PATH_ENV,
+        "raw": "",
+        "entries": [],
+        "count": 0,
+        "missing": [],
+    }
+
+    result = diagnose_plugin(_FakeCmds(known=set()), "orphan", search_path=empty)
+
+    assert result["registered"] is False
+    assert any("never registered" in item for item in result["suggestions"])
+
+
 def test_diagnose_requires_a_name():
     with pytest.raises(PluginContractError, match="non-empty"):
         diagnose_plugin(_FakeCmds(), "")

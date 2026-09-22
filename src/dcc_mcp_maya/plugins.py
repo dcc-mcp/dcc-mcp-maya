@@ -374,7 +374,14 @@ def diagnose_plugin(
     located = find_plugin_file(name, search_path=search)
     known = _known(cmds, name, search_path=search)
     record = plugin_record(cmds, name) if known else None
-    registered = bool(record["registered"]) if record else False
+    # ``registered`` is an always-valid flag and answers even when the plug-in
+    # is not on the search path, so read it directly rather than through
+    # ``record`` (which is None when ``known`` is False). Deriving it from
+    # ``known`` made "never registered" a function of path membership rather
+    # than registration state, asserting a falsehood for a plug-in Maya has in
+    # fact registered this session but whose file is missing.
+    _ok, _registered = _query(cmds, name, "registered")
+    registered = bool(_registered) if _ok else False
     loaded = bool(record["loaded"]) if record else False
 
     problems: List[str] = []
@@ -389,7 +396,7 @@ def diagnose_plugin(
         suggestions.append(
             "Install the plug-in, or add its directory to {} ({} entries searched)."
             " Maya has also never registered it.".format(PLUGIN_PATH_ENV, located["searched"])
-            if not known
+            if not registered
             else "Install the plug-in, or add its directory to {} ({} entries searched).".format(
                 PLUGIN_PATH_ENV, located["searched"]
             )
