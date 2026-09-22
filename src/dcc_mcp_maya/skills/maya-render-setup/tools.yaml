@@ -1,0 +1,231 @@
+tools:
+- name: create_render_layer
+  description: Create a renderSetup render layer and optionally make it visible.
+  execution: sync
+  affinity: main
+  annotations:
+    idempotent_hint: false
+  group: layers
+  input_schema:
+    type: object
+    properties:
+      name:
+        type: string
+        default: null
+      renderable:
+        type: string
+        default: true
+      activate:
+        type: string
+        default: false
+    required: []
+- name: list_render_layers
+  description: List renderSetup layers, the visible layer, and legacy renderLayer nodes.
+  execution: sync
+  affinity: main
+  annotations:
+    read_only_hint: true
+    idempotent_hint: true
+  group: layers
+  input_schema:
+    type: object
+    properties:
+      include_default:
+        type: string
+        default: true
+      include_legacy:
+        type: string
+        default: true
+    required: []
+- name: set_current_render_layer
+  description: Switch the current render layer (renderSetup or legacy).
+  execution: sync
+  affinity: main
+  annotations:
+    idempotent_hint: true
+  group: layers
+  input_schema:
+    type: object
+    properties:
+      name:
+        type: string
+        default: null
+      layer_system:
+        type: string
+        enum:
+        - render_setup
+        - legacy
+        default: render_setup
+    required: []
+- name: create_render_collection
+  description: Create a renderSetup collection, or replace an existing collection's
+    members.
+  execution: sync
+  affinity: main
+  annotations:
+    idempotent_hint: false
+  group: collections
+  input_schema:
+    type: object
+    properties:
+      layer:
+        type: string
+        default: null
+      name:
+        type: string
+        default: null
+      members:
+        type: string
+        default: null
+      pattern:
+        type: string
+        default: null
+      replace:
+        type: string
+        default: false
+    required: []
+- name: create_render_override
+  description: Override an attribute for everything a renderSetup collection selects.
+  execution: sync
+  affinity: main
+  annotations:
+    idempotent_hint: false
+  group: collections
+  input_schema:
+    type: object
+    properties:
+      layer:
+        type: string
+        default: null
+      collection:
+        type: string
+        default: null
+      attribute:
+        type: string
+        default: null
+      value:
+        type: string
+        default: null
+      override_type:
+        type: string
+        enum:
+        - absolute
+        - relative
+        - connection
+        default: absolute
+    required: []
+- name: add_aov
+  description: Create an Arnold AOV and wire it into the render options output list.
+  execution: sync
+  affinity: main
+  annotations:
+    idempotent_hint: false
+  group: aovs
+  input_schema:
+    type: object
+    properties:
+      name:
+        type: string
+        default: null
+      aov_type:
+        type: string
+        enum:
+        - int
+        - uint
+        - bool
+        - float
+        - rgb
+        - rgba
+        - vector
+        - vector2
+        - pointer
+        default: null
+      node_name:
+        type: string
+        default: null
+    required: []
+- name: list_aovs
+  description: List the AOVs wired into Arnold's render options.
+  execution: sync
+  affinity: main
+  annotations:
+    read_only_hint: true
+    idempotent_hint: true
+  group: aovs
+  input_schema:
+    type: object
+    properties: {}
+    required: []
+- name: set_aov_enabled
+  description: Enable or disable an existing Arnold AOV without disconnecting it.
+  execution: sync
+  affinity: main
+  annotations:
+    idempotent_hint: true
+  group: aovs
+  input_schema:
+    type: object
+    properties:
+      aov:
+        type: string
+        default: null
+      enabled:
+        type: string
+        default: true
+    required: []
+- name: remove_aov
+  description: Disconnect and delete an Arnold AOV.
+  execution: sync
+  affinity: main
+  annotations:
+    idempotent_hint: false
+  group: aovs
+  input_schema:
+    type: object
+    properties:
+      aov:
+        type: string
+        default: null
+    required: []
+- name: plan_comp_outputs
+  description: Plan per-layer and per-AOV output paths for a compositing hand-off.
+  execution: sync
+  affinity: main
+  annotations:
+    read_only_hint: true
+    idempotent_hint: true
+  group: precomp
+  input_schema:
+    type: object
+    properties:
+      directory:
+        type: string
+        default: null
+      layers:
+        type: string
+        default: null
+      aovs:
+        type: string
+        default: null
+      file_name:
+        type: string
+        default: <Scene>
+      start_frame:
+        type: string
+        default: 1
+      end_frame:
+        type: string
+        default: 1
+      frame_padding:
+        type: string
+        default: 4
+      extension:
+        type: string
+        default: exr
+      separate_aov_folders:
+        type: string
+        default: true
+      separate_layer_folders:
+        type: string
+        default: true
+    required: []
