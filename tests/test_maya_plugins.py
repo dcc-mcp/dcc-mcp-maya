@@ -8,6 +8,8 @@ mirrors real Maya behaviour verified on 2025 - in particular that
 
 from __future__ import annotations
 
+import os
+
 import pytest
 from conftest import load_and_call
 
@@ -440,6 +442,54 @@ def test_inventory_includes_macos_bundle_directories(tmp_path):
 
     assert "MacPlugin" in names
     assert "notAPluginDir" not in names
+
+
+def test_inventory_excludes_directories_wearing_a_plugin_extension(tmp_path):
+    """A directory named `stale.mll` is not a plug-in.
+
+    Only .bundle may also be a directory (macOS bundles); every other
+    extension must be a file. Skipping the file test for all known extensions
+    let these phantom entries into list_plugins.
+    """
+    (tmp_path / "stale.mll").mkdir()
+    (tmp_path / "old.so").mkdir()
+    (tmp_path / "dead.py").mkdir()
+    # Valid neighbours that must survive the fix unchanged.
+    (tmp_path / "win.mll").write_text("", encoding="utf-8")
+    (tmp_path / "linux.so").write_text("", encoding="utf-8")
+    (tmp_path / "script.py").write_text("", encoding="utf-8")
+    (tmp_path / "weird.bundle").write_text("", encoding="utf-8")  # .bundle as a FILE
+    (tmp_path / "MacPlugin.bundle").mkdir()  # .bundle as a DIRECTORY
+    (tmp_path / "bareplugin").write_text("", encoding="utf-8")  # extensionless file
+    (tmp_path / "notAPluginDir").mkdir()
+    path = {"env_var": PLUGIN_PATH_ENV, "raw": "", "entries": [str(tmp_path)], "count": 1, "missing": []}
+
+    names = known_plugin_names(_FakeCmds(), search_path=path)
+
+    for phantom in ("stale", "old", "dead"):
+        assert phantom not in names, phantom
+    for valid in ("win", "linux", "script", "weird", "MacPlugin", "bareplugin"):
+        assert valid in names, valid
+    assert "notAPluginDir" not in names
+
+
+def test_inventory_excludes_broken_symlinks(tmp_path):
+    """A dangling .bundle symlink is neither a file nor a directory.
+
+    The .bundle exemption used to skip the file test entirely, so a broken
+    `old.bundle` symlink was reported as a plug-in Maya cannot open.
+    """
+    os.symlink(str(tmp_path / "missing-target"), str(tmp_path / "old.bundle"))
+    # A symlink pointing at a real plug-in file is still a plug-in.
+    (tmp_path / "win.mll").write_text("", encoding="utf-8")
+    os.symlink(str(tmp_path / "win.mll"), str(tmp_path / "goodlink.mll"))
+    path = {"env_var": PLUGIN_PATH_ENV, "raw": "", "entries": [str(tmp_path)], "count": 1, "missing": []}
+
+    names = known_plugin_names(_FakeCmds(), search_path=path)
+
+    assert "old" not in names
+    assert "goodlink" in names
+    assert "win" in names
 
 
 def test_diagnose_flags_a_file_that_maya_never_registered(tmp_path):

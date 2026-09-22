@@ -298,9 +298,14 @@ def known_plugin_names(cmds: Any = None, search_path: Optional[Dict[str, Any]] =
             continue
         for entry in entries:
             stem, ext = os.path.splitext(entry)
-            # Only extensionless entries need the file test: a real macOS
-            # .bundle is a directory, and it is a valid plug-in.
-            if ext == "" and not os.path.isfile(os.path.join(directory, entry)):
+            full = os.path.join(directory, entry)
+            # A candidate must exist as something real. Ordinary plug-ins are
+            # FILES; a macOS .bundle ships as a DIRECTORY, so that extension is
+            # also accepted as a directory. Anything that is neither - such as a
+            # broken `old.bundle` symlink, which fails both tests - is excluded,
+            # because a path Maya cannot open is not a plug-in.
+            is_file = os.path.isfile(full)
+            if not is_file and not (ext == ".bundle" and os.path.isdir(full)):
                 continue
             if ext in PLUGIN_EXTENSIONS or ext == "":
                 if stem:
