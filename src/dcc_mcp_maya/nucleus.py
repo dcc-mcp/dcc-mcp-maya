@@ -969,9 +969,7 @@ def delete_cache(
     for node in as_str_list(scene_nodes):
         if not cmds.objExists(node):
             raise NucleusContractError("Node does not exist: {}".format(node))
-        found = _find_cache_node(
-            cmds, node, node.rsplit("|", 1)[-1].rsplit(":", 1)[-1], strict=True
-        )
+        found = _find_cache_node(cmds, node, node.rsplit("|", 1)[-1].rsplit(":", 1)[-1], strict=True)
         if found:
             derived.append(found)
 

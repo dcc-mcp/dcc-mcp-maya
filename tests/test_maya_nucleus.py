@@ -444,9 +444,7 @@ def test_field_attrs_and_create_flags_differ_only_where_maya_does():
     """
     known_splits = {"apply_per_vertex", "section_radius"}
     diverged = {
-        key
-        for key in set(FIELD_CREATE_FLAGS) & set(FIELD_ATTRS)
-        if FIELD_CREATE_FLAGS[key] != FIELD_ATTRS[key]
+        key for key in set(FIELD_CREATE_FLAGS) & set(FIELD_ATTRS) if FIELD_CREATE_FLAGS[key] != FIELD_ATTRS[key]
     }
     assert diverged == known_splits
 
@@ -532,8 +530,8 @@ def test_field_create_flags_exist_in_maya():
             else:
                 expected = [FIELD_CREATE_FLAGS[key]]
             for flag_name in expected:
-                assert flag_name in flags, (
-                    "cmds.{} has no -{} flag (whitelisted for '{}')".format(command_name, flag_name, field_type)
+                assert flag_name in flags, "cmds.{} has no -{} flag (whitelisted for '{}')".format(
+                    command_name, flag_name, field_type
                 )
 
 
@@ -560,11 +558,13 @@ def test_field_attrs_exist_on_maya_nodes():
         finally:
             cmds.delete(node)
 
-    missing = sorted({
-        attr
-        for key, attr in FIELD_ATTRS.items()
-        if key not in ("direction", "speed", "phase") and attr not in available
-    })
+    missing = sorted(
+        {
+            attr
+            for key, attr in FIELD_ATTRS.items()
+            if key not in ("direction", "speed", "phase") and attr not in available
+        }
+    )
     assert not missing, "FIELD_ATTRS names attributes no field node exposes: {}".format(missing)
 
 
