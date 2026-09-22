@@ -107,23 +107,37 @@ class _FakeCmds:
     def delete(self, node):
         self.calls.append(("delete", node))
 
-    @staticmethod
-    def _field_factory(name):
-        def factory(self, **kwargs):
-            self.calls.append((name, kwargs))
-            return [self._spawn("{}Field".format(name), "{}Field".format(name))]
+    def _field(self, name, **kwargs):
+        """Shared body for every dynamic field factory (air, drag, ...)."""
+        self.calls.append((name, kwargs))
+        return [self._spawn("{}Field".format(name), "{}Field".format(name))]
 
-        return factory
+    def air(self, **kwargs):
+        return self._field("air", **kwargs)
 
-    air = _field_factory("air")
-    drag = _field_factory("drag")
-    gravity = _field_factory("gravity")
-    newton = _field_factory("newton")
-    radial = _field_factory("radial")
-    turbulence = _field_factory("turbulence")
-    uniform = _field_factory("uniform")
-    vortex = _field_factory("vortex")
-    volumeAxis = _field_factory("volumeAxis")
+    def drag(self, **kwargs):
+        return self._field("drag", **kwargs)
+
+    def gravity(self, **kwargs):
+        return self._field("gravity", **kwargs)
+
+    def newton(self, **kwargs):
+        return self._field("newton", **kwargs)
+
+    def radial(self, **kwargs):
+        return self._field("radial", **kwargs)
+
+    def turbulence(self, **kwargs):
+        return self._field("turbulence", **kwargs)
+
+    def uniform(self, **kwargs):
+        return self._field("uniform", **kwargs)
+
+    def vortex(self, **kwargs):
+        return self._field("vortex", **kwargs)
+
+    def volumeAxis(self, **kwargs):
+        return self._field("volumeAxis", **kwargs)
 
 
 def _calls(cmds, name):
