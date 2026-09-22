@@ -114,21 +114,28 @@ jobs:
         env:
           RELEASE_VERSION: ${{ needs.release-please.outputs.version }}
           TAG_NAME: ${{ inputs.tag_name }}
+          EVENT_NAME: ${{ github.event_name }}
         run: |
           python - <<'PY'
           import os
           import sys
           from pathlib import Path
 
-          version = (os.environ.get("RELEASE_VERSION") or "").strip()
-          if not version:
+          # Same precedence as the checkout ``ref``: a manual backfill builds
+          # the requested tag, so it must also be validated against that tag.
+          version = ""
+          if os.environ.get("EVENT_NAME") == "workflow_dispatch":
               version = (os.environ.get("TAG_NAME") or "").strip().lstrip("vV")
+          if not version:
+              version = (os.environ.get("RELEASE_VERSION") or "").strip()
           if not version:
               print("No release version resolved; skipping the tag/artifact check")
               sys.exit(0)
 
           artifacts = sorted(Path("dist").glob("*.whl")) + sorted(Path("dist").glob("*.tar.gz"))
-          expected = "dcc_mcp_maya-%s" % version
+          # Anchor on the separator that follows the version: a bare prefix
+          # would let "0.9.2" accept "dcc_mcp_maya-0.9.28-...".
+          expected = ("dcc_mcp_maya-%s-" % version, "dcc_mcp_maya-%s." % version)
           mismatched = [path.name for path in artifacts if not path.name.startswith(expected)]
           if mismatched:
               print("::error::dist artifacts do not match version %s: %s" % (version, ", ".join(mismatched)))

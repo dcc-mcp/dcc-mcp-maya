@@ -142,3 +142,10 @@ def test_release_build_job_checks_dist_matches_the_tag(release):
     env = check[0].get("env") or {}
     assert "needs.release-please.outputs.version" in str(env.get("RELEASE_VERSION", ""))
     assert "inputs.tag_name" in str(env.get("TAG_NAME", ""))
+    script = _runs(check)
+    # A backfill builds the requested tag, so the version source must follow
+    # the same precedence as the checkout ``ref``.
+    assert "EVENT_NAME" in env and "workflow_dispatch" in script
+    # The version must be anchored at a filename boundary: a bare prefix lets
+    # "0.9.2" accept "dcc_mcp_maya-0.9.28-py3-none-any.whl".
+    assert 'dcc_mcp_maya-%s-" % version' in script and 'dcc_mcp_maya-%s." % version' in script
