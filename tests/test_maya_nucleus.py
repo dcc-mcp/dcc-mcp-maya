@@ -199,10 +199,7 @@ def _boot_maya_cmds():
     import maya.cmds as cmds
     import maya.standalone
 
-    try:
-        maya.standalone.initialize()
-    except Exception:  # noqa: BLE001 - already initialised is the common case
-        pass
+    maya.standalone.initialize()
     return cmds
 
 
@@ -518,20 +515,43 @@ def test_create_field_applies_node_only_settings_after_the_node_exists():
     """``trap_inside`` / ``turbulence_frequency`` are attributes, not flags."""
     cmds = _FakeCmds()
 
-    create_field(cmds, field_type="volume_axis", trap_inside=False, turbulence_frequency=2.0)
+    create_field(cmds, field_type="volume_axis", trap_inside=False, turbulence_frequency=[2.0, 2.0, 2.0])
 
     kwargs = _calls(cmds, "volumeAxis")[0][1]
     assert "trapInside" not in kwargs
     assert "turbulenceFrequency" not in kwargs
     applied = _setattr(cmds)
     assert applied["volumeAxisField1.trapInside"] == (False,)
-    assert applied["volumeAxisField1.turbulenceFrequency"] == (2.0,)
+    assert applied["volumeAxisField1.turbulenceFrequency"] == (2.0, 2.0, 2.0)
 
 
 def test_create_field_explains_retired_settings():
-    """A setting no Maya build exposes gets guidance, not a bare rejection."""
-    with pytest.raises(NucleusContractError, match="directional_strength.*directional_speed"):
+    """A setting no Maya build exposes gets guidance, not a bare rejection.
+
+    The wording matters: the generic "does not support" message would just
+    list the whitelist, which does not say why the setting is gone.
+    """
+    with pytest.raises(NucleusContractError, match="no Maya field command") as excinfo:
         create_field(_FakeCmds(), field_type="volume_axis", directional_strength=0.5)
+
+    assert "directional_speed" in str(excinfo.value)
+
+
+def test_create_field_rejects_scalar_value_for_a_compound_attr():
+    """``turbulenceFrequency`` is a double3; a scalar fails with an opaque Maya error."""
+    with pytest.raises(NucleusContractError, match="turbulence_frequency expects a 3-element"):
+        create_field(_FakeCmds(), field_type="volume_axis", turbulence_frequency=2.0)
+
+
+def test_create_field_writes_compound_attrs_with_all_components():
+    """A 3-element value must reach setAttr as a double3 with three components."""
+    cmds = _FakeCmds()
+
+    create_field(cmds, field_type="volume_axis", turbulence_frequency=[1.0, 2.0, 3.0])
+
+    applied = [call for call in cmds.calls if call[0] == "setAttr" and "turbulenceFrequency" in call[1]]
+    assert applied[0][2] == (1.0, 2.0, 3.0)
+    assert applied[0][3] == {"type": "double3"}
 
 
 def _collect_maya_table_errors(cmds):
@@ -591,12 +611,12 @@ def _maya_check_main():
     try:
         cmds = _boot_maya_cmds()
     except Exception as exc:  # noqa: BLE001 - report and let the parent decide
-        print("MAYA_UNAVAILABLE: {}".format(exc))
-        return 0
+        print("MAYA_BOOT_FAILED: {}".format(exc))
+        return 1
 
     if getattr(cmds, "air", None) is None:
-        print("MAYA_UNAVAILABLE: field commands are not registered")
-        return 0
+        print("MAYA_BOOT_FAILED: field commands are not registered")
+        return 1
 
     errors = _collect_maya_table_errors(cmds)
     for line in errors:
@@ -634,9 +654,9 @@ def test_field_tables_match_a_real_maya():
     )
     output = (result.stdout or "") + (result.stderr or "")
 
-    if "MAYA_UNAVAILABLE" in output:
-        pytest.skip(output.strip())
-
+    # Deliberately no skip based on the child's output: a child that could not
+    # boot must fail, otherwise a broken Maya install silently turns the guard
+    # into a no-op. The only skip is the parent's own import check above.
     assert result.returncode == 0, "Maya disagrees with the field tables:\n" + output.strip()
 
 

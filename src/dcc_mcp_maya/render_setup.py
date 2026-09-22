@@ -71,6 +71,14 @@ AOV_TYPE_MAX = 11
 #: broken scene degrades to "some AOVs invisible" instead of never returning.
 AOV_SCAN_LIMIT = 4096
 
+#: Empty slots to probe after the last hit before the scan gives up.  Stopping
+#: the instant the connection count is satisfied assumes ``listConnections``
+#: reports one entry per occupied slot. It does on Maya 2020-2026 - a source
+#: wired to slots 0 and 4 is listed twice - but if a build ever de-duplicated
+#: them, the count would be satisfied by slot 0 alone and slot 4 would go
+#: unseen. The trailing window keeps that hypothetical from losing an AOV.
+AOV_TRAILING_EMPTY_SLOTS = 8
+
 RENDER_SETUP_UNAVAILABLE_HINT = (
     "maya.app.renderSetup.model.renderSetup could not be imported; "
     "load the renderSetup plug-in (cmds.loadPlugin('renderSetup')) first."
@@ -512,6 +520,7 @@ def _occupied_aov_indices(cmds: Any) -> List[int]:
     if not connected:
         return []
     slot = 0
+    empty_run = 0
     while slot < AOV_SCAN_LIMIT:
         plug = "{}[{}]".format(_aov_list_plug(), slot)
         try:
@@ -520,10 +529,14 @@ def _occupied_aov_indices(cmds: Any) -> List[int]:
             sources = []
         if sources:
             indices.append(slot)
+            empty_run = 0
+        else:
+            empty_run += 1
         slot += 1
-        # ``>=`` not ``==``: two elements may share one source node, which
-        # makes ``listConnections`` report fewer entries than occupied slots.
-        if indices and len(indices) >= len(connected) and slot > max(indices):
+        # ``>=`` not ``==``: slots can outnumber the reported sources when two
+        # elements share one source node. The trailing empty run is what lets a
+        # later slot still be found once the count looks satisfied.
+        if indices and len(indices) >= len(connected) and empty_run >= AOV_TRAILING_EMPTY_SLOTS:
             break
     return sorted(set(indices))
 

@@ -254,6 +254,11 @@ FIELD_POST_CREATE_ATTRS: Dict[str, str] = {
     "trap_inside": "trapInside",
 }
 
+#: Post-create settings whose node attribute is a ``double3``. A scalar reaches
+#: ``setAttr`` as one component and Maya then fails with an opaque "error
+#: reading data element number 2", so reject it with a usable message.
+FIELD_COMPOUND_POST_CREATE: Tuple[str, ...] = ("turbulence_frequency",)
+
 #: Settings that used to be accepted but are neither a create flag nor a node
 #: attribute in any Maya build we could check.  They stay recognised so an
 #: agent gets an explanation instead of a bare "unsupported key" error.
@@ -600,6 +605,13 @@ def _field_create_kwargs(
     no fake-``cmds`` unit test can catch; the whitelist plus the meta-test in
     ``tests/test_maya_nucleus.py`` is what keeps the two in step.
     """
+    # Retired settings are checked first: they are absent from the whitelist,
+    # so the generic message below would otherwise fire and bury the guidance.
+    retired = sorted(key for key in settings if key in FIELD_RETIRED_SETTINGS)
+    if retired:
+        key = retired[0]
+        raise NucleusContractError("{}: {}".format(key, FIELD_RETIRED_SETTINGS[key]))
+
     supported = FIELD_SUPPORTED_FLAGS.get(field_type, ())
     unsupported = [key for key in settings if key not in supported]
     if unsupported:
@@ -628,7 +640,10 @@ def _field_create_kwargs(
                 create_kwargs[flag_name] = component
             continue
         if key in FIELD_POST_CREATE_ATTRS:
-            post_create[FIELD_POST_CREATE_ATTRS[key]] = _plug_value(value)
+            value = _plug_value(value)
+            if key in FIELD_COMPOUND_POST_CREATE and not isinstance(value, list):
+                raise NucleusContractError("{} expects a 3-element [x, y, z] list, got a single value".format(key))
+            post_create[FIELD_POST_CREATE_ATTRS[key]] = value
             continue
         create_kwargs[FIELD_CREATE_FLAGS[key]] = _plug_value(value)
     return create_kwargs, post_create

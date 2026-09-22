@@ -765,6 +765,20 @@ def test_occupied_aov_indices_finds_slots_above_the_connection_count():
     assert _occupied_aov_indices(cmds) == [4]
 
 
+def test_occupied_aov_indices_finds_slots_that_share_one_source():
+    """Two slots wired to one source node must both be reported.
+
+    Maya lists a shared source once per occupied element, so the connection
+    count still matches the slot count - but an early stop keyed only on that
+    count would settle for the first slot and lose the sparse one above it.
+    """
+    cmds = _FakeCmds(options_exists=True)
+    cmds.aov_slots = {0: "aiAOV_a", 4: "aiAOV_a"}
+    cmds.connections = ["aiAOV_a", "aiAOV_a"]
+
+    assert _occupied_aov_indices(cmds) == [0, 4]
+
+
 def test_add_aov_after_bulk_removal_does_not_collide():
     """The next index must still be a genuinely free slot after a bulk removal."""
     cmds = _FakeCmds(options_exists=True)
