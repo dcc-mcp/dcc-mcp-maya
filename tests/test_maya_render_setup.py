@@ -168,6 +168,7 @@ class _FakeCmds:
         if options_exists:
             self.nodes["defaultArnoldRenderOptions"] = "aiOptions"
         self.connections = list(aovs or [])
+        self.aov_slots = dict(enumerate(self.connections))
         self.deleted = []
         self.calls = []
         self.legacy_layers = ["defaultRenderLayer"]
@@ -228,20 +229,43 @@ class _FakeCmds:
             return 6
         return self.attrs.get(node, {}).get(attr)
 
-    def listConnections(self, plug, **_kwargs):
+    def listConnections(self, plug, **kwargs):
         if plug.endswith(".aovList"):
+            if kwargs.get("plugs"):
+                # Sparse array: report the real element index for each entry.
+                # Maya returns the destination plug, e.g. "...aovList[0]".
+                return [
+                    "{}[{}]".format(plug, index)
+                    for index in sorted(self.aov_slots)
+                    if self.aov_slots.get(index) in self.connections
+                ]
             return list(self.connections)
+        if "[" in plug:
+            index = int(plug.rsplit("[", 1)[1].rstrip("]"))
+            node = self.aov_slots.get(index)
+            if node is None or node not in self.connections:
+                return []
+            return [node]
         return []
 
     def connectAttr(self, source, destination, **_kwargs):
         self.calls.append(("connectAttr", source, destination))
         node = source.rpartition(".")[0]
+        index = int(destination.rsplit("[", 1)[1].rstrip("]"))
+        if self.aov_slots.get(index) is not None and self.aov_slots[index] != node:
+            raise RuntimeError("slot {} already occupied".format(index))
+        self.aov_slots[index] = node
         if node not in self.connections:
             self.connections.append(node)
 
-    def disconnectAttr(self, source, destination):  # noqa: ARG002 - destination is Maya-side
+    def disconnectAttr(self, source, destination):
         self.calls.append(("disconnectAttr", source))
-        self.connections = [item for item in self.connections if item != source.rpartition(".")[0]]
+        node = source.rpartition(".")[0]
+        index = int(destination.rsplit("[", 1)[1].rstrip("]"))
+        if self.aov_slots.get(index) == node:
+            # Sparse array: disconnecting frees the slot, it does not renumber.
+            del self.aov_slots[index]
+        self.connections = [item for item in self.connections if item != node]
 
     def editRenderLayerGlobals(self, **kwargs):
         if kwargs.get("query"):
@@ -689,6 +713,38 @@ def test_set_aov_enabled_rejects_unknown_aov_and_lists_current():
 
     with pytest.raises(RenderSetupContractError, match="No AOV named ghost"):
         set_aov_enabled(cmds, "ghost", True)
+
+
+def test_add_aov_reuses_a_hole_left_by_a_removal():
+    """aovList is sparse: a removed index leaves a hole that must be reused.
+
+    Counting connections to pick the index collides with a live element, and
+    connectAttr(force=True) then silently replaces an existing AOV.
+    """
+    cmds = _FakeCmds(options_exists=True)
+    add_aov(cmds, name="a")
+    add_aov(cmds, name="b")
+    add_aov(cmds, name="c")
+    remove_aov(cmds, "b")  # frees index 1, leaving {0, 2}
+
+    result = add_aov(cmds, name="d")
+
+    assert result["index"] == 1
+    # Slots, not insertion order, express the sparse array layout.
+    assert cmds.aov_slots == {0: "aiAOV_a", 1: "aiAOV_d", 2: "aiAOV_c"}
+
+
+def test_add_aov_does_not_replace_a_live_aov():
+    cmds = _FakeCmds(options_exists=True)
+    add_aov(cmds, name="a")
+    add_aov(cmds, name="b")
+    add_aov(cmds, name="c")
+    remove_aov(cmds, "b")
+    add_aov(cmds, name="d")
+
+    names = {record["name"] for record in list_aovs(cmds)["aovs"]}
+    assert names == {"a", "c", "d"}, "a live AOV was replaced"
+    assert cmds.aov_slots[2] == "aiAOV_c", "index 2 must still hold the original AOV"
 
 
 def test_remove_aov_deletes_only_the_requested_node():

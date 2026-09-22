@@ -476,17 +476,49 @@ def ensure_arnold(cmds: Any) -> Dict[str, Any]:
     return {"plugin": ARNOLD_PLUGIN, "options_node": ARNOLD_OPTIONS_NODE, "loaded": True}
 
 
-def _aov_index(cmds: Any) -> int:
-    """Next free ``aovList`` index.
-
-    ``getAttr(node.aovList, size=True)`` reports 0 even when the array is
-    populated, so the count must come from ``listConnections``.
-    """
-    return len(cmds.listConnections(_aov_list_plug(), source=True, destination=False) or [])
-
-
 def _aov_list_plug() -> str:
     return "{}.aovList".format(ARNOLD_OPTIONS_NODE)
+
+
+def _occupied_aov_indices(cmds: Any) -> List[int]:
+    """Return the ``aovList`` indices that currently hold a connection.
+
+    ``aovList`` is a sparse Maya multi-attribute: disconnecting element 1 does
+    NOT renumber element 2. Counting connections therefore both under-counts
+    and, after a hole appears, collides with a live element - and because
+    ``connectAttr(force=True)`` silently replaces, that destroys an existing
+    AOV instead of adding one.
+    """
+    # ``listConnections(..., plugs=True)`` on the destination returns the
+    # SOURCE plugs (e.g. "aiAOV_a.message"), not the destination elements, so
+    # it cannot reveal which element index each AOV occupies. Probe the
+    # elements directly: a populated slot returns its node, a hole returns
+    # empty. Verified on Maya 2025.
+    indices: List[int] = []
+    connected = cmds.listConnections(_aov_list_plug(), source=True, destination=False) or []
+    if not connected:
+        return []
+    for slot in range(len(connected) + len(indices) + 1):
+        plug = "{}[{}]".format(_aov_list_plug(), slot)
+        try:
+            sources = cmds.listConnections(plug, source=True, destination=False) or []
+        except Exception:  # noqa: BLE001 - an unset element can fail to query
+            sources = []
+        if sources:
+            indices.append(slot)
+    return sorted(set(indices))
+
+
+def _next_aov_index(cmds: Any) -> int:
+    """Smallest free ``aovList`` index, skipping any holes left by removals."""
+    occupied = _occupied_aov_indices(cmds)
+    candidate = 0
+    for used in occupied:
+        if used == candidate:
+            candidate += 1
+        elif used > candidate:
+            break
+    return candidate
 
 
 def _aov_record(cmds: Any, node: str) -> Dict[str, Any]:
@@ -539,22 +571,24 @@ def add_aov(
             )
         )
 
-    node = str(node_name or "").strip() or "{}_{}".format(AOV_NODE_TYPE, aov_name)
-    created = cmds.createNode(AOV_NODE_TYPE, name=node)
-    node = str(created)
-    cmds.setAttr("{}.name".format(node), aov_name, type="string")
-    cmds.setAttr("{}.type".format(node), value)
+    requested = str(node_name or "").strip() or "{}_{}".format(AOV_NODE_TYPE, aov_name)
+    created = str(cmds.createNode(AOV_NODE_TYPE, name=requested))
+    # Maya renames on a clash (aiAOV_1 -> aiAOV_2), so report when the node
+    # came back under a different name.
+    duplicated_name = created != requested
+    cmds.setAttr("{}.name".format(created), aov_name, type="string")
+    cmds.setAttr("{}.type".format(created), value)
 
-    index = _aov_index(cmds)
+    index = _next_aov_index(cmds)
     cmds.connectAttr(
-        "{}.message".format(node),
+        "{}.message".format(created),
         "{}[{}]".format(_aov_list_plug(), index),
-        force=True,
     )
     return {
-        "aov": _aov_record(cmds, node),
+        "aov": _aov_record(cmds, created),
         "index": index,
-        "duplicated_name": created != node,
+        "requested_node_name": requested,
+        "duplicated_name": duplicated_name,
     }
 
 
@@ -599,8 +633,9 @@ def remove_aov(cmds: Any, aov: str) -> Dict[str, Any]:
     """Disconnect and delete an AOV, keeping the array compact."""
     node = _resolve_aov_node(cmds, aov)
     record = _aov_record(cmds, node)
-    index = _aov_index(cmds)
-    for slot in range(index):
+    # Scan the indices that actually hold connections; a hole in the array
+    # means index N is not necessarily occupied.
+    for slot in _occupied_aov_indices(cmds):
         plug = "{}[{}]".format(_aov_list_plug(), slot)
         try:
             sources = cmds.listConnections(plug, source=True, destination=False) or []

@@ -10,13 +10,15 @@ tools:
     type: object
     properties:
       name:
-        type: string
+        type:
+        - string
+        - 'null'
         default: null
       renderable:
-        type: string
+        type: boolean
         default: true
       activate:
-        type: string
+        type: boolean
         default: false
     required: []
 - name: list_render_layers
@@ -31,10 +33,10 @@ tools:
     type: object
     properties:
       include_default:
-        type: string
+        type: boolean
         default: true
       include_legacy:
-        type: string
+        type: boolean
         default: true
     required: []
 - name: set_current_render_layer
@@ -48,7 +50,9 @@ tools:
     type: object
     properties:
       name:
-        type: string
+        type:
+        - string
+        - 'null'
         default: null
       layer_system:
         type: string
@@ -69,19 +73,30 @@ tools:
     type: object
     properties:
       layer:
-        type: string
+        type:
+        - string
+        - 'null'
         default: null
       name:
-        type: string
+        type:
+        - string
+        - 'null'
         default: null
       members:
-        type: string
+        type:
+        - array
+        - 'null'
+        items:
+          type: string
+        minItems: 1
         default: null
       pattern:
-        type: string
+        type:
+        - string
+        - 'null'
         default: null
       replace:
-        type: string
+        type: boolean
         default: false
     required: []
 - name: create_render_override
@@ -95,16 +110,21 @@ tools:
     type: object
     properties:
       layer:
-        type: string
+        type:
+        - string
+        - 'null'
         default: null
       collection:
-        type: string
+        type:
+        - string
+        - 'null'
         default: null
       attribute:
-        type: string
+        type:
+        - string
+        - 'null'
         default: null
       value:
-        type: string
         default: null
       override_type:
         type: string
@@ -125,10 +145,14 @@ tools:
     type: object
     properties:
       name:
-        type: string
+        type:
+        - string
+        - 'null'
         default: null
       aov_type:
-        type: string
+        type:
+        - string
+        - 'null'
         enum:
         - int
         - uint
@@ -141,7 +165,9 @@ tools:
         - pointer
         default: null
       node_name:
-        type: string
+        type:
+        - string
+        - 'null'
         default: null
     required: []
 - name: list_aovs
@@ -167,10 +193,12 @@ tools:
     type: object
     properties:
       aov:
-        type: string
+        type:
+        - string
+        - 'null'
         default: null
       enabled:
-        type: string
+        type: boolean
         default: true
     required: []
 - name: remove_aov
@@ -184,7 +212,9 @@ tools:
     type: object
     properties:
       aov:
-        type: string
+        type:
+        - string
+        - 'null'
         default: null
     required: []
 - name: plan_comp_outputs
@@ -199,33 +229,45 @@ tools:
     type: object
     properties:
       directory:
-        type: string
+        type:
+        - string
+        - 'null'
         default: null
       layers:
-        type: string
+        type:
+        - array
+        - 'null'
+        items:
+          type: string
+        minItems: 1
         default: null
       aovs:
-        type: string
+        type:
+        - array
+        - 'null'
+        items:
+          type: string
+        minItems: 1
         default: null
       file_name:
         type: string
         default: <Scene>
       start_frame:
-        type: string
+        type: integer
         default: 1
       end_frame:
-        type: string
+        type: integer
         default: 1
       frame_padding:
-        type: string
+        type: integer
         default: 4
       extension:
         type: string
         default: exr
       separate_aov_folders:
-        type: string
+        type: boolean
         default: true
       separate_layer_folders:
-        type: string
+        type: boolean
         default: true
     required: []
