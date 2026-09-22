@@ -281,15 +281,58 @@ def test_unload_plugin_rejects_not_loaded():
 # ---------------------------------------------------------------------------
 
 
-def test_diagnose_reports_a_healthy_loaded_plugin():
-    cmds = _FakeCmds(known={"mtoa"}, loaded={"mtoa"}, files={"mtoa": "/p/mtoa.mll"})
+def test_find_plugin_file_accepts_an_injected_search_path(tmp_path):
+    """Resolution must not depend on the ambient machine's search path."""
+    (tmp_path / "mtoa.mll").write_text("", encoding="utf-8")
+    path = {"entries": [str(tmp_path)], "count": 1, "missing": []}
 
-    result = diagnose_plugin(cmds, "mtoa")
+    result = find_plugin_file("mtoa", search_path=path)
+
+    assert result["found"] is True
+    assert result["candidates"] == [str(tmp_path / "mtoa.mll")]
+
+
+def test_find_plugin_file_accepts_a_bare_name_without_extension(tmp_path):
+    (tmp_path / "customPlugin").write_text("", encoding="utf-8")
+    path = {"entries": [str(tmp_path)], "count": 1, "missing": []}
+
+    assert find_plugin_file("customPlugin", search_path=path)["found"] is True
+
+
+def test_diagnose_reports_a_healthy_loaded_plugin(tmp_path):
+    """A usable plug-in is healthy regardless of stale path entries.
+
+    Stale search-path directories are environment hygiene and are reported as
+    ``warnings``; they must not make a working plug-in look unhealthy. The
+    search path is injected so the result does not depend on the machine.
+    """
+    (tmp_path / "mtoa.mll").write_text("", encoding="utf-8")
+    cmds = _FakeCmds(known={"mtoa"}, loaded={"mtoa"})
+    path = {
+        "entries": [str(tmp_path), str(tmp_path / "stale")],
+        "count": 2,
+        "missing": [str(tmp_path / "stale")],
+    }
+
+    result = diagnose_plugin(cmds, "mtoa", search_path=path)
 
     assert result["known"] is True
     assert result["loaded"] is True
+    assert result["file_found"] is True
     assert result["healthy"] is True
     assert result["problems"] == []
+    # The stale directory is a warning, not a verdict on the plug-in.
+    assert result["warnings"]
+    assert all(PLUGIN_PATH_ENV in item for item in result["warnings"])
+
+
+def test_diagnose_healthy_is_false_when_a_plugin_problem_exists():
+    cmds = _FakeCmds(known={"mtoa"}, loaded={"mtoa"})
+
+    broken = diagnose_plugin(cmds, "definitely_not_a_real_plugin_xyz")
+
+    assert broken["healthy"] is False
+    assert broken["problems"]
 
 
 def test_diagnose_explains_an_unknown_plugin():

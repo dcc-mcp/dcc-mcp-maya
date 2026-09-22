@@ -22,7 +22,7 @@ design and are invisible under a fake ``cmds``:
 from __future__ import annotations
 
 import os
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 #: Environment variable holding the plug-in search path.
 PLUGIN_PATH_ENV = "MAYA_PLUG_IN_PATH"
@@ -110,14 +110,17 @@ def plugin_search_path(cmds: Any = None) -> Dict[str, Any]:
     }
 
 
-def find_plugin_file(name: str, cmds: Any = None) -> Dict[str, Any]:
+def find_plugin_file(name: str, search_path: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """Locate a plug-in file on the search path.
 
     Resolves a bare name (``mtoa``) to an actual file, so a "not found" error
     can say whether the plug-in exists at all or is simply not on the path.
+
+    ``search_path`` accepts a :func:`plugin_search_path` result so callers (and
+    tests) can resolve against a known path rather than the ambient machine.
     """
     plugin = _require(name, "plugin")
-    path = plugin_search_path()
+    path = search_path if search_path is not None else plugin_search_path()
     names = [plugin] + [plugin + ext for ext in PLUGIN_EXTENSIONS]
     candidates: List[str] = []
     for directory in path["entries"]:
@@ -226,7 +229,7 @@ def load_plugin(cmds: Any, plugin: str, autoload: bool = False) -> Dict[str, Any
     try:
         result = cmds.loadPlugin(name, quiet=True)
     except Exception as exc:  # noqa: BLE001 - the message is the diagnosis
-        located = find_plugin_file(name)
+        located = find_plugin_file(name, search_path=plugin_search_path())
         detail = str(exc).strip() or "plug-in could not be loaded"
         hint = (
             "The plug-in file was found at {} but failed to load; it is likely built "
@@ -270,7 +273,7 @@ def unload_plugin(cmds: Any, plugin: str, force: bool = False) -> Dict[str, Any]
     if not _known(cmds, name):
         # Maya drops a plug-in from listPlugins once it is unloaded, so an
         # already-unloaded plug-in also lands here. Say which case it is.
-        if find_plugin_file(name)["found"]:
+        if find_plugin_file(name, search_path=plugin_search_path())["found"]:
             raise PluginContractError(
                 "{} is already unloaded, so there is nothing to unload. Loading it again "
                 "would register it with Maya.".format(name)
@@ -301,7 +304,7 @@ def unload_plugin(cmds: Any, plugin: str, force: bool = False) -> Dict[str, Any]
 # ---------------------------------------------------------------------------
 
 
-def diagnose_plugin(cmds: Any, plugin: str) -> Dict[str, Any]:
+def diagnose_plugin(cmds: Any, plugin: str, search_path: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """Report why a plug-in is or is not usable.
 
     Combines the three signals that matter: is the file on the search path, is
@@ -309,7 +312,8 @@ def diagnose_plugin(cmds: Any, plugin: str) -> Dict[str, Any]:
     is unavailable so an agent can act on it without a second round trip.
     """
     name = _require(plugin, "plugin")
-    located = find_plugin_file(name)
+    search = search_path if search_path is not None else plugin_search_path()
+    located = find_plugin_file(name, search_path=search)
     known = _known(cmds, name)
     record = plugin_record(cmds, name) if known else None
 
@@ -334,11 +338,21 @@ def diagnose_plugin(cmds: Any, plugin: str) -> Dict[str, Any]:
         problems.append("The plug-in is registered but not loaded.")
         suggestions.append("Load it to use its commands, nodes and metadata.")
 
+    # Stale search-path directories are environment hygiene, not a verdict on
+    # this plug-in. They are reported as ``warnings`` so ``healthy`` keeps
+    # meaning "this plug-in has no problem of its own" - otherwise a perfectly
+    # usable plug-in looked unhealthy on any machine with a stale path entry.
+    warnings: List[str] = []
     if located["missing_dirs"]:
-        problems.append("{} search path directories do not exist.".format(len(located["missing_dirs"])))
+        warnings.append(
+            "{} {} entr{} do not exist.".format(
+                len(located["missing_dirs"]),
+                PLUGIN_PATH_ENV,
+                "y" if len(located["missing_dirs"]) == 1 else "ies",
+            )
+        )
         suggestions.append("Remove or fix the stale entries in {}.".format(PLUGIN_PATH_ENV))
 
-    search = plugin_search_path()
     return {
         "plugin": name,
         "known": known,
@@ -349,6 +363,7 @@ def diagnose_plugin(cmds: Any, plugin: str) -> Dict[str, Any]:
         "record": record,
         "search_path": search,
         "problems": problems,
+        "warnings": warnings,
         "suggestions": suggestions,
         "healthy": not problems,
     }

@@ -28,6 +28,7 @@ def diagnose_plugin(plugin: Optional[str] = None) -> dict:
             record=result["record"],
             search_path=result["search_path"],
             problems=result["problems"],
+            warnings=result["warnings"],
             suggestions=result["suggestions"],
             healthy=result["healthy"],
         )
