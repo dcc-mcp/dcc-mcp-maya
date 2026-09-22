@@ -1,40 +1,4 @@
 tools:
-- name: list_bifrost_graphs
-  description: List Bifrost graph shapes and boards with optional node and port details.
-  execution: sync
-  affinity: main
-  annotations:
-    read_only_hint: true
-    idempotent_hint: true
-  group: graph
-  input_schema:
-    type: object
-    properties:
-      include_nodes:
-        type: boolean
-        default: true
-      include_ports:
-        type: boolean
-        default: false
-- name: create_bifrost_graph
-  description: Create an empty Bifrost graph shape or board in the current Maya scene.
-  execution: sync
-  affinity: main
-  annotations:
-    read_only_hint: false
-    idempotent_hint: false
-  group: graph
-  input_schema:
-    type: object
-    properties:
-      name:
-        type: string
-      kind:
-        type: string
-        enum:
-        - graph_shape
-        - board
-        default: graph_shape
 - name: add_bifrost_node
   description: Add a fully-qualified Bifrost node to an existing graph or compound.
   execution: sync
@@ -59,6 +23,34 @@ tools:
       compound:
         type: string
         default: .
+- name: cache_bifrost_simulation
+  description: Write and attach a geometry cache for a Bifrost graph's evaluated output.
+  execution: async
+  affinity: main
+  timeout_hint_secs: 600
+  group: simulation
+  input_schema:
+    type: object
+    properties:
+      graph:
+        type: string
+      directory:
+        type: string
+      file_name:
+        type: string
+      start_frame:
+        type: number
+      end_frame:
+        type: number
+      cache_format:
+        type: string
+        enum:
+        - OneFile
+        - OneFilePerFrame
+        default: OneFile
+    required:
+    - graph
+    - directory
 - name: connect_bifrost_ports
   description: Connect or disconnect two absolute-from-root ports in a Bifrost graph.
   execution: sync
@@ -88,6 +80,55 @@ tools:
       copy_metadata:
         type: boolean
         default: false
+- name: convert_bifrost_to_polygons
+  description: Convert a Bifrost graph's volumetric output into a Maya polygon mesh.
+  execution: async
+  affinity: main
+  timeout_hint_secs: 600
+  group: simulation
+  input_schema:
+    type: object
+    properties:
+      graph:
+        type: string
+      out_mesh:
+        type: string
+      name:
+        type: string
+      blend:
+        type: number
+        default: 1.0
+      threshold:
+        type: number
+        default: 0.0
+      mode:
+        type: string
+        enum:
+        - triangulate
+        - quad
+        - voronoi
+        default: triangulate
+    required:
+    - graph
+- name: create_bifrost_graph
+  description: Create an empty Bifrost graph shape or board in the current Maya scene.
+  execution: sync
+  affinity: main
+  annotations:
+    read_only_hint: false
+    idempotent_hint: false
+  group: graph
+  input_schema:
+    type: object
+    properties:
+      name:
+        type: string
+      kind:
+        type: string
+        enum:
+        - graph_shape
+        - board
+        default: graph_shape
 - name: create_bifrost_port
   description: Create a dynamic input or output port on a compatible Bifrost node.
   execution: sync
@@ -119,6 +160,23 @@ tools:
         - input
         - output
         default: input
+- name: list_bifrost_graphs
+  description: List Bifrost graph shapes and boards with optional node and port details.
+  execution: sync
+  affinity: main
+  annotations:
+    read_only_hint: true
+    idempotent_hint: true
+  group: graph
+  input_schema:
+    type: object
+    properties:
+      include_nodes:
+        type: boolean
+        default: true
+      include_ports:
+        type: boolean
+        default: false
 - name: set_bifrost_property
   description: Set an unconnected Bifrost node input port default from a JSON-compatible
     value.

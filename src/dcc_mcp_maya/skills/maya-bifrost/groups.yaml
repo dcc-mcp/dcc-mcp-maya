@@ -9,3 +9,9 @@ groups:
   - create_bifrost_port
   - connect_bifrost_ports
   - set_bifrost_property
+- name: simulation
+  description: Cache Bifrost simulations and bake graph output back to polygons.
+  default_active: true
+  tools:
+  - cache_bifrost_simulation
+  - convert_bifrost_to_polygons
