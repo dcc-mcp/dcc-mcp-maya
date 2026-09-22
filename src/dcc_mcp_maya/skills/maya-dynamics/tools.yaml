@@ -118,7 +118,11 @@ tools:
     required:
     - field_type
 - name: create_gravity_field
-  description: Create a gravity field and optionally connect it to dynamic targets.
+  description: 'Create a gravity field and optionally connect it to dynamic targets.
+    Kept for backwards compatibility: it targets legacy (non-Nucleus) rigid bodies
+    that expect gravity as an explicit field. Prefer create_dynamic_field with
+    field_type="gravity" for new work, or set Nucleus gravity directly with
+    create_nucleus / set_nucleus_properties.'
   execution: async
   affinity: main
   timeout_hint_secs: 600

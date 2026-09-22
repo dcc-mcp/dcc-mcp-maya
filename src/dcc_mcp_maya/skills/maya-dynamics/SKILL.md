@@ -71,11 +71,24 @@ is particle-driven rather than cloth-driven.
 5. `create_dynamic_field` for forces, `set_field_properties` to refine them.
 6. `create_ncache` once the motion is approved; `delete_ncache` to iterate.
 
+## Gravity: three ways, pick deliberately
+
+Maya exposes gravity in three places and they are **not** interchangeable:
+
+| Tool | Drives | Use when |
+|------|--------|----------|
+| `create_dynamic_field` with `field_type="gravity"` | Any dynamic object via a connected `gravityField` node | New work; the only option that supports attenuation, `max_distance` and `apply_per_vertex` |
+| `create_nucleus` / `set_nucleus_properties` (`gravity`, `gravity_direction`) | The Nucleus solver itself | nCloth / nParticle / nHair — gravity is a solver setting, no field node needed |
+| `create_gravity_field` | Legacy (non-Nucleus) rigid bodies | Backwards compatibility only; kept because existing scenes and agent prompts reference it |
+
+If nCloth looks wrong, check the **Nucleus** `gravity` first — it is almost
+never the field node.
+
 ## Scripts
 
 - `connect_dynamic_field` - Connect or disconnect an existing dynamic field from dynamic targets
 - `create_dynamic_field` - Create any Maya dynamic field and optionally connect it to targets
-- `create_gravity_field` - Create a gravity field and optionally connect targets
+- `create_gravity_field` - Create a gravity field and optionally connect targets (legacy; prefer `create_dynamic_field` with `field_type="gravity"`)
 - `create_ncache` - Write geometry / nCache files for Nucleus or deformable output
 - `create_ncloth` - Convert polygon meshes into Nucleus nCloth objects
 - `create_nconstraint` - Create a Nucleus constraint from driven nodes to an optional driver
