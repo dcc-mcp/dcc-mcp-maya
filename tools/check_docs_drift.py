@@ -26,10 +26,24 @@ _INLINE_CODE_RE = re.compile(r"`([^`\n]+)`")
 # no dots (excludes module paths like maya.cmds and filenames like config.json),
 # no uppercase (excludes env vars and class names).
 _TOOL_LIKE_RE = re.compile(r"^[a-z][a-z0-9_-]*[_\-][a-z0-9_-]*$")
-_FILE_EXT_RE = re.compile(r"\.(?:py|json|md|txt|yaml|yml|toml|cfg|ini|conf|xml|html|csv|env|sh|bat|ps1|lock)\b", re.IGNORECASE)
+_FILE_EXT_RE = re.compile(
+    r"\.(?:py|json|md|txt|yaml|yml|toml|cfg|ini|conf|xml|html|csv|env|sh|bat|ps1|lock)\b", re.IGNORECASE
+)
 _COUNT_RE = re.compile(r"\b(\d+)(\+?)\s+(?:typed\s+)?(?:Maya\s+)?tools?\b", re.IGNORECASE)
 _FENCE_RE = re.compile(r"^(?:```|~~~)")
-_SKIP_DIRS = {".git", ".hg", ".svn", ".tox", ".venv", "build", "dist", "node_modules", "__pycache__", ".pytest_cache", ".codebuddy"}
+_SKIP_DIRS = {
+    ".git",
+    ".hg",
+    ".svn",
+    ".tox",
+    ".venv",
+    "build",
+    "dist",
+    "node_modules",
+    "__pycache__",
+    ".pytest_cache",
+    ".codebuddy",
+}
 _SKIP_FILES = {"CHANGELOG.md"}
 
 
@@ -158,8 +172,7 @@ def check_docs_drift(repo_root: Path, tools_list_path: Path) -> list[Issue]:
                 severity="error",
                 code="TOOL_COUNT_MISMATCH",
                 message=(
-                    "{path}:{line}: claimed {expected}{plus} tools but tools/list has {actual} "
-                    "({comparator} expected)"
+                    "{path}:{line}: claimed {expected}{plus} tools but tools/list has {actual} ({comparator} expected)"
                 ).format(
                     path=claim.path.as_posix(),
                     line=claim.line,
@@ -196,8 +209,7 @@ def check_docs_drift(repo_root: Path, tools_list_path: Path) -> list[Issue]:
                 severity="warning",
                 code="UNDOCUMENTED_TOOLS",
                 message=(
-                    "{count} tools in tools/list are never referenced in Markdown "
-                    "(sample: {sample}{suffix})"
+                    "{count} tools in tools/list are never referenced in Markdown (sample: {sample}{suffix})"
                 ).format(count=len(undocumented), sample=sample, suffix=suffix),
                 path=tools_list_path,
                 line=1,

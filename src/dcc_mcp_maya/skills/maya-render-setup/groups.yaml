@@ -1,0 +1,27 @@
+groups:
+- name: layers
+  description: renderSetup render layers, plus reading legacy renderLayer nodes
+  default_active: false
+  tools:
+  - create_render_layer
+  - list_render_layers
+  - set_current_render_layer
+- name: collections
+  description: Contents of a render layer - collections and per-attribute overrides
+  default_active: false
+  tools:
+  - create_render_collection
+  - create_render_override
+- name: aovs
+  description: Arnold AOV creation, listing, enable/disable and removal
+  default_active: false
+  tools:
+  - add_aov
+  - list_aovs
+  - set_aov_enabled
+  - remove_aov
+- name: precomp
+  description: Plan per-layer and per-AOV output paths for a compositing hand-off
+  default_active: false
+  tools:
+  - plan_comp_outputs
