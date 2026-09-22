@@ -430,6 +430,18 @@ def test_inventory_excludes_directories_on_the_search_path(tmp_path):
     assert "notAPluginDir" not in names
 
 
+def test_inventory_includes_macos_bundle_directories(tmp_path):
+    """On macOS a plug-in ships as a .bundle directory, not as a file."""
+    (tmp_path / "MacPlugin.bundle").mkdir()
+    (tmp_path / "notAPluginDir").mkdir()
+    path = {"env_var": PLUGIN_PATH_ENV, "raw": "", "entries": [str(tmp_path)], "count": 1, "missing": []}
+
+    names = known_plugin_names(_FakeCmds(), search_path=path)
+
+    assert "MacPlugin" in names
+    assert "notAPluginDir" not in names
+
+
 def test_diagnose_flags_a_file_that_maya_never_registered(tmp_path):
     """On the search path but unregistered means its commands do not exist."""
     (tmp_path / "ghost.mll").write_text("", encoding="utf-8")

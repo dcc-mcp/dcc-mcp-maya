@@ -297,11 +297,11 @@ def known_plugin_names(cmds: Any = None, search_path: Optional[Dict[str, Any]] =
         except OSError:  # noqa: BLE001 - an unreadable dir is not fatal
             continue
         for entry in entries:
-            # Require a FILE: extensionless directories also sit on the search
-            # path and would otherwise be reported as plug-ins.
-            if not os.path.isfile(os.path.join(directory, entry)):
-                continue
             stem, ext = os.path.splitext(entry)
+            # Only extensionless entries need the file test: a real macOS
+            # .bundle is a directory, and it is a valid plug-in.
+            if ext == "" and not os.path.isfile(os.path.join(directory, entry)):
+                continue
             if ext in PLUGIN_EXTENSIONS or ext == "":
                 if stem:
                     names.add(stem)
