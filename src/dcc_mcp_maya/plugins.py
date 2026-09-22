@@ -297,6 +297,10 @@ def known_plugin_names(cmds: Any = None, search_path: Optional[Dict[str, Any]] =
         except OSError:  # noqa: BLE001 - an unreadable dir is not fatal
             continue
         for entry in entries:
+            # Require a FILE: extensionless directories also sit on the search
+            # path and would otherwise be reported as plug-ins.
+            if not os.path.isfile(os.path.join(directory, entry)):
+                continue
             stem, ext = os.path.splitext(entry)
             if ext in PLUGIN_EXTENSIONS or ext == "":
                 if stem:
@@ -370,25 +374,34 @@ def diagnose_plugin(
     located = find_plugin_file(name, search_path=search)
     known = _known(cmds, name, search_path=search)
     record = plugin_record(cmds, name) if known else None
+    registered = bool(record["registered"]) if record else False
+    loaded = bool(record["loaded"]) if record else False
 
     problems: List[str] = []
     suggestions: List[str] = []
 
-    if not known and not located["found"]:
+    if not located["found"]:
         problems.append(
-            "Maya does not know this plug-in and no file named {} exists on {}.".format(name, PLUGIN_PATH_ENV)
+            "No file named {} (with any of {}) exists on {}.".format(
+                name, ", ".join(PLUGIN_EXTENSIONS), PLUGIN_PATH_ENV
+            )
         )
         suggestions.append(
-            "Install the plug-in, or add its directory to {} ({} entries searched).".format(
+            "Install the plug-in, or add its directory to {} ({} entries searched)."
+            " Maya has also never registered it.".format(PLUGIN_PATH_ENV, located["searched"])
+            if not known
+            else "Install the plug-in, or add its directory to {} ({} entries searched).".format(
                 PLUGIN_PATH_ENV, located["searched"]
             )
         )
-    elif not known:
+    elif not registered:
+        # A file is on the path but Maya has never registered it, so its
+        # commands and node types do not exist yet.
         problems.append(
             "A file exists at {} but Maya has not registered it.".format(", ".join(located["candidates"][:3]))
         )
         suggestions.append("Load it once to register it, or check it was built for this Maya version.")
-    elif record is not None and not record["loaded"]:
+    elif not loaded:
         problems.append("The plug-in is registered but not loaded.")
         suggestions.append("Load it to use its commands, nodes and metadata.")
 
@@ -410,8 +423,8 @@ def diagnose_plugin(
     return {
         "plugin": name,
         "known": known,
-        "loaded": bool(record["loaded"]) if record else False,
-        "registered": bool(record["registered"]) if record else False,
+        "loaded": loaded,
+        "registered": registered,
         "file_found": located["found"],
         "candidates": located["candidates"],
         "record": record,
