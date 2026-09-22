@@ -1,0 +1,97 @@
+tools:
+- name: list_plugins
+  description: List Maya plug-ins with their load state and metadata.
+  execution: sync
+  affinity: main
+  annotations:
+    read_only_hint: true
+    idempotent_hint: true
+  group: inventory
+  input_schema:
+    type: object
+    properties:
+      pattern:
+        type: string
+        default: ''
+      loaded_only:
+        type: boolean
+        default: false
+      limit:
+        type: integer
+        default: 200
+    required: []
+- name: load_plugin
+  description: Load a Maya plug-in, with an actionable error when it cannot be found.
+  execution: sync
+  affinity: main
+  annotations:
+    idempotent_hint: false
+  group: lifecycle
+  input_schema:
+    type: object
+    properties:
+      plugin:
+        type:
+        - string
+        - 'null'
+        default: null
+      autoload:
+        type: boolean
+        default: false
+    required:
+    - plugin
+- name: unload_plugin
+  description: Unload a Maya plug-in, refusing when Maya reports it cannot be unloaded.
+  execution: sync
+  affinity: main
+  annotations:
+    idempotent_hint: false
+  group: lifecycle
+  input_schema:
+    type: object
+    properties:
+      plugin:
+        type:
+        - string
+        - 'null'
+        default: null
+      force:
+        type: boolean
+        default: false
+    required:
+    - plugin
+- name: diagnose_plugin
+  description: 'Explain why a plug-in is or is not usable: path, load state and problems.'
+  execution: sync
+  affinity: main
+  annotations:
+    read_only_hint: true
+    idempotent_hint: true
+  group: diagnostics
+  input_schema:
+    type: object
+    properties:
+      plugin:
+        type:
+        - string
+        - 'null'
+        default: null
+    required:
+    - plugin
+- name: get_plugin_path
+  description: Report the plug-in search path and resolve a plug-in name to a file.
+  execution: sync
+  affinity: main
+  annotations:
+    read_only_hint: true
+    idempotent_hint: true
+  group: diagnostics
+  input_schema:
+    type: object
+    properties:
+      plugin:
+        type:
+        - string
+        - 'null'
+        default: null
+    required: []

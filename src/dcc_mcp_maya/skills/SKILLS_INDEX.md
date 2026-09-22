@@ -2,7 +2,7 @@
 
 > Cross-skill navigation map. Read this before deciding which skill to load.
 
-The 31 bundled skills are organised into **five stages** that match the
+The 33 bundled skills are organised into **five stages** that match the
 mental model of a Maya pipeline. Each skill carries the stage in its
 SKILL.md frontmatter under `metadata.dcc-mcp.stage`.
 
@@ -10,11 +10,11 @@ SKILL.md frontmatter under `metadata.dcc-mcp.stage`.
 
 | Stage | Purpose | Default loaded? | Skills |
 |-------|---------|-----------------|--------|
-| `bootstrap` | Escape hatch; arbitrary code only when no typed skill fits. | yes | `maya-scripting` |
+| `bootstrap` | Escape hatch; arbitrary code only when no typed skill fits, plus plug-in diagnosis. | yes | `maya-scripting`, `maya-plugins` |
 | `scene` | Scene file lifecycle, DAG navigation, attributes, node graph, viewport visibility. | partial (`maya-scene` only) | `maya-scene`, `maya-scene-assembly`, `maya-display`, `maya-attributes`, `maya-node-graph` |
 | `authoring` | Create / edit content: meshes, UVs, materials, rigs, animation, dynamics, particles, Bifrost graphs, light rigs. | no | `maya-primitives`, `maya-mesh-ops`, `maya-uv-ops`, `maya-materials`, `maya-material-library`, `maya-texture-bake`, `maya-rigging`, `maya-animation`, `maya-dynamics`, `maya-particles`, `maya-bifrost`, `maya-pose-library`, `maya-expressions`, `maya-light-rig` |
 | `interchange` | Move geometry / scenes across DCCs (FBX, OBJ, USD revisions, presets, save). | no | `maya-geometry`, `maya-asset-sync`, `maya-export-preset` |
-| `pipeline` | Production pipeline: project, publish, shot export, render, render farm, render setup and AOVs, asset import, development diagnostics. | no | `maya-dev`, `maya-pipeline`, `maya-shot-export`, `maya-render`, `maya-render-setup`, `maya-render-farm`, `maya-asset-source`, `maya-import-to-scene` |
+| `pipeline` | Production pipeline: project, publish, shot export, render, render farm, render setup and AOVs, compositing, asset import, development diagnostics. | no | `maya-dev`, `maya-pipeline`, `maya-shot-export`, `maya-render`, `maya-render-setup`, `maya-compositing`, `maya-render-farm`, `maya-asset-source`, `maya-import-to-scene` |
 
 ## Deciding which skill to load
 
@@ -53,6 +53,8 @@ Full rationale: repo root `AGENTS.md` § *Bulk import, export, and naming*; exam
 | Look-dev a hero asset, save material preset | `maya-materials` → `maya-material-library` |
 | Split a scene into render layers with per-layer overrides, then lay out comp outputs | `maya-render-setup` (`create_render_layer` → `create_render_collection` → `create_render_override` → `set_current_render_layer` → `plan_comp_outputs`) |
 | Add or toggle Arnold AOVs for a multipass render | `maya-render-setup` (`list_aovs` → `add_aov` → `set_aov_enabled` → `plan_comp_outputs`) |
+| Composite a beauty pass with AOVs inside Maya | `maya-render-setup` (`plan_comp_outputs`) → `maya-compositing` (`create_image_reader` → `create_layer_stack` → `add_comp_layer` → `list_comp_layers`) |
+| A command or node type is missing / a plug-in will not load | `maya-plugins` (`diagnose_plugin` → `get_plugin_path` → `load_plugin`) |
 | Publish an asset version | `maya-pipeline` (uses `maya-geometry` under the hood; declared in `depends`) |
 | Synchronize a revisioned Houdini asset | `maya-asset-sync` (`read_asset_head` → `sync_usd_revision(editability_mode="native")` for editable curves/joints/materials, or `usd_proxy` for composition fidelity) |
 | Bake AO maps from high-res to low-res | `maya-uv-ops` → `maya-texture-bake` |
