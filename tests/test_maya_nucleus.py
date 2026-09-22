@@ -8,6 +8,7 @@ the tests importable without a Maya interpreter.
 from __future__ import annotations
 
 import pathlib
+import sys
 from contextlib import contextmanager
 
 import pytest
@@ -177,34 +178,31 @@ def _setattr(cmds):
     return {call[1]: call[2] for call in cmds.calls if call[0] == "setAttr"}
 
 
-def _live_cmds():
-    """Return a real ``maya.cmds``, or skip the test.
+#: Flag that turns this file into the Maya-hosted drift checker.  See
+#: :func:`_maya_check_main`.
+MAYA_CHECK_ARGV = "--maya-field-table-check"
+
+
+def _boot_maya_cmds():
+    """Import and initialise a real ``maya.cmds``.
 
     The field commands (``air``, ``gravity``, ...) are not registered until
     Maya is initialised, so importing ``maya.cmds`` is not enough: under
     mayapy the flag tables stay empty until ``maya.standalone.initialize()``
-    runs. Booting standalone here is what makes these meta-tests meaningful in
-    the mayapy CI job, which is the only place a fake ``cmds`` cannot hide a
-    wrong flag name.
+    runs.
+
+    Caller must run this in a child interpreter. Booting standalone mutates
+    process-global state - ``is_gui_executable()`` starts reporting batch
+    mode, which changes the dispatcher ``MayaMcpServer`` installs and breaks
+    ``tests/test_server.py``.
     """
-    cmds = pytest.importorskip("maya.cmds")
+    import maya.cmds as cmds
+    import maya.standalone
 
-    if getattr(cmds, "about", None) is not None:
-        try:
-            if not cmds.about(batch=True):
-                pytest.skip("interactive Maya session; refusing to initialise standalone")
-        except Exception:  # noqa: BLE001 - older/uninitialised builds raise here
-            pass
-
-    standalone = pytest.importorskip("maya.standalone")
     try:
-        standalone.initialize()
-    except Exception as exc:  # noqa: BLE001 - already initialised is the common case
-        if "already" not in str(exc).lower():
-            pytest.skip("maya.standalone.initialize() failed: {}".format(exc))
-
-    if getattr(cmds, "air", None) is None:
-        pytest.skip("field commands are not registered in this Maya interpreter")
+        maya.standalone.initialize()
+    except Exception:  # noqa: BLE001 - already initialised is the common case
+        pass
     return cmds
 
 
@@ -536,20 +534,20 @@ def test_create_field_explains_retired_settings():
         create_field(_FakeCmds(), field_type="volume_axis", directional_strength=0.5)
 
 
-def test_field_create_flags_exist_in_maya():
-    """Meta-test: the whitelist must match Maya's real flag table.
+def _collect_maya_table_errors(cmds):
+    """Return a list of drift descriptions; empty means Maya agrees with us.
 
-    Unit tests run against a fake ``cmds`` that swallows every keyword, so they
-    cannot catch a flag Maya rejects. This check replays the whitelist against
-    ``cmds.help()`` and is skipped when no Maya interpreter is available - it
-    runs in the mayapy CI job, which is where the guarantee actually matters.
+    Runs inside the child interpreter spawned by
+    :func:`test_field_tables_match_a_real_maya`.
     """
-    cmds = _live_cmds()
+    errors = []
 
+    # 1. Every whitelisted create flag must exist on its command.
     for field_type, settings in sorted(FIELD_SUPPORTED_FLAGS.items()):
         command_name = FIELD_COMMANDS[field_type]
-        command = getattr(cmds, command_name, None)
-        assert command is not None, "maya.cmds.{} is missing".format(command_name)
+        if getattr(cmds, command_name, None) is None:
+            errors.append("maya.cmds.{} is missing".format(command_name))
+            continue
 
         flags = _maya_flag_names(cmds, command_name)
         for key in settings:
@@ -561,42 +559,85 @@ def test_field_create_flags_exist_in_maya():
             else:
                 expected = [FIELD_CREATE_FLAGS[key]]
             for flag_name in expected:
-                assert flag_name in flags, "cmds.{} has no -{} flag (whitelisted for '{}')".format(
-                    command_name, flag_name, field_type
-                )
+                if flag_name not in flags:
+                    errors.append(
+                        "cmds.{} has no -{} flag (whitelisted for '{}')".format(command_name, flag_name, field_type)
+                    )
 
-
-def test_field_attrs_exist_on_maya_nodes():
-    """Meta-test: every entry of ``FIELD_ATTRS`` must be a real node attribute.
-
-    ``FIELD_ATTRS`` feeds ``setAttr``, and a fake ``cmds`` swallows any plug
-    name, so a typo here only surfaces on a live scene. ``directional_strength``
-    used to be advertised here while no Maya field node has that attribute.
-    Skipped when no Maya interpreter is available.
-    """
-    cmds = _live_cmds()
-
-    # ``vortex`` exposes no directionX/Y/Z, so compare against the union of
-    # attributes the field family offers rather than any single node.
+    # 2. Every FIELD_ATTRS entry must exist on some field node. ``vortex``
+    #    exposes no directionX/Y/Z, so compare against the union of the family.
     available = set()
-    for field_type, command_name in sorted(FIELD_COMMANDS.items()):
+    for _field_type, command_name in sorted(FIELD_COMMANDS.items()):
         command = getattr(cmds, command_name, None)
         if command is None:
-            pytest.skip("maya.cmds.{} unavailable in this interpreter".format(command_name))
+            continue
         node = command()
         try:
             available.update(cmds.listAttr(node) or [])
         finally:
             cmds.delete(node)
 
-    missing = sorted(
-        {
-            attr
-            for key, attr in FIELD_ATTRS.items()
-            if key not in ("direction", "speed", "phase") and attr not in available
-        }
+    for key, attr in sorted(FIELD_ATTRS.items()):
+        if key in ("direction", "speed", "phase"):
+            continue
+        if attr not in available:
+            errors.append("FIELD_ATTRS names attribute '{}' ({}) no field node exposes".format(attr, key))
+
+    return errors
+
+
+def _maya_check_main():
+    """Child-interpreter entry point; print drift and return an exit code."""
+    try:
+        cmds = _boot_maya_cmds()
+    except Exception as exc:  # noqa: BLE001 - report and let the parent decide
+        print("MAYA_UNAVAILABLE: {}".format(exc))
+        return 0
+
+    if getattr(cmds, "air", None) is None:
+        print("MAYA_UNAVAILABLE: field commands are not registered")
+        return 0
+
+    errors = _collect_maya_table_errors(cmds)
+    for line in errors:
+        print("DRIFT: {}".format(line))
+    return 1 if errors else 0
+
+
+def test_field_tables_match_a_real_maya():
+    """Meta-test: the flag and attribute tables must match real Maya.
+
+    Unit tests run against a fake ``cmds`` that swallows every keyword, so they
+    cannot catch a flag Maya rejects - five whitelisted flags were wrong before
+    this check existed. It runs in the mayapy CI job, where a real Maya is
+    available.
+
+    The check runs in a child interpreter because booting
+    ``maya.standalone`` flips ``is_gui_executable()`` to batch mode for the
+    whole process, which changes the dispatcher ``MayaMcpServer`` installs and
+    breaks ``tests/test_server.py``.
+    """
+    import subprocess
+
+    try:
+        import importlib.util
+
+        if importlib.util.find_spec("maya.cmds") is None:
+            pytest.skip("maya.cmds is not importable in this interpreter")
+    except (ImportError, ValueError):
+        pytest.skip("maya.cmds is not importable in this interpreter")
+
+    result = subprocess.run(
+        [sys.executable, str(pathlib.Path(__file__).resolve()), MAYA_CHECK_ARGV],
+        capture_output=True,
+        text=True,
     )
-    assert not missing, "FIELD_ATTRS names attributes no field node exposes: {}".format(missing)
+    output = (result.stdout or "") + (result.stderr or "")
+
+    if "MAYA_UNAVAILABLE" in output:
+        pytest.skip(output.strip())
+
+    assert result.returncode == 0, "Maya disagrees with the field tables:\n" + output.strip()
 
 
 def test_set_field_properties_edits_only_supplied_values():
@@ -1117,3 +1158,9 @@ def test_skill_set_nucleus_properties_requires_solver():
     )
 
     assert result["success"] is False
+
+
+if __name__ == "__main__" and MAYA_CHECK_ARGV in sys.argv:
+    # Child-interpreter mode: boot Maya and compare the field tables. Kept out
+    # of the pytest process because maya.standalone mutates global state.
+    sys.exit(_maya_check_main())
