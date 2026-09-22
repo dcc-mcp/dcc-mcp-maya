@@ -29,7 +29,7 @@ class _FakeCmds:
         return node in self.existing or node in self._created
 
     def nodeType(self, node):
-        return self.existing.get(node) or self._created.get(node) or "transform"
+        return self.existing.get(node) or self._created.get(node) or "mesh"
 
     def listRelatives(self, node, **_kwargs):
         return ["|bifrostGraph1"]
@@ -149,7 +149,11 @@ def test_write_simulation_cache_uses_scene_range():
     kwargs = _calls(cmds, "cacheFile")[0][1]
     assert kwargs["directory"] == "/tmp/bifrost"
     assert kwargs["format"] == "OneFile"
-    assert kwargs["points"] == "|bifrostGraph1"
+    # ``cacheFile -points`` requires a shape, not the parent transform.
+    assert kwargs["points"] == "bifrostGraphShape1"
+    # A real cacheFile node must be created, otherwise the cache files are
+    # written but never drive the graph output back.
+    assert kwargs["createCacheNode"] is True
 
 
 def test_write_simulation_cache_honours_explicit_frames_and_name():

@@ -6,8 +6,10 @@ import pytest
 from conftest import load_and_call
 
 from dcc_mcp_maya.particles import (
+    CYCLE_MODES,
     EMITTER_TYPES,
     NPARTICLE_ATTRS,
+    PARTICLE_ATTRS,
     ParticleContractError,
     create_emitter,
     create_particle_instancer,
@@ -234,6 +236,12 @@ def test_nparticle_attrs_mapping_exposes_snake_case_keys():
     assert NPARTICLE_ATTRS["self_collide_width_scale"] == "selfCollideWidthScale"
 
 
+def test_particle_attrs_do_not_expose_reserved_or_invalid_plugs():
+    """`for` is a Python keyword and not a particle plug; setAttr would fail."""
+    assert "for" not in PARTICLE_ATTRS
+    assert "for" not in NPARTICLE_ATTRS
+
+
 # ---------------------------------------------------------------------------
 # Instancing
 # ---------------------------------------------------------------------------
@@ -246,12 +254,12 @@ def test_create_particle_instancer_uses_add_object():
         cmds,
         particle="nParticleShape1",
         objects=["pRock1"],
-        cycle="random",
+        cycle="sequential",
     )
 
     assert result["particle"] == "nParticleShape1"
     assert result["objects"] == ["pRock1"]
-    assert result["cycle"] == "random"
+    assert result["cycle"] == "sequential"
     _op, node, kwargs = [call for call in cmds.calls if call[0] == "particleInstancer"][0]
     assert node == "nParticleShape1"
     assert kwargs["addObject"] is True
@@ -260,8 +268,16 @@ def test_create_particle_instancer_uses_add_object():
 
 def test_create_particle_instancer_rejects_bad_cycle():
     cmds = _FakeCmds(existing={"nParticleShape1": "nParticle", "pRock1": "transform"})
-    with pytest.raises(ParticleContractError, match="cycle must be"):
+    with pytest.raises(ParticleContractError, match="cycle must be one of"):
         create_particle_instancer(cmds, particle="nParticleShape1", objects=["pRock1"], cycle="sometimes")
+
+
+def test_create_particle_instancer_rejects_random_cycle_unsupported_by_maya():
+    """Maya's -cycle only accepts none/sequential; random is rejected by the command."""
+    cmds = _FakeCmds(existing={"nParticleShape1": "nParticle", "pRock1": "transform"})
+    with pytest.raises(ParticleContractError, match="cycle must be one of"):
+        create_particle_instancer(cmds, particle="nParticleShape1", objects=["pRock1"], cycle="random")
+    assert "random" not in CYCLE_MODES
 
 
 def test_create_particle_instancer_requires_sources():

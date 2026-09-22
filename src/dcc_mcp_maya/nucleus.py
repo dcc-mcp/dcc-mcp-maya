@@ -18,6 +18,9 @@ Coverage (batch 1 of the native-capability expansion):
 
 from __future__ import annotations
 
+# Import built-in modules
+import glob
+import os
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Set, Tuple
 
 NCLOTH_NODE_TYPE = "nCloth"
@@ -701,11 +704,15 @@ def write_cache(
             "fileName": name,
             "directory": cache_dir,
             "format": cache_format,
-            "dataFormat": data_format,
+            # Maya's flag is -cacheFormat; there is no -dataFormat.
+            "cacheFormat": data_format,
             "startTime": frame_range[0],
             "endTime": frame_range[1],
             "points": shape,
             "worldSpace": bool(world_space),
+            # Without -createCacheNode Maya writes the cache files but returns a
+            # bare file name and never drives the output geometry back.
+            "createCacheNode": True,
         }
         created = cmds.cacheFile(**kwargs)
         names: List[str] = []
@@ -760,6 +767,35 @@ def resolve_frame_range(
     return start, end
 
 
+def _delete_cache_files(cmds: Any, node: str) -> List[str]:
+    """Delete the on-disk files belonging to a ``cacheFile`` node.
+
+    A ``cacheFile`` node stores its location in ``cachePath`` + ``cacheName``,
+    and Maya writes either ``<name>.mcx`` + ``<name>.xml`` (OneFile) or
+    ``<name>Frame<N>.mcx`` + ``<name>.xml`` (OneFilePerFrame). Matching on the
+    ``<name>*`` prefix covers both layouts. Missing files are skipped so a
+    partially-written cache cannot fail the delete.
+    """
+    try:
+        cache_path = str(cmds.getAttr("{}.cachePath".format(node))).strip()
+        cache_name = str(cmds.getAttr("{}.cacheName".format(node))).strip()
+    except Exception:  # noqa: BLE001 - node may not expose the plugs
+        return []
+    if not cache_path or not cache_name:
+        return []
+
+    removed: List[str] = []
+    for path in sorted(glob.glob(os.path.join(cache_path, cache_name + "*"))):
+        if not os.path.isfile(path):
+            continue
+        try:
+            os.remove(path)
+        except OSError:  # noqa: BLE001 - best effort; report what we could not remove
+            continue
+        removed.append(path)
+    return removed
+
+
 def delete_cache(
     cmds: Any,
     cache_nodes: Optional[Sequence[str]] = None,
@@ -783,14 +819,16 @@ def delete_cache(
     if not targets:
         raise NucleusContractError("No cacheFile nodes found; pass cache_nodes or scene_nodes")
 
+    removed_files: List[str] = []
     for node in targets:
         if not cmds.objExists(node):
             raise NucleusContractError("Cache node does not exist: {}".format(node))
-        try:
-            cmds.cacheFile(removeCache=node)
-        except Exception:  # noqa: BLE001 - older Maya builds reject the flag
-            cmds.delete(node)
-        else:
-            if delete_files:
-                cmds.delete(node)
-    return {"deleted": targets, "count": len(targets), "delete_files": bool(delete_files)}
+        if delete_files:
+            removed_files.extend(_delete_cache_files(cmds, node))
+        cmds.delete(node)
+    return {
+        "deleted": targets,
+        "count": len(targets),
+        "delete_files": bool(delete_files),
+        "removed_files": removed_files,
+    }

@@ -28,7 +28,7 @@ metadata:
       surface emitter, curve emitter, emit particles, rate, speed, spread,
       lifespan, particle render type, spheres, sprites, blobby, cloud, streak,
       instancer, instance geometry onto particles, particle instancer,
-      rotationPP, cycle sequential random
+      rotationPP, cycle sequential debris variation
     tools: tools.yaml
     groups: groups.yaml
 ---
@@ -52,7 +52,8 @@ covered:
 4. `set_particle_properties` — tune the look: `radius`, `opacity`,
    `particle_render_type`, and physics: `conserve`, `drag`, `mass`, `bounce`.
 5. `create_particle_instancer` — replace point rendering with real geometry.
-   Use `cycle="random"` with several source objects for debris variation.
+   Use `cycle="sequential"` with several source objects for debris variation.
+   Maya's `-cycle` only accepts `none` or `sequential`; `random` is rejected.
 6. Collide with the world via `maya-dynamics create_nrigid`, then cache with
    `maya-dynamics create_ncache`.
 

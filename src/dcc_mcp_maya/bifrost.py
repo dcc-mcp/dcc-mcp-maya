@@ -355,6 +355,18 @@ def convert_to_polygons(
     }
 
 
+def _cacheable_shape(cmds: Any, node: str) -> str:
+    """Resolve ``node`` to a shape that ``cmds.cacheFile -points`` accepts.
+
+    ``-points`` rejects transforms, so when a transform is passed we fall back
+    to its first shape and then to the node itself.
+    """
+    if str(cmds.nodeType(node)) != "transform":
+        return node
+    shapes = cmds.listRelatives(node, shapes=True, fullPath=True) or []
+    return str(shapes[0]) if shapes else node
+
+
 def write_simulation_cache(
     cmds: Any,
     graph: str,
@@ -378,8 +390,9 @@ def write_simulation_cache(
     if cache_format not in CACHE_FORMATS:
         raise BifrostContractError("cache_format must be one of: {}".format(", ".join(CACHE_FORMATS)))
 
-    parents = cmds.listRelatives(graph_name, parent=True, fullPath=True) or []
-    target = str(parents[0]) if parents else graph_name
+    # ``cacheFile -points`` requires a shape node, so cache the graph shape
+    # itself rather than its parent transform.
+    target = _cacheable_shape(cmds, graph_name)
 
     start, end = _resolve_frame_range(cmds, start_frame, end_frame)
     base = str(file_name or "").strip() or target.rsplit("|", 1)[-1].rsplit(":", 1)[-1]
@@ -391,6 +404,9 @@ def write_simulation_cache(
         "startTime": start,
         "endTime": end,
         "points": target,
+        # Without -createCacheNode Maya writes the cache files but returns a
+        # bare file name instead of a cache node, so nothing is driven back.
+        "createCacheNode": True,
     }
     created = cmds.cacheFile(**kwargs)
     names: List[str] = []

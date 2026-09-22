@@ -7,9 +7,13 @@ the tests importable without a Maya interpreter.
 
 from __future__ import annotations
 
+import pathlib
+from contextlib import contextmanager
+
 import pytest
 from conftest import load_and_call
 
+from dcc_mcp_maya import nucleus as nucleus_mod
 from dcc_mcp_maya.nucleus import (
     CACHEABLE_NODE_TYPES,
     FIELD_COMMANDS,
@@ -142,6 +146,23 @@ class _FakeCmds:
 
 def _calls(cmds, name):
     return [call for call in cmds.calls if call[0] == name]
+
+
+@contextmanager
+def _patch_cache_files(removed):
+    """Capture the paths ``_delete_cache_files`` removes."""
+    original = nucleus_mod._delete_cache_files
+
+    def _spy(cmds, node):
+        paths = original(cmds, node)
+        removed.extend(paths)
+        return paths
+
+    nucleus_mod._delete_cache_files = _spy
+    try:
+        yield
+    finally:
+        nucleus_mod._delete_cache_files = original
 
 
 def _setattr(cmds):
@@ -407,6 +428,9 @@ def test_write_cache_uses_scene_range_when_frames_omitted():
     assert kwargs["format"] == "OneFile"
     assert kwargs["startTime"] == 1.0
     assert kwargs["endTime"] == 120.0
+    # A real cacheFile node must be created, otherwise the cache is written
+    # but never drives the geometry back.
+    assert kwargs["createCacheNode"] is True
 
 
 def test_write_cache_honours_explicit_frames_and_formats():
@@ -426,7 +450,9 @@ def test_write_cache_honours_explicit_frames_and_formats():
     assert result["frame_range"] == [10.0, 50.0]
     kwargs = _calls(cmds, "cacheFile")[0][1]
     assert kwargs["format"] == "OneFilePerFrame"
-    assert kwargs["dataFormat"] == "mcx"
+    # Maya's real flag is -cacheFormat; -dataFormat does not exist.
+    assert kwargs["cacheFormat"] == "mcx"
+    assert "dataFormat" not in kwargs
     assert kwargs["worldSpace"] is True
 
 
@@ -469,27 +495,72 @@ def test_cacheable_types_are_restricted_to_output_geometry():
     assert "transform" not in CACHEABLE_NODE_TYPES
 
 
-def test_delete_cache_detaches_nodes():
+def test_delete_cache_detaches_nodes_without_touching_files():
     cmds = _FakeCmds(existing={"cacheFile1": "cacheFile"})
 
     result = delete_cache(cmds, cache_nodes=["cacheFile1"])
 
     assert result["deleted"] == ["cacheFile1"]
-    assert _calls(cmds, "cacheFile")[0][1] == {"removeCache": "cacheFile1"}
-    assert _calls(cmds, "delete") == []
+    assert _calls(cmds, "delete") == [("delete", "cacheFile1")]
+    assert result["delete_files"] is False
+    assert result["removed_files"] == []
 
 
 def test_delete_cache_can_remove_files_too():
     cmds = _FakeCmds(existing={"cacheFile1": "cacheFile"})
+    files = []
 
-    delete_cache(cmds, cache_nodes=["cacheFile1"], delete_files=True)
+    with _patch_cache_files(files):
+        result = delete_cache(cmds, cache_nodes=["cacheFile1"], delete_files=True)
 
+    assert result["delete_files"] is True
+    # Node is still removed even when delete_files is set.
     assert _calls(cmds, "delete") == [("delete", "cacheFile1")]
+    assert result["removed_files"] == files
 
 
 def test_delete_cache_requires_a_target():
     with pytest.raises(NucleusContractError, match="No cacheFile nodes found"):
         delete_cache(_FakeCmds())
+
+
+def test_delete_cache_removes_onefile_and_perframe_files(tmp_path):
+    """Real-filesystem check: both Maya cache layouts are removed."""
+    for name in ("hero.mcx", "hero.xml", "heroFrame1.mcx", "heroFrame2.mcx", "unrelated.mcx"):
+        (tmp_path / name).write_text("x", encoding="utf-8")
+    cmds = _FakeCmds(existing={"cacheFile1": "cacheFile"})
+    cmds.getAttr = lambda plug: str(tmp_path) + "/" if plug.endswith("cachePath") else "hero"
+
+    result = delete_cache(cmds, cache_nodes=["cacheFile1"], delete_files=True)
+
+    assert result["delete_files"] is True
+    removed = {pathlib.Path(p).name for p in result["removed_files"]}
+    assert removed == {"hero.mcx", "hero.xml", "heroFrame1.mcx", "heroFrame2.mcx"}
+    assert (tmp_path / "unrelated.mcx").exists()
+
+
+def test_delete_cache_keeps_files_when_not_requested(tmp_path):
+    (tmp_path / "hero.mcx").write_text("x", encoding="utf-8")
+    cmds = _FakeCmds(existing={"cacheFile1": "cacheFile"})
+    cmds.getAttr = lambda plug: str(tmp_path) + "/" if plug.endswith("cachePath") else "hero"
+
+    delete_cache(cmds, cache_nodes=["cacheFile1"])
+
+    assert (tmp_path / "hero.mcx").exists()
+
+
+def test_delete_cache_tolerates_nodes_without_cache_plugs():
+    cmds = _FakeCmds(existing={"cacheFile1": "cacheFile"})
+
+    def _boom(plug):  # noqa: ARG001 - simulate a node without cache plugs
+        raise RuntimeError("no such attr")
+
+    cmds.getAttr = _boom
+
+    result = delete_cache(cmds, cache_nodes=["cacheFile1"], delete_files=True)
+
+    assert result["removed_files"] == []
+    assert _calls(cmds, "delete") == [("delete", "cacheFile1")]
 
 
 # ---------------------------------------------------------------------------

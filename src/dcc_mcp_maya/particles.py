@@ -46,6 +46,11 @@ NPARTICLE_RENDER_TYPES: Tuple[str, ...] = (
     "tube",
 )
 
+#: ``cmds.particleInstancer -cycle`` values accepted by Maya.
+#: Maya rejects anything else, including ``random``.
+CYCLE_MODES: Tuple[str, ...] = ("none", "sequential")
+
+
 NPARTICLE_ATTRS: Dict[str, str] = {
     "lifespan_mode": "lifespanMode",
     "lifespan": "lifespan",
@@ -94,7 +99,6 @@ PARTICLE_ATTRS: Dict[str, str] = {
     "is_dynamic": "isDynamic",
     "dynamics_weight": "dynamicsWeight",
     "count": "count",
-    "for": "for",
 }
 
 EMITTER_ATTRS: Dict[str, str] = {
@@ -418,9 +422,11 @@ def create_particle_instancer(
         if not cmds.objExists(obj):
             raise ParticleContractError("Source object does not exist: {}".format(obj))
 
+    # Maya's `-cycle` only accepts "none" or "sequential"; anything else is
+    # rejected by the command itself, so validate here to fail with a clear message.
     cycle_mode = str(cycle or "none").strip().lower()
-    if cycle_mode not in ("none", "sequential", "random"):
-        raise ParticleContractError("cycle must be 'none', 'sequential' or 'random'")
+    if cycle_mode not in CYCLE_MODES:
+        raise ParticleContractError("cycle must be one of: {}".format(", ".join(CYCLE_MODES)))
 
     kwargs: Dict[str, Any] = {
         "addObject": True,
