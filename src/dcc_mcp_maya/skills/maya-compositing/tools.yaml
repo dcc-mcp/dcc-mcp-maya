@@ -146,7 +146,7 @@ tools:
         - 'null'
         items:
           type: string
-        minItems: 1
+        minItems: 2
         default: null
       operation:
         type: string

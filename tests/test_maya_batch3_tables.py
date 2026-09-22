@@ -40,9 +40,33 @@ def _maya_flag_names(cmds, command_name):
     return set(re.findall(r"^\s*-\w+\s+-(\w+)\s", text, re.M))
 
 
+def _probe_array_plug(cmds, node_type, plug, base):
+    """Verify a multi plug needs an index and accepts one.
+
+    Connecting to the parent of a multi attribute fails with a multi-attribute
+    parent level error, while an indexed connect succeeds - so a plain
+    ``objExists`` check is not enough to prove the plug is usable.
+    """
+    problems = []
+    source = cmds.createNode("file")
+    try:
+        try:
+            cmds.connectAttr("{}.outColor".format(source), base)
+            problems.append("{} .{} accepted an unindexed connect".format(node_type, plug))
+        except Exception:  # noqa: BLE001 - expected to fail
+            pass
+        try:
+            cmds.connectAttr("{}.outColor".format(source), "{}[0]".format(base))
+        except Exception as exc:  # noqa: BLE001 - report
+            problems.append("{} .{}[0] rejected a connect: {}".format(node_type, plug, exc))
+    finally:
+        cmds.delete(source)
+    return problems
+
+
 def _collect_errors(cmds):
     """Return drift descriptions; empty means Maya agrees with the tables."""
-    from dcc_mcp_maya.compositing import BLEND_MODES, INPUT_PLUGS, UTILITY_NODES
+    from dcc_mcp_maya.compositing import ARRAY_INPUT_PLUGS, BLEND_MODES, INPUT_PLUGS, UTILITY_NODES
     from dcc_mcp_maya.plugins import ALWAYS_VALID_FLAGS, LOADED_ONLY_FLAGS
 
     errors = []
@@ -83,8 +107,12 @@ def _collect_errors(cmds):
             continue
         try:
             for plug in plugs:
-                if not cmds.objExists("{}.{}".format(node, plug)):
+                base = "{}.{}".format(node, plug)
+                if not cmds.objExists(base):
                     errors.append("{} has no .{} plug".format(node_type, plug))
+                    continue
+                if ARRAY_INPUT_PLUGS.get(node_type) == plug:
+                    errors.extend(_probe_array_plug(cmds, node_type, plug, base))
         finally:
             try:
                 cmds.delete(node)
@@ -92,10 +120,10 @@ def _collect_errors(cmds):
                 pass
 
     # 4. layeredTexture must expose the blend-mode enum we validate against.
+    #    attributeQuery's node flag takes a node NAME, not a plug path.
     stack = cmds.createNode("layeredTexture")
     try:
-        cmds.createNode("file")  # ensure a source exists
-        modes = cmds.attributeQuery("blendMode", node="{}.inputs[0]".format(stack), listEnum=True)
+        modes = cmds.attributeQuery("blendMode", node=stack, listEnum=True)
         if modes:
             declared = list(modes[0].split(":"))
             if declared != list(BLEND_MODES):

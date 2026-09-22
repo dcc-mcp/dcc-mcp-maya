@@ -9,12 +9,23 @@ from dcc_mcp_maya.plugins import PluginContractError
 from dcc_mcp_maya.plugins import list_plugins as _list_plugins
 
 
-def list_plugins(pattern: str = "", loaded_only: bool = False, limit: int = 200) -> dict:
-    """List plug-ins known to Maya."""
+def list_plugins(
+    pattern: str = "",
+    loaded_only: bool = False,
+    limit: int = 200,
+    search_path: dict = None,
+) -> dict:
+    """List plug-ins Maya can address, loaded or not."""
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 
-        result = _list_plugins(cmds, pattern=pattern, loaded_only=loaded_only, limit=limit)
+        result = _list_plugins(
+            cmds,
+            pattern=pattern,
+            loaded_only=loaded_only,
+            limit=limit,
+            search_path=search_path,
+        )
         return maya_success(
             "Listed {} plug-in(s) ({} loaded)".format(result["count"], result["loaded_count"]),
             plugins=result["plugins"],

@@ -94,6 +94,23 @@ def _resolve(cmds: Any, node: str, what: str = "node") -> str:
     return name
 
 
+def output_plug(cmds: Any, node: str) -> str:
+    """Return the colour output plug ``node`` actually exposes.
+
+    Not every comp node exposes ``outColor``: ``file`` does, but
+    ``blendColors``, ``multiplyDivide``, ``reverse``, ``clamp`` and the other
+    utility nodes expose ``output`` (verified on Maya 2025). Chaining a merge
+    result into a stack used to fail for exactly this reason.
+    """
+    for attr in ("outColor", "output"):
+        plug = "{}.{}".format(node, attr)
+        if cmds.objExists(plug):
+            return plug
+    raise CompositingContractError(
+        "{} exposes neither outColor nor output, so it cannot be used as a comp source.".format(node)
+    )
+
+
 def _connected_indices(cmds: Any, node: str, attr: str = "inputs") -> List[int]:
     """Element indices of ``node.attr`` that currently hold a connection.
 
@@ -113,7 +130,12 @@ def _connected_indices(cmds: Any, node: str, attr: str = "inputs") -> List[int]:
     if not connected:
         return []
     indices: List[int] = []
-    for slot in range(len(connected) + len(indices) + 1):
+    # The bound must grow as holes are found: after connecting 0/1/2 and
+    # disconnecting 0 and 1, only one connection remains while index 2 is still
+    # occupied, so a bound of len(connected) would miss it.
+    slot = 0
+    empty_streak = 0
+    while empty_streak < 32:
         plug = "{}.{}[{}].color".format(node, attr, slot)
         try:
             sources = cmds.listConnections(plug, source=True, destination=False) or []
@@ -121,6 +143,10 @@ def _connected_indices(cmds: Any, node: str, attr: str = "inputs") -> List[int]:
             sources = []
         if sources:
             indices.append(slot)
+            empty_streak = 0
+        else:
+            empty_streak += 1
+        slot += 1
     return sorted(set(indices))
 
 
@@ -202,14 +228,19 @@ def add_layer(
         raise CompositingContractError("{} is a {}, expected a {}".format(target, node_type, LAYERED_TEXTURE))
     src = _resolve(cmds, source, "source")
 
-    index = _next_index(cmds, target)
-    cmds.connectAttr("{}.outColor".format(src), "{}.inputs[{}].color".format(target, index))
-
-    applied: Dict[str, Any] = {"index": index, "source": src}
+    # Validate everything BEFORE mutating: connecting first and rejecting the
+    # blend mode afterwards would leave an orphan layer in the stack, and a
+    # retry with a corrected mode would then add a duplicate.
     if blend_mode not in BLEND_MODES:
         raise CompositingContractError(
             "Unknown blend mode {}. Supported: {}".format(blend_mode, ", ".join(BLEND_MODES))
         )
+    src_plug = output_plug(cmds, src)
+
+    index = _next_index(cmds, target)
+    cmds.connectAttr(src_plug, "{}.inputs[{}].color".format(target, index))
+
+    applied: Dict[str, Any] = {"index": index, "source": src, "source_plug": src_plug}
     plug = "{}.inputs[{}].blendMode".format(target, index)
     if cmds.objExists(plug):
         cmds.setAttr(plug, BLEND_MODES.index(blend_mode))
@@ -268,7 +299,7 @@ def remove_layer(cmds: Any, stack: str, index: int) -> Dict[str, Any]:
                 slot, target, _connected_indices(cmds, target) or "(none)"
             )
         )
-    cmds.disconnectAttr("{}.outColor".format(sources[0]), plug)
+    cmds.disconnectAttr(output_plug(cmds, str(sources[0])), plug)
     return {"stack": target, "removed_index": slot, "source": str(sources[0])}
 
 
@@ -305,8 +336,8 @@ def merge_layers(
             )
         node = cmds.createNode(BLEND_NODE, name=name) if name else cmds.createNode(BLEND_NODE)
         node = str(node)
-        cmds.connectAttr("{}.outColor".format(nodes[0]), "{}.color1".format(node))
-        cmds.connectAttr("{}.outColor".format(nodes[1]), "{}.color2".format(node))
+        cmds.connectAttr(output_plug(cmds, nodes[0]), "{}.color1".format(node))
+        cmds.connectAttr(output_plug(cmds, nodes[1]), "{}.color2".format(node))
         cmds.setAttr("{}.blender".format(node), float(blend_amount))
         return {
             "node": node,
@@ -370,14 +401,45 @@ INPUT_PLUGS: Dict[str, Tuple[str, ...]] = {
     "file": (),  # a file node is a source, not a consumer
 }
 
+#: Input plugs that are multi (array) attributes, so a connection must name an
+#: element index. ``plusMinusAverage.input3D`` rejects a connection to the
+#: parent with "multi-attribute parent level" (verified on Maya 2025).
+ARRAY_INPUT_PLUGS: Dict[str, str] = {
+    "plusMinusAverage": "input3D",
+}
+
+
+def _next_array_slot(cmds: Any, plug: str) -> int:
+    """Smallest free element index of a multi plug."""
+    occupied: List[int] = []
+    for slot in range(64):
+        try:
+            sources = cmds.listConnections("{}[{}]".format(plug, slot), source=True, destination=False) or []
+        except Exception:  # noqa: BLE001 - an unset element can fail to query
+            sources = []
+        if sources:
+            occupied.append(slot)
+    candidate = 0
+    for used in occupied:
+        if used == candidate:
+            candidate += 1
+        elif used > candidate:
+            break
+    return candidate
+
 
 def connect_comp(cmds: Any, source: str, destination: str, source_attr: str = "outColor") -> Dict[str, Any]:
     """Connect two comp nodes together."""
     src = _resolve(cmds, source, "source")
     dst = _resolve(cmds, destination, "destination")
-    src_plug = "{}.{}".format(src, str(source_attr or "").strip() or "outColor")
-    if not cmds.objExists(src_plug):
-        raise CompositingContractError("Source plug does not exist: {}".format(src_plug))
+    requested = str(source_attr or "").strip()
+    if requested:
+        src_plug = "{}.{}".format(src, requested)
+        if not cmds.objExists(src_plug):
+            raise CompositingContractError("Source plug does not exist: {}".format(src_plug))
+    else:
+        # Default to whatever the source actually exposes.
+        src_plug = output_plug(cmds, src)
 
     dst_type = str(cmds.nodeType(dst))
     candidates = INPUT_PLUGS.get(dst_type)
@@ -388,12 +450,26 @@ def connect_comp(cmds: Any, source: str, destination: str, source_attr: str = "o
     if not candidates:
         raise CompositingContractError("{} is a {} and has no colour input to connect into.".format(dst, dst_type))
 
+    if dst_type == LAYERED_TEXTURE:
+        # A stack is populated per layer, with a blend mode and opacity per
+        # entry; a bare connection would bypass all of that.
+        raise CompositingContractError(
+            "{} is a layeredTexture; use add_comp_layer to stack into it rather than connect_comp_nodes.".format(dst)
+        )
+
     for attr in candidates:
-        plug = "{}.{}".format(dst, attr)
-        if not cmds.objExists(plug):
+        base = "{}.{}".format(dst, attr)
+        if not cmds.objExists(base):
             continue
-        if cmds.listConnections(plug, source=True, destination=False):
-            continue
+        if ARRAY_INPUT_PLUGS.get(dst_type) == attr:
+            # Multi attribute: connect into the next free element. The parent
+            # rejects an unindexed connect with a multi-attribute error.
+            slot = _next_array_slot(cmds, base)
+            plug = "{}[{}]".format(base, slot)
+        else:
+            if cmds.listConnections(base, source=True, destination=False):
+                continue
+            plug = base
         cmds.connectAttr(src_plug, plug)
         return {"source": src_plug, "destination": plug}
     raise CompositingContractError(

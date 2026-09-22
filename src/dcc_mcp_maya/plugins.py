@@ -151,6 +151,8 @@ def plugin_record(cmds: Any, plugin: str) -> Dict[str, Any]:
     plug-in yields ``available: False`` plus a reason rather than a failure.
     """
     name = _require(plugin, "plugin")
+    # ``name`` is itself a loaded-only flag, so the record gets the requested
+    # name unconditionally rather than a None read back from an unloaded node.
     record: Dict[str, Any] = {"name": name}
     unavailable: List[str] = []
 
@@ -162,6 +164,9 @@ def plugin_record(cmds: Any, plugin: str) -> Dict[str, Any]:
 
     loaded = bool(record.get("loaded"))
     for flag in LOADED_ONLY_FLAGS:
+        if flag == "name":
+            # Already set from the requested name above.
+            continue
         if not loaded:
             record[flag] = None
             unavailable.append(flag)
@@ -187,10 +192,14 @@ def list_plugins(
     pattern: str = "",
     loaded_only: bool = False,
     limit: int = 200,
+    search_path: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
-    """List plug-ins known to Maya, newest-style metadata included."""
-    raw = cmds.pluginInfo(query=True, listPlugins=True) or []
-    names = sorted(str(item) for item in raw)
+    """List every plug-in Maya can address, loaded or not.
+
+    Uses the search path as the inventory (see :func:`known_plugin_names`),
+    because ``pluginInfo(listPlugins=True)`` omits unloaded plug-ins.
+    """
+    names = known_plugin_names(cmds, search_path=search_path)
     needle = str(pattern or "").strip().lower()
     if needle:
         names = [item for item in names if needle in item.lower()]
@@ -240,40 +249,81 @@ def load_plugin(cmds: Any, plugin: str, autoload: bool = False) -> Dict[str, Any
         )
         raise PluginContractError("{}: {} -- {}".format(name, detail, hint)) from exc
 
+    # The plug-in IS loaded by this point. A failure to record the autoload
+    # preference must not be reported as a failed load, so it is surfaced in
+    # the result instead of raised.
+    autoload_error = None
     if autoload:
         try:
             cmds.pluginInfo(name, edit=True, autoload=True)
         except Exception as exc:  # noqa: BLE001 - report, do not fail the load
-            raise PluginContractError(
-                "{} loaded but its autoload preference could not be set: {}".format(name, exc)
-            ) from exc
+            autoload_error = str(exc)
 
     return {
         "plugin": name,
         "loaded": True,
         "was_loaded": before,
-        "autoload": bool(autoload),
+        "autoload": bool(autoload) and autoload_error is None,
+        "autoload_error": autoload_error,
         "result": [str(item) for item in result] if isinstance(result, (list, tuple)) else str(result or ""),
         "record": plugin_record(cmds, name),
     }
 
 
-def _known(cmds: Any, plugin: str) -> bool:
-    """Whether Maya knows about ``plugin`` at all."""
+def known_plugin_names(cmds: Any = None, search_path: Optional[Dict[str, Any]] = None) -> List[str]:
+    """Every plug-in Maya can address, loaded or not.
+
+    ``pluginInfo(listPlugins=True)`` lists **only loaded** plug-ins (verified on
+    Maya 2025: an unloaded ``mtoa`` disappears from it entirely). Enumerating
+    the search path is therefore the only way to see unloaded plug-ins, and
+    each candidate is still queryable by name - Maya answers ``loaded=False``
+    rather than raising.
+    """
+    loaded = set()
     try:
-        names = {str(item) for item in (cmds.pluginInfo(query=True, listPlugins=True) or [])}
+        loaded = {str(item) for item in (cmds.pluginInfo(query=True, listPlugins=True) or [])}
+    except Exception:  # noqa: BLE001 - fall back to path enumeration only
+        loaded = set()
+
+    names = set(loaded)
+    path = search_path if search_path is not None else plugin_search_path()
+    # Enumerate plug-in files on the search path. Using os.listdir rather than
+    # the glob-based find_plugin_file keeps this to one pass over each dir.
+    for directory in path["entries"]:
+        if not os.path.isdir(directory):
+            continue
+        try:
+            entries = os.listdir(directory)
+        except OSError:  # noqa: BLE001 - an unreadable dir is not fatal
+            continue
+        for entry in entries:
+            stem, ext = os.path.splitext(entry)
+            if ext in PLUGIN_EXTENSIONS or ext == "":
+                if stem:
+                    names.add(stem)
+    return sorted(names)
+
+
+def _known(cmds: Any, plugin: str, search_path: Optional[Dict[str, Any]] = None) -> bool:
+    """Whether Maya can address ``plugin``, loaded or not."""
+    try:
+        return plugin in set(known_plugin_names(cmds, search_path=search_path))
     except Exception:  # noqa: BLE001 - treat as unknown
         return False
-    return plugin in names
 
 
-def unload_plugin(cmds: Any, plugin: str, force: bool = False) -> Dict[str, Any]:
+def unload_plugin(
+    cmds: Any,
+    plugin: str,
+    force: bool = False,
+    search_path: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
     """Unload a plug-in, refusing when Maya reports it cannot be unloaded."""
     name = _require(plugin, "plugin")
-    if not _known(cmds, name):
+    if not _known(cmds, name, search_path=search_path):
         # Maya drops a plug-in from listPlugins once it is unloaded, so an
         # already-unloaded plug-in also lands here. Say which case it is.
-        if find_plugin_file(name, search_path=plugin_search_path())["found"]:
+        if find_plugin_file(name, search_path=search_path)["found"]:
             raise PluginContractError(
                 "{} is already unloaded, so there is nothing to unload. Loading it again "
                 "would register it with Maya.".format(name)
@@ -304,7 +354,11 @@ def unload_plugin(cmds: Any, plugin: str, force: bool = False) -> Dict[str, Any]
 # ---------------------------------------------------------------------------
 
 
-def diagnose_plugin(cmds: Any, plugin: str, search_path: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+def diagnose_plugin(
+    cmds: Any,
+    plugin: str,
+    search_path: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
     """Report why a plug-in is or is not usable.
 
     Combines the three signals that matter: is the file on the search path, is
@@ -314,7 +368,7 @@ def diagnose_plugin(cmds: Any, plugin: str, search_path: Optional[Dict[str, Any]
     name = _require(plugin, "plugin")
     search = search_path if search_path is not None else plugin_search_path()
     located = find_plugin_file(name, search_path=search)
-    known = _known(cmds, name)
+    known = _known(cmds, name, search_path=search)
     record = plugin_record(cmds, name) if known else None
 
     problems: List[str] = []

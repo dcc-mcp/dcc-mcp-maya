@@ -26,6 +26,7 @@ from dcc_mcp_maya.compositing import (
     create_layer_stack,
     list_layers,
     merge_layers,
+    output_plug,
     remove_layer,
 )
 
@@ -250,6 +251,82 @@ def test_add_layer_rejects_an_unknown_blend_mode():
 
     with pytest.raises(CompositingContractError, match="Unknown blend mode"):
         add_layer(cmds, stack, a, blend_mode="NotAMode")
+
+
+def test_add_layer_rejects_a_bad_mode_without_leaving_an_orphan():
+    """Validation must happen before the connection, or a retry duplicates."""
+    cmds = _FakeCmds()
+    a = create_image_reader(cmds, file_path="/s/a.exr", name="a")["node"]
+    stack = create_layer_stack(cmds, name="stack")["node"]
+
+    with pytest.raises(CompositingContractError, match="Unknown blend mode"):
+        add_layer(cmds, stack, a, blend_mode="Nope")
+
+    assert list_layers(cmds, stack)["layers"] == []
+
+
+def test_add_layer_finds_occupied_layers_after_holes():
+    """The probe must look past holes: 3 layers minus 0 and 1 leaves index 2."""
+    cmds = _FakeCmds()
+    stack = create_layer_stack(cmds, name="stack")["node"]
+    nodes = [create_image_reader(cmds, file_path="/s/{}.exr".format(n), name=n)["node"] for n in "xyz"]
+    for node in nodes:
+        add_layer(cmds, stack, node)
+    remove_layer(cmds, stack, 0)
+    remove_layer(cmds, stack, 1)
+
+    assert [item["index"] for item in list_layers(cmds, stack)["layers"]] == [2]
+
+
+def test_a_blend_result_can_be_stacked():
+    """blendColors exposes output, not outColor - chaining used to fail."""
+    cmds = _FakeCmds()
+    a = create_image_reader(cmds, file_path="/s/a.exr", name="a")["node"]
+    b = create_image_reader(cmds, file_path="/s/b.exr", name="b")["node"]
+    blended = merge_layers(cmds, [a, b], operation="blend", name="blended")["node"]
+    stack = create_layer_stack(cmds, name="stack")["node"]
+
+    result = add_layer(cmds, stack, blended, blend_mode="Over")
+
+    assert result["index"] == 0
+    assert result["source_plug"] == "blended.output"
+
+
+def test_output_plug_prefers_outcolor_then_output():
+    cmds = _FakeCmds()
+    reader = create_image_reader(cmds, file_path="/s/a.exr", name="a")["node"]
+    reverse = create_comp_node(cmds, "reverse", name="rv")["node"]
+
+    assert output_plug(cmds, reader) == "a.outColor"
+    assert output_plug(cmds, reverse) == "rv.output"
+
+
+def test_output_plug_rejects_a_node_without_a_colour_output():
+    cmds = _FakeCmds()
+    other = cmds.createNode("network", name="net")
+
+    with pytest.raises(CompositingContractError, match="neither outColor nor output"):
+        output_plug(cmds, other)
+
+
+def test_connect_comp_indexes_a_multi_attribute_input():
+    """plusMinusAverage.input3D rejects an unindexed connect in real Maya."""
+    cmds = _FakeCmds()
+    a = create_image_reader(cmds, file_path="/s/a.exr", name="a")["node"]
+    pma = create_comp_node(cmds, "plusMinusAverage", name="pma")["node"]
+
+    result = connect_comp(cmds, a, pma)
+
+    assert result["destination"] == "pma.input3D[0]"
+
+
+def test_connect_comp_refuses_a_layered_texture_destination():
+    cmds = _FakeCmds()
+    a = create_image_reader(cmds, file_path="/s/a.exr", name="a")["node"]
+    stack = create_layer_stack(cmds, name="stack")["node"]
+
+    with pytest.raises(CompositingContractError, match="add_comp_layer"):
+        connect_comp(cmds, a, stack)
 
 
 def test_remove_layer_disconnects_without_deleting_the_source():

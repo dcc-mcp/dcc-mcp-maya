@@ -29,6 +29,9 @@ class _FakeCmds:
     """Stand-in for ``maya.cmds`` whose pluginInfo mirrors Maya 2025."""
 
     def __init__(self, known=None, loaded=None, unload_ok=True, files=None):
+        # `known` is every plug-in Maya can address; `loaded` is the subset that
+        # is currently loaded. pluginInfo(listPlugins=True) exposes only the
+        # loaded ones - verified on Maya 2025.
         self.known = set(known or [])
         self.loaded = set(loaded or [])
         self.unload_ok = unload_ok
@@ -39,7 +42,8 @@ class _FakeCmds:
     def pluginInfo(self, plugin=None, **kwargs):
         self.calls.append(("pluginInfo", plugin, dict(kwargs)))
         if kwargs.get("listPlugins"):
-            return sorted(self.known)
+            # Real Maya lists only LOADED plug-ins here.
+            return sorted(self.loaded)
         if kwargs.get("query"):
             for flag, value in kwargs.items():
                 if value is not True or flag in ("query",):
@@ -88,6 +92,19 @@ class _FakeCmds:
         return True
 
 
+def _path_with(names, tmp_path, stale=0):
+    """Build a plugin_search_path-shaped dict backed by real temp files."""
+    entries = []
+    missing = []
+    for name in names:
+        (tmp_path / (name + ".mll")).write_text("", encoding="utf-8")
+        entries.append(str(tmp_path))
+    for index in range(stale):
+        entries.append(str(tmp_path / ("stale{}".format(index))))
+        missing.append(str(tmp_path / ("stale{}".format(index))))
+    return {"env_var": PLUGIN_PATH_ENV, "raw": "", "entries": entries, "count": len(entries), "missing": missing}
+
+
 # ---------------------------------------------------------------------------
 # Search path
 # ---------------------------------------------------------------------------
@@ -129,7 +146,9 @@ def test_unloaded_plugin_reports_metadata_as_unavailable():
     assert record["metadata_available"] is False
     assert record["version"] is None
     assert record["reason"]
-    assert set(LOADED_ONLY_FLAGS).issubset(set(record["unavailable_flags"]))
+    # The requested name is always reported, even for an unloaded plug-in.
+    assert record["name"] == "mtoa"
+    assert set(LOADED_ONLY_FLAGS) - {"name"} <= set(record["unavailable_flags"])
 
 
 def test_loaded_plugin_reports_full_metadata():
@@ -154,37 +173,71 @@ def test_plugin_record_requires_a_name():
 # ---------------------------------------------------------------------------
 
 
-def test_list_plugins_filters_and_counts():
-    cmds = _FakeCmds(known={"mtoa", "fbxmaya", "objExport"}, loaded={"mtoa", "fbxmaya"})
+def test_list_plugins_includes_unloaded_plugins(tmp_path):
+    """pluginInfo(listPlugins=True) omits unloaded plug-ins, so the inventory
+    must come from the search path."""
+    cmds = _FakeCmds(known={"mtoa", "unloadedOne"}, loaded={"mtoa"})
+    path = _path_with(["mtoa", "unloadedOne"], tmp_path)
 
-    result = list_plugins(cmds, pattern="maya")
+    result = list_plugins(cmds, search_path=path)
+
+    names = {item["name"] for item in result["plugins"]}
+    assert names == {"mtoa", "unloadedOne"}
+    states = {item["name"]: item["loaded"] for item in result["plugins"]}
+    assert states == {"mtoa": True, "unloadedOne": False}
+
+
+def test_load_plugin_autoload_failure_does_not_fail_the_load():
+    """The plug-in IS loaded; only the preference failed. Say so."""
+    cmds = _FakeCmds(known={"mtoa"})
+
+    def _boom(plugin, **_kwargs):
+        raise RuntimeError("cannot write prefs")
+
+    cmds.pluginInfo = _boom
+
+    result = load_plugin(cmds, "mtoa", autoload=True)
+
+    assert result["loaded"] is True
+    assert result["autoload"] is False
+    assert result["autoload_error"]
+
+
+def test_list_plugins_filters_and_counts(tmp_path):
+    cmds = _FakeCmds(known={"mtoa", "fbxmaya", "objExport"}, loaded={"mtoa", "fbxmaya"})
+    path = _path_with(["mtoa", "fbxmaya", "objExport"], tmp_path)
+
+    result = list_plugins(cmds, pattern="maya", search_path=path)
 
     assert [item["name"] for item in result["plugins"]] == ["fbxmaya"]
     assert result["loaded_count"] == 1
 
 
-def test_list_plugins_loaded_only():
+def test_list_plugins_loaded_only(tmp_path):
     cmds = _FakeCmds(known={"a", "b"}, loaded={"b"})
+    path = _path_with(["a", "b"], tmp_path)
 
-    result = list_plugins(cmds, loaded_only=True)
+    result = list_plugins(cmds, loaded_only=True, search_path=path)
 
     assert [item["name"] for item in result["plugins"]] == ["b"]
 
 
-def test_list_plugins_truncates_and_flags_it():
+def test_list_plugins_truncates_and_flags_it(tmp_path):
     cmds = _FakeCmds(known={"a", "b", "c"})
+    path = _path_with(["a", "b", "c"], tmp_path)
 
-    result = list_plugins(cmds, limit=2)
+    result = list_plugins(cmds, limit=2, search_path=path)
 
     assert result["count"] == 2
     assert result["total_matches"] == 3
     assert result["truncated"] is True
 
 
-def test_list_plugins_clamps_a_zero_limit():
+def test_list_plugins_clamps_a_zero_limit(tmp_path):
     cmds = _FakeCmds(known={"a", "b"})
+    path = _path_with(["a", "b"], tmp_path)
 
-    result = list_plugins(cmds, limit=0)
+    result = list_plugins(cmds, limit=0, search_path=path)
 
     assert result["count"] == 1
 
@@ -269,11 +322,12 @@ def test_unload_plugin_rejects_unknown_plugin():
         unload_plugin(_FakeCmds(known=set()), "nope")
 
 
-def test_unload_plugin_rejects_not_loaded():
+def test_unload_plugin_rejects_not_loaded(tmp_path):
     cmds = _FakeCmds(known={"mtoa"})
+    path = _path_with(["mtoa"], tmp_path)
 
-    with pytest.raises(PluginContractError, match="nothing to unload"):
-        unload_plugin(cmds, "mtoa")
+    with pytest.raises(PluginContractError, match="already unloaded|nothing to unload"):
+        unload_plugin(cmds, "mtoa", search_path=path)
 
 
 # ---------------------------------------------------------------------------
@@ -347,10 +401,11 @@ def test_diagnose_explains_an_unknown_plugin():
     assert result["suggestions"]
 
 
-def test_diagnose_explains_a_registered_but_unloaded_plugin():
+def test_diagnose_explains_a_registered_but_unloaded_plugin(tmp_path):
     cmds = _FakeCmds(known={"mtoa"})
+    path = _path_with(["mtoa"], tmp_path)
 
-    result = diagnose_plugin(cmds, "mtoa")
+    result = diagnose_plugin(cmds, "mtoa", search_path=path)
 
     assert result["healthy"] is False
     assert result["known"] is True
@@ -372,10 +427,11 @@ def _call(script, cmds, **kwargs):
     return load_and_call("maya-plugins/scripts/{}.py".format(script), cmds, "main", **kwargs)
 
 
-def test_skill_list_plugins_reports_counts():
+def test_skill_list_plugins_reports_counts(tmp_path):
     cmds = _FakeCmds(known={"mtoa", "fbxmaya"}, loaded={"mtoa"})
+    path = _path_with(["mtoa", "fbxmaya"], tmp_path)
 
-    result = _call("list_plugins", cmds)
+    result = _call("list_plugins", cmds, search_path=path)
 
     assert result["success"] is True, result
     assert result["context"]["count"] == 2

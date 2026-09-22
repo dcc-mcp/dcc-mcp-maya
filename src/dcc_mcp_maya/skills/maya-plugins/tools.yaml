@@ -38,7 +38,8 @@ tools:
       autoload:
         type: boolean
         default: false
-    required: []
+    required:
+    - plugin
 - name: unload_plugin
   description: Unload a Maya plug-in, refusing when Maya reports it cannot be unloaded.
   execution: sync
@@ -57,7 +58,8 @@ tools:
       force:
         type: boolean
         default: false
-    required: []
+    required:
+    - plugin
 - name: diagnose_plugin
   description: 'Explain why a plug-in is or is not usable: path, load state and problems.'
   execution: sync
@@ -74,7 +76,8 @@ tools:
         - string
         - 'null'
         default: null
-    required: []
+    required:
+    - plugin
 - name: get_plugin_path
   description: Report the plug-in search path and resolve a plug-in name to a file.
   execution: sync

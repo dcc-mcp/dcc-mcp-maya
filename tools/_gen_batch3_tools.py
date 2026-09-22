@@ -81,6 +81,15 @@ ENUMS = {
 
 SIMPLE_TYPES = {str: "string", int: "integer", float: "number", bool: "boolean"}
 
+#: Parameters that reject fewer than N items, so the schema refuses up front a
+#: request the contract would only reject at runtime.
+MIN_ITEMS = {("merge_comp_layers", "sources"): 2}
+
+#: Optional parameters that are nonetheless mandatory in practice: the contract
+#: rejects an empty value, so declaring them required stops schema-validating
+#: clients from omitting them.
+REQUIRED_WHEN_OPTIONAL = {"load_plugin": ("plugin",), "unload_plugin": ("plugin",), "diagnose_plugin": ("plugin",)}
+
 
 def _union_args(annotation):
     if str(getattr(annotation, "__origin__", "")).endswith("Union"):
@@ -98,10 +107,14 @@ def _unwrap(annotation):
     return annotation, False
 
 
-def _json_type(base):
+def _json_type(base, tool_name, param_name):
     origin = getattr(base, "__origin__", None)
     if origin is list:
-        return {"type": "array", "items": {"type": SIMPLE_TYPES.get(base.__args__[0], "string")}, "minItems": 1}
+        return {
+            "type": "array",
+            "items": {"type": SIMPLE_TYPES.get(base.__args__[0], "string")},
+            "minItems": MIN_ITEMS.get((tool_name, param_name), 1),
+        }
     if base is Any:
         return {}
     return {"type": SIMPLE_TYPES.get(base, "string")}
@@ -120,10 +133,14 @@ def _schema(skill, tool):
     properties, required = {}, []
     for name, param in signature.parameters.items():
         base, nullable = _unwrap(hints.get(name, str))
-        prop = dict(_json_type(base))
+        prop = dict(_json_type(base, tool, name))
         if nullable and prop.get("type"):
             prop["type"] = [prop["type"], "null"]
         if param.default is inspect.Parameter.empty and not nullable:
+            required.append(name)
+        elif name in REQUIRED_WHEN_OPTIONAL.get(tool, ()):
+            # Declared Optional[str] = None so the skill can produce a friendly
+            # error, but omitting it always fails - so require it in the schema.
             required.append(name)
         if name in ENUMS.get(tool, {}):
             prop["enum"] = list(ENUMS[tool][name]) + ([None] if nullable else [])
