@@ -45,13 +45,24 @@ jobs:
     needs: [release-please]
     if: needs.release-please.outputs.release_created == 'true' || (github.event_name == 'workflow_dispatch' && inputs.tag_name != '')
     runs-on: ubuntu-latest
+    env:
+      # Release gate must run the same hermetic test contract as ci.yml. Job
+      # persistence takes a machine-wide exclusive SQLite lease per process,
+      # so two in-process MayaMcpServer instances collide and every later
+      # start fails with "job persistence unavailable (ownership)" — that is
+      # what broke the v0.9.27 / v0.9.28 releases. Tests never need persisted
+      # job history.
+      DCC_MCP_DISABLE_JOB_PERSISTENCE: "1"
+      DCC_MCP_MAYA_JOB_STORAGE: ""
+      DCC_MCP_ALLOW_AMBIENT_PYTHON: "1"
     steps:
       - uses: actions/checkout@v6
 
       - name: Set up Python 3.12
         uses: actions/setup-python@v6
         with:
-          python-version: "3.14"
+          # 3.12 is the newest interpreter declared in pyproject classifiers.
+          python-version: "3.12"
 
       - name: Install build tools
         run: pip install hatchling build
@@ -59,10 +70,31 @@ jobs:
       - name: Run tests
         run: |
           pip install ".[dev]"
-          pytest tests/ -v --tb=short
+          pytest tests/ \
+            --ignore=tests/e2e \
+            --ignore=tests/e2e_standalone \
+            -v --tb=short
 
       - name: Build wheel and sdist
         run: python -m build
+
+      - name: Verify dist artifacts
+        run: |
+          python - <<'PY'
+          import sys
+          from pathlib import Path
+
+          dist = Path("dist")
+          wheels = sorted(dist.glob("*.whl"))
+          sdists = sorted(dist.glob("*.tar.gz"))
+          if not wheels or not sdists:
+              print("::error::dist/ is missing a wheel or an sdist")
+              for path in sorted(dist.iterdir()):
+                  print("dist entry:", path.name)
+              sys.exit(1)
+          for path in wheels + sdists:
+              print("built:", path.name)
+          PY
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v7
@@ -114,10 +146,10 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - name: Set up Python 3.10
+      - name: Set up Python 3.12
         uses: actions/setup-python@v6
         with:
-          python-version: "3.14"
+          python-version: "3.12"
 
       - name: Install assemble dependencies
         run: pip install dcc-mcp-core "packaging>=21.3"
@@ -163,6 +195,45 @@ jobs:
         with:
           tag_name: ${{ needs.release-please.outputs.tag_name }}
           files: dist/*
+
+  # ── Fail loudly when a release ships without wheel / sdist ─────────────────
+  # ``publish`` and ``attach-release-assets`` are skipped when an upstream job
+  # fails, which silently produced two releases with mod ZIPs only. This job
+  # turns that silent gap into a red check on the release run.
+  verify-release-assets:
+    needs: [release-please, attach-release-assets]
+    if: needs.release-please.outputs.release_created == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Verify wheel and sdist are attached to the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG_NAME: ${{ needs.release-please.outputs.tag_name }}
+        run: |
+          set -euo pipefail
+
+          assets="$(gh release view "$TAG_NAME" --json assets --jq '.assets[].name')"
+          echo "Release assets for $TAG_NAME:"
+          echo "$assets"
+
+          wheel="$(echo "$assets" | grep -E '^dcc_mcp_maya-.+-py3-none-any\.whl$' || true)"
+          sdist="$(echo "$assets" | grep -E '^dcc_mcp_maya-.+\.tar\.gz$' || true)"
+
+          missing=""
+          if [ -z "$wheel" ]; then missing="wheel"; fi
+          if [ -z "$sdist" ]; then
+            if [ -n "$missing" ]; then missing="$missing, sdist"; else missing="sdist"; fi
+          fi
+
+          if [ -n "$missing" ]; then
+            echo "::error::release $TAG_NAME is missing: $missing — PyPI publish or asset attach did not happen"
+            exit 1
+          fi
+
+          echo "wheel and sdist present on $TAG_NAME"
 
   # ── Attach .mod module ZIPs to GitHub Release ───────────────────────────────
   attach-mod-release:
