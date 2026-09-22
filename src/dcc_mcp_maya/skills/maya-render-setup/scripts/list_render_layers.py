@@ -41,8 +41,6 @@ def list_render_layers(
             str(exc),
             possible_solutions=[
                 "Load the renderSetup plug-in: cmds.loadPlugin('renderSetup').",
-                "Render setup is unavailable, so this tool cannot report any layer - "
-                "including legacy ones. Legacy layers are never reported on their own.",
             ],
         )
     except ImportError:

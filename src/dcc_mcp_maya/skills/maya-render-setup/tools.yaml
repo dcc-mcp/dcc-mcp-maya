@@ -163,6 +163,7 @@ tools:
         - vector
         - vector2
         - pointer
+        - null
         default: null
       node_name:
         type:

@@ -110,7 +110,9 @@ def _schema(tool):
         if param.default is inspect.Parameter.empty and not nullable:
             required.append(name)
         if name in ENUMS.get(tool, {}):
-            prop["enum"] = ENUMS[tool][name]
+            # A nullable enum must permit null, or the enum constraint rejects
+            # the very value its type allows.
+            prop["enum"] = list(ENUMS[tool][name]) + ([None] if nullable else [])
         if param.default is not inspect.Parameter.empty:
             prop["default"] = param.default
         properties[name] = prop
