@@ -17,6 +17,7 @@ from dcc_mcp_maya.plugins import (
     PluginContractError,
     diagnose_plugin,
     find_plugin_file,
+    known_plugin_names,
     list_plugins,
     load_plugin,
     plugin_record,
@@ -29,11 +30,13 @@ class _FakeCmds:
     """Stand-in for ``maya.cmds`` whose pluginInfo mirrors Maya 2025."""
 
     def __init__(self, known=None, loaded=None, unload_ok=True, files=None):
-        # `known` is every plug-in Maya can address; `loaded` is the subset that
-        # is currently loaded. pluginInfo(listPlugins=True) exposes only the
-        # loaded ones - verified on Maya 2025.
+        # `known` is every plug-in Maya can address; `loaded` is the subset
+        # currently loaded; `registered` is the subset Maya has ever registered
+        # (only those expose commands and node types). pluginInfo exposes
+        # listPlugins as loaded-only - verified on Maya 2025.
         self.known = set(known or [])
         self.loaded = set(loaded or [])
+        self.registered = set(self.loaded) | set(self.known)
         self.unload_ok = unload_ok
         self.files = files or {}
         self.calls = []
@@ -53,7 +56,7 @@ class _FakeCmds:
                 if flag == "autoload":
                     return plugin in self.autoload
                 if flag == "registered":
-                    return plugin in self.known
+                    return plugin in self.registered
                 # Metadata flags only answer while loaded - Maya raises otherwise.
                 if plugin not in self.loaded:
                     raise RuntimeError("invalid object or value")
@@ -81,6 +84,8 @@ class _FakeCmds:
             # Maya raises even with quiet=True.
             raise RuntimeError('Plug-in "{}" not found on MAYA_PLUG_IN_PATH.'.format(plugin))
         self.loaded.add(plugin)
+        self.registered.add(plugin)
+        self.known.add(plugin)
         return [plugin]
 
     def unloadPlugin(self, plugin, **kwargs):
@@ -411,6 +416,99 @@ def test_diagnose_explains_a_registered_but_unloaded_plugin(tmp_path):
     assert result["known"] is True
     assert result["loaded"] is False
     assert any("not loaded" in problem for problem in result["problems"])
+
+
+def test_inventory_excludes_directories_on_the_search_path(tmp_path):
+    """Extensionless directories sit on the path and are not plug-ins."""
+    (tmp_path / "realPlugin.mll").write_text("", encoding="utf-8")
+    (tmp_path / "notAPluginDir").mkdir()
+    path = {"env_var": PLUGIN_PATH_ENV, "raw": "", "entries": [str(tmp_path)], "count": 1, "missing": []}
+
+    names = known_plugin_names(_FakeCmds(), search_path=path)
+
+    assert "realPlugin" in names
+    assert "notAPluginDir" not in names
+
+
+def test_inventory_includes_macos_bundle_directories(tmp_path):
+    """On macOS a plug-in ships as a .bundle directory, not as a file."""
+    (tmp_path / "MacPlugin.bundle").mkdir()
+    (tmp_path / "notAPluginDir").mkdir()
+    path = {"env_var": PLUGIN_PATH_ENV, "raw": "", "entries": [str(tmp_path)], "count": 1, "missing": []}
+
+    names = known_plugin_names(_FakeCmds(), search_path=path)
+
+    assert "MacPlugin" in names
+    assert "notAPluginDir" not in names
+
+
+def test_diagnose_flags_a_file_that_maya_never_registered(tmp_path):
+    """On the search path but unregistered means its commands do not exist."""
+    (tmp_path / "ghost.mll").write_text("", encoding="utf-8")
+    # On the search path but never loaded, so Maya has not registered it.
+    cmds = _FakeCmds()
+    cmds.registered = set()
+    path = _path_with(["ghost"], tmp_path)
+
+    result = diagnose_plugin(cmds, "ghost", search_path=path)
+
+    assert result["known"] is True
+    assert result["registered"] is False
+    assert result["healthy"] is False
+    assert any("not registered" in problem for problem in result["problems"])
+
+
+class _RegisteredWithoutFile(_FakeCmds):
+    """Maya registered the plug-in this session, but its file is not on the
+    search path - e.g. it was loaded and then the directory was removed.
+
+    ``registered`` is an always-valid flag and answers True here, while the
+    path enumeration reports the plug-in as unknown.
+    """
+
+    def __init__(self):
+        super().__init__(known=set(), loaded=set())
+        self.registered = {"orphan"}
+
+    def pluginInfo(self, plugin=None, **kwargs):
+        if kwargs.get("query") and kwargs.get("registered"):
+            return plugin in self.registered
+        return super().pluginInfo(plugin, **kwargs)
+
+
+def test_diagnose_does_not_claim_never_registered_when_it_is():
+    """A false "never registered" is indistinguishable from a true one if the
+    wording depends on ``known`` rather than Maya's registration state."""
+    empty = {
+        "env_var": PLUGIN_PATH_ENV,
+        "raw": "",
+        "entries": [],
+        "count": 0,
+        "missing": [],
+    }
+
+    result = diagnose_plugin(_RegisteredWithoutFile(), "orphan", search_path=empty)
+
+    assert result["known"] is False
+    assert result["file_found"] is False
+    assert result["registered"] is True
+    assert all("never registered" not in item for item in result["suggestions"])
+
+
+def test_diagnose_keeps_never_registered_when_it_is_true():
+    """Control case: the claim must still appear when it is actually true."""
+    empty = {
+        "env_var": PLUGIN_PATH_ENV,
+        "raw": "",
+        "entries": [],
+        "count": 0,
+        "missing": [],
+    }
+
+    result = diagnose_plugin(_FakeCmds(known=set()), "orphan", search_path=empty)
+
+    assert result["registered"] is False
+    assert any("never registered" in item for item in result["suggestions"])
 
 
 def test_diagnose_requires_a_name():
