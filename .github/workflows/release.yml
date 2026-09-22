@@ -57,16 +57,28 @@ jobs:
       # `publish` + `attach-release-assets`.
       #
       # Job persistence itself is covered by ci.yml; this job only needs the
-      # suite green so the wheel/sdist can be built and published.
+      # suite green so the wheel/sdist can be built and published. Both
+      # variables are set so the gate matches ci.yml exactly:
+      # ``DCC_MCP_DISABLE_JOB_PERSISTENCE`` is read by dcc-mcp-core, while
+      # ``DCC_MCP_MAYA_JOB_STORAGE`` is the one the adapter's
+      # ``resolve_job_storage()`` honours.
       DCC_MCP_ALLOW_AMBIENT_PYTHON: "1"
       DCC_MCP_DISABLE_JOB_PERSISTENCE: "1"
+      DCC_MCP_MAYA_JOB_STORAGE: ""
     steps:
+      # Manual backfills must build the tagged source. Without ``ref`` the
+      # dispatch branch (main by default) is built instead, so a backfill
+      # could publish another version's artifacts under the requested tag.
       - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag_name || github.sha }}
+          persist-credentials: false
 
-      - name: Set up Python 3.14
+      - name: Set up Python 3.12
         uses: actions/setup-python@v6
         with:
-          python-version: "3.14"
+          # 3.12 is the newest interpreter declared by the wheel classifiers.
+          python-version: "3.12"
 
       - name: Install build tools
         run: pip install hatchling build
@@ -74,7 +86,10 @@ jobs:
       - name: Run tests
         run: |
           pip install ".[dev]"
-          pytest tests/ -v --tb=short
+          pytest tests/ \
+            --ignore=tests/e2e \
+            --ignore=tests/e2e_standalone \
+            -v --tb=short
 
       - name: Build wheel and sdist
         run: python -m build
@@ -92,6 +107,34 @@ jobs:
             exit 1
           fi
           echo "OK: ${#wheels[@]} wheel(s), ${#sdists[@]} sdist(s)"
+
+      # Second guard rail: PyPI uploads cannot be overwritten or deleted, so
+      # the artifacts must belong to the tag `publish` is about to target.
+      - name: Verify dist matches the requested tag
+        env:
+          RELEASE_VERSION: ${{ needs.release-please.outputs.version }}
+          TAG_NAME: ${{ inputs.tag_name }}
+        run: |
+          python - <<'PY'
+          import os
+          import sys
+          from pathlib import Path
+
+          version = (os.environ.get("RELEASE_VERSION") or "").strip()
+          if not version:
+              version = (os.environ.get("TAG_NAME") or "").strip().lstrip("vV")
+          if not version:
+              print("No release version resolved; skipping the tag/artifact check")
+              sys.exit(0)
+
+          artifacts = sorted(Path("dist").glob("*.whl")) + sorted(Path("dist").glob("*.tar.gz"))
+          expected = "dcc_mcp_maya-%s" % version
+          mismatched = [path.name for path in artifacts if not path.name.startswith(expected)]
+          if mismatched:
+              print("::error::dist artifacts do not match version %s: %s" % (version, ", ".join(mismatched)))
+              sys.exit(1)
+          print("OK: %d artifact(s) match version %s" % (len(artifacts), version))
+          PY
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v7
@@ -144,12 +187,17 @@ jobs:
             runs-on: macos-latest
     runs-on: ${{ matrix.runs-on }}
     steps:
+      # Same backfill rule as the build job: the .mod ZIPs must be assembled
+      # from the requested tag, not from whatever main points at.
       - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag_name || github.sha }}
+          persist-credentials: false
 
-      - name: Set up Python 3.10
+      - name: Set up Python 3.12
         uses: actions/setup-python@v6
         with:
-          python-version: "3.14"
+          python-version: "3.12"
 
       - name: Install assemble dependencies
         run: pip install dcc-mcp-core "packaging>=21.3"
@@ -227,6 +275,8 @@ jobs:
     # were skipped — that is precisely the v0.9.27/v0.9.28 failure mode.
     if: always() && (needs.release-please.outputs.release_created == 'true' || (github.event_name == 'workflow_dispatch' && inputs.tag_name != ''))
     runs-on: ubuntu-latest
+    permissions:
+      contents: read  # read-only: this job only inspects release assets
 
     steps:
       - name: Assert the release carries a wheel and an sdist
