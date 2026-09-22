@@ -17,15 +17,19 @@ from conftest import load_and_call
 from dcc_mcp_maya import nucleus as nucleus_mod
 from dcc_mcp_maya.nucleus import (
     CACHEABLE_NODE_TYPES,
+    COMPOUND_ATTR_TYPES,
     DEFAULT_DIRECTION_FLAGS,
     FIELD_ATTRS,
     FIELD_COMMANDS,
+    FIELD_COMPOUND_ATTRS,
     FIELD_CREATE_FLAGS,
     FIELD_DIRECTION_FLAGS,
     FIELD_POST_CREATE_ATTRS,
     FIELD_SUPPORTED_FLAGS,
     NCONSTRAINT_TYPES,
     NUCLEUS_ATTRS,
+    NUCLEUS_COMPOUND_ATTRS,
+    NUCLEUS_NODE_TYPE,
     NucleusContractError,
     _cache_file_paths,
     _find_cache_node,
@@ -554,6 +558,56 @@ def test_create_field_writes_compound_attrs_with_all_components():
     assert applied[0][3] == {"type": "double3"}
 
 
+def test_create_field_rejects_a_short_compound_list_before_creating_the_node():
+    """A 2-element value must not leave an orphan field node behind.
+
+    ``create_field`` validates the whole payload before calling the factory,
+    the same validate-then-apply rule the nCache delete path follows - an
+    orphan node is invisible to the caller but pollutes every later scene
+    query.
+    """
+    cmds = _FakeCmds()
+
+    with pytest.raises(NucleusContractError, match=r"turbulence_frequency expects a 3-element \[x, y, z\] list, got 2"):
+        create_field(cmds, field_type="volume_axis", turbulence_frequency=[1.0, 2.0])
+
+    assert _calls(cmds, "volumeAxis") == [], "a rejected payload must not reach the field factory"
+    assert cmds._after == {}, "a rejected payload must not create nodes"
+
+
+def test_create_field_rejects_an_empty_position():
+    """``[]`` is a caller mistake, not "position not given".
+
+    ``if position:" would silently create the field at the origin; ``None`` is
+    the only value that means "not given" - the same convention the
+    ``create_dynamic_field`` skill script uses.
+    """
+    cmds = _FakeCmds()
+
+    with pytest.raises(NucleusContractError, match=r"position expects a 3-element \[x, y, z\] list, got 0"):
+        create_field(cmds, field_type="air", position=[])
+
+    assert _calls(cmds, "air") == [], "a rejected payload must not reach the factory"
+    assert cmds._after == {}
+
+
+def test_create_field_rejects_a_scalar_direction():
+    """``direction`` is a compound too; a scalar used to raise a bare TypeError."""
+    with pytest.raises(NucleusContractError, match="direction expects a 3-element"):
+        create_field(_FakeCmds(), field_type="gravity", direction=1.0)
+
+
+def test_compound_attr_tables_only_name_known_settings():
+    """The compound lists must name keys the attribute maps actually expose.
+
+    A typo here would silently disable the guard for that key.
+    """
+    for key in FIELD_COMPOUND_ATTRS:
+        assert key in FIELD_ATTRS, "compound field setting '{}' is not in FIELD_ATTRS".format(key)
+    for key in NUCLEUS_COMPOUND_ATTRS:
+        assert key in NUCLEUS_ATTRS, "compound nucleus setting '{}' is not in NUCLEUS_ATTRS".format(key)
+
+
 def _collect_maya_table_errors(cmds):
     """Return a list of drift descriptions; empty means Maya agrees with us.
 
@@ -593,7 +647,9 @@ def _collect_maya_table_errors(cmds):
             continue
         node = command()
         try:
-            available.update(cmds.listAttr(node) or [])
+            attrs = cmds.listAttr(node) or []
+            available.update(attrs)
+            errors.extend(_maya_compound_drift(cmds, node, attrs, FIELD_ATTRS, FIELD_COMPOUND_ATTRS, _field_type))
         finally:
             cmds.delete(node)
 
@@ -603,7 +659,90 @@ def _collect_maya_table_errors(cmds):
         if attr not in available:
             errors.append("FIELD_ATTRS names attribute '{}' ({}) no field node exposes".format(attr, key))
 
+    # 3. The nucleus solver compounds (gravity / wind direction are float3).
+    solver = cmds.createNode(NUCLEUS_NODE_TYPE)
+    try:
+        errors.extend(
+            _maya_compound_drift(
+                cmds,
+                solver,
+                cmds.listAttr(solver) or [],
+                NUCLEUS_ATTRS,
+                NUCLEUS_COMPOUND_ATTRS,
+                NUCLEUS_NODE_TYPE,
+            )
+        )
+    finally:
+        cmds.delete(solver)
+
+    # 4. A compound write must actually round-trip. The apply loop always
+    #    passes type="double3", including for the solver's float3 plugs, and a
+    #    fake cmds cannot prove Maya accepts that - so write and read back.
+    errors.extend(_maya_compound_round_trip_errors(cmds))
+
     return errors
+
+
+def _maya_compound_round_trip_errors(cmds):
+    """Write a compound with ``type="double3"`` and read it back on real Maya."""
+    errors = []
+
+    cmds.select(clear=True)  # a selected field makes cmds.<field>() refuse to run
+    solver = cmds.createNode(NUCLEUS_NODE_TYPE)
+    try:
+        expected = (0.0, -1.0, 0.0)
+        cmds.setAttr(solver + ".gravityDirection", *expected, type="double3")
+        read = _read_triple(cmds, solver + ".gravityDirection")
+        if read != expected:
+            errors.append("nucleus float3 round trip wrote {}, read {}".format(expected, read))
+    finally:
+        cmds.delete(solver)
+
+    cmds.select(clear=True)
+    field = cmds.volumeAxis()[0]
+    try:
+        expected = (1.5, 2.5, 3.5)
+        cmds.setAttr(field + ".turbulenceFrequency", *expected, type="double3")
+        read = _read_triple(cmds, field + ".turbulenceFrequency")
+        if read != expected:
+            errors.append("volumeAxis double3 round trip wrote {}, read {}".format(expected, read))
+    finally:
+        cmds.delete(cmds.listRelatives(field, parent=True, fullPath=True) or [field])
+
+    return errors
+
+
+def _read_triple(cmds, plug):
+    """Read a compound plug back as a rounded tuple of three floats."""
+    value = cmds.getAttr(plug)[0]
+    return tuple(round(float(item), 6) for item in value)
+
+
+def _maya_compound_drift(cmds, node, attrs, attr_map, compound, label):
+    """Describe every compound / scalar mismatch between a table and Maya.
+
+    Only attributes the node actually exposes are checked - ``vortex`` has no
+    ``direction``, so it is simply skipped.  Both directions matter: an
+    unmarked compound re-opens the opaque "error reading data element number 2"
+    the guard exists to prevent, and a wrongly marked scalar rejects a value
+    Maya would have accepted.
+    """
+    drift = []
+    if isinstance(node, (list, tuple)):
+        # A field factory returns [fieldShape] rather than a plain name.
+        node = node[0]
+    for key, attr in sorted(attr_map.items()):
+        if attr not in attrs:
+            continue
+        reported = cmds.getAttr("{}.{}".format(node, attr), type=True)
+        is_compound = reported in COMPOUND_ATTR_TYPES
+        if is_compound and key not in compound:
+            drift.append(
+                "{}: '{}' ({}) is a {} in Maya but is not in the compound list".format(label, attr, key, reported)
+            )
+        if key in compound and not is_compound:
+            drift.append("{}: '{}' ({}) is marked compound but Maya reports {}".format(label, attr, key, reported))
+    return drift
 
 
 def _maya_check_main():
@@ -674,6 +813,140 @@ def test_set_field_properties_edits_only_supplied_values():
 def test_set_field_properties_rejects_empty_payload():
     with pytest.raises(NucleusContractError, match="at least one attribute"):
         set_field_properties(_FakeCmds(), fields=["airField1"], properties={})
+
+
+def test_set_field_properties_rejects_scalar_for_a_compound_attr():
+    """The edit path must guard compounds the way the create path does.
+
+    Before this guard, ``turbulence_frequency=2.0`` reached Maya as a bare
+    ``setAttr("...turbulenceFrequency", 2.0)`` and failed with an opaque
+    "error reading data element number 2".
+    """
+    cmds = _FakeCmds(existing={"volumeAxisField1": "volumeAxisField"})
+
+    with pytest.raises(NucleusContractError, match="turbulence_frequency expects a 3-element"):
+        set_field_properties(cmds, fields=["volumeAxisField1"], properties={"turbulence_frequency": 2.0})
+
+    assert _setattr(cmds) == {}, "a rejected payload must not touch the node"
+
+
+def test_set_field_properties_rejects_a_short_compound_list():
+    cmds = _FakeCmds(existing={"volumeAxisField1": "volumeAxisField"})
+
+    with pytest.raises(NucleusContractError, match=r"turbulence_frequency expects a 3-element \[x, y, z\] list, got 2"):
+        set_field_properties(cmds, fields=["volumeAxisField1"], properties={"turbulence_frequency": [1.0, 2.0]})
+
+    assert _setattr(cmds) == {}
+
+
+def test_set_field_properties_rejects_a_scalar_direction():
+    """``direction`` is a compound on every field that exposes it."""
+    cmds = _FakeCmds(existing={"airField1": "airField"})
+
+    with pytest.raises(NucleusContractError, match="direction expects a 3-element"):
+        set_field_properties(cmds, fields=["airField1"], properties={"direction": 1.0})
+
+    assert _setattr(cmds) == {}
+
+
+def test_set_field_properties_validates_every_value_before_editing():
+    """One bad value must not leave the field half-edited."""
+    cmds = _FakeCmds(existing={"volumeAxisField1": "volumeAxisField"})
+
+    with pytest.raises(NucleusContractError, match="turbulence_frequency"):
+        set_field_properties(
+            cmds,
+            fields=["volumeAxisField1"],
+            properties={"magnitude": 3.0, "turbulence_frequency": 2.0},
+        )
+
+    assert _setattr(cmds) == {}, "magnitude must not be applied before the payload is accepted"
+
+
+def test_set_field_properties_rejects_a_short_list_before_writing_anything():
+    """A non-compound short list must not half-edit the node either.
+
+    ``sorted(attrs)`` puts ``apply_per_vertex`` first, so a length check left
+    in the apply loop would write it and only then reject ``attenuation``.
+    """
+    cmds = _FakeCmds(existing={"airField1": "airField"})
+
+    with pytest.raises(NucleusContractError, match="attenuation expects 3 components, got 2"):
+        set_field_properties(
+            cmds, fields=["airField1"], properties={"apply_per_vertex": 1.0, "attenuation": [1.0, 2.0]}
+        )
+
+    assert _setattr(cmds) == {}, "apply_per_vertex must not be written before the payload is accepted"
+
+
+def test_set_field_properties_reports_non_numeric_components():
+    """A non-numeric component must surface as a contract error, not ValueError."""
+    cmds = _FakeCmds(existing={"volumeAxisField1": "volumeAxisField"})
+
+    with pytest.raises(NucleusContractError, match="numeric"):
+        set_field_properties(cmds, fields=["volumeAxisField1"], properties={"turbulence_frequency": ["a", "b", "c"]})
+
+    with pytest.raises(NucleusContractError, match="numeric"):
+        set_field_properties(cmds, fields=["volumeAxisField1"], properties={"magnitude": ["a", "b", "c"]})
+
+    assert _setattr(cmds) == {}
+
+
+def test_set_nucleus_properties_rejects_a_scalar_gravity_direction():
+    """``gravityDirection`` is a float3; a scalar hits the same opaque error."""
+    cmds = _FakeCmds(existing={"nucleus1": "nucleus"})
+
+    with pytest.raises(NucleusContractError, match="gravity_direction expects a 3-element"):
+        set_nucleus_properties(cmds, solver="nucleus1", properties={"gravity_direction": 9.8})
+
+    assert _setattr(cmds) == {}
+
+
+def test_create_nucleus_solver_rejects_a_bad_payload_before_creating_the_node():
+    """An orphan solver is worse than a dirty scene.
+
+    ``first_nucleus()`` returns the first solver in the scene, so a solver left
+    behind by a rejected call would silently absorb every later
+    ``set_nucleus_properties`` call that omits ``solver``.
+    """
+    cmds = _FakeCmds()
+
+    with pytest.raises(NucleusContractError, match="Unsupported attribute"):
+        create_nucleus_solver(cmds, properties={"windSpeed": 1.0})
+
+    assert _calls(cmds, "nucleus") == [], "a rejected payload must not reach the factory"
+    assert cmds._after == {}, "a rejected payload must not create nodes"
+
+
+def test_create_nucleus_solver_rejects_a_scalar_compound_before_creating_the_node():
+    cmds = _FakeCmds()
+
+    with pytest.raises(NucleusContractError, match="gravity_direction expects a 3-element"):
+        create_nucleus_solver(cmds, properties={"gravity_direction": 9.8})
+
+    assert _calls(cmds, "nucleus") == []
+    assert cmds._after == {}
+
+
+def test_create_ncloth_rejects_a_bad_payload_before_creating_the_node():
+    """The field path plans before it creates; cloth must follow the same rule."""
+    cmds = _FakeCmds(existing={"pPlane1": "mesh"})
+
+    with pytest.raises(NucleusContractError, match="Unsupported attribute"):
+        create_ncloth(cmds, objects=["pPlane1"], properties={"not_an_attr": 1.0})
+
+    assert _calls(cmds, "nClothCreate") == []
+    assert cmds._after == {}
+
+
+def test_create_nrigid_rejects_a_bad_payload_before_creating_the_node():
+    cmds = _FakeCmds(existing={"pPlane1": "mesh"})
+
+    with pytest.raises(NucleusContractError, match="Unsupported attribute"):
+        create_nrigid(cmds, objects=["pPlane1"], properties={"not_an_attr": 1.0})
+
+    assert _calls(cmds, "nRigid") == []
+    assert cmds._after == {}
 
 
 # ---------------------------------------------------------------------------

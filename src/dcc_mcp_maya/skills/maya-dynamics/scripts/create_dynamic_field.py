@@ -83,7 +83,7 @@ def create_dynamic_field(
             possible_solutions=[
                 "field_type must be one of: " + ", ".join(sorted(FIELD_COMMANDS)),
                 "Each field type only accepts a subset of flags; the error lists the supported ones.",
-                "direction takes a 3-element [x, y, z] list.",
+                "direction and turbulence_frequency take a 3-element [x, y, z] list.",
             ],
         )
     except ImportError:
