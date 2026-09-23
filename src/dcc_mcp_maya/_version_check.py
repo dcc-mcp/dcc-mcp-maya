@@ -41,11 +41,16 @@ The same comparison is applied to ``dcc-mcp-core``: its startup log line
 (``dcc_mcp_core.__version__``) and its distribution metadata can drift the
 same way, which is why "read the version off the log" was unreliable.
 
-Python 3.7 support
-------------------
-:mod:`importlib.metadata` is 3.8+, so the optional ``importlib_metadata``
-backport is used when present.  With neither available the affected report
-degrades to :data:`STATUS_UNKNOWN` instead of failing the import.
+Python 3.7 support (Maya 2022)
+------------------------------
+:mod:`importlib.metadata` is 3.8+ and the ``importlib_metadata`` backport is
+not a declared dependency (adding one for a diagnostics-only feature would
+make every Maya 2022 install depend on a network-resolved wheel).  When
+neither is importable, :func:`distribution_version` falls back to a pure
+stdlib scan of ``sys.path`` for ``<package>-*.dist-info/METADATA`` and reads
+the ``Version:`` field.  That keeps the drift check working on the py3.7
+hosts where it matters most — those are the ones that still carry stale
+installs from several releases ago.
 
 Opt out with ``DCC_MCP_MAYA_VERSION_CHECK=0``.
 """
@@ -54,9 +59,12 @@ Opt out with ``DCC_MCP_MAYA_VERSION_CHECK=0``.
 from __future__ import annotations
 
 # Import built-in modules
+import io
 import logging
+import os
+import sys
 from dataclasses import dataclass
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 # Import local modules
 from dcc_mcp_maya import _env
@@ -111,19 +119,87 @@ def _normalize_version(raw: Any) -> str:
         return text.lower()
 
 
+def _metadata_field(metadata_text: str, field: str) -> Optional[str]:
+    """Return the first ``Field: value`` line matching *field* (case-insensitive)."""
+    prefix = field.lower() + ":"
+    for line in metadata_text.splitlines():
+        if line.lower().startswith(prefix):
+            value = line[len(prefix) :].strip()
+            if value:
+                return value
+    return None
+
+
+def _scan_distribution_dirs(package: str) -> List[Tuple[str, str]]:
+    """Find ``<package>-*.dist-info`` / ``.egg-info`` directories on ``sys.path``.
+
+    Pure-stdlib stand-in for :mod:`importlib.metadata`, used on Python 3.7
+    (Maya 2022) where neither the stdlib module nor the
+    ``importlib_metadata`` backport is guaranteed to exist.  Returns
+    ``(metadata_file, distribution_dir)`` pairs in ``sys.path`` order.
+    """
+    normalised = package.replace("-", "_")
+    prefixes = (normalised + "-", package + "-")
+    suffixes = (".dist-info", ".egg-info")
+    found: List[Tuple[str, str]] = []
+
+    for entry in sys.path:
+        if not entry:
+            continue
+        try:
+            names = sorted(os.listdir(entry))
+        except OSError:  # noqa: BLE001 - unreadable / missing sys.path entry
+            continue
+        for name in names:
+            lowered = name.lower()
+            if not lowered.endswith(suffixes):
+                continue
+            if not any(lowered.startswith(prefix) for prefix in prefixes):
+                continue
+            metadata_file = os.path.join(entry, name, "METADATA")
+            if not os.path.isfile(metadata_file):
+                metadata_file = os.path.join(entry, name, "PKG-INFO")
+                if not os.path.isfile(metadata_file):
+                    continue
+            found.append((metadata_file, os.path.join(entry, name)))
+    return found
+
+
+def _version_from_metadata_file(metadata_file: str) -> Optional[str]:
+    try:
+        with io.open(metadata_file, "r", encoding="utf-8", errors="replace") as handle:
+            content = handle.read()
+    except OSError:  # noqa: BLE001
+        return None
+    return _metadata_field(content, "Version")
+
+
 def distribution_version(package: str) -> Optional[str]:
     """Return the installed-distribution version of *package*.
 
-    Returns ``None`` when the package has no distribution metadata or when
-    no metadata API is available at all.
+    Resolution order:
+
+    1. :mod:`importlib.metadata` (Python 3.8+) or the ``importlib_metadata``
+       backport, when importable.
+    2. A pure-stdlib scan of ``sys.path`` for ``<package>-*.dist-info``, so
+       Python 3.7 / Maya 2022 hosts are still covered.
+
+    Returns ``None`` when no distribution metadata can be found at all.
     """
     metadata = _metadata_module()
-    if metadata is None:
-        return None
-    try:
-        return str(metadata.version(package))
-    except Exception:  # noqa: BLE001 - PackageNotFoundError and friends
-        return None
+    if metadata is not None:
+        try:
+            return str(metadata.version(package))
+        except Exception:  # noqa: BLE001 - PackageNotFoundError and friends
+            pass
+        # Fall through: a partially-installed distribution can raise even when
+        # a .dist-info directory is present, and the scan can still read it.
+
+    for metadata_file, _distribution_dir in _scan_distribution_dirs(package):
+        version = _version_from_metadata_file(metadata_file)
+        if version:
+            return version
+    return None
 
 
 def distribution_location(package: str) -> Optional[str]:
@@ -133,19 +209,23 @@ def distribution_location(package: str) -> Optional[str]:
     without guessing which site-packages is responsible.
     """
     metadata = _metadata_module()
-    if metadata is None:
-        return None
-    try:
-        distribution = metadata.distribution(package)
-    except Exception:  # noqa: BLE001
-        return None
-    try:
-        return str(distribution.locate_file(""))
-    except Exception:  # noqa: BLE001
+    if metadata is not None:
         try:
-            return str(distribution._path)  # noqa: SLF001 - older backports
+            distribution = metadata.distribution(package)
         except Exception:  # noqa: BLE001
-            return None
+            distribution = None
+        if distribution is not None:
+            try:
+                return str(distribution.locate_file(""))
+            except Exception:  # noqa: BLE001
+                try:
+                    return str(distribution._path)  # noqa: SLF001 - older backports
+                except Exception:  # noqa: BLE001
+                    pass
+
+    for _metadata_file, distribution_dir in _scan_distribution_dirs(package):
+        return distribution_dir
+    return None
 
 
 def module_origin(module: Optional[Any]) -> Optional[str]:
@@ -250,10 +330,7 @@ def build_report(
 
     if installed is None:
         if _metadata_module() is None:
-            detail = (
-                "cannot read installed distribution metadata "
-                "(Python 3.7 without the importlib_metadata backport)"
-            )
+            detail = "cannot read installed distribution metadata (Python 3.7 without the importlib_metadata backport)"
             status = STATUS_UNKNOWN
         else:
             detail = "no installed distribution metadata found (source checkout or vendored module)"
@@ -343,12 +420,20 @@ def version_report(include_core: bool = True) -> Dict[str, Any]:
         {
           "adapter": {...VersionReport...},
           "core": {...VersionReport...},
-          "consistent": bool,
+          "consistent": bool,   # every report is STATUS_CONSISTENT
+          "drift": bool,        # at least one report is STATUS_MISMATCH
         }
+
+    ``consistent`` is intentionally strict: a report that could not be
+    decided (``not-installed`` for a source checkout, ``unknown`` when no
+    metadata can be read) makes it ``False``.  Consumers that only care
+    about real drift — "two answers exist and disagree" — must read
+    ``drift`` instead.
     """
     reports = collect_version_reports(include_core=include_core)
     payload: Dict[str, Any] = {name: report.to_dict() for name, report in reports.items()}
     payload["consistent"] = all(report.consistent for report in reports.values())
+    payload["drift"] = any(report.status == STATUS_MISMATCH for report in reports.values())
     return payload
 
 
@@ -403,6 +488,7 @@ def run_version_self_check(
         log_report(report, target_logger)
     payload: Dict[str, Any] = {name: report.to_dict() for name, report in reports.items()}
     payload["consistent"] = all(report.consistent for report in reports.values())
+    payload["drift"] = any(report.status == STATUS_MISMATCH for report in reports.values())
     return payload
 
 

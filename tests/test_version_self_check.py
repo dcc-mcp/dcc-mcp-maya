@@ -13,6 +13,8 @@ from __future__ import annotations
 # Import built-in modules
 import logging
 import os
+import sys
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -66,7 +68,11 @@ class TestBuildReport:
         assert report.consistent is False
         assert report.authoritative_version == "0.9.30"
 
-    def test_missing_metadata_api_degrades_to_unknown(self):
+    def test_missing_metadata_api_degrades_to_unknown(self, tmp_path, monkeypatch):
+        # Isolate sys.path as well: without it the scan fallback would still
+        # find the real installed dist-info and report a (correct) mismatch
+        # instead of "cannot decide".
+        monkeypatch.setattr(sys, "path", [str(tmp_path)])
         with patch.object(_version_check, "_metadata_module", return_value=None):
             report = _version_check.build_report("dcc-mcp-maya", module=_module("0.9.30"))
 
@@ -248,6 +254,118 @@ class TestCollectAndRun:
 
         assert payload["consistent"] is False
         assert any(record.levelno == logging.WARNING for record in caplog.records)
+
+
+class TestDistributionScanFallback:
+    """End-to-end drift coverage against a real ``.dist-info`` directory.
+
+    Python 3.7 (Maya 2022) has no :mod:`importlib.metadata` and the
+    ``importlib_metadata`` backport is not a declared dependency, so the
+    pure-stdlib ``sys.path`` scan inside :func:`distribution_version` is what
+    keeps the drift check alive on those hosts — the platform the reported
+    Maya 2022 host runs on.  These tests build an actual stale distribution
+    directory instead of stubbing the resolver.
+
+    Note: :mod:`importlib.metadata` caches ``sys.path`` in a default-argument
+    ``Context``, so a synthetic directory cannot be pointed at deterministically.
+    The scan fallback is exercised here; the "metadata API wins when present"
+    ordering is covered by :meth:`test_metadata_api_takes_priority`.
+    """
+
+    @staticmethod
+    def _make_dist_info(root: Path, package: str, version: str) -> Path:
+        dist_info = root / "{}-{}.dist-info".format(package, version)
+        dist_info.mkdir(parents=True, exist_ok=True)
+        (dist_info / "METADATA").write_text(
+            "Metadata-Version: 2.1\nName: {}\nVersion: {}\n".format(package, version),
+            encoding="utf-8",
+        )
+        return dist_info
+
+    def test_stale_dist_info_is_detected_as_drift(self, tmp_path, monkeypatch):
+        site = self._make_dist_info(tmp_path, "dcc-mcp-maya", "0.9.14")
+        monkeypatch.setattr(sys, "path", [str(tmp_path)] + list(sys.path))
+        monkeypatch.setattr(_version_check, "_metadata_module", lambda: None)
+
+        report = _version_check.build_report(
+            "dcc-mcp-maya", module=_module("0.9.16", "/modules/dcc_mcp_maya/__init__.py")
+        )
+
+        assert report.distribution_version == "0.9.14"
+        assert report.runtime_version == "0.9.16"
+        assert report.status == _version_check.STATUS_MISMATCH
+        assert report.authoritative_version == "0.9.16"
+        assert str(site).lower() in (report.distribution_path or "").lower()
+
+    def test_matching_dist_info_is_consistent(self, tmp_path, monkeypatch):
+        self._make_dist_info(tmp_path, "dcc-mcp-maya", "0.9.30")
+        monkeypatch.setattr(sys, "path", [str(tmp_path)] + list(sys.path))
+        monkeypatch.setattr(_version_check, "_metadata_module", lambda: None)
+
+        report = _version_check.build_report("dcc-mcp-maya", module=_module("0.9.30"))
+
+        assert report.status == _version_check.STATUS_CONSISTENT
+
+    def test_egg_info_is_also_recognised(self, tmp_path, monkeypatch):
+        egg_info = tmp_path / "dcc_mcp_maya-0.9.1.egg-info"
+        egg_info.mkdir(parents=True)
+        (egg_info / "PKG-INFO").write_text("Name: dcc-mcp-maya\nVersion: 0.9.1\n", encoding="utf-8")
+        monkeypatch.setattr(sys, "path", [str(tmp_path)] + list(sys.path))
+        monkeypatch.setattr(_version_check, "_metadata_module", lambda: None)
+
+        assert _version_check.distribution_version("dcc-mcp-maya") == "0.9.1"
+
+    def test_scan_finds_nothing_without_metadata_dirs(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(sys, "path", [str(tmp_path)])
+        monkeypatch.setattr(_version_check, "_metadata_module", lambda: None)
+
+        assert _version_check.distribution_version("dcc-mcp-maya") is None
+        assert _version_check.distribution_location("dcc-mcp-maya") is None
+
+    def test_metadata_api_takes_priority_when_available(self, tmp_path, monkeypatch):
+        """When the metadata API works it is consulted before the scan."""
+        self._make_dist_info(tmp_path, "dcc-mcp-maya", "0.9.14")
+        monkeypatch.setattr(sys, "path", [str(tmp_path)] + list(sys.path))
+        monkeypatch.setattr(_version_check, "_metadata_module", lambda: SimpleNamespace(version=lambda _name: "0.9.99"))
+
+        assert _version_check.distribution_version("dcc-mcp-maya") == "0.9.99"
+
+    def test_drift_flag_is_independent_of_undecidable_reports(self):
+        """``consistent`` is strict; ``drift`` means "two answers disagree"."""
+        undecidable = _version_check.VersionReport(
+            package="dcc-mcp-maya",
+            runtime_version="0.9.30",
+            distribution_version=None,
+            status=_version_check.STATUS_NOT_INSTALLED,
+        )
+        drifted = _version_check.VersionReport(
+            package="dcc-mcp-core",
+            runtime_version="0.19.2",
+            distribution_version="0.19.3",
+            status=_version_check.STATUS_MISMATCH,
+        )
+        with patch.object(_version_check, "adapter_report", return_value=undecidable), patch.object(
+            _version_check, "core_report", return_value=drifted
+        ):
+            payload = _version_check.version_report()
+
+        assert payload["consistent"] is False
+        assert payload["drift"] is True
+
+        healthy = _version_check.VersionReport(
+            package="dcc-mcp-core",
+            runtime_version="0.19.3",
+            distribution_version="0.19.3",
+            status=_version_check.STATUS_CONSISTENT,
+        )
+        with patch.object(_version_check, "adapter_report", return_value=undecidable), patch.object(
+            _version_check, "core_report", return_value=healthy
+        ):
+            payload = _version_check.version_report()
+
+        # A source checkout is not consistent, but it is not drift either.
+        assert payload["consistent"] is False
+        assert payload["drift"] is False
 
 
 class TestEnvResolution:

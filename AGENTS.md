@@ -366,6 +366,7 @@ response, and `dcc-mcp-cli` report).
 | Where does the version come from? | `pyproject.toml` → `project.version`; release-please bumps it together with `src/dcc_mcp_maya/__version__.py` and every other file carrying the release-please version marker. `tests/test_version_single_source.py` fails CI when they drift. |
 | Which one wins at runtime? | `dcc_mcp_maya.__version__` — it is the code that executes, so it is what bug reports should quote. |
 | What happens on drift? | `MayaMcpServer.start()` runs `dcc_mcp_maya._version_check.run_version_self_check()` once: it logs both answers with their paths and emits a **warning** naming the stale side. It never raises and never blocks startup. |
+| Does it work on Maya 2022 (Python 3.7)? | Yes. `importlib.metadata` is 3.8+, so when neither it nor the `importlib_metadata` backport is importable the check falls back to a pure-stdlib scan of `sys.path` for `dcc_mcp_maya-*.dist-info/METADATA`. No new runtime dependency. |
 
 ```python
 from dcc_mcp_maya import version_report, run_version_self_check
@@ -373,10 +374,14 @@ from dcc_mcp_maya import version_report, run_version_self_check
 version_report()
 # {'adapter': {'status': 'mismatch', 'runtime_version': '0.9.16',
 #              'distribution_version': '0.9.14', 'module_path': '...', ...},
-#  'core': {...}, 'consistent': False}
+#  'core': {...}, 'consistent': False, 'drift': True}
 
 run_version_self_check()   # same payload, logged (info when healthy, warning on drift)
 ```
+
+`consistent` is strict — a source checkout (`not-installed`) or a host where
+the metadata cannot be read (`unknown`) makes it `False`. Read `drift` when you
+only care about "two answers exist and disagree".
 
 `dcc-mcp-core` gets the same treatment, so its startup log line and its
 distribution metadata are cross-checked too — "read the version off the log" is

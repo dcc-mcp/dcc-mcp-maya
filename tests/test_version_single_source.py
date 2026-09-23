@@ -34,6 +34,10 @@ except ImportError:  # pragma: no cover - Python 3.7-3.10
 
 ROOT = Path(__file__).resolve().parents[1]
 PYPROJECT = ROOT / "pyproject.toml"
+#: release-please keeps the released version here; it is the base for every
+#: other claim and what ``.github/workflows/version-consistency.yml`` treats as
+#: the source of truth (that job only runs when one of these files changes).
+RELEASE_MANIFEST = ROOT / ".release-please-manifest.json"
 VERSION_MODULE = ROOT / "src" / "dcc_mcp_maya" / "__version__.py"
 RELEASE_PLEASE_CONFIG = ROOT / "release-please-config.json"
 SERVER_MODULE = ROOT / "src" / "dcc_mcp_maya" / "server.py"
@@ -57,14 +61,18 @@ def _release_please_files() -> list[Path]:
     """Files release-please rewrites on every release (the managed set)."""
     config = json.loads(RELEASE_PLEASE_CONFIG.read_text(encoding="utf-8"))
     return sorted(
-        ROOT / entry["path"]
-        for entry in config["packages"]["."]["extra-files"]
-        if (ROOT / entry["path"]).is_file()
+        ROOT / entry["path"] for entry in config["packages"]["."]["extra-files"] if (ROOT / entry["path"]).is_file()
     )
 
 
 def test_pyproject_and_module_version_agree():
     assert _pyproject_version() == _module_version()
+
+
+def test_release_manifest_agrees_with_pyproject():
+    """``.release-please-manifest.json`` is the base of the version chain."""
+    manifest = json.loads(RELEASE_MANIFEST.read_text(encoding="utf-8"))
+    assert manifest["."] == _pyproject_version()
 
 
 def test_version_module_carries_the_release_please_marker():
