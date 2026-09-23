@@ -28,8 +28,14 @@ classifiers = [
 
 dependencies = [
     # 0.19.45 defaults instance listeners to operating-system-assigned ports.
-    "dcc-mcp-core>=0.19.45,<1.0.0",
-    "dcc-mcp-server>=0.18.21,<1.0.0",
+    #
+    # The upper bound is pinned to the 0.20.x series: ``<1.0.0`` admitted any future minor, so a
+    # Core minor release could silently break this adapter (0.20.34 changed the Install SOP
+    # schema version). Failing at dependency resolution is louder and cheaper than failing the
+    # Install SOP contract tests. Runtime installs into a user's Maya stay permissive via
+    # MAX_CORE_VERSION in install.py.
+    "dcc-mcp-core>=0.19.45,<0.21.0",
+    "dcc-mcp-server>=0.18.21,<0.21.0",
     "packaging>=21.3",
 ]
 

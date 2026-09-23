@@ -242,7 +242,8 @@ def test_single_segment_pep440_core_version_claim_is_rejected() -> None:
 def test_readme_core_badge_uses_the_canonical_complete_upper_bound() -> None:
     content = unquote((ROOT / "README.md").read_text(encoding="utf-8"))
 
-    assert "dcc--mcp--core->=0.19.45,<1.0.0-blue" in content
+    assert "dcc--mcp--core->=0.19.45,<0.21.0-blue" in content
+    assert "dcc--mcp--core->=0.19.45,<1.0.0-blue" not in content
     assert "dcc--mcp--core->=0.19.45,<1.0-blue" not in content
 
 
