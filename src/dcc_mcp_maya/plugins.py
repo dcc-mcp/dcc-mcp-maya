@@ -373,12 +373,22 @@ def diagnose_plugin(
     Combines the three signals that matter: is the file on the search path, is
     it loaded, and does Maya consider it registered. Each carries the reason it
     is unavailable so an agent can act on it without a second round trip.
+
+    ``record`` is ``Optional[Dict[str, Any]]``: it is ``None`` whenever
+    ``known`` is ``False``, and ``known`` is a statement about the search path,
+    not about registration. ``registered=True`` with ``record=None`` is
+    therefore a reachable, legitimate shape - Maya registered the plug-in this
+    session but its file is no longer on the search path. Callers must read
+    ``registered`` (and ``loaded``) from this envelope itself and must not
+    dereference ``record`` without a ``None`` check.
     """
     name = _require(plugin, "plugin")
     search = search_path if search_path is not None else plugin_search_path()
     located = find_plugin_file(name, search_path=search)
     known = _known(cmds, name, search_path=search)
-    record = plugin_record(cmds, name) if known else None
+    # Optional on purpose: ``known`` False means "not on the search path", which
+    # says nothing about registration, so ``registered`` below can be True here.
+    record: Optional[Dict[str, Any]] = plugin_record(cmds, name) if known else None
     # ``registered`` is an always-valid flag and answers even when the plug-in
     # is not on the search path, so read it directly rather than through
     # ``record`` (which is None when ``known`` is False). Deriving it from
