@@ -82,6 +82,56 @@ class TestResolveJobRecovery:
             assert _env.resolve_job_recovery(None) == "drop"
 
 
+class TestResolvePort:
+    """``port=None`` must never reach the Rust ``McpHttpConfig`` (issue #3531)."""
+
+    def test_none_without_env_is_os_assigned(self):
+        env = os.environ.copy()
+        env.pop(_env.ENV_PORT, None)
+        with patch.dict(os.environ, env, clear=True):
+            assert _env.resolve_port(None) == _env.DEFAULT_PORT == 0
+
+    def test_none_reads_env_var(self):
+        with patch.dict(os.environ, {_env.ENV_PORT: "18765"}):
+            assert _env.resolve_port(None) == 18765
+
+    def test_blank_env_falls_back_to_default(self):
+        with patch.dict(os.environ, {_env.ENV_PORT: "   "}):
+            assert _env.resolve_port(None) == 0
+
+    def test_env_zero_is_os_assigned(self):
+        with patch.dict(os.environ, {_env.ENV_PORT: "0"}):
+            assert _env.resolve_port(None) == 0
+
+    def test_explicit_port_wins_over_env(self):
+        with patch.dict(os.environ, {_env.ENV_PORT: "18765"}):
+            assert _env.resolve_port(8791) == 8791
+
+    def test_explicit_zero_wins_over_env(self):
+        with patch.dict(os.environ, {_env.ENV_PORT: "18765"}):
+            assert _env.resolve_port(0) == 0
+
+    def test_explicit_default_override(self):
+        env = os.environ.copy()
+        env.pop(_env.ENV_PORT, None)
+        with patch.dict(os.environ, env, clear=True):
+            assert _env.resolve_port(None, default=8765) == 8765
+
+    @pytest.mark.parametrize("raw", ["abc", "87.5", "-1", "65536"])
+    def test_invalid_env_raises_readable_error(self, raw):
+        with patch.dict(os.environ, {_env.ENV_PORT: raw}):
+            with pytest.raises(ValueError, match=_env.ENV_PORT):
+                _env.resolve_port(None)
+
+    @pytest.mark.parametrize("bad", [-1, 65536, 70000])
+    def test_out_of_range_raises(self, bad):
+        with pytest.raises(ValueError, match="between 0 and 65535"):
+            _env.resolve_port(bad)
+
+    def test_numeric_string_is_coerced(self):
+        assert _env.resolve_port("8791") == 8791
+
+
 class TestResolveWindowTitle:
     def test_explicit_wins(self):
         with patch.dict(os.environ, {_env.ENV_WINDOW_TITLE: "Other"}):

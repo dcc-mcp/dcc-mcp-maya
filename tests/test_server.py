@@ -119,6 +119,137 @@ def _list_all_mcp_tools(url):
 # ── MayaMcpServer unit tests ──────────────────────────────────────────────────
 
 
+def _capture_handed_off_port(srv_mod, monkeypatch, **options_kwargs) -> dict:
+    """Build core options and capture the ``port`` the adapter hands to core.
+
+    This is the contract that actually broke: ``dcc-mcp-core>=0.19.45``
+    resolves ``port=None`` itself, so assertions on the *final* port pass with
+    or without the adapter fix.  Only the hand-off value distinguishes them.
+    """
+    captured: dict = {}
+    real_from_env = srv_mod.DccServerOptions.from_env
+
+    def spy(cls, **kwargs):
+        captured["port"] = kwargs.get("port", "ABSENT")
+        return real_from_env(**kwargs)
+
+    monkeypatch.setattr(srv_mod.DccServerOptions, "from_env", classmethod(spy))
+    srv_mod.MayaServerOptions(**options_kwargs).to_core_options()
+    return captured
+
+
+class TestDefaultPortHandoff:
+    """The adapter must hand core an ``int``, never ``None`` (issue #3531).
+
+    These are the real regression tests.  Before the fix the adapter passed
+    ``port=None`` through to ``DccServerOptions.from_env``; cores older than
+    0.19.45 then forwarded ``None`` into the Rust ``McpHttpConfig``
+    constructor::
+
+        TypeError: argument 'port': 'NoneType' object cannot be interpreted
+        as an integer
+
+    Cores >=0.19.45 silently resolve ``None`` themselves, which is why
+    assertions on the *final* port (see :class:`TestDefaultPortResolution`)
+    pass either way — these assertions on the hand-off value do not.
+    """
+
+    def test_unspecified_port_hands_core_an_int(self, monkeypatch):
+        srv_mod = _import_server()
+        monkeypatch.delenv("DCC_MCP_MAYA_PORT", raising=False)
+
+        captured = _capture_handed_off_port(srv_mod, monkeypatch)
+
+        assert isinstance(captured["port"], int), "adapter must resolve None before core sees it"
+        assert captured["port"] == 0
+
+    def test_env_port_is_resolved_by_the_adapter(self, monkeypatch):
+        srv_mod = _import_server()
+        monkeypatch.setenv("DCC_MCP_MAYA_PORT", "18765")
+
+        captured = _capture_handed_off_port(srv_mod, monkeypatch)
+
+        assert captured["port"] == 18765
+
+    def test_explicit_port_is_handed_through_unchanged(self, monkeypatch):
+        srv_mod = _import_server()
+        monkeypatch.setenv("DCC_MCP_MAYA_PORT", "18765")
+
+        captured = _capture_handed_off_port(srv_mod, monkeypatch, port=8791)
+
+        assert captured["port"] == 8791
+
+
+class TestDefaultPortResolution:
+    """Observable end-state of ``port=None`` (issue #3531).
+
+    These lock in *behaviour* — the server must start and bind an OS-assigned
+    port — but on ``dcc-mcp-core>=0.19.45`` they passed before the fix too,
+    because core resolved ``None`` on its own.  The contract that broke is
+    asserted in :class:`TestDefaultPortHandoff`.
+    """
+
+    def test_options_default_resolves_to_os_assigned_port(self, monkeypatch):
+        srv_mod = _import_server()
+        monkeypatch.delenv("DCC_MCP_MAYA_PORT", raising=False)
+
+        port = srv_mod.MayaServerOptions().to_core_options().port
+
+        assert isinstance(port, int)
+        assert port == 0
+
+    def test_options_none_reads_env_var(self, monkeypatch):
+        srv_mod = _import_server()
+        monkeypatch.setenv("DCC_MCP_MAYA_PORT", "18765")
+
+        assert srv_mod.MayaServerOptions(port=None).to_core_options().port == 18765
+
+    def test_explicit_port_still_wins(self, monkeypatch):
+        srv_mod = _import_server()
+        monkeypatch.setenv("DCC_MCP_MAYA_PORT", "18765")
+
+        assert srv_mod.MayaServerOptions(port=8791).to_core_options().port == 8791
+
+    def test_invalid_env_var_raises_value_error(self, monkeypatch):
+        srv_mod = _import_server()
+        monkeypatch.setenv("DCC_MCP_MAYA_PORT", "not-a-port")
+
+        with pytest.raises(ValueError, match="DCC_MCP_MAYA_PORT"):
+            srv_mod.MayaServerOptions().to_core_options()
+
+    def test_server_constructs_with_default_port(self, monkeypatch):
+        """``MayaMcpServer()`` with no arguments must not raise TypeError."""
+        srv_mod = _import_server()
+        monkeypatch.delenv("DCC_MCP_MAYA_PORT", raising=False)
+
+        server = srv_mod.MayaMcpServer()
+
+        try:
+            assert server._config.port == 0
+        finally:
+            server.stop()
+
+    def test_invalid_default_raises_readable_error(self):
+        """An out-of-range ``default`` is reported as such, not as the env var."""
+        srv_mod = _import_server()
+
+        with pytest.raises(ValueError, match="port default"):
+            srv_mod._env.resolve_port(None, default=70000)
+
+    def test_server_default_port_binds_os_assigned_port(self, monkeypatch):
+        """``start_server()`` defaults produce a usable handle (issue #3531)."""
+        srv_mod = _import_server()
+        monkeypatch.delenv("DCC_MCP_MAYA_PORT", raising=False)
+
+        server = srv_mod.MayaMcpServer()
+        try:
+            handle = server.start()
+            assert handle.mcp_url().startswith("http://127.0.0.1:")
+            assert handle.port > 0
+        finally:
+            server.stop()
+
+
 class TestMayaMcpServerApi:
     def test_explicit_gateway_port_zero_disables_gateway(self):
         srv_mod = _import_server()
