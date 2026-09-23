@@ -21,6 +21,13 @@ import pytest
 ASSEMBLE_MOD = Path(__file__).parent.parent / "packaging" / "assemble_mod.py"
 PROJECT_ROOT = Path(__file__).parent.parent
 
+# The Core upper bound this adapter ships, read from the single source of truth so tightening
+# it does not require touching every packaging assertion.
+MAX_CORE_VERSION = re.search(
+    r'"dcc-mcp-core>=[0-9.]+,<(?P<upper>[0-9.]+)"',
+    (PROJECT_ROOT / "pyproject.toml").read_text(encoding="utf-8"),
+).group("upper")
+
 _spec = _ilu.spec_from_file_location("assemble_mod", str(ASSEMBLE_MOD))
 assemble_mod = _ilu.module_from_spec(_spec)
 _spec.loader.exec_module(assemble_mod)
@@ -59,7 +66,7 @@ def _make_recorded_core_wheel(
     return _make_fake_wheel(dest, f"dcc_mcp_core-{version}-{tag}.whl", entries)
 
 
-def _make_fake_pyproject(dest: Path, core_version: str = "0.15.7", core_upper: str = "1.0.0") -> Path:
+def _make_fake_pyproject(dest: Path, core_version: str = "0.15.7", core_upper: str = "0.21.0") -> Path:
     toml_path = dest / "pyproject.toml"
     toml_path.write_text(
         "[project]\ndependencies = [\n"
@@ -134,7 +141,7 @@ class TestResolveServerVersion:
 
     def test_raises_when_no_version_found(self, tmp_path):
         (tmp_path / "pyproject.toml").write_text(
-            '[project]\ndependencies = [\n    "dcc-mcp-core>=0.18.17,<1.0.0",\n]\n',
+            '[project]\ndependencies = [\n    "dcc-mcp-core>=0.18.17,<0.21.0",\n]\n',
             encoding="utf-8",
         )
         with pytest.raises(RuntimeError, match="Cannot find dcc-mcp-server version"):
@@ -530,17 +537,17 @@ class TestGenerateModuleInfo:
         assert info["embedded_core_version"] == "0.19.4"
         assert info["bundled_server_version"] == "0.18.21"
         assert info["min_core_version"] == "0.19.45"
-        assert info["max_core_version_exclusive"] == "1.0.0"
+        assert info["max_core_version_exclusive"] == MAX_CORE_VERSION
         assert info["has_python37"] is True
         assert info["supported_maya_versions"] == ["2022", "2023", "2024", "2025", "2026"]
 
     def test_module_info_derives_exact_core_bounds_from_pyproject(self, tmp_path):
-        _make_fake_pyproject(tmp_path, "0.19.45", "1.0.0")
+        _make_fake_pyproject(tmp_path, "0.19.45", "0.21.0")
 
         info = json.loads(assemble_mod.generate_module_info("0.2.2", project_root=tmp_path))
 
         assert info["min_core_version"] == "0.19.45"
-        assert info["max_core_version_exclusive"] == "1.0.0"
+        assert info["max_core_version_exclusive"] == "0.21.0"
 
 
 class TestPackagingReadmes:
@@ -961,7 +968,7 @@ class TestAssemble:
         assert info["embedded_core_version"] == "0.15.0"
         assert info["bundled_server_version"] == "0.15.0"
         assert info["min_core_version"] == "0.15.0"
-        assert info["max_core_version_exclusive"] == "1.0.0"
+        assert info["max_core_version_exclusive"] == "0.21.0"
 
         mod_content = (result / "dcc_mcp_maya.mod").read_text(encoding="utf-8")
         assert "MAYAVERSION:2022" in mod_content
@@ -1046,7 +1053,7 @@ class TestAssemblePipeline:
         assert info["supported_maya_versions"] == ["2022", "2023", "2024", "2025", "2026"]
         assert info["has_python37"] is True
         assert info["min_core_version"] == "0.15.0"
-        assert info["max_core_version_exclusive"] == "1.0.0"
+        assert info["max_core_version_exclusive"] == "0.21.0"
         assert (result / "README-pipeline.txt").exists()
         assert not (result / "install.bat").exists()
         assert not (result / "install.sh").exists()
@@ -1091,7 +1098,7 @@ class TestMain:
             assert info["embedded_core_version"] == "0.15.0"
             assert info["bundled_server_version"] == "0.15.0"
             assert info["min_core_version"] == "0.15.0"
-            assert info["max_core_version_exclusive"] == "1.0.0"
+            assert info["max_core_version_exclusive"] == "0.21.0"
 
     @pytest.mark.parametrize("root_name", ["python", "python37"])
     def test_archive_rejects_external_hardlink_mutation_window(self, tmp_path, root_name):

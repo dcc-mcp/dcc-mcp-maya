@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Iterable, Optional, Tuple
 
 DEFAULT_GATEWAY_URL = "http://127.0.0.1:9765/mcp"
-CORE_REQUIREMENT = "dcc-mcp-core>=0.19.45,<1.0.0"
+CORE_REQUIREMENT = "dcc-mcp-core>=0.19.45,<0.21.0"
 
 
 def run(command: list[str], cwd: Optional[Path] = None) -> None:

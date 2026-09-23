@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import sys
 import zipfile
 from pathlib import Path
@@ -136,7 +137,7 @@ def test_install_dry_run_emits_a_complete_non_mutating_plan(tmp_path, monkeypatc
 
     report = json.loads(capsys.readouterr().out)
     assert exit_code == 0
-    assert report["schema_version"] == 1
+    assert report["schema_version"] == install.report_schema_version()
     assert report["status"] == "planned"
     assert report["dcc_type"] == "maya"
     assert report["install_state"] == "fresh"
@@ -605,7 +606,15 @@ def test_public_reports_use_shared_schema_and_stable_exit_codes():
     from dcc_mcp_maya import install
 
     schema = install.load_install_sop_schema()
-    assert schema["$id"] == "https://dcc-mcp.github.io/schemas/adapter-install-sop-v1.schema.json"
+    # Core names the artifact by revision (`adapter-install-sop-vN.schema.json`) and moved from
+    # v1 to v2 in 0.20.34, so pinning the file name would fail on every Core revision bump.
+    # Pin the contract identity instead: the shared Install SOP schema, whatever revision
+    # currently carries it.
+    assert re.fullmatch(
+        r"https://dcc-mcp\.github\.io/schemas/adapter-install-sop-v[0-9]+\.schema\.json",
+        schema["$id"],
+    ), schema["$id"]
+    assert install.report_schema_version() == schema["properties"]["schema_version"]["const"]
     assert install.INSTALL_EXIT_CODES == {
         "ok": 0,
         "preflight": 10,
@@ -1261,3 +1270,125 @@ def test_preflight_discovers_supported_host_and_embedded_mayapy(tmp_path, monkey
     assert report["host"]["path"] == str(maya_root.resolve())
     assert report["python"]["path"] == str(mayapy.resolve())
     assert report["python"]["selection_source"] == "discovered"
+
+
+def _schema_document(const):
+    """A minimal Core schema document enforcing one ``schema_version`` const."""
+    return {"properties": {"schema_version": {"const": const, "type": "integer"}}}
+
+
+def test_report_schema_version_follows_the_published_document(monkeypatch):
+    """The report field comes from the ``const`` Core enforces, not a literal."""
+    from dcc_mcp_maya import install
+
+    monkeypatch.setattr(install, "_published_schema", lambda: _schema_document(7))
+
+    assert install.report_schema_version() == 7
+
+
+def test_report_schema_version_ignores_cores_artifact_revision(monkeypatch):
+    """Core's exported constant is the artifact revision, not the report field.
+
+    Core 0.20.34 exports ``INSTALL_SOP_SCHEMA_VERSION = 2`` (the ``-v2`` artifact revision)
+    while the report field must stay at the document's ``const`` of 1, because v2 only adds an
+    optional ``catalog`` object. These are separate quantities that merely agreed while both
+    were 1, so the constant must never reach the report.
+    """
+    from dcc_mcp_maya import install
+
+    monkeypatch.setattr(install, "_published_schema", lambda: _schema_document(1))
+
+    assert install.report_schema_version() == 1
+
+
+def test_report_schema_version_falls_back_when_the_document_is_missing(monkeypatch):
+    """A Core with no readable schema document still yields a usable report."""
+    from dcc_mcp_maya import install
+
+    monkeypatch.setattr(install, "_published_schema", lambda: None)
+
+    assert install.report_schema_version() == install.FALLBACK_REPORT_SCHEMA_VERSION
+
+
+@pytest.mark.parametrize(
+    "error",
+    [
+        RuntimeError("Install SOP schema integrity error: schema_digest_mismatch"),
+        OSError("schema file unreadable"),
+        ValueError("schema document is not valid JSON"),
+    ],
+)
+def test_report_schema_version_survives_schema_read_failure(monkeypatch, error):
+    """An unhealthy Core must not stop the CLI from emitting a report.
+
+    Core verifies its schema document with a SHA-256 digest and raises on a missing, tampered,
+    or unparsable document. Broken installs are exactly the situation this CLI exists to
+    report on, so the read failure has to degrade to the fallback instead of propagating.
+    """
+    from dcc_mcp_maya import install
+
+    def _raise():
+        raise error
+
+    monkeypatch.setattr(install, "_published_schema", _raise)
+
+    assert install.report_schema_version() == install.FALLBACK_REPORT_SCHEMA_VERSION
+
+
+def test_emitted_report_matches_the_version_core_validates(tmp_path, monkeypatch, capsys):
+    """End-to-end: the emitted report's field equals what Core's published schema enforces."""
+    from dcc_mcp_maya import install
+
+    maya_root = tmp_path / "Maya2025"
+    maya_root.mkdir()
+    mayapy = Path(sys.executable)
+    monkeypatch.setenv("DCC_MCP_MAYA_VERSION", "2025")
+    monkeypatch.setenv("DCC_MCP_MAYA_MODULES_DIR", str(tmp_path / "maya" / "modules"))
+    monkeypatch.setenv("DCC_MCP_MAYA_RECEIPT", str(tmp_path / "receipts" / "maya.json"))
+    monkeypatch.setattr(
+        install,
+        "_probe_target",
+        lambda _python: {
+            "maya_version": "2025",
+            "python_version": "3.11.9",
+            "core_version": "0.19.91",
+            "adapter_version": install.__version__,
+        },
+    )
+
+    assert (
+        install.main(["install", "--dry-run", "--json", "--dcc-path", str(maya_root), "--python", str(mayapy)])
+        == install.INSTALL_EXIT_OK
+    )
+    report = json.loads(capsys.readouterr().out)
+
+    document = install._published_schema_or_none()
+    if document is not None:
+        declared = document["properties"]["schema_version"]["const"]
+        assert report["schema_version"] == declared
+
+
+def _ci_workflow():
+    """Parsed ``.github/workflows/ci.yml`` for the repository under test."""
+    import yaml
+
+    return yaml.safe_load((ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8"))
+
+
+def test_ci_core_latest_job_resolves_a_real_core_version():
+    """The early-warning job must fail loudly rather than test an empty pin."""
+    job = _ci_workflow()["jobs"]["core-latest"]
+    resolve = [step for step in job["steps"] if step.get("id") == "core"]
+    assert resolve, "core-latest job has no version resolution step"
+
+    script = resolve[0]["run"]
+    assert "exit 1" in script, "empty version resolution must fail the job"
+    assert "::error::" in script
+
+
+def test_ci_matrix_still_uploads_coverage():
+    """The main test matrix must keep reporting coverage to Codecov."""
+    steps = _ci_workflow()["jobs"]["test"]["steps"]
+
+    uploads = [step for step in steps if str(step.get("uses", "")).startswith("codecov/codecov-action")]
+    assert uploads, "test job lost its Codecov upload step"

@@ -55,6 +55,50 @@ jobs:
           fail_ci_if_error: false
           token: ${{ secrets.CODECOV_TOKEN }}
 
+  core-latest:
+    # The pinned upper bound keeps the main matrix reproducible, but it also hides
+    # incompatibilities until a bump lands. This job deliberately runs against the newest
+    # published Core -- including versions the pin excludes -- so a Core minor that breaks the
+    # Install SOP contract shows up here instead of silently landing in the main matrix.
+    name: core-latest compatibility
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    env:
+      DCC_MCP_DISABLE_JOB_PERSISTENCE: "1"
+      DCC_MCP_MAYA_JOB_STORAGE: ""
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Resolve newest Core
+        id: core
+        run: |
+          python -m pip install --upgrade pip
+          version=$(python -m pip index versions dcc-mcp-core \
+            | tr ',' '\n' | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+          # Fail loudly here rather than silently testing an empty pin: this job exists only
+          # to warn about new Core releases, so a run that resolved nothing would otherwise
+          # still report success.
+          if [ -z "${version}" ]; then
+            echo "::error::could not resolve newest dcc-mcp-core version"
+            exit 1
+          fi
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "Resolved dcc-mcp-core ${version}"
+
+      - name: Install adapter with newest Core
+        run: |
+          python -m pip install -e ".[dev]"
+          python -m pip install --upgrade "dcc-mcp-core==${{ steps.core.outputs.version }}"
+          python -m pip show dcc-mcp-core
+
+      - name: Install SOP contract against newest Core
+        run: python -m pytest tests/test_install_lifecycle.py -v --tb=short
+
   # Maya 2022 ships Python 3.7 — exercise the real mayapy interpreter + cp37 core wheel.
   test-mayapy-py37:
     name: Test (mayapy / Maya 2022 / Python 3.7)
