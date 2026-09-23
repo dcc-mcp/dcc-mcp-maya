@@ -61,10 +61,7 @@ from dcc_mcp_maya.host import MayaCallableDispatcher
 
 logger = logging.getLogger(__name__)
 
-#: Fallback MCP HTTP port (``0`` = let the OS choose).  Re-exported from
-#: :mod:`dcc_mcp_maya._env` so the env-var resolver and the public constant
-#: cannot drift apart.
-DEFAULT_PORT = _env.DEFAULT_PORT
+DEFAULT_PORT = 0
 DEFAULT_SERVER_VERSION = __version__
 
 #: Built-in skills directory shipped with this package.
@@ -98,13 +95,7 @@ def _log_dispatcher_shutdown(dcc_name: str, signalled: Any) -> None:
 
 @dataclass
 class MayaServerOptions:
-    """Maya adapter options collapsed for the core 0.17.31 server contract.
-
-    ``port=None`` means "unspecified": :meth:`to_core_options` resolves it via
-    :func:`dcc_mcp_maya._env.resolve_port` (``DCC_MCP_MAYA_PORT``, then
-    :data:`DEFAULT_PORT`) so a concrete integer always reaches
-    ``DccServerOptions.from_env``.
-    """
+    """Maya adapter options collapsed for the core 0.17.31 server contract."""
 
     port: Optional[int] = None
     server_name: str = "maya-mcp"
@@ -128,7 +119,7 @@ class MayaServerOptions:
         return DccServerOptions.from_env(
             dcc_name="maya",
             builtin_skills_dir=_BUILTIN_SKILLS_DIR,
-            port=_env.resolve_port(self.port),
+            port=self.port,
             server_name=self.server_name,
             server_version=self.server_version,
             gateway_port=self.gateway_port,
@@ -961,11 +952,6 @@ def start_server(
 
     Creates a module-level :class:`MayaMcpServer` singleton, optionally
     discovers all skills, and starts the MCP Streamable HTTP server.
-
-    ``port`` semantics — ``None`` (the default) means "unspecified": the port
-    is then taken from ``DCC_MCP_MAYA_PORT`` and falls back to an OS-assigned
-    free port (``0``).  Call ``handle.mcp_url()`` / ``handle.port`` on the
-    returned handle to learn the port that was actually bound.
 
     All keyword arguments accepted by :class:`MayaMcpServer` may be passed
     via ``**kwargs``.

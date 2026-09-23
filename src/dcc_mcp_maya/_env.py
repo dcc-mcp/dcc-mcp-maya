@@ -176,18 +176,35 @@ def resolve_port(port: Optional[int] = None, *, default: int = DEFAULT_PORT) -> 
 
     ``None`` means "caller did not specify" — the adapter then falls back to
     ``DCC_MCP_MAYA_PORT`` and finally to :data:`DEFAULT_PORT` (``0``, i.e. an
-    OS-assigned free port).  Every ``dcc-mcp-core`` release before the
-    ``DccServerOptions.from_env`` ``None`` fallback forwarded ``None`` straight
-    into the Rust ``McpHttpConfig`` constructor, which raised::
+    OS-assigned free port).  :meth:`MayaServerOptions.to_core_options`
+    resolves here so a concrete ``int`` always reaches
+    ``DccServerOptions.from_env``.
 
-        TypeError: argument 'port': 'NoneType' object cannot be interpreted
-        as an integer
+    .. note::
 
-    so :meth:`MayaServerOptions.to_core_options` resolves here instead and
-    never hands ``None`` downstream.
+       **This is a legacy-core compatibility shim.**
+       ``dcc-mcp-core>=0.19.45`` already performs the identical resolution
+       inside ``DccServerOptions.from_env`` — same ``DCC_MCP_MAYA_PORT``
+       name, same ``0`` fallback, same ``[0, 65535]`` bounds, and it already
+       raises a readable ``ValueError``.  On those releases the shim is
+       behaviour-neutral: it moves the computation one layer up and never
+       lets ``None`` cross the adapter boundary.
+
+       It exists because cores older than 0.19.45 — including the 0.19.2
+       build the original crash was reported against — forward ``None``
+       straight into the Rust ``McpHttpConfig`` constructor::
+
+           TypeError: argument 'port': 'NoneType' object cannot be
+           interpreted as an integer
+
+       Removal condition: raise the ``dcc-mcp-core`` floor in
+       ``pyproject.toml`` to ``>=0.19.45`` *and* confirm no shipped Maya
+       environment still resolves an older core.  Until then keep the shim
+       so ``start_server()`` works regardless of which core the host has.
 
     Priority: explicit ``port`` argument > ``DCC_MCP_MAYA_PORT`` (when set and
-    non-empty) > ``default``.
+    non-empty) > ``default``.  A blank ``DCC_MCP_MAYA_PORT`` is treated as
+    unset; core would reject it with ``ValueError`` instead.
 
     Raises:
         ValueError: if the resolved value is outside ``[0, 65535]``.
@@ -196,7 +213,7 @@ def resolve_port(port: Optional[int] = None, *, default: int = DEFAULT_PORT) -> 
         return _coerce_port(port, "port")
     raw = os.environ.get(ENV_PORT, "").strip()
     if not raw:
-        return _coerce_port(default, ENV_PORT)
+        return _coerce_port(default, "port default")
     return _coerce_port(raw, ENV_PORT)
 
 
