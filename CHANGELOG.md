@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.9.29](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.28...v0.9.29) (2026-09-22)
+
+
+### Features
+
+* add maya-compositing and maya-plugins skills ([#532](https://github.com/dcc-mcp/dcc-mcp-maya/issues/532)) ([9206279](https://github.com/dcc-mcp/dcc-mcp-maya/commit/92062793c2591629fc8dd1327e1c43082d4909a7))
+
+
+### Bug Fixes
+
+* **ci:** unblock Release build job so wheels reach PyPI again ([9bcb68b](https://github.com/dcc-mcp/dcc-mcp-maya/commit/9bcb68b9f76dae5b444dcc7e28f3143b005daa35))
+* **dynamics:** constrain cmds field create flags and harden nCache deletion ([#530](https://github.com/dcc-mcp/dcc-mcp-maya/issues/530)) ([437da3c](https://github.com/dcc-mcp/dcc-mcp-maya/commit/437da3c8a5900633142cc14470df63e3c10d3e3b))
+* **dynamics:** guard compound field attributes on the create and edit paths ([0fbf632](https://github.com/dcc-mcp/dcc-mcp-maya/commit/0fbf632a514d4bd468c5de19adfc44a1fe8fe699))
+* **plugins:** exclude directories from inventory and key diagnosis off registered state ([#533](https://github.com/dcc-mcp/dcc-mcp-maya/issues/533)) ([f01075e](https://github.com/dcc-mcp/dcc-mcp-maya/commit/f01075e4bfccefa271cd7a45bca0562e8c46a83f))
+* **plugins:** only .bundle may be a directory in the plug-in inventory ([91ba100](https://github.com/dcc-mcp/dcc-mcp-maya/commit/91ba100e36e36cf041a2451ee2b23155f263306e))
+
 ## [0.9.28](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.27...v0.9.28) (2026-09-22)
 
 
