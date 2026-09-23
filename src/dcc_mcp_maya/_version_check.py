@@ -242,8 +242,38 @@ def _version_from_metadata_file(metadata_file: str) -> Optional[str]:
     return _metadata_field(content, "Version")
 
 
-def distribution_version(package: str) -> Optional[str]:
-    """Return the installed-distribution version of *package*.
+def _distribution_path_from_api(metadata: Any, package: str) -> Optional[str]:
+    """Locate *package* through the metadata API, at ``.dist-info`` granularity."""
+    try:
+        distribution = metadata.distribution(package)
+    except Exception:  # noqa: BLE001 - PackageNotFoundError and friends
+        return None
+    if distribution is None:
+        return None
+    # ``Distribution._path`` is the ``.dist-info`` directory — the artifact an
+    # operator actually has to delete.  locate_file("")
+    # resolves to the ``site-packages`` root instead, so it is only a fallback
+    # for backports that do not expose ``_path``.
+    try:
+        path = getattr(distribution, "_path", None)
+    except Exception:  # noqa: BLE001
+        path = None
+    if path:
+        return str(path)
+    try:
+        located = distribution.locate_file("")
+    except Exception:  # noqa: BLE001
+        return None
+    return str(located) if located else None
+
+
+def _resolve_distribution(package: str) -> Tuple[Optional[str], Optional[str]]:
+    """Resolve the installed distribution once, as ``(version, path)``.
+
+    Both halves always describe the **same** artifact.  Resolving them
+    independently lets the two answers come apart — the version from one
+    ``.dist-info`` and the path from another — which would tell the operator to
+    delete a distribution the report never quoted.
 
     Resolution order:
 
@@ -252,7 +282,9 @@ def distribution_version(package: str) -> Optional[str]:
     2. A pure-stdlib scan of ``sys.path`` for ``<package>-*.dist-info``, so
        Python 3.7 / Maya 2022 hosts are still covered.
 
-    Returns ``None`` when no distribution metadata can be found at all.
+    A candidate that yields no version is skipped in both passes alike, so a
+    malformed ``.dist-info`` on ``sys.path`` cannot supply a path on its own.
+    Returns ``(None, None)`` when nothing usable is found.
     """
     metadata = _metadata_module()
     if metadata is not None:
@@ -264,15 +296,25 @@ def distribution_version(package: str) -> Optional[str]:
         # empty value; ``str()`` would turn that into the literal ``"None"``
         # and poison the report, so fall through to the scan instead.
         if value:
-            return str(value)
+            return str(value), _distribution_path_from_api(metadata, package)
         # Fall through: a partially-installed distribution can raise even when
         # a .dist-info directory is present, and the scan can still read it.
 
-    for metadata_file, _distribution_dir in _scan_distribution_dirs(package):
+    for metadata_file, distribution_path in _scan_distribution_dirs(package):
         version = _version_from_metadata_file(metadata_file)
         if version:
-            return version
-    return None
+            return version, distribution_path
+    return None, None
+
+
+def distribution_version(package: str) -> Optional[str]:
+    """Return the installed-distribution version of *package*.
+
+    See :func:`_resolve_distribution` for the resolution order.
+
+    Returns ``None`` when no distribution metadata can be found at all.
+    """
+    return _resolve_distribution(package)[0]
 
 
 def distribution_location(package: str) -> Optional[str]:
@@ -281,38 +323,18 @@ def distribution_location(package: str) -> Optional[str]:
     Used in log lines so an operator can delete the stale ``.dist-info``
     without guessing which site-packages is responsible.
 
-    Both resolution paths answer at that same granularity: the ``.dist-info``
-    / ``.egg-info`` artifact itself, never the ``site-packages`` root that
-    merely contains it.
-    """
-    metadata = _metadata_module()
-    if metadata is not None:
-        try:
-            distribution = metadata.distribution(package)
-        except Exception:  # noqa: BLE001
-            distribution = None
-        if distribution is not None:
-            # ``Distribution._path`` is the ``.dist-info`` directory — the
-            # artifact an operator actually has to delete.  locate_file("")
-            # resolves to the ``site-packages`` root instead, which is both
-            # coarser than promised and inconsistent with the scan fallback, so
-            # it is only a fallback for backports that lack ``_path``.
-            try:
-                path = getattr(distribution, "_path", None)
-            except Exception:  # noqa: BLE001
-                path = None
-            if path:
-                return str(path)
-            try:
-                located = distribution.locate_file("")
-            except Exception:  # noqa: BLE001
-                located = None
-            if located:
-                return str(located)
+    Both resolution paths answer at the same granularity: the ``.dist-info`` /
+    ``.egg-info`` artifact itself.  The returned path always belongs to the
+    same artifact that :func:`distribution_version` quoted, because a report
+    naming one version and another distribution's directory would send the
+    operator to delete the wrong install.
 
-    for _metadata_file, distribution_path in _scan_distribution_dirs(package):
-        return distribution_path
-    return None
+    The one exception is a metadata backport that does not expose ``_path``:
+    locate_file("")
+    then answers with the site-packages root that contains the artifact, which
+    is coarser than ideal but still names the right install.
+    """
+    return _resolve_distribution(package)[1]
 
 
 def module_origin(module: Optional[Any]) -> Optional[str]:

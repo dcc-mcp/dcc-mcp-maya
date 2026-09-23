@@ -438,6 +438,23 @@ class TestDistributionScanFallback:
         assert report.distribution_version is None
         assert "None" not in report.detail
 
+    def test_version_and_path_come_from_the_same_artifact(self, tmp_path, monkeypatch):
+        # The first candidate on sys.path is a broken install whose METADATA has
+        # no ``Version:`` line, so the version comes from a later entry.  The
+        # path has to follow it: naming the broken entry would send the operator
+        # to delete a distribution the report never quoted.
+        first = tmp_path / "first"
+        second = tmp_path / "second"
+        broken = first / "dcc-mcp-maya-0.9.30.dist-info"
+        broken.mkdir(parents=True)
+        (broken / "METADATA").write_text("Metadata-Version: 2.1\nName: dcc-mcp-maya\n", encoding="utf-8")
+        good = self._make_dist_info(second, "dcc-mcp-maya", "0.9.2")
+        monkeypatch.setattr(sys, "path", [str(first), str(second)])
+        monkeypatch.setattr(_version_check, "_metadata_module", lambda: None)
+
+        assert _version_check.distribution_version("dcc-mcp-maya") == "0.9.2"
+        assert _version_check.distribution_location("dcc-mcp-maya") == str(good)
+
     def test_scan_finds_nothing_without_metadata_dirs(self, tmp_path, monkeypatch):
         monkeypatch.setattr(sys, "path", [str(tmp_path)])
         monkeypatch.setattr(_version_check, "_metadata_module", lambda: None)
@@ -521,9 +538,9 @@ class TestDistributionLocation:
     """
 
     @staticmethod
-    def _fake_metadata(dist_path=None, site_root=None):
+    def _fake_metadata(dist_path=None, site_root=None, version="0.9.30"):
         distribution = SimpleNamespace(_path=dist_path, locate_file=lambda _relative: site_root)
-        return SimpleNamespace(distribution=lambda _name: distribution)
+        return SimpleNamespace(version=lambda _name: version, distribution=lambda _name: distribution)
 
     def test_metadata_api_prefers_the_dist_info_directory(self, monkeypatch):
         monkeypatch.setattr(
@@ -562,6 +579,58 @@ class TestDistributionLocation:
         )
 
         assert _version_check.distribution_location("dcc-mcp-maya") is None
+
+    def test_empty_api_version_ignores_the_api_path(self, tmp_path, monkeypatch):
+        # The version falls through to the scan, so the path has to fall
+        # through with it.  Taking the path from a metadata API that could not
+        # produce a version pairs the report with an artifact it never quoted.
+        dist_info = tmp_path / "dcc-mcp-maya-0.9.30.dist-info"
+        dist_info.mkdir()
+        (dist_info / "METADATA").write_text("Name: dcc-mcp-maya\nVersion: 0.9.30\n", encoding="utf-8")
+        monkeypatch.setattr(sys, "path", [str(tmp_path)])
+        monkeypatch.setattr(
+            _version_check,
+            "_metadata_module",
+            lambda: self._fake_metadata("/stale/dcc-mcp-maya-0.9.14.dist-info", "/site-packages", version=None),
+        )
+
+        assert _version_check.distribution_version("dcc-mcp-maya") == "0.9.30"
+        assert _version_check.distribution_location("dcc-mcp-maya") == str(dist_info)
+
+    def test_report_pairs_the_version_with_its_own_path(self, tmp_path, monkeypatch):
+        # End-to-end shape of the same rule: build_report prints
+        # "distribution: <path>" so the operator deletes a stale install, and
+        # that path has to be the artifact the quoted version came from.
+        dist_info = tmp_path / "dcc-mcp-maya-0.9.30.dist-info"
+        dist_info.mkdir()
+        (dist_info / "METADATA").write_text("Name: dcc-mcp-maya\nVersion: 0.9.30\n", encoding="utf-8")
+        monkeypatch.setattr(sys, "path", [str(tmp_path)])
+        monkeypatch.setattr(
+            _version_check,
+            "_metadata_module",
+            lambda: self._fake_metadata("/stale/dcc-mcp-maya-0.9.14.dist-info", "/site-packages", version=None),
+        )
+
+        report = _version_check.build_report("dcc-mcp-maya", module=_module("0.9.16"))
+
+        assert report.distribution_version == "0.9.30"
+        assert report.distribution_path == str(dist_info)
+        assert report.status == _version_check.STATUS_MISMATCH
+
+    def test_resolve_distribution_pairs_version_with_its_own_path(self, tmp_path, monkeypatch):
+        dist_info = tmp_path / "dcc-mcp-maya-0.9.30.dist-info"
+        dist_info.mkdir()
+        (dist_info / "METADATA").write_text("Name: dcc-mcp-maya\nVersion: 0.9.30\n", encoding="utf-8")
+        monkeypatch.setattr(sys, "path", [str(tmp_path)])
+        monkeypatch.setattr(_version_check, "_metadata_module", lambda: None)
+
+        assert _version_check._resolve_distribution("dcc-mcp-maya") == ("0.9.30", str(dist_info))
+
+    def test_resolve_distribution_returns_empty_pair_when_nothing_found(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(sys, "path", [str(tmp_path)])
+        monkeypatch.setattr(_version_check, "_metadata_module", lambda: None)
+
+        assert _version_check._resolve_distribution("dcc-mcp-maya") == (None, None)
 
     def test_both_paths_agree_on_granularity(self, tmp_path, monkeypatch):
         # The scan branch always answered with the ``.dist-info`` directory;
