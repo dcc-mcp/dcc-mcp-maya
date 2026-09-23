@@ -47,8 +47,9 @@ Python 3.7 support (Maya 2022)
 not a declared dependency (adding one for a diagnostics-only feature would
 make every Maya 2022 install depend on a network-resolved wheel).  When
 neither is importable, :func:`distribution_version` falls back to a pure
-stdlib scan of ``sys.path`` for ``<package>-*.dist-info/METADATA`` and reads
-the ``Version:`` field.  That keeps the drift check working on the py3.7
+stdlib scan of ``sys.path`` for ``<package>-*.dist-info/METADATA`` (or the
+``PKG-INFO`` of an ``.egg-info``, including setuptools' single-file form) and
+reads the ``Version:`` field.  That keeps the drift check working on the py3.7
 hosts where it matters most — those are the ones that still carry stale
 installs from several releases ago.
 
@@ -130,17 +131,72 @@ def _metadata_field(metadata_text: str, field: str) -> Optional[str]:
     return None
 
 
+def _version_from_distribution_name(distribution_path: str) -> str:
+    """Extract the version segment of a ``<package>-<version>.dist-info`` name.
+
+    Only used to *order* candidates inside one directory; the reported version
+    always comes from the metadata file itself.
+    """
+    name = os.path.basename(os.path.normpath(distribution_path))
+    for suffix in (".dist-info", ".egg-info"):
+        if name.lower().endswith(suffix):
+            name = name[: -len(suffix)]
+            break
+    else:
+        return ""
+    # ``<package>-<version>``: PEP 440 versions never contain a dash, so the
+    # last dash-separated segment is the version.
+    return name.rsplit("-", 1)[-1] if "-" in name else ""
+
+
+def _version_sort_key(version_text: str) -> Tuple[Any, ...]:
+    """Return a sort key that orders PEP 440 versions numerically.
+
+    ``0.9.30`` must rank above ``0.9.2``; ``sorted()`` over the raw
+    ``.dist-info`` directory names gets that the wrong way round.  Falls back
+    to the lower-cased text when :mod:`packaging` is unavailable or the value
+    is not a valid version, so non-PEP 440 names still order deterministically
+    instead of raising.
+    """
+    text = _normalize_version(version_text)
+    if not text:
+        return (0, None, "")
+    try:
+        from packaging.version import Version  # noqa: PLC0415
+
+        return (1, Version(text), "")
+    except Exception:  # noqa: BLE001 - InvalidVersion / ImportError
+        return (0, None, text)
+
+
+def _candidate_sort_key(candidate: Tuple[str, str]) -> Tuple[Any, ...]:
+    """Sort key ranking one scan candidate by version, newest first.
+
+    The metadata file is authoritative; its ``.dist-info`` name is only the
+    fallback for candidates whose version cannot be read.
+    """
+    version = _version_from_metadata_file(candidate[0]) or _version_from_distribution_name(candidate[1])
+    return _version_sort_key(version)
+
+
 def _scan_distribution_dirs(package: str) -> List[Tuple[str, str]]:
-    """Find ``<package>-*.dist-info`` / ``.egg-info`` directories on ``sys.path``.
+    """Find ``<package>-*.dist-info`` / ``.egg-info`` distributions on ``sys.path``.
 
     Pure-stdlib stand-in for :mod:`importlib.metadata`, used on Python 3.7
     (Maya 2022) where neither the stdlib module nor the
-    ``importlib_metadata`` backport is guaranteed to exist.  Returns
-    ``(metadata_file, distribution_dir)`` pairs in ``sys.path`` order.
+    ``importlib_metadata`` backport is guaranteed to exist.  Recognises the
+    ``<package>-<version>.dist-info`` / ``.egg-info`` layouts, plus the
+    unversioned ``<package>.egg-info`` that setuptools writes for editable
+    installs.  Returns ``(metadata_file, distribution_path)`` pairs in
+    ``sys.path`` order; where one directory holds several distributions the
+    highest PEP 440 version comes first.
     """
     normalised = package.replace("-", "_")
     prefixes = (normalised + "-", package + "-")
     suffixes = (".dist-info", ".egg-info")
+    # setuptools names the editable-install artifact ``<package>.egg-info``,
+    # with no version segment for the prefix check above to match on.
+    bare_names = (normalised + ".egg-info", package.lower() + ".egg-info")
     found: List[Tuple[str, str]] = []
 
     for entry in sys.path:
@@ -150,18 +206,30 @@ def _scan_distribution_dirs(package: str) -> List[Tuple[str, str]]:
             names = sorted(os.listdir(entry))
         except OSError:  # noqa: BLE001 - unreadable / missing sys.path entry
             continue
+        candidates: List[Tuple[str, str]] = []
         for name in names:
             lowered = name.lower()
             if not lowered.endswith(suffixes):
                 continue
-            if not any(lowered.startswith(prefix) for prefix in prefixes):
+            if not lowered.startswith(prefixes) and lowered not in bare_names:
                 continue
-            metadata_file = os.path.join(entry, name, "METADATA")
+            distribution_path = os.path.join(entry, name)
+            if os.path.isfile(distribution_path):
+                # setuptools allows a single-file ``.egg-info`` that *is* the
+                # PKG-INFO payload, with no directory to look inside of.
+                candidates.append((distribution_path, distribution_path))
+                continue
+            metadata_file = os.path.join(distribution_path, "METADATA")
             if not os.path.isfile(metadata_file):
-                metadata_file = os.path.join(entry, name, "PKG-INFO")
+                metadata_file = os.path.join(distribution_path, "PKG-INFO")
                 if not os.path.isfile(metadata_file):
                     continue
-            found.append((metadata_file, os.path.join(entry, name)))
+            candidates.append((metadata_file, distribution_path))
+        # Several distributions in one directory is itself the failure mode
+        # this check exists to surface: the newest one is the best answer, and
+        # lexicographic ordering would rank ``0.9.2`` above ``0.9.30``.
+        candidates.sort(key=_candidate_sort_key, reverse=True)
+        found.extend(candidates)
     return found
 
 
@@ -174,8 +242,38 @@ def _version_from_metadata_file(metadata_file: str) -> Optional[str]:
     return _metadata_field(content, "Version")
 
 
-def distribution_version(package: str) -> Optional[str]:
-    """Return the installed-distribution version of *package*.
+def _distribution_path_from_api(metadata: Any, package: str) -> Optional[str]:
+    """Locate *package* through the metadata API, at ``.dist-info`` granularity."""
+    try:
+        distribution = metadata.distribution(package)
+    except Exception:  # noqa: BLE001 - PackageNotFoundError and friends
+        return None
+    if distribution is None:
+        return None
+    # ``Distribution._path`` is the ``.dist-info`` directory — the artifact an
+    # operator actually has to delete.  locate_file("")
+    # resolves to the ``site-packages`` root instead, so it is only a fallback
+    # for backports that do not expose ``_path``.
+    try:
+        path = getattr(distribution, "_path", None)
+    except Exception:  # noqa: BLE001
+        path = None
+    if path:
+        return str(path)
+    try:
+        located = distribution.locate_file("")
+    except Exception:  # noqa: BLE001
+        return None
+    return str(located) if located else None
+
+
+def _resolve_distribution(package: str) -> Tuple[Optional[str], Optional[str]]:
+    """Resolve the installed distribution once, as ``(version, path)``.
+
+    Both halves always describe the **same** artifact.  Resolving them
+    independently lets the two answers come apart — the version from one
+    ``.dist-info`` and the path from another — which would tell the operator to
+    delete a distribution the report never quoted.
 
     Resolution order:
 
@@ -184,22 +282,39 @@ def distribution_version(package: str) -> Optional[str]:
     2. A pure-stdlib scan of ``sys.path`` for ``<package>-*.dist-info``, so
        Python 3.7 / Maya 2022 hosts are still covered.
 
-    Returns ``None`` when no distribution metadata can be found at all.
+    A candidate that yields no version is skipped in both passes alike, so a
+    malformed ``.dist-info`` on ``sys.path`` cannot supply a path on its own.
+    Returns ``(None, None)`` when nothing usable is found.
     """
     metadata = _metadata_module()
     if metadata is not None:
         try:
-            return str(metadata.version(package))
+            value = metadata.version(package)
         except Exception:  # noqa: BLE001 - PackageNotFoundError and friends
-            pass
+            value = None
+        # A malformed METADATA without a ``Version:`` field can answer with an
+        # empty value; ``str()`` would turn that into the literal ``"None"``
+        # and poison the report, so fall through to the scan instead.
+        if value:
+            return str(value), _distribution_path_from_api(metadata, package)
         # Fall through: a partially-installed distribution can raise even when
         # a .dist-info directory is present, and the scan can still read it.
 
-    for metadata_file, _distribution_dir in _scan_distribution_dirs(package):
+    for metadata_file, distribution_path in _scan_distribution_dirs(package):
         version = _version_from_metadata_file(metadata_file)
         if version:
-            return version
-    return None
+            return version, distribution_path
+    return None, None
+
+
+def distribution_version(package: str) -> Optional[str]:
+    """Return the installed-distribution version of *package*.
+
+    See :func:`_resolve_distribution` for the resolution order.
+
+    Returns ``None`` when no distribution metadata can be found at all.
+    """
+    return _resolve_distribution(package)[0]
 
 
 def distribution_location(package: str) -> Optional[str]:
@@ -207,25 +322,19 @@ def distribution_location(package: str) -> Optional[str]:
 
     Used in log lines so an operator can delete the stale ``.dist-info``
     without guessing which site-packages is responsible.
-    """
-    metadata = _metadata_module()
-    if metadata is not None:
-        try:
-            distribution = metadata.distribution(package)
-        except Exception:  # noqa: BLE001
-            distribution = None
-        if distribution is not None:
-            try:
-                return str(distribution.locate_file(""))
-            except Exception:  # noqa: BLE001
-                try:
-                    return str(distribution._path)  # noqa: SLF001 - older backports
-                except Exception:  # noqa: BLE001
-                    pass
 
-    for _metadata_file, distribution_dir in _scan_distribution_dirs(package):
-        return distribution_dir
-    return None
+    Both resolution paths answer at the same granularity: the ``.dist-info`` /
+    ``.egg-info`` artifact itself.  The returned path always belongs to the
+    same artifact that :func:`distribution_version` quoted, because a report
+    naming one version and another distribution's directory would send the
+    operator to delete the wrong install.
+
+    The one exception is a metadata backport that does not expose ``_path``:
+    locate_file("")
+    then answers with the site-packages root that contains the artifact, which
+    is coarser than ideal but still names the right install.
+    """
+    return _resolve_distribution(package)[1]
 
 
 def module_origin(module: Optional[Any]) -> Optional[str]:
@@ -330,7 +439,11 @@ def build_report(
 
     if installed is None:
         if _metadata_module() is None:
-            detail = "cannot read installed distribution metadata (Python 3.7 without the importlib_metadata backport)"
+            detail = (
+                "no distribution metadata source available: neither importlib.metadata nor the "
+                "importlib_metadata backport is importable, and no {}-*.dist-info or .egg-info "
+                "was found on sys.path".format(package)
+            )
             status = STATUS_UNKNOWN
         else:
             detail = "no installed distribution metadata found (source checkout or vendored module)"
