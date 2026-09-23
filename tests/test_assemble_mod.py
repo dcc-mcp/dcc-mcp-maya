@@ -343,6 +343,47 @@ class TestWheelFetchRetry:
         assert urlretrieve_mock.call_count == 1
         assert sleep_mock.call_count == 0
 
+    @pytest.mark.parametrize("attempts", [1, 3], ids=["no-retry", "retries-exhausted"])
+    def test_exhausted_retries_reraise_the_original_error(self, tmp_path, attempts):
+        """A wheel fetch that never succeeds must surface the original error.
+
+        ``attempts=1`` is the "do not retry" path.  If the final ``raise`` in
+        ``_retry_transient`` is ever swallowed (silently returning ``None``),
+        a wheel that was never downloaded looks identical to a cached one, so
+        the caller ships a module with a missing wheel instead of failing.
+        """
+        sentinel = self._reset_error()
+        dest = tmp_path / "dcc_mcp_core-0.15.7-cp38-abi3-macosx_11_0_arm64.whl"
+
+        with patch("urllib.request.urlretrieve", side_effect=sentinel) as urlretrieve_mock, patch.object(
+            assemble_mod, "_sleep"
+        ) as sleep_mock:
+            with pytest.raises(urllib.error.URLError) as excinfo:
+                assemble_mod._download_file("https://example.com/wheel.whl", dest, attempts=attempts)
+
+        assert excinfo.value is sentinel
+        assert urlretrieve_mock.call_count == attempts
+        assert sleep_mock.call_count == attempts - 1
+
+    def test_partial_wheel_is_deleted_when_the_transfer_dies(self, tmp_path):
+        """A truncated transfer must not leave its partial file behind.
+
+        ``attempts=1`` removes the retry that would otherwise overwrite
+        ``dest`` with a complete wheel, so the assertion really locks in the
+        ``unlink()`` in the ``except`` branch instead of passing by accident.
+        """
+        dest = tmp_path / "dcc_mcp_core-0.15.7-cp38-abi3-macosx_11_0_arm64.whl"
+
+        def die_halfway(_url, dest_path):
+            Path(dest_path).write_bytes(b"partial")  # what an interrupted transfer leaves behind
+            raise self._reset_error()
+
+        with patch("urllib.request.urlretrieve", side_effect=die_halfway), patch.object(assemble_mod, "_sleep"):
+            with pytest.raises(urllib.error.URLError):
+                assemble_mod._download_file("https://example.com/wheel.whl", dest, attempts=1)
+
+        assert not dest.exists()
+
     def test_server_wheel_download_retries_a_transient_error(self, tmp_path):
         version = "0.18.17"
         filename = f"dcc_mcp_server-{version}-py3-none-macosx_11_0_arm64.whl"
