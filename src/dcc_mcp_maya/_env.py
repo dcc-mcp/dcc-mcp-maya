@@ -53,6 +53,10 @@ ENV_EXCLUDE_STUBS_FROM_TOOLS_LIST = "DCC_MCP_MAYA_EXCLUDE_STUBS_FROM_TOOLS_LIST"
 #: Env var that disables project-tools registration.  ``"0"`` → disabled,
 #: anything else (including unset) → enabled.
 ENV_PROJECT_TOOLS = "DCC_MCP_MAYA_PROJECT_TOOLS"
+#: Startup version self-check (``dcc_mcp_maya._version_check``): compares the
+#: running module version with the installed distribution metadata for
+#: ``dcc-mcp-maya`` and ``dcc-mcp-core`` and warns on drift.  ``"0"`` disables.
+ENV_VERSION_CHECK = "DCC_MCP_MAYA_VERSION_CHECK"
 
 #: Default SQLite filename inside the platform data directory.
 DEFAULT_JOB_DB_FILENAME = "jobs.db"
@@ -213,6 +217,24 @@ def resolve_project_tools_enabled(flag: bool | None = None) -> bool:
     if flag is not None:
         return bool(flag)
     raw = os.environ.get(ENV_PROJECT_TOOLS)
+    if raw is None:
+        return True
+    return raw.strip() != "0"
+
+
+def resolve_version_check_enabled(flag: Optional[bool] = None) -> bool:
+    """Resolve whether the startup version self-check runs.
+
+    The check compares ``dcc_mcp_maya.__version__`` (the module that is
+    actually running) with the installed ``dcc-mcp-maya`` distribution
+    metadata and warns on drift — see :mod:`dcc_mcp_maya._version_check`.
+
+    Priority: explicit ``flag`` argument > ``DCC_MCP_MAYA_VERSION_CHECK``
+    env var (``"0"`` disables) > ``True``.
+    """
+    if flag is not None:
+        return bool(flag)
+    raw = os.environ.get(ENV_VERSION_CHECK)
     if raw is None:
         return True
     return raw.strip() != "0"

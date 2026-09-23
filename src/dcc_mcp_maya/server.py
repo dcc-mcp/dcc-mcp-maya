@@ -11,6 +11,7 @@ Module            Responsibility
 ``_executor``    In-process skill execution + handler registration
 ``_skill_loader`` Minimal-mode skill loading (constants + loaders)
 ``_version_probe`` Maya availability + version string detection
+``_version_check`` Runtime version provenance + drift self-check
 ``_transport``    ``TransportManager`` wrappers (bind/find/rank)
 ``_pyexec``       ``DCC_MCP_PYTHON_EXECUTABLE`` auto-correction (#125)
 ================  ===========================================================
@@ -28,7 +29,7 @@ import sys
 import threading
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, List, Optional
+from typing import Any, Dict, List, Optional
 
 # Import third-party modules
 from dcc_mcp_core import DccServerOptions, HostExecutionBridge, scan_and_load_strict
@@ -44,10 +45,12 @@ from dcc_mcp_maya import (
     _resources,
     _skill_loader,
     _transport,
+    _version_check,
     _version_probe,
 )
 from dcc_mcp_maya.__version__ import __version__
 from dcc_mcp_maya._pyexec import auto_correct as _auto_correct_pyexec
+from dcc_mcp_maya._version_check import run_version_self_check
 from dcc_mcp_maya.capability_manifest import (
     MayaCapabilityManifestBuilder,
     build_manifest_payload,
@@ -263,6 +266,11 @@ class MayaMcpServer(DccServerBase):
         # Host dispatcher attached by the plugin/bootstrap.  The core
         # HostExecutionBridge is the single adapter-facing execution path
         # for direct host callables and in-process skill scripts.
+        # Version provenance snapshot filled in by ``_run_version_self_check``
+        # during ``start()`` (issue: dist metadata vs runtime ``__version__``).
+        self._version_report: Optional[Dict[str, Any]] = None
+        self._version_self_checked: bool = False
+
         self._maya_dispatcher: Any = None
         self._host_dispatcher: Any = None
         self._auto_ui_pump: Any = None
@@ -708,6 +716,44 @@ class MayaMcpServer(DccServerBase):
 
     # ── Lifecycle: start() + gateway capability metadata ───────────────
 
+    def version_report(self) -> Dict[str, Any]:
+        """Return the version provenance payload (see :mod:`_version_check`).
+
+        Reports both the imported-module version (:data:`__version__`, which
+        is also ``server_version`` in the MCP ``initialize`` response and in
+        the gateway registry) and the installed distribution metadata for
+        ``dcc-mcp-maya`` / ``dcc-mcp-core``.  Used by diagnostics and by
+        :meth:`_run_version_self_check`; never raises — an unexpected failure
+        yields an empty dict.
+        """
+        try:
+            return _version_check.version_report()
+        except Exception as exc:  # noqa: BLE001 - diagnostics must not break startup
+            logger.debug("[%s] version report unavailable: %s", self._dcc_name, exc)
+            return {}
+
+    def _run_version_self_check(self) -> None:
+        """Log the running versions once and warn when metadata disagrees.
+
+        A host can end up with a stale ``.dist-info`` (or an editable install
+        that was never upgraded) next to a newer module on ``sys.path``, so
+        ``importlib.metadata.version("dcc-mcp-maya")`` and
+        ``dcc_mcp_maya.__version__`` answer differently.  Silently accepting
+        that makes bug reports and compatibility matrices untrustworthy, so
+        the drift is logged as a warning with both paths.  The check never
+        raises and never blocks startup; opt out with
+        ``DCC_MCP_MAYA_VERSION_CHECK=0``.
+        """
+        if getattr(self, "_version_self_checked", False):
+            return
+        self._version_self_checked = True
+        if not _env.resolve_version_check_enabled():
+            return
+        try:
+            self._version_report = run_version_self_check(logger)
+        except Exception as exc:  # noqa: BLE001 - never block startup on diagnostics
+            logger.debug("[%s] version self-check skipped: %s", self._dcc_name, exc)
+
     def start(self) -> Any:
         """Start the HTTP server.
 
@@ -719,7 +765,11 @@ class MayaMcpServer(DccServerBase):
         FileRegistry entries written by sibling Maya instances that
         registered before the local election won.  The gateway's own
         heartbeat (5 s) publishes our metadata anyway.
+
+        Before that, :meth:`_run_version_self_check` logs which adapter/core
+        version is actually executing and warns on distribution drift.
         """
+        self._run_version_self_check()
         return super().start()
 
     def _upgrade_to_gateway(self) -> bool:

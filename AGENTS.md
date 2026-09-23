@@ -353,6 +353,35 @@ Operator opt-in for a hard timeout: `DCC_MCP_MAYA_READINESS_TIMEOUT_SECS=60` —
 
 ---
 
+## Version provenance (single source + drift warning)
+
+One host can answer "which adapter version is this?" in several ways, and a
+stale install makes them disagree — `importlib.metadata.version('dcc-mcp-maya')`
+reports what `pip` recorded, while `dcc_mcp_maya.__version__` reports the module
+that is actually executing (also what the startup log, the MCP `initialize`
+response, and `dcc-mcp-cli` report).
+
+| Question | Answer |
+|-----------|--------|
+| Where does the version come from? | `pyproject.toml` → `project.version`; release-please bumps it together with `src/dcc_mcp_maya/__version__.py` and every other file carrying the release-please version marker. `tests/test_version_single_source.py` fails CI when they drift. |
+| Which one wins at runtime? | `dcc_mcp_maya.__version__` — it is the code that executes, so it is what bug reports should quote. |
+| What happens on drift? | `MayaMcpServer.start()` runs `dcc_mcp_maya._version_check.run_version_self_check()` once: it logs both answers with their paths and emits a **warning** naming the stale side. It never raises and never blocks startup. |
+
+```python
+from dcc_mcp_maya import version_report, run_version_self_check
+
+version_report()
+# {'adapter': {'status': 'mismatch', 'runtime_version': '0.9.16',
+#              'distribution_version': '0.9.14', 'module_path': '...', ...},
+#  'core': {...}, 'consistent': False}
+
+run_version_self_check()   # same payload, logged (info when healthy, warning on drift)
+```
+
+`dcc-mcp-core` gets the same treatment, so its startup log line and its
+distribution metadata are cross-checked too — "read the version off the log" is
+no longer a guess. Opt out with `DCC_MCP_MAYA_VERSION_CHECK=0`.
+
 ## Key Conventions
 
 ### Tool Naming
@@ -420,6 +449,7 @@ All other skills appear as `__skill__<name>` stubs (default behavior). Call `loa
 | `DCC_MCP_MAYA_DISABLE_EXECUTE_PYTHON` | `0` | `1` / `true` / `yes` / `on` — refuse ``execute_python`` (skills-first policy). |
 | `DCC_MCP_MAYA_DISABLE_EXECUTE_MEL` | `0` | Same truthy tokens — refuse ``execute_mel`` only. |
 | `DCC_MCP_MAYA_DISABLE_ARBITRARY_SCRIPT` | `0` | Same truthy tokens — refuse **both** ``execute_python`` and ``execute_mel``. |
+| `DCC_MCP_MAYA_VERSION_CHECK` | `1` | `0` = skip the startup version self-check that compares the running module version with the installed distribution metadata (see [Version provenance](#version-provenance-single-source--drift-warning)). |
 
 ---
 
@@ -462,6 +492,7 @@ Bugs that only reproduce through the **gateway REST** surface (`/v1/search`, `/v
 | `src/dcc_mcp_maya/_executor.py` | In-process skill execution + handler registration (respects `_affinity`) |
 | `src/dcc_mcp_maya/_affinity.py` | Per-action thread-affinity lookup from sibling `tools.yaml` |
 | `src/dcc_mcp_maya/_skill_loader.py` | Minimal-mode skill loading (constants + loaders) |
+| `src/dcc_mcp_maya/_version_check.py` | Runtime version provenance — compares ``dcc_mcp_maya.__version__`` with the installed distribution metadata and warns on drift |
 | `src/dcc_mcp_maya/_version_probe.py` | Maya availability + version string detection |
 | `src/dcc_mcp_maya/_transport.py` | `TransportManager` wrappers (bind / find / rank) |
 | `src/dcc_mcp_maya/_pyexec.py` | Auto-correct `DCC_MCP_PYTHON_EXECUTABLE` (issue #125) |

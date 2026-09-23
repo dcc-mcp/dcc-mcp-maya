@@ -38,9 +38,11 @@ from dcc_mcp_maya._env import (
     ENV_DISABLE_EXECUTE_MEL,
     ENV_DISABLE_EXECUTE_PYTHON,
     ENV_ENABLE_GATEWAY_FAILOVER,
+    ENV_VERSION_CHECK,
     resolve_enable_gateway_failover,
     resolve_execute_mel_disabled,
     resolve_execute_python_disabled,
+    resolve_version_check_enabled,
 )
 from dcc_mcp_maya._project_tools import (
     ENV_PROJECT_TOOLS,
@@ -94,6 +96,11 @@ from dcc_mcp_maya._skill_loader import (
     build_minimal_mode_config,
     build_minimal_mode_for_stages,
     skills_for_stage,
+)
+from dcc_mcp_maya._version_check import (
+    VersionReport,
+    run_version_self_check,
+    version_report,
 )
 from dcc_mcp_maya.api import (
     MissingParamError,
@@ -256,6 +263,13 @@ __all__ = [
     "resolve_enable_gateway_failover",
     "resolve_execute_python_disabled",
     "resolve_execute_mel_disabled",
+    # Runtime version provenance + drift self-check
+    # (``dcc_mcp_maya.__version__`` vs installed distribution metadata)
+    "ENV_VERSION_CHECK",
+    "resolve_version_check_enabled",
+    "VersionReport",
+    "version_report",
+    "run_version_self_check",
     # 5-stage skill taxonomy + minimal-mode helpers
     # - stage source-of-truth: each SKILL.md frontmatter
     #   (parsed into dcc_mcp_core.SkillMetadata.stage)
