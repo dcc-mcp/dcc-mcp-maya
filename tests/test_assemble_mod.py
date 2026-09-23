@@ -8,8 +8,10 @@ import importlib.util as _ilu
 import json
 import os
 import re
+import socket
 import subprocess
 import sys
+import urllib.error
 import zipfile
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -248,6 +250,142 @@ class TestDownloadServerWheel:
             wheel = assemble_mod.download_server_wheel(version, "win64", tmp_path)
 
         assert wheel.name == filename
+
+
+class TestWheelFetchRetry:
+    """PyPI fetches must survive a transient reset without swallowing real errors.
+
+    CI has seen ``URLError: ConnectionResetError [Errno 104]`` on the same head
+    that passes on a re-run, so transient transport failures are retried. A 404
+    or any other deterministic failure must still surface on the first attempt.
+    """
+
+    def _reset_error(self):
+        return urllib.error.URLError(ConnectionResetError(104, "Connection reset by peer"))
+
+    def _not_found_error(self, url):
+        return urllib.error.HTTPError(url, 404, "Not Found", None, None)
+
+    def _pypi_response(self, version: str = "0.15.7") -> dict:
+        filename = f"dcc_mcp_core-{version}-cp38-abi3-macosx_11_0_arm64.whl"
+        urls = [{"filename": filename, "url": f"https://example.com/{filename}", "packagetype": "bdist_wheel"}]
+        return {"info": {"version": version}, "urls": urls, "releases": {version: urls}}
+
+    def _json_response(self, payload: dict) -> MagicMock:
+        mock_resp = MagicMock()
+        mock_resp.read.return_value = json.dumps(payload).encode()
+        mock_resp.__enter__ = lambda s: s
+        mock_resp.__exit__ = MagicMock(return_value=False)
+        return mock_resp
+
+    def test_transient_index_error_is_retried_and_succeeds(self, tmp_path):
+        responses = [self._reset_error(), self._json_response(self._pypi_response())]
+
+        def fake_urlopen(_url, timeout=None):
+            result = responses.pop(0)
+            if isinstance(result, Exception):
+                raise result
+            return result
+
+        with patch("urllib.request.urlopen", side_effect=fake_urlopen), patch(
+            "urllib.request.urlretrieve",
+            side_effect=lambda _url, dest: _make_fake_wheel(
+                Path(dest).parent, Path(dest).name, {"dcc_mcp_core/__init__.py": b"# abi3"}
+            ),
+        ), patch.object(assemble_mod, "_sleep") as sleep_mock:
+            wheels = assemble_mod.download_core_wheels("0.15.7", "macos", tmp_path)
+
+        assert len(wheels) == 1
+        assert sleep_mock.call_count == 1
+
+    def test_http_404_on_the_index_is_not_retried(self, tmp_path):
+        url = "https://pypi.org/pypi/dcc-mcp-core/0.15.7/json"
+
+        with patch("urllib.request.urlopen", side_effect=self._not_found_error(url)) as urlopen_mock, patch.object(
+            assemble_mod, "_sleep"
+        ) as sleep_mock:
+            with pytest.raises(urllib.error.HTTPError):
+                assemble_mod.download_core_wheels("0.15.7", "macos", tmp_path)
+
+        assert urlopen_mock.call_count == 1
+        assert sleep_mock.call_count == 0
+
+    def test_transient_wheel_download_error_is_retried_and_succeeds(self, tmp_path):
+        """A truncated first transfer is retried, and its partial file is removed."""
+        dest_file = tmp_path / "dcc_mcp_core-0.15.7-cp38-abi3-macosx_11_0_arm64.whl"
+        attempts = []
+
+        def fake_urlretrieve(_url, dest):
+            attempts.append(dest)
+            if len(attempts) == 1:
+                Path(dest).write_bytes(b"partial")  # what an interrupted transfer leaves behind
+                raise self._reset_error()
+            _make_fake_wheel(Path(dest).parent, Path(dest).name, {"dcc_mcp_core/__init__.py": b"# abi3"})
+
+        with patch("urllib.request.urlopen", return_value=self._json_response(self._pypi_response())), patch(
+            "urllib.request.urlretrieve", side_effect=fake_urlretrieve
+        ), patch.object(assemble_mod, "_sleep") as sleep_mock:
+            wheels = assemble_mod.download_core_wheels("0.15.7", "macos", tmp_path)
+
+        assert len(wheels) == 1
+        assert len(attempts) == 2
+        assert sleep_mock.call_count == 1
+        assert dest_file.read_bytes()[:2] == b"PK"  # a real zip, not the partial file
+
+    def test_http_404_on_a_wheel_download_is_not_retried(self, tmp_path):
+        with patch("urllib.request.urlopen", return_value=self._json_response(self._pypi_response())), patch(
+            "urllib.request.urlretrieve",
+            side_effect=self._not_found_error("https://example.com/dcc_mcp_core-0.15.7.whl"),
+        ) as urlretrieve_mock, patch.object(assemble_mod, "_sleep") as sleep_mock:
+            with pytest.raises(urllib.error.HTTPError):
+                assemble_mod.download_core_wheels("0.15.7", "macos", tmp_path)
+
+        assert urlretrieve_mock.call_count == 1
+        assert sleep_mock.call_count == 0
+
+    def test_server_wheel_download_retries_a_transient_error(self, tmp_path):
+        version = "0.18.17"
+        filename = f"dcc_mcp_server-{version}-py3-none-macosx_11_0_arm64.whl"
+        pypi_data = {
+            "info": {"version": version},
+            "urls": [{"filename": filename, "url": f"https://example.com/{filename}", "packagetype": "bdist_wheel"}],
+            "releases": {
+                version: [
+                    {"filename": filename, "url": f"https://example.com/{filename}", "packagetype": "bdist_wheel"}
+                ]
+            },
+        }
+        attempts = []
+
+        def fake_urlretrieve(_url, dest):
+            attempts.append(dest)
+            if len(attempts) == 1:
+                raise self._reset_error()
+            _make_fake_wheel(Path(dest).parent, Path(dest).name, {"dcc_mcp_server/__init__.py": b"# server"})
+
+        with patch("urllib.request.urlopen", return_value=self._json_response(pypi_data)), patch(
+            "urllib.request.urlretrieve", side_effect=fake_urlretrieve
+        ), patch.object(assemble_mod, "_sleep") as sleep_mock:
+            wheel = assemble_mod.download_server_wheel(version, "macos", tmp_path)
+
+        assert wheel.name == filename
+        assert len(attempts) == 2
+        assert sleep_mock.call_count == 1
+
+    @pytest.mark.parametrize(
+        "error,expected",
+        [
+            (urllib.error.URLError("offline"), True),
+            (urllib.error.HTTPError("https://example.com", 404, "Not Found", None, None), False),
+            (urllib.error.HTTPError("https://example.com", 403, "Forbidden", None, None), False),
+            (ConnectionResetError(104, "Connection reset by peer"), True),
+            (socket.timeout("timed out"), True),
+            (ValueError("deterministic"), False),
+        ],
+        ids=["urlerror", "http-404", "http-403", "reset", "timeout", "value-error"],
+    )
+    def test_only_transient_errors_are_classified_retryable(self, error, expected):
+        assert assemble_mod._is_transient_network_error(error) is expected
 
 
 class TestExtractWheel:

@@ -168,6 +168,94 @@ def _version_lt(ver: str, maximum: str) -> bool:
     return _version_key(ver) < _version_key(maximum)
 
 
+# PyPI fetches occasionally die on a transient connection reset (observed in CI
+# as ``URLError: ConnectionResetError [Errno 104]``, passing on a re-run of the
+# same head). Only transport-level failures are retried: an HTTP status (404,
+# 403, ...) or a malformed payload is deterministic and re-sending it would just
+# delay an error that cannot change.
+PYPI_RETRY_ATTEMPTS = 3
+PYPI_RETRY_BACKOFF_SECS = 1.0
+
+
+def _is_transient_network_error(exc: BaseException) -> bool:
+    """Whether *exc* is a transport failure that a retry can clear.
+
+    ``urllib.error.HTTPError`` is deliberately rejected first: it *is* a
+    subclass of ``URLError``, but it carries an HTTP status, so a 404 means the
+    URL is wrong and will still be wrong on the next attempt.
+    """
+    import http.client
+    import socket
+    import urllib.error
+
+    if isinstance(exc, urllib.error.HTTPError):
+        return False
+    return isinstance(
+        exc,
+        (urllib.error.URLError, socket.timeout, ConnectionResetError, http.client.HTTPException),
+    )
+
+
+def _sleep(seconds: float) -> None:
+    """Indirection around :func:`time.sleep` so tests can drop the delay."""
+    import time
+
+    time.sleep(seconds)
+
+
+def _retry_transient(operation, description: str, attempts: int = PYPI_RETRY_ATTEMPTS):
+    """Run *operation*, retrying transient network failures with backoff.
+
+    Deterministic failures are re-raised on the first attempt so the caller
+    sees the original error instead of a delayed copy of it.
+    """
+    total = max(1, int(attempts))
+    for attempt in range(1, total + 1):
+        try:
+            return operation()
+        except Exception as exc:  # noqa: BLE001 - classified, then re-raised
+            if attempt >= total or not _is_transient_network_error(exc):
+                raise
+            delay = PYPI_RETRY_BACKOFF_SECS * (2 ** (attempt - 1))
+            print(f"  Transient network error during {description} ({exc}); retrying in {delay:g}s")
+            _sleep(delay)
+    return None  # pragma: no cover - the loop returns or raises
+
+
+def _fetch_json(url: str, timeout: int, attempts: int = PYPI_RETRY_ATTEMPTS) -> dict:
+    """GET *url* and decode its JSON body, retrying transient network errors.
+
+    Only the transfer is retried: a truncated or non-JSON body is a
+    deterministic error and is raised on the first attempt.
+    """
+    import urllib.request
+
+    def _get() -> bytes:
+        with urllib.request.urlopen(url, timeout=timeout) as resp:
+            return resp.read()
+
+    return json.loads(_retry_transient(_get, f"GET {url}", attempts))
+
+
+def _download_file(url: str, dest: Path, attempts: int = PYPI_RETRY_ATTEMPTS) -> None:
+    """Download *url* to *dest*, retrying transient network errors.
+
+    A file left behind by an interrupted transfer is deleted before the next
+    attempt so a truncated download can never be mistaken for a whole wheel.
+    """
+    import urllib.request
+
+    def _get():
+        try:
+            urllib.request.urlretrieve(url, str(dest))
+        except Exception:
+            if dest.exists():
+                dest.unlink()
+            raise
+
+    _retry_transient(_get, f"download {url}", attempts)
+
+
 def download_core_wheels(version: str, platform: str, dest: Path) -> List[Path]:
     """Download dcc-mcp-core wheels for the target platform.
 
@@ -177,14 +265,11 @@ def download_core_wheels(version: str, platform: str, dest: Path) -> List[Path]:
     package can route Maya 2022 to ``python37/`` and newer Maya versions
     to ``python/``.
     """
-    import urllib.request
-
     wheel_patterns = _core_wheel_patterns(platform)
 
     pypi_url = f"https://pypi.org/pypi/dcc-mcp-core/{version}/json"
     print(f"  Querying PyPI: {pypi_url}")
-    with urllib.request.urlopen(pypi_url, timeout=30) as resp:
-        pypi_data = json.loads(resp.read())
+    pypi_data = _fetch_json(pypi_url, timeout=30)
 
     releases = pypi_data.get("releases", {})
     version_files = releases.get(version, [])
@@ -205,7 +290,7 @@ def download_core_wheels(version: str, platform: str, dest: Path) -> List[Path]:
             print(f"  Already cached: {filename}")
             continue
         print(f"  Downloading {filename} ({desc})...")
-        urllib.request.urlretrieve(url, str(dest_file))
+        _download_file(url, dest_file)
 
     wheels = list(dest.glob("dcc_mcp_core-*.whl"))
     if not wheels:
@@ -216,12 +301,9 @@ def download_core_wheels(version: str, platform: str, dest: Path) -> List[Path]:
 
 def download_server_wheel(version: str, platform: str, dest: Path) -> Path:
     """Download the dcc-mcp-server sidecar wheel for the target platform."""
-    import urllib.request
-
     pypi_url = f"https://pypi.org/pypi/dcc-mcp-server/{version}/json"
     print(f"  Querying PyPI: {pypi_url}")
-    with urllib.request.urlopen(pypi_url, timeout=30) as resp:
-        pypi_data = json.loads(resp.read())
+    pypi_data = _fetch_json(pypi_url, timeout=30)
 
     releases = pypi_data.get("releases", {})
     version_files = releases.get(version, [])
@@ -240,7 +322,7 @@ def download_server_wheel(version: str, platform: str, dest: Path) -> Path:
             print(f"  Already cached: {filename}")
             return dest_file
         print(f"  Downloading {filename} (sidecar server)...")
-        urllib.request.urlretrieve(file_map[filename], str(dest_file))
+        _download_file(file_map[filename], dest_file)
         return dest_file
     raise RuntimeError(
         f"No dcc-mcp-server wheel matching {patterns!r} found on PyPI for platform={platform}, version={version}"

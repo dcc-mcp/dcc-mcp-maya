@@ -545,6 +545,32 @@ def test_diagnose_does_not_claim_never_registered_when_it_is():
     assert all("never registered" not in item for item in result["suggestions"])
 
 
+def test_diagnose_record_is_none_while_registered_is_true():
+    """Envelope shape: ``registered`` and ``record`` are independent signals.
+
+    ``record`` is only built when the file is on the search path, while
+    ``registered`` is read straight from Maya. A plug-in Maya registered this
+    session whose directory has since disappeared therefore legitimately yields
+    ``registered=True`` and ``record=None`` together. Locked so a caller cannot
+    start assuming ``record`` is always a dict.
+    """
+    empty = {
+        "env_var": PLUGIN_PATH_ENV,
+        "raw": "",
+        "entries": [],
+        "count": 0,
+        "missing": [],
+    }
+
+    result = diagnose_plugin(_RegisteredWithoutFile(), "orphan", search_path=empty)
+
+    assert result["known"] is False
+    assert result["registered"] is True
+    assert result["record"] is None
+    # ``loaded`` must come from the envelope, not from dereferencing ``record``.
+    assert result["loaded"] is False
+
+
 def test_diagnose_keeps_never_registered_when_it_is_true():
     """Control case: the claim must still appear when it is actually true."""
     empty = {
@@ -629,6 +655,19 @@ def test_skill_diagnose_plugin_reports_problems():
     assert result["success"] is True, result
     assert result["context"]["healthy"] is False
     assert result["context"]["problems"]
+
+
+def test_skill_diagnose_plugin_passes_a_none_record_through():
+    """The skill layer only forwards ``record``; it must not dereference it.
+
+    A registered plug-in missing from the search path is the one shape where a
+    consumer tempting ``result[\"record\"][\"version\"]`` would raise.
+    """
+    result = _call("diagnose_plugin", _RegisteredWithoutFile(), plugin="orphan")
+
+    assert result["success"] is True, result
+    assert result["context"]["registered"] is True
+    assert result["context"]["record"] is None
 
 
 def test_skill_diagnose_plugin_rejects_empty_name():
