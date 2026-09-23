@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.9.31](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.30...v0.9.31) (2026-09-23)
+
+
+### Features
+
+* single-source adapter version and startup drift self-check ([#541](https://github.com/dcc-mcp/dcc-mcp-maya/issues/541)) ([5b2132d](https://github.com/dcc-mcp/dcc-mcp-maya/commit/5b2132dea531317a0c8dfb45f752200fed55fa48))
+
+
+### Bug Fixes
+
+* **install:** read the report schema version from Core's published document ([76920e5](https://github.com/dcc-mcp/dcc-mcp-maya/commit/76920e5b7ece64f5c5e96fbaff4f9418daa8b955))
+* **server:** resolve default MCP port before handing options to core ([#540](https://github.com/dcc-mcp/dcc-mcp-maya/issues/540)) ([d6a9404](https://github.com/dcc-mcp/dcc-mcp-maya/commit/d6a940461fb5bb38ccfaa5f632feec0fbca54488))
+* **version-check:** report dist-info granularity and harden the py3.7 scan fallback ([#542](https://github.com/dcc-mcp/dcc-mcp-maya/issues/542)) ([2ad0ad1](https://github.com/dcc-mcp/dcc-mcp-maya/commit/2ad0ad1299776715e4a2f55e400dc655489e29ce))
+
 ## [0.9.30](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.29...v0.9.30) (2026-09-23)
 
 
