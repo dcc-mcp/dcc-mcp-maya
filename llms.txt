@@ -203,6 +203,7 @@ Tool naming: `{skill_name.replace("-","_")}__{script_stem}` (e.g. `maya_scene__n
 | `DCC_MCP_MAYA_DISABLE_EXECUTE_PYTHON` | `0` | `1`/`true`/`yes`/`on` — refuse `execute_python` (skills-first enforcement) |
 | `DCC_MCP_MAYA_DISABLE_EXECUTE_MEL` | `0` | Same tokens — refuse `execute_mel` only |
 | `DCC_MCP_MAYA_DISABLE_ARBITRARY_SCRIPT` | `0` | Same tokens — refuse **both** `execute_python` and `execute_mel` |
+| `DCC_MCP_MAYA_VERSION_CHECK` | `1` | `0`=skip startup version self-check (running module vs installed distribution metadata, for `dcc-mcp-maya` and `dcc-mcp-core`) |
 
 ---
 
