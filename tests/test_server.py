@@ -119,6 +119,73 @@ def _list_all_mcp_tools(url):
 # ── MayaMcpServer unit tests ──────────────────────────────────────────────────
 
 
+class TestDefaultPortResolution:
+    """``port=None`` must resolve to a concrete integer before core sees it.
+
+    Regression tests for the reported crash (issue #3531)::
+
+        MayaMcpServer()  # port=None
+        TypeError: argument 'port': 'NoneType' object cannot be interpreted
+        as an integer
+
+    Older ``dcc-mcp-core`` builds forwarded ``None`` into the Rust
+    ``McpHttpConfig`` constructor, so the adapter resolves the default itself.
+    """
+
+    def test_options_default_resolves_to_os_assigned_port(self, monkeypatch):
+        srv_mod = _import_server()
+        monkeypatch.delenv("DCC_MCP_MAYA_PORT", raising=False)
+
+        port = srv_mod.MayaServerOptions().to_core_options().port
+
+        assert isinstance(port, int)
+        assert port == 0
+
+    def test_options_none_reads_env_var(self, monkeypatch):
+        srv_mod = _import_server()
+        monkeypatch.setenv("DCC_MCP_MAYA_PORT", "18765")
+
+        assert srv_mod.MayaServerOptions(port=None).to_core_options().port == 18765
+
+    def test_explicit_port_still_wins(self, monkeypatch):
+        srv_mod = _import_server()
+        monkeypatch.setenv("DCC_MCP_MAYA_PORT", "18765")
+
+        assert srv_mod.MayaServerOptions(port=8791).to_core_options().port == 8791
+
+    def test_invalid_env_var_raises_value_error(self, monkeypatch):
+        srv_mod = _import_server()
+        monkeypatch.setenv("DCC_MCP_MAYA_PORT", "not-a-port")
+
+        with pytest.raises(ValueError, match="DCC_MCP_MAYA_PORT"):
+            srv_mod.MayaServerOptions().to_core_options()
+
+    def test_server_constructs_with_default_port(self, monkeypatch):
+        """``MayaMcpServer()`` with no arguments must not raise TypeError."""
+        srv_mod = _import_server()
+        monkeypatch.delenv("DCC_MCP_MAYA_PORT", raising=False)
+
+        server = srv_mod.MayaMcpServer()
+
+        try:
+            assert server._config.port == 0
+        finally:
+            server.stop()
+
+    def test_server_default_port_binds_os_assigned_port(self, monkeypatch):
+        """``start_server()`` defaults produce a usable handle (issue #3531)."""
+        srv_mod = _import_server()
+        monkeypatch.delenv("DCC_MCP_MAYA_PORT", raising=False)
+
+        server = srv_mod.MayaMcpServer()
+        try:
+            handle = server.start()
+            assert handle.mcp_url().startswith("http://127.0.0.1:")
+            assert handle.port > 0
+        finally:
+            server.stop()
+
+
 class TestMayaMcpServerApi:
     def test_explicit_gateway_port_zero_disables_gateway(self):
         srv_mod = _import_server()
