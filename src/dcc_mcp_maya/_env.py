@@ -197,10 +197,14 @@ def resolve_port(port: Optional[int] = None, *, default: int = DEFAULT_PORT) -> 
            TypeError: argument 'port': 'NoneType' object cannot be
            interpreted as an integer
 
-       Removal condition: raise the ``dcc-mcp-core`` floor in
-       ``pyproject.toml`` to ``>=0.19.45`` *and* confirm no shipped Maya
-       environment still resolves an older core.  Until then keep the shim
-       so ``start_server()`` works regardless of which core the host has.
+       Removal condition — all three must hold: the Python 3.7 support
+       commitment is lifted, the ``dcc-mcp-core`` floor in
+       ``pyproject.toml`` can be raised above 0.19.45, and no shipped Maya
+       environment still resolves an older core.  Raising the floor alone
+       is not sufficient today: core 0.19.x wheels are not py37-native, so
+       it would push Python 3.7 Maya sites off a core they can install.
+       Until then keep the shim so ``start_server()`` works regardless of
+       which core the host resolves.
 
     Priority: explicit ``port`` argument > ``DCC_MCP_MAYA_PORT`` (when set and
     non-empty) > ``default``.  A blank ``DCC_MCP_MAYA_PORT`` is treated as
