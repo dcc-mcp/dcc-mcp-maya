@@ -85,7 +85,7 @@ jobs:
 
       - name: Run tests
         run: |
-          pip install ".[dev]"
+          pip install -e ".[dev]"
           pytest tests/ \
             --ignore=tests/e2e \
             --ignore=tests/e2e_standalone \
