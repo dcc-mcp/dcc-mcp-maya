@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.32](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.31...v0.9.32) (2026-09-26)
+
+
+### Bug Fixes
+
+* **ci:** install package in editable mode before release tests ([1eff754](https://github.com/dcc-mcp/dcc-mcp-maya/commit/1eff754a0106cb34007d0c6ebdfbf0ee4fba1419))
+
 ## [0.9.31](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.30...v0.9.31) (2026-09-23)
 
 
