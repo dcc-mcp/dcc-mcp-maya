@@ -257,7 +257,7 @@ jobs:
           # Pin the smoke-test CLI to a published release.  The moving
           # ``latest`` alias can briefly exist without its platform manifest
           # while the core release assets are being uploaded.
-          curl -fsSL https://raw.githubusercontent.com/loonghao/dcc-mcp-core/main/scripts/install-cli.sh \
+          curl -fsSL https://raw.githubusercontent.com/dcc-mcp/dcc-mcp-core/main/scripts/install-cli.sh \
             | bash -s -- --version 0.20.26
           echo "$DCC_MCP_INSTALL_DIR" >> "$GITHUB_PATH"
 
@@ -352,7 +352,7 @@ jobs:
           # Pin the smoke-test CLI to a published release.  The moving
           # ``latest`` alias can briefly exist without its platform manifest
           # while the core release assets are being uploaded.
-          curl -fsSL https://raw.githubusercontent.com/loonghao/dcc-mcp-core/main/scripts/install-cli.sh \
+          curl -fsSL https://raw.githubusercontent.com/dcc-mcp/dcc-mcp-core/main/scripts/install-cli.sh \
             | bash -s -- --version 0.20.26
           echo "$DCC_MCP_INSTALL_DIR" >> "$GITHUB_PATH"
 
