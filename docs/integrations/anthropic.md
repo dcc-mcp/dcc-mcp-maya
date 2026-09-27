@@ -1,7 +1,11 @@
-# ANTHROPIC.md — Anthropic API / Claude Code Integration Guide
+# Anthropic API / Claude Code Integration Guide
 
+
+> Vendor integration notes for `dcc-mcp-maya`. Moved here from the repo root so that
+> [`AGENTS.md`](../../AGENTS.md) stays the **only** agent contract file at the root.
+> Anything not specific to this vendor belongs in `AGENTS.md`, not here.
 > Anthropic-specific integration notes for `dcc-mcp-maya`.
-> For the full project map, see [AGENTS.md](AGENTS.md).
+> For the full project map, see [AGENTS.md](../../AGENTS.md).
 
 ---
 
@@ -14,7 +18,7 @@
 ## Integration Setup
 
 ### Claude Desktop
-See [CLAUDE.md](CLAUDE.md) for the exact `claude_desktop_config.json` snippet.
+See [`docs/integrations/claude.md`](claude.md) for the exact `claude_desktop_config.json` snippet.
 
 ### Claude Code / Custom Anthropic Clients
 Configure your MCP client with:
@@ -52,7 +56,7 @@ When building Anthropic prompts for `dcc-mcp-maya`:
 
 ## See Also
 
-- [AGENTS.md](AGENTS.md) — Shared agent navigation map; keep common guidance single-sourced there
-- [llms.txt](llms.txt) — One-page core reference
-- [llms-full.txt](llms-full.txt) — Exhaustive API reference
-- [README.md](README.md) — Human-facing installation and overview
+- [AGENTS.md](../../AGENTS.md) — Shared agent navigation map; keep common guidance single-sourced there
+- [llms.txt](../../llms.txt) — One-page core reference
+- [llms-full.txt](../../llms-full.txt) — Exhaustive API reference
+- [README.md](../../README.md) — Human-facing installation and overview

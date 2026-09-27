@@ -516,4 +516,25 @@ Bugs that only reproduce through the **gateway REST** surface (`/v1/search`, `/v
 | `docs/` | VitePress documentation site (EN + ZH) |
 | `tests/` | pytest suite (unit + E2E + integration) |
 
+## Vendor Integration Guides
+
+`AGENTS.md` is the **only** agent contract file at the repo root. Vendor-specific
+integration notes live under `docs/integrations/` and are linked from here. They are
+companions, not alternative entry points: nothing in them may contradict `AGENTS.md`,
+and anything not specific to one vendor belongs here instead.
+
+| Vendor | Doc | What is specific to it |
+|--------|-----|------------------------|
+| Anthropic / Claude Code | [`docs/integrations/anthropic.md`](docs/integrations/anthropic.md) | Extended thinking, computer-use synergy, structured `ToolResult` handling, prompting recommendations |
+| OpenAI / GPT | [`docs/integrations/openai.md`](docs/integrations/openai.md) | Function-calling ↔ MCP tool mapping, async `job_id` polling via `jobs_get_status` |
+| Claude Desktop | [`docs/integrations/claude.md`](docs/integrations/claude.md) | `claude_desktop_config.json` snippet, progressive loading, quick test prompts |
+| Cursor | [`docs/integrations/cursor.md`](docs/integrations/cursor.md) | Cursor MCP configuration, skill-script dev loop, inline review, cross-skill refactor |
+| Google Gemini / Vertex AI | [`docs/integrations/gemini.md`](docs/integrations/gemini.md) | Skill script generation, structured results, skill search & discovery |
+
+**Don't** re-add `CLAUDE.md` / `GEMINI.md` / `CURSOR.md` / `ANTHROPIC.md` / `OPENAI.md` /
+`COPILOT.md` / `CODEBUDDY.md` / `.cursorrules` at the repo root —
+`tests/test_agent_instruction_files.py` fails the build if they reappear.
+
+---
+
 **New in 0.2.20:** Rust-backed dispatchers (`PyPumpedDispatcher`, `PyStandaloneDispatcher`, `_CorePump`, `create_pumped_dispatcher`) provide higher performance via APIs introduced in Core 0.14.17. See `llms-full.txt` for details. |

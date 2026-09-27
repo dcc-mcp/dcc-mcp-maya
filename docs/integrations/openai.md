@@ -1,7 +1,11 @@
-# OPENAI.md — OpenAI API / GPT Integration Guide
+# OpenAI API / GPT Integration Guide
 
+
+> Vendor integration notes for `dcc-mcp-maya`. Moved here from the repo root so that
+> [`AGENTS.md`](../../AGENTS.md) stays the **only** agent contract file at the root.
+> Anything not specific to this vendor belongs in `AGENTS.md`, not here.
 > OpenAI-specific integration notes for `dcc-mcp-maya`.
-> For the full project map, see [AGENTS.md](AGENTS.md).
+> For the full project map, see [AGENTS.md](../../AGENTS.md).
 
 ---
 
@@ -44,7 +48,7 @@ For async tools (`execution: async` in `tools.yaml`), the server returns a `job_
 
 ## OpenAI-Specific Tips
 
-- **System prompt:** Include a summary of [llms.txt](llms.txt) in your system prompt so the model knows the available tool surface.
+- **System prompt:** Include a summary of [llms.txt](../../llms.txt) in your system prompt so the model knows the available tool surface.
 - **Tool selection:** With 72+ tools, the initial `tools/list` in minimal mode is small (core tools only). The model should learn to call `load_skill` before attempting specialized operations.
 - **Async handling:** Long renders return a `job_id`. Use `jobs_get_status` with the same `job_id` to poll. Set a reasonable polling interval (2–5s).
 
@@ -52,7 +56,7 @@ For async tools (`execution: async` in `tools.yaml`), the server returns a `job_
 
 ## See Also
 
-- [AGENTS.md](AGENTS.md) — Shared agent navigation map; keep common guidance single-sourced there
-- [llms.txt](llms.txt) — One-page core reference
-- [llms-full.txt](llms-full.txt) — Exhaustive API reference
-- [README.md](README.md) — Human-facing installation and overview
+- [AGENTS.md](../../AGENTS.md) — Shared agent navigation map; keep common guidance single-sourced there
+- [llms.txt](../../llms.txt) — One-page core reference
+- [llms-full.txt](../../llms-full.txt) — Exhaustive API reference
+- [README.md](../../README.md) — Human-facing installation and overview
