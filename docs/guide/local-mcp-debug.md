@@ -35,7 +35,7 @@ If the connection fails: confirm Maya is running, the plugin is loaded, no other
 
 ## 3. Connect Claude Desktop (reference)
 
-Add to `claude_desktop_config.json` (see the repository root `CLAUDE.md`):
+Add to `claude_desktop_config.json` (see [`docs/integrations/claude.md`](../integrations/claude.md)):
 
 ```json
 {
