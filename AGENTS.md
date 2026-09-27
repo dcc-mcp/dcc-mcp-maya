@@ -57,6 +57,68 @@ Or load the Maya plugin (`dcc_mcp_maya_plugin.py`) and the server starts automat
 
 ---
 
+## Repository Contract
+
+**Build and test commands — always go through `vx just`. Do not call `uv`, `pytest`, or `ruff` directly.**
+
+| Task | Command |
+|------|---------|
+| Install dev environment | `vx just setup` |
+| Lint (autofix) | `vx just lint-fix` |
+| Lint everything | `vx just lint-all` |
+| Fast tests | `vx just test-quick` |
+| Pre-commit check | `vx just check` (lint + test-quick) |
+| Full CI locally | `vx just ci` (lint-all + test-coverage) |
+| Release gate | `vx just gate` (lint-all + test-quick + test-smoke) |
+
+**Repository layout**
+
+| Path | Role |
+|------|------|
+| `src/dcc_mcp_maya/` | Adapter package — server, dispatcher, skill loader |
+| `src/dcc_mcp_maya/skills/` | Built-in skill packages (`SKILL.md` + `tools.yaml` + `scripts/`) |
+| `src/dcc_mcp_maya/api.py` | Skill authoring helpers (`with_maya`, `maya_success`, `maya_error`) |
+| `maya/` | Maya-side plugin and module payload |
+| `tests/` | pytest suite (unit + E2E + integration) |
+| `docs/` | VitePress documentation site (EN + ZH) |
+| `tools/` | Dev helper scripts (e.g. `tools/lint_skill_affinity.py`) |
+| `packaging/` | Distribution packaging |
+| `justfile` | Canonical task entrypoint |
+
+**Release flow** — `release-please` on `main` drives `CHANGELOG.md` and the version in `pyproject.toml` from Conventional Commit subjects. Tagging and publishing run in CI. Never edit `CHANGELOG.md` or a version string by hand.
+
+**Prohibitions**
+
+- Do not bypass the justfile — no direct `uv run pytest`, `python -m pytest`, or `ruff` invocations.
+- Do not edit `CHANGELOG.md` or version strings manually.
+- Do not add a second agent contract file at the repository root (`CLAUDE.md`, `GEMINI.md`, `CURSOR.md`, `OPENAI.md`, `ANTHROPIC.md`, …). `AGENTS.md` is the single source; see [Agent contract files](#agent-contract-files).
+- Do not register a tool that touches Maya state without `affinity: main` in its `tools.yaml`.
+- Prefer typed skill tools over `execute_python` / `execute_mel`.
+
+---
+
+## Agent Contract Files
+
+`AGENTS.md` is the **only** agent contract file in this repository. It is the
+native instruction file for Codex, OpenCode, Cursor, GitHub Copilot, Windsurf,
+Cline, Roo Code, Kiro, Trae, and Augment, and Claude Code falls back to it when
+no `CLAUDE.md` exists. Guidance that used to live in `CLAUDE.md`, `CURSOR.md`,
+`GEMINI.md`, `OPENAI.md`, and `ANTHROPIC.md` has been folded into
+[Client Integration Notes](#client-integration-notes) below.
+
+**Gemini CLI exception:** Gemini CLI defaults its context file to `GEMINI.md`. To
+make it read `AGENTS.md`, set `context.fileName` once in `~/.gemini/settings.json`:
+
+```json
+{
+  "context": {
+    "fileName": ["AGENTS.md", "GEMINI.md"]
+  }
+}
+```
+
+---
+
 ## Information Layers — Pick Your Depth
 
 ### Layer 1 — You Are a User / Operator
@@ -455,6 +517,159 @@ All other skills appear as `__skill__<name>` stubs (default behavior). Call `loa
 | `DCC_MCP_MAYA_DISABLE_EXECUTE_MEL` | `0` | Same truthy tokens — refuse ``execute_mel`` only. |
 | `DCC_MCP_MAYA_DISABLE_ARBITRARY_SCRIPT` | `0` | Same truthy tokens — refuse **both** ``execute_python`` and ``execute_mel``. |
 | `DCC_MCP_MAYA_VERSION_CHECK` | `1` | `0` = skip the startup version self-check that compares the running module version with the installed distribution metadata (see [Version provenance](#version-provenance-single-source--drift-warning)). |
+
+---
+
+## Client Integration Notes
+
+Every MCP client uses the same endpoint — `http://127.0.0.1:9765/mcp` (MCP
+Streamable HTTP, spec `2025-03-26`). Gateway / multi-instance mode keeps the
+same endpoint; discovery runs through `DCC_MCP_GATEWAY_PORT` (default `9765`).
+
+### Claude Desktop
+
+Add to `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "maya": {
+      "url": "http://127.0.0.1:9765/mcp"
+    }
+  }
+}
+```
+
+File locations:
+
+- macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
+- Windows: `%APPDATA%\Claude\claude_desktop_config.json`
+
+Restart Claude Desktop after editing. Claude Code and custom Anthropic clients
+point at the same URL; see `docs/guide/local-mcp-debug.md` for attaching a
+debugger to the in-Maya server.
+
+**Progressive loading — the one thing every client must learn.** By default the
+server starts in **minimal mode** with only a few built-in tools active:
+
+- `execute_python`, `execute_mel`
+- `get_scene_info`, `get_selection`, `get_session_info`
+- `search_tools`, `list_skills`, `load_skill`
+
+All other skills appear as `__skill__<name>` stubs, which keeps the initial
+`tools/list` small and fast for the model to parse. When a tool from an unloaded
+skill is needed:
+
+1. Call `load_skill("maya-primitives")` to expand the skill.
+2. Then call the desired tool (e.g. `maya_primitives__create_sphere`).
+
+**Code execution policy.** Prefer `search_skills` → `load_skill` → typed tools
+with `inputSchema`. Use `execute_python` only when no skill covers the task (bulk
+in-Maya loops, OpenMaya gaps, one-offs). Operators can refuse it with
+`DCC_MCP_MAYA_DISABLE_EXECUTE_PYTHON=1` or
+`DCC_MCP_MAYA_DISABLE_ARBITRARY_SCRIPT=1`.
+
+**Quick test prompts.**
+
+> “Create a red sphere in Maya”
+> “List all cameras in the scene and select the perspective camera”
+> “Capture the viewport so I can see the current state”
+> “Load the maya-animation skill and set a keyframe on the sphere's translateY at frame 10”
+
+### Cursor
+
+Cursor Settings → MCP Servers:
+
+```json
+{
+  "maya": {
+    "url": "http://127.0.0.1:9765/mcp"
+  }
+}
+```
+
+Cursor-specific workflows:
+
+1. **Edit → test → iterate.** Edit a script under `src/dcc_mcp_maya/skills/<skill>/scripts/` (for example `src/dcc_mcp_maya/skills/maya-my-feature/scripts/my_tool.py`). With `DCC_MCP_MAYA_HOT_RELOAD=1` the server picks up changes without restarting Maya. Then ask Cursor to call the tool — “Run my_tool with radius=2” — and “Capture the viewport” to see the result as a base64 PNG.
+2. **Inline skill review.** Paste a skill script and ask “Review this Maya skill script for thread safety. Does it need `affinity: main`?” — Cursor can cross-reference the sibling `tools.yaml` against the script body to validate the affinity declaration.
+3. **Cross-skill refactors.** Cursor's codebase-aware edits suit bulk changes such as “Update all skills that use `error_result(..., str(exc))` to use `maya_from_exception(exc, ...)` instead”.
+
+Cursor can also generate complete multi-file skill packages — `SKILL.md`,
+`tools.yaml`, `groups.yaml`, and `scripts/*.py` — in a single session.
+
+Always run `python tools/lint_skill_affinity.py` (`vx just lint-skills`) in
+Cursor's integrated terminal before committing new skills.
+
+### Gemini
+
+Gemini generates whole skill packages well. Author scripts against `dcc_mcp_maya.api`:
+
+```python
+from dcc_mcp_maya.api import with_maya, maya_success
+
+@with_maya
+def batch_rename(prefix: str, suffix: str = "") -> dict:
+    """Rename selected objects with prefix and suffix."""
+    import maya.cmds as cmds
+    selected = cmds.ls(selection=True) or []
+    renamed = []
+    for obj in selected:
+        new_name = f"{prefix}{obj}{suffix}"
+        renamed.append(cmds.rename(obj, new_name))
+    return maya_success("Renamed objects", renamed=renamed, count=len(renamed))
+```
+
+Place the result under a directory listed in `DCC_MCP_MAYA_SKILL_PATHS`.
+
+Results are nested JSON that Gemini parses directly:
+
+```json
+{
+  "success": true,
+  "message": "Created sphere",
+  "context": {
+    "object_name": "pSphere1",
+    "radius": 1.0
+  }
+}
+```
+
+Discover capabilities with `search_tools(query="bake", tags=["animation"])` and
+`search_skills(...)`, then generate `SKILL.md`, `tools.yaml`, an optional
+`groups.yaml`, and `scripts/*.py` for the skill.
+
+### OpenAI / Codex
+
+MCP maps onto OpenAI function calling as follows:
+
+| OpenAI concept | MCP equivalent |
+|----------------|----------------|
+| `functions` list | `tools/list` |
+| `function.name` | `{skill}__{script}` (e.g. `maya_scene__new_scene`) |
+| `function.arguments` | JSON payload sent to `tools/call` |
+| `function_call` | `tools/call` with `_meta.progressToken` for async tools |
+
+Async tools (`execution: async` in `tools.yaml`) return a `job_id` immediately;
+poll `jobs_get_status` at a 2–5 s interval. Without a job storage backend and
+async job surface configured, async tools execute synchronously.
+
+Put a summary of `llms.txt` in the system prompt so the model knows the available
+tool surface, and teach it to call `load_skill` before specialized operations
+(see [Minimal Mode](#minimal-mode-default)).
+
+### Anthropic API
+
+- **Extended thinking** pairs well with minimal mode: reason about which skill is needed, call `load_skill`, then call the specific tool.
+- **Computer use:** `capture_viewport` provides the same visual feedback loop inside Maya.
+- **Structured outputs:** the nested `ToolResult` dicts from `maya_success` / `maya_error` are handled cleanly; use `possible_solutions` to drive recovery.
+- **Long contexts:** feed `get_scene_info` output in for complex scene work — the hierarchical DAG description helps reasoning about object relationships.
+- **Cancellation:** script loops that poll `check_maya_cancelled()` exit cleanly when the client sends `notifications/cancelled`.
+
+**Prompting recommendations for Anthropic prompts driving `dcc-mcp-maya`:**
+
+1. **State the minimal-mode behaviour** — only core tools are loaded initially, so the model must call `load_skill` to expand the surface.
+2. **Encourage viewport checks** — “After geometry changes, call `capture_viewport` to verify visually.”
+3. **State cancellation awareness** — `check_maya_cancelled()` is polled by well-behaved skills, so long jobs can be cancelled safely.
 
 ---
 

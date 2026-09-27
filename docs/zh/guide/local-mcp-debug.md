@@ -35,7 +35,7 @@ URL；默认实例端口由操作系统分配。
 
 ## 3. 连接 Claude Desktop（参考）
 
-在 `claude_desktop_config.json` 中加入（详见仓库根目录 `CLAUDE.md`）：
+在 `claude_desktop_config.json` 中加入（详见仓库根目录 `AGENTS.md`）：
 
 ```json
 {
