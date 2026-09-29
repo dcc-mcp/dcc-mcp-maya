@@ -281,17 +281,21 @@ legacy in-process gateway path.
 3. Point your MCP host at `http://127.0.0.1:9765/mcp`.
 
 For auto-start, copy or source the bundled `maya/userSetup.py`. If you maintain
-your own `userSetup.py`, load the plugin after Maya is idle:
+your own `userSetup.py`, queue the load on Maya's deferred command queue:
 
 ```python
 import maya.cmds as cmds
-import maya.utils
 
-maya.utils.executeDeferred(
+cmds.evalDeferred(
     lambda: cmds.loadPlugin("dcc_mcp_maya_plugin", quiet=True),
     lowestPriority=True,
 )
 ```
+
+Prefer `cmds.evalDeferred` to `maya.utils.executeDeferred` for start-up
+auto-load. `maya.utils.executeDeferred` runs on Maya's **idle event loop**,
+which only fires once the main thread actually goes idle; during a GUI
+start-up that may never happen, and the plug-in silently never loads.
 
 Useful plugin defaults:
 

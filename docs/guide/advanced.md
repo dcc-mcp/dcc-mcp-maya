@@ -366,7 +366,7 @@ For studio deployments, use `userSetup.py` with conditional startup:
 ```python
 # userSetup.py
 import os
-import maya.utils
+import maya.cmds as cmds
 
 def _start_mcp_if_enabled():
     if os.environ.get("DCC_MCP_MAYA_AUTOSTART", "1") == "0":
@@ -375,5 +375,10 @@ def _start_mcp_if_enabled():
     handle = dcc_mcp_maya.start_server()
     print(f"[studio] Maya MCP: {handle.mcp_url()}")
 
-maya.utils.executeDeferred(_start_mcp_if_enabled)
+cmds.evalDeferred(_start_mcp_if_enabled, lowestPriority=True)
 ```
+
+Use `cmds.evalDeferred` rather than `maya.utils.executeDeferred` here. The
+former drains as part of Maya's start-up sequence; the latter waits for an
+idle main thread, which during a GUI start-up may never arrive — the
+plug-in then silently never starts.
