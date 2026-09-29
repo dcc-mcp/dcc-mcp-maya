@@ -303,7 +303,7 @@ MCP 服务器默认监听 `127.0.0.1`（本地回环）— **无法从其他机�
 ```python
 # userSetup.py
 import os
-import maya.utils
+import maya.cmds as cmds
 
 def _start_mcp_if_enabled():
     if os.environ.get("DCC_MCP_MAYA_AUTOSTART", "1") == "0":
@@ -312,5 +312,9 @@ def _start_mcp_if_enabled():
     handle = dcc_mcp_maya.start_server()
     print(f"[studio] Maya MCP: {handle.mcp_url()}")
 
-maya.utils.executeDeferred(_start_mcp_if_enabled)
+cmds.evalDeferred(_start_mcp_if_enabled, lowestPriority=True)
 ```
+
+这里请用 `cmds.evalDeferred`，不要用 `maya.utils.executeDeferred`。前者作为 Maya
+启动序列的一部分被排空；后者要等主线程真正进入 idle，而 GUI 启动期间可能永远等不到，
+插件就会静默地不加载。
