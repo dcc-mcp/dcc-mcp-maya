@@ -334,3 +334,40 @@ def test_watchdog_absent_scriptjob_is_tolerated(monkeypatch, tmp_path) -> None:
     _exec_user_setup(monkeypatch, cmds_module)
 
     assert [record["stage"] for record in _failures(error_dir)] == []
+
+
+def test_failure_record_carries_the_exception_traceback(monkeypatch, tmp_path) -> None:
+    """The record must describe ``exc``, not whatever was last being handled.
+
+    The watchdog give-up builds its exception outside an ``except`` block, so
+    ``traceback.format_exc()`` would have written ``NoneType: None`` there.
+    """
+    error_dir = _isolate_error_dir(monkeypatch, tmp_path)
+    cmds_module = _stub_cmds_full()
+    module = _exec_user_setup(monkeypatch, cmds_module)
+
+    def raises() -> None:
+        raise ValueError("raised inside the load")
+
+    monkeypatch.setattr(module, "_apply_default_env", raises)
+    module._load_dcc_mcp_maya()
+
+    records = _failures(error_dir)
+    assert records[0]["traceback"]
+    assert "ValueError" in records[0]["traceback"]
+    assert "raised inside the load" in records[0]["traceback"]
+    assert "NoneType: None" not in records[0]["traceback"]
+
+
+def test_failure_record_for_exception_built_outside_except(monkeypatch, tmp_path) -> None:
+    """Reporting an exception that was never raised still records its type."""
+    error_dir = _isolate_error_dir(monkeypatch, tmp_path)
+    cmds_module = _stub_cmds_full()
+    module = _exec_user_setup(monkeypatch, cmds_module)
+
+    module._report_failure("watchdog_give_up", RuntimeError("plug-in never registered"))
+
+    records = _failures(error_dir)
+    assert records[0]["stage"] == "watchdog_give_up"
+    assert records[0]["error"] == "plug-in never registered"
+    assert "NoneType: None" not in records[0]["traceback"]

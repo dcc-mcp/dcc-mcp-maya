@@ -42,6 +42,11 @@ def _report_failure(stage: str, exc: BaseException) -> None:
     """
     error_type = type(exc).__name__
     message = "dcc-mcp-maya auto-load failed ({}): {}: {}".format(stage, error_type, exc)
+    # Format the exception's *own* traceback rather than the one currently
+    # being handled: several callers (notably the watchdog give-up) build the
+    # exception outside an ``except`` block, where ``traceback.format_exc()``
+    # would only yield "NoneType: None".
+    formatted = "".join(traceback.format_exception(type(exc), exc, exc.__traceback__)).strip()
     try:
         import maya.cmds as cmds
 
@@ -68,7 +73,7 @@ def _report_failure(stage: str, exc: BaseException) -> None:
             "status": "failed",
             "error_type": error_type,
             "error": str(exc),
-            "traceback": traceback.format_exc(),
+            "traceback": formatted,
         }
         with log_path.open("a", encoding="utf-8") as stream:
             stream.write(json.dumps(record, ensure_ascii=False, sort_keys=True) + "\n")
