@@ -21,6 +21,111 @@ BOOTSTRAP_ERROR_DIR_ENV = "DCC_MCP_MAYA_BOOTSTRAP_ERROR_DIR"
 WATCHDOG_MAX_ATTEMPTS = 3
 #: Seconds the watchdog waits between two load attempts.
 WATCHDOG_GRACE_SECS = 10.0
+#: Longest *legitimate* time from arming the watchdog to its give-up report:
+#: one grace period before the first retry, one per retry, and one final tick
+#: on which the give-up is reported. A healthy retry chain therefore finishes
+#: within this window, so the hang threshold must stay strictly above it or
+#: slow-but-working sessions would be misreported as hung.
+WATCHDOG_WORST_CASE_SECS = WATCHDOG_GRACE_SECS * (WATCHDOG_MAX_ATTEMPTS + 1)
+
+#: Run-scoped bootstrap hang marker. ``_mark_run_started`` fills it in once,
+#: before the first schedule; ``_retire_run_marker`` empties it. Retries must
+#: never rewrite it -- a new marker per retry would let attempt N's retirement
+#: mask attempt N+1's hang.
+_RUN_MARKER = {"marker": None, "watchdog_armed": False}
+
+
+def _bootstrap_watch() -> Optional[ModuleType]:
+    """Return the hang watchdog, or ``None`` when the adapter is unavailable.
+
+    The watchdog is pure standard library and lives in the adapter package so
+    it can be unit-tested outside Maya. If the adapter cannot be imported the
+    ``import`` stage below already reports that, so a missing watchdog is not
+    itself an error worth raising here.
+    """
+    try:
+        from dcc_mcp_maya import _bootstrap_watch
+    except Exception:
+        return None
+    return _bootstrap_watch
+
+
+def _mark_run_started() -> bool:
+    """Write this run's ``started`` marker exactly once, before scheduling.
+
+    A bootstrap that hangs raises nothing, so neither :func:`_report_failure`
+    nor the watchdog's give-up ever fires -- the process simply sits there and
+    the receipts directory stays empty. The marker is the only externally
+    visible proof that a load was attempted and never returned.
+
+    It is written here, once per sourced ``userSetup.py``, rather than inside
+    :func:`_load_dcc_mcp_maya`: that function runs again on every watchdog
+    retry, and a marker per attempt would let one attempt's exit hide the
+    next attempt's hang.
+
+    Returns ``True`` when a marker is armed and therefore needs retiring.
+    """
+    watch = _bootstrap_watch()
+    if watch is None:
+        return False
+    try:
+        _RUN_MARKER["marker"] = watch.record_bootstrap_started()
+    except Exception:
+        _RUN_MARKER["marker"] = None
+    return _RUN_MARKER["marker"] is not None
+
+
+def _retire_run_marker(finished: bool = False) -> None:
+    """Retire this run's marker. Idempotent, and safe when none was written.
+
+    ``finished`` distinguishes the two terminal states an operator cares
+    about: the load really completed (write the ``finished`` receipt) versus
+    the run stopped trying (drop the marker so a reported failure is never
+    later misread as a hang).
+    """
+    watch = _bootstrap_watch()
+    marker = _RUN_MARKER.get("marker")
+    if watch is None or marker is None:
+        return
+    _RUN_MARKER["marker"] = None
+    try:
+        if finished:
+            watch.record_bootstrap_finished(marker)
+        else:
+            watch.clear_bootstrap_marker(marker)
+    except Exception:
+        pass
+
+
+def _retire_if_terminal(finished: bool) -> None:
+    """Retire on success, or on failure when no watchdog will retry it.
+
+    While the idle watchdog is armed a failed attempt is not terminal -- it
+    will simply be retried, and the give-up path retires the marker. With no
+    watchdog armed (hosts without ``cmds.scriptJob``) a failed attempt *is*
+    the last word, so it must retire here or the marker would linger and be
+    misread as a hang on the next start-up.
+    """
+    if finished or not _RUN_MARKER.get("watchdog_armed"):
+        _retire_run_marker(finished=finished)
+
+
+def _report_prior_bootstrap_hang() -> None:
+    """Announce a bootstrap that started on an earlier launch and never finished.
+
+    A load that hangs raises nothing, so the only moment it can be observed is
+    the *next* start-up. Detection runs at import time rather than inside the
+    deferred callback precisely because in the hang scenario the deferred
+    callback is the thing that never runs.
+    """
+    watch = _bootstrap_watch()
+    if watch is None:
+        return
+    try:
+        watch.report_bootstrap_hang()
+    except Exception:
+        # A diagnostic must never stop the load it is diagnosing.
+        pass
 
 
 def _bootstrap_error_dir() -> Path:
@@ -122,37 +227,85 @@ def _apply_default_env() -> None:
     os.environ.setdefault("DCC_MCP_GATEWAY_PORT", "9765")
 
 
+def _bootstrap_watch() -> Optional[ModuleType]:
+    """Return the hang watchdog, or ``None`` when the adapter is unavailable.
+
+    The watchdog is pure standard library and lives in the adapter package so
+    it can be unit-tested outside Maya. If the adapter cannot be imported the
+    ``import`` stage below already reports that, so a missing watchdog is not
+    itself an error worth raising here.
+    """
+    try:
+        from dcc_mcp_maya import _bootstrap_watch
+    except Exception:
+        return None
+    return _bootstrap_watch
+
+
+def _report_prior_bootstrap_hang() -> None:
+    """Announce a bootstrap that started on an earlier launch and never finished.
+
+    A load that hangs raises nothing, so the only moment it can be observed is
+    the *next* start-up. Detection runs at import time rather than inside the
+    deferred callback precisely because in the hang scenario the deferred
+    callback is the thing that never runs.
+    """
+    watch = _bootstrap_watch()
+    if watch is None:
+        return
+    try:
+        watch.report_bootstrap_hang()
+    except Exception:
+        # A diagnostic must never stop the load it is diagnosing.
+        pass
+
+
 def _load_dcc_mcp_maya() -> None:
     """Run the fixed captured bootstrap after Maya's startup queue drains.
 
     Each phase is reported separately: "the plug-in did not load" is not
     actionable, while "the adapter package is not importable" is.
+
+    A load that neither raises nor returns leaves no receipt at all, so the
+    call is bracketed by a ``started`` / ``finished`` marker pair. A marker
+    that outlives its threshold is the only externally visible proof that
+    ``cmds.loadPlugin`` blocked instead of failing.
     """
     try:
         _apply_default_env()
         _setup_module_paths()
     except Exception as exc:
         _report_failure("environment", exc)
+        _retire_if_terminal(finished=False)
         return
 
     try:
         from dcc_mcp_maya.install import bootstrap_user_setup
     except Exception as exc:
         _report_failure("import", exc)
+        _retire_if_terminal(finished=False)
         return
 
     try:
         _load_via_bootstrap(bootstrap_user_setup)
     except Exception as exc:
         _report_failure("plugin_load", exc)
+        # A raised exception is not a hang, but it is only terminal when no
+        # watchdog is going to retry it.
+        _retire_if_terminal(finished=False)
         return
 
     # A load that returns cleanly without registering the plug-in is the
     # failure mode that started this investigation: every channel reported
     # success while no MCP server existed. Verify instead of assuming.
+    verified = False
     try:
         cmds = _maya_cmds()
-        if cmds is not None and not cmds.pluginInfo("dcc_mcp_maya_plugin", query=True, loaded=True):
+        if cmds is None:  # nothing to verify outside a Maya session
+            verified = True
+        elif cmds.pluginInfo("dcc_mcp_maya_plugin", query=True, loaded=True):
+            verified = True
+        else:
             _report_failure(
                 "plugin_verify",
                 RuntimeError(
@@ -162,6 +315,8 @@ def _load_dcc_mcp_maya() -> None:
             )
     except Exception as exc:
         _report_failure("plugin_verify", exc)
+
+    _retire_if_terminal(finished=verified)
 
 
 def _load_via_bootstrap(bootstrap_user_setup) -> None:
@@ -195,18 +350,20 @@ def _schedule(callback) -> None:
     """
     cmds = _maya_cmds()
     if cmds is None:
-        return
+        return False
     eval_deferred = getattr(cmds, "evalDeferred", None)
     if eval_deferred is None:
         _report_failure(
             "schedule",
             RuntimeError("maya.cmds.evalDeferred is unavailable; the Maya deferred queue is not ready"),
         )
-        return
+        return False
     try:
         eval_deferred(callback, lowestPriority=True)
     except Exception as exc:
         _report_failure("schedule", exc)
+        return False
+    return True
 
 
 def _plugin_loaded() -> bool:
@@ -245,6 +402,10 @@ def _arm_autoload_watchdog() -> None:
     # are read from module scope at call time.
     state = {"job": None, "attempts": 0, "next_check": None, "armed_at": time.monotonic()}
 
+    # While armed, a failed load attempt is retryable rather than terminal, so
+    # the run marker must survive until the give-up below.
+    _RUN_MARKER["watchdog_armed"] = True
+
     def _disarm() -> None:
         job = state.get("job")
         state["job"] = None
@@ -270,6 +431,10 @@ def _arm_autoload_watchdog() -> None:
                 return
             state["gave_up"] = True
             _disarm()
+            _RUN_MARKER["watchdog_armed"] = False
+            # The run has stopped trying. This is a reported failure, not a
+            # hang, so the marker must not survive to be misread as one.
+            _retire_run_marker(finished=False)
             _report_failure(
                 "watchdog_give_up",
                 RuntimeError(
@@ -285,8 +450,21 @@ def _arm_autoload_watchdog() -> None:
     try:
         state["job"] = script_job(event=("idle", _on_idle))
     except Exception as exc:
+        _RUN_MARKER["watchdog_armed"] = False
         _report_failure("watchdog_schedule", exc)
 
 
-_schedule(_load_dcc_mcp_maya)
+_report_prior_bootstrap_hang()
+if _maya_cmds() is not None:
+    # Only arm a marker when a load can actually be attempted: outside a Maya
+    # session nothing would ever retire it. Written before the first schedule
+    # so that it exists before any attempt -- including the watchdog's retries.
+    _mark_run_started()
+scheduled = _schedule(_load_dcc_mcp_maya)
 _arm_autoload_watchdog()
+if not scheduled:
+    # Nothing was queued. The watchdog may still own the run (it retries from
+    # the idle queue), in which case its give-up path retires the marker;
+    # otherwise retire now so a marker for a load that never started cannot be
+    # misread as a hang on the next start-up.
+    _retire_if_terminal(finished=False)

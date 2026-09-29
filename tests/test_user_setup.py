@@ -60,6 +60,11 @@ def _failures(error_dir):
 
 def _isolate_error_dir(monkeypatch, tmp_path):
     monkeypatch.setenv("DCC_MCP_MAYA_BOOTSTRAP_ERROR_DIR", str(tmp_path))
+    # ``_apply_default_env`` uses ``os.environ.setdefault``; pre-seeding the two
+    # ports keeps the deferred callback from leaking them into later tests,
+    # which would make port-resolution assertions order-dependent.
+    monkeypatch.setenv("DCC_MCP_MAYA_PORT", "0")
+    monkeypatch.setenv("DCC_MCP_GATEWAY_PORT", "9765")
     return tmp_path
 
 

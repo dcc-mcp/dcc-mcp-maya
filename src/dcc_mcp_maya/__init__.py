@@ -33,6 +33,23 @@ from __future__ import annotations
 
 # Import local modules
 from dcc_mcp_maya.__version__ import __version__
+from dcc_mcp_maya._bootstrap_watch import (
+    BOOTSTRAP_STAGE,
+    DEFAULT_BOOTSTRAP_TIMEOUT_SECS,
+    ENV_BOOTSTRAP_ERROR_DIR,
+    ENV_BOOTSTRAP_TIMEOUT,
+    bootstrap_error_dir,
+    bootstrap_log_path,
+    bootstrap_pending_dir,
+    clear_bootstrap_marker,
+    detect_bootstrap_hang,
+    read_bootstrap_records,
+    read_pending_markers,
+    record_bootstrap_finished,
+    record_bootstrap_started,
+    report_bootstrap_hang,
+    resolve_bootstrap_timeout_secs,
+)
 from dcc_mcp_maya._env import (
     ENV_DISABLE_ARBITRARY_SCRIPT,
     ENV_DISABLE_EXECUTE_MEL,
@@ -319,4 +336,20 @@ __all__ = [
     "resolve_sidecar_binary",
     "start_sidecar",
     "stop_sidecar",
+    # Bootstrap hang watchdog (userSetup started/finished markers)
+    "ENV_BOOTSTRAP_ERROR_DIR",
+    "ENV_BOOTSTRAP_TIMEOUT",
+    "DEFAULT_BOOTSTRAP_TIMEOUT_SECS",
+    "BOOTSTRAP_STAGE",
+    "resolve_bootstrap_timeout_secs",
+    "bootstrap_error_dir",
+    "bootstrap_log_path",
+    "bootstrap_pending_dir",
+    "record_bootstrap_started",
+    "record_bootstrap_finished",
+    "clear_bootstrap_marker",
+    "read_pending_markers",
+    "read_bootstrap_records",
+    "detect_bootstrap_hang",
+    "report_bootstrap_hang",
 ]
