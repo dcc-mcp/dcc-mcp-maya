@@ -143,6 +143,26 @@ cmds.evalDeferred(_load_dcc_mcp_maya, lowestPriority=True)
 `dcc_mcp_maya.start_server()`。GUI 会话需要 Maya UI dispatcher
 才能执行 `affinity: main` 工具；插件会自动安装它。
 
+### 自动加载排查
+
+如果插件没有加载，先查这两个信号，再动手猜：
+
+- **Script Editor / 状态栏告警** —— 自动加载失败现在会通过 `cmds.warning`
+  上报，即使从未打开过 Script Editor 也能在 Maya 里看到。
+- **日志文件** —— `<DCC_MCP_LOG_DIR>`（或系统临时目录）下的
+  `dcc-mcp-maya-userSetup.log`，记录每次尝试的完整堆栈。
+
+最常见的原因是调度 API 用错了：
+
+```python
+# 错误 —— lowestPriority 会被当作参数传给回调函数（TypeError，被 Maya
+# 的 deferred 调度器静默吞掉）：没有插件、没有服务、没有报错。
+maya.utils.executeDeferred(_load_dcc_mcp_maya, lowestPriority=True)
+
+# 正确 —— lowestPriority 是 evalDeferred 命令的调度标志。
+cmds.evalDeferred(_load_dcc_mcp_maya, lowestPriority=True)
+```
+
 ## 方式五 — 调试用 direct start_server
 
 直连 server 模式适合本地调试和 `mayapy` 脚本。在 Maya GUI 中请显式传入
