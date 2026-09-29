@@ -24,12 +24,21 @@ This module exposes a single best-effort helper:
 * :func:`configure_commandport_hygiene` — calls
   :func:`close_default_commandport` then :func:`suppress_security_warnings`
   (preferred plug-in entry point).
-* :func:`suppress_security_warnings` — re-opens every currently-open
-  commandPort with ``-securityWarning false``, **preserving each port's
-  ``sourceType``** (``python`` vs ``mel``).  Forcing every listener to
-  MEL turned Python smoke tests such as ``1+1;`` into Script Editor
-  syntax-error spam when another tool still dialed a Python commandPort.
-  Idempotent; never raises; never opens new ports.
+* :func:`suppress_security_warnings` — clears the security-warning flag on
+  every currently-open commandPort, **without closing any of them** when
+  Maya exposes its listener registry (see :func:`disable_warning_in_place`);
+  the previous close/re-open fallback is used only for ports the registry
+  does not cover.  Idempotent; never raises; never opens new ports.
+* :func:`disable_warning_in_place` — flips ``securityWarning`` off directly
+  on Maya's live listener objects.
+
+Why the in-place path matters (issue #3929): closing and re-opening a port
+that is *currently serving a client* drops that client's socket. An operator
+who drove Maya over a commandPort — for example to run
+``cmds.loadPlugin('dcc_mcp_maya_plugin')`` manually — got a 0-byte reply and
+a dead port the moment the plug-in's startup ran the hygiene pass, which both
+broke their session and destroyed the very channel they would have used to
+diagnose it.
 
 Set ``DCC_MCP_MAYA_CLOSE_DEFAULT_COMMANDPORT=0`` to keep the default port open.
 Set ``DCC_MCP_MAYA_DISABLE_COMMANDPORT_WARNING=0`` to opt out of warning suppression.
@@ -39,9 +48,10 @@ Set ``DCC_MCP_MAYA_DISABLE_COMMANDPORT_WARNING=0`` to opt out of warning suppres
 from __future__ import annotations
 
 # Import built-in modules
+import importlib
 import logging
 import os
-from typing import List
+from typing import Dict, List
 
 logger = logging.getLogger(__name__)
 
@@ -146,12 +156,77 @@ def close_default_commandport() -> int:
     return closed
 
 
+def _commandport_registry() -> Dict[str, object]:
+    """Return Maya's live ``{portName: listener thread}`` registry, or ``{}``.
+
+    ``maya.app.general.CommandPort`` keeps every open listener in a
+    module-level dict (``__commandPorts``); the port names returned by
+    ``commandPort -q -name`` are its keys. Reaching into it is best effort:
+    Maya could rename the module or the attribute in a future release, in
+    which case callers fall back to the close/re-open path.
+    """
+    try:
+        module = importlib.import_module("maya.app.general.CommandPort")
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("commandPort registry unavailable: %s", exc)
+        return {}
+    registry = getattr(module, "__commandPorts", None)
+    if not isinstance(registry, dict):
+        return {}
+    return registry
+
+
+def disable_warning_in_place(port: str) -> bool:
+    """Clear the security-warning flag on an open port without closing it.
+
+    Maya stores the flag on the listener object itself
+    (``__commandPorts[port].servObj.securityWarning``), so it can simply be
+    flipped to ``False`` — no socket is dropped and no client is
+    disconnected.  Returns ``True`` on success, ``False`` when the registry
+    does not expose this port (older/newer Maya layout), in which case the
+    caller should fall back to :func:`_reopen_port_without_warning`.
+    """
+    registry = _commandport_registry()
+    entry = registry.get(port)
+    server = getattr(entry, "servObj", None)
+    if server is None or not hasattr(server, "securityWarning"):
+        return False
+    try:
+        server.securityWarning = False
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("in-place commandPort warning clear failed for %s: %s", port, exc)
+        return False
+    return True
+
+
+def _reopen_port_without_warning(cmds: object, port: str) -> bool:
+    """Close and re-open ``port`` with ``-securityWarning false``.
+
+    Last-resort path for Maya builds that do not expose the listener
+    registry.  It **drops the connection of any client currently attached to
+    that port**, so :func:`suppress_security_warnings` only uses it for ports
+    :func:`disable_warning_in_place` could not handle.
+
+    The original ``sourceType`` is preserved — re-opening as MEL breaks any
+    Python listener still used by legacy MCP bridges.
+    """
+    source_type = _port_source_type(cmds, port)
+    cmds.commandPort(name=port, close=True)  # type: ignore[union-attr]
+    cmds.commandPort(  # type: ignore[union-attr]
+        name=port,
+        securityWarning=False,
+        sourceType=source_type,
+    )
+    return True
+
+
 def suppress_security_warnings() -> int:
     """Disable the commandPort security warning on every open port.
 
-    Walks every port returned by ``commandPort -q -name`` and re-opens
-    it with ``-securityWarning false`` so subsequent requests skip the
-    modal dialog.  Pass-through when:
+    Prefers :func:`disable_warning_in_place`, which flips the flag on Maya's
+    live listener object and leaves the socket — and every connected client —
+    untouched (issue #3929).  Only ports Maya's registry does not cover fall
+    back to the destructive close/re-open path.  Pass-through when:
 
     * Maya is not importable (standalone build, ``mayapy`` test run).
     * No ports are open (the common case when the user has not enabled
@@ -161,8 +236,8 @@ def suppress_security_warnings() -> int:
     Returns
     -------
     int
-        The number of ports that were re-opened with the warning
-        disabled.  ``0`` covers every no-op path above.
+        The number of ports whose security warning was disabled.
+        ``0`` covers every no-op path above.
     """
     if _is_disabled_by_env():
         logger.debug("%s=0 — leaving commandPort security warnings on", ENV_DISABLE_WARNING)
@@ -178,26 +253,25 @@ def suppress_security_warnings() -> int:
         return 0
 
     fixed = 0
+    reopened = 0
     for port in ports:
         try:
-            # Closing then re-opening with -securityWarning false is the
-            # only way to flip the flag on an existing port; Maya does
-            # not expose a runtime mutator for this attribute.  Preserve
-            # the original sourceType — re-opening as MEL breaks any
-            # Python listener still used by legacy MCP bridges.
-            source_type = _port_source_type(cmds, port)
-            cmds.commandPort(name=port, close=True)
-            cmds.commandPort(
-                name=port,
-                securityWarning=False,
-                sourceType=source_type,
-            )
-            fixed += 1
+            if disable_warning_in_place(port):
+                fixed += 1
+                continue
+            # Fallback: Maya does not expose this listener, so the only way
+            # to flip the flag is a close/re-open cycle.  Preserve the
+            # original sourceType — re-opening as MEL breaks any Python
+            # listener still used by legacy MCP bridges.
+            if _reopen_port_without_warning(cmds, port):
+                fixed += 1
+                reopened += 1
         except Exception as exc:  # noqa: BLE001
             logger.debug("Could not disable security warning on %s: %s", port, exc)
     if fixed:
         logger.info(
-            "Disabled commandPort security warning on %d port(s) — see issue #148",
+            "Disabled commandPort security warning on %d port(s) (%d via close/re-open) — see issue #148",
             fixed,
+            reopened,
         )
     return fixed

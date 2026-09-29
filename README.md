@@ -297,6 +297,15 @@ auto-load. `maya.utils.executeDeferred` runs on Maya's **idle event loop**,
 which only fires once the main thread actually goes idle; during a GUI
 start-up that may never happen, and the plug-in silently never loads.
 
+Never pass `lowestPriority` to `maya.utils.executeDeferred` either: it forwards
+extra keyword arguments to the callable, so the load callback raises
+`TypeError` inside Maya's deferred dispatcher and fails with no visible error.
+`cmds.evalDeferred` treats `lowestPriority` as the scheduling flag it is.
+
+If auto-load fails, the reason is written to the Script Editor, Maya's status
+line, and `<DCC_MCP_MAYA_BOOTSTRAP_ERROR_DIR>` (default
+`~/.dcc-mcp/receipts/bootstrap-errors/`).
+
 Useful plugin defaults:
 
 | Mode | URL |

@@ -156,6 +156,27 @@ Avoid calling plain `dcc_mcp_maya.start_server()` from Maya GUI startup code.
 GUI sessions need a Maya UI dispatcher for `affinity: main` tools; the plugin
 installs it for you.
 
+### Auto-load troubleshooting
+
+If the plugin does not load, look for these two signals before guessing:
+
+- **Script Editor / status line warning** — a failed auto-load now reports
+  through `cmds.warning`, so it shows up in Maya even when the Script Editor
+  has never been opened.
+- **Log file** — `<DCC_MCP_LOG_DIR>` (or the OS temp directory) /
+  `dcc-mcp-maya-userSetup.log` holds the full traceback of every attempt.
+
+The most common cause is the wrong scheduling API:
+
+```python
+# WRONG — lowestPriority is forwarded to the callback (TypeError, silently
+# swallowed by Maya's deferred dispatcher): no plugin, no server, no error.
+maya.utils.executeDeferred(_load_dcc_mcp_maya, lowestPriority=True)
+
+# RIGHT — lowestPriority is a scheduling flag of the evalDeferred command.
+cmds.evalDeferred(_load_dcc_mcp_maya, lowestPriority=True)
+```
+
 ## Method 5 — direct start_server for debugging
 
 Direct server mode is useful for local debugging and `mayapy` scripts. In Maya

@@ -275,6 +275,34 @@ def _is_interactive() -> bool:
         return False
 
 
+# ── user-visible diagnostics (issue #3929) ─────────────────────────────────
+
+
+def _display(message: str, *, error: bool = False) -> None:
+    """Show ``message`` where an artist or TD will actually see it.
+
+    ``logger.error`` alone is invisible in Maya — the ``logging`` package has
+    no handler configured inside Maya, so a failed plug-in load used to leave
+    the session with no MCP server and no explanation at all.
+
+    :meth:`OpenMaya.MGlobal.displayError` / ``displayWarning`` write to the
+    Script Editor **and** Maya's status line, which is visible even when the
+    Script Editor has never been opened. Best effort: reporting must never
+    mask the original failure, so every channel is guarded.
+    """
+    try:
+        if error:
+            om.MGlobal.displayError(message)
+        else:
+            om.MGlobal.displayWarning(message)
+    except Exception:  # noqa: BLE001 — never let reporting raise
+        pass
+    try:
+        cmds.warning(message)
+    except Exception:  # noqa: BLE001
+        pass
+
+
 # ── crash-reporter suppression (issue #241) ─────────────────────────────────
 
 
@@ -393,12 +421,22 @@ def initializePlugin(plugin):
     try:
         _enable_crash_reporter_suppression_for_plugin()
         if _is_interactive():
-            _add_menu()
+            # Issue #3929 — a menu failure must never cost us the server, so
+            # the two startup steps are no longer chained in one try block.
+            try:
+                _add_menu()
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("dcc-mcp-maya menu setup failed: %s", exc)
             _start_async()
         else:
             _start()
     except Exception as exc:
+        message = "dcc-mcp-maya: plug-in init failed — MCP tools are unavailable (%s: %s)" % (
+            type(exc).__name__,
+            exc,
+        )
         logger.error("dcc-mcp-maya plugin failed to initialize: %s", exc)
+        _display(message, error=True)
         raise RuntimeError(f"dcc-mcp-maya init failed: {exc}") from exc
 
 
@@ -525,6 +563,25 @@ def _export_worker_env() -> None:
 
 
 def _start() -> None:
+    """Start the MCP server (called from Maya main thread).
+
+    Thin wrapper around :func:`_start_impl` that guarantees the failure is
+    visible. ``_start`` is handed to ``cmds.evalDeferred``, so an exception
+    raised here is caught by Maya's deferred dispatcher and reported nowhere
+    (issue #3929): the plug-in manager says "loaded", no MCP server ever
+    starts, and nothing in the UI explains why.
+    """
+    try:
+        _start_impl()
+    except Exception as exc:  # noqa: BLE001 — report, then let Maya see it too
+        _display(
+            "dcc-mcp-maya: MCP server failed to start — %s: %s" % (type(exc).__name__, exc),
+            error=True,
+        )
+        raise
+
+
+def _start_impl() -> None:
     """Start the MCP server (called from Maya main thread)."""
     global _handle, _host, _host_dispatcher, _host_startup
 
@@ -646,7 +703,12 @@ def _start_async() -> None:
     try:
         cmds.evalDeferred(_start, lowestPriority=True)
     except Exception as exc:
+        message = "dcc-mcp-maya: could not schedule MCP server startup — %s: %s" % (
+            type(exc).__name__,
+            exc,
+        )
         logger.error("Failed to schedule MCP server startup: %s", exc)
+        _display(message, error=True)
         raise
 
 

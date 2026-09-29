@@ -6,6 +6,7 @@ import json
 import logging
 import os
 import sys
+import time
 import traceback
 from datetime import datetime, timezone
 from pathlib import Path
@@ -15,6 +16,11 @@ from typing import Optional
 logger = logging.getLogger(__name__)
 
 BOOTSTRAP_ERROR_DIR_ENV = "DCC_MCP_MAYA_BOOTSTRAP_ERROR_DIR"
+
+#: Maximum number of watchdog-driven load retries after the deferred call.
+WATCHDOG_MAX_ATTEMPTS = 3
+#: Seconds the watchdog waits between two load attempts.
+WATCHDOG_GRACE_SECS = 10.0
 
 
 def _bootstrap_error_dir() -> Path:
@@ -40,6 +46,14 @@ def _report_failure(stage: str, exc: BaseException) -> None:
         import maya.cmds as cmds
 
         cmds.warning(message)
+    except Exception:
+        pass
+    try:
+        # MGlobal also writes to Maya's status line, so the failure is visible
+        # even when the Script Editor has never been opened.
+        import maya.api.OpenMaya as om
+
+        om.MGlobal.displayWarning(message)
     except Exception:
         pass
     try:
@@ -123,9 +137,37 @@ def _load_dcc_mcp_maya() -> None:
         return
 
     try:
-        bootstrap_user_setup(defer=False)
+        _load_via_bootstrap(bootstrap_user_setup)
     except Exception as exc:
         _report_failure("plugin_load", exc)
+        return
+
+    # A load that returns cleanly without registering the plug-in is the
+    # failure mode that started this investigation: every channel reported
+    # success while no MCP server existed. Verify instead of assuming.
+    try:
+        cmds = _maya_cmds()
+        if cmds is not None and not cmds.pluginInfo("dcc_mcp_maya_plugin", query=True, loaded=True):
+            _report_failure(
+                "plugin_verify",
+                RuntimeError(
+                    "bootstrap_user_setup() returned but dcc_mcp_maya_plugin is not loaded; "
+                    "check the Plug-in Manager and the bootstrap-error log"
+                ),
+            )
+    except Exception as exc:
+        _report_failure("plugin_verify", exc)
+
+
+def _load_via_bootstrap(bootstrap_user_setup) -> None:
+    """Run the adapter's captured, bounded bootstrap.
+
+    Kept as a separate seam so the import phase and the load phase stay
+    independently reportable (and testable) -- "the adapter package is not
+    importable" and "the plug-in did not load" need different fixes.
+    """
+    # ``defer=False``: *we* are the deferred callback already.
+    bootstrap_user_setup(defer=False)
 
 
 def _maya_cmds() -> Optional[ModuleType]:
@@ -162,4 +204,84 @@ def _schedule(callback) -> None:
         _report_failure("schedule", exc)
 
 
+def _plugin_loaded() -> bool:
+    """Return True when the plug-in is registered in this Maya session."""
+    cmds = _maya_cmds()
+    if cmds is None:
+        return False
+    try:
+        return bool(cmds.pluginInfo("dcc_mcp_maya_plugin", query=True, loaded=True))
+    except Exception:
+        return False
+
+
+def _arm_autoload_watchdog() -> None:
+    """Retry the plug-in load from Maya's idle queue, then stop.
+
+    ``cmds.evalDeferred`` is the primary path and normally fires during
+    start-up. This watchdog covers the cases where it does not:
+
+    * the deferred item is dropped while Maya is still booting (packaged /
+      ``.mod`` installs where ``userSetup.py`` is sourced very early),
+    * the first attempt runs before another plug-in or studio bootstrap has
+      finished extending ``MAYA_PLUG_IN_PATH``.
+
+    At most :data:`WATCHDOG_MAX_ATTEMPTS` retries are made, spaced by
+    :data:`WATCHDOG_GRACE_SECS`; the job then reports the give-up through
+    :func:`_report_failure` and removes itself, so a Maya session never
+    carries a permanently polling job.
+    """
+    cmds = _maya_cmds()
+    script_job = getattr(cmds, "scriptJob", None) if cmds is not None else None
+    if script_job is None:
+        return
+
+    # ``next_check`` stays ``None`` until the first idle tick so both tunables
+    # are read from module scope at call time.
+    state = {"job": None, "attempts": 0, "next_check": None, "armed_at": time.monotonic()}
+
+    def _disarm() -> None:
+        job = state.get("job")
+        state["job"] = None
+        if job is not None:
+            try:
+                cmds.scriptJob(kill=job, force=True)
+            except Exception:
+                pass
+
+    def _on_idle() -> None:
+        if _plugin_loaded():
+            _disarm()
+            return
+        now = time.monotonic()
+        if state["next_check"] is None:
+            state["next_check"] = state["armed_at"] + WATCHDOG_GRACE_SECS
+        if now < state["next_check"]:
+            return
+        if state["attempts"] >= WATCHDOG_MAX_ATTEMPTS:
+            # Give up exactly once: a host that cannot kill the scriptJob must
+            # not turn the give-up into an infinite warning stream.
+            if state.get("gave_up"):
+                return
+            state["gave_up"] = True
+            _disarm()
+            _report_failure(
+                "watchdog_give_up",
+                RuntimeError(
+                    "plug-in still not loaded after {} retries; load it manually with "
+                    "cmds.loadPlugin('dcc_mcp_maya_plugin')".format(WATCHDOG_MAX_ATTEMPTS)
+                ),
+            )
+            return
+        state["attempts"] += 1
+        state["next_check"] = now + WATCHDOG_GRACE_SECS
+        _load_dcc_mcp_maya()
+
+    try:
+        state["job"] = script_job(event=("idle", _on_idle))
+    except Exception as exc:
+        _report_failure("watchdog_schedule", exc)
+
+
 _schedule(_load_dcc_mcp_maya)
+_arm_autoload_watchdog()
