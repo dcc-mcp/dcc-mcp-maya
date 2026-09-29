@@ -9,7 +9,7 @@ your existing ``userSetup.py``).  On every Maya launch it:
    tools route to the correct instance.
 3. Enables the shared MCP gateway on :data:`DEFAULT_GATEWAY_PORT` — the
    first Maya to bind that port wins the election.
-4. Loads the ``dcc_mcp_maya`` plugin via :mod:`maya.utils.executeDeferred`.
+4. Loads the ``dcc_mcp_maya`` plugin via ``cmds.evalDeferred(..., lowestPriority=True)``.
 
 See ``docs/guide/multi-instance.md`` (EN) / ``docs/zh/guide/multi-instance.md``
 (ZH) for the full deployment guide.
@@ -77,10 +77,19 @@ def _load_dcc_mcp_maya() -> None:
 
 
 try:
-    import maya.utils  # type: ignore[import]
+    import maya.cmds as cmds  # type: ignore[import]
 
-    maya.utils.executeDeferred(_load_dcc_mcp_maya)
-except ImportError:
+    # ``cmds.evalDeferred`` is the scheduling API: ``lowestPriority`` is a
+    # *scheduling* flag there, whereas ``maya.utils.executeDeferred`` would
+    # forward it to the callback (TypeError, silently swallowed by Maya).
+    cmds.evalDeferred(_load_dcc_mcp_maya, lowestPriority=True)
+except Exception as exc:  # noqa: BLE001
     # Not running inside Maya — the helpers above are still importable for
     # testing / introspection (see tests/test_multi_instance_example.py).
-    pass
+    # Inside Maya a scheduling failure is reported, never swallowed: a silent
+    # except here is exactly the failure mode this example warns about.
+    logger.warning("dcc-mcp-maya auto-load could not be scheduled: %s", exc)
+    try:
+        cmds.warning("dcc-mcp-maya auto-load could not be scheduled: %s" % (exc,))
+    except Exception:  # noqa: BLE001
+        pass

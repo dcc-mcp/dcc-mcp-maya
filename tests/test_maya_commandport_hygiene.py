@@ -11,6 +11,7 @@ from __future__ import annotations
 
 # Import built-in modules
 import sys
+from types import ModuleType
 from unittest.mock import MagicMock, patch
 
 # Import third-party modules
@@ -206,3 +207,88 @@ class TestSuppressSecurityWarnings:
         monkeypatch.setitem(sys.modules, "maya.cmds", None)
         with patch.object(_commandport, "_list_open_ports", return_value=["only"]):
             assert _commandport.suppress_security_warnings() == 0
+
+
+# ────────────────────────────────────────────────────────────────────────
+# disable_warning_in_place (issue #3929)
+# ────────────────────────────────────────────────────────────────────────
+
+
+def _fake_listener(security_warning=True):
+    listener = MagicMock()
+    listener.servObj = MagicMock()
+    listener.servObj.securityWarning = security_warning
+    return listener
+
+
+def _patch_registry(monkeypatch, registry):
+    """Make ``maya.app.general.CommandPort`` expose ``registry``."""
+    module = ModuleType("maya.app.general.CommandPort")
+    setattr(module, "__commandPorts", registry)
+    app_module = ModuleType("maya.app.general")
+    app_module.CommandPort = module
+    app_pkg = ModuleType("maya.app")
+    app_pkg.general = app_module
+    maya_module = ModuleType("maya")
+    maya_module.app = app_pkg
+    monkeypatch.setitem(sys.modules, "maya", maya_module)
+    monkeypatch.setitem(sys.modules, "maya.app", app_pkg)
+    monkeypatch.setitem(sys.modules, "maya.app.general", app_module)
+    monkeypatch.setitem(sys.modules, "maya.app.general.CommandPort", module)
+    return module
+
+
+class TestDisableWarningInPlace:
+    def test_clears_flag_without_touching_the_port(self, monkeypatch):
+        listener = _fake_listener()
+        _patch_registry(monkeypatch, {":50007": listener})
+
+        assert _commandport.disable_warning_in_place(":50007") is True
+        assert listener.servObj.securityWarning is False
+
+    def test_false_when_port_not_in_registry(self, monkeypatch):
+        _patch_registry(monkeypatch, {":50007": _fake_listener()})
+        assert _commandport.disable_warning_in_place(":7001") is False
+
+    def test_false_when_registry_module_missing(self, monkeypatch):
+        monkeypatch.setitem(sys.modules, "maya.app.general.CommandPort", None)
+        assert _commandport.disable_warning_in_place(":50007") is False
+
+    def test_false_when_listener_has_no_serv_obj(self, monkeypatch):
+        _patch_registry(monkeypatch, {":50007": object()})
+        assert _commandport.disable_warning_in_place(":50007") is False
+
+
+class TestSuppressSecurityWarningsInPlace:
+    def test_does_not_close_ports_covered_by_the_registry(self, monkeypatch):
+        """Regression #3929: an in-use commandPort must survive plug-in startup."""
+        monkeypatch.delenv(_commandport.ENV_DISABLE_WARNING, raising=False)
+        listener = _fake_listener()
+        _patch_registry(monkeypatch, {":7001": listener})
+
+        fake_cmds = MagicMock()
+        fake_maya = sys.modules["maya"]
+        fake_maya.cmds = fake_cmds
+        monkeypatch.setitem(sys.modules, "maya.cmds", fake_cmds)
+
+        with patch.object(_commandport, "_list_open_ports", return_value=[":7001"]):
+            assert _commandport.suppress_security_warnings() == 1
+
+        assert listener.servObj.securityWarning is False
+        assert fake_cmds.commandPort.call_count == 0, "no close/re-open cycle for a registered port"
+
+    def test_falls_back_to_reopen_for_unregistered_ports(self, monkeypatch):
+        monkeypatch.delenv(_commandport.ENV_DISABLE_WARNING, raising=False)
+        _patch_registry(monkeypatch, {})
+        fake_cmds = MagicMock()
+        fake_cmds.commandPort.side_effect = ["python", None, None]
+        sys.modules["maya"].cmds = fake_cmds
+        monkeypatch.setitem(sys.modules, "maya.cmds", fake_cmds)
+
+        with patch.object(_commandport, "_list_open_ports", return_value=[":7001"]):
+            assert _commandport.suppress_security_warnings() == 1
+
+        kwargs_seq = [c[1] for c in fake_cmds.commandPort.call_args_list]
+        assert kwargs_seq[0] == {"name": ":7001", "query": True, "sourceType": True}
+        assert kwargs_seq[1] == {"name": ":7001", "close": True}
+        assert kwargs_seq[2] == {"name": ":7001", "securityWarning": False, "sourceType": "python"}

@@ -749,3 +749,74 @@ class TestExportWorkerEnv:
             plugin_module._export_worker_env()
             assert "DCC_MCP_PYTHON_EXECUTABLE" in os.environ
             assert "DCC_MCP_PYTHON_INIT_SNIPPET" in os.environ
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# User-visible failure reporting (issue #3929)
+# ──────────────────────────────────────────────────────────────────────────────
+
+
+class TestStartupFailureIsVisible:
+    """A failed startup must reach the artist, not just ``logger``."""
+
+    def test_display_routes_errors_to_mglobal(self, plugin_module, mock_maya_modules):
+        plugin_module._display("boom", error=True)
+
+        mock_maya_modules.api.OpenMaya.MGlobal.displayError.assert_called_once_with("boom")
+
+    def test_display_routes_warnings_to_mglobal(self, plugin_module, mock_maya_modules):
+        plugin_module._display("careful")
+
+        mock_maya_modules.api.OpenMaya.MGlobal.displayWarning.assert_called_once_with("careful")
+
+    def test_display_never_raises_when_channels_are_broken(self, plugin_module, mock_maya_modules):
+        mglobal = mock_maya_modules.api.OpenMaya.MGlobal
+        mglobal.displayError.side_effect = RuntimeError("no UI")
+        mock_maya_modules.cmds.warning.side_effect = RuntimeError("no UI")
+
+        plugin_module._display("boom", error=True)  # must not raise
+
+    def test_initialize_plugin_reports_before_raising(self, plugin_module, mock_maya_modules):
+        mock_maya_modules.cmds.about.side_effect = lambda **kwargs: False if kwargs.get("batch") else "2025"
+        plugin_module._add_menu = MagicMock()
+        plugin_module._start_async = MagicMock(side_effect=RuntimeError("schedule failed"))
+
+        with pytest.raises(RuntimeError):
+            plugin_module.initializePlugin(MagicMock())
+
+        mglobal = mock_maya_modules.api.OpenMaya.MGlobal
+        assert mglobal.displayError.call_count == 1
+        assert "dcc-mcp-maya" in mglobal.displayError.call_args[0][0]
+
+    def test_menu_failure_does_not_cost_the_server(self, plugin_module, mock_maya_modules):
+        """Issue #3929: menu creation must never block MCP server startup."""
+        mock_maya_modules.cmds.about.side_effect = lambda **kwargs: False if kwargs.get("batch") else "2025"
+        plugin_module._add_menu = MagicMock(side_effect=RuntimeError("no MayaWindow"))
+        plugin_module._start_async = MagicMock()
+
+        plugin_module.initializePlugin(MagicMock())
+
+        plugin_module._start_async.assert_called_once_with()
+
+    def test_deferred_start_reports_and_reraises(self, plugin_module, mock_maya_modules):
+        """``_start`` is a deferred callback: without this, Maya swallows it."""
+        plugin_module._start_impl = MagicMock(side_effect=RuntimeError("server dead"))
+
+        with pytest.raises(RuntimeError):
+            plugin_module._start()
+
+        mglobal = mock_maya_modules.api.OpenMaya.MGlobal
+        assert mglobal.displayError.call_count == 1
+        message = mglobal.displayError.call_args[0][0]
+        assert "server dead" in message
+        assert "dcc-mcp-maya" in message
+
+    def test_schedule_failure_is_reported(self, plugin_module, mock_maya_modules):
+        mock_maya_modules.cmds.evalDeferred.side_effect = RuntimeError("queue gone")
+
+        with pytest.raises(RuntimeError):
+            plugin_module._start_async()
+
+        mglobal = mock_maya_modules.api.OpenMaya.MGlobal
+        assert mglobal.displayError.call_count == 1
+        assert "schedule" in mglobal.displayError.call_args[0][0].lower()
