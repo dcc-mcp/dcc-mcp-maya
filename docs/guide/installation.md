@@ -163,8 +163,13 @@ If the plugin does not load, look for these two signals before guessing:
 - **Script Editor / status line warning** — a failed auto-load now reports
   through `cmds.warning`, so it shows up in Maya even when the Script Editor
   has never been opened.
-- **Log file** — `<DCC_MCP_LOG_DIR>` (or the OS temp directory) /
-  `dcc-mcp-maya-userSetup.log` holds the full traceback of every attempt.
+- **Log file** — `<DCC_MCP_MAYA_BOOTSTRAP_ERROR_DIR>` (default
+  `~/.dcc-mcp/receipts/bootstrap-errors/`) holds one JSON line per failed
+  attempt in `userSetup-<YYYYMMDD>.jsonl`, alongside core's
+  `dcc-mcp-maya.<pid>.host-errors.log`.
+
+`DCC_MCP_LOG_DIR` is a different channel: it holds the plugin's Python
+fatal-signal traces (`maya-faulthandler-<pid>.log`), not auto-load failures.
 
 The most common cause is the wrong scheduling API:
 

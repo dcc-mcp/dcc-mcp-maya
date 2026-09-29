@@ -302,9 +302,12 @@ extra keyword arguments to the callable, so the load callback raises
 `TypeError` inside Maya's deferred dispatcher and fails with no visible error.
 `cmds.evalDeferred` treats `lowestPriority` as the scheduling flag it is.
 
-If auto-load fails, the reason is written to the Script Editor, Maya's status
-line, and `<DCC_MCP_MAYA_BOOTSTRAP_ERROR_DIR>` (default
-`~/.dcc-mcp/receipts/bootstrap-errors/`).
+When you copy or source the bundled `maya/userSetup.py`, a failed auto-load is
+written to the Script Editor, Maya's status line, and
+`<DCC_MCP_MAYA_BOOTSTRAP_ERROR_DIR>` (default
+`~/.dcc-mcp/receipts/bootstrap-errors/`). A hand-written `userSetup.py` like
+the snippet above only gets the plug-in's own Script Editor / status-line
+report, because the JSONL record is written by the bundled file.
 
 Useful plugin defaults:
 

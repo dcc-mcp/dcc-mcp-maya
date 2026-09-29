@@ -149,8 +149,13 @@ cmds.evalDeferred(_load_dcc_mcp_maya, lowestPriority=True)
 
 - **Script Editor / 状态栏告警** —— 自动加载失败现在会通过 `cmds.warning`
   上报，即使从未打开过 Script Editor 也能在 Maya 里看到。
-- **日志文件** —— `<DCC_MCP_LOG_DIR>`（或系统临时目录）下的
-  `dcc-mcp-maya-userSetup.log`，记录每次尝试的完整堆栈。
+- **日志文件** —— `<DCC_MCP_MAYA_BOOTSTRAP_ERROR_DIR>`（默认
+  `~/.dcc-mcp/receipts/bootstrap-errors/`）下，每次失败尝试写一行 JSON 到
+  `userSetup-<YYYYMMDD>.jsonl`，同目录还有 core 写的
+  `dcc-mcp-maya.<pid>.host-errors.log`。
+
+`DCC_MCP_LOG_DIR` 是另一个通道：放的是插件的 Python 致命信号堆栈
+（`maya-faulthandler-<pid>.log`），不是自动加载失败记录。
 
 最常见的原因是调度 API 用错了：
 

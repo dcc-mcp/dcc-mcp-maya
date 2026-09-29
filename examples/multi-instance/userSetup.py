@@ -83,7 +83,13 @@ try:
     # *scheduling* flag there, whereas ``maya.utils.executeDeferred`` would
     # forward it to the callback (TypeError, silently swallowed by Maya).
     cmds.evalDeferred(_load_dcc_mcp_maya, lowestPriority=True)
-except Exception:  # noqa: BLE001
+except Exception as exc:  # noqa: BLE001
     # Not running inside Maya — the helpers above are still importable for
     # testing / introspection (see tests/test_multi_instance_example.py).
-    pass
+    # Inside Maya a scheduling failure is reported, never swallowed: a silent
+    # except here is exactly the failure mode this example warns about.
+    logger.warning("dcc-mcp-maya auto-load could not be scheduled: %s", exc)
+    try:
+        cmds.warning("dcc-mcp-maya auto-load could not be scheduled: %s" % (exc,))
+    except Exception:  # noqa: BLE001
+        pass
