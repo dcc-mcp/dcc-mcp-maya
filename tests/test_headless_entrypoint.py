@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib
 import json
 import sys
 import threading
@@ -9,13 +10,18 @@ from types import SimpleNamespace
 
 import pytest
 
-from dcc_mcp_maya import headless
 from dcc_mcp_maya.__main__ import main
 from dcc_mcp_maya.server import DccServerOptions, MayaServerOptions
 
 
 @pytest.fixture
-def stack(monkeypatch):
+def headless():
+    # Dependency-contract tests reload adapter modules; patch the current one.
+    return importlib.import_module("dcc_mcp_maya.headless")
+
+
+@pytest.fixture
+def stack(monkeypatch, headless):
     events = []
     owner = threading.get_ident()
     dispatcher = object()
@@ -53,10 +59,11 @@ def stack(monkeypatch):
     monkeypatch.setattr(headless, "BlockingDispatcher", lambda: dispatcher)
     monkeypatch.setattr(headless, "MayaHost", Host)
     monkeypatch.setattr(headless, "MayaMcpServer", Server)
+    monkeypatch.setattr(headless, "core_version", "0.19.64")
     return events, Host, Server
 
 
-def test_foreground_owns_dispatcher_and_cleans_up_after_pump(stack):
+def test_foreground_owns_dispatcher_and_cleans_up_after_pump(stack, headless):
     events, _, _ = stack
     stop = threading.Event()
     headless.serve_headless(
@@ -69,7 +76,7 @@ def test_foreground_owns_dispatcher_and_cleans_up_after_pump(stack):
 
 
 @pytest.mark.parametrize("failure", ["start", "register_builtin_actions", "on_started"])
-def test_startup_failure_stops_owned_server_and_dispatcher(stack, failure):
+def test_startup_failure_stops_owned_server_and_dispatcher(stack, failure, headless):
     events, _, server = stack
 
     def fail(*args, **kwargs):
@@ -83,7 +90,7 @@ def test_startup_failure_stops_owned_server_and_dispatcher(stack, failure):
     assert events[-2:] == ["server_stop", "host_stop"]
 
 
-def test_interactive_host_is_rejected_before_server_start(stack):
+def test_interactive_host_is_rejected_before_server_start(stack, headless):
     events, host, _ = stack
     host.is_background = lambda self: False
     with pytest.raises(RuntimeError, match="batch Maya"):
@@ -91,7 +98,7 @@ def test_interactive_host_is_rejected_before_server_start(stack):
     assert events == ["host_stop"]
 
 
-def test_host_cleanup_runs_even_if_server_shutdown_fails(stack):
+def test_host_cleanup_runs_even_if_server_shutdown_fails(stack, headless):
     events, _, server = stack
 
     def fail(self):
@@ -103,7 +110,7 @@ def test_host_cleanup_runs_even_if_server_shutdown_fails(stack):
     assert events[-1] == "host_stop"
 
 
-def test_off_main_thread_is_rejected(stack):
+def test_off_main_thread_is_rejected(stack, headless):
     errors = []
 
     def run():
@@ -119,7 +126,7 @@ def test_off_main_thread_is_rejected(stack):
     assert stack[0] == []
 
 
-def test_old_core_is_rejected_before_server_start(stack, monkeypatch):
+def test_old_core_is_rejected_before_server_start(stack, monkeypatch, headless):
     monkeypatch.setattr(headless, "core_version", "0.19.45")
     with pytest.raises(RuntimeError, match="dcc-mcp-core>=0.19.64"):
         headless.serve_headless()
@@ -144,7 +151,7 @@ def test_instance_registration_preserves_older_gui_options(monkeypatch, instance
 
 
 @pytest.mark.parametrize("failure", [None, KeyboardInterrupt, RuntimeError])
-def test_cli_initializes_sdk_and_always_uninitializes(monkeypatch, capsys, failure):
+def test_cli_initializes_sdk_and_always_uninitializes(monkeypatch, capsys, failure, headless):
     events = []
     standalone = SimpleNamespace(
         initialize=lambda **kwargs: events.append(("initialize", kwargs)),

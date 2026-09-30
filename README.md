@@ -200,7 +200,7 @@ Start a new standalone instance through Maya's official Python executable:
 mayapy -m dcc_mcp_maya --port 0 --gateway-port 9765 --json
 ```
 
-The CLI requires `dcc-mcp-core>=0.19.64`, initializes Maya, pumps Core's dispatcher on the owning main thread,
+The CLI requires Core 0.19.64 or newer, initializes Maya, pumps Core's dispatcher on the owning main thread,
 and uninitializes Maya on shutdown. The startup JSON reports the actual host
 PID and direct MCP endpoint; the gateway discovers this standalone instance.
 Use repeated `--skill-path` arguments to load project skills and
