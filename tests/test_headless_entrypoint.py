@@ -11,6 +11,7 @@ import pytest
 
 from dcc_mcp_maya import headless
 from dcc_mcp_maya.__main__ import main
+from dcc_mcp_maya.server import DccServerOptions, MayaServerOptions
 
 
 @pytest.fixture
@@ -123,6 +124,23 @@ def test_old_core_is_rejected_before_server_start(stack, monkeypatch):
     with pytest.raises(RuntimeError, match="dcc-mcp-core>=0.19.64"):
         headless.serve_headless()
     assert stack[0] == []
+
+
+@pytest.mark.parametrize("instance_type", [None, "standalone"])
+def test_instance_registration_preserves_older_gui_options(monkeypatch, instance_type):
+    captured = {}
+    sentinel = object()
+
+    def from_env(**kwargs):
+        captured.update(kwargs)
+        if instance_type is None:
+            assert "instance_type" not in kwargs
+        return sentinel
+
+    monkeypatch.setattr(DccServerOptions, "from_env", from_env)
+    assert MayaServerOptions(instance_type=instance_type).to_core_options() is sentinel
+    if instance_type is not None:
+        assert captured["instance_type"] == instance_type
 
 
 @pytest.mark.parametrize("failure", [None, KeyboardInterrupt, RuntimeError])
