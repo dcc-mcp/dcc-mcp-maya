@@ -192,6 +192,26 @@ print(handle.mcp_url())  # Exact direct endpoint selected by the OS
 Connect through the stable gateway on `9765`, or use the printed URL for an
 explicit direct debugging connection.
 
+### Headless Mayapy
+
+Start a new standalone instance through Maya's official Python executable:
+
+```bash
+mayapy -m dcc_mcp_maya --port 0 --gateway-port 9765 --json
+```
+
+The CLI requires `dcc-mcp-core>=0.19.64`, initializes Maya, pumps Core's dispatcher on the owning main thread,
+and uninitializes Maya on shutdown. The startup JSON reports the actual host
+PID and direct MCP endpoint; the gateway discovers this standalone instance.
+Use repeated `--skill-path` arguments to load project skills and
+`--registry-dir` to select an isolated registry. The existing `dcc-mcp-maya`
+console command continues to manage installation.
+
+For an already initialized batch interpreter, call
+`dcc_mcp_maya.serve_headless(stop_event=...)` from the main thread. The caller
+owns Maya initialization and the stop event; the function owns its server and
+dispatcher. GUI sessions use the plugin or `start_server()` with a UI dispatcher.
+
 ## Architecture
 
 <p align="center">

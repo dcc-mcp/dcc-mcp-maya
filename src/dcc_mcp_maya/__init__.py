@@ -175,6 +175,7 @@ from dcc_mcp_maya.dispatcher import (
     create_dispatcher,
     create_pumped_dispatcher,
 )
+from dcc_mcp_maya.headless import serve_headless
 from dcc_mcp_maya.host import MayaCallableDispatcher, MayaHost
 from dcc_mcp_maya.server import DEFAULT_PORT, MayaMcpServer, MayaServerOptions, start_server, stop_server
 from dcc_mcp_maya.sidecar import (
@@ -197,6 +198,7 @@ __all__ = [
     "MayaServerOptions",
     "start_server",
     "stop_server",
+    "serve_headless",
     # Host adapter (main-thread dispatcher)
     "MayaHost",
     "MayaCallableDispatcher",

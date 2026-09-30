@@ -126,6 +126,7 @@ class MayaServerOptions:
     enable_workflows: Optional[bool] = None
     host_dispatcher: Optional[Any] = None
     readiness_timeout_secs: Optional[int] = None
+    instance_type: Optional[str] = None
 
     def to_core_options(self) -> DccServerOptions:
         return DccServerOptions.from_env(
@@ -145,6 +146,7 @@ class MayaServerOptions:
             dcc_pid=self.dcc_pid,
             dcc_window_title=self.dcc_window_title,
             dcc_window_handle=self.dcc_window_handle,
+            **({"instance_type": self.instance_type} if self.instance_type is not None else {}),
         )
 
 
@@ -194,6 +196,7 @@ class MayaMcpServer(DccServerBase):
         host_dispatcher: Optional[Any] = None,
         readiness_timeout_secs: Optional[int] = None,
         options: Optional[MayaServerOptions] = None,
+        instance_type: Optional[str] = None,
     ) -> None:
         if options is None:
             options = MayaServerOptions(
@@ -214,6 +217,7 @@ class MayaMcpServer(DccServerBase):
                 enable_workflows=enable_workflows,
                 host_dispatcher=host_dispatcher,
                 readiness_timeout_secs=readiness_timeout_secs,
+                instance_type=instance_type,
             )
 
         super().__init__(options=options.to_core_options())
