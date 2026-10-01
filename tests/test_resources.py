@@ -38,6 +38,7 @@ from dcc_mcp_maya import (
     MayaResourceBinder,
     install_resources,
 )
+from dcc_mcp_maya import _resources as resources_mod
 from dcc_mcp_maya._resources import (
     _maya_api_signatures_producer,
     _maya_cmds_help_producer,
@@ -374,7 +375,16 @@ class TestMayaResourceBinderBind:
         for ev in DEFAULT_SCENE_EVENTS:
             assert ev in installed_events
 
-    def test_unbind_is_idempotent_and_clears_state(self) -> None:
+    def test_unbind_is_idempotent_and_clears_state(self, monkeypatch) -> None:
+        """A successful teardown clears the ids; a second unbind is a no-op.
+
+        The real ``scriptJob(kill=...)`` is pinned to "everything removed"
+        here: this asserts the *bookkeeping* contract, and Maya's answer
+        varies by host state (under ``mayapy`` without
+        ``maya.standalone.initialize()`` ``cmds.scriptJob`` does not even
+        exist, so every kill fails -- see PR #555 P2).
+        """
+        monkeypatch.setattr(resources_mod, "_default_event_remover", lambda ids: [])
         server = _FakeServer()
         binder = MayaResourceBinder(event_installer=lambda cb, evs: [1, 2])
         binder.bind(server)
@@ -382,6 +392,21 @@ class TestMayaResourceBinderBind:
         binder.unbind()
         binder.unbind()  # idempotent
         assert binder.scene_event_ids == []
+
+    def test_unbind_retains_ids_the_remover_could_not_kill(self, monkeypatch) -> None:
+        """PR #555 P2: ids are dropped only once their kill actually succeeded.
+
+        Forgetting the survivor is the leak the original fix removed -- the
+        scriptJob would stay installed against a shut-down server with no
+        handle left to remove it.
+        """
+        monkeypatch.setattr(resources_mod, "_default_event_remover", lambda ids: [2])
+        server = _FakeServer()
+        binder = MayaResourceBinder(event_installer=lambda cb, evs: [1, 2])
+        binder.bind(server)
+        binder.install_scene_events()
+        binder.unbind()
+        assert binder.scene_event_ids == [2], "the un-killed id must stay reachable for a retry"
 
 
 # ---------------------------------------------------------------------------
