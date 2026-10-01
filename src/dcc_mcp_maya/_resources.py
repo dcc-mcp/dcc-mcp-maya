@@ -43,6 +43,8 @@ import threading
 import time
 from typing import Any, Callable, Dict, List, Optional
 
+from dcc_mcp_maya._main_thread import is_main_thread, run_on_main_thread
+
 logger = logging.getLogger(__name__)
 
 #: Disable scene-snapshot publishing entirely with this env var (e.g.
@@ -469,7 +471,15 @@ class MayaResourceBinder:
         return list(self.scene_event_ids)
 
     def unbind(self) -> None:
-        """Detach scriptJobs and stop pending publishes.  Idempotent."""
+        """Detach scriptJobs and stop pending publishes.  Idempotent.
+
+        The ``scriptJob`` teardown touches ``maya.cmds``, which is not
+        thread-safe.  When called off the main thread (the plug-in's
+        *Restart MCP Server* stops the server on a daemon thread — issue
+        #552) the removal is deferred to Maya's main thread and the ids are
+        retained until it actually happens, so a failed teardown cannot leak
+        live scene-event hooks bound to a shut-down server.
+        """
         if self._unbound:
             return
         self._unbound = True
@@ -484,12 +494,34 @@ class MayaResourceBinder:
             except Exception:  # noqa: BLE001
                 pass
 
-        if self.scene_event_ids:
-            try:
-                _default_event_remover(self.scene_event_ids)
-            except Exception as exc:  # noqa: BLE001
-                logger.debug("resources: event remover raised: %s", exc)
-            self.scene_event_ids = []
+        self._remove_scene_events()
+
+    def _remove_scene_events(self) -> None:
+        """Kill the scene-event scriptJobs on Maya's main thread.
+
+        Kept separate from :meth:`unbind` so the idempotency guard on
+        ``_unbound`` cannot short-circuit a deferred retry: ``unbind``
+        marks the binder unbound immediately (pure Python, safe on any
+        thread) while the ``maya.cmds`` teardown runs later, on the main
+        thread.
+        """
+        if not self.scene_event_ids:
+            return
+
+        if not is_main_thread():
+            scheduled = run_on_main_thread(self._remove_scene_events)
+            if not scheduled:
+                logger.warning(
+                    "resources: cannot reach Maya's main thread; %d scene-event scriptJob(s) left installed",
+                    len(self.scene_event_ids),
+                )
+            return
+
+        try:
+            _default_event_remover(self.scene_event_ids)
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("resources: event remover raised: %s", exc)
+        self.scene_event_ids = []
 
     # ── Public helpers used by tests / callers that own the snapshot ──
 
