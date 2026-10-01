@@ -512,8 +512,7 @@ class MayaResourceBinder:
             scheduled = run_on_main_thread(self._remove_scene_events)
             if not scheduled:
                 logger.warning(
-                    "resources: cannot reach Maya's main thread; "
-                    "%d scene-event scriptJob(s) left installed",
+                    "resources: cannot reach Maya's main thread; %d scene-event scriptJob(s) left installed",
                     len(self.scene_event_ids),
                 )
             return

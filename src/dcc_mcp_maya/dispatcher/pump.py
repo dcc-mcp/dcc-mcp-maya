@@ -157,8 +157,7 @@ class MayaUiPump:
             scheduled = run_on_main_thread(self.uninstall)
             if not scheduled:
                 logger.warning(
-                    "MayaUiPump: cannot reach Maya's main thread; "
-                    "scriptJob %s left installed",
+                    "MayaUiPump: cannot reach Maya's main thread; scriptJob %s left installed",
                     self._script_job_id,
                 )
             return
@@ -376,8 +375,7 @@ class _CorePump:
             scheduled = run_on_main_thread(self.uninstall)
             if not scheduled:
                 logger.warning(
-                    "_CorePump: cannot reach Maya's main thread; "
-                    "scriptJob %s left installed",
+                    "_CorePump: cannot reach Maya's main thread; scriptJob %s left installed",
                     self._script_job_id,
                 )
             return
