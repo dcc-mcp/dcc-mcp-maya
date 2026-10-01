@@ -27,6 +27,7 @@ from typing import Any, Dict, Optional, Tuple
 from dcc_mcp_core import PyPumpedDispatcher
 
 # Import local modules
+from dcc_mcp_maya._main_thread import is_main_thread, run_on_main_thread
 from dcc_mcp_maya.dispatcher.standalone import MayaStandaloneDispatcher
 from dcc_mcp_maya.dispatcher.ui import MayaUiDispatcher
 
@@ -137,21 +138,49 @@ class MayaUiPump:
             return False
 
     def uninstall(self) -> None:
-        """Remove the idle-event scriptJob from Maya."""
+        """Remove the idle-event scriptJob from Maya.
+
+        ``maya.cmds`` is not thread-safe, so the kill is deferred to Maya's
+        main thread when called from anywhere else (the plug-in's *Restart
+        MCP Server* stops the server on a daemon thread — issue #552).
+
+        Our bookkeeping is only cleared once the kill actually happened or
+        the job is known to be gone; otherwise a failed teardown would drop
+        the id and leak a live idle scriptJob bound to a dead dispatcher.
+        """
         if not self._installed:
             return
 
+        if not is_main_thread():
+            # Hand the real teardown to Maya's main thread and keep
+            # ``_script_job_id`` intact so it can still be killed there.
+            scheduled = run_on_main_thread(self.uninstall)
+            if not scheduled:
+                logger.warning(
+                    "MayaUiPump: cannot reach Maya's main thread; "
+                    "scriptJob %s left installed",
+                    self._script_job_id,
+                )
+            return
+
+        killed = False
         try:
             import maya.cmds as cmds  # noqa: PLC0415
 
             if self._script_job_id is not None:
                 cmds.scriptJob(kill=self._script_job_id, force=True)
+                killed = True
                 logger.info("MayaUiPump uninstalled (scriptJob=%d)", self._script_job_id)
+            else:
+                # Installed without an id (headless Maya returns None):
+                # nothing exists to kill.
+                killed = True
         except Exception as exc:
             logger.warning("MayaUiPump: error removing scriptJob: %s", exc)
         finally:
-            self._script_job_id = None
-            self._installed = False
+            if killed:
+                self._script_job_id = None
+                self._installed = False
 
     # ── Pump implementation ───────────────────────────────────────────────────
 
@@ -335,20 +364,40 @@ class _CorePump:
             return False
 
     def uninstall(self) -> None:
-        """Remove the idle-event scriptJob from Maya."""
+        """Remove the idle-event scriptJob from Maya.
+
+        Defers to Maya's main thread when called from a worker thread —
+        ``maya.cmds`` is not thread-safe (issue #552).
+        """
         if not self._installed:
             return
+
+        if not is_main_thread():
+            scheduled = run_on_main_thread(self.uninstall)
+            if not scheduled:
+                logger.warning(
+                    "_CorePump: cannot reach Maya's main thread; "
+                    "scriptJob %s left installed",
+                    self._script_job_id,
+                )
+            return
+
+        killed = False
         try:
             import maya.cmds as cmds  # noqa: PLC0415
 
             if self._script_job_id is not None:
                 cmds.scriptJob(kill=self._script_job_id, force=True)
+                killed = True
                 logger.info("_CorePump uninstalled (scriptJob=%d)", self._script_job_id)
+            else:
+                killed = True
         except Exception as exc:
             logger.warning("_CorePump: error removing scriptJob: %s", exc)
         finally:
-            self._script_job_id = None
-            self._installed = False
+            if killed:
+                self._script_job_id = None
+                self._installed = False
 
     def _pump_tick(self) -> None:
         """Idle-event callback — drain pending Rust-side main-thread jobs."""
