@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.9.33](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.32...v0.9.33) (2026-10-01)
+
+
+### Bug Fixes
+
+* keep scene-event ids whose scriptJob kill failed ([#557](https://github.com/dcc-mcp/dcc-mcp-maya/issues/557)) ([7f95561](https://github.com/dcc-mcp/dcc-mcp-maya/commit/7f955612b5b1ecbdedfcca1238d22cf729b0d978))
+* keep scriptJob teardown on Maya's main thread during stop/restart ([874b61e](https://github.com/dcc-mcp/dcc-mcp-maya/commit/874b61e65c2ac688ff16a3707e8bf061b72f064e))
+
 ## [0.9.32](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.31...v0.9.32) (2026-09-30)
 
 
