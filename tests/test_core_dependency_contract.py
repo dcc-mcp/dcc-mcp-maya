@@ -242,9 +242,9 @@ def test_single_segment_pep440_core_version_claim_is_rejected() -> None:
 def test_readme_core_badge_uses_the_canonical_complete_upper_bound() -> None:
     content = unquote((ROOT / "README.md").read_text(encoding="utf-8"))
 
-    assert "dcc--mcp--core->=0.19.45,<0.21.0-blue" in content
-    assert "dcc--mcp--core->=0.19.45,<1.0.0-blue" not in content
-    assert "dcc--mcp--core->=0.19.45,<1.0-blue" not in content
+    assert "dcc--mcp--core->=0.19.64,<0.21.0-blue" in content
+    assert "dcc--mcp--core->=0.19.64,<1.0.0-blue" not in content
+    assert "dcc--mcp--core->=0.19.64,<1.0-blue" not in content
 
 
 def test_installer_core_dependency_contract_matches_package_metadata() -> None:
@@ -254,3 +254,36 @@ def test_installer_core_dependency_contract_matches_package_metadata() -> None:
 
     assert install.CORE_VERSION_REQUIREMENT == _core_dependency()
     assert install._core_version_specifier() == Requirement(_core_dependency()).specifier
+
+
+CORE_VERSION_GATE = re.compile(r'Version\("(?P<version>\d+(?:\.\d+)+)"\)')
+
+
+def _declared_core_floor():
+    from packaging.requirements import Requirement
+    from packaging.version import Version
+
+    specifier = Requirement(_core_dependency()).specifier
+    floors = [Version(spec.version) for spec in specifier if spec.operator == ">="]
+    assert floors, "declared Core dependency has no lower bound: %s" % _core_dependency()
+    return max(floors)
+
+
+@pytest.mark.parametrize("relative_path", ("src/dcc_mcp_maya/headless.py",))
+def test_runtime_core_gates_stay_inside_the_declared_dependency_range(relative_path: str) -> None:
+    """A runtime Core version gate must never exceed the declared dependency floor.
+
+    A gate above the floor lets pip resolve a Core that only fails later, at call
+    time, instead of failing at dependency resolution.
+    """
+    from packaging.version import Version
+
+    declared = _declared_core_floor()
+    source = (ROOT / relative_path).read_text(encoding="utf-8")
+    gates = [Version(match.group("version")) for match in CORE_VERSION_GATE.finditer(source)]
+    assert gates, "%s declares no Core version gate to keep in sync" % relative_path
+    assert declared >= max(gates), "declared Core floor %s is below the %s runtime gate %s" % (
+        declared,
+        relative_path,
+        max(gates),
+    )
