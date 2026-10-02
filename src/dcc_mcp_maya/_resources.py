@@ -43,6 +43,8 @@ import threading
 import time
 from typing import Any, Callable, Dict, List, Optional
 
+from dcc_mcp_maya._main_thread import is_main_thread, run_on_main_thread
+
 logger = logging.getLogger(__name__)
 
 #: Disable scene-snapshot publishing entirely with this env var (e.g.
@@ -324,6 +326,9 @@ def _parse_path_uri(uri: str, *, scheme: str) -> Optional[List[str]]:
 
 SnapshotProvider = Callable[[], Dict[str, Any]]
 EventInstaller = Callable[[Callable[[], None], tuple], List[int]]
+# Takes the ids to tear down and returns the ids that could **not** be
+# removed, so callers never forget a live scriptJob (issue #552 follow-up).
+EventRemover = Callable[[List[int]], Optional[List[int]]]
 BusyChecker = Callable[[], bool]
 
 
@@ -351,16 +356,47 @@ def _default_event_installer(callback: Callable[[], None], events: tuple) -> Lis
     return job_ids
 
 
-def _default_event_remover(job_ids: List[int]) -> None:
-    """Tear down the scriptJobs installed by :func:`_default_event_installer`."""
+def _default_event_remover(job_ids: List[int]) -> List[int]:
+    """Tear down the scriptJobs installed by :func:`_default_event_installer`.
+
+    Every id is killed independently, so one refusal never prevents the
+    remaining jobs from being cleaned up.  Returns the ids whose kill
+    **failed** (empty when all of them went away) so the caller can keep
+    bookkeeping for exactly the jobs that are still live.
+    """
     cmds = _maya_cmds()
     if cmds is None:
-        return
+        return []
+    failed: List[int] = []
     for jid in job_ids:
         try:
             cmds.scriptJob(kill=jid, force=True)
         except Exception as exc:  # noqa: BLE001
             logger.debug("resources: scriptJob kill(%s) failed: %s", jid, exc)
+            failed.append(jid)
+    return failed
+
+
+def _coerce_job_ids(ids: Any) -> List[int]:
+    """Normalise a remover's return value into a list of int job ids.
+
+    ``None`` and other non-iterables are treated as "nothing left" so a
+    custom / monkeypatched remover that returns nothing does not break
+    teardown.
+    """
+    if not ids:
+        return []
+    out: List[int] = []
+    try:
+        iterator = iter(ids)
+    except TypeError:
+        return []
+    for raw in iterator:
+        try:
+            out.append(int(raw))
+        except (TypeError, ValueError):
+            continue
+    return out
 
 
 # ---------------------------------------------------------------------------
@@ -469,7 +505,15 @@ class MayaResourceBinder:
         return list(self.scene_event_ids)
 
     def unbind(self) -> None:
-        """Detach scriptJobs and stop pending publishes.  Idempotent."""
+        """Detach scriptJobs and stop pending publishes.  Idempotent.
+
+        The ``scriptJob`` teardown touches ``maya.cmds``, which is not
+        thread-safe.  When called off the main thread (the plug-in's
+        *Restart MCP Server* stops the server on a daemon thread — issue
+        #552) the removal is deferred to Maya's main thread and the ids are
+        retained until it actually happens, so a failed teardown cannot leak
+        live scene-event hooks bound to a shut-down server.
+        """
         if self._unbound:
             return
         self._unbound = True
@@ -484,12 +528,42 @@ class MayaResourceBinder:
             except Exception:  # noqa: BLE001
                 pass
 
-        if self.scene_event_ids:
-            try:
-                _default_event_remover(self.scene_event_ids)
-            except Exception as exc:  # noqa: BLE001
-                logger.debug("resources: event remover raised: %s", exc)
-            self.scene_event_ids = []
+        self._remove_scene_events()
+
+    def _remove_scene_events(self) -> None:
+        """Kill the scene-event scriptJobs on Maya's main thread.
+
+        Kept separate from :meth:`unbind` so the idempotency guard on
+        ``_unbound`` cannot short-circuit a deferred retry: ``unbind``
+        marks the binder unbound immediately (pure Python, safe on any
+        thread) while the ``maya.cmds`` teardown runs later, on the main
+        thread.
+
+        State is only dropped for the jobs that were actually killed.
+        Ids whose kill failed stay in :attr:`scene_event_ids` so a later
+        retry (or an operator) can still find them -- clearing them
+        unconditionally is precisely the "lost id" leak that keeps the
+        scriptJob alive against a shut-down server (issue #552).
+        """
+        if not self.scene_event_ids:
+            return
+
+        if not is_main_thread():
+            scheduled = run_on_main_thread(self._remove_scene_events)
+            if not scheduled:
+                logger.warning(
+                    "resources: cannot reach Maya's main thread; %d scene-event scriptJob(s) left installed",
+                    len(self.scene_event_ids),
+                )
+            return
+
+        try:
+            remaining = _default_event_remover(self.scene_event_ids)
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("resources: event remover raised: %s", exc)
+            return
+
+        self.scene_event_ids = _coerce_job_ids(remaining)
 
     # ── Public helpers used by tests / callers that own the snapshot ──
 

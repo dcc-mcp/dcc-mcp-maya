@@ -1,5 +1,35 @@
 # Changelog
 
+## [0.9.33](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.32...v0.9.33) (2026-10-01)
+
+
+### Bug Fixes
+
+* keep scene-event ids whose scriptJob kill failed ([#557](https://github.com/dcc-mcp/dcc-mcp-maya/issues/557)) ([7f95561](https://github.com/dcc-mcp/dcc-mcp-maya/commit/7f955612b5b1ecbdedfcca1238d22cf729b0d978))
+* keep scriptJob teardown on Maya's main thread during stop/restart ([874b61e](https://github.com/dcc-mcp/dcc-mcp-maya/commit/874b61e65c2ac688ff16a3707e8bf061b72f064e))
+
+## [0.9.32](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.31...v0.9.32) (2026-09-30)
+
+
+### Features
+
+* serve standalone Maya through official Mayapy entrypoint ([#553](https://github.com/dcc-mcp/dcc-mcp-maya/issues/553)) ([9f24211](https://github.com/dcc-mcp/dcc-mcp-maya/commit/9f24211b058e391a7bd376c2ccccc4fb8fcab460))
+* **userSetup:** make a hanging auto-load observable with started/finished markers ([55fa620](https://github.com/dcc-mcp/dcc-mcp-maya/commit/55fa620cd41c66e9333fd433f0f2fbe5896df4c6))
+
+
+### Bug Fixes
+
+* **ci:** install package in editable mode before release tests ([1eff754](https://github.com/dcc-mcp/dcc-mcp-maya/commit/1eff754a0106cb34007d0c6ebdfbf0ee4fba1419))
+* make Maya plug-in auto-load reliable and never silent ([#550](https://github.com/dcc-mcp/dcc-mcp-maya/issues/550)) ([5f75bc9](https://github.com/dcc-mcp/dcc-mcp-maya/commit/5f75bc9345a00d07527258430c0ac2fc6f7cf718))
+* **userSetup:** report auto-load failures and keep cmds.evalDeferred ([80fcf4c](https://github.com/dcc-mcp/dcc-mcp-maya/commit/80fcf4c362bcc2a30858ef4dc18cb741dbc6f7fb))
+* **userSetup:** report auto-load failures and keep cmds.evalDeferred ([80fcf4c](https://github.com/dcc-mcp/dcc-mcp-maya/commit/80fcf4c362bcc2a30858ef4dc18cb741dbc6f7fb))
+
+
+### Documentation
+
+* fix VitePress dead links and add ZH integration mirrors ([7178b24](https://github.com/dcc-mcp/dcc-mcp-maya/commit/7178b242d0b1417469de39a0c964c398acc538d5))
+* single-source agent contract into AGENTS.md ([6bb6b3e](https://github.com/dcc-mcp/dcc-mcp-maya/commit/6bb6b3e7b9611acb62bc5eff3055458773439670))
+
 ## [0.9.31](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.30...v0.9.31) (2026-09-23)
 
 
