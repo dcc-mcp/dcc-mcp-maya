@@ -38,11 +38,9 @@ try:
         INSTALL_EXIT_PREFLIGHT,
         INSTALL_EXIT_REQUIRES_RESTART,
         INSTALL_EXIT_VERIFY,
-        INSTALL_SOP_SCHEMA_VERSION,
         load_install_sop_schema,
     )
 except ImportError:
-    INSTALL_SOP_SCHEMA_VERSION = 1
     INSTALL_EXIT_OK = 0
     INSTALL_EXIT_PREFLIGHT = 10
     INSTALL_EXIT_ACQUIRE = 20
@@ -1898,7 +1896,6 @@ __all__ = [
     "INSTALL_EXIT_PREFLIGHT",
     "INSTALL_EXIT_REQUIRES_RESTART",
     "INSTALL_EXIT_VERIFY",
-    "INSTALL_SOP_SCHEMA_VERSION",
     "LIFECYCLE_COMMANDS",
     "load_install_sop_schema",
     "main",
