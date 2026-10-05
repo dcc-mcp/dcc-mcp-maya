@@ -17,6 +17,70 @@ logger = logging.getLogger(__name__)
 
 BOOTSTRAP_ERROR_DIR_ENV = "DCC_MCP_MAYA_BOOTSTRAP_ERROR_DIR"
 
+#: DCC identifier stamped onto every record. Keep in sync with
+#: ``dcc_mcp_maya.install.DCC_TYPE``: core keys its own host-error log on the
+#: same value, so a cross-referencing operator sees one name for one host.
+DCC_TYPE = "maya"
+
+#: Local JSONL schema version. Bump when the record shape below changes.
+BOOTSTRAP_ERROR_SCHEMA_VERSION = 1
+#: Bytes a single day's JSONL may reach before it is rotated. Matches core's
+#: ``RotatingFileHandler(maxBytes=..., backupCount=4)`` in
+#: ``dcc_mcp_core.host_errors`` so both logs age out at the same rate.
+#:
+#: The file is shared with ``dcc_mcp_maya._bootstrap_watch``, which appends
+#: its ``finished`` / ``hang_detected`` terminal events to the same
+#: ``userSetup-<YYYYMMDD>.jsonl``. Rotation therefore only renames and never
+#: truncates in place, so a concurrent append lands in a rotated generation
+#: rather than being lost.
+BOOTSTRAP_ERROR_MAX_BYTES = 5 * 1024 * 1024
+#: Number of rotated generations kept alongside the live file (``.1`` .. ``.4``
+#: in core's naming), so the directory is bounded at 5 x 5 MB.
+BOOTSTRAP_ERROR_BACKUP_COUNT = 4
+
+#: Stages whose failure is *already* on disk in core's schema, so recording it
+#: here as well would leave two differently-shaped records for one failure.
+#:
+#: ``dcc_mcp_maya.install.bootstrap_user_setup`` wraps ``cmds.loadPlugin`` in
+#: core's ``capture_bootstrap_errors``, which records and then re-raises. When
+#: core owns that capture path, a ``plugin_load`` failure it re-raises is
+#: already persisted -- it carries ``adapter_version`` / ``core_version`` /
+#: ``dcc_type`` and is rotated, none of which this file could add.
+#:
+#: Owning the stage is not the same as owning the record: core only captures
+#: when it actually has ``capture_bootstrap_errors``, and it does not below
+#: 0.19.90, while ``dcc_mcp_maya.install.MIN_CORE_VERSION`` is still 0.19.45.
+#: On such an older core the ``from dcc_mcp_core import
+#: capture_bootstrap_errors`` inside ``bootstrap_user_setup`` raises before
+#: any capture runs, the ImportError surfaces as ``plugin_load``, and core has
+#: written nothing -- suppressing the local record there would drop the only
+#: trace of the failure. :func:`_report_failure` therefore pairs this set with
+#: :func:`_core_persists_bootstrap_errors` and never trusts the set alone.
+#:
+#: If ``dcc_mcp_core``'s module-level import in ``dcc_mcp_maya.install`` is
+#: ever made lazy, ``plugin_load`` must come off this set with it: a lazy
+#: import failure would surface as ``plugin_load`` and be silenced here.
+#:
+#: ``environment``, ``import``, ``schedule``, ``plugin_verify`` and the
+#: watchdog stages are *not* covered by core, so they keep the local record.
+CORE_PERSISTED_STAGES = frozenset({"plugin_load"})
+
+
+def _core_persists_bootstrap_errors() -> bool:
+    """True only when core can actually persist the record we would suppress.
+
+    ``CORE_PERSISTED_STAGES`` names stages core records *when it owns the capture
+    path*. On a core old enough to lack ``capture_bootstrap_errors`` -- absent
+    before 0.19.90, while ``MIN_CORE_VERSION`` is still 0.19.45 -- the failure
+    never enters core's capture, so suppressing the local record would drop it
+    everywhere. Probe the symbol rather than the version:
+    ``bootstrap_user_setup`` only reaches this point after core imported
+    successfully, so the module object is present whenever this matters.
+    """
+    core = sys.modules.get("dcc_mcp_core")
+    return core is not None and hasattr(core, "capture_bootstrap_errors")
+
+
 #: Maximum number of watchdog-driven load retries after the deferred call.
 WATCHDOG_MAX_ATTEMPTS = 3
 #: Seconds the watchdog waits between two load attempts.
@@ -136,6 +200,96 @@ def _bootstrap_error_dir() -> Path:
     return Path.home() / ".dcc-mcp" / "receipts" / "bootstrap-errors"
 
 
+def _package_version(module_name: str) -> Optional[str]:
+    """Best-effort ``__version__`` of an already-imported-or-importable module.
+
+    Provenance only: a bootstrap record that cannot name its versions is still
+    worth far more than no record at all, so every failure here is swallowed.
+    """
+    module = sys.modules.get(module_name)
+    if module is None:
+        try:
+            module = __import__(module_name, fromlist=["__version__"])
+        except Exception:
+            return None
+    version = getattr(module, "__version__", None)
+    return str(version) if version else None
+
+
+def _rotate_bootstrap_log(path: Path) -> None:
+    """Rotate ``path`` through ``.1`` .. ``.N``, mirroring core's handler.
+
+    Core uses :class:`logging.handlers.RotatingFileHandler`, which renames
+    ``.i`` to ``.i+1`` from the oldest generation down and then moves the live
+    file to ``.1``. Reproducing that naming keeps the two logs -- core's
+    ``host-errors.log`` and this one -- inspectable with the same habits.
+    """
+    for generation in range(BOOTSTRAP_ERROR_BACKUP_COUNT - 1, 0, -1):
+        source = path.with_name("{}.{}".format(path.name, generation))
+        destination = path.with_name("{}.{}".format(path.name, generation + 1))
+        if not source.exists():
+            continue
+        if destination.exists():
+            destination.unlink()
+        source.replace(destination)
+    first = path.with_name("{}.1".format(path.name))
+    if first.exists():
+        first.unlink()
+    if path.exists():
+        path.replace(first)
+
+
+def _echo_to_stderr(line: str) -> None:
+    """Last-resort channel when the JSONL itself cannot be written."""
+    try:
+        sys.stderr.write(line + "\n")
+        sys.stderr.flush()
+    except Exception:
+        pass
+
+
+def _write_failure_record(stage: str, error_type: str, message: str, formatted: str) -> None:
+    """Append one JSONL record, bounded and rotated, or fall back to stderr.
+
+    The file is the only channel that outlives the Script Editor's scrollback,
+    so a failure to write it must never be swallowed: the record is echoed to
+    stderr instead, which keeps at least one durable trace in a launched-from-
+    terminal or redirected Maya session.
+    """
+    log_dir = _bootstrap_error_dir()
+    log_path = log_dir / "userSetup-{}.jsonl".format(datetime.now(timezone.utc).strftime("%Y%m%d"))
+    record = {
+        "schema_version": BOOTSTRAP_ERROR_SCHEMA_VERSION,
+        "timestamp_utc": datetime.now(timezone.utc).isoformat(),
+        "pid": os.getpid(),
+        "dcc_type": DCC_TYPE,
+        "adapter_version": _package_version("dcc_mcp_maya"),
+        "core_version": _package_version("dcc_mcp_core"),
+        "stage": stage,
+        "status": "failed",
+        "error_type": error_type,
+        "error": message,
+        "traceback": formatted,
+    }
+    payload = json.dumps(record, ensure_ascii=False, sort_keys=True)
+    try:
+        log_dir.mkdir(parents=True, exist_ok=True)
+        # Rotate on what the file is *about to become*, not on what it already
+        # is: a single large traceback can push a nearly-empty file past the
+        # cap in one append.
+        pending = len(payload.encode("utf-8")) + 1
+        if log_path.exists() and log_path.stat().st_size + pending > BOOTSTRAP_ERROR_MAX_BYTES:
+            _rotate_bootstrap_log(log_path)
+        # ``newline=""``: on Windows the default text mode rewrites the
+        # trailing ``\n`` to ``\r\n``, and a CRLF JSONL is not the line format
+        # every downstream reader assumes.
+        with log_path.open("a", encoding="utf-8", newline="") as stream:
+            stream.write(payload + "\n")
+    except Exception as write_error:
+        _echo_to_stderr("dcc-mcp-maya auto-load: could not write {} to {}: {}".format(stage, log_path, write_error))
+        _echo_to_stderr(payload)
+
+
 def _report_failure(stage: str, exc: BaseException) -> None:
     """Surface an auto-load failure where an operator can actually see it.
 
@@ -166,24 +320,13 @@ def _report_failure(stage: str, exc: BaseException) -> None:
         om.MGlobal.displayWarning(message)
     except Exception:
         pass
-    try:
-        log_dir = _bootstrap_error_dir()
-        log_dir.mkdir(parents=True, exist_ok=True)
-        log_path = log_dir / "userSetup-{}.jsonl".format(datetime.now(timezone.utc).strftime("%Y%m%d"))
-        record = {
-            "schema_version": 1,
-            "timestamp_utc": datetime.now(timezone.utc).isoformat(),
-            "pid": os.getpid(),
-            "stage": stage,
-            "status": "failed",
-            "error_type": error_type,
-            "error": str(exc),
-            "traceback": formatted,
-        }
-        with log_path.open("a", encoding="utf-8") as stream:
-            stream.write(json.dumps(record, ensure_ascii=False, sort_keys=True) + "\n")
-    except Exception:
-        pass
+    # The Script Editor channel always fires -- it is the one an artist sees
+    # first. The file is skipped only when core both owns the stage and can
+    # actually persist it, so one failure lands exactly once: never twice in
+    # the receipts directory, and never zero times on a core too old to have
+    # captured it.
+    if stage not in CORE_PERSISTED_STAGES or not _core_persists_bootstrap_errors():
+        _write_failure_record(stage, error_type, str(exc), formatted)
     logger.warning("%s", message)
 
 
@@ -225,39 +368,6 @@ def _setup_module_paths() -> None:
 def _apply_default_env() -> None:
     os.environ.setdefault("DCC_MCP_MAYA_PORT", "0")
     os.environ.setdefault("DCC_MCP_GATEWAY_PORT", "9765")
-
-
-def _bootstrap_watch() -> Optional[ModuleType]:
-    """Return the hang watchdog, or ``None`` when the adapter is unavailable.
-
-    The watchdog is pure standard library and lives in the adapter package so
-    it can be unit-tested outside Maya. If the adapter cannot be imported the
-    ``import`` stage below already reports that, so a missing watchdog is not
-    itself an error worth raising here.
-    """
-    try:
-        from dcc_mcp_maya import _bootstrap_watch
-    except Exception:
-        return None
-    return _bootstrap_watch
-
-
-def _report_prior_bootstrap_hang() -> None:
-    """Announce a bootstrap that started on an earlier launch and never finished.
-
-    A load that hangs raises nothing, so the only moment it can be observed is
-    the *next* start-up. Detection runs at import time rather than inside the
-    deferred callback precisely because in the hang scenario the deferred
-    callback is the thing that never runs.
-    """
-    watch = _bootstrap_watch()
-    if watch is None:
-        return
-    try:
-        watch.report_bootstrap_hang()
-    except Exception:
-        # A diagnostic must never stop the load it is diagnosing.
-        pass
 
 
 def _load_dcc_mcp_maya() -> None:

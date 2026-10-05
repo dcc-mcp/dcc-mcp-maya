@@ -12,6 +12,7 @@ attempt would let attempt N's exit hide attempt N+1's hang.
 
 from __future__ import annotations
 
+import contextlib
 import importlib.util
 import json
 import sys
@@ -244,6 +245,27 @@ def _install_adapter_stub(monkeypatch, side_effect=None):
     return calls
 
 
+def _install_core_stub(monkeypatch):
+    """Pin a core that *can* capture bootstrap errors.
+
+    ``userSetup`` suppresses the local record only when core owns the capture
+    path, and core does not own it below 0.19.90 -- which is the version the
+    mayapy floor lane installs. Without this pin the dedupe assertion below
+    would silently mean different things on different core versions.
+    """
+    core_module = ModuleType("dcc_mcp_core")
+    core_module.__version__ = "0.19.90"
+
+    @contextlib.contextmanager
+    def capture_bootstrap_errors(dcc_name, **_kwargs):
+        # Records and re-raises in reality; nothing here reaches it.
+        yield
+
+    core_module.capture_bootstrap_errors = capture_bootstrap_errors
+    monkeypatch.setitem(sys.modules, "dcc_mcp_core", core_module)
+    return core_module
+
+
 def test_marker_is_written_once_per_run_before_the_first_schedule(monkeypatch, tmp_path) -> None:
     """PM condition 1: one marker per run, written before the first schedule.
 
@@ -335,9 +357,16 @@ def test_healthy_retry_chain_is_never_reported_as_a_hang(monkeypatch, tmp_path) 
 
 
 def test_failed_load_without_a_watchdog_retires_the_marker(monkeypatch, tmp_path) -> None:
-    """With no watchdog armed a failed attempt is terminal, not retryable."""
+    """With no watchdog armed a failed attempt is terminal, not retryable.
+
+    The failure surfaces on ``cmds.warning`` but leaves no local record:
+    with a core that owns the capture path, ``plugin_load`` is one of the
+    stages core's ``capture_bootstrap_errors`` already persisted, so a second
+    record here would be the duplicate this channel was cleaned up to remove.
+    """
     _isolate(monkeypatch, tmp_path)
-    cmds_module, scheduled, _ = _stub_cmds()
+    cmds_module, scheduled, warnings = _stub_cmds()
+    _install_core_stub(monkeypatch)
     _install_adapter_stub(monkeypatch, side_effect=RuntimeError("loadPlugin exploded"))
     _exec_user_setup(monkeypatch, cmds_module)
 
@@ -345,8 +374,8 @@ def test_failed_load_without_a_watchdog_retires_the_marker(monkeypatch, tmp_path
 
     assert watch.read_pending_markers() == []
     assert watch.detect_bootstrap_hang() == []
-    stages = [record["stage"] for record in _records(tmp_path)]
-    assert stages == ["plugin_load"]
+    assert warnings and "plugin_load" in warnings[0], "the failure must still reach the Script Editor"
+    assert [record for record in _records(tmp_path) if record.get("status") == "failed"] == []
 
 
 def test_no_marker_outside_a_maya_session(monkeypatch, tmp_path) -> None:
@@ -389,3 +418,43 @@ def test_user_setup_announces_a_hang_from_the_previous_launch(monkeypatch, tmp_p
     # Detection runs at import time, so it still fires when the deferred
     # callback never runs -- which is exactly the hang scenario.
     assert len(scheduled) == 1
+
+
+def test_watchdog_records_use_lf_line_endings(monkeypatch, tmp_path) -> None:
+    """The watchdog shares the JSONL with userSetup, so it must write LF too.
+
+    ``_append_record`` targets the very same ``userSetup-<YYYYMMDD>.jsonl``
+    that ``maya/userSetup.py`` appends ``failed`` records to. In the default
+    text mode Windows rewrites the trailing ``\n`` to CRLF, which would leave
+    one file carrying two line endings -- the userSetup half LF and the
+    watchdog half CRLF -- and undo the line-ending guarantee the other half
+    of this log was changed to provide.
+    """
+    _isolate(monkeypatch, tmp_path)
+    marker = watch.record_bootstrap_started()
+    watch.record_bootstrap_finished(marker)
+
+    payload = watch.bootstrap_log_path().read_bytes()
+    assert payload, "the finished event must have been appended"
+    assert b"\r\n" not in payload, "Windows text mode would emit CRLF"
+    assert payload.endswith(b"\n")
+
+
+def test_read_bootstrap_records_includes_rotated_generations(tmp_path) -> None:
+    """Capping the log must not shrink what an operator can recover.
+
+    ``maya/userSetup.py`` rotates ``userSetup-<date>.jsonl`` through numbered
+    generations once it fills. Reading only ``*.jsonl`` would hide every
+    rotated record from this public reader, so rotated history is folded back
+    in -- oldest generation first, live file last.
+    """
+    log = tmp_path / "userSetup-20261005.jsonl"
+    for generation, stage in ((2, "oldest"), (1, "older")):
+        log.with_name("{}.{}".format(log.name, generation)).write_text(
+            json.dumps({"stage": stage}) + "\n", encoding="utf-8"
+        )
+    log.write_text(json.dumps({"stage": "live"}) + "\n", encoding="utf-8")
+
+    stages = [record["stage"] for record in watch.read_bootstrap_records(tmp_path)]
+
+    assert stages == ["oldest", "older", "live"]
