@@ -12,6 +12,7 @@ attempt would let attempt N's exit hide attempt N+1's hang.
 
 from __future__ import annotations
 
+import contextlib
 import importlib.util
 import json
 import sys
@@ -244,6 +245,27 @@ def _install_adapter_stub(monkeypatch, side_effect=None):
     return calls
 
 
+def _install_core_stub(monkeypatch):
+    """Pin a core that *can* capture bootstrap errors.
+
+    ``userSetup`` suppresses the local record only when core owns the capture
+    path, and core does not own it below 0.19.90 -- which is the version the
+    mayapy floor lane installs. Without this pin the dedupe assertion below
+    would silently mean different things on different core versions.
+    """
+    core_module = ModuleType("dcc_mcp_core")
+    core_module.__version__ = "0.19.90"
+
+    @contextlib.contextmanager
+    def capture_bootstrap_errors(dcc_name, **_kwargs):
+        # Records and re-raises in reality; nothing here reaches it.
+        yield
+
+    core_module.capture_bootstrap_errors = capture_bootstrap_errors
+    monkeypatch.setitem(sys.modules, "dcc_mcp_core", core_module)
+    return core_module
+
+
 def test_marker_is_written_once_per_run_before_the_first_schedule(monkeypatch, tmp_path) -> None:
     """PM condition 1: one marker per run, written before the first schedule.
 
@@ -338,12 +360,13 @@ def test_failed_load_without_a_watchdog_retires_the_marker(monkeypatch, tmp_path
     """With no watchdog armed a failed attempt is terminal, not retryable.
 
     The failure surfaces on ``cmds.warning`` but leaves no local record:
-    ``plugin_load`` is one of the stages core's ``capture_bootstrap_errors``
-    already persisted, so a second record here would be the duplicate this
-    channel was cleaned up to remove.
+    with a core that owns the capture path, ``plugin_load`` is one of the
+    stages core's ``capture_bootstrap_errors`` already persisted, so a second
+    record here would be the duplicate this channel was cleaned up to remove.
     """
     _isolate(monkeypatch, tmp_path)
     cmds_module, scheduled, warnings = _stub_cmds()
+    _install_core_stub(monkeypatch)
     _install_adapter_stub(monkeypatch, side_effect=RuntimeError("loadPlugin exploded"))
     _exec_user_setup(monkeypatch, cmds_module)
 
