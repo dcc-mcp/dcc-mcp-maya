@@ -85,3 +85,24 @@ tools:
       merge_namespaces:
         type: boolean
         default: false
+      source_unit:
+        type: string
+        enum:
+        - mm
+        - cm
+        - m
+        - km
+        - in
+        - ft
+        - yd
+        description: Unit of the file; scaled to the scene unit.
+      source_up_axis:
+        type: string
+        enum:
+        - y
+        - z
+        description: Up axis of the file; rotated to match.
+      require_semantics:
+        type: boolean
+        default: false
+        description: Fail if semantics are undeclared.

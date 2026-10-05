@@ -64,9 +64,19 @@ import_to_scene(descriptor, axis_conversion=..., material_mode=..., ...)
   "unit_scale":          1.0,
   "material_mode":       "preserve | assign_lambert | skip",
   "placement_hint":      "origin | selection | custom",
-  "target_collection":   null
+  "target_collection":   null,
+  "source_unit":         "m",
+  "source_up_axis":      "z",
+  "target_unit":         "cm",
+  "target_up_axis":      "y",
+  "unit_conversion_factor": 100.0,
+  "warnings":            []
 }
 ```
+
+`source_unit` / `source_up_axis` are whatever the caller declared (or
+`null`); `target_unit` / `target_up_axis` are read from the live scene.
+`warnings` is non-empty whenever an assumption had to be made.
 
 ## MaterialMode
 
@@ -98,6 +108,51 @@ top-level transform when you need to correct mismatches:
 
 `unit_scale` applies a uniform scale to every top-level transform (e.g.
 `0.01` to convert cm → m).
+
+## Declared source semantics (`source_unit` / `source_up_axis`)
+
+`axis_conversion` and `unit_scale` are *manual knobs*: the caller has to
+already know what the file is authored in. OBJ carries neither unit nor
+up-axis metadata, so an undeclared import is silently read in whatever the
+target scene happens to use — a 2 × 4 × 6 **metre** box lands as 2 × 4 × 6
+**centimetres** in a centimetre scene, and a Z-up file lies down in a
+Y-up scene. Geometry is fully intact, so nothing looks broken.
+
+Declare the source instead and let the tool convert:
+
+| Parameter | Effect |
+|-----------|--------|
+| `source_unit` | `mm` / `cm` / `m` / `km` / `in` / `ft` / `yd`. Scaled into the target scene unit (`currentUnit -q -linear`). |
+| `source_up_axis` | `y` or `z`. Rotated to match the target scene up axis (`upAxis -q -axis`). |
+| `require_semantics` | `true` fails the import instead of warning when either is undeclared. |
+
+Example — a metres-authored, Z-up OBJ into a centimetre, Y-up scene:
+
+```python
+import_to_scene(asset, source_unit="m", source_up_axis="z")
+# -> unit_conversion_factor 100.0, axis_conversion "z_to_y"
+```
+
+When the source is **not** declared:
+
+- The import still runs, using the target scene's unit and orientation.
+- The result carries a `warnings` entry naming the assumption that was
+  applied, and the same text is mirrored to Maya's Script Editor via
+  `cmds.warning`.
+- `require_semantics=True` turns that warning into a hard error.
+
+Warnings are only raised for formats that cannot carry the metadata. FBX,
+USD and Maya ASCII/Binary describe their own units and axis, so they stay
+quiet unless you explicitly override them.
+
+## Known limitation — OBJ `o` groups
+
+Maya's OBJ importer merges every `o` group in a file into a single
+transform, and exposes no option to split them (verified on Maya 2026:
+`options="mo=1"`, `mo=0`, `groups=1` and `g=1` all yield one transform).
+Object separation is therefore **not** handled here; it needs either
+pre-splitting the file per group or post-splitting the merged mesh by face
+range. Tracked separately.
 
 ## Scripts
 

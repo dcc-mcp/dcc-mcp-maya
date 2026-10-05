@@ -49,6 +49,36 @@ _AXIS_ROTATION: Dict[str, float] = {
     "z_to_y": -90.0,
 }
 
+# ---------------------------------------------------------------------------
+# Unit / up-axis semantics
+# ---------------------------------------------------------------------------
+
+#: Linear units Maya reports from ``currentUnit``, expressed in centimetres
+#: (Maya's internal linear unit). Converting a declared source unit into the
+#: target scene's unit is a ratio of these two values.
+_UNIT_TO_CM: Dict[str, float] = {
+    "mm": 0.1,
+    "cm": 1.0,
+    "m": 100.0,
+    "km": 100000.0,
+    "in": 2.54,
+    "ft": 30.48,
+    "yd": 91.44,
+}
+
+#: Up-axis values understood by ``upAxis``.
+_UP_AXES = ("y", "z")
+
+#: File formats that carry **no** unit and **no** up-axis metadata.
+#:
+#: These are the dangerous ones: the numbers arrive as bare floats, so Maya
+#: silently reads them in the target scene's unit and orientation. An OBJ
+#: authored in metres lands 100x too small in a centimetre scene, and a Z-up
+#: file lies down in a Y-up scene -- with geometry fully intact, so nothing
+#: looks broken. These formats must warn when the caller does not declare
+#: semantics; formats that carry their own metadata (FBX, USD, MA, MB) do not.
+_FORMAT_WITHOUT_SEMANTICS = frozenset({"obj"})
+
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -85,6 +115,115 @@ def _top_level_transforms(new_long: List[str], cmds: Any) -> List[str]:
             except Exception:  # noqa: BLE001
                 pass
     return result
+
+
+def _scene_linear_unit(cmds: Any) -> str:
+    """Return the target scene's linear unit (``cm``, ``m``, ...) or ``""``."""
+    try:
+        unit = cmds.currentUnit(query=True, linear=True)
+    except Exception:  # noqa: BLE001
+        return ""
+    return str(unit).strip().lower() if unit else ""
+
+
+def _scene_up_axis(cmds: Any) -> str:
+    """Return the target scene's up axis (``y`` or ``z``) or ``""``."""
+    try:
+        axis = cmds.upAxis(query=True, axis=True)
+    except Exception:  # noqa: BLE001
+        return ""
+    return str(axis).strip().lower() if axis else ""
+
+
+def _resolve_import_semantics(  # noqa: PLR0912
+    cmds: Any,
+    fmt: str,
+    source_unit: Optional[str],
+    source_up_axis: Optional[str],
+    axis_conversion: str,
+) -> Dict[str, Any]:
+    """Decide how -- and whether -- to convert units and up-axis.
+
+    The caller may declare what the *file* is authored in. When they do, the
+    values are converted into the target scene. When they do not and the format
+    cannot carry that metadata either, the import is still performed but the
+    assumption is reported instead of being swallowed.
+
+    Returns a dict with ``errors`` (fatal), ``warnings`` (non-fatal),
+    ``unit_factor``, ``axis_conversion``, plus the resolved source/target
+    values so the result can be audited after the fact.
+    """
+    errors: List[str] = []
+    warnings: List[str] = []
+
+    target_unit = _scene_linear_unit(cmds)
+    target_up_axis = _scene_up_axis(cmds)
+    declared_unit = (source_unit or "").strip().lower() or None
+    declared_axis = (source_up_axis or "").strip().lower() or None
+
+    if declared_unit is not None and declared_unit not in _UNIT_TO_CM:
+        errors.append("Unknown source_unit '{}'. Supported: {}".format(declared_unit, ", ".join(sorted(_UNIT_TO_CM))))
+        declared_unit = None
+
+    if declared_axis is not None and declared_axis not in _UP_AXES:
+        errors.append("Unknown source_up_axis '{}'. Supported: y, z".format(declared_axis))
+        declared_axis = None
+
+    # -- Unit ---------------------------------------------------------------
+    unit_factor = 1.0
+    if declared_unit and target_unit in _UNIT_TO_CM:
+        unit_factor = _UNIT_TO_CM[declared_unit] / _UNIT_TO_CM[target_unit]
+    elif declared_unit and not target_unit:
+        warnings.append(
+            "Cannot convert units: the target scene reports no linear unit, so source_unit='{}' was ignored.".format(
+                declared_unit
+            )
+        )
+    elif not declared_unit and fmt in _FORMAT_WITHOUT_SEMANTICS:
+        # Neither the file nor the caller knows. Maya has already read the bare
+        # numbers in the target unit, so state the assumption out loud rather
+        # than letting a 100x error pass as a clean import.
+        warnings.append(
+            "Source file declares no unit and source_unit was not given; values were "
+            "interpreted as '{}' (the target scene unit). Pass source_unit to convert.".format(target_unit or "unknown")
+        )
+
+    # -- Up axis ------------------------------------------------------------
+    resolved_axis = axis_conversion or "none"
+    if declared_axis and not target_up_axis:
+        warnings.append(
+            "Cannot determine the target scene up-axis, so source_up_axis='{}' was ignored.".format(declared_axis)
+        )
+    elif resolved_axis == "none" and declared_axis and declared_axis != target_up_axis:
+        resolved_axis = "z_to_y" if declared_axis == "z" else "y_to_z"
+
+    if not declared_axis and fmt in _FORMAT_WITHOUT_SEMANTICS:
+        warnings.append(
+            "Source file declares no up-axis and source_up_axis was not given; the geometry "
+            "was imported as authored, which is {}-up in this scene. Pass source_up_axis "
+            "('y' or 'z') to convert.".format(target_up_axis or "unknown")
+        )
+
+    return {
+        "errors": errors,
+        "warnings": warnings,
+        "unit_factor": unit_factor,
+        "axis_conversion": resolved_axis,
+        "source_unit": declared_unit,
+        "source_up_axis": declared_axis,
+        "target_unit": target_unit,
+        "target_up_axis": target_up_axis,
+    }
+
+
+def _announce_warnings(cmds: Any, warnings: List[str]) -> None:
+    """Mirror warnings into Maya's Script Editor so they reach the operator."""
+    for message in warnings:
+        logger.warning("%s", message)
+        try:
+            cmds.warning("[import_to_scene] {}".format(message))
+        except Exception:  # noqa: BLE001
+            pass
 
 
 def _apply_axis_conversion(cmds: Any, nodes: List[str], axis_conversion: str) -> None:
@@ -239,6 +378,9 @@ def import_to_scene(  # noqa: PLR0913
     custom_position: Optional[List[float]] = None,
     target_collection: Optional[str] = None,
     merge_namespaces: bool = False,
+    source_unit: Optional[str] = None,
+    source_up_axis: Optional[str] = None,
+    require_semantics: bool = False,
 ) -> Dict[str, Any]:
     """Import *asset* into the current Maya scene.
 
@@ -267,6 +409,18 @@ def import_to_scene(  # noqa: PLR0913
         top-level nodes to.
     merge_namespaces
         Reuse an existing namespace rather than appending a numeric suffix.
+    source_unit
+        Linear unit the *file* is authored in (``mm``, ``cm``, ``m``, ``km``,
+        ``in``, ``ft``, ``yd``). When given, values are converted into the
+        target scene's unit. When omitted, no conversion happens -- and for
+        formats that cannot carry unit metadata (OBJ) a warning records the
+        assumption instead of failing silently.
+    source_up_axis
+        Up axis the *file* is authored in (``y`` or ``z``). When it differs
+        from the target scene's up axis the import is rotated to match.
+    require_semantics
+        Refuse to import (instead of warning) when the source unit or up axis
+        is undeclared for a format that cannot carry that metadata.
 
     Returns
     -------
@@ -330,6 +484,37 @@ def import_to_scene(  # noqa: PLR0913
             mel.eval("FBXImportGenerateLog -v false")
 
         # ------------------------------------------------------------------
+        # Resolve unit / up-axis semantics before touching the scene
+        # ------------------------------------------------------------------
+        semantics = _resolve_import_semantics(cmds, fmt, source_unit, source_up_axis, axis_conversion)
+
+        if semantics["errors"]:
+            return skill_error(
+                " ".join(semantics["errors"]),
+                "invalid_import_semantics",
+                errors=semantics["errors"],
+                possible_solutions=[
+                    "source_unit accepts: {}".format(", ".join(sorted(_UNIT_TO_CM))),
+                    "source_up_axis accepts: y, z",
+                ],
+            )
+
+        if require_semantics and semantics["warnings"]:
+            return skill_error(
+                "Refusing to import with an assumption: {}".format(" ".join(semantics["warnings"])),
+                "undeclared_import_semantics",
+                warnings=semantics["warnings"],
+                possible_solutions=[
+                    "Pass source_unit and source_up_axis so the values can be converted, "
+                    "or set require_semantics=False to import with the stated assumption."
+                ],
+            )
+
+        _announce_warnings(cmds, semantics["warnings"])
+        resolved_axis_conversion = semantics["axis_conversion"]
+        resolved_unit_scale = unit_scale * semantics["unit_factor"]
+
+        # ------------------------------------------------------------------
         # Snapshot scene before import
         # ------------------------------------------------------------------
         before = cmds.ls(long=True) or []
@@ -380,8 +565,8 @@ def import_to_scene(  # noqa: PLR0913
         # ------------------------------------------------------------------
         # Post-import transforms
         # ------------------------------------------------------------------
-        _apply_axis_conversion(cmds, top_nodes, axis_conversion)
-        _apply_unit_scale(cmds, top_nodes, unit_scale)
+        _apply_axis_conversion(cmds, top_nodes, resolved_axis_conversion)
+        _apply_unit_scale(cmds, top_nodes, resolved_unit_scale)
 
         # ------------------------------------------------------------------
         # Material mode
@@ -411,20 +596,31 @@ def import_to_scene(  # noqa: PLR0913
             "imported_long_names": new_long,
             "top_level_groups": top_level_groups,
             "size_bytes": os.path.getsize(normalized),
-            "axis_conversion": axis_conversion,
-            "unit_scale": unit_scale,
+            "axis_conversion": resolved_axis_conversion,
+            "unit_scale": resolved_unit_scale,
             "material_mode": material_mode,
             "placement_hint": placement_hint,
             "target_collection": target_collection,
+            "source_unit": semantics["source_unit"],
+            "source_up_axis": semantics["source_up_axis"],
+            "target_unit": semantics["target_unit"],
+            "target_up_axis": semantics["target_up_axis"],
+            "unit_conversion_factor": semantics["unit_factor"],
+            "warnings": semantics["warnings"],
         }
 
+        message = "Imported '{}' ({} node(s))".format(result["asset_name"], len(new_short))
+        if result["warnings"]:
+            message = "{} -- {}".format(message, " ".join(result["warnings"]))
+
         return skill_success(
-            "Imported '{}' ({} node(s))".format(result["asset_name"], len(new_short)),
+            message,
             **result,
             prompt=(
                 "Use maya_scene__get_selection or maya_scene__get_scene_info to "
                 "inspect the imported hierarchy. top_level_groups lists the "
-                "world-root transforms."
+                "world-root transforms. Check the 'warnings' field: when source "
+                "semantics were undeclared it records the assumption that was applied."
             ),
         )
 
