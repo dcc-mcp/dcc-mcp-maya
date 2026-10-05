@@ -139,7 +139,12 @@ def _utc_now() -> datetime:
 
 def _append_record(path: Path, record: Dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("a", encoding="utf-8") as stream:
+    # ``newline=""``: this file is shared with ``maya/userSetup.py``, which
+    # appends the ``failed`` records to the very same
+    # ``userSetup-<YYYYMMDD>.jsonl``. Default text mode would rewrite the
+    # trailing ``\n`` to CRLF on Windows and leave one file with two line
+    # endings -- the exact thing capping the log was meant to make readable.
+    with path.open("a", encoding="utf-8", newline="") as stream:
         stream.write(json.dumps(record, ensure_ascii=False, sort_keys=True) + "\n")
 
 

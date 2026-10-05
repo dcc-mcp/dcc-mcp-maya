@@ -420,6 +420,26 @@ def test_user_setup_announces_a_hang_from_the_previous_launch(monkeypatch, tmp_p
     assert len(scheduled) == 1
 
 
+def test_watchdog_records_use_lf_line_endings(monkeypatch, tmp_path) -> None:
+    """The watchdog shares the JSONL with userSetup, so it must write LF too.
+
+    ``_append_record`` targets the very same ``userSetup-<YYYYMMDD>.jsonl``
+    that ``maya/userSetup.py`` appends ``failed`` records to. In the default
+    text mode Windows rewrites the trailing ``\n`` to CRLF, which would leave
+    one file carrying two line endings -- the userSetup half LF and the
+    watchdog half CRLF -- and undo the line-ending guarantee the other half
+    of this log was changed to provide.
+    """
+    _isolate(monkeypatch, tmp_path)
+    marker = watch.record_bootstrap_started()
+    watch.record_bootstrap_finished(marker)
+
+    payload = watch.bootstrap_log_path().read_bytes()
+    assert payload, "the finished event must have been appended"
+    assert b"\r\n" not in payload, "Windows text mode would emit CRLF"
+    assert payload.endswith(b"\n")
+
+
 def test_read_bootstrap_records_includes_rotated_generations(tmp_path) -> None:
     """Capping the log must not shrink what an operator can recover.
 
