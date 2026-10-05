@@ -42,21 +42,44 @@ BOOTSTRAP_ERROR_BACKUP_COUNT = 4
 #: here as well would leave two differently-shaped records for one failure.
 #:
 #: ``dcc_mcp_maya.install.bootstrap_user_setup`` wraps ``cmds.loadPlugin`` in
-#: core's ``capture_bootstrap_errors``, which records and then re-raises. By
-#: the time :func:`_report_failure` sees a ``plugin_load`` failure, core owns
-#: the record -- it carries ``adapter_version`` / ``core_version`` /
+#: core's ``capture_bootstrap_errors``, which records and then re-raises. When
+#: core owns that capture path, a ``plugin_load`` failure it re-raises is
+#: already persisted -- it carries ``adapter_version`` / ``core_version`` /
 #: ``dcc_type`` and is rotated, none of which this file could add.
 #:
-#: Silence here is only safe because ``dcc_mcp_maya.install`` imports
-#: ``dcc_mcp_core`` at *module* scope: importing ``bootstrap_user_setup``
-#: already requires core, so any failure that reaches ``plugin_load`` came out
-#: of core's capture. A host without core fails one stage earlier, at
-#: ``import``, which is still recorded locally. If that module-level import is
-#: ever made lazy, ``plugin_load`` must come off this set with it.
+#: Owning the stage is not the same as owning the record: core only captures
+#: when it actually has ``capture_bootstrap_errors``, and it does not below
+#: 0.19.90, while ``dcc_mcp_maya.install.MIN_CORE_VERSION`` is still 0.19.45.
+#: On such an older core the ``from dcc_mcp_core import
+#: capture_bootstrap_errors`` inside ``bootstrap_user_setup`` raises before
+#: any capture runs, the ImportError surfaces as ``plugin_load``, and core has
+#: written nothing -- suppressing the local record there would drop the only
+#: trace of the failure. :func:`_report_failure` therefore pairs this set with
+#: :func:`_core_persists_bootstrap_errors` and never trusts the set alone.
+#:
+#: If ``dcc_mcp_core``'s module-level import in ``dcc_mcp_maya.install`` is
+#: ever made lazy, ``plugin_load`` must come off this set with it: a lazy
+#: import failure would surface as ``plugin_load`` and be silenced here.
 #:
 #: ``environment``, ``import``, ``schedule``, ``plugin_verify`` and the
 #: watchdog stages are *not* covered by core, so they keep the local record.
 CORE_PERSISTED_STAGES = frozenset({"plugin_load"})
+
+
+def _core_persists_bootstrap_errors() -> bool:
+    """True only when core can actually persist the record we would suppress.
+
+    ``CORE_PERSISTED_STAGES`` names stages core records *when it owns the capture
+    path*. On a core old enough to lack ``capture_bootstrap_errors`` -- absent
+    before 0.19.90, while ``MIN_CORE_VERSION`` is still 0.19.45 -- the failure
+    never enters core's capture, so suppressing the local record would drop it
+    everywhere. Probe the symbol rather than the version:
+    ``bootstrap_user_setup`` only reaches this point after core imported
+    successfully, so the module object is present whenever this matters.
+    """
+    core = sys.modules.get("dcc_mcp_core")
+    return core is not None and hasattr(core, "capture_bootstrap_errors")
+
 
 #: Maximum number of watchdog-driven load retries after the deferred call.
 WATCHDOG_MAX_ATTEMPTS = 3
@@ -298,9 +321,11 @@ def _report_failure(stage: str, exc: BaseException) -> None:
     except Exception:
         pass
     # The Script Editor channel always fires -- it is the one an artist sees
-    # first. The file is skipped only for stages core already persisted, so
-    # one failure never lands twice in the receipts directory.
-    if stage not in CORE_PERSISTED_STAGES:
+    # first. The file is skipped only when core both owns the stage and can
+    # actually persist it, so one failure lands exactly once: never twice in
+    # the receipts directory, and never zero times on a core too old to have
+    # captured it.
+    if stage not in CORE_PERSISTED_STAGES or not _core_persists_bootstrap_errors():
         _write_failure_record(stage, error_type, str(exc), formatted)
     logger.warning("%s", message)
 

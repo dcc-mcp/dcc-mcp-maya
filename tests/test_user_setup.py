@@ -253,11 +253,15 @@ def _install_adapter_stub(monkeypatch, *, load_side_effect=None):
     return calls
 
 
-def _install_core_stub(monkeypatch, core_records):
+def _install_core_stub(monkeypatch, core_records, *, with_capture=True):
     """Inject a fake ``dcc_mcp_core`` exposing the bootstrap-error entry points.
 
     Mirrors the two behaviours the dedupe depends on:
     ``capture_bootstrap_errors`` records and then re-raises.
+
+    ``with_capture=False`` models a core from before 0.19.90, which predates
+    ``capture_bootstrap_errors`` entirely: importing that symbol from it
+    raises, so nothing is captured and the local record must stay.
     """
     core_module = ModuleType("dcc_mcp_core")
     core_module.__version__ = "4.5.6"
@@ -274,7 +278,8 @@ def _install_core_stub(monkeypatch, core_records):
             raise
 
     core_module.record_bootstrap_error = record_bootstrap_error
-    core_module.capture_bootstrap_errors = capture_bootstrap_errors
+    if with_capture:
+        core_module.capture_bootstrap_errors = capture_bootstrap_errors
     monkeypatch.setitem(sys.modules, "dcc_mcp_core", core_module)
     return core_module
 
@@ -477,6 +482,38 @@ def test_plugin_load_failure_is_recorded_once_in_core_schema(monkeypatch, tmp_pa
     assert core_records[0]["dcc_type"] == "maya"
     assert core_records[0]["phase"] == "userSetup"
     assert core_records[0]["adapter_version"] == "1.2.3"
+    assert cmds_module._warnings and "plugin_load" in cmds_module._warnings[0]
+
+
+def test_plugin_load_failure_is_recorded_locally_when_core_cannot_capture(monkeypatch, tmp_path) -> None:
+    """A core without ``capture_bootstrap_errors`` must not lose the record.
+
+    ``CORE_PERSISTED_STAGES`` says core owns ``plugin_load``, but that only
+    holds once core can actually capture. Below 0.19.90 -- while
+    ``MIN_CORE_VERSION`` is still 0.19.45 -- the import of the symbol inside
+    ``bootstrap_user_setup`` raises before any capture runs, so core writes
+    nothing. Suppressing the local record there would drop a real failure on
+    the floor with no receipt at all, which is worse than the duplicate it
+    removes.
+    """
+    error_dir = _isolate_error_dir(monkeypatch, tmp_path)
+    core_records = []
+    _install_core_stub(monkeypatch, core_records, with_capture=False)
+    cmds_module = _stub_cmds_full()
+    module = _exec_user_setup(monkeypatch, cmds_module)
+    _install_adapter_stub(monkeypatch)
+
+    def load_failing_before_any_capture(_bootstrap_user_setup):
+        # Reproduces core < 0.19.90: ``install.bootstrap_user_setup`` cannot
+        # even import the capture helper, so the ImportError escapes as a
+        # ``plugin_load`` failure that no capture ever saw.
+        from dcc_mcp_core import capture_bootstrap_errors  # noqa: F401
+
+    monkeypatch.setattr(module, "_load_via_bootstrap", load_failing_before_any_capture)
+    module._load_dcc_mcp_maya()
+
+    assert [record["stage"] for record in _failures(error_dir)] == ["plugin_load"]
+    assert core_records == [], "a core that cannot capture records nothing"
     assert cmds_module._warnings and "plugin_load" in cmds_module._warnings[0]
 
 
