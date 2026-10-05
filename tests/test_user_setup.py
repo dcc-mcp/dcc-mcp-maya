@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import builtins
+import contextlib
 import importlib.util
 import json
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 from types import ModuleType
 
@@ -251,6 +253,46 @@ def _install_adapter_stub(monkeypatch, *, load_side_effect=None):
     return calls
 
 
+def _install_core_stub(monkeypatch, core_records):
+    """Inject a fake ``dcc_mcp_core`` exposing the bootstrap-error entry points.
+
+    Mirrors the two behaviours the dedupe depends on:
+    ``capture_bootstrap_errors`` records and then re-raises.
+    """
+    core_module = ModuleType("dcc_mcp_core")
+    core_module.__version__ = "4.5.6"
+
+    def record_bootstrap_error(dcc_name, exc, **kwargs):
+        core_records.append(dict(dcc_type=dcc_name, error=str(exc), **kwargs))
+
+    @contextlib.contextmanager
+    def capture_bootstrap_errors(dcc_name, **kwargs):
+        try:
+            yield
+        except BaseException as exc:
+            record_bootstrap_error(dcc_name, exc, **kwargs)
+            raise
+
+    core_module.record_bootstrap_error = record_bootstrap_error
+    core_module.capture_bootstrap_errors = capture_bootstrap_errors
+    monkeypatch.setitem(sys.modules, "dcc_mcp_core", core_module)
+    return core_module
+
+
+def _stub_versions(monkeypatch, *, adapter="1.2.3", core="4.5.6"):
+    """Pin the version provenance a record is required to carry."""
+    for name, version in (("dcc_mcp_maya", adapter), ("dcc_mcp_core", core)):
+        module = ModuleType(name)
+        module.__version__ = version
+        monkeypatch.setitem(sys.modules, name, module)
+
+
+def _todays_log_path(error_dir):
+    """The JSONL file ``_report_failure`` appends to today."""
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%d")
+    return Path(error_dir) / "userSetup-{}.jsonl".format(stamp)
+
+
 def test_failure_is_mirrored_to_the_maya_status_line(monkeypatch, tmp_path) -> None:
     """MGlobal reaches the status line even when no Script Editor is open."""
     error_dir = _isolate_error_dir(monkeypatch, tmp_path)
@@ -376,3 +418,147 @@ def test_failure_record_for_exception_built_outside_except(monkeypatch, tmp_path
     assert records[0]["stage"] == "watchdog_give_up"
     assert records[0]["error"] == "plug-in never registered"
     assert "NoneType: None" not in records[0]["traceback"]
+
+
+def test_failure_record_names_the_versions_that_failed(monkeypatch, tmp_path) -> None:
+    """A record that cannot say which builds failed is only half a report.
+
+    Core stamps ``adapter_version`` / ``core_version`` / ``dcc_type`` onto its
+    own host-error records. The stages core does *not* cover stay here, so
+    they must carry the same provenance or an operator has to guess which
+    ``dcc_mcp_maya`` and which ``dcc_mcp_core`` produced the trace.
+    """
+    error_dir = _isolate_error_dir(monkeypatch, tmp_path)
+    _stub_versions(monkeypatch)
+    cmds_module, scheduled, _ = _stub_cmds()
+    module = _exec_user_setup(monkeypatch, cmds_module)
+
+    def boom() -> None:
+        raise OSError("read-only environment")
+
+    monkeypatch.setattr(module, "_apply_default_env", boom)
+    callback, _ = scheduled[0]
+    callback()
+
+    (record,) = _failures(error_dir)
+    assert record["dcc_type"] == "maya"
+    assert record["adapter_version"] == "1.2.3"
+    assert record["core_version"] == "4.5.6"
+
+
+def test_plugin_load_failure_is_recorded_once_in_core_schema(monkeypatch, tmp_path) -> None:
+    """One ``plugin_load`` failure must leave one record, and it is core's.
+
+    ``install.bootstrap_user_setup`` already wraps ``cmds.loadPlugin`` in
+    core's ``capture_bootstrap_errors``, which records and then re-raises. A
+    local record on top of that left two differently-shaped entries for a
+    single failure, the local one missing the version provenance.
+    """
+    error_dir = _isolate_error_dir(monkeypatch, tmp_path)
+    core_records = []
+    _install_core_stub(monkeypatch, core_records)
+    cmds_module = _stub_cmds_full()
+    module = _exec_user_setup(monkeypatch, cmds_module)
+    _install_adapter_stub(monkeypatch)
+
+    def load_failing_inside_core_capture(_bootstrap_user_setup):
+        # Reproduces ``bootstrap_user_setup(defer=False)``: the failure is
+        # raised from inside core's capture, so core owns the record.
+        from dcc_mcp_core import capture_bootstrap_errors
+
+        with capture_bootstrap_errors("maya", adapter_version="1.2.3", phase="userSetup", log_dir=str(error_dir)):
+            raise RuntimeError("loadPlugin exploded")
+
+    monkeypatch.setattr(module, "_load_via_bootstrap", load_failing_inside_core_capture)
+    module._load_dcc_mcp_maya()
+
+    assert _failures(error_dir) == [], "core already persisted this failure"
+    assert len(core_records) == 1, "one failure must mean one record"
+    assert core_records[0]["dcc_type"] == "maya"
+    assert core_records[0]["phase"] == "userSetup"
+    assert core_records[0]["adapter_version"] == "1.2.3"
+    assert cmds_module._warnings and "plugin_load" in cmds_module._warnings[0]
+
+
+def test_successful_load_leaves_no_failure_record(monkeypatch, tmp_path) -> None:
+    """A working load must not leave a ``failed`` record behind.
+
+    The JSONL is shared with ``dcc_mcp_maya._bootstrap_watch``, which
+    legitimately appends a ``finished`` event, so this asserts on the *status*
+    rather than on the file being empty. A stale ``failed`` record on the happy
+    path is what made this channel untrustworthy: an operator greps the
+    directory and cannot tell a live failure from an old one.
+    """
+    error_dir = _isolate_error_dir(monkeypatch, tmp_path)
+    cmds_module = _stub_cmds_full(plugin_loaded=True)
+    module = _exec_user_setup(monkeypatch, cmds_module)
+    _install_adapter_stub(monkeypatch)
+
+    module._load_dcc_mcp_maya()
+
+    assert [record for record in _failures(error_dir) if record.get("status") == "failed"] == []
+    assert cmds_module._warnings == []
+
+
+def test_bootstrap_error_dir_defaults_to_the_receipts_tree(monkeypatch, tmp_path) -> None:
+    """With no override the records land in the shared receipts directory."""
+    monkeypatch.setenv("DCC_MCP_MAYA_PORT", "0")
+    monkeypatch.setenv("DCC_MCP_GATEWAY_PORT", "9765")
+    monkeypatch.delenv("DCC_MCP_MAYA_BOOTSTRAP_ERROR_DIR", raising=False)
+    module = _exec_user_setup(monkeypatch, _stub_cmds()[0])
+
+    assert module._bootstrap_error_dir() == Path.home() / ".dcc-mcp" / "receipts" / "bootstrap-errors"
+
+
+def test_failure_records_use_lf_line_endings(monkeypatch, tmp_path) -> None:
+    """JSONL is one record per line; Windows text mode must not write CRLF."""
+    error_dir = _isolate_error_dir(monkeypatch, tmp_path)
+    cmds_module = _stub_cmds()
+    module = _exec_user_setup(monkeypatch, cmds_module)
+
+    module._report_failure("schedule", RuntimeError("line ending check"))
+
+    (log_path,) = sorted(Path(error_dir).glob("*.jsonl"))
+    raw = log_path.read_bytes()
+    assert b"\r\n" not in raw
+    assert raw.endswith(b"\n")
+
+
+def test_failure_records_rotate_instead_of_growing_unbounded(monkeypatch, tmp_path) -> None:
+    """The log keeps at most ``BACKUP_COUNT`` generations, as core's does."""
+    error_dir = _isolate_error_dir(monkeypatch, tmp_path)
+    cmds_module = _stub_cmds()
+    module = _exec_user_setup(monkeypatch, cmds_module)
+
+    log_path = _todays_log_path(error_dir)
+    for generation in range(1, module.BOOTSTRAP_ERROR_BACKUP_COUNT + 1):
+        log_path.with_name("{}.{}".format(log_path.name, generation)).write_text("old\n", encoding="utf-8")
+    log_path.write_text("x" * module.BOOTSTRAP_ERROR_MAX_BYTES, encoding="utf-8")
+
+    module._report_failure("schedule", RuntimeError("rotation check"))
+
+    assert log_path.stat().st_size < module.BOOTSTRAP_ERROR_MAX_BYTES
+    assert log_path.with_name(log_path.name + ".1").read_text(encoding="utf-8").startswith("x")
+    assert not log_path.with_name(log_path.name + ".{}".format(module.BOOTSTRAP_ERROR_BACKUP_COUNT + 1)).exists()
+
+
+def test_unwritable_record_falls_back_to_stderr(monkeypatch, tmp_path, capsys) -> None:
+    """A write failure must surface instead of vanishing behind ``except: pass``.
+
+    The file is the only channel that outlives the Script Editor, so silently
+    losing it would silently lose the diagnostic -- the exact regression this
+    whole channel exists to prevent.
+    """
+    error_dir = _isolate_error_dir(monkeypatch, tmp_path)
+    cmds_module = _stub_cmds()
+    module = _exec_user_setup(monkeypatch, cmds_module)
+
+    blocker = Path(error_dir) / "not-a-directory"
+    blocker.write_text("", encoding="utf-8")  # mkdir below it must fail
+    monkeypatch.setattr(module, "_bootstrap_error_dir", lambda: blocker / "nested")
+
+    module._report_failure("schedule", RuntimeError("disk full"))
+
+    captured = capsys.readouterr()
+    assert "could not write" in captured.err
+    assert "disk full" in captured.err, "the record itself must survive on stderr"

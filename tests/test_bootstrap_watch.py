@@ -335,9 +335,15 @@ def test_healthy_retry_chain_is_never_reported_as_a_hang(monkeypatch, tmp_path) 
 
 
 def test_failed_load_without_a_watchdog_retires_the_marker(monkeypatch, tmp_path) -> None:
-    """With no watchdog armed a failed attempt is terminal, not retryable."""
+    """With no watchdog armed a failed attempt is terminal, not retryable.
+
+    The failure surfaces on ``cmds.warning`` but leaves no local record:
+    ``plugin_load`` is one of the stages core's ``capture_bootstrap_errors``
+    already persisted, so a second record here would be the duplicate this
+    channel was cleaned up to remove.
+    """
     _isolate(monkeypatch, tmp_path)
-    cmds_module, scheduled, _ = _stub_cmds()
+    cmds_module, scheduled, warnings = _stub_cmds()
     _install_adapter_stub(monkeypatch, side_effect=RuntimeError("loadPlugin exploded"))
     _exec_user_setup(monkeypatch, cmds_module)
 
@@ -345,8 +351,8 @@ def test_failed_load_without_a_watchdog_retires_the_marker(monkeypatch, tmp_path
 
     assert watch.read_pending_markers() == []
     assert watch.detect_bootstrap_hang() == []
-    stages = [record["stage"] for record in _records(tmp_path)]
-    assert stages == ["plugin_load"]
+    assert warnings and "plugin_load" in warnings[0], "the failure must still reach the Script Editor"
+    assert [record for record in _records(tmp_path) if record.get("status") == "failed"] == []
 
 
 def test_no_marker_outside_a_maya_session(monkeypatch, tmp_path) -> None:
