@@ -11,6 +11,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from dcc_mcp_maya import gui_bootstrap
 from dcc_mcp_maya.gui_bootstrap import (
     bootstrap_in_maya,
     build_maya_launch_args,
@@ -448,12 +449,24 @@ def test_probe_rejects_non_finite_timeout(tmp_path) -> None:
         )
 
 
-def test_probe_waits_only_until_the_target_registry_row_becomes_ready(tmp_path) -> None:
+# Enough headroom for a CI runner to schedule the publisher thread: the row takes
+# a few milliseconds to write, so 10 s is ~300x the work instead of the 16x that
+# made this test flaky on the coverage-instrumented macOS ARM64 lane.
+PUBLISH_TIMEOUT_SECS = 10.0
+
+
+def test_probe_waits_only_until_the_target_registry_row_becomes_ready(tmp_path, monkeypatch) -> None:
     log_path = tmp_path / "bootstrap.jsonl"
     registry_dir = tmp_path / "registry"
+    first_probe_done = threading.Event()
+    row_published = threading.Event()
 
     def publish_bootstrap_result() -> None:
-        time.sleep(0.03)
+        # Publish only after the probe has taken its first look, so the waiting
+        # path is exercised deterministically rather than racing the publisher
+        # thread against the probe deadline.
+        if not first_probe_done.wait(timeout=PUBLISH_TIMEOUT_SECS):
+            return
         registry_dir.mkdir()
         record_bootstrap_stage(log_path, "plugin_invoked", "started")
         record_bootstrap_stage(log_path, "plugin_load", "succeeded")
@@ -462,7 +475,16 @@ def test_probe_waits_only_until_the_target_registry_row_becomes_ready(tmp_path) 
             json.dumps([{"instance_id": "maya-ready", "dcc_type": "maya", "pid": 4125}]),
             encoding="utf-8",
         )
+        row_published.set()
 
+    probe_once = gui_bootstrap._probe_gui_readiness_once
+
+    def probe_once_and_release_publisher(**kwargs):
+        outcome = probe_once(**kwargs)
+        first_probe_done.set()
+        return outcome
+
+    monkeypatch.setattr(gui_bootstrap, "_probe_gui_readiness_once", probe_once_and_release_publisher)
     publisher = threading.Thread(target=publish_bootstrap_result)
     publisher.start()
     started = time.monotonic()
@@ -470,12 +492,14 @@ def test_probe_waits_only_until_the_target_registry_row_becomes_ready(tmp_path) 
         log_path=log_path,
         registry_dir=registry_dir,
         maya_pid=4125,
-        timeout_secs=0.5,
+        timeout_secs=PUBLISH_TIMEOUT_SECS,
         poll_interval_secs=0.005,
     )
     elapsed = time.monotonic() - started
-    publisher.join(timeout=1)
+    publisher.join(timeout=PUBLISH_TIMEOUT_SECS)
 
+    assert first_probe_done.is_set()
+    assert row_published.wait(timeout=PUBLISH_TIMEOUT_SECS) is True
     assert result["ready"] is True
     assert result["instance"]["instance_id"] == "maya-ready"
-    assert elapsed < 0.5
+    assert elapsed < PUBLISH_TIMEOUT_SECS
