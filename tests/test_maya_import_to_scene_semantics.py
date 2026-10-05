@@ -46,12 +46,18 @@ def _semantics_cmds(unit="cm", up="y", before=None, after=None):
 
 
 def _xform_calls_with(cmds, keyword):
-    """xform calls that *set* ``keyword``, skipping ``query=True`` reads."""
+    """xform calls that *set* ``keyword``, skipping ``query=True`` reads.
+
+    Uses ``call[1]`` rather than ``call.kwargs``: the latter only exists on
+    Python 3.8+, and this module must also run under the Maya 2022 (py3.7)
+    CI lane.
+    """
     out = []
     for call in cmds.xform.call_args_list:
-        if call.kwargs.get("query") is True:
+        kwargs = call[1]
+        if kwargs.get("query") is True:
             continue
-        if keyword in call.kwargs:
+        if keyword in kwargs:
             out.append(call)
     return out
 
@@ -131,7 +137,7 @@ def test_declared_metres_into_centimetre_scene_scales_by_100(tmp_path):
     assert not any("declares no unit" in w for w in ctx["warnings"])
     scales = _xform_calls_with(cmds, "scale")
     assert scales
-    assert scales[0].kwargs["scale"] == [100.0, 100.0, 100.0]
+    assert scales[0][1]["scale"] == [100.0, 100.0, 100.0]
 
 
 def test_declared_millimetres_into_metre_scene_scales_down(tmp_path):
@@ -206,7 +212,7 @@ def test_manual_unit_scale_composes_with_declared_conversion(tmp_path):
     assert result["success"] is True, result
     assert result["context"]["unit_scale"] == 200.0
     scales = _xform_calls_with(cmds, "scale")
-    assert scales[0].kwargs["scale"] == [200.0, 200.0, 200.0]
+    assert scales[0][1]["scale"] == [200.0, 200.0, 200.0]
 
 
 # ---------------------------------------------------------------------------
