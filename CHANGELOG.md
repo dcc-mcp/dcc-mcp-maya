@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.9.34](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.33...v0.9.34) (2026-10-05)
+
+
+### Bug Fixes
+
+* de-flake the GUI readiness probe wait test ([2a4c736](https://github.com/dcc-mcp/dcc-mcp-maya/commit/2a4c7361f3e809226444b82cd66bf6e2fd59845d))
+* dedupe userSetup failure records against core and harden the JSONL channel ([4bfbca8](https://github.com/dcc-mcp/dcc-mcp-maya/commit/4bfbca8e273b7bae59c582221a755f77e1025e8d))
+* drop the deprecated INSTALL_SOP_SCHEMA_VERSION alias ([#558](https://github.com/dcc-mcp/dcc-mcp-maya/issues/558)) ([84dcaa4](https://github.com/dcc-mcp/dcc-mcp-maya/commit/84dcaa45660b04ed608e133338fa861fa9cc8992))
+* keep the local userSetup record when core cannot capture it ([83f080d](https://github.com/dcc-mcp/dcc-mcp-maya/commit/83f080d1adad0d71ee8964888acc25867e4fcdb2))
+* rotate before overflow and keep rotated records readable ([f7c6613](https://github.com/dcc-mcp/dcc-mcp-maya/commit/f7c6613208fc9611fd8646f10a7e1bc74b34ad4b))
+* write the shared bootstrap JSONL with LF endings from the watchdog ([5596561](https://github.com/dcc-mcp/dcc-mcp-maya/commit/5596561dc661c883c26befb7d377870069fba605))
+
 ## [0.9.33](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.32...v0.9.33) (2026-10-01)
 
 
