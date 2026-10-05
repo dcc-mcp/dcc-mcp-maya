@@ -542,6 +542,27 @@ def test_failure_records_rotate_instead_of_growing_unbounded(monkeypatch, tmp_pa
     assert not log_path.with_name(log_path.name + ".{}".format(module.BOOTSTRAP_ERROR_BACKUP_COUNT + 1)).exists()
 
 
+def test_rotation_triggers_before_a_record_would_overflow(monkeypatch, tmp_path) -> None:
+    """Rotate on the size the file is about to reach, not the size it has.
+
+    Checking only the current size lets a single large traceback push a
+    nearly-empty file well past the cap in one append.
+    """
+    error_dir = _isolate_error_dir(monkeypatch, tmp_path)
+    cmds_module = _stub_cmds()
+    module = _exec_user_setup(monkeypatch, cmds_module)
+
+    log_path = _todays_log_path(error_dir)
+    log_path.write_text("x" * (module.BOOTSTRAP_ERROR_MAX_BYTES - 64), encoding="utf-8")
+
+    module._report_failure("schedule", RuntimeError("overflow check"))
+
+    rotated = log_path.with_name(log_path.name + ".1")
+    assert rotated.exists(), "a record that would not fit must force a rotation"
+    assert rotated.stat().st_size == module.BOOTSTRAP_ERROR_MAX_BYTES - 64
+    assert log_path.stat().st_size <= module.BOOTSTRAP_ERROR_MAX_BYTES
+
+
 def test_unwritable_record_falls_back_to_stderr(monkeypatch, tmp_path, capsys) -> None:
     """A write failure must surface instead of vanishing behind ``except: pass``.
 

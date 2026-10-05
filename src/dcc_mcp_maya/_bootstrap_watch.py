@@ -266,26 +266,47 @@ def read_pending_markers(
     return markers
 
 
+def _rotated_generations(path: Path) -> List[Path]:
+    """Rotated copies of ``path`` (``.1`` .. ``.N``), oldest generation first.
+
+    ``maya/userSetup.py`` caps each day's log and rotates it through numbered
+    generations. Reading only ``*.jsonl`` would make every rotated record
+    invisible to this interface, so the generations are folded back in --
+    highest number first, which is oldest first.
+    """
+    numbered = []
+    for candidate in path.parent.glob(path.name + ".*"):
+        suffix = candidate.suffix.lstrip(".")
+        if suffix.isdigit():
+            numbered.append((int(suffix), candidate))
+    return [candidate for _, candidate in sorted(numbered, reverse=True)]
+
+
 def read_bootstrap_records(
     log_dir: Optional[Path] = None, environ: Optional[Dict[str, str]] = None
 ) -> List[Dict[str, Any]]:
-    """Return the JSONL audit records for ``log_dir`` (newest file last)."""
+    """Return the JSONL audit records for ``log_dir`` (newest file last).
+
+    Rotated generations are included so that capping the log does not silently
+    shrink what an operator can recover: the live file stays last.
+    """
     directory = Path(log_dir) if log_dir is not None else bootstrap_error_dir(environ)
     records: List[Dict[str, Any]] = []
     if not directory.is_dir():
         return records
     for path in sorted(directory.glob("*.jsonl")):
-        try:
-            lines = path.read_text(encoding="utf-8").splitlines()
-        except OSError:
-            continue
-        for line in lines:
+        for source in _rotated_generations(path) + [path]:
             try:
-                payload = json.loads(line)
-            except ValueError:
+                lines = source.read_text(encoding="utf-8").splitlines()
+            except OSError:
                 continue
-            if isinstance(payload, dict):
-                records.append(payload)
+            for line in lines:
+                try:
+                    payload = json.loads(line)
+                except ValueError:
+                    continue
+                if isinstance(payload, dict):
+                    records.append(payload)
     return records
 
 

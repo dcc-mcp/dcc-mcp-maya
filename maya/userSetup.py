@@ -251,7 +251,11 @@ def _write_failure_record(stage: str, error_type: str, message: str, formatted: 
     payload = json.dumps(record, ensure_ascii=False, sort_keys=True)
     try:
         log_dir.mkdir(parents=True, exist_ok=True)
-        if log_path.exists() and log_path.stat().st_size >= BOOTSTRAP_ERROR_MAX_BYTES:
+        # Rotate on what the file is *about to become*, not on what it already
+        # is: a single large traceback can push a nearly-empty file past the
+        # cap in one append.
+        pending = len(payload.encode("utf-8")) + 1
+        if log_path.exists() and log_path.stat().st_size + pending > BOOTSTRAP_ERROR_MAX_BYTES:
             _rotate_bootstrap_log(log_path)
         # ``newline=""``: on Windows the default text mode rewrites the
         # trailing ``\n`` to ``\r\n``, and a CRLF JSONL is not the line format

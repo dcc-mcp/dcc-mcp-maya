@@ -395,3 +395,23 @@ def test_user_setup_announces_a_hang_from_the_previous_launch(monkeypatch, tmp_p
     # Detection runs at import time, so it still fires when the deferred
     # callback never runs -- which is exactly the hang scenario.
     assert len(scheduled) == 1
+
+
+def test_read_bootstrap_records_includes_rotated_generations(tmp_path) -> None:
+    """Capping the log must not shrink what an operator can recover.
+
+    ``maya/userSetup.py`` rotates ``userSetup-<date>.jsonl`` through numbered
+    generations once it fills. Reading only ``*.jsonl`` would hide every
+    rotated record from this public reader, so rotated history is folded back
+    in -- oldest generation first, live file last.
+    """
+    log = tmp_path / "userSetup-20261005.jsonl"
+    for generation, stage in ((2, "oldest"), (1, "older")):
+        log.with_name("{}.{}".format(log.name, generation)).write_text(
+            json.dumps({"stage": stage}) + "\n", encoding="utf-8"
+        )
+    log.write_text(json.dumps({"stage": "live"}) + "\n", encoding="utf-8")
+
+    stages = [record["stage"] for record in watch.read_bootstrap_records(tmp_path)]
+
+    assert stages == ["oldest", "older", "live"]
