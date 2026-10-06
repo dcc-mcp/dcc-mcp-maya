@@ -318,6 +318,51 @@ def test_declared_unit_without_a_target_unit_warns_and_skips_conversion(tmp_path
     assert any("source_unit='m' was ignored" in w for w in result["context"]["warnings"])
 
 
+def test_declared_unit_with_an_unconvertible_target_unit_warns(tmp_path):
+    """A target unit outside the conversion table must not silently drop source_unit.
+
+    Maya reports eight linear units; if the table falls behind, a declared
+    source_unit would be dropped with no conversion and no warning -- the exact
+    silent failure this tool exists to prevent. The fallback branch keeps that
+    gap loud.
+    """
+    path = tmp_path / "cal.obj"
+    path.write_bytes(b"OBJ")
+    cmds = _semantics_cmds(unit="parsec", up="y")
+
+    result = load_and_call(_SCRIPT, cmds, "main", asset=_make_asset(str(path)), source_unit="m")
+
+    assert result["success"] is True, result
+    assert result["context"]["unit_conversion_factor"] == 1.0
+    warnings = result["context"]["warnings"]
+    assert warnings, "declared source_unit was dropped without a warning"
+    assert any("source_unit='m' was ignored" in w for w in warnings)
+
+
+def test_declared_miles_into_centimetre_scene_scales(tmp_path):
+    path = tmp_path / "cal.obj"
+    path.write_bytes(b"OBJ")
+    cmds = _semantics_cmds(unit="cm", up="y")
+
+    result = load_and_call(_SCRIPT, cmds, "main", asset=_make_asset(str(path)), source_unit="mi", source_up_axis="y")
+
+    assert result["success"] is True, result
+    assert result["context"]["unit_conversion_factor"] == 160934.4
+    assert result["context"]["warnings"] == []
+
+
+def test_declared_unit_into_a_mile_target_scene_converts(tmp_path):
+    path = tmp_path / "cal.obj"
+    path.write_bytes(b"OBJ")
+    cmds = _semantics_cmds(unit="mi", up="y")
+
+    result = load_and_call(_SCRIPT, cmds, "main", asset=_make_asset(str(path)), source_unit="m", source_up_axis="y")
+
+    assert result["success"] is True, result
+    assert result["context"]["unit_conversion_factor"] == 100.0 / 160934.4
+    assert result["context"]["warnings"] == []
+
+
 def test_declared_up_axis_without_a_target_axis_warns_and_skips_rotation(tmp_path):
     path = tmp_path / "cal.obj"
     path.write_bytes(b"OBJ")

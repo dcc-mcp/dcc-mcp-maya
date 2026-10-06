@@ -95,6 +95,7 @@ tools:
         - in
         - ft
         - yd
+        - mi
         description: Unit of the file; scaled to the scene unit.
       source_up_axis:
         type: string

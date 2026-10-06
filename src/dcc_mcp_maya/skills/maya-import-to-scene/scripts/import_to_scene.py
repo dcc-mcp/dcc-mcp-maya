@@ -64,6 +64,7 @@ _UNIT_TO_CM: Dict[str, float] = {
     "in": 2.54,
     "ft": 30.48,
     "yd": 91.44,
+    "mi": 160934.4,
 }
 
 #: Up-axis values understood by ``upAxis``.
@@ -178,6 +179,15 @@ def _resolve_import_semantics(  # noqa: PLR0912
             "Cannot convert units: the target scene reports no linear unit, so source_unit='{}' was ignored.".format(
                 declared_unit
             )
+        )
+    elif declared_unit:
+        # The scene named a unit, but it is not one we can convert. Dropping the
+        # caller's declaration here is precisely the silent failure this tool
+        # exists to prevent: the numbers get read in an unconvertible unit and
+        # reported as a clean import.
+        warnings.append(
+            "Cannot convert units: the target scene unit '{}' has no conversion factor, so "
+            "source_unit='{}' was ignored.".format(target_unit, declared_unit)
         )
     elif not declared_unit and fmt in _FORMAT_WITHOUT_SEMANTICS:
         # Neither the file nor the caller knows. Maya has already read the bare
@@ -411,7 +421,7 @@ def import_to_scene(  # noqa: PLR0913
         Reuse an existing namespace rather than appending a numeric suffix.
     source_unit
         Linear unit the *file* is authored in (``mm``, ``cm``, ``m``, ``km``,
-        ``in``, ``ft``, ``yd``). When given, values are converted into the
+        ``in``, ``ft``, ``yd``, ``mi``). When given, values are converted into the
         target scene's unit. When omitted, no conversion happens -- and for
         formats that cannot carry unit metadata (OBJ) a warning records the
         assumption instead of failing silently.

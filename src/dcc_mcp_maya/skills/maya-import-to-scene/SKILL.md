@@ -122,7 +122,7 @@ Declare the source instead and let the tool convert:
 
 | Parameter | Effect |
 |-----------|--------|
-| `source_unit` | `mm` / `cm` / `m` / `km` / `in` / `ft` / `yd`. Scaled into the target scene unit (`currentUnit -q -linear`). |
+| `source_unit` | `mm` / `cm` / `m` / `km` / `in` / `ft` / `yd` / `mi`. Scaled into the target scene unit (`currentUnit -q -linear`). |
 | `source_up_axis` | `y` or `z`. Rotated to match the target scene up axis (`upAxis -q -axis`). |
 | `require_semantics` | `true` fails the import instead of warning when either is undeclared. |
 
