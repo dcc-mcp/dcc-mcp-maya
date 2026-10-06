@@ -91,8 +91,10 @@ DOCKER_QUICK_START.md
 .multica/
 
 # Local agent / IDE directories. These are runtime mount points, not source:
-# the skills and context that actually get loaded come from the Monica workspace
-# skill registry, so keeping a copy in the repository only lets the two drift.
+# an agent runtime materialises skills into them at task start, so a copy kept
+# here is never the one that gets loaded and only drifts. Patterns are anchored
+# with a leading "/" so only the repository root matches; unanchored patterns
+# would silently ignore a nested directory of the same name.
 /.agents/
 /.agent_context/
 /.aider/
