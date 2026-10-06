@@ -150,12 +150,29 @@ def _resolve_import_semantics(  # noqa: PLR0912
     cannot carry that metadata either, the import is still performed but the
     assumption is reported instead of being swallowed.
 
+    Declarative conversion is only applied to formats that cannot carry the
+    metadata themselves (see ``_FORMAT_WITHOUT_SEMANTICS``). FBX, USD and the
+    Maya formats describe their own units and up axis, and Maya's importers
+    apply that on import -- measured on Maya 2026, a metres-authored FBX lands
+    at 100 cm in a centimetre scene, and a Y-up file lands height-on-Z in a
+    Z-up scene. Scaling or rotating again would double-apply, which is the
+    very class of silent error this tool exists to prevent. A declaration on
+    such a format is reported as ignored rather than applied.
+
     Returns a dict with ``errors`` (fatal), ``warnings`` (non-fatal),
+    ``blocking_warnings`` (the subset that ``require_semantics`` refuses on),
     ``unit_factor``, ``axis_conversion``, plus the resolved source/target
     values so the result can be audited after the fact.
     """
     errors: List[str] = []
     warnings: List[str] = []
+    # Assumptions the caller did not authorise. Kept separate from ``warnings``
+    # so an advisory "your declaration was ignored" note never trips
+    # ``require_semantics``: that flag refuses *undeclared* imports, and a
+    # self-describing format is not importing under an assumption.
+    blocking_warnings: List[str] = []
+    # Does the format carry its own unit / up-axis metadata?
+    self_describing = fmt not in _FORMAT_WITHOUT_SEMANTICS
 
     target_unit = _scene_linear_unit(cmds)
     target_up_axis = _scene_up_axis(cmds)
@@ -172,7 +189,15 @@ def _resolve_import_semantics(  # noqa: PLR0912
 
     # -- Unit ---------------------------------------------------------------
     unit_factor = 1.0
-    if declared_unit and target_unit in _UNIT_TO_CM:
+    if declared_unit and self_describing:
+        # The importer already converted the file's own units into the scene
+        # unit. Applying the declared factor on top would scale twice.
+        warnings.append(
+            "source_unit='{}' was ignored: {} files carry their own units and Maya's importer "
+            "already converted them into the scene unit ('{}'). Use unit_scale for a manual "
+            "override.".format(declared_unit, fmt.upper(), target_unit or "unknown")
+        )
+    elif declared_unit and target_unit in _UNIT_TO_CM:
         unit_factor = _UNIT_TO_CM[declared_unit] / _UNIT_TO_CM[target_unit]
     elif declared_unit and not target_unit:
         warnings.append(
@@ -192,15 +217,23 @@ def _resolve_import_semantics(  # noqa: PLR0912
     elif not declared_unit and fmt in _FORMAT_WITHOUT_SEMANTICS:
         # Neither the file nor the caller knows. Maya has already read the bare
         # numbers in the target unit, so state the assumption out loud rather
-        # than letting a 100x error pass as a clean import.
-        warnings.append(
+        # than letting a 100x error pass as a clean import. This one is an
+        # unauthorised assumption, so require_semantics refuses on it.
+        blocking_warnings.append(
             "Source file declares no unit and source_unit was not given; values were "
             "interpreted as '{}' (the target scene unit). Pass source_unit to convert.".format(target_unit or "unknown")
         )
 
     # -- Up axis ------------------------------------------------------------
     resolved_axis = axis_conversion or "none"
-    if declared_axis and not target_up_axis:
+    if declared_axis and self_describing:
+        # Same reasoning as units: the importer aligned the up axis already.
+        warnings.append(
+            "source_up_axis='{}' was ignored: {} files carry their own up axis and Maya's "
+            "importer already aligned it to the scene ('{}'). Use axis_conversion for a "
+            "manual override.".format(declared_axis, fmt.upper(), target_up_axis or "unknown")
+        )
+    elif declared_axis and not target_up_axis:
         warnings.append(
             "Cannot determine the target scene up-axis, so source_up_axis='{}' was ignored.".format(declared_axis)
         )
@@ -208,15 +241,17 @@ def _resolve_import_semantics(  # noqa: PLR0912
         resolved_axis = "z_to_y" if declared_axis == "z" else "y_to_z"
 
     if not declared_axis and fmt in _FORMAT_WITHOUT_SEMANTICS:
-        warnings.append(
+        blocking_warnings.append(
             "Source file declares no up-axis and source_up_axis was not given; the geometry "
             "was imported as authored, which is {}-up in this scene. Pass source_up_axis "
             "('y' or 'z') to convert.".format(target_up_axis or "unknown")
         )
 
+    warnings = warnings + blocking_warnings
     return {
         "errors": errors,
         "warnings": warnings,
+        "blocking_warnings": blocking_warnings,
         "unit_factor": unit_factor,
         "axis_conversion": resolved_axis,
         "source_unit": declared_unit,
@@ -424,7 +459,9 @@ def import_to_scene(  # noqa: PLR0913
         ``in``, ``ft``, ``yd``, ``mi``). When given, values are converted into the
         target scene's unit. When omitted, no conversion happens -- and for
         formats that cannot carry unit metadata (OBJ) a warning records the
-        assumption instead of failing silently.
+        assumption instead of failing silently. Only applies to formats
+        without their own unit metadata; on FBX / USD / MA / MB the importer
+        has already converted, so the declaration is reported as ignored.
     source_up_axis
         Up axis the *file* is authored in (``y`` or ``z``). When it differs
         from the target scene's up axis the import is rotated to match.
@@ -509,11 +546,13 @@ def import_to_scene(  # noqa: PLR0913
                 ],
             )
 
-        if require_semantics and semantics["warnings"]:
+        # Only *unauthorised* assumptions block. A note that a declaration was
+        # ignored on a self-describing format is advisory, not an assumption.
+        if require_semantics and semantics["blocking_warnings"]:
             return skill_error(
-                "Refusing to import with an assumption: {}".format(" ".join(semantics["warnings"])),
+                "Refusing to import with an assumption: {}".format(" ".join(semantics["blocking_warnings"])),
                 "undeclared_import_semantics",
-                warnings=semantics["warnings"],
+                warnings=semantics["blocking_warnings"],
                 possible_solutions=[
                     "Pass source_unit and source_up_axis so the values can be converted, "
                     "or set require_semantics=False to import with the stated assumption."

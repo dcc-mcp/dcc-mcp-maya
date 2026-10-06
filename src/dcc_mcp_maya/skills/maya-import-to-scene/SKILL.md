@@ -141,9 +141,30 @@ When the source is **not** declared:
   `cmds.warning`.
 - `require_semantics=True` turns that warning into a hard error.
 
-Warnings are only raised for formats that cannot carry the metadata. FBX,
-USD and Maya ASCII/Binary describe their own units and axis, so they stay
-quiet unless you explicitly override them.
+### Formats that carry their own semantics
+
+`source_unit` / `source_up_axis` describe the **file**. That only needs saying
+for formats which cannot say it themselves — currently **OBJ**. FBX, USD and
+the Maya formats (MA / MB) embed their own units and up axis, and Maya's
+importer applies that on import.
+
+Measured on Maya 2026 with `FBXResetImport` defaults:
+
+| File | Target scene | Measured |
+|------|--------------|----------|
+| 1 m cube, FBX (`UnitScaleFactor` 100) | cm | lands at **100 cm** — already converted |
+| Y-up FBX, height on Y | Z-up | height lands on **Z** — already aligned |
+| hand-written OBJ, bare metre numbers | cm | lands at **1 cm** — *not* converted |
+
+So for those formats the declaration is **ignored, not applied**: scaling or
+rotating again would double-apply and reintroduce the exact silent 100x error
+this feature exists to prevent. Passing `source_unit` to an FBX import is
+reported as an advisory `warnings` entry; use `unit_scale` /
+`axis_conversion` if you genuinely want a manual override.
+
+An ignored-declaration note is advisory only — it does **not** trip
+`require_semantics`, which refuses imports made under an *unauthorised*
+assumption (an undeclared OBJ), not self-describing ones.
 
 ## Known limitation — OBJ `o` groups
 

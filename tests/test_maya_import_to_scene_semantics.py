@@ -306,6 +306,89 @@ def test_fbx_does_not_warn_when_semantics_undeclared(tmp_path):
     assert result["context"]["warnings"] == []
 
 
+def test_fbx_ignores_a_declared_unit_instead_of_double_scaling(tmp_path):
+    """FBX carries its own units, so a declared source_unit must not scale again.
+
+    Measured on Maya 2026: a metres-authored FBX (UnitScaleFactor 100) lands at
+    100 cm in a centimetre scene -- the importer already converted. Applying the
+    declared factor on top would scale twice, which is the same silent 100x
+    class of error this tool exists to prevent, just on another format.
+    """
+    path = tmp_path / "hero.fbx"
+    path.write_bytes(b"FBX")
+    cmds = _semantics_cmds(unit="cm", up="y")
+
+    result = load_and_call_with_mel(
+        _SCRIPT, cmds, MagicMock(), "main", asset=_make_asset(str(path), "fbx"), source_unit="m"
+    )
+
+    assert result["success"] is True, result
+    assert result["context"]["unit_conversion_factor"] == 1.0
+    assert _xform_calls_with(cmds, "scale") == []
+    warnings = result["context"]["warnings"]
+    assert any("source_unit='m' was ignored" in w for w in warnings)
+
+
+def test_fbx_ignores_a_declared_up_axis_instead_of_double_rotating(tmp_path):
+    """Same double-apply guard for the up axis.
+
+    Measured on Maya 2026: a Y-up FBX imported into a Z-up scene lands its
+    height on Z -- the importer already aligned it, so rotating again would
+    double-rotate.
+    """
+    path = tmp_path / "hero.fbx"
+    path.write_bytes(b"FBX")
+    cmds = _semantics_cmds(unit="cm", up="y")
+
+    result = load_and_call_with_mel(
+        _SCRIPT, cmds, MagicMock(), "main", asset=_make_asset(str(path), "fbx"), source_up_axis="z"
+    )
+
+    assert result["success"] is True, result
+    assert result["context"]["axis_conversion"] == "none"
+    warnings = result["context"]["warnings"]
+    assert any("source_up_axis='z' was ignored" in w for w in warnings)
+
+
+def test_require_semantics_still_passes_for_fbx_with_a_declaration(tmp_path):
+    """An ignored-declaration note is advisory and must not trip require_semantics.
+
+    require_semantics refuses imports made under an *unauthorised* assumption.
+    A self-describing format is not that, so a pipeline using the flag must not
+    start failing on FBX that previously passed.
+    """
+    path = tmp_path / "hero.fbx"
+    path.write_bytes(b"FBX")
+    cmds = _semantics_cmds(unit="cm", up="y")
+
+    result = load_and_call_with_mel(
+        _SCRIPT,
+        cmds,
+        MagicMock(),
+        "main",
+        asset=_make_asset(str(path), "fbx"),
+        source_unit="m",
+        source_up_axis="z",
+        require_semantics=True,
+    )
+
+    assert result["success"] is True, result
+
+
+def test_usd_ignores_declared_semantics_too(tmp_path):
+    path = tmp_path / "hero.usd"
+    path.write_bytes(b"USD")
+    cmds = _semantics_cmds(unit="cm", up="y")
+
+    result = load_and_call_with_mel(
+        _SCRIPT, cmds, MagicMock(), "main", asset=_make_asset(str(path), "usd"), source_unit="m"
+    )
+
+    assert result["success"] is True, result
+    assert result["context"]["unit_conversion_factor"] == 1.0
+    assert any("source_unit='m' was ignored" in w for w in result["context"]["warnings"])
+
+
 def test_declared_unit_without_a_target_unit_warns_and_skips_conversion(tmp_path):
     path = tmp_path / "cal.obj"
     path.write_bytes(b"OBJ")
