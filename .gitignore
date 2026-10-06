@@ -89,3 +89,32 @@ DOCKER_QUICK_START.md
 # local_directory, but they must not be committed.
 .agent_context/
 .multica/
+
+# Local agent / IDE directories. These are runtime mount points, not source:
+# an agent runtime materialises skills into them at task start, so a copy kept
+# here is never the one that gets loaded and only drifts. Patterns are anchored
+# with a leading "/" so only the repository root matches; unanchored patterns
+# would silently ignore a nested directory of the same name.
+/.agents/
+/.agent_context/
+/.aider/
+/.augment/
+/.beads/
+/.claude/
+/.cline/
+/.clinerules/
+/.codebuddy/
+/.codegraph/
+/.codex/
+/.continue/
+/.cursor/
+/.gemini/
+/.kimi/
+/.kiro/
+/.monica/
+/.multica/
+/.opencode/
+/.roo/
+/.serena/
+/.trae/
+/.windsurf/
