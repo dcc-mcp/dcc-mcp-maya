@@ -89,3 +89,30 @@ DOCKER_QUICK_START.md
 # local_directory, but they must not be committed.
 .agent_context/
 .multica/
+
+# Local agent / IDE directories. These are runtime mount points, not source:
+# the skills and context that actually get loaded come from the Monica workspace
+# skill registry, so keeping a copy in the repository only lets the two drift.
+/.agents/
+/.agent_context/
+/.aider/
+/.augment/
+/.beads/
+/.claude/
+/.cline/
+/.clinerules/
+/.codebuddy/
+/.codegraph/
+/.codex/
+/.continue/
+/.cursor/
+/.gemini/
+/.kimi/
+/.kiro/
+/.monica/
+/.multica/
+/.opencode/
+/.roo/
+/.serena/
+/.trae/
+/.windsurf/
