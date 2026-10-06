@@ -64,9 +64,19 @@ import_to_scene(descriptor, axis_conversion=..., material_mode=..., ...)
   "unit_scale":          1.0,
   "material_mode":       "preserve | assign_lambert | skip",
   "placement_hint":      "origin | selection | custom",
-  "target_collection":   null
+  "target_collection":   null,
+  "source_unit":         "m",
+  "source_up_axis":      "z",
+  "target_unit":         "cm",
+  "target_up_axis":      "y",
+  "unit_conversion_factor": 100.0,
+  "warnings":            []
 }
 ```
+
+`source_unit` / `source_up_axis` are whatever the caller declared (or
+`null`); `target_unit` / `target_up_axis` are read from the live scene.
+`warnings` is non-empty whenever an assumption had to be made.
 
 ## MaterialMode
 
@@ -98,6 +108,80 @@ top-level transform when you need to correct mismatches:
 
 `unit_scale` applies a uniform scale to every top-level transform (e.g.
 `0.01` to convert cm → m).
+
+## Declared source semantics (`source_unit` / `source_up_axis`)
+
+`axis_conversion` and `unit_scale` are *manual knobs*: the caller has to
+already know what the file is authored in. OBJ carries neither unit nor
+up-axis metadata, so an undeclared import is read by Maya as bare numbers in
+its internal unit — always **centimetres**, whatever `currentUnit` says. A
+2 × 4 × 6 **metre** box therefore lands as 2 × 4 × 6 **centimetres**, and a
+Z-up file lies down in a Y-up scene. Geometry is fully intact, so nothing
+looks broken.
+
+Because the values arrive as centimetres, a declared `source_unit` is a
+straight *source unit → centimetres* conversion. **The target scene unit is
+not part of the calculation** — `currentUnit` only changes how those
+centimetres are displayed, not how they were read. Measured on Maya 2026: one
+hand-written OBJ imported into cm / mm / m / km / in scenes measures `[1, 2, 3]`
+centimetres in every one of them.
+
+Declare the source instead and let the tool convert:
+
+| Parameter | Effect |
+|-----------|--------|
+| `source_unit` | `mm` / `cm` / `m` / `km` / `in` / `ft` / `yd` / `mi`. Scaled so the values become centimetres — Maya's internal unit (see below). |
+| `source_up_axis` | `y` or `z`. Rotated to match the target scene up axis (`upAxis -q -axis`). |
+| `require_semantics` | `true` fails the import instead of warning when either is undeclared. |
+
+Example — a metres-authored, Z-up OBJ into a centimetre, Y-up scene:
+
+```python
+import_to_scene(asset, source_unit="m", source_up_axis="z")
+# -> unit_conversion_factor 100.0, axis_conversion "z_to_y"
+```
+
+When the source is **not** declared:
+
+- The import still runs, with the values read as centimetres.
+- The result carries a `warnings` entry naming the assumption that was
+  applied (that the bare numbers are centimetres), and the same text is
+  mirrored to Maya's Script Editor via `cmds.warning`.
+- `require_semantics=True` turns that warning into a hard error.
+
+### Formats that carry their own semantics
+
+`source_unit` / `source_up_axis` describe the **file**. That only needs saying
+for formats which cannot say it themselves — currently **OBJ**. FBX, USD and
+the Maya formats (MA / MB) embed their own units and up axis, and Maya's
+importer applies that on import.
+
+Measured on Maya 2026 with `FBXResetImport` defaults:
+
+| File | Target scene | Measured |
+|------|--------------|----------|
+| 1 m cube, FBX (`UnitScaleFactor` 100) | cm | lands at **100 cm** — already converted |
+| Y-up FBX, height on Y | Z-up | height lands on **Z** — already aligned |
+| hand-written OBJ, bare numbers | cm / mm / m / km / in | lands at **`[1, 2, 3]` cm in all five** — *not* converted, and independent of scene unit |
+
+So for those formats the declaration is **ignored, not applied**: scaling or
+rotating again would double-apply and reintroduce the exact silent 100x error
+this feature exists to prevent. Passing `source_unit` to an FBX import is
+reported as an advisory `warnings` entry; use `unit_scale` /
+`axis_conversion` if you genuinely want a manual override.
+
+An ignored-declaration note is advisory only — it does **not** trip
+`require_semantics`, which refuses imports made under an *unauthorised*
+assumption (an undeclared OBJ), not self-describing ones.
+
+## Known limitation — OBJ `o` groups
+
+Maya's OBJ importer merges every `o` group in a file into a single
+transform, and exposes no option to split them (verified on Maya 2026:
+`options="mo=1"`, `mo=0`, `groups=1` and `g=1` all yield one transform).
+Object separation is therefore **not** handled here; it needs either
+pre-splitting the file per group or post-splitting the merged mesh by face
+range. Tracked separately.
 
 ## Scripts
 
