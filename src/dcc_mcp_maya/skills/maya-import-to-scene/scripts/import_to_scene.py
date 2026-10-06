@@ -150,6 +150,10 @@ def _resolve_import_semantics(  # noqa: PLR0912
     cannot carry that metadata either, the import is still performed but the
     assumption is reported instead of being swallowed.
 
+    Formats without unit metadata are read by Maya in its internal unit, which
+    is always centimetres, so a declared source unit converts straight to
+    centimetres -- the target scene's unit does not enter into it.
+
     Declarative conversion is only applied to formats that cannot carry the
     metadata themselves (see ``_FORMAT_WITHOUT_SEMANTICS``). FBX, USD and the
     Maya formats describe their own units and up axis, and Maya's importers
@@ -188,6 +192,14 @@ def _resolve_import_semantics(  # noqa: PLR0912
         declared_axis = None
 
     # -- Unit ---------------------------------------------------------------
+    # Maya reads a format without unit metadata in its INTERNAL unit, which is
+    # always centimetres -- currentUnit only changes how those centimetres are
+    # displayed, not how they are read. Measured on Maya 2026: one hand-written
+    # OBJ imported into cm / mm / m / km / in scenes measures [1, 2, 3] cm in
+    # every one of them. So converting a declared source unit is a straight
+    # unit -> centimetres conversion; dividing by the target scene unit (as an
+    # earlier version did) is only correct when that unit happens to be cm,
+    # and silently under-scales by up to 1e5 otherwise.
     unit_factor = 1.0
     if declared_unit and self_describing:
         # The importer already converted the file's own units into the scene
@@ -197,31 +209,17 @@ def _resolve_import_semantics(  # noqa: PLR0912
             "already converted them into the scene unit ('{}'). Use unit_scale for a manual "
             "override.".format(declared_unit, fmt.upper(), target_unit or "unknown")
         )
-    elif declared_unit and target_unit in _UNIT_TO_CM:
-        unit_factor = _UNIT_TO_CM[declared_unit] / _UNIT_TO_CM[target_unit]
-    elif declared_unit and not target_unit:
-        warnings.append(
-            "Cannot convert units: the target scene reports no linear unit, so source_unit='{}' was ignored.".format(
-                declared_unit
-            )
-        )
     elif declared_unit:
-        # The scene named a unit, but it is not one we can convert. Dropping the
-        # caller's declaration here is precisely the silent failure this tool
-        # exists to prevent: the numbers get read in an unconvertible unit and
-        # reported as a clean import.
-        warnings.append(
-            "Cannot convert units: the target scene unit '{}' has no conversion factor, so "
-            "source_unit='{}' was ignored.".format(target_unit, declared_unit)
-        )
-    elif not declared_unit and fmt in _FORMAT_WITHOUT_SEMANTICS:
+        unit_factor = _UNIT_TO_CM[declared_unit]
+    elif fmt in _FORMAT_WITHOUT_SEMANTICS:
         # Neither the file nor the caller knows. Maya has already read the bare
-        # numbers in the target unit, so state the assumption out loud rather
-        # than letting a 100x error pass as a clean import. This one is an
+        # numbers as centimetres, so state that assumption out loud rather than
+        # letting a 100x error pass as a clean import. This one is an
         # unauthorised assumption, so require_semantics refuses on it.
         blocking_warnings.append(
             "Source file declares no unit and source_unit was not given; values were "
-            "interpreted as '{}' (the target scene unit). Pass source_unit to convert.".format(target_unit or "unknown")
+            "interpreted as centimetres (Maya's internal unit, whatever the scene unit is). "
+            "Pass source_unit to convert."
         )
 
     # -- Up axis ------------------------------------------------------------
@@ -456,12 +454,14 @@ def import_to_scene(  # noqa: PLR0913
         Reuse an existing namespace rather than appending a numeric suffix.
     source_unit
         Linear unit the *file* is authored in (``mm``, ``cm``, ``m``, ``km``,
-        ``in``, ``ft``, ``yd``, ``mi``). When given, values are converted into the
-        target scene's unit. When omitted, no conversion happens -- and for
-        formats that cannot carry unit metadata (OBJ) a warning records the
-        assumption instead of failing silently. Only applies to formats
-        without their own unit metadata; on FBX / USD / MA / MB the importer
-        has already converted, so the declaration is reported as ignored.
+        ``in``, ``ft``, ``yd``, ``mi``). When given, values are scaled so they
+        become centimetres -- Maya's internal unit, which is how a format
+        without unit metadata is read regardless of ``currentUnit``. When
+        omitted, no conversion happens -- and for formats that cannot carry
+        unit metadata (OBJ) a warning records the assumption instead of
+        failing silently. Only applies to formats without their own unit
+        metadata; on FBX / USD / MA / MB the importer has already converted,
+        so the declaration is reported as ignored.
     source_up_axis
         Up axis the *file* is authored in (``y`` or ``z``). When it differs
         from the target scene's up axis the import is rotated to match.

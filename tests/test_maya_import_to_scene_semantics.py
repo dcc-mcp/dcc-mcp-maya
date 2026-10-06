@@ -67,17 +67,24 @@ def _xform_calls_with(cmds, keyword):
 # ---------------------------------------------------------------------------
 
 
-def test_undeclared_obj_unit_warns_with_the_target_unit(tmp_path):
+def test_undeclared_obj_unit_warns_that_values_were_read_as_centimetres(tmp_path):
+    """An undeclared OBJ is read as centimetres, whatever the scene unit says.
+
+    Maya's internal unit is the centimetre and currentUnit only changes how
+    those centimetres are displayed, so the warning must name centimetres --
+    telling a metre-scene caller "interpreted as 'm'" would be a lie.
+    """
     path = tmp_path / "cal.obj"
     path.write_bytes(b"OBJ")
-    cmds = _semantics_cmds(unit="cm")
+    cmds = _semantics_cmds(unit="m")
 
     result = load_and_call(_SCRIPT, cmds, "main", asset=_make_asset(str(path)))
 
     assert result["success"] is True, result
     ctx = result["context"]
     assert any("declares no unit" in w for w in ctx["warnings"])
-    assert any("'cm'" in w for w in ctx["warnings"])
+    assert any("centimetres" in w for w in ctx["warnings"])
+    assert not any("interpreted as 'm'" in w for w in ctx["warnings"])
     assert ctx["source_unit"] is None
     assert ctx["unit_conversion_factor"] == 1.0
 
@@ -140,15 +147,41 @@ def test_declared_metres_into_centimetre_scene_scales_by_100(tmp_path):
     assert scales[0][1]["scale"] == [100.0, 100.0, 100.0]
 
 
-def test_declared_millimetres_into_metre_scene_scales_down(tmp_path):
+def test_declared_millimetres_scale_to_centimetres_regardless_of_scene(tmp_path):
+    """The factor is source-unit -> cm only; the target scene unit does not divide it.
+
+    Measured on Maya 2026: one OBJ imported into cm / mm / m / km / in scenes
+    measures the same centimetre value in all of them, so a target-unit
+    denominator is only correct when that unit happens to be cm.
+    """
     path = tmp_path / "cal.obj"
     path.write_bytes(b"OBJ")
-    cmds = _semantics_cmds(unit="m", up="y")
+    for scene_unit in ("cm", "mm", "m", "km", "in", "mi"):
+        cmds = _semantics_cmds(unit=scene_unit, up="y")
+        result = load_and_call(_SCRIPT, cmds, "main", asset=_make_asset(str(path)), source_unit="mm")
+        assert result["success"] is True, result
+        assert result["context"]["unit_conversion_factor"] == 0.1, "scene {} produced a target-dependent factor".format(
+            scene_unit
+        )
 
-    result = load_and_call(_SCRIPT, cmds, "main", asset=_make_asset(str(path)), source_unit="mm")
 
-    assert result["success"] is True, result
-    assert result["context"]["unit_conversion_factor"] == 0.001
+def test_declared_metres_scale_by_100_in_non_centimetre_scenes(tmp_path):
+    """The regression the target-unit denominator caused.
+
+    A metre-declared OBJ in a metre scene used to compute 100/100 = 1.0, i.e. a
+    completely silent no-op that left the asset 100x too small.
+    """
+    path = tmp_path / "cal.obj"
+    path.write_bytes(b"OBJ")
+    for scene_unit in ("m", "mm", "km", "mi", "in", "ft", "yd"):
+        cmds = _semantics_cmds(unit=scene_unit, up="y")
+        result = load_and_call(_SCRIPT, cmds, "main", asset=_make_asset(str(path)), source_unit="m")
+        assert result["success"] is True, result
+        assert result["context"]["unit_conversion_factor"] == 100.0, (
+            "scene {} produced a target-dependent factor".format(scene_unit)
+        )
+        scales = _xform_calls_with(cmds, "scale")
+        assert scales and scales[0][1]["scale"] == [100.0, 100.0, 100.0]
 
 
 def test_matching_source_and_target_unit_is_a_no_op(tmp_path):
@@ -389,7 +422,13 @@ def test_usd_ignores_declared_semantics_too(tmp_path):
     assert any("source_unit='m' was ignored" in w for w in result["context"]["warnings"])
 
 
-def test_declared_unit_without_a_target_unit_warns_and_skips_conversion(tmp_path):
+def test_declared_unit_converts_even_when_the_scene_reports_no_unit(tmp_path):
+    """The factor no longer depends on the scene, so a blank scene unit still converts.
+
+    Previously a scene that reported no linear unit skipped the conversion
+    entirely. Since the target unit is not part of the calculation any more,
+    there is nothing to skip.
+    """
     path = tmp_path / "cal.obj"
     path.write_bytes(b"OBJ")
     cmds = _semantics_cmds(unit="", up="y")
@@ -397,17 +436,16 @@ def test_declared_unit_without_a_target_unit_warns_and_skips_conversion(tmp_path
     result = load_and_call(_SCRIPT, cmds, "main", asset=_make_asset(str(path)), source_unit="m")
 
     assert result["success"] is True, result
-    assert result["context"]["unit_conversion_factor"] == 1.0
-    assert any("source_unit='m' was ignored" in w for w in result["context"]["warnings"])
+    assert result["context"]["unit_conversion_factor"] == 100.0
+    assert not any("was ignored" in w for w in result["context"]["warnings"])
 
 
-def test_declared_unit_with_an_unconvertible_target_unit_warns(tmp_path):
-    """A target unit outside the conversion table must not silently drop source_unit.
+def test_declared_unit_converts_even_for_an_unknown_scene_unit(tmp_path):
+    """Same for a scene unit outside the table: the declaration still applies.
 
-    Maya reports eight linear units; if the table falls behind, a declared
-    source_unit would be dropped with no conversion and no warning -- the exact
-    silent failure this tool exists to prevent. The fallback branch keeps that
-    gap loud.
+    The old code divided by the target unit and fell through to a silent no-op
+    whenever that unit was missing from the table. Conversion is now a pure
+    source-unit -> centimetres step, so an exotic scene unit cannot suppress it.
     """
     path = tmp_path / "cal.obj"
     path.write_bytes(b"OBJ")
@@ -416,10 +454,8 @@ def test_declared_unit_with_an_unconvertible_target_unit_warns(tmp_path):
     result = load_and_call(_SCRIPT, cmds, "main", asset=_make_asset(str(path)), source_unit="m")
 
     assert result["success"] is True, result
-    assert result["context"]["unit_conversion_factor"] == 1.0
-    warnings = result["context"]["warnings"]
-    assert warnings, "declared source_unit was dropped without a warning"
-    assert any("source_unit='m' was ignored" in w for w in warnings)
+    assert result["context"]["unit_conversion_factor"] == 100.0
+    assert not any("was ignored" in w for w in result["context"]["warnings"])
 
 
 def test_declared_miles_into_centimetre_scene_scales(tmp_path):
@@ -434,7 +470,12 @@ def test_declared_miles_into_centimetre_scene_scales(tmp_path):
     assert result["context"]["warnings"] == []
 
 
-def test_declared_unit_into_a_mile_target_scene_converts(tmp_path):
+def test_declared_metres_into_a_mile_scene_still_scales_by_100(tmp_path):
+    """A mile scene must not shrink the factor: conversion is source-unit -> cm.
+
+    The old formula divided by the target unit, so a mile scene produced
+    100/160934.4 and left the asset 1.6e5 times too small, silently.
+    """
     path = tmp_path / "cal.obj"
     path.write_bytes(b"OBJ")
     cmds = _semantics_cmds(unit="mi", up="y")
@@ -442,7 +483,7 @@ def test_declared_unit_into_a_mile_target_scene_converts(tmp_path):
     result = load_and_call(_SCRIPT, cmds, "main", asset=_make_asset(str(path)), source_unit="m", source_up_axis="y")
 
     assert result["success"] is True, result
-    assert result["context"]["unit_conversion_factor"] == 100.0 / 160934.4
+    assert result["context"]["unit_conversion_factor"] == 100.0
     assert result["context"]["warnings"] == []
 
 
