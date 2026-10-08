@@ -41,8 +41,6 @@ tools:
             - mb
           size_bytes:
             type: integer
-          metadata:
-            type: object
       namespace:
         type: string
       group_name:
@@ -96,14 +94,14 @@ tools:
         - ft
         - yd
         - mi
-        description: Unit of the file; scaled to the scene unit.
+        description: Unit of the file. OBJ only; FBX/USD/MA/MB - ignored, warns.
       source_up_axis:
         type: string
         enum:
         - y
         - z
-        description: Up axis of the file; rotated to match.
+        description: Up axis of the file. OBJ only; FBX/USD/MA/MB - ignored, warns.
       require_semantics:
         type: boolean
         default: false
-        description: Fail if semantics are undeclared.
+        description: Refuse undeclared OBJ semantics.
