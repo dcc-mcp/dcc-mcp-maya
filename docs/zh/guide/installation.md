@@ -101,6 +101,37 @@ mayapy -m dcc_mcp_maya.gui_bootstrap probe --maya-pid <PID> --log-path <BOOTSTRA
 也不会执行调用方提供的 MEL/Python，更不会回退到 UI 自动化。真实 GUI 证明
 仍需要可用的 Maya 安装与许可证。
 
+## 可信 UI runtime bootstrap（可选）
+
+`MayaServerOptions`、`MayaMcpServer` 和 `start_server` 可接收 Core 的
+`UiControlRuntimeOptions`。适配器传递原始冻结对象；省略该选项时沿用现有
+Core 契约，也不会导入新的选项类。已发布 Core 0.20.41 尚未提供此可选 API。
+
+操作员可以指定可信模块，在插件创建 server 前完成配置。模块的固定入口
+`bootstrap_in_maya()` 构造 Core 选项，然后调用
+`dcc_mcp_maya.gui_bootstrap.bootstrap_in_maya(ui_control=options)`。
+通过 `gui_bootstrap launch --bootstrap-module studio.maya_owner` 显式启动；
+模块名只接受点分隔的 Python 标识符。使用全新 `MAYA_APP_DIR`，设置 Maya 的
+`MAYA_SKIP_USERSETUP_PY=1`，并确保插件尚未加载。默认启动命令保持原样。
+
+运行时必须由操作员选择绝对路径、核验后的 SHA256 和精确版本。只准备前台
+窗口而不输入内容时，使用 `allowed_actions=()`、
+`window_operations=("restore_activate",)`、`ttl_minutes=5`，并省略录制选项。
+这些配置只属于可信 bootstrap，不接受 agent 通过 snapshot 参数或环境变量
+序列化授权。隔离验收时关闭 gateway，将 registry 输出保存在私有目录。
+
+当前验证候选将 Core Python 源码
+[`c679c61c`](https://github.com/dcc-mcp/dcc-mcp-core/pull/2724)（基于 `2b864fa4`）
+与单独发布的 native Core 0.20.41 组合使用，并非已发布 wheel。
+DCC-CUA `1.9.4+unreal-capture.10` 已构建，但尚未通过界面验收；录制存在已知
+问题，保持关闭。
+
+`configure_bootstrap(ui_control=options)` 的选择在当前进程内固定，必须早于
+singleton 的首次启动尝试。启动前重复传入相同选项可安全复用；冲突配置、
+已加载插件，以及成功或失败启动后的配置变更都会被拒绝。停止 server 不会
+重置该选择。每次 UI 任务结束时先取得规范 `ui_control__stop_computer_use`
+回执，再停止自有 server 和进程。另一套配置应使用新进程。
+
 ## 方式三 — mayapy bootstrap
 
 对于 headless E2E 或服务化运行，可以用自带的 bootstrap 启动 Maya：

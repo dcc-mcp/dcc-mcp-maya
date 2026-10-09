@@ -114,6 +114,41 @@ Pass `--registry-dir` only when Maya uses the matching
 MEL/Python or falls back to UI automation. A live Maya installation and license
 are still required for the GUI proof.
 
+## Trusted UI runtime bootstrap (opt in)
+
+`MayaServerOptions`, `MayaMcpServer`, and `start_server` accept an optional
+Core `UiControlRuntimeOptions`. The adapter forwards the original frozen object;
+omitting it preserves the existing Core contract and does not import the new
+options class. Published Core 0.20.41 does not provide this opt-in API.
+
+A trusted operator module can select the runtime before the packaged plugin
+creates its server. Its fixed `bootstrap_in_maya()` entry point constructs the
+Core object and calls `dcc_mcp_maya.gui_bootstrap.bootstrap_in_maya(ui_control=options)`.
+Launch it explicitly with `gui_bootstrap launch --bootstrap-module studio.maya_owner`.
+Only dotted Python module identifiers are accepted. Use a fresh `MAYA_APP_DIR`,
+set Maya's `MAYA_SKIP_USERSETUP_PY=1`, and ensure the plugin is not already loaded.
+The default launcher command is unchanged.
+
+Select an absolute executable, its verified SHA256 and exact runtime version.
+For foreground preparation without content input use `allowed_actions=()`,
+`window_operations=("restore_activate",)`, `ttl_minutes=5`, and omit recording.
+These are trusted bootstrap options, never agent-supplied snapshot parameters
+or environment-serialized grants. Keep gateway disabled and registry output
+private for an isolated acceptance run.
+
+The current validation candidate uses Core Python source
+[`c679c61c`](https://github.com/dcc-mcp/dcc-mcp-core/pull/2724) over base `2b864fa4`
+with the separately published native Core 0.20.41. This is a source composition,
+not a released wheel. DCC-CUA `1.9.4+unreal-capture.10` is built but has not passed
+UI acceptance; recording is known broken and remains disabled.
+
+`configure_bootstrap(ui_control=options)` is process-scoped and must precede any
+singleton startup attempt. Identical pre-start configuration is idempotent;
+conflicts, an already-loaded plugin, and changes after a failed or successful
+startup are rejected. Stopping the server does not reset this selection. Finish
+every UI task with the canonical `ui_control__stop_computer_use` acknowledgement,
+then stop the owned server and process. Use a fresh process for another selection.
+
 ## Method 3 — mayapy bootstrap
 
 For headless E2E or service-style runs, start Maya through the bundled bootstrap:

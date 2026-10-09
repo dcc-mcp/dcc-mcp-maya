@@ -27,9 +27,9 @@ import logging
 import os
 import sys
 import threading
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 # Import third-party modules
 from dcc_mcp_core import DccServerOptions, HostExecutionBridge, scan_and_load_strict
@@ -61,6 +61,9 @@ from dcc_mcp_maya.context_snapshot import (
     collect_gateway_metadata,
 )
 from dcc_mcp_maya.host import MayaCallableDispatcher
+
+if TYPE_CHECKING:
+    from dcc_mcp_core.server import UiControlRuntimeOptions
 
 logger = logging.getLogger(__name__)
 
@@ -127,8 +130,10 @@ class MayaServerOptions:
     host_dispatcher: Optional[Any] = None
     readiness_timeout_secs: Optional[int] = None
     instance_type: Optional[str] = None
+    ui_control: Optional[UiControlRuntimeOptions] = None
 
     def to_core_options(self) -> DccServerOptions:
+        _validate_ui_control(self.ui_control)
         return DccServerOptions.from_env(
             dcc_name="maya",
             builtin_skills_dir=_BUILTIN_SKILLS_DIR,
@@ -147,6 +152,7 @@ class MayaServerOptions:
             dcc_window_title=self.dcc_window_title,
             dcc_window_handle=self.dcc_window_handle,
             **({"instance_type": self.instance_type} if self.instance_type is not None else {}),
+            **({"ui_control": self.ui_control} if self.ui_control is not None else {}),
         )
 
 
@@ -197,6 +203,7 @@ class MayaMcpServer(DccServerBase):
         readiness_timeout_secs: Optional[int] = None,
         options: Optional[MayaServerOptions] = None,
         instance_type: Optional[str] = None,
+        ui_control: Optional[UiControlRuntimeOptions] = None,
     ) -> None:
         if options is None:
             options = MayaServerOptions(
@@ -218,7 +225,10 @@ class MayaMcpServer(DccServerBase):
                 host_dispatcher=host_dispatcher,
                 readiness_timeout_secs=readiness_timeout_secs,
                 instance_type=instance_type,
+                ui_control=ui_control,
             )
+        elif ui_control is not None and ui_control != options.ui_control:
+            raise BootstrapConfigurationError("ui_control conflicts with MayaServerOptions")
 
         super().__init__(options=options.to_core_options())
 
@@ -989,9 +999,69 @@ class MayaMcpServer(DccServerBase):
 
 # ── Module-level singleton helpers ─────────────────────────────────────────
 
-_server_lock = threading.Lock()
+_server_lock = threading.RLock()
 _instance_holder: List[Optional[MayaMcpServer]] = [None]
 _server_instance: Optional[MayaMcpServer] = None
+_bootstrap_ui_control: Optional[UiControlRuntimeOptions] = None
+_startup_attempted = False
+
+
+class BootstrapConfigurationError(RuntimeError):
+    """Trusted bootstrap selection conflicts with this process's startup."""
+
+
+def _validate_ui_control(ui_control: Optional[UiControlRuntimeOptions]) -> None:
+    if ui_control is None:
+        return
+    try:
+        from dcc_mcp_core.server import UiControlRuntimeOptions
+    except ImportError as exc:
+        raise BootstrapConfigurationError("This Core does not support typed UI Control runtime options") from exc
+    if not isinstance(ui_control, UiControlRuntimeOptions):
+        raise TypeError("ui_control must be the public Core UiControlRuntimeOptions")
+
+
+def configure_bootstrap(*, ui_control: UiControlRuntimeOptions) -> None:
+    """Select trusted UI Control options before the singleton's first start.
+
+    Selection is process-scoped. Identical calls before startup are idempotent;
+    after any startup attempt use a fresh process rather than reconfiguring it.
+    This does not start a server, task, or host.
+    """
+    global _bootstrap_ui_control
+    _validate_ui_control(ui_control)
+    if ui_control is None:
+        raise TypeError("configure_bootstrap requires UiControlRuntimeOptions")
+    with _server_lock:
+        if _startup_attempted or _instance_holder[0] is not None:
+            raise BootstrapConfigurationError("Bootstrap must be configured before any server startup attempt")
+        if _bootstrap_ui_control is not None and _bootstrap_ui_control != ui_control:
+            raise BootstrapConfigurationError("A different UI Control runtime is already configured")
+        if _bootstrap_ui_control is None:
+            _bootstrap_ui_control = ui_control
+
+
+def _resolve_bootstrap(ui_control: Optional[UiControlRuntimeOptions], kwargs: Dict[str, Any]) -> None:
+    """Freeze selection under the server lock and forward its original object."""
+    global _bootstrap_ui_control, _startup_attempted
+    options = kwargs.get("options")
+    option_ui_control = options.ui_control if options is not None else None
+    _validate_ui_control(ui_control)
+    _validate_ui_control(option_ui_control)
+    if ui_control is not None and option_ui_control is not None and ui_control != option_ui_control:
+        raise BootstrapConfigurationError("ui_control conflicts with MayaServerOptions")
+    selected = ui_control if ui_control is not None else option_ui_control
+    if (_startup_attempted or _bootstrap_ui_control is not None) and selected is not None:
+        if selected != _bootstrap_ui_control:
+            raise BootstrapConfigurationError("UI Control runtime cannot change after bootstrap selection")
+    if not _startup_attempted and _bootstrap_ui_control is None:
+        _bootstrap_ui_control = selected
+    _startup_attempted = True
+    if _bootstrap_ui_control is not None:
+        if options is None:
+            kwargs["ui_control"] = _bootstrap_ui_control
+        elif options.ui_control is not _bootstrap_ui_control:
+            kwargs["options"] = replace(options, ui_control=_bootstrap_ui_control)
 
 
 def start_server(
@@ -1009,6 +1079,7 @@ def start_server(
     dcc_window_handle: Optional[int] = None,
     host_dispatcher: Optional[Any] = None,
     readiness_timeout_secs: Optional[int] = None,
+    ui_control: Optional[UiControlRuntimeOptions] = None,
     **kwargs: Any,
 ) -> Any:
     """Start (or return the already-running) Maya MCP server.
@@ -1031,13 +1102,14 @@ def start_server(
     """
     global _server_instance
 
-    dcc_window_title = _env.resolve_window_title(dcc_window_title)
+    with _server_lock:
+        _resolve_bootstrap(ui_control, kwargs)
+        dcc_window_title = _env.resolve_window_title(dcc_window_title)
 
-    # Issue #125 — fix DCC_MCP_PYTHON_EXECUTABLE if it points at a GUI binary.
-    _auto_correct_pyexec()
+        # Issue #125 — fix DCC_MCP_PYTHON_EXECUTABLE if it points at a GUI binary.
+        _auto_correct_pyexec()
 
-    if register_builtins:
-        with _server_lock:
+        if register_builtins:
             if _instance_holder[0] is not None and _instance_holder[0].is_running:
                 return _instance_holder[0]._handle  # type: ignore[return-value]
 
@@ -1082,29 +1154,29 @@ def start_server(
             _server_instance = server
             return handle
 
-    # No builtin registration — delegate to the shared core factory path.
-    handle = create_dcc_server(
-        instance_holder=_instance_holder,
-        lock=_server_lock,
-        server_class=MayaMcpServer,
-        port=port,
-        register_builtins=False,
-        extra_skill_paths=extra_skill_paths,
-        include_bundled=include_bundled,
-        enable_hot_reload=enable_hot_reload,
-        hot_reload_env_var="DCC_MCP_MAYA_HOT_RELOAD",
-        metrics_enabled=metrics_enabled,
-        job_storage_path=job_storage_path,
-        job_recovery=job_recovery,
-        dcc_pid=dcc_pid,
-        dcc_window_title=dcc_window_title,
-        dcc_window_handle=dcc_window_handle,
-        host_dispatcher=host_dispatcher,
-        readiness_timeout_secs=readiness_timeout_secs,
-        **kwargs,
-    )
-    _server_instance = _instance_holder[0]
-    return handle
+        # The shared factory acquires the same reentrant construction lock.
+        handle = create_dcc_server(
+            instance_holder=_instance_holder,
+            lock=_server_lock,
+            server_class=MayaMcpServer,
+            port=port,
+            register_builtins=False,
+            extra_skill_paths=extra_skill_paths,
+            include_bundled=include_bundled,
+            enable_hot_reload=enable_hot_reload,
+            hot_reload_env_var="DCC_MCP_MAYA_HOT_RELOAD",
+            metrics_enabled=metrics_enabled,
+            job_storage_path=job_storage_path,
+            job_recovery=job_recovery,
+            dcc_pid=dcc_pid,
+            dcc_window_title=dcc_window_title,
+            dcc_window_handle=dcc_window_handle,
+            host_dispatcher=host_dispatcher,
+            readiness_timeout_secs=readiness_timeout_secs,
+            **kwargs,
+        )
+        _server_instance = _instance_holder[0]
+        return handle
 
 
 def stop_server() -> None:
