@@ -464,7 +464,10 @@ def import_to_scene(  # noqa: PLR0913
         so the declaration is reported as ignored.
     source_up_axis
         Up axis the *file* is authored in (``y`` or ``z``). When it differs
-        from the target scene's up axis the import is rotated to match.
+        from the target scene's up axis the import is rotated to match. Only
+        applies to formats without their own up-axis metadata; on FBX / USD /
+        MA / MB the importer has already aligned the axis, so the declaration
+        is reported as ignored rather than applied.
     require_semantics
         Refuse to import (instead of warning) when the source unit or up axis
         is undeclared for a format that cannot carry that metadata.
