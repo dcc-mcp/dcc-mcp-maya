@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import argparse
 import json
+import keyword
 import math
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -13,7 +15,10 @@ import time
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, Iterator, List, Optional, Union
+from typing import TYPE_CHECKING, Any, Dict, Iterator, List, Optional, Union
+
+if TYPE_CHECKING:
+    from dcc_mcp_core.server import UiControlRuntimeOptions
 
 PathLike = Union[str, Path]
 
@@ -27,9 +32,22 @@ _MAYA_GUI_BOOTSTRAP_PYTHON = (
 )
 
 
-def build_maya_launch_args(maya_executable: PathLike) -> List[str]:
-    """Build the fixed non-interactive GUI bootstrap command."""
-    mel_command = 'python("{}")'.format(_MAYA_GUI_BOOTSTRAP_PYTHON.replace("\\", "\\\\").replace('"', '\\"'))
+def build_maya_launch_args(maya_executable: PathLike, *, bootstrap_module: Optional[str] = None) -> List[str]:
+    """Build a deferred call to the operator-selected module's fixed entry point."""
+    python_command = _MAYA_GUI_BOOTSTRAP_PYTHON
+    if bootstrap_module is not None:
+        if not isinstance(bootstrap_module, str) or not re.fullmatch(
+            r"[A-Za-z_][A-Za-z_0-9]*(?:\.[A-Za-z_][A-Za-z_0-9]*)*", bootstrap_module
+        ):
+            raise ValueError("bootstrap_module must be a dotted Python module identifier")
+        if any(keyword.iskeyword(part) for part in bootstrap_module.split(".")):
+            raise ValueError("bootstrap_module must be a dotted Python module identifier")
+        python_command = (
+            "import maya.cmds as cmds; "
+            "cmds.evalDeferred(lambda: __import__('{}', "
+            "fromlist=['bootstrap_in_maya']).bootstrap_in_maya(), lowestPriority=True)"
+        ).format(bootstrap_module)
+    mel_command = 'python("{}")'.format(python_command.replace("\\", "\\\\").replace('"', '\\"'))
     return [os.fspath(maya_executable), "-command", mel_command]
 
 
@@ -47,8 +65,10 @@ def launch_maya_gui(
     timeout_secs: float = 120.0,
     registry_base: Optional[PathLike] = None,
     log_path: Optional[PathLike] = None,
+    bootstrap_module: Optional[str] = None,
 ) -> Dict[str, Any]:
-    """Launch Maya with the fixed bootstrap and return one bounded diagnosis."""
+    """Launch with an optional trusted bootstrap module and a bounded diagnosis."""
+    launch_args = build_maya_launch_args(maya_executable, bootstrap_module=bootstrap_module)
     timeout = float(timeout_secs)
     if not math.isfinite(timeout):
         raise ValueError("timeout_secs must be finite")
@@ -69,7 +89,8 @@ def launch_maya_gui(
     env = os.environ.copy()
     env[ENV_GUI_BOOTSTRAP_LOG] = os.fspath(resolved_log_path)
     env["DCC_MCP_REGISTRY_DIR"] = os.fspath(resolved_registry_base)
-    process = subprocess.Popen(build_maya_launch_args(executable), env=env)
+    launch_args[0] = os.fspath(executable)
+    process = subprocess.Popen(launch_args, env=env)
     result = probe_gui_readiness(
         log_path=resolved_log_path,
         registry_dir=_registry_directory(resolved_registry_base),
@@ -98,7 +119,7 @@ def record_bootstrap_stage(log_path: PathLike, stage: str, status: str, **detail
     return event
 
 
-def bootstrap_in_maya() -> None:
+def bootstrap_in_maya(*, ui_control: Optional[UiControlRuntimeOptions] = None) -> None:
     """Resolve and load the packaged plug-in without changing its Auto Load state."""
     log_path = os.environ[ENV_GUI_BOOTSTRAP_LOG]
     prior_events = _read_bootstrap_stages(log_path)
@@ -138,6 +159,13 @@ def bootstrap_in_maya() -> None:
     record_bootstrap_stage(log_path, "plugin_load", "started", plugin_name=PLUGIN_NAME)
     try:
         already_loaded = bool(cmds.pluginInfo(PLUGIN_NAME, query=True, loaded=True))
+        if ui_control is not None:
+            from dcc_mcp_maya.server import BootstrapConfigurationError, configure_bootstrap
+
+            if already_loaded:
+                raise BootstrapConfigurationError("Trusted UI Control options require an unloaded plugin")
+            configure_bootstrap(ui_control=ui_control)
+            record_bootstrap_stage(log_path, "ui_control_configuration", "succeeded")
         if not already_loaded:
             cmds.loadPlugin(os.fspath(plugin_path), quiet=True)
     except Exception as exc:
@@ -385,6 +413,7 @@ def _argument_parser() -> argparse.ArgumentParser:
     launch_parser.add_argument("--timeout", type=float, default=120.0)
     launch_parser.add_argument("--registry-dir", dest="registry_base")
     launch_parser.add_argument("--log-path")
+    launch_parser.add_argument("--bootstrap-module", help="operator-owned Python module with bootstrap_in_maya()")
 
     probe_parser = subparsers.add_parser("probe", help="probe an already launched diagnostic bootstrap")
     probe_parser.add_argument("--maya-pid", type=int, required=True)
@@ -404,6 +433,7 @@ def main(argv: Optional[List[str]] = None) -> int:
                 timeout_secs=args.timeout,
                 registry_base=args.registry_base,
                 log_path=args.log_path,
+                bootstrap_module=args.bootstrap_module,
             )
         else:
             result = probe_gui_readiness(

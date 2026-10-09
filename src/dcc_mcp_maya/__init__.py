@@ -177,7 +177,15 @@ from dcc_mcp_maya.dispatcher import (
 )
 from dcc_mcp_maya.headless import serve_headless
 from dcc_mcp_maya.host import MayaCallableDispatcher, MayaHost
-from dcc_mcp_maya.server import DEFAULT_PORT, MayaMcpServer, MayaServerOptions, start_server, stop_server
+from dcc_mcp_maya.server import (
+    DEFAULT_PORT,
+    BootstrapConfigurationError,
+    MayaMcpServer,
+    MayaServerOptions,
+    configure_bootstrap,
+    start_server,
+    stop_server,
+)
 from dcc_mcp_maya.sidecar import (
     ENV_SIDECAR_BINARY,
     ENV_SIDECAR_MODE,
@@ -196,6 +204,8 @@ __all__ = [
     "DEFAULT_PORT",
     "MayaMcpServer",
     "MayaServerOptions",
+    "BootstrapConfigurationError",
+    "configure_bootstrap",
     "start_server",
     "stop_server",
     "serve_headless",
