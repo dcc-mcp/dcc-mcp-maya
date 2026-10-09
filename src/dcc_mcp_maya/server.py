@@ -1060,7 +1060,7 @@ def _resolve_bootstrap(ui_control: Optional[UiControlRuntimeOptions], kwargs: Di
     if _bootstrap_ui_control is not None:
         if options is None:
             kwargs["ui_control"] = _bootstrap_ui_control
-        elif options.ui_control is None:
+        elif options.ui_control is not _bootstrap_ui_control:
             kwargs["options"] = replace(options, ui_control=_bootstrap_ui_control)
 
 

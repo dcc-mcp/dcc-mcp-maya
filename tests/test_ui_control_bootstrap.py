@@ -196,6 +196,16 @@ def test_configured_start_preserves_caller_options(runtime_options, controlled_s
     assert supplied.ui_control is None
 
 
+def test_equal_caller_options_forward_first_selected_object(runtime_options, controlled_start):
+    equal_options = replace(runtime_options)
+    assert equal_options == runtime_options and equal_options is not runtime_options
+    supplied = server.MayaServerOptions(ui_control=equal_options)
+    server.configure_bootstrap(ui_control=runtime_options)
+    server.start_server(options=supplied)
+    assert controlled_start[0]["options"].ui_control is runtime_options
+    assert supplied.ui_control is equal_options
+
+
 def test_conflicting_direct_and_adapter_options_fail_before_construction(runtime_options, controlled_start):
     supplied = server.MayaServerOptions(ui_control=runtime_options)
     with pytest.raises(server.BootstrapConfigurationError, match="conflicts"):
