@@ -322,8 +322,38 @@ def test_provider_exception_does_not_permanently_block_next_event(runtime):
     binder.snapshot_provider = runtime.provider
     runtime.clear_queries()
     runtime.events[-1]()
+    assert runtime.cmds.calls == []
+    runtime.now += 0.5
+    runtime.timers[-1].fire()
     runtime.drain()
     assert binder.scene_publish_count == baseline + 1
+    runtime.assert_main_queries()
+
+
+@pytest.mark.parametrize("failure", ["provider", "set_scene"])
+def test_failed_refresh_still_throttles_gateway_queries(runtime, failure):
+    binder = runtime.make_binder()
+
+    def fail(*args):
+        raise RuntimeError("scene temporarily unavailable")
+
+    if failure == "provider":
+        binder.snapshot_provider = fail
+    else:
+        binder.handle.set_scene = fail
+    runtime.clear_queries()
+    runtime.now += 1.0
+    runtime.events[-1]()
+    assert len(runtime.metadata) == 1
+    for _ in range(100):
+        runtime.events[-1]()
+    assert len(runtime.metadata) == 1
+    assert len(runtime.timers) == 1
+    runtime.now += 0.5
+    runtime.timers[-1].fire()
+    assert len(runtime.metadata) == 1
+    runtime.drain()
+    assert len(runtime.metadata) == 2
     runtime.assert_main_queries()
 
 

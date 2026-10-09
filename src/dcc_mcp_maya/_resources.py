@@ -764,6 +764,7 @@ class MayaResourceBinder:
                 self._refresh_token = None
                 self._pending_publish = False
                 self._publish_timer = None
+                self._last_publish_at = time.monotonic()
 
     def _refresh_scene(self, generation: int, token: object) -> None:
         """Read Maya only after its host queue reaches the current lifetime."""
