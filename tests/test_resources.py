@@ -21,6 +21,7 @@ Covers:
 from __future__ import annotations
 
 import json
+import queue
 import sys
 import time
 from typing import Any, Callable, Dict, List
@@ -414,6 +415,30 @@ class TestMayaResourceBinderBind:
 # ---------------------------------------------------------------------------
 
 
+@pytest.fixture
+def drain_scene_publishes(monkeypatch):
+    """Model Maya's deferred queue; only the test's main thread drains it."""
+    callbacks = queue.Queue()
+
+    def schedule(callback):
+        if resources_mod.is_main_thread():
+            callback()
+        else:
+            callbacks.put(callback)
+        return True
+
+    def drain():
+        while True:
+            try:
+                callback = callbacks.get_nowait()
+            except queue.Empty:
+                return
+            callback()
+
+    monkeypatch.setattr(resources_mod, "run_on_main_thread", schedule)
+    return drain
+
+
 class TestThrottling:
     """A burst of scene events collapses to two publishes (lead + trail)."""
 
@@ -433,7 +458,7 @@ class TestThrottling:
         binder._on_scene_event()  # type: ignore[attr-defined]
         assert binder.scene_publish_count == baseline + 1
 
-    def test_burst_collapses_to_one_trailing_publish(self) -> None:
+    def test_burst_collapses_to_one_trailing_publish(self, drain_scene_publishes) -> None:
         """A burst within the throttle window collapses to a single trail-edge publish."""
         server = _FakeServer()
         binder = MayaResourceBinder(
@@ -452,12 +477,14 @@ class TestThrottling:
         assert binder.scene_publish_count == baseline
         # Wait for the trail-edge timer to fire.
         time.sleep(0.2)
+        assert binder.scene_publish_count == baseline
+        drain_scene_publishes()
         # Exactly one trailing publish, regardless of burst size.
         assert binder.scene_publish_count == baseline + 1
 
         binder.unbind()
 
-    def test_lead_then_burst_then_trail(self) -> None:
+    def test_lead_then_burst_then_trail(self, drain_scene_publishes) -> None:
         """Full lead+trail dance: first event past window leads, burst trails."""
         server = _FakeServer()
         binder = MayaResourceBinder(
@@ -477,6 +504,8 @@ class TestThrottling:
             binder._on_scene_event()  # type: ignore[attr-defined]
         assert binder.scene_publish_count == baseline + 1
         time.sleep(0.2)
+        assert binder.scene_publish_count == baseline + 1
+        drain_scene_publishes()
         assert binder.scene_publish_count == baseline + 2
 
         binder.unbind()
