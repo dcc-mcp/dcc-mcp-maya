@@ -40,7 +40,7 @@ The list must include `dcc_type=maya`. If it does not, follow the
 **dcc-mcp-maya** — Core Maya adapter for DCC-MCP — gateway-managed instance,
 mayapy-based MCP server.
 
-It is one of **38 host adapters** in the DCC-MCP catalog. Every adapter speaks the same
+It is one of **47 host adapters** in the DCC-MCP catalog. Every adapter speaks the same
 MCP protocol and builds on the same core runtime contract; each one exposes the tools
 its own host needs on top of that.
 
