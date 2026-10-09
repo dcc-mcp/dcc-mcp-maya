@@ -449,6 +449,12 @@ class MayaResourceBinder:
         self._last_publish_at: float = 0.0
         self._publish_timer: Optional[threading.Timer] = None
         self._unbound: bool = False
+        self._generation: int = 0
+        self._refresh_token: Optional[object] = None
+        self._refresh_dispatched: bool = False
+        self._refresh_sync_gateway: bool = False
+        self._refresh_check_busy: bool = False
+        self._scene_event_generation: Optional[int] = None
 
     # ── Public API ──────────────────────────────────────────────────────
 
@@ -466,16 +472,25 @@ class MayaResourceBinder:
         targets the same server.  Returns ``True`` when the handle was
         successfully obtained.
         """
-        if self.bound_server is server:
-            return True
-        self.bound_server = server
-        self._unbound = False
+        with self._lock:
+            if self.bound_server is server and not self._unbound and self.handle is not None:
+                return True
+        if self.bound_server is not None and not self._unbound:
+            self.unbind()
 
         try:
-            self.handle = server._server.resources()
+            handle = server._server.resources()
         except Exception as exc:  # noqa: BLE001
             logger.debug("resources: server.resources() unavailable: %s", exc)
             return False
+        with self._lock:
+            self._generation += 1
+            self.bound_server = server
+            self.handle = handle
+            self._unbound = False
+            self._last_publish_at = 0.0
+            self.registered_producers = []
+            self.session_event_uri = None
 
         # Static producer registration --------------------------------
         self._register_producer(SCHEME_MAYA_CMDS, _maya_cmds_help_producer)
@@ -496,13 +511,33 @@ class MayaResourceBinder:
         — useful for tests that exercise the throttling logic without
         a live Maya.
         """
-        if self.bound_server is None:
+        with self._lock:
+            if self.bound_server is None or self._unbound:
+                return []
+            generation = self._generation
+            if self._scene_event_generation == generation:
+                return list(self.scene_event_ids)
+        if not is_main_thread():
+            run_on_main_thread(lambda: self._install_scene_events(generation))
             return []
-        if self.scene_event_ids:
-            return list(self.scene_event_ids)
-        ids = self.event_installer(self._on_scene_event, self.events)
-        self.scene_event_ids = list(ids)
-        return list(self.scene_event_ids)
+        return self._install_scene_events(generation)
+
+    def _install_scene_events(self, generation: int) -> List[int]:
+        with self._lock:
+            if self._unbound or generation != self._generation:
+                return []
+            if self._scene_event_generation == generation:
+                return list(self.scene_event_ids)
+        ids = list(self.event_installer(lambda: self._on_scene_event(generation), self.events))
+        with self._lock:
+            self.scene_event_ids.extend(ids)
+            active = not self._unbound and generation == self._generation
+            if active:
+                self._scene_event_generation = generation
+            installed = list(self.scene_event_ids)
+        if not active:
+            self._remove_scene_events(ids)
+        return installed if active else []
 
     def unbind(self) -> None:
         """Detach scriptJobs and stop pending publishes.  Idempotent.
@@ -514,11 +549,12 @@ class MayaResourceBinder:
         retained until it actually happens, so a failed teardown cannot leak
         live scene-event hooks bound to a shut-down server.
         """
-        if self._unbound:
-            return
-        self._unbound = True
-
         with self._lock:
+            if self._unbound:
+                return
+            self._unbound = True
+            self._generation = getattr(self, "_generation", 0) + 1
+            self._refresh_token = None
             timer = self._publish_timer
             self._publish_timer = None
             self._pending_publish = False
@@ -530,7 +566,7 @@ class MayaResourceBinder:
 
         self._remove_scene_events()
 
-    def _remove_scene_events(self) -> None:
+    def _remove_scene_events(self, job_ids: Optional[List[int]] = None) -> None:
         """Kill the scene-event scriptJobs on Maya's main thread.
 
         Kept separate from :meth:`unbind` so the idempotency guard on
@@ -545,25 +581,30 @@ class MayaResourceBinder:
         unconditionally is precisely the "lost id" leak that keeps the
         scriptJob alive against a shut-down server (issue #552).
         """
-        if not self.scene_event_ids:
+        with self._lock:
+            ids = list(self.scene_event_ids if job_ids is None else job_ids)
+        if not ids:
             return
 
         if not is_main_thread():
-            scheduled = run_on_main_thread(self._remove_scene_events)
+            # Rebinding this binder must not let a late teardown kill new hooks.
+            scheduled = run_on_main_thread(lambda: self._remove_scene_events(ids))
             if not scheduled:
                 logger.warning(
                     "resources: cannot reach Maya's main thread; %d scene-event scriptJob(s) left installed",
-                    len(self.scene_event_ids),
+                    len(ids),
                 )
             return
 
         try:
-            remaining = _default_event_remover(self.scene_event_ids)
+            remaining = _coerce_job_ids(_default_event_remover(ids))
         except Exception as exc:  # noqa: BLE001
             logger.debug("resources: event remover raised: %s", exc)
             return
 
-        self.scene_event_ids = _coerce_job_ids(remaining)
+        removed = set(ids).difference(remaining)
+        with self._lock:
+            self.scene_event_ids = [jid for jid in self.scene_event_ids if jid not in removed]
 
     # ── Public helpers used by tests / callers that own the snapshot ──
 
@@ -574,22 +615,29 @@ class MayaResourceBinder:
         is invoked to compute one.  Used by tests and by callers that
         want to force a refresh after a scripted edit.
         """
-        if self.handle is None:
-            return
         if payload is None:
-            if self.snapshot_provider is None:
+            self._request_scene_publish(sync_gateway=False)
+            return
+        # Explicit payloads require no Maya query; only computed snapshots
+        # and gateway metadata need the host's main-thread queue.
+        with self._lock:
+            generation = self._generation
+        self._publish_payload(payload, generation)
+
+    def _publish_payload(self, payload: Dict[str, Any], generation: int) -> None:
+        with self._lock:
+            if self._unbound or generation != self._generation or self.handle is None:
                 return
-            try:
-                payload = self.snapshot_provider()
-            except Exception as exc:  # noqa: BLE001
-                logger.debug("resources: snapshot provider raised: %s", exc)
-                return
+            handle = self.handle
         try:
-            self.handle.set_scene(payload)
-            self.scene_publish_count += 1
-            self._last_publish_at = time.monotonic()
+            handle.set_scene(payload)
         except Exception as exc:  # noqa: BLE001
             logger.debug("resources: set_scene raised: %s", exc)
+            return
+        with self._lock:
+            if not self._unbound and generation == self._generation:
+                self.scene_publish_count += 1
+                self._last_publish_at = time.monotonic()
 
     # ── Internals ───────────────────────────────────────────────────────
 
@@ -629,7 +677,7 @@ class MayaResourceBinder:
             logger.debug("resources: busy checker raised: %s", exc)
             return False
 
-    def _on_scene_event(self) -> None:
+    def _on_scene_event(self, generation: Optional[int] = None) -> None:
         """ScriptJob callback: schedule a throttled scene republish.
 
         Maya fires ``DagObjectCreated`` per node, which can mean
@@ -637,42 +685,119 @@ class MayaResourceBinder:
         storm into one publish per :attr:`throttle_secs` window using
         a trailing-edge timer.
         """
-        if self._unbound or self._is_executor_busy():
-            return
-        with self._lock:
-            now = time.monotonic()
-            since = now - self._last_publish_at
-            if since >= self.throttle_secs:
-                # Lead-edge: publish immediately.
-                schedule_now = True
-                self._pending_publish = False
-            else:
-                # Trail-edge: defer until the throttle window closes.
-                schedule_now = False
-                if not self._pending_publish:
-                    delay = self.throttle_secs - since
-                    self._pending_publish = True
-                    self._publish_timer = threading.Timer(delay, self._on_throttle_fire)
-                    self._publish_timer.daemon = True
-                    self._publish_timer.start()
-        if schedule_now:
-            self._publish_scene_now()
+        self._request_scene_publish(sync_gateway=True, throttled=True, generation=generation)
 
-    def _on_throttle_fire(self) -> None:
-        """Trailing-edge throttle handler — runs on a Timer thread."""
-        if self._unbound or self._is_executor_busy():
+    def _request_scene_publish(
+        self,
+        *,
+        sync_gateway: bool,
+        throttled: bool = False,
+        generation: Optional[int] = None,
+    ) -> None:
+        """Coalesce events while a timer, queued callback or snapshot is active."""
+        if throttled and self._is_executor_busy():
             return
+        cancel_timer = None
         with self._lock:
-            self._pending_publish = False
+            if self._unbound or self.handle is None:
+                return
+            if generation is not None and generation != self._generation:
+                return
+            generation = self._generation
+            if self._pending_publish:
+                self._refresh_sync_gateway |= sync_gateway
+                self._refresh_check_busy &= throttled
+                if throttled or self._publish_timer is None:
+                    return
+                # A forced refresh can shorten an existing throttle delay.
+                cancel_timer = self._publish_timer
+                self._publish_timer = None
+                token = self._refresh_token
+                timer = None
+            else:
+                token = object()
+                self._refresh_token = token
+                self._refresh_dispatched = False
+                self._pending_publish = True
+                self._refresh_sync_gateway = sync_gateway
+                self._refresh_check_busy = throttled
+                delay = max(0.0, self.throttle_secs - (time.monotonic() - self._last_publish_at)) if throttled else 0.0
+                timer = None
+                if delay:
+                    timer = threading.Timer(delay, lambda: self._on_throttle_fire(generation, token))
+                    timer.daemon = True
+                    self._publish_timer = timer
+        # Schedulers and injected timers can run inline. Keep them outside
+        # the state lock because Maya queries can trigger another scene event.
+        if cancel_timer is not None:
+            cancel_timer.cancel()
+        if timer is not None:
+            try:
+                timer.start()
+            except Exception as exc:  # noqa: BLE001
+                logger.debug("resources: throttle timer start failed: %s", exc)
+                self._finish_scene_publish(generation, token)
+        else:
+            self._dispatch_scene_publish(generation, token)
+
+    def _on_throttle_fire(self, generation: int, token: object) -> None:
+        """Timer threads only request work on Maya's main-thread queue."""
+        with self._lock:
+            if self._unbound or generation != self._generation or token is not self._refresh_token:
+                return
             self._publish_timer = None
-        self._publish_scene_now()
+        self._dispatch_scene_publish(generation, token)
+
+    def _dispatch_scene_publish(self, generation: int, token: object) -> None:
+        with self._lock:
+            if self._unbound or generation != self._generation or token is not self._refresh_token:
+                return
+            if self._refresh_dispatched:
+                return
+            self._refresh_dispatched = True
+        if not run_on_main_thread(lambda: self._refresh_scene(generation, token)):
+            self._finish_scene_publish(generation, token)
+
+    def _finish_scene_publish(self, generation: int, token: object) -> None:
+        with self._lock:
+            if generation == self._generation and token is self._refresh_token:
+                self._refresh_token = None
+                self._pending_publish = False
+                self._publish_timer = None
+                self._last_publish_at = time.monotonic()
+
+    def _refresh_scene(self, generation: int, token: object) -> None:
+        """Read Maya only after its host queue reaches the current lifetime."""
+        try:
+            with self._lock:
+                if self._unbound or generation != self._generation or token is not self._refresh_token:
+                    return
+                check_busy = self._refresh_check_busy
+                provider = self.snapshot_provider
+            if check_busy and self._is_executor_busy():
+                return
+            if provider is not None:
+                try:
+                    payload = provider()
+                except Exception as exc:  # noqa: BLE001
+                    logger.debug("resources: snapshot provider raised: %s", exc)
+                else:
+                    self._publish_payload(payload, generation)
+            with self._lock:
+                if self._unbound or generation != self._generation or token is not self._refresh_token:
+                    return
+                sync_gateway = self._refresh_sync_gateway
+                server = self.bound_server
+            if sync_gateway:
+                self._sync_gateway_scene_metadata(server)
+        finally:
+            self._finish_scene_publish(generation, token)
 
     def _publish_scene_now(self) -> None:
-        """Resolve the current snapshot and publish via :meth:`publish_scene`."""
-        self.publish_scene()
-        self._sync_gateway_scene_metadata()
+        """Request an unthrottled main-thread scene and registry refresh."""
+        self._request_scene_publish(sync_gateway=True)
 
-    def _sync_gateway_scene_metadata(self) -> None:
+    def _sync_gateway_scene_metadata(self, server: Any) -> None:
         """Push scene path / version into the gateway FileRegistry (admin SCENE column).
 
         MCP ``scene://current`` already refreshes on Maya scriptJob events, but
@@ -681,7 +806,6 @@ class MayaResourceBinder:
         runs.  Re-use the same throttled path so save / open / rename keep the
         admin UI and ``gateway://instances`` in sync.
         """
-        server = self.bound_server
         if server is None:
             return
         publish = getattr(server, "publish_capability_snapshot", None)
