@@ -7,9 +7,11 @@ for the opt-in boundary. The default path still exercises their real options.
 from __future__ import annotations
 
 import builtins
+import importlib
+import sys
 import threading
 from dataclasses import FrozenInstanceError, dataclass, replace
-from types import SimpleNamespace
+from types import ModuleType, SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
@@ -28,12 +30,24 @@ class ControlledRuntimeOptions:
     recording: object = None
 
 
-@pytest.fixture
-def runtime_options(monkeypatch, tmp_path):
-    import dcc_mcp_core.server as core_server
-
+def controlled_options_type(monkeypatch):
+    try:
+        core_server = importlib.import_module("dcc_mcp_core.server")
+    except ModuleNotFoundError as error:
+        if error.name != "dcc_mcp_core.server":
+            raise
+        # Older cp37 Core packages have no modular server namespace. Only this
+        # opt-in controlled fixture supplies the candidate API boundary.
+        core_server = ModuleType("dcc_mcp_core.server")
+        monkeypatch.setitem(sys.modules, "dcc_mcp_core.server", core_server)
     options_type = getattr(core_server, "UiControlRuntimeOptions", ControlledRuntimeOptions)
     monkeypatch.setattr(core_server, "UiControlRuntimeOptions", options_type, raising=False)
+    return options_type
+
+
+@pytest.fixture
+def runtime_options(monkeypatch, tmp_path):
+    options_type = controlled_options_type(monkeypatch)
     return options_type(
         binary=str(tmp_path / "dcc-cua.exe"),
         sha256="a" * 64,
@@ -42,6 +56,19 @@ def runtime_options(monkeypatch, tmp_path):
         window_operations=("restore_activate",),
         ttl_minutes=5,
     )
+
+
+def test_controlled_fixture_supports_legacy_core_without_server_namespace(monkeypatch):
+    original_import = importlib.import_module
+
+    def legacy_import(name, package=None):
+        if name == "dcc_mcp_core.server":
+            raise ModuleNotFoundError("legacy Core namespace", name=name)
+        return original_import(name, package)
+
+    monkeypatch.setattr(importlib, "import_module", legacy_import)
+    assert controlled_options_type(monkeypatch) is ControlledRuntimeOptions
+    assert sys.modules["dcc_mcp_core.server"].UiControlRuntimeOptions is ControlledRuntimeOptions
 
 
 @pytest.fixture(autouse=True)
