@@ -536,7 +536,7 @@ class TestGenerateModuleInfo:
         assert info["adapter_version"] == "0.2.2"
         assert info["embedded_core_version"] == "0.19.4"
         assert info["bundled_server_version"] == "0.18.21"
-        assert info["min_core_version"] == "0.19.45"
+        assert info["min_core_version"] == "0.20.0"
         assert info["max_core_version_exclusive"] == MAX_CORE_VERSION
         assert info["has_python37"] is True
         assert info["supported_maya_versions"] == ["2022", "2023", "2024", "2025", "2026"]

@@ -48,8 +48,9 @@ BOOTSTRAP_ERROR_BACKUP_COUNT = 4
 #: ``dcc_type`` and is rotated, none of which this file could add.
 #:
 #: Owning the stage is not the same as owning the record: core only captures
-#: when it actually has ``capture_bootstrap_errors``, and it does not below
-#: 0.19.90, while ``dcc_mcp_maya.install.MIN_CORE_VERSION`` is still 0.19.45.
+#: when it actually has ``capture_bootstrap_errors``, which it does not below
+#: 0.19.90. ``dcc_mcp_maya.install.MIN_CORE_VERSION`` is above that line, so
+#: this is defence in depth rather than a live gap -- probe the symbol anyway.
 #: On such an older core the ``from dcc_mcp_core import
 #: capture_bootstrap_errors`` inside ``bootstrap_user_setup`` raises before
 #: any capture runs, the ImportError surfaces as ``plugin_load``, and core has
@@ -71,9 +72,11 @@ def _core_persists_bootstrap_errors() -> bool:
 
     ``CORE_PERSISTED_STAGES`` names stages core records *when it owns the capture
     path*. On a core old enough to lack ``capture_bootstrap_errors`` -- absent
-    before 0.19.90, while ``MIN_CORE_VERSION`` is still 0.19.45 -- the failure
-    never enters core's capture, so suppressing the local record would drop it
-    everywhere. Probe the symbol rather than the version:
+    before 0.19.90 -- the failure never enters core's capture, so suppressing the
+    local record would drop it everywhere. ``MIN_CORE_VERSION`` sits above that
+    line, so a conforming install always has the symbol; this probe still covers
+    sites that resolved an older Core outside the declared range. Probe the symbol
+    rather than the version:
     ``bootstrap_user_setup`` only reaches this point after core imported
     successfully, so the module object is present whenever this matters.
     """

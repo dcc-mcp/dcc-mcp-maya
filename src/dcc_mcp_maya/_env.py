@@ -203,12 +203,16 @@ def resolve_port(port: Optional[int] = None, *, default: int = DEFAULT_PORT) -> 
 
        Removal condition — all three must hold: the Python 3.7 support
        commitment is lifted, the ``dcc-mcp-core`` floor in
-       ``pyproject.toml`` can be raised above 0.19.45, and no shipped Maya
-       environment still resolves an older core.  Raising the floor alone
-       is not sufficient today: core 0.19.x wheels are not py37-native, so
-       it would push Python 3.7 Maya sites off a core they can install.
-       Until then keep the shim so ``start_server()`` works regardless of
-       which core the host resolves.
+       ``pyproject.toml`` can be raised above 0.20.0, and no shipped Maya
+       environment still resolves an older core.  The floor is now 0.20.0,
+       but raising it does not remove the shim by itself: a Maya site can
+       still resolve an older Core (an internal index, a pinned
+       environment, or a Core whose py37 wheel is unavailable), and those
+       sites must keep working.  Every Core from 0.19.45 through the current
+       0.20.x series ships a cp37 wheel with the native ``_core`` extension,
+       so a py37 wheel being unavailable is not what keeps the shim alive.
+       Until every condition holds, keep the shim so ``start_server()``
+       works regardless of which core the host resolves.
 
     Priority: explicit ``port`` argument > ``DCC_MCP_MAYA_PORT`` (when set and
     non-empty) > ``default``.  A blank ``DCC_MCP_MAYA_PORT`` is treated as

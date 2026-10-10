@@ -69,17 +69,27 @@ def test_install_package_keeps_python_37_compatible_pip(monkeypatch, tmp_path):
 @pytest.mark.parametrize(
     ("core_version", "accepted"),
     (
-        ("0.19.45", True),
-        ("0.19.45.0", True),
-        ("0.19.45+local", True),
+        # ``{floor}`` expands to the declared Core floor, so the accepted cases keep tracking
+        # ``CORE_REQUIREMENT`` instead of pinning a version the adapter already rejected.
+        ("{floor}", True),
+        ("{floor}.0", True),
+        ("{floor}+local", True),
+        # Below the declared floor.
+        ("0.19.45", False),
         ("0.19.44", False),
         ("1.0.0", False),
         ("1.0.0rc1", False),
         ("1.0.0.dev1", False),
-        ("garbage 0.19.45", False),
+        ("garbage {floor}", False),
     ),
 )
 def test_verify_import_enforces_canonical_core_requirement(monkeypatch, core_version, accepted):
+    from packaging.requirements import Requirement
+
+    floor = next(
+        spec.version for spec in Requirement(setup_dcc_mcp_maya.CORE_REQUIREMENT).specifier if spec.operator == ">="
+    )
+    core_version = core_version.format(floor=floor)
     commands = []
     monkeypatch.setattr(setup_dcc_mcp_maya, "run", lambda command, cwd=None: commands.append(command))
 
