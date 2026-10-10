@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.9.35](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.34...v0.9.35) (2026-10-10)
+
+
+### Features
+
+* **import-to-scene:** declare source unit and up axis on import ([6285152](https://github.com/dcc-mcp/dcc-mcp-maya/commit/6285152d2e06ce28e08c3405e3da529c70976b47))
+
+
+### Bug Fixes
+
+* dispatch scene resource refreshes on the main thread ([#569](https://github.com/dcc-mcp/dcc-mcp-maya/issues/569)) ([3acde89](https://github.com/dcc-mcp/dcc-mcp-maya/commit/3acde897e0bd3f025db97cb975fe480d781d6502))
+* raise declared dcc-mcp-core floor to 0.20.0 ([#554](https://github.com/dcc-mcp/dcc-mcp-maya/issues/554)) ([d264801](https://github.com/dcc-mcp/dcc-mcp-maya/commit/d264801bd63086ab3a268aba9c4ed31f19945fc0))
+
+
+### Documentation
+
+* **import-to-scene:** state that unit/up-axis declarations are OBJ-only ([#567](https://github.com/dcc-mcp/dcc-mcp-maya/issues/567)) ([6c387c0](https://github.com/dcc-mcp/dcc-mcp-maya/commit/6c387c0ca0e5460d951c980f7643d9c256948444))
+* **readme:** add the generated DCC-MCP host matrix pointer ([#564](https://github.com/dcc-mcp/dcc-mcp-maya/issues/564)) ([5614eb3](https://github.com/dcc-mcp/dcc-mcp-maya/commit/5614eb3fe594222a87bef94031b321bf5acee431))
+* refresh the generated DCC-MCP host matrix pointer ([#570](https://github.com/dcc-mcp/dcc-mcp-maya/issues/570)) ([5240742](https://github.com/dcc-mcp/dcc-mcp-maya/commit/524074209e2b58cbb1a41a4f63a1cbf9522a1a7b))
+
 ## [0.9.34](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.33...v0.9.34) (2026-10-05)
 
 
