@@ -242,9 +242,9 @@ def test_single_segment_pep440_core_version_claim_is_rejected() -> None:
 def test_readme_core_badge_uses_the_canonical_complete_upper_bound() -> None:
     content = unquote((ROOT / "README.md").read_text(encoding="utf-8"))
 
-    assert "dcc--mcp--core->=0.19.45,<0.21.0-blue" in content
-    assert "dcc--mcp--core->=0.19.45,<1.0.0-blue" not in content
-    assert "dcc--mcp--core->=0.19.45,<1.0-blue" not in content
+    assert "dcc--mcp--core->=0.20.0,<0.21.0-blue" in content
+    assert "dcc--mcp--core->=0.20.0,<1.0.0-blue" not in content
+    assert "dcc--mcp--core->=0.20.0,<1.0-blue" not in content
 
 
 def test_installer_core_dependency_contract_matches_package_metadata() -> None:
@@ -254,3 +254,78 @@ def test_installer_core_dependency_contract_matches_package_metadata() -> None:
 
     assert install.CORE_VERSION_REQUIREMENT == _core_dependency()
     assert install._core_version_specifier() == Requirement(_core_dependency()).specifier
+
+
+CORE_VERSION_GATE = re.compile(r'Version\("(?P<version>\d+(?:\.\d+)+)"\)')
+
+
+def _declared_core_floor():
+    from packaging.requirements import Requirement
+    from packaging.version import Version
+
+    specifier = Requirement(_core_dependency()).specifier
+    floors = [Version(spec.version) for spec in specifier if spec.operator == ">="]
+    assert floors, "declared Core dependency has no lower bound: %s" % _core_dependency()
+    return max(floors)
+
+
+@pytest.mark.parametrize("relative_path", ("src/dcc_mcp_maya/headless.py",))
+def test_runtime_core_gates_stay_inside_the_declared_dependency_range(relative_path: str) -> None:
+    """A runtime Core version gate must never exceed the declared dependency floor.
+
+    A gate above the floor lets pip resolve a Core that only fails later, at call
+    time, instead of failing at dependency resolution.
+    """
+    from packaging.version import Version
+
+    declared = _declared_core_floor()
+    source = (ROOT / relative_path).read_text(encoding="utf-8")
+    gates = [Version(match.group("version")) for match in CORE_VERSION_GATE.finditer(source)]
+    assert gates, "%s declares no Core version gate to keep in sync" % relative_path
+    assert declared >= max(gates), "declared Core floor %s is below the %s runtime gate %s" % (
+        declared,
+        relative_path,
+        max(gates),
+    )
+
+
+def test_declared_core_range_spans_at_most_one_core_minor_line() -> None:
+    """The declared Core range may cover only one Core minor line.
+
+    Core's adapter requirement policy caps the span at one minor line
+    (``MAX_MINOR_LINES = 1``): the upper bound must sit no higher than the next
+    minor above the floor. Widening the upper bound while leaving the floor on an
+    older line reopens the exact failure this contract exists to prevent -- a
+    declared range whose lower end is missing capabilities the adapter relies on.
+    """
+    from packaging.requirements import Requirement
+    from packaging.version import Version
+
+    specifier = Requirement(_core_dependency()).specifier
+    ceilings = [Version(spec.version) for spec in specifier if spec.operator == "<"]
+    assert ceilings, "declared Core dependency has no upper bound: %s" % _core_dependency()
+
+    floor = _declared_core_floor()
+    ceiling = min(ceilings)
+    limit = Version("%d.%d.0" % (floor.major, floor.minor + 1))
+    assert ceiling <= limit, "declared Core range %s spans more than one minor line (upper bound %s, limit %s)" % (
+        _core_dependency(),
+        ceiling,
+        limit,
+    )
+
+
+def test_declared_core_floor_provides_the_symbols_the_adapter_imports() -> None:
+    """The declared floor must not sit below a Core version missing a used symbol.
+
+    ``install.bootstrap_user_setup`` imports ``dcc_mcp_core.capture_bootstrap_errors``
+    at call time. That symbol is absent on Core 0.19.45 -- the floor this adapter
+    used to declare -- so a floor on that line advertised support for a Core that
+    could not run the installer's own bootstrap path.
+    """
+    from packaging.version import Version
+
+    declared = _declared_core_floor()
+    assert declared >= Version("0.19.90"), (
+        "declared Core floor %s predates dcc_mcp_core.capture_bootstrap_errors (introduced in 0.19.90)" % declared
+    )

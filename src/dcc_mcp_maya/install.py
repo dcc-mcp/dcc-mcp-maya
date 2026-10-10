@@ -73,7 +73,7 @@ FALLBACK_REPORT_SCHEMA_VERSION = 1
 
 DCC_TYPE = "maya"
 COMMAND = "dcc-mcp-maya"
-MIN_CORE_VERSION = "0.19.45"
+MIN_CORE_VERSION = "0.20.0"
 # Pinned to the 0.20.x series rather than the next major: ``<1.0.0`` admitted any future Core
 # minor, so a Core minor could silently break the Install SOP contract (0.20.34 changed the
 # Install SOP schema version). This adapter declares one canonical Core range across PyPI

@@ -27,14 +27,29 @@ classifiers = [
 ]
 
 dependencies = [
-    # 0.19.45 defaults instance listeners to operating-system-assigned ports.
+    # Historical note (no longer a constraint on the floor): 0.19.45 was the
+    # release that defaulted instance listeners to OS-assigned ports.
+    #
+    # The floor is 0.20.0 because Core's adapter requirement policy caps a declared
+    # range at one minor line (MAX_MINOR_LINES = 1): since the upper bound must admit
+    # the current Core series, the lower bound has to sit on that same 0.20.x line.
+    # A floor on 0.19.x with an upper bound of <0.21.0 spans two minor lines and is
+    # rejected by Core's own checker.
+    #
+    # Raising the floor also closes two older gaps: the standalone Mayapy entrypoint
+    # (dcc_mcp_maya.headless.serve_headless) gates on >=0.19.64, and
+    # dcc_mcp_core.capture_bootstrap_errors only exists from 0.19.90 -- both are now
+    # strictly below the declared floor, so no supported version lacks them.
+    #
+    # Python 3.7 support is unaffected: 0.20.0 still publishes a cp37 wheel carrying
+    # the native dcc_mcp_core/_core extension and the dcc_mcp_core.host package.
     #
     # The upper bound is pinned to the 0.20.x series: ``<1.0.0`` admitted any future minor, so a
     # Core minor release could silently break this adapter (0.20.34 changed the Install SOP
     # schema version). Failing at dependency resolution is louder and cheaper than failing the
     # Install SOP contract tests. Runtime installs into a user's Maya stay permissive via
     # MAX_CORE_VERSION in install.py.
-    "dcc-mcp-core>=0.19.45,<0.21.0",
+    "dcc-mcp-core>=0.20.0,<0.21.0",
     "dcc-mcp-server>=0.18.21,<0.21.0",
     "packaging>=21.3",
 ]

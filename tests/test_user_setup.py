@@ -489,12 +489,13 @@ def test_plugin_load_failure_is_recorded_locally_when_core_cannot_capture(monkey
     """A core without ``capture_bootstrap_errors`` must not lose the record.
 
     ``CORE_PERSISTED_STAGES`` says core owns ``plugin_load``, but that only
-    holds once core can actually capture. Below 0.19.90 -- while
-    ``MIN_CORE_VERSION`` is still 0.19.45 -- the import of the symbol inside
-    ``bootstrap_user_setup`` raises before any capture runs, so core writes
-    nothing. Suppressing the local record there would drop a real failure on
-    the floor with no receipt at all, which is worse than the duplicate it
-    removes.
+    holds once core can actually capture. Below 0.19.90 the import of the symbol
+    inside ``bootstrap_user_setup`` raises before any capture runs, so core
+    writes nothing. ``MIN_CORE_VERSION`` sits above that line, so a conforming
+    install always has the symbol -- but a site can still resolve an older Core
+    outside the declared range, and suppressing the local record there would
+    drop a real failure with no receipt at all, which is worse than the
+    duplicate it removes.
     """
     error_dir = _isolate_error_dir(monkeypatch, tmp_path)
     core_records = []

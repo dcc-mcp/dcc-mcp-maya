@@ -20,15 +20,19 @@ def _provenance_record(path, content):
 
 
 def _write_provenanced_module_zip(install, payload, *, mutate=None, python37_content=None, extra_entries=None):
+    # The synthetic payload must advertise the same Core version the adapter requires
+    # (``install.MIN_CORE_VERSION``); deriving it here keeps these fixtures valid when the
+    # declared Core floor moves.
+    core_version = install.MIN_CORE_VERSION
     core_path = "python/dcc_mcp_core/__init__.py"
-    core_content = b'__version__ = "0.19.45"\n'
-    metadata_path = "python/dcc_mcp_core-0.19.45.dist-info/METADATA"
-    metadata_content = b"Metadata-Version: 2.1\nName: dcc-mcp-core\nVersion: 0.19.45\n"
+    core_content = ('__version__ = "%s"\n' % core_version).encode()
+    metadata_path = "python/dcc_mcp_core-%s.dist-info/METADATA" % core_version
+    metadata_content = ("Metadata-Version: 2.1\nName: dcc-mcp-core\nVersion: %s\n" % core_version).encode()
     provenance = {
         "schema_version": 1,
         "name": "dcc-mcp-core",
-        "version": install.MIN_CORE_VERSION,
-        "source_wheels": [{"filename": "dcc_mcp_core-0.19.45-cp38-abi3-win_amd64.whl", "sha256": "a" * 64}],
+        "version": core_version,
+        "source_wheels": [{"filename": "dcc_mcp_core-%s-cp38-abi3-win_amd64.whl" % core_version, "sha256": "a" * 64}],
         "roots": {
             "python": {
                 "metadata": _provenance_record(metadata_path, metadata_content),
@@ -45,7 +49,7 @@ def _write_provenanced_module_zip(install, payload, *, mutate=None, python37_con
     }
     if python37_content is not None:
         python37_path = "python37/dcc_mcp_core/_core.pyd"
-        python37_metadata_path = "python37/dcc_mcp_core-0.19.45.dist-info/METADATA"
+        python37_metadata_path = "python37/dcc_mcp_core-%s.dist-info/METADATA" % core_version
         entries[python37_path] = python37_content
         entries[python37_metadata_path] = metadata_content
         provenance["roots"]["python37"] = {
@@ -93,7 +97,7 @@ def _configure_fake_maya(install, tmp_path, monkeypatch, version="2025"):
         lambda _python: {
             "maya_version": version,
             "python_version": "3.11.9",
-            "core_version": "0.19.91",
+            "core_version": install.MIN_CORE_VERSION,
             "adapter_version": install.__version__,
         },
     )
@@ -118,7 +122,7 @@ def test_install_dry_run_emits_a_complete_non_mutating_plan(tmp_path, monkeypatc
         lambda _python: {
             "maya_version": "2025",
             "python_version": "3.11.9",
-            "core_version": "0.19.91",
+            "core_version": install.MIN_CORE_VERSION,
             "adapter_version": install.__version__,
         },
     )
@@ -538,7 +542,7 @@ def test_preflight_rejects_unsupported_maya_and_core_before_writes(tmp_path, mon
         lambda _python: {
             "maya_version": "2020",
             "python_version": "2.7.18",
-            "core_version": "0.19.91",
+            "core_version": install.MIN_CORE_VERSION,
             "adapter_version": install.__version__,
         },
     )
@@ -552,24 +556,30 @@ def test_preflight_rejects_unsupported_maya_and_core_before_writes(tmp_path, mon
 @pytest.mark.parametrize(
     ("core_version", "expected_exit"),
     (
-        ("garbage 0.19.45", 10),
-        ("0.19.45garbage", 10),
+        # ``{floor}`` expands to the declared Core floor, so these cases track the adapter
+        # instead of silently testing a version the adapter already rejected.
+        ("garbage {floor}", 10),
+        ("{floor}garbage", 10),
         ("0..19.45", 10),
         ("", 10),
-        ("0.19.44", 10),
+        # Below the declared floor.
+        ("0.19.45", 10),
         ("1.0.0rc1", 10),
         ("1.0.0.dev1", 10),
         ("1.0.0", 10),
-        ("0.19.45", 0),
-        ("0.19.45.0", 0),
-        ("0.19.45+local", 0),
-        ("0.19.91", 0),
+        ("{floor}", 0),
+        ("{floor}.0", 0),
+        ("{floor}+local", 0),
+        # Above the declared floor: the first patch release on the next Core line.
+        ("0.20.1", 0),
     ),
 )
 def test_operator_dry_run_strictly_validates_complete_core_version_before_writes(
     core_version, expected_exit, tmp_path, monkeypatch, capsys
 ):
     from dcc_mcp_maya import install
+
+    core_version = core_version.format(floor=install.MIN_CORE_VERSION)
 
     maya_root = tmp_path / "Maya2025"
     maya_root.mkdir()
@@ -758,7 +768,11 @@ def test_module_zip_rejects_path_traversal_before_profile_writes(tmp_path, monke
     (
         {},
         {"min_core_version": "0.19.44", "max_core_version_exclusive": "1.0.0"},
-        {"min_core_version": "0.19.45", "max_core_version_exclusive": "1.0"},
+        # ``{floor}`` expands to the declared Core floor: with min already correct the
+        # upper bound is the only key that can fail, so this case covers it alone. A
+        # min that also differs would trip ``any(...)`` on the floor first and leave
+        # the upper bound unexercised.
+        {"min_core_version": "{floor}", "max_core_version_exclusive": "1.0"},
     ),
 )
 def test_module_zip_rejects_missing_or_mismatched_core_bounds_before_writes(
@@ -766,6 +780,7 @@ def test_module_zip_rejects_missing_or_mismatched_core_bounds_before_writes(
 ):
     from dcc_mcp_maya import install
 
+    metadata_patch = {key: value.format(floor=install.MIN_CORE_VERSION) for key, value in metadata_patch.items()}
     maya_root, modules_dir, scripts_dir, receipt = _configure_fake_maya(install, tmp_path, monkeypatch)
     payload = tmp_path / "contract-drift.zip"
     metadata = {"name": "dcc_mcp_maya", "adapter_version": install.__version__}
@@ -899,8 +914,8 @@ def test_module_zip_rejects_duplicate_same_version_core_identity_before_writes(t
 
     def duplicate(entries, _provenance):
         entries["vendor/dcc_mcp_core-copy.dist-info/METADATA"] = (
-            b"Metadata-Version: 2.1\nName: dcc_mcp_core\nVersion: 0.19.45\n"
-        )
+            "Metadata-Version: 2.1\nName: dcc_mcp_core\nVersion: %s\n" % install.MIN_CORE_VERSION
+        ).encode()
 
     _write_provenanced_module_zip(install, payload, mutate=duplicate)
 
@@ -916,10 +931,12 @@ def test_module_zip_rejects_conflicting_core_metadata_headers_per_root(root_name
     payload = tmp_path / ("conflicting-core-metadata-%s.zip" % root_name)
 
     def conflicting_headers(entries, provenance):
-        metadata_path = "%s/dcc_mcp_core-0.19.45.dist-info/METADATA" % root_name
+        core_version = install.MIN_CORE_VERSION
+        metadata_path = "%s/dcc_mcp_core-%s.dist-info/METADATA" % (root_name, core_version)
         metadata_content = (
-            b"Metadata-Version: 2.1\nName: dcc-mcp-core\nName: attacker-core\nVersion: 0.19.45\nVersion: 9.9.9\n"
-        )
+            "Metadata-Version: 2.1\nName: dcc-mcp-core\nName: attacker-core\nVersion: %s\nVersion: 9.9.9\n"
+            % core_version
+        ).encode()
         entries[metadata_path] = metadata_content
         provenance["roots"][root_name]["metadata"] = _provenance_record(metadata_path, metadata_content)
 
@@ -1257,7 +1274,7 @@ def test_preflight_discovers_supported_host_and_embedded_mayapy(tmp_path, monkey
         lambda selected: {
             "maya_version": "2027",
             "python_version": "3.11",
-            "core_version": "0.19.91",
+            "core_version": install.MIN_CORE_VERSION,
             "adapter_version": install.__version__,
             "selected": str(selected),
         },
@@ -1351,7 +1368,7 @@ def test_emitted_report_matches_the_version_core_validates(tmp_path, monkeypatch
         lambda _python: {
             "maya_version": "2025",
             "python_version": "3.11.9",
-            "core_version": "0.19.91",
+            "core_version": install.MIN_CORE_VERSION,
             "adapter_version": install.__version__,
         },
     )

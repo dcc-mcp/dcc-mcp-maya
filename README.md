@@ -115,7 +115,7 @@ The Maya plugin starts a Rust `dcc-mcp-server` sidecar by default, so HTTP and g
 [![Python](https://img.shields.io/pypi/pyversions/dcc-mcp-maya?label=Python)](https://pypi.org/project/dcc-mcp-maya/)
 [![Maya](https://img.shields.io/badge/Maya-2020%2B-37A5CC)](https://www.autodesk.com/products/maya/overview)
 [![MCP](https://img.shields.io/badge/MCP-Streamable%20HTTP-6f42c1)](https://modelcontextprotocol.io/)
-[![dcc-mcp-core](https://img.shields.io/badge/dcc--mcp--core-%3E%3D0.19.45%2C%3C0.21.0-blue)](https://github.com/dcc-mcp/dcc-mcp-core)
+[![dcc-mcp-core](https://img.shields.io/badge/dcc--mcp--core-%3E%3D0.20.0%2C%3C0.21.0-blue)](https://github.com/dcc-mcp/dcc-mcp-core)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 ## Showcase
@@ -220,7 +220,7 @@ Start a new standalone instance through Maya's official Python executable:
 mayapy -m dcc_mcp_maya --port 0 --gateway-port 9765 --json
 ```
 
-The CLI requires Core 0.19.64 or newer, initializes Maya, pumps Core's dispatcher on the owning main thread,
+The CLI requires Core 0.20.0 or newer, initializes Maya, pumps Core's dispatcher on the owning main thread,
 and uninitializes Maya on shutdown. The startup JSON reports the actual host
 PID and direct MCP endpoint; the gateway discovers this standalone instance.
 Use repeated `--skill-path` arguments to load project skills and
@@ -519,7 +519,7 @@ Windows symlinks require Developer Mode or an elevated shell. If symlinks are un
 
 - Autodesk Maya 2020+
 - Python 3.7+
-- `dcc-mcp-core>=0.19.45,<0.21.0` (Asset Sync tools feature-detect `dcc_mcp_core.asset_sync` at call time)
+- `dcc-mcp-core>=0.20.0,<0.21.0` (Asset Sync tools feature-detect `dcc_mcp_core.asset_sync` at call time)
 - Standard sidecar binary for plugin mode: `dcc-mcp-server>=0.18.21`
 
 ## License
