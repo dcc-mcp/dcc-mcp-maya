@@ -80,6 +80,33 @@ PENDING_DIR_NAME = "pending"
 BOOTSTRAP_LOG_PREFIX = "userSetup"
 SCHEMA_VERSION = 1
 
+#: Bytes a single day's JSONL may reach before it is rotated. Matches core's
+#: ``RotatingFileHandler(maxBytes=..., backupCount=4)`` in
+#: ``dcc_mcp_core.host_errors`` so both logs age out at the same rate.
+#:
+#: This is the *shared* cap for both writers of ``userSetup-<YYYYMMDD>.jsonl``
+#: -- this module's ``finished`` / ``hang_detected`` events and
+#: ``maya/userSetup.py``'s ``failed`` records. ``maya/userSetup.py`` sources
+#: before the adapter is importable, so it re-declares the same numbers and
+#: imports these when it can. Keeping the values identical is what makes the
+#: "bounded at 5 x 5 MiB" claim true no matter which half is appending: the
+#: half that rotates is not necessarily the half that grows.
+BOOTSTRAP_ERROR_MAX_BYTES = 5 * 1024 * 1024
+#: Number of rotated generations kept alongside the live file (``.1`` .. ``.4``
+#: in core's naming), so the directory is bounded at 5 x 5 MB.
+BOOTSTRAP_ERROR_BACKUP_COUNT = 4
+
+#: Per-field caps mirroring ``dcc_mcp_core.host_errors``, which records the
+#: same failures under the same ``traceback`` / ``error`` keys and truncates at
+#: these exact limits. Rotation bounds the *file*; these bound a single record,
+#: so one pathologically large traceback cannot blow a whole generation by
+#: itself. Reusing core's numbers rather than inventing new ones keeps a
+#: record readable the same way whichever writer produced it.
+MAX_TB_CHARS = 32768
+MAX_MSG_CHARS = 8192
+_MAX_TRUNCATED_FIELDS = ("traceback", "message")
+_TRUNCATION_SUFFIX = "...[truncated]"
+
 
 def resolve_bootstrap_timeout_secs(environ: Optional[Dict[str, str]] = None) -> Optional[float]:
     """Return the hang threshold in seconds, or ``None`` when disabled.
@@ -137,15 +164,93 @@ def _utc_now() -> datetime:
     return datetime.now(timezone.utc)
 
 
+def _truncate(text: Optional[str], limit: int) -> Optional[str]:
+    """Bound ``text`` at ``limit`` characters, mirroring core's helper."""
+    if text is None or len(text) <= limit:
+        return text
+    return text[:limit] + _TRUNCATION_SUFFIX
+
+
+def _bounded_record(record: Dict[str, Any]) -> Dict[str, Any]:
+    """Cap the free-text fields that can grow without bound.
+
+    Rotation alone bounds the file only while each record stays small: a single
+    multi-megabyte ``traceback`` would land in one append and push a nearly
+    empty file straight past the cap, and no amount of rotating afterwards
+    shrinks the generation already written. Caps match
+    ``dcc_mcp_core.host_errors`` so the same failure reads the same either way.
+    """
+    bounded = dict(record)
+    for key in _MAX_TRUNCATED_FIELDS:
+        if key not in bounded:
+            continue
+        value = bounded[key]
+        if isinstance(value, str):
+            bounded[key] = _truncate(value, MAX_TB_CHARS if key == "traceback" else MAX_MSG_CHARS)
+    return bounded
+
+
+def rotate_bootstrap_log(
+    path: Path,
+    backup_count: int = BOOTSTRAP_ERROR_BACKUP_COUNT,
+) -> None:
+    """Rotate ``path`` through ``.1`` .. ``.N``, mirroring core's handler.
+
+    Core uses :class:`logging.handlers.RotatingFileHandler`, which renames
+    ``.i`` to ``.i+1`` from the oldest generation down and then moves the live
+    file to ``.1``. Reproducing that naming keeps the two logs -- core's
+    ``host-errors.log`` and this one -- inspectable with the same habits.
+
+    Rotation only ever renames, never truncates in place, so an append racing
+    a rotation lands in a rotated generation instead of being lost. That is
+    what lets both writers of this file rotate it without coordinating.
+    """
+    for generation in range(backup_count - 1, 0, -1):
+        source = path.with_name("{}.{}".format(path.name, generation))
+        destination = path.with_name("{}.{}".format(path.name, generation + 1))
+        if not source.exists():
+            continue
+        if destination.exists():
+            destination.unlink()
+        source.replace(destination)
+    first = path.with_name("{}.1".format(path.name))
+    if first.exists():
+        first.unlink()
+    if path.exists():
+        path.replace(first)
+
+
 def _append_record(path: Path, record: Dict[str, Any]) -> None:
+    """Append one record, rotating first when the append would overflow.
+
+    The cap is enforced here and not only in ``maya/userSetup.py`` because the
+    two halves grow the same file under different conditions: ``failed``
+    records only appear while a bootstrap is actually broken, whereas
+    ``finished`` / ``hang_detected`` accumulate on every healthy launch. Once a
+    studio fixes whatever was failing, the only remaining writer is this one --
+    so a cap enforced solely on the failure path leaves the log unbounded
+    precisely in the period where nobody is watching it.
+    """
     path.parent.mkdir(parents=True, exist_ok=True)
+    payload = json.dumps(_bounded_record(record), ensure_ascii=False, sort_keys=True)
+    # Rotate on what the file is *about to become*, not on what it already is:
+    # a single large record can push a nearly-empty file past the cap in one
+    # append. Both writers of this file apply the same rule, so whichever side
+    # happens to cross the boundary is the one that rotates.
+    pending = len(payload.encode("utf-8")) + 1
+    try:
+        current = path.stat().st_size if path.exists() else 0
+    except OSError:
+        current = 0
+    if current + pending > BOOTSTRAP_ERROR_MAX_BYTES:
+        rotate_bootstrap_log(path)
     # ``newline=""``: this file is shared with ``maya/userSetup.py``, which
     # appends the ``failed`` records to the very same
     # ``userSetup-<YYYYMMDD>.jsonl``. Default text mode would rewrite the
     # trailing ``\n`` to CRLF on Windows and leave one file with two line
     # endings -- the exact thing capping the log was meant to make readable.
     with path.open("a", encoding="utf-8", newline="") as stream:
-        stream.write(json.dumps(record, ensure_ascii=False, sort_keys=True) + "\n")
+        stream.write(payload + "\n")
 
 
 def _marker_path(run_id: str, environ: Optional[Dict[str, str]] = None) -> Path:
