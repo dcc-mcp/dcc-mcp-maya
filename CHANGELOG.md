@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.36](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.35...v0.9.36) (2026-10-17)
+
+
+### Bug Fixes
+
+* bundle compatible packaging in offline Maya module ZIPs ([#572](https://github.com/dcc-mcp/dcc-mcp-maya/issues/572)) ([#573](https://github.com/dcc-mcp/dcc-mcp-maya/issues/573)) ([2399bb6](https://github.com/dcc-mcp/dcc-mcp-maya/commit/2399bb6ecd3f095a0e34d5b5051957e3fddae1e4))
+
 ## [0.9.35](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.34...v0.9.35) (2026-10-10)
 
 
