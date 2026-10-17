@@ -3,7 +3,7 @@
 Maya provides Python. The adapter's required runtime closure is the standard
 library, Maya/plugin-owned modules, and first-party DCC-MCP Core/server. Build
 and development dependencies are separate. The enforceable repository policy is
-in [AGENTS.md](../../AGENTS.md#adapter-runtime-dependency-boundary).
+in [AGENTS.md](https://github.com/dcc-mcp/dcc-mcp-maya/blob/main/AGENTS.md#adapter-runtime-dependency-boundary).
 
 ## Version checks without a runtime package
 
