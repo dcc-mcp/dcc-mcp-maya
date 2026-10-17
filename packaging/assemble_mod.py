@@ -44,6 +44,10 @@ MAYA_PYTHONPATH_BY_VERSION = {
 }
 PLATFORMS_WITH_CP37_WHEELS = {"win64", "linux"}
 CORE_PROVENANCE_PATH = "core-provenance.json"
+# The last packaging release supporting Maya 2022's Python 3.7. This pure-Python
+# wheel has no runtime dependencies; pin its bytes for both module runtime roots.
+BUNDLED_PACKAGING_VERSION = "24.0"
+BUNDLED_PACKAGING_SHA256 = "2ddfb553fdf02fb784c234c7ba6ccc288296ceabec964ad2eae3777778130bc5"
 
 if os.name == "nt":
     import ctypes
@@ -327,6 +331,41 @@ def download_server_wheel(version: str, platform: str, dest: Path) -> Path:
     raise RuntimeError(
         f"No dcc-mcp-server wheel matching {patterns!r} found on PyPI for platform={platform}, version={version}"
     )
+
+
+def download_packaging_wheel(dest: Path) -> bytes:
+    """Fetch the complete, hash-pinned Python 3.7-compatible runtime dependency."""
+    filename = f"packaging-{BUNDLED_PACKAGING_VERSION}-py3-none-any.whl"
+    data = _fetch_json(f"https://pypi.org/pypi/packaging/{BUNDLED_PACKAGING_VERSION}/json", timeout=30)
+    candidates = [item for item in data["urls"] if item["filename"] == filename and not item.get("yanked")]
+    if len(candidates) != 1 or candidates[0].get("digests", {}).get("sha256") != BUNDLED_PACKAGING_SHA256:
+        raise RuntimeError("Pinned packaging wheel identity does not match PyPI metadata")
+    wheel = dest / filename
+    _download_file(candidates[0]["url"], wheel)
+    payload = wheel.read_bytes()
+    if hashlib.sha256(payload).hexdigest() != BUNDLED_PACKAGING_SHA256:
+        raise RuntimeError("Pinned packaging wheel SHA256 mismatch")
+    return payload
+
+
+def extract_packaging_wheel(payload: bytes, dest: Path) -> None:
+    """Extract the complete captured wheel, including metadata and licenses."""
+    with zipfile.ZipFile(io.BytesIO(payload)) as archive:
+        for member in archive.infolist():
+            parts = Path(member.filename).parts
+            if (
+                not parts
+                or Path(member.filename).is_absolute()
+                or ".." in parts
+                or parts[0] not in ("packaging", f"packaging-{BUNDLED_PACKAGING_VERSION}.dist-info")
+                or stat.S_ISLNK(member.external_attr >> 16)
+            ):
+                raise RuntimeError(f"Unexpected packaging wheel member: {member.filename}")
+            if member.is_dir():
+                continue
+            target = dest / member.filename
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(archive.read(member))
 
 
 def _core_wheel_patterns(platform: str) -> List[Tuple[str, str]]:
@@ -990,6 +1029,7 @@ def assemble(project_root: Path, version: str, platform: str, output: Path, *, _
         cache_dir = Path(wheel_cache)
         wheels = download_core_wheels(core_version, platform, cache_dir)
         server_wheel = download_server_wheel(server_version, platform, cache_dir)
+        packaging_wheel = download_packaging_wheel(cache_dir)
         abi3_wheels = [wheel for wheel in wheels if "abi3" in wheel.name]
         cp37_wheels = [wheel for wheel in wheels if "cp37-cp37m" in wheel.name]
         full_wheels = abi3_wheels or wheels
@@ -1042,6 +1082,7 @@ def assemble(project_root: Path, version: str, platform: str, output: Path, *, _
                 continue
             print(f"  Extracting {server_wheel.name} to {package_root.name}/...")
             extract_server_wheel(server_wheel, package_root)
+            extract_packaging_wheel(packaging_wheel, package_root)
         _bind_extracted_core_objects(module_dir, expected_roots)
     print("  Extracted dcc_mcp_core")
     print("  Extracted dcc_mcp_server")

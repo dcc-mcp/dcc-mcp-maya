@@ -635,6 +635,76 @@ def _mock_server_download(version, _platform, dest):
     )
 
 
+@pytest.fixture
+def bundled_packaging(monkeypatch):
+    """Unit assembly tests use a complete tiny wheel, never the builder's package."""
+
+    def fake_download(dest):
+        return _make_fake_wheel(
+            dest,
+            "packaging-24.0-py3-none-any.whl",
+            {
+                "packaging/__init__.py": b"__version__ = '24.0'\n",
+                "packaging/version.py": b"# version parser\n",
+                "packaging-24.0.dist-info/METADATA": b"Name: packaging\nVersion: 24.0\nRequires-Python: >=3.7\n",
+                "packaging-24.0.dist-info/LICENSE": b"license retained\n",
+                "packaging-24.0.dist-info/WHEEL": b"Tag: py3-none-any\n",
+                "packaging-24.0.dist-info/RECORD": b"",
+            },
+        ).read_bytes()
+
+    monkeypatch.setattr(assemble_mod, "download_packaging_wheel", fake_download)
+
+
+class TestBundledPackaging:
+    def test_download_checks_pinned_metadata_and_payload(self, tmp_path, monkeypatch):
+        payload = b"captured complete wheel"
+        digest = hashlib.sha256(payload).hexdigest()
+        monkeypatch.setattr(assemble_mod, "BUNDLED_PACKAGING_SHA256", digest)
+        monkeypatch.setattr(
+            assemble_mod,
+            "_fetch_json",
+            lambda *args, **kwargs: {
+                "urls": [
+                    {
+                        "filename": "packaging-24.0-py3-none-any.whl",
+                        "url": "https://example.com/packaging.whl",
+                        "digests": {"sha256": digest},
+                    }
+                ]
+            },
+        )
+        monkeypatch.setattr(assemble_mod, "_download_file", lambda url, path: path.write_bytes(payload))
+        assert assemble_mod.download_packaging_wheel(tmp_path) == payload
+        monkeypatch.setattr(assemble_mod, "_download_file", lambda url, path: path.write_bytes(b"wrong"))
+        with pytest.raises(RuntimeError, match="SHA256 mismatch"):
+            assemble_mod.download_packaging_wheel(tmp_path)
+
+    def test_download_rejects_changed_or_yanked_identity(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(assemble_mod, "_fetch_json", lambda *args, **kwargs: {"urls": []})
+        with pytest.raises(RuntimeError, match="identity"):
+            assemble_mod.download_packaging_wheel(tmp_path)
+
+    @pytest.mark.parametrize("member", ["../escape.py", "/escape.py", "foreign/package.py"])
+    def test_extraction_rejects_unexpected_members(self, tmp_path, member):
+        wheel = _make_fake_wheel(tmp_path, "packaging-24.0-py3-none-any.whl", {member: b"bad"})
+        with pytest.raises(RuntimeError, match="Unexpected packaging wheel member"):
+            assemble_mod.extract_packaging_wheel(wheel.read_bytes(), tmp_path / "out")
+
+    def test_complete_wheel_survives_in_both_runtime_roots(self, tmp_path, bundled_packaging):
+        project = _setup_project(tmp_path)
+        with patch.object(assemble_mod, "resolve_core_version", return_value="0.15.0"), patch.object(
+            assemble_mod, "download_core_wheels", side_effect=_mock_download_and_resolve(project, tmp_path)
+        ), patch.object(assemble_mod, "resolve_server_version", return_value="0.15.0"), patch.object(
+            assemble_mod, "download_server_wheel", side_effect=_mock_server_download
+        ):
+            root = assemble_mod.assemble(project, "0.9.35", "win64", tmp_path / "out")
+        for name in ("python", "python37"):
+            assert (root / name / "packaging/version.py").is_file()
+            for metadata in ("METADATA", "LICENSE", "WHEEL", "RECORD"):
+                assert (root / name / "packaging-24.0.dist-info" / metadata).is_file()
+
+
 def _replace_with_directory_link(source: Path, preserved: Path) -> None:
     source.replace(preserved)
     if os.name == "nt":
@@ -649,6 +719,7 @@ def _replace_with_directory_link(source: Path, preserved: Path) -> None:
         source.symlink_to(preserved, target_is_directory=True)
 
 
+@pytest.mark.usefixtures("bundled_packaging")
 class TestAssemble:
     def test_capture_rejects_file_symlink_without_mutating_target(self, tmp_path):
         target = tmp_path / "target.py"
@@ -993,6 +1064,7 @@ class TestAssemble:
         assert (result / "scripts" / "userSetup.py").exists()
 
 
+@pytest.mark.usefixtures("bundled_packaging")
 class TestAssemblePortable:
     def test_win64_has_install_scripts(self, tmp_path):
         project = _setup_project(tmp_path)
@@ -1031,6 +1103,7 @@ class TestAssemblePortable:
         assert not (result / "install.bat").exists()
 
 
+@pytest.mark.usefixtures("bundled_packaging")
 class TestAssemblePipeline:
     def test_has_module_info_and_no_install_scripts(self, tmp_path):
         project = _setup_project(tmp_path)
@@ -1059,6 +1132,7 @@ class TestAssemblePipeline:
         assert not (result / "install.sh").exists()
 
 
+@pytest.mark.usefixtures("bundled_packaging")
 class TestMain:
     def test_creates_two_zips(self, tmp_path):
         project = _setup_project(tmp_path)
