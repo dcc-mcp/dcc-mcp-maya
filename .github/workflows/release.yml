@@ -224,6 +224,14 @@ jobs:
             --project-root .
         shell: bash
 
+      - name: Install module smoke test runner
+        run: pip install pytest
+
+      - name: Verify sealed module ZIPs without site packages
+        env:
+          DCC_MCP_MAYA_TEST_MODULE_ZIPS: dist/mod
+        run: python -m pytest tests/test_offline_module_bootstrap.py -m packaging -v
+
       - name: Upload mod artifact
         uses: actions/upload-artifact@v7
         with:

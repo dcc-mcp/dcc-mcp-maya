@@ -94,6 +94,11 @@ jobs:
             --output dist/mod \
             --project-root .
 
+      - name: Verify sealed module ZIPs with the host interpreter
+        env:
+          DCC_MCP_MAYA_TEST_MODULE_ZIPS: dist/mod
+        run: mayapy -m pytest tests/test_offline_module_bootstrap.py -m packaging -v
+
       - name: Deploy .mod module to Maya modules directory
         run: |
           # Maya looks for modules in ~/maya/modules/ on Linux
