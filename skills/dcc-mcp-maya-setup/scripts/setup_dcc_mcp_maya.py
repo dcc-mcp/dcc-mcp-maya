@@ -113,19 +113,19 @@ def install_package(mayapy: Path, source: str, repo_root: Path, skip_install: bo
 def verify_import(mayapy: Path) -> None:
     code = (
         """\
-from packaging.requirements import Requirement
-from packaging.version import InvalidVersion, Version
-
 import dcc_mcp_core
 import dcc_mcp_maya
+from dcc_mcp_maya._version_contract import InvalidVersion, Version
+from dcc_mcp_maya.install import CORE_VERSION_REQUIREMENT, _core_version_specifier
 
-requirement = Requirement(%r)
+assert CORE_VERSION_REQUIREMENT == %r
+requirement = _core_version_specifier()
 try:
     core_version = Version(str(dcc_mcp_core.__version__))
 except InvalidVersion as exc:
     raise SystemExit("Invalid dcc-mcp-core version: %%s" %% exc)
-if core_version not in requirement.specifier:
-    raise SystemExit("Unsupported dcc-mcp-core %%s; required %%s" %% (core_version, requirement.specifier))
+if core_version not in requirement:
+    raise SystemExit("Unsupported dcc-mcp-core %%s; required %%s" %% (core_version, requirement))
 print("dcc-mcp-maya", dcc_mcp_maya.__version__)
 print("dcc-mcp-core", core_version)
 """

@@ -5,6 +5,7 @@ from __future__ import annotations
 import copy
 import json
 import os
+import re
 import shlex
 import subprocess
 import sys
@@ -36,7 +37,7 @@ def preparation(steps):
 
 def test_release_declares_assembler_dependency_before_consumption():
     project = tomllib.loads((ROOT / "pyproject.toml").read_text())["project"]
-    requirement = next(value for value in project["dependencies"] if value.startswith("packaging>="))
+    requirement = next(value for value in project["optional-dependencies"]["dev"] if value.startswith("packaging>="))
     assert requirement in preparation(release_steps())
 
 
@@ -95,7 +96,7 @@ def test_clean_release_preparation_builds_actual_module_archives(tmp_path):
     inventory = run("inventory", [python, "-I", "-m", "pip", "list", "--format=json"])
     assert inventory.returncode == 0, inventory.stderr
     names = {entry["name"].lower().replace("_", "-") for entry in json.loads(inventory.stdout)}
-    assert {"dcc-mcp-maya", "pytest", "build", "hatchling"}.isdisjoint(names), names
+    assert {"dcc-mcp-core", "dcc-mcp-maya", "pytest", "build", "hatchling"}.isdisjoint(names), names
     prepared = run("prepared-consumer", consumer + ["--help"])
     assert prepared.returncode == 0, prepared.stdout + prepared.stderr
     # Use the actual workflow assembler arguments, substituting only runner
@@ -111,3 +112,24 @@ def test_clean_release_preparation_builds_actual_module_archives(tmp_path):
     assert built.returncode == 0, built.stdout + built.stderr
     for variant in ("portable", "pipeline"):
         assert len(list((tmp_path / "artifacts" / variant).glob("*.zip"))) == 1
+
+
+def test_e2e_sealed_zip_uses_the_copied_source_version():
+    steps = yaml.safe_load((ROOT / ".github/workflows/e2e.yml").read_text())["jobs"]["e2e"]["steps"]
+    index = next(i for i, step in enumerate(steps) if step.get("name") == "Assemble .mod module")
+    script = steps[index]["run"]
+    match = re.search(r"VERSION=\"\$\(python -c '([^']+)'\)\"", script)
+    assert match, "E2E archive identity must come from the source, not a placeholder"
+    result = subprocess.run(
+        [sys.executable, "-I", "-S", "-c", match.group(1)],
+        cwd=str(ROOT),
+        capture_output=True,
+        universal_newlines=True,
+        timeout=10,
+    )
+    project = tomllib.loads((ROOT / "pyproject.toml").read_text())["project"]
+    assert result.returncode == 0 and result.stdout.strip() == project["version"], result.stderr
+    assert '--version "$VERSION"' in script
+    assert "packaging>=21.3" in script  # Explicit build input, not pytest leakage.
+    assert "test_offline_module_bootstrap.py" in steps[index + 1]["run"]
+    assert steps[index + 2]["name"] == "Deploy .mod module to Maya modules directory"

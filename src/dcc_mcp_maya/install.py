@@ -28,6 +28,7 @@ import dcc_mcp_core
 from dcc_mcp_core.install_lifecycle import inspect_install_root, safe_remove_tree, wait_for_sidecar_ready
 
 from dcc_mcp_maya.__version__ import __version__
+from dcc_mcp_maya._version_contract import InvalidVersion, StableReleaseRange, Version, canonicalize_name
 
 try:
     from dcc_mcp_core.deployment import (
@@ -148,8 +149,6 @@ def _version_tuple(value):
 
 def _pep440_version(value):
     """Parse one complete PEP 440 version or return ``None``."""
-    from packaging.version import InvalidVersion, Version
-
     try:
         return Version(str(value))
     except InvalidVersion:
@@ -157,10 +156,8 @@ def _pep440_version(value):
 
 
 def _core_version_specifier():
-    """Keep lifecycle dependencies out of the offline userSetup import path."""
-    from packaging.specifiers import SpecifierSet
-
-    return SpecifierSet(CORE_VERSION_REQUIREMENT[len("dcc-mcp-core") :])
+    """The canonical stable release range, independent of site-packages."""
+    return StableReleaseRange(MIN_CORE_VERSION, MAX_CORE_VERSION)
 
 
 def _probe_target(python_path):
@@ -940,9 +937,6 @@ def _core_provenance_failure(message):
 
 
 def _parse_unique_core_metadata(metadata_content):
-    from packaging.utils import canonicalize_name
-    from packaging.version import InvalidVersion, Version
-
     try:
         package_metadata = Parser().parsestr(metadata_content.decode("utf-8"))
         names = package_metadata.get_all("Name", [])
@@ -982,9 +976,6 @@ def _validate_provenance_record(archive, normalized, record, expected_prefix=Non
 
 
 def _validate_module_zip_core_provenance(archive, normalized, module_info, embedded_core_version):
-    from packaging.utils import canonicalize_name
-    from packaging.version import InvalidVersion, Version
-
     identities = []
     for relative_path, member_name in normalized.items():
         if not relative_path.casefold().endswith(".dist-info/metadata"):
@@ -1128,8 +1119,6 @@ def _validate_module_zip_core_provenance(archive, normalized, module_info, embed
 
 
 def _validate_module_zip(payload):
-    from packaging.version import InvalidVersion, Version
-
     try:
         payload_bytes, source_fingerprint, source_sha256 = _capture_module_zip_source(payload)
         archive = zipfile.ZipFile(io.BytesIO(payload_bytes))

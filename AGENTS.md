@@ -389,6 +389,36 @@ no longer a guess. Opt out with `DCC_MCP_MAYA_VERSION_CHECK=0`.
 
 ## Key Conventions
 
+### Adapter Runtime Dependency Boundary
+
+- Maya owns the Python interpreter. Adapter runtime code uses the Python standard
+  library, host-owned modules, and first-party `dcc-mcp-core` / `dcc-mcp-server`
+  APIs. Do not add third-party runtime requirements, vendor them into the adapter,
+  or create an adapter-specific interpreter / virtual environment.
+- Host-owned integrations include Maya APIs, Maya's PySide / shiboken bindings,
+  Arnold's `mtoa`, and Maya USD's `pxr`. Use the host's versions; never pip-install
+  replacements into a release bundle. Feature-specific host modules may be absent.
+- The existing lazy `debugpy` developer integration, optional PyYAML affinity
+  loader, and `importlib_metadata` compatibility probe are narrowly grandfathered
+  at their audited call sites. They must handle missing imports, remain outside
+  required runtime dependencies and release bundles, and must not become startup
+  prerequisites. These exceptions do not authorize new third-party imports.
+- Build / development dependencies are separate: `packaging` is permitted for
+  wheel validation and test oracles, not adapter runtime version handling. Keep
+  build tools in build requirements and developer tools in the `dev` extra.
+- An adapter whose host has no Python interpreter must use the official shared
+  DCC-MCP Runtime rather than ship or create its own interpreter / virtual
+  environment. Changes to other adapters or Runtime belong in their own review.
+- Run `python -m pytest tests/test_adapter_runtime_dependencies.py` before changing
+  dependencies or import paths. The normal CI pytest suite runs this gate. It
+  audits runtime declarations and all adapter / Maya bootstrap Python sources,
+  including known dynamic imports. Extend an allowlist only after reviewing
+  ownership, absent-module behavior, and distribution-size impact; do not bypass
+  a failure by relabeling a runtime dependency as a development dependency.
+
+Version semantics, compatibility differences, sealed-ZIP gates and measured
+size impact are documented in [Runtime dependencies](docs/guide/runtime-dependencies.md).
+
 ### Tool Naming
 - Action name = `{skill_name.replace("-","_")}__{script_stem}`
 - Example: skill `maya-scene` + script `new_scene.py` → tool `maya_scene__new_scene`
