@@ -86,10 +86,12 @@ jobs:
           # Ensure up-to-date CA certificates are available for the system
           # Python (used by assemble_mod.py to query PyPI). The tahv/mayapy
           # containers (especially 2022/2023) ship outdated system certs.
-          mayapy -m pip install --quiet certifi
+          mayapy -m pip install --quiet certifi "packaging>=21.3"
           export SSL_CERT_FILE="$(mayapy -c 'import certifi; print(certifi.where())')"
+          # The sealed ZIP installer validates metadata against copied source.
+          VERSION="$(python -c 'import runpy; print(runpy.run_path("src/dcc_mcp_maya/__version__.py")["__version__"])')"
           python packaging/assemble_mod.py \
-            --version "0.0.0-ci" \
+            --version "$VERSION" \
             --platform linux \
             --output dist/mod \
             --project-root .

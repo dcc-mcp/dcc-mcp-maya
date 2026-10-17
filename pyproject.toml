@@ -51,11 +51,12 @@ dependencies = [
     # MAX_CORE_VERSION in install.py.
     "dcc-mcp-core>=0.20.0,<0.21.0",
     "dcc-mcp-server>=0.18.21,<0.21.0",
-    "packaging>=21.3",
 ]
 
 [project.optional-dependencies]
 dev = [
+    # Build-time wheel metadata validation and exact-version test oracle only.
+    "packaging>=21.3",
     "pytest>=7.0",
     "pytest-cov>=4.0",
     "pytest-mock>=3.0",

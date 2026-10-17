@@ -1,4 +1,4 @@
-"""Bootstrap must not import the lifecycle-only PEP 440 dependency."""
+"""Sealed runtime closure: bootstrap, lifecycle and serving need no packaging."""
 
 from __future__ import annotations
 
@@ -84,12 +84,13 @@ for version in ('0.19.64', '0.19.64.post1', '0.19.64+local'):
     headless.core_version = version
     dcc_mcp_maya.serve_headless()
     assert events == ['skills', 'start', 'pump', 'server_stop', 'host_stop'], events
-import packaging, packaging.version, packaging.specifiers
-for module in (packaging, packaging.version, packaging.specifiers):
-    assert pathlib.Path(module.__file__).resolve().relative_to(root / runtime_root)
-assert packaging.__version__ == '24.0'
 assert install._pep440_version('0.19.64rc1') < install._pep440_version('0.19.64')
 assert install._pep440_version(dcc_mcp_core.__version__) in install._core_version_specifier()
+# Exercise immutable archive capture, Core identity and complete provenance.
+validated = install._validate_module_zip(pathlib.Path(sys.argv[2]))
+assert validated.source_sha256 and validated.entries
+assert importlib.util.find_spec('packaging') is None
+assert not any(name == 'packaging' or name.startswith('packaging.') for name in sys.modules)
 assert importlib.util.find_spec('pip') is None
 print(json.dumps({'headless': 'PASS (modeled host/server)', 'bootstrap': 'PASS', 'maya_origin': install.__file__, 'core_version': dcc_mcp_core.__version__, 'host': 'modeled; no licensed acceptance'}))
 """
@@ -131,9 +132,24 @@ def test_actual_module_zip_bootstraps_without_site_or_pip(variant, tmp_path):
     payloads = list((Path(location) / variant).glob("*.zip"))
     assert len(payloads) == 1
     with zipfile.ZipFile(payloads[0]) as archive:
+        # Inspect BOTH runtime roots, even when this runner executes only one.
+        allowed = {"dcc_mcp_maya", "dcc_mcp_core", "dcc_mcp_server", "scripts"}
+        for name in archive.namelist():
+            parts = name.split("/")
+            if len(parts) > 2 and parts[2] and parts[1] in ("python", "python37"):
+                top = parts[2]
+                assert top in allowed or (top.startswith("dcc_mcp_core-") and top.endswith(".dist-info")), name
         archive.extractall(tmp_path)
     result = subprocess.run(
-        [sys.executable, "-I", "-S", "-c", OFFLINE_BOOTSTRAP, str(tmp_path / "dcc-mcp-maya")],
+        [
+            sys.executable,
+            "-I",
+            "-S",
+            "-c",
+            OFFLINE_BOOTSTRAP,
+            str(tmp_path / "dcc-mcp-maya"),
+            str(payloads[0].resolve()),
+        ],
         capture_output=True,
         universal_newlines=True,
         timeout=30,

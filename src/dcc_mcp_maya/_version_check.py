@@ -69,6 +69,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 # Import local modules
 from dcc_mcp_maya import _env
+from dcc_mcp_maya._version_contract import Version
 
 logger = logging.getLogger(__name__)
 
@@ -106,15 +107,13 @@ def _metadata_module() -> Optional[Any]:
 def _normalize_version(raw: Any) -> str:
     """Normalise *raw* so ``0.9.2`` and ``0.9.02`` compare equal.
 
-    Falls back to a lower-cased string when :mod:`packaging` is unavailable
-    or the value is not PEP 440 (``"unknown"``, ``"0.9.16+local"`` …).
+    Falls back to a lower-cased string when the value is not an exact package
+    version (for example ``"unknown"``).
     """
     text = "" if raw is None else str(raw).strip()
     if not text:
         return ""
     try:
-        from packaging.version import Version  # noqa: PLC0415
-
         return str(Version(text))
     except Exception:  # noqa: BLE001 - InvalidVersion / ImportError / TypeError
         return text.lower()
@@ -154,16 +153,13 @@ def _version_sort_key(version_text: str) -> Tuple[Any, ...]:
 
     ``0.9.30`` must rank above ``0.9.2``; ``sorted()`` over the raw
     ``.dist-info`` directory names gets that the wrong way round.  Falls back
-    to the lower-cased text when :mod:`packaging` is unavailable or the value
-    is not a valid version, so non-PEP 440 names still order deterministically
+    to the lower-cased text when the value is not a valid version, so non-PEP 440 names still order deterministically
     instead of raising.
     """
     text = _normalize_version(version_text)
     if not text:
         return (0, None, "")
     try:
-        from packaging.version import Version  # noqa: PLC0415
-
         return (1, Version(text), "")
     except Exception:  # noqa: BLE001 - InvalidVersion / ImportError
         return (0, None, text)

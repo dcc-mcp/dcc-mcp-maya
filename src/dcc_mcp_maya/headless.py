@@ -8,6 +8,7 @@ from typing import Callable, List, Optional
 from dcc_mcp_core import __version__ as core_version
 from dcc_mcp_core.host import BlockingDispatcher
 
+from dcc_mcp_maya._version_contract import Version
 from dcc_mcp_maya.host import MayaHost
 from dcc_mcp_maya.server import MayaMcpServer
 
@@ -28,10 +29,6 @@ def serve_headless(
     """
     if threading.current_thread() is not threading.main_thread():
         raise RuntimeError("serve_headless() must run on Mayapy's main thread")
-    # Keep GUI/userSetup imports independent of lifecycle-only dependencies.
-    # Module ZIPs bundle packaging for this entry point as well as install CLI.
-    from packaging.version import Version
-
     if Version(core_version) < Version("0.19.64"):
         raise RuntimeError("serve_headless() requires dcc-mcp-core>=0.19.64 for standalone instance registration")
     dispatcher = BlockingDispatcher()

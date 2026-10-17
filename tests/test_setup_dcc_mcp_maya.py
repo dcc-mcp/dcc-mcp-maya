@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import builtins
 import importlib.util
 import sys
 from argparse import Namespace
@@ -95,8 +96,19 @@ def test_verify_import_enforces_canonical_core_requirement(monkeypatch, core_ver
 
     setup_dcc_mcp_maya.verify_import(Path("mayapy"))
 
+    # Import real runtime helpers before replacing only the observed versions.
+    from dcc_mcp_maya import install
+
+    assert callable(install._core_version_specifier)
     monkeypatch.setitem(sys.modules, "dcc_mcp_maya", SimpleNamespace(__version__="0.9.25"))
     monkeypatch.setitem(sys.modules, "dcc_mcp_core", SimpleNamespace(__version__=core_version))
+    original_import = builtins.__import__
+
+    def without_packaging(name, *args, **kwargs):
+        assert name.split(".")[0] != "packaging", "setup subprocess reintroduced a runtime dependency"
+        return original_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", without_packaging)
     if accepted:
         exec(commands[0][2], {})
     else:

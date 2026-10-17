@@ -253,7 +253,9 @@ def test_installer_core_dependency_contract_matches_package_metadata() -> None:
     from dcc_mcp_maya import install
 
     assert install.CORE_VERSION_REQUIREMENT == _core_dependency()
-    assert install._core_version_specifier() == Requirement(_core_dependency()).specifier
+    expected = Requirement(_core_dependency()).specifier
+    for value in ("0.20.0", "0.20.0+local", "0.20.1", "0.20.1rc1", "0.21.0", "1!0.20.0"):
+        assert (value in install._core_version_specifier()) == expected.contains(value, prereleases=False)
 
 
 CORE_VERSION_GATE = re.compile(r'Version\("(?P<version>\d+(?:\.\d+)+)"\)')
