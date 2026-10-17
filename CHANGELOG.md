@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.37](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.36...v0.9.37) (2026-10-17)
+
+
+### Code Refactoring
+
+* remove third-party version dependency from Maya runtime ([#575](https://github.com/dcc-mcp/dcc-mcp-maya/issues/575)) ([ba0bb86](https://github.com/dcc-mcp/dcc-mcp-maya/commit/ba0bb8688585063631b17eade154654fda124d2b))
+
 ## [0.9.36](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.35...v0.9.36) (2026-10-17)
 
 
