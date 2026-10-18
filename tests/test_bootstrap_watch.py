@@ -532,9 +532,7 @@ def test_bounded_growth_assertions_fail_when_rotation_is_removed(monkeypatch, tm
     _fill_watch_log(monkeypatch, tmp_path, generations=2)
 
     live = watch.bootstrap_log_path()
-    assert live.stat().st_size > watch.BOOTSTRAP_ERROR_MAX_BYTES, (
-        "with rotation disabled the log must exceed the cap"
-    )
+    assert live.stat().st_size > watch.BOOTSTRAP_ERROR_MAX_BYTES, "with rotation disabled the log must exceed the cap"
 
 
 def test_oversized_single_record_cannot_blow_a_generation(monkeypatch, tmp_path) -> None:
@@ -578,6 +576,25 @@ def test_rotated_generations_read_oldest_first_after_watch_rotation(monkeypatch,
     assert sequences == sorted(sequences), "records must read oldest-first, live file last"
 
 
+def _is_docstring(node) -> bool:
+    """True for a module docstring expression on both Python 3.7 and 3.8+.
+
+    Python 3.7 parses a string literal as ``ast.Str``; 3.8+ folds it into
+    ``ast.Constant``. The header probe below replays only ``userSetup.py``'s
+    leading imports and constants, so it must skip the docstring on both or it
+    ``break``s on line 1 and captures no constants at all -- making the very
+    drift it exists to detect unobservable on the py3.7 red-line lane.
+    """
+    if not isinstance(node, _ast.Expr):
+        return False
+    value = node.value
+    if isinstance(value, _ast.Constant):
+        return isinstance(value.value, str)
+    # ``ast.Str`` is removed in Python 3.14, so match by class name rather
+    # than referencing the symbol (which keeps this importable there too).
+    return type(value).__name__ == "Str"
+
+
 def test_user_setup_and_watch_share_one_rotation_policy() -> None:
     """The two writers must agree on the cap, or one silently owns the bound.
 
@@ -594,7 +611,7 @@ def test_user_setup_and_watch_share_one_rotation_policy() -> None:
     tree = _ast.parse(source)
     header_nodes = []
     for node in tree.body:
-        if isinstance(node, _ast.Expr) and isinstance(node.value, _ast.Constant):
+        if _is_docstring(node):
             continue  # module docstring
         if not isinstance(node, (_ast.Import, _ast.ImportFrom, _ast.Assign)):
             break
