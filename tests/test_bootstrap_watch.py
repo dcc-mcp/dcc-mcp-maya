@@ -12,6 +12,7 @@ attempt would let attempt N's exit hide attempt N+1's hang.
 
 from __future__ import annotations
 
+import ast as _ast
 import contextlib
 import importlib.util
 import json
@@ -438,6 +439,190 @@ def test_watchdog_records_use_lf_line_endings(monkeypatch, tmp_path) -> None:
     assert payload, "the finished event must have been appended"
     assert b"\r\n" not in payload, "Windows text mode would emit CRLF"
     assert payload.endswith(b"\n")
+
+
+def _fill_watch_log(monkeypatch, tmp_path, *, generations, details=None):
+    """Append ``finished`` records until the log has rolled ``generations`` times.
+
+    A real ``finished`` record is ~327 B, so filling one 5 MiB generation from
+    genuine launch-sized records takes ~16k appends -- far too slow for a unit
+    test, and it would make the suite the thing that needs optimising. The
+    records here are still written through the real public path
+    (``record_bootstrap_finished`` -> ``_append_record``); only the free-form
+    ``filler`` field is enlarged so a handful of writes covers several
+    generations. Rotation, the cap check, and the ordering guarantees under
+    test are all exercised exactly as they are in production.
+    """
+    chunk = watch.BOOTSTRAP_ERROR_MAX_BYTES // 4
+    for index in range(generations * 4 + 2):
+        payload = {"filler": "F" * chunk, "seq": index}
+        payload.update(details or {})
+        watch.record_bootstrap_finished(None, **payload)
+
+
+def test_watch_only_writes_stay_bounded_by_the_rotation_cap(monkeypatch, tmp_path) -> None:
+    """Acceptance: watch-only growth is capped at MAX_BYTES x (BACKUP_COUNT + 1).
+
+    ``finished`` / ``hang_detected`` records are the *only* writer once a studio
+    has fixed whatever was failing, and they accumulate on every healthy launch.
+    Before this change ``_append_record`` just appended: the sole rotation path
+    lived in ``maya/userSetup.py``'s ``_write_failure_record``, which never runs
+    when nothing fails. So the log was bounded only while it was also being
+    filled with failures -- unbounded precisely in the healthy period.
+
+    This is proven by appending, not inferred: write well past the cap, then
+    assert the directory never holds more than the budget allows and no
+    generation exists beyond ``BACKUP_COUNT``.
+    """
+    _isolate(monkeypatch, tmp_path)
+    max_bytes = watch.BOOTSTRAP_ERROR_MAX_BYTES
+    backup_count = watch.BOOTSTRAP_ERROR_BACKUP_COUNT
+
+    _fill_watch_log(monkeypatch, tmp_path, generations=backup_count + 2)
+
+    live = watch.bootstrap_log_path()
+    assert live.exists()
+    # The live file never exceeds a single generation...
+    assert live.stat().st_size <= max_bytes, "the live log grew past one generation"
+
+    # ...at most BACKUP_COUNT rotated generations exist...
+    for generation in range(1, backup_count + 1):
+        rotated = live.with_name("{}.{}".format(live.name, generation))
+        assert rotated.exists(), "generation {} should exist after this much appending".format(generation)
+        assert rotated.stat().st_size <= max_bytes
+    assert not live.with_name("{}.{}".format(live.name, backup_count + 1)).exists()
+
+    # ...so the whole day's directory is bounded at MAX_BYTES x (BACKUP_COUNT + 1).
+    budget = max_bytes * (backup_count + 1)
+    on_disk = sum(path.stat().st_size for path in Path(tmp_path).glob("userSetup-*"))
+    assert on_disk <= budget, "directory holds {} bytes, cap is {}".format(on_disk, budget)
+
+
+def test_watch_only_growth_is_bounded_without_any_failed_records(monkeypatch, tmp_path) -> None:
+    """The bounded-growth assertion must hold with zero ``failed`` records.
+
+    Separate from the byte-budget test above on purpose: that one proves the
+    cap, this one proves the *scenario* -- no ``_write_failure_record`` call
+    ever happens here, so nothing on the userSetup side can be doing the
+    rotating. If this passes, the watch side is genuinely self-bounding.
+    """
+    _isolate(monkeypatch, tmp_path)
+    _fill_watch_log(monkeypatch, tmp_path, generations=watch.BOOTSTRAP_ERROR_BACKUP_COUNT + 1)
+
+    records = watch.read_bootstrap_records(tmp_path)
+    assert records, "records must exist for this to be a meaningful bound"
+    assert all(record.get("status") == watch.STATUS_FINISHED for record in records)
+    assert not any(record.get("status") == "failed" for record in records)
+
+    live = watch.bootstrap_log_path()
+    assert live.stat().st_size <= watch.BOOTSTRAP_ERROR_MAX_BYTES
+
+
+def test_bounded_growth_assertions_fail_when_rotation_is_removed(monkeypatch, tmp_path) -> None:
+    """Negative control: the bounded-growth test must fail without rotation.
+
+    A cap test that passes whether or not the cap is enforced is not a test, it
+    is a comment. Disabling rotation turns ``_append_record`` back into the
+    unbounded append this change removed, so the very assertion the fix exists
+    to satisfy must go red here.
+    """
+    _isolate(monkeypatch, tmp_path)
+    monkeypatch.setattr(watch, "rotate_bootstrap_log", lambda *args, **kwargs: None)
+
+    _fill_watch_log(monkeypatch, tmp_path, generations=2)
+
+    live = watch.bootstrap_log_path()
+    assert live.stat().st_size > watch.BOOTSTRAP_ERROR_MAX_BYTES, "with rotation disabled the log must exceed the cap"
+
+
+def test_oversized_single_record_cannot_blow_a_generation(monkeypatch, tmp_path) -> None:
+    """One record is bounded too, not just the file.
+
+    Rotation bounds the file only while each append stays small: a multi-
+    megabyte ``traceback`` would land in a single write and push a nearly empty
+    file straight past the cap. The caps mirror core's ``host_errors``.
+    """
+    _isolate(monkeypatch, tmp_path)
+    watch.record_bootstrap_finished(
+        None,
+        run_id="run-oversized",
+        traceback="T" * (watch.MAX_TB_CHARS * 3),
+        message="M" * (watch.MAX_MSG_CHARS * 3),
+    )
+
+    live = watch.bootstrap_log_path()
+    assert live.stat().st_size <= watch.BOOTSTRAP_ERROR_MAX_BYTES
+    (record,) = watch.read_bootstrap_records(tmp_path)
+    assert len(record["traceback"]) < watch.MAX_TB_CHARS * 2
+    assert record["traceback"].endswith("...[truncated]")
+    assert len(record["message"]) < watch.MAX_MSG_CHARS * 2
+    assert record["message"].endswith("...[truncated]")
+
+
+def test_rotated_generations_read_oldest_first_after_watch_rotation(monkeypatch, tmp_path) -> None:
+    """Watch-side rotation must not scramble the read order.
+
+    ``read_bootstrap_records`` folds rotated generations back in oldest-first
+    with the live file last. Now that the watch side rotates too, that ordering
+    has to survive rotation performed by *this* writer, not just userSetup's.
+    """
+    _isolate(monkeypatch, tmp_path)
+    _fill_watch_log(monkeypatch, tmp_path, generations=watch.BOOTSTRAP_ERROR_BACKUP_COUNT + 1)
+
+    records = watch.read_bootstrap_records(tmp_path)
+    sequences = [record["seq"] for record in records]
+
+    assert len(sequences) > watch.BOOTSTRAP_ERROR_BACKUP_COUNT, "rotation must have happened"
+    assert sequences == sorted(sequences), "records must read oldest-first, live file last"
+
+
+def _is_docstring(node) -> bool:
+    """True for a module docstring expression on both Python 3.7 and 3.8+.
+
+    Python 3.7 parses a string literal as ``ast.Str``; 3.8+ folds it into
+    ``ast.Constant``. The header probe below replays only ``userSetup.py``'s
+    leading imports and constants, so it must skip the docstring on both or it
+    ``break``s on line 1 and captures no constants at all -- making the very
+    drift it exists to detect unobservable on the py3.7 red-line lane.
+    """
+    if not isinstance(node, _ast.Expr):
+        return False
+    value = node.value
+    if isinstance(value, _ast.Constant):
+        return isinstance(value.value, str)
+    # ``ast.Str`` is removed in Python 3.14, so match by class name rather
+    # than referencing the symbol (which keeps this importable there too).
+    return type(value).__name__ == "Str"
+
+
+def test_user_setup_and_watch_share_one_rotation_policy() -> None:
+    """The two writers must agree on the cap, or one silently owns the bound.
+
+    ``maya/userSetup.py`` sources before the adapter is importable, so it keeps
+    literal fallbacks. If those drift from the adapter's constants, whichever
+    half grows the file is no longer bounded by the value the other half
+    enforces -- and the drift is invisible until the log is already huge.
+    """
+    source = USER_SETUP_PATH.read_text(encoding="utf-8")
+    namespace = {"__name__": "_user_setup_policy_probe"}
+    # Execute only the leading header -- imports and module-level constants.
+    # The rest of the file defines functions and then *calls* them at import
+    # time to drive the Maya load, so it cannot be executed here.
+    tree = _ast.parse(source)
+    header_nodes = []
+    for node in tree.body:
+        if _is_docstring(node):
+            continue  # module docstring
+        if not isinstance(node, (_ast.Import, _ast.ImportFrom, _ast.Assign)):
+            break
+        header_nodes.append(node)
+    header = _ast.Module(body=header_nodes, type_ignores=[])
+    exec(compile(header, str(USER_SETUP_PATH), "exec"), namespace)
+
+    assert namespace["BOOTSTRAP_ERROR_MAX_BYTES"] == watch.BOOTSTRAP_ERROR_MAX_BYTES
+    assert namespace["BOOTSTRAP_ERROR_BACKUP_COUNT"] == watch.BOOTSTRAP_ERROR_BACKUP_COUNT
+    assert namespace["BOOTSTRAP_ERROR_MAX_TRACEBACK_CHARS"] == watch.MAX_TB_CHARS
+    assert namespace["BOOTSTRAP_ERROR_MAX_MESSAGE_CHARS"] == watch.MAX_MSG_CHARS
 
 
 def test_read_bootstrap_records_includes_rotated_generations(tmp_path) -> None:

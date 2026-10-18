@@ -33,10 +33,24 @@ BOOTSTRAP_ERROR_SCHEMA_VERSION = 1
 #: ``userSetup-<YYYYMMDD>.jsonl``. Rotation therefore only renames and never
 #: truncates in place, so a concurrent append lands in a rotated generation
 #: rather than being lost.
+#:
+#: Both writers enforce this cap, so the half that rotates is not necessarily
+#: the half that grows. These literals are the *fallback* for a Maya that
+#: sources this file before the adapter is importable -- the authoritative
+#: values live in ``dcc_mcp_maya._bootstrap_watch`` and are imported below when
+#: they can be. The two must stay numerically identical, which is what
+#: :func:`_shared_rotation_policy` is for.
 BOOTSTRAP_ERROR_MAX_BYTES = 5 * 1024 * 1024
 #: Number of rotated generations kept alongside the live file (``.1`` .. ``.4``
 #: in core's naming), so the directory is bounded at 5 x 5 MB.
 BOOTSTRAP_ERROR_BACKUP_COUNT = 4
+
+#: Per-field caps mirroring ``dcc_mcp_core.host_errors``. A rotation bounds the
+#: file; these bound one record, so a single huge traceback cannot blow a whole
+#: generation before any rotation gets the chance to run.
+BOOTSTRAP_ERROR_MAX_TRACEBACK_CHARS = 32768
+BOOTSTRAP_ERROR_MAX_MESSAGE_CHARS = 8192
+_TRUNCATION_SUFFIX = "...[truncated]"
 
 #: Stages whose failure is *already* on disk in core's schema, so recording it
 #: here as well would leave two differently-shaped records for one failure.
@@ -115,6 +129,46 @@ def _bootstrap_watch() -> Optional[ModuleType]:
     except Exception:
         return None
     return _bootstrap_watch
+
+
+def _shared_rotation_policy() -> tuple:
+    """Return ``(max_bytes, backup_count, rotate, truncate)`` for the JSONL.
+
+    The daily log is written by *two* halves that never see each other's code:
+    this file appends ``failed`` records, and ``dcc_mcp_maya._bootstrap_watch``
+    appends ``finished`` / ``hang_detected``. A cap defined in only one of them
+    leaves the file unbounded whenever the other is the sole writer -- and the
+    sole writer is ``_bootstrap_watch`` in exactly the healthy period where no
+    bootstrap is failing.
+
+    The authoritative values therefore live in the adapter, and this file
+    imports them when it can. It must still source cleanly *before* the adapter
+    is importable (that ordering is the whole point of ``userSetup.py``), so the
+    module-level literals above are the fallback, not a second opinion. The
+    ``truncate`` element is likewise the adapter's, or a local equivalent with
+    the same limits when the adapter is unavailable.
+    """
+    watch = _bootstrap_watch()
+    if watch is not None:
+        return (
+            watch.BOOTSTRAP_ERROR_MAX_BYTES,
+            watch.BOOTSTRAP_ERROR_BACKUP_COUNT,
+            watch.rotate_bootstrap_log,
+            watch._truncate,
+        )
+    return (
+        BOOTSTRAP_ERROR_MAX_BYTES,
+        BOOTSTRAP_ERROR_BACKUP_COUNT,
+        _rotate_bootstrap_log,
+        _truncate,
+    )
+
+
+def _truncate(text, limit: int):
+    """Bound ``text`` at ``limit`` characters, mirroring core's helper."""
+    if text is None or len(text) <= limit:
+        return text
+    return text[:limit] + _TRUNCATION_SUFFIX
 
 
 def _mark_run_started() -> bool:
@@ -219,15 +273,19 @@ def _package_version(module_name: str) -> Optional[str]:
     return str(version) if version else None
 
 
-def _rotate_bootstrap_log(path: Path) -> None:
+def _rotate_bootstrap_log(path: Path, backup_count: int = BOOTSTRAP_ERROR_BACKUP_COUNT) -> None:
     """Rotate ``path`` through ``.1`` .. ``.N``, mirroring core's handler.
 
     Core uses :class:`logging.handlers.RotatingFileHandler`, which renames
     ``.i`` to ``.i+1`` from the oldest generation down and then moves the live
     file to ``.1``. Reproducing that naming keeps the two logs -- core's
     ``host-errors.log`` and this one -- inspectable with the same habits.
+
+    Rotation only ever renames, never truncates in place, so an append racing a
+    rotation lands in a rotated generation instead of being lost. That is what
+    lets both writers of this file rotate it without coordinating.
     """
-    for generation in range(BOOTSTRAP_ERROR_BACKUP_COUNT - 1, 0, -1):
+    for generation in range(backup_count - 1, 0, -1):
         source = path.with_name("{}.{}".format(path.name, generation))
         destination = path.with_name("{}.{}".format(path.name, generation + 1))
         if not source.exists():
@@ -261,6 +319,7 @@ def _write_failure_record(stage: str, error_type: str, message: str, formatted: 
     """
     log_dir = _bootstrap_error_dir()
     log_path = log_dir / "userSetup-{}.jsonl".format(datetime.now(timezone.utc).strftime("%Y%m%d"))
+    max_bytes, backup_count, rotate, truncate = _shared_rotation_policy()
     record = {
         "schema_version": BOOTSTRAP_ERROR_SCHEMA_VERSION,
         "timestamp_utc": datetime.now(timezone.utc).isoformat(),
@@ -271,18 +330,20 @@ def _write_failure_record(stage: str, error_type: str, message: str, formatted: 
         "stage": stage,
         "status": "failed",
         "error_type": error_type,
-        "error": message,
-        "traceback": formatted,
+        "error": truncate(message, BOOTSTRAP_ERROR_MAX_MESSAGE_CHARS),
+        "traceback": truncate(formatted, BOOTSTRAP_ERROR_MAX_TRACEBACK_CHARS),
     }
     payload = json.dumps(record, ensure_ascii=False, sort_keys=True)
     try:
         log_dir.mkdir(parents=True, exist_ok=True)
         # Rotate on what the file is *about to become*, not on what it already
         # is: a single large traceback can push a nearly-empty file past the
-        # cap in one append.
+        # cap in one append. Both writers of this file apply the same rule, so
+        # whichever side happens to cross the boundary is the one that rotates.
         pending = len(payload.encode("utf-8")) + 1
-        if log_path.exists() and log_path.stat().st_size + pending > BOOTSTRAP_ERROR_MAX_BYTES:
-            _rotate_bootstrap_log(log_path)
+        current = log_path.stat().st_size if log_path.exists() else 0
+        if current + pending > max_bytes:
+            rotate(log_path, backup_count)
         # ``newline=""``: on Windows the default text mode rewrites the
         # trailing ``\n`` to ``\r\n``, and a CRLF JSONL is not the line format
         # every downstream reader assumes.
