@@ -153,6 +153,9 @@ jobs:
           print('Native core', dcc_mcp_core.__version__, core.__name__)
           "
 
+      - name: Install preflight in fresh mayapy
+        run: mayapy -m pytest tests/e2e_standalone/test_install_probe.py -m e2e -v --tb=short
+
       - name: Run tests (mayapy)
         run: |
           mayapy -c "
