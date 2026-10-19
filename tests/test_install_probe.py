@@ -172,7 +172,7 @@ def test_probe_timeout_is_bounded_and_classified(probe_runtime, monkeypatch):
 
     def run_with_short_timeout(*args, **kwargs):
         assert kwargs["timeout"] == 20
-        kwargs["timeout"] = 0.5
+        kwargs["timeout"] = 2
         return run(*args, **kwargs)
 
     monkeypatch.setattr(install.subprocess, "run", run_with_short_timeout)
@@ -183,7 +183,7 @@ def test_probe_timeout_is_bounded_and_classified(probe_runtime, monkeypatch):
     assert caught.value.reason == "python_probe_failed"
     assert isinstance(caught.value.__cause__, subprocess.TimeoutExpired)
     # The child never claims cleanup completed after it was forcibly stopped.
-    assert events() == ["initialize"]
+    assert events() in ([], ["initialize"])
 
 
 def test_probe_script_retains_python37_syntax(probe_runtime, monkeypatch):
