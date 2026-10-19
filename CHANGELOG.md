@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.9.38](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.37...v0.9.38) (2026-10-19)
+
+
+### Bug Fixes
+
+* bound the shared bootstrap JSONL on the watch side too ([89eb2d4](https://github.com/dcc-mcp/dcc-mcp-maya/commit/89eb2d4bca9664e77c26e31ade08f30ddd484e6c))
+* **install:** initialize Maya standalone during preflight ([b9dfe94](https://github.com/dcc-mcp/dcc-mcp-maya/commit/b9dfe947e8850ba39af5c2917b3ae15a6f6e0139))
+* **install:** initialize standalone for mayapy preflight ([fffc964](https://github.com/dcc-mcp/dcc-mcp-maya/commit/fffc964c20ac90ca1dc838bd60ce50a1f718f0c3))
+
 ## [0.9.37](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.36...v0.9.37) (2026-10-17)
 
 
