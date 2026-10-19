@@ -161,14 +161,40 @@ def _core_version_specifier():
 
 
 def _probe_target(python_path):
-    script = (
-        "import json,sys; import maya.cmds as cmds; "
-        "import dcc_mcp_core,dcc_mcp_maya; "
-        "print(json.dumps({'maya_version':str(cmds.about(version=True)),"
-        "'python_version':'.'.join(map(str,sys.version_info[:3])),"
-        "'core_version':dcc_mcp_core.__version__,"
-        "'adapter_version':dcc_mcp_maya.__version__}))"
-    )
+    # A bare mayapy imports an empty maya.cmds command table. Startup hooks may
+    # already have initialized it, in which case this probe must not own teardown.
+    script = """
+import json
+import sys
+import maya.cmds as cmds
+import maya.standalone as standalone
+
+initialized_here = False
+try:
+    if not callable(getattr(cmds, 'about', None)):
+        standalone.initialize(name='python')
+        initialized_here = True
+    import dcc_mcp_core
+    import dcc_mcp_maya
+    payload = {
+        'maya_version': str(cmds.about(version=True)),
+        'python_version': '.'.join(map(str, sys.version_info[:3])),
+        'core_version': dcc_mcp_core.__version__,
+        'adapter_version': dcc_mcp_maya.__version__,
+    }
+finally:
+    if initialized_here:
+        probe_failed = sys.exc_info()[0] is not None
+        try:
+            standalone.uninitialize()
+        except Exception as exc:
+            if not probe_failed:
+                raise
+            print('Maya standalone cleanup failed: %s' % exc, file=sys.stderr)
+
+# Startup and teardown can both write stdout; metadata must be the final line.
+print(json.dumps(payload))
+"""
     try:
         completed = subprocess.run(
             [str(python_path), "-c", script],
