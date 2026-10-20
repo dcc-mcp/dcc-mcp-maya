@@ -11,6 +11,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from types import ModuleType
 
+import pytest
+
 USER_SETUP_PATH = Path(__file__).resolve().parents[1] / "maya" / "userSetup.py"
 
 
@@ -335,57 +337,85 @@ def test_silent_noop_load_is_reported(monkeypatch, tmp_path) -> None:
     assert cmds_module._warnings, "the silent no-op must reach cmds.warning"
 
 
-def test_watchdog_arms_a_bounded_idle_scriptjob(monkeypatch, tmp_path) -> None:
+def test_watchdog_uses_single_shot_timer_without_idle_polling(monkeypatch, tmp_path, watchdog_qt):
     _isolate_error_dir(monkeypatch, tmp_path)
-    cmds_module = _stub_cmds_full()
-    _exec_user_setup(monkeypatch, cmds_module)
+    cmds = _stub_cmds_full()
+    module = _exec_user_setup(monkeypatch, cmds)
+    timer = watchdog_qt[0]
+    assert timer.single_shot and timer.active
+    assert timer.interval == module.WATCHDOG_GRACE_SECS * 1000
+    assert cmds._script_jobs == []
 
-    assert len(cmds_module._script_jobs) == 1
-    event = cmds_module._script_jobs[0]["event"]
-    assert event[0] == "idle"
-    assert callable(event[1])
 
-
-def test_watchdog_retries_then_gives_up_visibly(monkeypatch, tmp_path) -> None:
-    """Retries are bounded and the give-up is reported, not silent."""
+def test_watchdog_retries_then_gives_up_visibly(monkeypatch, tmp_path, watchdog_qt):
     error_dir = _isolate_error_dir(monkeypatch, tmp_path)
-    cmds_module = _stub_cmds_full(load_marks_loaded=False)
-    module = _exec_user_setup(monkeypatch, cmds_module)
-    _install_adapter_stub(monkeypatch)
-    callback = cmds_module._script_jobs[0]["event"][1]
-
-    module.WATCHDOG_GRACE_SECS = 0.0
+    cmds = _stub_cmds_full(load_marks_loaded=False)
+    module = _exec_user_setup(monkeypatch, cmds)
+    calls = _install_adapter_stub(monkeypatch)
+    timer = watchdog_qt[0]
     for _ in range(module.WATCHDOG_MAX_ATTEMPTS + 2):
-        callback()
-
+        timer.fire()
     stages = [record["stage"] for record in _failures(error_dir)]
-    assert "watchdog_give_up" in stages
-    assert stages.count("watchdog_give_up") == 1, "the watchdog must give up exactly once"
-    assert any("give up" in message or "retries" in message for message in cmds_module._warnings)
+    assert stages.count("watchdog_give_up") == 1
+    assert len(calls) == module.WATCHDOG_MAX_ATTEMPTS
+    assert timer.deleted and not timer.active
+    assert not module._RUN_MARKER["watchdog_armed"]
 
 
-def test_watchdog_disarms_when_the_plugin_registers(monkeypatch, tmp_path) -> None:
-    """A loaded plug-in stops the watchdog (no permanent polling job)."""
+def test_watchdog_disarms_when_the_plugin_registers(monkeypatch, tmp_path, watchdog_qt):
     _isolate_error_dir(monkeypatch, tmp_path)
-    cmds_module = _stub_cmds_full(load_marks_loaded=False)
-    _exec_user_setup(monkeypatch, cmds_module)
-    callback = cmds_module._script_jobs[0]["event"][1]
+    cmds = _stub_cmds_full(plugin_loaded=True)
+    module = _exec_user_setup(monkeypatch, cmds)
+    timer = watchdog_qt[0]
+    timer.fire()
+    assert timer.deleted and not timer.active
+    assert module._AUTOLOAD_WATCHDOG_TIMER is None
+    assert not module._RUN_MARKER["watchdog_armed"]
+    assert not cmds._warnings
 
-    cmds_module._state["loaded"] = True  # plug-in finished loading after arming
-    callback()
 
-    assert any("kill" in kwargs for kwargs in cmds_module._script_jobs[1:])
-    assert not cmds_module._warnings
-
-
-def test_watchdog_absent_scriptjob_is_tolerated(monkeypatch, tmp_path) -> None:
-    """Hosts without ``cmds.scriptJob`` keep the deferred-only behaviour."""
+def test_watchdog_keeps_failed_cancel_available_for_retry(monkeypatch, tmp_path, watchdog_qt):
     error_dir = _isolate_error_dir(monkeypatch, tmp_path)
-    cmds_module = _stub_cmds_full()
-    del cmds_module.scriptJob
-    _exec_user_setup(monkeypatch, cmds_module)
+    cmds = _stub_cmds_full(plugin_loaded=True)
+    module = _exec_user_setup(monkeypatch, cmds)
+    timer = watchdog_qt[0]
+    timer.stop_error = RuntimeError("timer stop failed")
+    timer.fire()
+    assert module._AUTOLOAD_WATCHDOG_TIMER is timer
+    assert [record["stage"] for record in _failures(error_dir)].count("watchdog_cancel") == 1
+    # An already queued timeout must not query Maya again after termination.
+    cmds.pluginInfo = lambda *a, **kw: pytest.fail("late timeout queried Maya")
+    timer.fire()
+    timer.stop_error = None
+    assert module._cancel_autoload_watchdog()
+    assert module._AUTOLOAD_WATCHDOG_TIMER is None
+    assert timer.deleted
 
-    assert [record["stage"] for record in _failures(error_dir)] == []
+
+def test_watchdog_schedule_failure_preserves_primary_load(monkeypatch, tmp_path, watchdog_qt):
+    from PySide6.QtCore import QTimer
+    def fail_start(self, interval):
+        raise RuntimeError("timer start failed")
+    monkeypatch.setattr(QTimer, "start", fail_start)
+    error_dir = _isolate_error_dir(monkeypatch, tmp_path)
+    cmds = _stub_cmds_full()
+    module = _exec_user_setup(monkeypatch, cmds)
+    assert not module._RUN_MARKER["watchdog_armed"]
+    assert module._AUTOLOAD_WATCHDOG_TIMER is None
+    assert watchdog_qt[0].deleted
+    assert len(cmds._scheduled) == 1
+    assert "watchdog_schedule" in [record["stage"] for record in _failures(error_dir)]
+
+
+def test_watchdog_without_qt_application_is_tolerated(monkeypatch, tmp_path, watchdog_qt):
+    from PySide6.QtCore import QCoreApplication
+    monkeypatch.setattr(QCoreApplication, "instance", lambda: None)
+    error_dir = _isolate_error_dir(monkeypatch, tmp_path)
+    cmds = _stub_cmds_full()
+    module = _exec_user_setup(monkeypatch, cmds)
+    assert watchdog_qt == []
+    assert not module._RUN_MARKER["watchdog_armed"]
+    assert _failures(error_dir) == []
 
 
 def test_failure_record_carries_the_exception_traceback(monkeypatch, tmp_path) -> None:

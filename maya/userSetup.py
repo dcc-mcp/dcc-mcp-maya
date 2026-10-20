@@ -6,7 +6,6 @@ import json
 import logging
 import os
 import sys
-import time
 import traceback
 from datetime import datetime, timezone
 from pathlib import Path
@@ -221,9 +220,9 @@ def _retire_run_marker(finished: bool = False) -> None:
 def _retire_if_terminal(finished: bool) -> None:
     """Retire on success, or on failure when no watchdog will retry it.
 
-    While the idle watchdog is armed a failed attempt is not terminal -- it
+    While the watchdog is armed a failed attempt is not terminal -- it
     will simply be retried, and the give-up path retires the marker. With no
-    watchdog armed (hosts without ``cmds.scriptJob``) a failed attempt *is*
+    watchdog armed (hosts without a Qt application) a failed attempt *is*
     the last word, so it must retire here or the marker would linger and be
     misread as a hang on the next start-up.
     """
@@ -551,64 +550,66 @@ def _plugin_loaded() -> bool:
         return False
 
 
+_AUTOLOAD_WATCHDOG_TIMER = None
+
+
+def _cancel_autoload_watchdog() -> bool:
+    """Retain the timer on cleanup failure so cancellation can be retried."""
+    global _AUTOLOAD_WATCHDOG_TIMER
+    timer = _AUTOLOAD_WATCHDOG_TIMER
+    if timer is None:
+        return True
+    try:
+        timer.stop()
+        timer.deleteLater()
+    except Exception as exc:
+        _report_failure("watchdog_cancel", exc)
+        return False
+    _AUTOLOAD_WATCHDOG_TIMER = None
+    return True
+
+
 def _arm_autoload_watchdog() -> None:
-    """Retry the plug-in load from Maya's idle queue, then stop.
+    """Retry after a grace period without starving Maya's deferred queue.
 
-    ``cmds.evalDeferred`` is the primary path and normally fires during
-    start-up. This watchdog covers the cases where it does not:
-
-    * the deferred item is dropped while Maya is still booting (packaged /
-      ``.mod`` installs where ``userSetup.py`` is sourced very early),
-    * the first attempt runs before another plug-in or studio bootstrap has
-      finished extending ``MAYA_PLUG_IN_PATH``.
-
-    At most :data:`WATCHDOG_MAX_ATTEMPTS` retries are made, spaced by
-    :data:`WATCHDOG_GRACE_SECS`; the job then reports the give-up through
-    :func:`_report_failure` and removes itself, so a Maya session never
-    carries a permanently polling job.
+    A persistent idle scriptJob can neither kill itself while running nor
+    let lowest-priority startup work drain. A single-shot Qt timer runs on
+    the main thread and rearms only while another bounded retry is needed.
     """
-    cmds = _maya_cmds()
-    script_job = getattr(cmds, "scriptJob", None) if cmds is not None else None
-    if script_job is None:
+    global _AUTOLOAD_WATCHDOG_TIMER
+    if _maya_cmds() is None:
+        return
+    try:
+        try:
+            from PySide6.QtCore import QCoreApplication, QTimer
+        except ImportError:
+            from PySide2.QtCore import QCoreApplication, QTimer
+    except ImportError:
+        return
+    app = QCoreApplication.instance()
+    if app is None:
         return
 
-    # ``next_check`` stays ``None`` until the first idle tick so both tunables
-    # are read from module scope at call time.
-    state = {"job": None, "attempts": 0, "next_check": None, "armed_at": time.monotonic()}
+    state = {"attempts": 0, "finished": False}
 
-    # While armed, a failed load attempt is retryable rather than terminal, so
-    # the run marker must survive until the give-up below.
-    _RUN_MARKER["watchdog_armed"] = True
+    def _finish(finished: bool) -> None:
+        # A queued timeout remains harmless even if stopping/deleting fails.
+        state["finished"] = True
+        _RUN_MARKER["watchdog_armed"] = False
+        _cancel_autoload_watchdog()
+        _retire_run_marker(finished=finished)
 
-    def _disarm() -> None:
-        job = state.get("job")
-        state["job"] = None
-        if job is not None:
-            try:
-                cmds.scriptJob(kill=job, force=True)
-            except Exception:
-                pass
+    def _schedule_check() -> None:
+        timer.start(max(1, int(WATCHDOG_GRACE_SECS * 1000)))
 
-    def _on_idle() -> None:
-        if _plugin_loaded():
-            _disarm()
+    def _on_timeout() -> None:
+        if state["finished"]:
             return
-        now = time.monotonic()
-        if state["next_check"] is None:
-            state["next_check"] = state["armed_at"] + WATCHDOG_GRACE_SECS
-        if now < state["next_check"]:
+        if _plugin_loaded():
+            _finish(True)
             return
         if state["attempts"] >= WATCHDOG_MAX_ATTEMPTS:
-            # Give up exactly once: a host that cannot kill the scriptJob must
-            # not turn the give-up into an infinite warning stream.
-            if state.get("gave_up"):
-                return
-            state["gave_up"] = True
-            _disarm()
-            _RUN_MARKER["watchdog_armed"] = False
-            # The run has stopped trying. This is a reported failure, not a
-            # hang, so the marker must not survive to be misread as one.
-            _retire_run_marker(finished=False)
+            _finish(False)
             _report_failure(
                 "watchdog_give_up",
                 RuntimeError(
@@ -618,13 +619,24 @@ def _arm_autoload_watchdog() -> None:
             )
             return
         state["attempts"] += 1
-        state["next_check"] = now + WATCHDOG_GRACE_SECS
         _load_dcc_mcp_maya()
+        try:
+            _schedule_check()
+        except Exception as exc:
+            _finish(False)
+            _report_failure("watchdog_schedule", exc)
 
     try:
-        state["job"] = script_job(event=("idle", _on_idle))
+        timer = QTimer(app)
+        _AUTOLOAD_WATCHDOG_TIMER = timer
+        timer.setSingleShot(True)
+        timer.timeout.connect(_on_timeout)
+        _schedule_check()
+        _RUN_MARKER["watchdog_armed"] = True
     except Exception as exc:
+        state["finished"] = True
         _RUN_MARKER["watchdog_armed"] = False
+        _cancel_autoload_watchdog()
         _report_failure("watchdog_schedule", exc)
 
 
@@ -638,7 +650,7 @@ scheduled = _schedule(_load_dcc_mcp_maya)
 _arm_autoload_watchdog()
 if not scheduled:
     # Nothing was queued. The watchdog may still own the run (it retries from
-    # the idle queue), in which case its give-up path retires the marker;
+    # the Qt event loop), in which case its give-up path retires the marker;
     # otherwise retire now so a marker for a load that never started cannot be
     # misread as a hang on the next start-up.
     _retire_if_terminal(finished=False)
