@@ -408,6 +408,7 @@ class TestMayaStandaloneDispatcher:
             affinity="main",
             action_name="maya_primitives__create_sphere",
             timeout_hint_secs=30,
+            timeout_ms=2000,
         )
 
         assert result == {"value": 42}
@@ -422,42 +423,69 @@ class TestMayaStandaloneDispatcher:
             pytest.skip("Python 3.7 Protocol runtime checks differ from typing_extensions")
         assert isinstance(d, BaseDccCallableDispatcher)
 
-    def test_dispatch_callable_serializes_across_instances(self):
+    def test_worker_scene_call_waits_for_main_thread_pump(self):
         from dcc_mcp_maya.dispatcher import MayaStandaloneDispatcher
 
-        first = MayaStandaloneDispatcher()
-        second = MayaStandaloneDispatcher()
-        entered = threading.Event()
-        release = threading.Event()
-        order = []
+        dispatcher = MayaStandaloneDispatcher()
+        executed = []
+        result = []
+        worker = threading.Thread(target=lambda: result.append(dispatcher.dispatch_callable(
+            lambda: executed.append(threading.get_ident()) or "scene", timeout_hint_secs=2)))
+        worker.start()
+        try:
+            deadline = time.monotonic() + 1
+            while not dispatcher.queue_size() and time.monotonic() < deadline:
+                time.sleep(0.001)
+            assert executed == []
+            dispatcher.drain_queue(50)
+            worker.join(timeout=2)
+            assert result == ["scene"]
+            assert executed == [threading.main_thread().ident]
+        finally:
+            dispatcher.shutdown()
+            worker.join(timeout=2)
 
-        def slow_task():
-            order.append("first-enter")
-            entered.set()
-            release.wait(timeout=5)
-            order.append("first-exit")
-            return "first"
+    def test_any_callable_does_not_need_a_main_thread_pump(self):
+        from dcc_mcp_maya.dispatcher import MayaStandaloneDispatcher
 
-        def fast_task():
-            order.append("second-enter")
-            return "second"
+        dispatcher = MayaStandaloneDispatcher()
+        executed = []
+        worker = threading.Thread(target=lambda: executed.append(
+            dispatcher.dispatch_callable(threading.get_ident, affinity="any")))
+        worker.start()
+        worker.join(timeout=2)
+        assert executed == [worker.ident]
+        assert dispatcher.queue_size() == 0
 
-        t = threading.Thread(target=lambda: first.dispatch_callable(slow_task))
-        t.start()
-        assert entered.wait(timeout=5)
+    def test_pump_rejects_worker_thread(self):
+        from dcc_mcp_maya.dispatcher import MayaStandaloneDispatcher
 
-        result_holder = []
-        t2 = threading.Thread(target=lambda: result_holder.append(second.dispatch_callable(fast_task)))
-        t2.start()
-        time.sleep(0.05)
-        assert result_holder == []
+        dispatcher = MayaStandaloneDispatcher()
+        errors = []
+        def worker():
+            try:
+                dispatcher.drain_queue(50)
+            except RuntimeError as exc:
+                errors.append(str(exc))
+        thread = threading.Thread(target=worker)
+        thread.start()
+        thread.join(timeout=2)
+        assert errors and "main thread" in errors[0]
 
-        release.set()
-        t.join(timeout=5)
-        t2.join(timeout=5)
+    def test_shutdown_releases_waiting_scene_call(self):
+        from dcc_mcp_maya.dispatcher import MayaStandaloneDispatcher
 
-        assert result_holder == ["second"]
-        assert order == ["first-enter", "first-exit", "second-enter"]
+        dispatcher = MayaStandaloneDispatcher()
+        results = []
+        worker = threading.Thread(target=lambda: results.append(dispatcher.submit_callable(
+            "scene", lambda: pytest.fail("executed after shutdown"), affinity="main", timeout_ms=2000)))
+        worker.start()
+        deadline = time.monotonic() + 1
+        while not dispatcher.queue_size() and time.monotonic() < deadline:
+            time.sleep(0.001)
+        dispatcher.shutdown()
+        worker.join(timeout=2)
+        assert results and results[0]["success"] is False
 
     def test_supported(self):
         from dcc_mcp_maya.dispatcher import MayaStandaloneDispatcher
@@ -465,12 +493,12 @@ class TestMayaStandaloneDispatcher:
         d = MayaStandaloneDispatcher()
         assert set(d.supported()) == {"any", "main"}
 
-    def test_capabilities_no_time_slicing(self):
+    def test_capabilities_support_cooperative_pump(self):
         from dcc_mcp_maya.dispatcher import MayaStandaloneDispatcher
 
         d = MayaStandaloneDispatcher()
         caps = d.capabilities()
-        assert caps["supports_time_slicing"] is False
+        assert caps["supports_time_slicing"] is True
         assert caps["supports_main_thread"] is True
 
 

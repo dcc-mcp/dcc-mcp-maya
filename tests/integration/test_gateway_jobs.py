@@ -426,7 +426,8 @@ def test_submit_async_callable_with_job_manager():
         on_complete=on_complete,
     )
 
-    assert result["status"] == "completed"
+    assert result["status"] == "pending"
+    dispatcher.drain_queue(50)
     status = mgr.get_status(job_id)
     assert status["status"] == "completed"
     assert status["output"]["frames"] == 10

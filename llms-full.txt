@@ -210,7 +210,7 @@ pump.uninstall()
 
 ### MayaStandaloneDispatcher
 
-For `mayapy` / batch contexts where there is no event loop. All jobs execute directly on the calling thread.
+For `mayapy` / batch contexts without an idle event loop. Scene jobs are queued for Maya's initialization thread; call `dispatcher.drain_queue(8)` in the main loop. Prefer `serve_headless()` for a long-lived owning-thread service.
 
 ```python
 from dcc_mcp_maya.dispatcher import MayaStandaloneDispatcher

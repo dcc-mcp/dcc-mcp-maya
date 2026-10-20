@@ -7,8 +7,7 @@ during Maya's boot window:
 * ``dispatcher = True`` — after ``HostExecutionBridge`` wires the
   in-process executor.
 * ``dcc = True``        — after Maya's main thread pumps the first
-  deferred no-op job (or synchronously on
-  :class:`MayaStandaloneDispatcher`).
+  deferred no-op job, including standalone mode.
 
 The Maya adapter **wraps** :class:`dcc_mcp_core.ReadinessProbe` (core
 0.14.28+) — these tests exercise only the Maya-side plumbing
@@ -18,7 +17,7 @@ own state machine is unit-tested upstream by ``dcc-mcp-core``.
 
 The tests avoid importing a real Maya — they use a fake dispatcher for
 the "never pumps" case and :class:`MayaStandaloneDispatcher` for the
-"flips synchronously" case, matching the harness style already used by
+"flips on the first headless pump" case, matching the harness style already used by
 ``tests/test_dispatcher.py``.
 """
 
@@ -175,12 +174,14 @@ class TestReadinessBinderBind:
         assert bound is True
         _assert_ready_bits(binder.report(), process=True, dispatcher=True, dcc=True)
 
-    def test_bind_with_standalone_flips_both_bits_synchronously(self) -> None:
-        """:class:`MayaStandaloneDispatcher` runs callbacks on the calling thread."""
+    def test_bind_with_standalone_waits_for_first_main_thread_pump(self) -> None:
+        """Readiness must wait for the headless main loop to drain the probe."""
         server = _FakeServer(dispatcher=MayaStandaloneDispatcher())
         binder = ReadinessBinder()
         bound = binder.bind(server)
         assert bound is True
+        assert binder.is_ready() is False
+        server._maya_dispatcher.drain_queue(50)
         assert binder.is_ready() is True
         _assert_ready_bits(binder.report(), process=True, dispatcher=True, dcc=True)
 
@@ -231,6 +232,8 @@ class TestReadinessBinderBind:
         # Second bind on the same server is a no-op and returns the
         # previously-recorded scheduling state.
         assert binder.bind(server) is True
+        assert server._maya_dispatcher.queue_size() == 1
+        server._maya_dispatcher.drain_queue(50)
         assert binder.is_ready() is True
 
     def test_custom_probe_scheduler_is_used(self) -> None:
@@ -350,7 +353,7 @@ class TestMayaMcpServerReadinessIntegration:
             except Exception:  # noqa: BLE001
                 pass
 
-    def test_constructor_with_dispatcher_lands_all_green(self) -> None:
+    def test_constructor_with_dispatcher_waits_for_pump(self) -> None:
         from dcc_mcp_maya import MayaMcpServer
 
         server = MayaMcpServer(
@@ -358,6 +361,8 @@ class TestMayaMcpServerReadinessIntegration:
             host_dispatcher=MayaStandaloneDispatcher(),
         )
         try:
+            assert server.readiness_report()["dcc"] is False
+            server._maya_dispatcher.drain_queue(50)
             _assert_ready_bits(
                 server.readiness_report(),
                 process=True,

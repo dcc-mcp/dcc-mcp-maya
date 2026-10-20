@@ -485,24 +485,7 @@ class TestMayaMcpServerApi:
         finally:
             server.stop()
 
-    def test_standalone_skill_load_transform_disables_affinity_enforcement(self):
-        """mayapy direct HTTP adjusts detached core skill metadata before loading."""
-        srv_mod = _import_server()
-
-        class Tool:
-            def __init__(self, enforce_thread_affinity):
-                self.enforce_thread_affinity = enforce_thread_affinity
-
-        class Skill:
-            def __init__(self):
-                self.tools = [Tool(True), Tool(False)]
-
-        skill = Skill()
-
-        assert srv_mod.MayaMcpServer._standalone_skill_load_transform(skill) is None
-        assert [tool.enforce_thread_affinity for tool in skill.tools] == [False, False]
-
-    def test_standalone_transform_persists_for_core_catalog_load(self):
+    def test_standalone_preserves_affinity_enforcement_for_core_catalog_load(self):
         """Core-owned MCP load_skill sees Maya standalone metadata overrides too."""
         srv_mod = _import_server()
 
@@ -520,7 +503,7 @@ class TestMayaMcpServerApi:
             meta = server._server.registry.get_action("maya_primitives__create_sphere")
             assert meta is not None
             assert meta["thread_affinity"] == "main"
-            assert meta.get("enforce_thread_affinity", False) is False
+            assert meta.get("enforce_thread_affinity", False) is True
         finally:
             server.stop()
 
@@ -546,16 +529,6 @@ class TestMayaMcpServerApi:
             finally:
                 server.stop()
 
-    def test_affinity_override_skipped_for_host_dispatcher(self):
-        """Only standalone dispatchers need object-level affinity overrides."""
-        srv_mod = _import_server()
-
-        server = srv_mod.MayaMcpServer(port=0, enable_gateway_failover=False, gateway_port=0)
-        server._host_dispatcher = object()
-        try:
-            assert server._uses_standalone_affinity_override() is False
-        finally:
-            server.stop()
 
 
 # ── Issue #138: strict skill scan opt-in ──────────────────────────────────────

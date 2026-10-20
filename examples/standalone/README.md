@@ -50,3 +50,10 @@ Load the standalone-scene-report skill and call standalone_scene_report__create_
 The skill imports `maya.cmds` inside the tool function, declares
 `affinity: main`, and avoids UI-only commands so it works in `mayapy` /
 `maya.standalone`.
+
+Scene requests run on the thread that initialized Maya. The example uses
+`serve_headless()` to pump Core's owning-thread dispatcher. Custom hosts using
+`MayaStandaloneDispatcher` must call `dispatcher.drain_queue(budget_ms=8)`; blocking that thread with `Event.wait()` or an HTTP request
+prevents scene work from running. Pure filesystem tools may use `affinity: any`.
+Shutdown the server before `maya.standalone.uninitialize()` to release queued
+requests without executing them after Maya has shut down.

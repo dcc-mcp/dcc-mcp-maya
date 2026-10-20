@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import threading
+import time
 import urllib.request
 from pathlib import Path
 
@@ -85,7 +87,37 @@ def _load_script(skill_name: str, script_name: str):
     return mod
 
 
+_ACTIVE_DISPATCHERS = {}
+
+
 def _mcp_post(url, body, timeout=60):
+    """Run HTTP on a client thread while the Maya owner pumps scene work."""
+    if threading.current_thread() is not threading.main_thread():
+        return _mcp_post_blocking(url, body, timeout)
+    results = []
+    errors = []
+    def client():
+        try:
+            results.append(_mcp_post_blocking(url, body, timeout))
+        except BaseException as exc:
+            errors.append(exc)
+    for dispatcher in tuple(_ACTIVE_DISPATCHERS.values()):
+        dispatcher.drain_queue(8)
+    worker = threading.Thread(target=client, daemon=True)
+    worker.start()
+    deadline = time.monotonic() + timeout + 1
+    while worker.is_alive() and time.monotonic() < deadline:
+        for dispatcher in tuple(_ACTIVE_DISPATCHERS.values()):
+            dispatcher.drain_queue(8)
+        time.sleep(0.001)
+    if worker.is_alive():
+        raise TimeoutError("standalone HTTP client did not finish")
+    if errors:
+        raise errors[0]
+    return results[0]
+
+
+def _mcp_post_blocking(url, body, timeout):
     data = json.dumps(body).encode()
     req = urllib.request.Request(
         url,
