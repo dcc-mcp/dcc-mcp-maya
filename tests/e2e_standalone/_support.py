@@ -90,6 +90,18 @@ def _load_script(skill_name: str, script_name: str):
 _ACTIVE_DISPATCHERS = {}
 
 
+def _join_clients(workers, timeout):
+    """Keep the Maya owner pumping while concurrent HTTP clients finish."""
+    assert threading.current_thread() is threading.main_thread()
+    deadline = time.monotonic() + timeout
+    while any(worker.is_alive() for worker in workers):
+        for dispatcher in tuple(_ACTIVE_DISPATCHERS.values()):
+            dispatcher.drain_queue(8)
+        if time.monotonic() >= deadline:
+            raise TimeoutError("standalone HTTP clients did not finish")
+        time.sleep(0.001)
+
+
 def _mcp_post(url, body, timeout=60):
     """Run HTTP on a client thread while the Maya owner pumps scene work."""
     if threading.current_thread() is not threading.main_thread():
@@ -107,13 +119,7 @@ def _mcp_post(url, body, timeout=60):
         dispatcher.drain_queue(8)
     worker = threading.Thread(target=client, daemon=True)
     worker.start()
-    deadline = time.monotonic() + timeout + 1
-    while worker.is_alive() and time.monotonic() < deadline:
-        for dispatcher in tuple(_ACTIVE_DISPATCHERS.values()):
-            dispatcher.drain_queue(8)
-        time.sleep(0.001)
-    if worker.is_alive():
-        raise TimeoutError("standalone HTTP client did not finish")
+    _join_clients([worker], timeout + 1)
     if errors:
         raise errors[0]
     return results[0]

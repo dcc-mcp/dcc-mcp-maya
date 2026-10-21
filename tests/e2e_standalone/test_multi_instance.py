@@ -6,7 +6,7 @@ import threading
 
 import pytest
 
-from ._support import _mcp_list_all_tools, _mcp_post, _new_scene, cmds
+from ._support import _join_clients, _mcp_list_all_tools, _mcp_post, _new_scene, cmds
 
 pytestmark = pytest.mark.e2e
 
@@ -116,8 +116,7 @@ class TestMultiInstanceIsolation:
             t_b = threading.Thread(target=call_server, args=("serverB", h_b.mcp_url(), 11))
             t_a.start()
             t_b.start()
-            t_a.join(timeout=15)
-            t_b.join(timeout=15)
+            _join_clients([t_a, t_b], timeout=15)
 
             for label in ("serverA", "serverB"):
                 assert label in results, "Thread did not complete"
@@ -316,8 +315,7 @@ class TestMultiInstanceConcurrentWorkflows:
         t_b = threading.Thread(target=call_b)
         t_a.start()
         t_b.start()
-        t_a.join(timeout=15)
-        t_b.join(timeout=15)
+        _join_clients([t_a, t_b], timeout=15)
 
         assert "a" in results and "b" in results
         for key in ("a", "b"):
@@ -325,6 +323,8 @@ class TestMultiInstanceConcurrentWorkflows:
             assert not isinstance(r, Exception), "Request {} failed: {}".format(key, r)
             code, body = r
             assert code == 200
+            assert not body["result"].get("isError"), body
+            assert body["result"]["structuredContent"]["success"] is True, body
 
     def test_tools_list_stable_after_concurrent_calls(self):
         """tools/list stays complete on both servers after burst of concurrent calls."""
@@ -332,7 +332,7 @@ class TestMultiInstanceConcurrentWorkflows:
 
         def fire_call(url, req_id):
             try:
-                _mcp_post(
+                code, body = _mcp_post(
                     url,
                     {
                         "jsonrpc": "2.0",
@@ -341,6 +341,8 @@ class TestMultiInstanceConcurrentWorkflows:
                         "params": {"name": "maya_scene__get_session_info", "arguments": {}},
                     },
                 )
+                assert code == 200 and not body["result"].get("isError"), body
+                assert body["result"]["structuredContent"]["success"] is True, body
             except Exception as exc:
                 errors.append(exc)
 
@@ -351,8 +353,7 @@ class TestMultiInstanceConcurrentWorkflows:
 
         for t in threads:
             t.start()
-        for t in threads:
-            t.join(timeout=20)
+        _join_clients(threads, timeout=20)
 
         assert not errors, "Concurrent calls raised: {}".format(errors)
 

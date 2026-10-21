@@ -55,24 +55,28 @@ def test_repeated_scene_requests_execute_on_maya_main_thread(monkeypatch):
 def test_serve_headless_scene_request_and_clean_stop(monkeypatch):
     from dcc_mcp_maya.headless import serve_headless
 
-    original = _executor.run_skill_script
+    original = cmds.about
     executed = []
+    request_in_flight = threading.Event()
     stop = threading.Event()
     replies = []
     errors = []
     workers = []
     version = cmds.about(version=True)
 
-    def checked_runner(path, params):
-        executed.append(threading.get_ident())
-        assert threading.current_thread() is threading.main_thread()
-        return original(path, params)
+    def checked_about(*args, **kwargs):
+        # Observe Maya itself even if plugin lifecycle tests reimport the adapter.
+        if request_in_flight.is_set() and kwargs.get("version"):
+            executed.append(threading.get_ident())
+            assert threading.current_thread() is threading.main_thread()
+        return original(*args, **kwargs)
 
-    monkeypatch.setattr(_executor, "run_skill_script", checked_runner)
+    monkeypatch.setattr(cmds, "about", checked_about)
 
     def announce(server):
         def client():
             try:
+                request_in_flight.set()
                 code, reply = _mcp_post_blocking(
                     server.mcp_url,
                     {
@@ -88,6 +92,7 @@ def test_serve_headless_scene_request_and_clean_stop(monkeypatch):
             except Exception as exc:
                 errors.append(exc)
             finally:
+                request_in_flight.clear()
                 stop.set()
 
         worker = threading.Thread(target=client, daemon=True)
@@ -101,4 +106,4 @@ def test_serve_headless_scene_request_and_clean_stop(monkeypatch):
     assert not replies[0]["result"].get("isError"), replies
     data = replies[0]["result"]["structuredContent"]
     assert data["success"] is True and data["context"]["maya_version"] == version
-    assert executed == [threading.main_thread().ident]
+    assert executed and all(ident == threading.main_thread().ident for ident in executed)
