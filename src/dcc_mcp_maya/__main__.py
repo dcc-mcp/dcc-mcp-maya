@@ -6,6 +6,7 @@ import argparse
 import json
 import logging
 import os
+import sys
 from typing import Optional, Sequence
 
 
@@ -18,6 +19,11 @@ def _port(value: str) -> int:
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
     """Initialize standalone Maya and serve until interrupted."""
+    argv = list(sys.argv[1:] if argv is None else argv)
+    from dcc_mcp_maya import install  # noqa: PLC0415
+
+    if argv and argv[0] in install.LIFECYCLE_COMMANDS:
+        return install.main(argv)
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--port", type=_port, default=None)
     parser.add_argument("--gateway-port", type=_port, default=None)

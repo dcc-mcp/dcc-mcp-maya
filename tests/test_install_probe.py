@@ -96,6 +96,24 @@ def test_probe_initializes_bare_mayapy_and_emits_metadata_after_cleanup(probe_ru
     assert events() == ["initialize", "dcc_mcp_core", "dcc_mcp_maya", "about", "uninitialize"]
 
 
+def test_probe_skips_startup_hooks_only_in_its_child(probe_runtime, monkeypatch):
+    modules, events = probe_runtime
+    standalone = modules / "maya/standalone.py"
+    with standalone.open("a", encoding="utf-8") as stream:
+        stream.write(
+            "\noriginal_initialize = initialize\n"
+            "def initialize(name='python'):\n"
+            "    assert os.environ.get('MAYA_SKIP_USERSETUP_PY') == '1'\n"
+            "    return original_initialize(name=name)\n"
+        )
+    monkeypatch.setenv("MAYA_SKIP_USERSETUP_PY", "parent-value")
+    assert install._probe_target(sys.executable)["maya_version"] == "2026"
+    assert "initialize" in events() and "uninitialize" in events()
+    import os
+
+    assert os.environ["MAYA_SKIP_USERSETUP_PY"] == "parent-value"
+
+
 def test_probe_preserves_a_runtime_initialized_by_sitecustomize(probe_runtime):
     modules, events = probe_runtime
     (modules / "sitecustomize.py").write_text(

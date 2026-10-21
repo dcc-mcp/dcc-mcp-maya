@@ -195,6 +195,8 @@ finally:
 # Startup and teardown can both write stdout; metadata must be the final line.
 print(json.dumps(payload))
 """
+    probe_env = os.environ.copy()
+    probe_env["MAYA_SKIP_USERSETUP_PY"] = "1"
     try:
         completed = subprocess.run(
             [str(python_path), "-c", script],
@@ -202,6 +204,7 @@ print(json.dumps(payload))
             capture_output=True,
             universal_newlines=True,
             timeout=20,
+            env=probe_env,
         )
     except (OSError, subprocess.TimeoutExpired) as exc:
         raise LifecycleError(
@@ -494,7 +497,9 @@ def _base_report(ctx, command, status):
 
 def _command_for(ctx, command, execute=False):
     command_line = [
-        COMMAND,
+        str(ctx.python_path),
+        "-m",
+        "dcc_mcp_maya",
         command,
         "--dcc-path",
         str(ctx.host_path),
@@ -677,6 +682,9 @@ def _validate_module_zip_publication(stage, validated):
 def _tree_sha256(path):
     digest = hashlib.sha256()
     for item in sorted((candidate for candidate in path.rglob("*") if candidate.is_file()), key=lambda p: p.as_posix()):
+        # Maya generates bytecode after installation; staging excludes it too.
+        if item.suffix in {".pyc", ".pyo"}:
+            continue
         relative = item.relative_to(path).as_posix().encode("utf-8")
         digest.update(len(relative).to_bytes(4, "big"))
         digest.update(relative)
@@ -1314,11 +1322,52 @@ def _extract_module_zip(payload, stage, validated=None):
         raise
 
 
+def _stage_runtime_dependencies(python_path, destination):
+    # Resolve native dependencies in the target interpreter, never the installer's ABI.
+    script = """
+import os
+import shutil
+import sys
+from pathlib import Path
+import dcc_mcp_core
+import dcc_mcp_server
+
+destination = Path(sys.argv[1])
+ignore = shutil.ignore_patterns('__pycache__', '*.pyc', '*.pyo')
+for module in (dcc_mcp_core, dcc_mcp_server):
+    source = Path(module.__file__).resolve().parent
+    shutil.copytree(str(source), str(destination / module.__name__), ignore=ignore)
+    metadata = source.parent / ('%s-%s.dist-info' % (module.__name__, module.__version__))
+    if metadata.is_dir():
+        shutil.copytree(str(metadata), str(destination / metadata.name), ignore=ignore)
+binary = Path(dcc_mcp_server.binary_path())
+(destination / 'scripts').mkdir(exist_ok=True)
+shutil.copy2(str(binary), str(destination / 'scripts' / ('dcc-mcp-server.exe' if os.name == 'nt' else 'dcc-mcp-server')))
+"""
+    try:
+        result = subprocess.run(
+            [str(python_path), "-c", script, str(destination)],
+            capture_output=True,
+            universal_newlines=True,
+            timeout=60,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        raise LifecycleError(INSTALL_EXIT_ACQUIRE, "acquire", "runtime_dependency_stage_failed", str(exc)) from exc
+    if result.returncode != 0:
+        raise LifecycleError(
+            INSTALL_EXIT_ACQUIRE,
+            "acquire",
+            "runtime_dependency_stage_failed",
+            "Could not bundle the selected mayapy runtime: %s" % result.stderr.strip()[-2000:],
+        )
+
+
 def _stage_module_tree(stage, ctx, validated_module_zip=None):
     if ctx.module_zip is not None:
         _extract_module_zip(ctx.module_zip, stage, validated_module_zip)
         return (stage / "python37").is_dir()
     (stage / "python").mkdir(parents=True)
+    _stage_runtime_dependencies(ctx.python_path, stage / "python")
     package_source = Path(__file__).resolve().parent
     shutil.copytree(
         str(package_source),
@@ -1526,7 +1575,7 @@ def _readiness_next_steps(ctx):
             "id": "launch_maya",
             "description": "Launch the selected Maya installation and let userSetup finish.",
             "command": [str(ctx.host_path)],
-            "why": "The typed host.ping probe requires a running Maya instance.",
+            "why": "The typed maya_scene__get_session_info probe requires a running Maya instance.",
         },
         {
             "id": "verify_install",
@@ -1580,7 +1629,7 @@ def _verify(ctx, environ, timeout_secs):
         environ.get("DCC_MCP_REGISTRY_DIR"),
         dcc_type=DCC_TYPE,
         timeout_secs=max(0.0, float(timeout_secs)),
-        probe_tool="host.ping",
+        probe_tool="maya_scene__get_session_info",
         probe_timeout_secs=min(3.0, max(0.1, float(timeout_secs))),
     )
     if not readiness.get("success"):
@@ -1589,14 +1638,14 @@ def _verify(ctx, environ, timeout_secs):
             "failure_stage": "readiness",
             "failure_reason": "sidecar_unavailable",
             "readiness_status": readiness.get("status"),
-            "probe_tool": "host.ping",
+            "probe_tool": "maya_scene__get_session_info",
         }, _readiness_next_steps(ctx)
     return {
         "directly_usable": True,
         "failure_stage": None,
         "failure_reason": None,
-        "probe_tool": "host.ping",
-        "instance_id": readiness.get("instance_id"),
+        "probe_tool": "maya_scene__get_session_info",
+        "instance_id": readiness.get("instance_id") or readiness.get("entry", {}).get("instance_id"),
     }, []
 
 
