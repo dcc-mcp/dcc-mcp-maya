@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.39](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.38...v0.9.39) (2026-10-21)
+
+
+### Bug Fixes
+
+* unblock Maya startup and main-thread standalone requests ([a172887](https://github.com/dcc-mcp/dcc-mcp-maya/commit/a172887933c51f000b1d487b594f4e97b15fcd45))
+
 ## [0.9.38](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.37...v0.9.38) (2026-10-19)
 
 
