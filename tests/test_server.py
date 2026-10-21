@@ -666,9 +666,10 @@ class TestMayaMcpServerHttp:
     """End-to-end HTTP tests against a real McpHttpServer (no Maya needed)."""
 
     @pytest.fixture
-    def running_server(self):
+    def running_server(self, monkeypatch, tmp_path):
+        monkeypatch.setenv("DCC_MCP_REGISTRY_DIR", str(tmp_path / "registry"))
         srv_mod = _import_server()
-        server = srv_mod.MayaMcpServer(port=0)
+        server = srv_mod.MayaMcpServer(port=0, gateway_port=0)
         # Pass explicit skills path to ensure discovery regardless of install mode
         server.register_builtin_actions(extra_skill_paths=[_builtin_skills_dir()])
         # Explicitly load key skills so their tools appear in tools/list
