@@ -19,8 +19,11 @@ import pytest
 
 
 @pytest.fixture(autouse=True)
-def mock_maya_modules():
+def mock_maya_modules(monkeypatch, tmp_path):
     """Inject a minimal maya stub so imports succeed without a real Maya."""
+    # Lifecycle and HTTP tests must never take over a workstation's gateway.
+    monkeypatch.setenv("DCC_MCP_GATEWAY_PORT", "0")
+    monkeypatch.setenv("DCC_MCP_REGISTRY_DIR", str(tmp_path / "registry"))
     maya_mock = MagicMock()
     maya_mock.cmds = MagicMock()
     maya_mock.mel = MagicMock()
@@ -666,8 +669,7 @@ class TestMayaMcpServerHttp:
     """End-to-end HTTP tests against a real McpHttpServer (no Maya needed)."""
 
     @pytest.fixture
-    def running_server(self, monkeypatch, tmp_path):
-        monkeypatch.setenv("DCC_MCP_REGISTRY_DIR", str(tmp_path / "registry"))
+    def running_server(self):
         srv_mod = _import_server()
         server = srv_mod.MayaMcpServer(port=0, gateway_port=0)
         # Pass explicit skills path to ensure discovery regardless of install mode
