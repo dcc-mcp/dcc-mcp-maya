@@ -121,6 +121,11 @@ handle = dcc_mcp_maya.start_server(host_dispatcher=dispatcher)
 print(handle.mcp_url())   # exact OS-assigned direct URL
 ```
 
+For `mayapy`, follow [the standalone guide](./standalone.md):
+pass a `MayaStandaloneDispatcher` and call `dispatcher.drain_queue(8)` in the
+main loop. Headless Maya still requires scene commands on its initialization
+thread; blocking that thread prevents HTTP scene requests from completing.
+
 Agents normally use the stable gateway on `http://127.0.0.1:9765/mcp`.
 Run `dcc-mcp-cli list` when the exact direct URL is required.
 

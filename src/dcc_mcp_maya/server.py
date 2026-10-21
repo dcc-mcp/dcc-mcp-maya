@@ -540,34 +540,9 @@ class MayaMcpServer(DccServerBase):
             minimal_mode=minimal_mode,
         )
 
-    def _uses_standalone_affinity_override(self) -> bool:
-        dispatcher = getattr(self, "_host_dispatcher", None)
-        return type(dispatcher).__name__ in {"MayaStandaloneDispatcher", "PyStandaloneDispatcher"}
-
     def _configure_skill_load_transform(self) -> None:
-        """Install Maya's standalone policy through core's skill-load hook."""
-        if not self._uses_standalone_affinity_override():
-            self.clear_skill_load_transform()
-            return
-
-        if self.set_skill_load_transform(self._standalone_skill_load_transform):
-            logger.info("[%s] Standalone skill-load transform installed", self._dcc_name)
-            return
-
-        logger.warning("[%s] Standalone skill-load transform unavailable", self._dcc_name)
-
-    @staticmethod
-    def _standalone_skill_load_transform(skill: Any) -> None:
-        """Let core load main-affinity Maya tools inline in mayapy standalone mode."""
-        changed = False
-        tools = list(getattr(skill, "tools", ()) or ())
-        for tool in tools:
-            if getattr(tool, "enforce_thread_affinity", None) is not True:
-                continue
-            setattr(tool, "enforce_thread_affinity", False)
-            changed = True
-        if changed:
-            setattr(skill, "tools", tools)
+        """Keep declared affinity enforcement in standalone as well as GUI mode."""
+        self.clear_skill_load_transform()
 
     def _build_minimal_mode_config(self, minimal: Optional[bool]) -> Any:
         """Return Maya's core MinimalModeConfig or ``None`` for full mode."""

@@ -347,7 +347,7 @@ from dcc_mcp_maya import (
 from dcc_mcp_core import ReadinessProbe
 ```
 
-In batch / `mayapy` mode (`MayaStandaloneDispatcher` attached, or no host dispatcher at all — i.e. inline executor mode) the probe lands all-green synchronously — there is no UI event loop to wait on. In interactive Maya with a real UI dispatcher, the `dcc` bit flips after the first idle pump tick, so `dcc=true` is an honest "main thread is alive and pumping" signal.
+With `MayaStandaloneDispatcher` attached, the caller must pump `dispatcher.drain_queue()` on Maya's initialization thread; `dcc` flips after that first pump. Only inline executor mode (no host dispatcher) lands all-green synchronously. In interactive Maya with a UI dispatcher, `dcc` flips after the first idle pump tick, so `dcc=true` is an honest "main thread is alive and pumping" signal.
 
 Operator opt-in for a hard timeout: `DCC_MCP_MAYA_READINESS_TIMEOUT_SECS=60` — advisory only; the adapter does not auto-fail the probe when the timeout elapses (a hung Maya is better reported as "still booting" than as a synthetic error).
 
@@ -500,7 +500,7 @@ A: The tool's `tools.yaml` must declare `affinity: main`. Anything touching Maya
 A: Poll `check_maya_cancelled()` inside the loop. It raises `CancelledError` when the client or dispatcher signals cancellation.
 
 **Q: How do I start the server in a Maya batch / `mayapy` script?**  
-A: Same API — `dcc_mcp_maya.start_server(port=0)`. In batch mode the `MayaStandaloneDispatcher` runs jobs on the calling thread directly.
+A: Prefer `mayapy -m dcc_mcp_maya`, which uses `serve_headless()` to own the main-thread pump. Custom hosts can pass `MayaStandaloneDispatcher` to `start_server()` and call `dispatcher.drain_queue()` from Maya's initialization thread while clients run on other threads or processes.
 
 **Q: Where are the built-in skills?**  
 A: `src/dcc_mcp_maya/skills/` (28 packages, 211 scripts, 212 MCP tools). Each package contains `SKILL.md`, `tools.yaml`, optional `groups.yaml`, and `scripts/*.py`.

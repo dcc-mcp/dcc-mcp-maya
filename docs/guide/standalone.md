@@ -70,13 +70,25 @@ handle = start_server(
 )
 
 print(handle.mcp_url())  # exact OS-assigned direct URL
-threading.Event().wait()
+stop = threading.Event()
+try:
+    while not stop.wait(0.01):
+        dispatcher.drain_queue(budget_ms=8)
+finally:
+    stop_server()
+    maya.standalone.uninitialize()
 ```
 
-`MayaStandaloneDispatcher` runs Maya work serially under one process-wide lock.
-It advertises support for both `main` and `any` affinity, but there is no UI
-thread to marshal onto. The important guarantee is that concurrent HTTP calls
-do not enter `maya.cmds` at the same time.
+`MayaStandaloneDispatcher` queues scene work for Maya's initialization thread.
+Call `drain_queue()` on that main thread while HTTP clients run on other
+threads or processes. Blocking the owner with `Event.wait()` alone cannot
+service scene requests. Readiness remains false until the first pump, and
+shutdown interrupts queued calls. `affinity: any` is reserved for pure Python
+or filesystem work.
+
+For a long-lived service prefer `serve_headless()` (used by
+`mayapy -m dcc_mcp_maya` and the bundled example); it already owns the main-thread
+pump, server lifecycle and cleanup through Core's dispatcher.
 
 ## Writing Standalone-Safe Skills
 

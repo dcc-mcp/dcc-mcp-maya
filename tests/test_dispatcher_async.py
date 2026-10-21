@@ -154,45 +154,39 @@ class TestSubmitAsyncCallable:
 
 
 class TestStandaloneSubmitAsync:
-    """MayaStandaloneDispatcher.submit_async_callable executes synchronously."""
+    """Headless async scene work completes only when the main loop pumps."""
 
     def setup_method(self):
         self.dispatcher = MayaStandaloneDispatcher()
 
-    def test_executes_synchronously(self):
-        """Standalone dispatcher runs the task before returning."""
+    def test_executes_on_next_pump(self):
         executed = []
+        completed = []
+        result = self.dispatcher.submit_async_callable(
+            "req-s1", lambda: executed.append(True) or "ok", job_id="sjid-1", on_complete=completed.append
+        )
+        assert executed == []
+        assert result["status"] == "pending"
+        self.dispatcher.drain_queue(50)
+        assert executed == [True]
+        assert completed[0]["success"] is True
+        assert completed[0]["job_id"] == "sjid-1"
 
-        def task():
-            executed.append(True)
-            return "ok"
-
-        result = self.dispatcher.submit_async_callable("req-s1", task, job_id="sjid-1")
-        assert executed, "task was not executed"
-        assert result["status"] == "completed"
-        assert result["job_id"] == "sjid-1"
-
-    def test_on_complete_called_before_return(self):
-        """on_complete is invoked before submit_async_callable returns."""
+    def test_on_complete_follows_task_on_main_thread(self):
         call_order = []
-
-        def task():
-            call_order.append("task")
-            return 99
-
-        def on_complete(outcome):
-            call_order.append("callback")
-
-        self.dispatcher.submit_async_callable("req-s2", task, on_complete=on_complete)
+        self.dispatcher.submit_async_callable(
+            "req-s2", lambda: call_order.append("task"), on_complete=lambda outcome: call_order.append("callback")
+        )
+        assert call_order == []
+        self.dispatcher.drain_queue(50)
         assert call_order == ["task", "callback"]
 
     def test_failed_task_has_failed_status(self):
-        """A task that raises produces status='failed'."""
-
         def bad_task():
             raise ValueError("oops")
 
-        result = self.dispatcher.submit_async_callable("req-s3", bad_task)
-        assert result["status"] == "failed"
-        assert result["success"] is False
-        assert "oops" in result["error"]
+        completed = []
+        self.dispatcher.submit_async_callable("req-s3", bad_task, on_complete=completed.append)
+        self.dispatcher.drain_queue(50)
+        assert completed[0]["success"] is False
+        assert "oops" in completed[0]["error"]

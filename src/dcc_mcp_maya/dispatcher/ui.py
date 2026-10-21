@@ -62,19 +62,21 @@ class MayaUiDispatcher(HostUiDispatcherBase):
         execution = kwargs.pop("execution", "sync")
         thread_affinity = kwargs.pop("thread_affinity", kwargs.pop("affinity", "main"))
 
-        timeout_ms = timeout_hint_secs_to_ms(
-            timeout_hint_secs,
-            action_name=action_name,
-            skill_name=skill_name,
-            thread_affinity=thread_affinity,
-            execution=execution,
-        )
+        timeout_ms = kwargs.pop("timeout_ms", None)
+        if timeout_ms is None:
+            timeout_ms = timeout_hint_secs_to_ms(
+                timeout_hint_secs,
+                action_name=action_name,
+                skill_name=skill_name,
+                thread_affinity=thread_affinity,
+                execution=execution,
+            )
 
         request_id = f"dispatch_{uuid.uuid4().hex}"
         result = self.submit_callable(
             request_id=request_id,
             task=lambda: func(*args, **kwargs),
-            affinity="main",
+            affinity=thread_affinity,
             timeout_ms=timeout_ms,
         )
 

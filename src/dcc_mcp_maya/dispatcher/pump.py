@@ -253,7 +253,8 @@ def create_dispatcher(
     Returns
     -------
     tuple[MayaUiDispatcher | MayaStandaloneDispatcher, MayaUiPump | None]
-        A ``(dispatcher, pump)`` pair.  The pump is ``None`` in standalone mode.
+        A ``(dispatcher, pump)`` pair.  The timer pump is ``None`` in standalone mode; call
+        ``dispatcher.drain_queue(budget_ms)`` in the headless main loop.
     """
     try:
         import maya.cmds as cmds  # noqa: PLC0415

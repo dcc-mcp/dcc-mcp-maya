@@ -22,8 +22,51 @@ from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 from unittest.mock import MagicMock, patch
 
-# Import third-party modules
 import pytest
+
+
+@pytest.fixture
+def watchdog_qt(monkeypatch):
+    """Model Qt single-shot delivery, including an already queued late timeout."""
+    from types import ModuleType, SimpleNamespace
+
+    timers = []
+
+    class Timer:
+        def __init__(self, parent):
+            self.active = self.deleted = False
+            self.stop_error = None
+            self.timeout = SimpleNamespace(connect=lambda callback: setattr(self, "callback", callback))
+            timers.append(self)
+
+        def setSingleShot(self, value):
+            self.single_shot = value
+
+        def start(self, interval):
+            self.interval = interval
+            self.active = True
+
+        def stop(self):
+            if self.stop_error:
+                raise self.stop_error
+            self.active = False
+
+        def deleteLater(self):
+            self.deleted = True
+
+        def fire(self):
+            self.active = False
+            self.callback()
+
+    core = ModuleType("PySide6.QtCore")
+    core.QCoreApplication = SimpleNamespace(instance=lambda: object())
+    core.QTimer = Timer
+    package = ModuleType("PySide6")
+    package.QtCore = core
+    monkeypatch.setitem(sys.modules, "PySide6", package)
+    monkeypatch.setitem(sys.modules, "PySide6.QtCore", core)
+    return timers
+
 
 SKILLS_ROOT = Path(__file__).parent.parent / "src" / "dcc_mcp_maya" / "skills"
 

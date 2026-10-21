@@ -108,6 +108,28 @@ is on `MAYA_PLUG_IN_PATH` or copy it into the user's Maya plug-ins folder.
 
 ## First Live Smoke Prompt
 
+### Recognize Home before claiming GUI readiness
+
+Maya's first-use Home page can show a new/experienced-user choice and an
+enter-editor button while the MCP sidecar is already working. Distinguish
+startup splash, first-use Home, ordinary Home, and the visible editor. Report
+MCP readiness separately from the observed UI surface; these are observations,
+not additional fields returned by the current readiness API.
+
+Use project `dcc-cua` / DCC-MCP `ui-control` for the UI steps, with the runtime
+version and exact PID/HWND reported before the first observation. Identify
+controls through their roles, structure, ownership and pixels across languages.
+For an authorized setup, complete the welcome choice and enter the existing
+editor without replacing the scene. Verify the transition: a successful click
+response that only focuses a control is insufficient. Rediscover and rebind the
+editor HWND if it differs from Home, then confirm a visible viewport and the
+typed scene query against the same Maya instance. If foreground input is
+refused, stop and request only the necessary manual navigation; do not fall back
+to generic UI automation or injected Maya UI code.
+
+See [startup and Home diagnosis](../../docs/guide/local-mcp-debug.md#5-distinguish-startup-home-and-editor-readiness)
+for the state/evidence table and slow-splash checks.
+
 Ask the MCP host to run this prompt after Maya is open and the plugin is
 loaded:
 

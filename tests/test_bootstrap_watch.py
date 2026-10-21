@@ -6,7 +6,7 @@ state observable: a ``started`` marker that is never retired and outlives the
 threshold means the load was attempted and never returned.
 
 The marker is deliberately **run-scoped, not attempt-scoped**. After PR #550
-``_load_dcc_mcp_maya`` runs again on every idle-watchdog retry, so a marker per
+``_load_dcc_mcp_maya`` runs again on every watchdog retry, so a marker per
 attempt would let attempt N's exit hide attempt N+1's hang.
 """
 
@@ -270,7 +270,7 @@ def _install_core_stub(monkeypatch):
 def test_marker_is_written_once_per_run_before_the_first_schedule(monkeypatch, tmp_path) -> None:
     """PM condition 1: one marker per run, written before the first schedule.
 
-    The idle watchdog calls ``_load_dcc_mcp_maya`` again on every retry, so a
+    The watchdog calls ``_load_dcc_mcp_maya`` again on every retry, so a
     marker per attempt would let attempt N's exit mask attempt N+1's hang.
     """
     _isolate(monkeypatch, tmp_path)
@@ -302,19 +302,17 @@ def test_marker_is_written_once_per_run_before_the_first_schedule(monkeypatch, t
     assert len(calls) >= 1
 
 
-def test_watchdog_give_up_retires_the_marker(monkeypatch, tmp_path) -> None:
+def test_watchdog_give_up_retires_the_marker(monkeypatch, tmp_path, watchdog_qt) -> None:
     """PM condition 2: a give-up is a reported failure, so it must not linger."""
     _isolate(monkeypatch, tmp_path)
     cmds_module, scheduled, warnings = _stub_cmds(plugin_loaded=False)
-    script_jobs = []
-    cmds_module.scriptJob = lambda **kwargs: script_jobs.append(kwargs) or len(script_jobs)
     _install_adapter_stub(monkeypatch)
     module = _exec_user_setup(monkeypatch, cmds_module)
 
     assert len(watch.read_pending_markers()) == 1, "a marker is armed while the run is in flight"
 
     module.WATCHDOG_GRACE_SECS = 0.0
-    callback = script_jobs[0]["event"][1]
+    callback = watchdog_qt[0].fire
     for _ in range(module.WATCHDOG_MAX_ATTEMPTS + 2):
         callback()
 
@@ -334,8 +332,6 @@ def test_healthy_retry_chain_is_never_reported_as_a_hang(monkeypatch, tmp_path) 
     """
     _isolate(monkeypatch, tmp_path)
     cmds_module, scheduled, _ = _stub_cmds(plugin_loaded=False)
-    script_jobs = []
-    cmds_module.scriptJob = lambda **kwargs: script_jobs.append(kwargs) or len(script_jobs)
     _install_adapter_stub(monkeypatch)
     module = _exec_user_setup(monkeypatch, cmds_module)
 

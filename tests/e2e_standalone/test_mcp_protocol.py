@@ -8,7 +8,7 @@ import pytest
 
 from dcc_mcp_maya.server import MayaMcpServer
 
-from ._support import _mcp_list_all_tools, _mcp_post, _new_scene
+from ._support import _mcp_list_all_tools, _mcp_post, _new_scene, cmds
 
 pytestmark = pytest.mark.e2e
 
@@ -156,10 +156,6 @@ class TestMcpHttpConnectivity:
             f"Expected at least one {group_name!r} tool after activation; after={sorted(after_names)[:40]}"
         )
 
-    @pytest.mark.xfail(
-        reason="dcc-mcp-core subprocess executor uses relative script path; known issue",
-        strict=False,
-    )
     def test_tools_call_get_session_info_via_http(self):
         """tools/call returns Maya session info over HTTP."""
         code, body = _mcp_post(
@@ -168,22 +164,30 @@ class TestMcpHttpConnectivity:
                 "jsonrpc": "2.0",
                 "id": 3,
                 "method": "tools/call",
-                "params": {"name": "maya-scene.get_session_info", "arguments": {}},
+                "params": {"name": "maya_scene__get_session_info", "arguments": {}},
             },
         )
         assert code == 200
         content = body["result"]["content"]
         assert len(content) > 0
         # Content is a list of {type, text} blocks
-        text = content[0].get("text", "")
-        assert "maya_version" in text or "success" in text
+        assert not body["result"].get("isError"), body
+        data = body["result"]["structuredContent"]
+        assert data["success"] is True
+        assert data["context"]["maya_version"] == cmds.about(version=True)
 
-    @pytest.mark.xfail(
-        reason="dcc-mcp-core subprocess executor uses relative script path; known issue",
-        strict=False,
-    )
     def test_tools_call_create_sphere_via_http(self):
         """tools/call create_sphere returns success in JSON response."""
+        code, loaded = _mcp_post(
+            self._mcp_url,
+            {
+                "jsonrpc": "2.0",
+                "id": 40,
+                "method": "tools/call",
+                "params": {"name": "load_skill", "arguments": {"skill_name": "maya-primitives"}},
+            },
+        )
+        assert code == 200 and not loaded["result"].get("isError"), loaded
         code, body = _mcp_post(
             self._mcp_url,
             {
@@ -191,7 +195,7 @@ class TestMcpHttpConnectivity:
                 "id": 4,
                 "method": "tools/call",
                 "params": {
-                    "name": "maya-primitives.create_sphere",
+                    "name": "maya_primitives__create_sphere",
                     "arguments": {"radius": 1.5, "name": "httpSphere"},
                 },
             },
@@ -200,13 +204,10 @@ class TestMcpHttpConnectivity:
         # Verify JSON response indicates success (MCP server ran the tool)
         content = body["result"]["content"]
         assert len(content) > 0
-        text = content[0].get("text", "")
-        assert "success" in text or "httpSphere" in text
+        assert not body["result"].get("isError"), body
+        assert body["result"]["structuredContent"]["success"] is True
+        assert cmds.objExists("httpSphere")
 
-    @pytest.mark.xfail(
-        reason="dcc-mcp-core subprocess executor uses relative script path; known issue",
-        strict=False,
-    )
     def test_tools_call_execute_python_via_http(self):
         """tools/call execute_python returns success in JSON response."""
         code, body = _mcp_post(
@@ -216,7 +217,7 @@ class TestMcpHttpConnectivity:
                 "id": 5,
                 "method": "tools/call",
                 "params": {
-                    "name": "maya-scripting.execute_python",
+                    "name": "maya_scripting__execute_python",
                     "arguments": {"code": "import maya.cmds as cmds; cmds.polyCube(n='httpCube')"},
                 },
             },
@@ -227,6 +228,8 @@ class TestMcpHttpConnectivity:
         # Tool executed — response contains result text
         text = content[0].get("text", "")
         assert isinstance(text, str) and len(text) > 0
+        assert not body["result"].get("isError"), body
+        assert cmds.objExists("httpCube")
 
 
 class TestScriptingHttpE2E:

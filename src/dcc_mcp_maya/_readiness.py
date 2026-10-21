@@ -101,8 +101,7 @@ ProbeScheduler = Callable[[Any, Callable[[], None]], bool]
 """Dispatcher-agnostic scheduler: ``(dispatcher, on_done) -> scheduled?``.
 
 Returns ``True`` when ``on_done`` is guaranteed to eventually be called
-(synchronously on standalone dispatchers; after the next pump cycle on
-UI dispatchers).
+(after the next main-thread pump cycle on standalone or UI dispatchers).
 """
 
 
@@ -237,9 +236,8 @@ class ReadinessBinder:
            main thread to wait on — so flip all bits green immediately.
         4. Otherwise, schedule a no-op probe on the host dispatcher so
            the first main-thread pump flips ``dcc = true``.  On
-           :class:`MayaStandaloneDispatcher` that callback fires
-           synchronously; on a live Maya UI dispatcher it fires on the
-           first idle tick once the scene is up.
+           :class:`MayaStandaloneDispatcher` the caller must pump explicitly;
+           on a live Maya UI dispatcher it fires on the first idle tick.
 
         Returns
         -------
