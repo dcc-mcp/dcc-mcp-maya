@@ -123,6 +123,11 @@ print(handle.mcp_url())   # 操作系统分配的实例直连地址
 Agent 通常连接稳定网关 `http://127.0.0.1:9765/mcp`；需要实例直连地址时运行
 `dcc-mcp-cli list`。
 
+`mayapy` 的用法见 [Standalone 指南](./standalone.md)：传入
+`MayaStandaloneDispatcher`，并在主循环调用 `dispatcher.drain_queue(8)`。
+Headless Maya 的场景命令仍须在初始化线程执行；阻塞该线程会使 HTTP
+场景请求无法完成。
+
 ## 下一步
 
 - [安装指南](./installation) — 插件模式、userSetup.py、多 Maya 版本配置

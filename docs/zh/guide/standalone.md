@@ -69,12 +69,23 @@ handle = start_server(
 )
 
 print(handle.mcp_url())  # 操作系统分配的实例直连地址
-threading.Event().wait()
+stop = threading.Event()
+try:
+    while not stop.wait(0.01):
+        dispatcher.drain_queue(budget_ms=8)
+finally:
+    stop_server()
+    maya.standalone.uninitialize()
 ```
 
-`MayaStandaloneDispatcher` 会用一个进程级锁串行执行 Maya 操作。它声明支持
-`main` 和 `any` affinity，但 standalone 里没有真正的 UI 主线程可切换；关键
-保证是并发 HTTP 请求不会同时进入 `maya.cmds`。
+`MayaStandaloneDispatcher` 将场景操作排队交给初始化 Maya 的主线程。
+HTTP 客户端在其他线程或进程运行时，主线程必须调用 `drain_queue()`。
+仅用 `Event.wait()` 阻塞主线程无法处理场景请求。首次 pump 前 readiness
+保持未就绪；关闭 dispatcher 会中断排队请求。`affinity: any` 仅用于纯 Python
+或文件系统操作。
+
+长驻服务优先使用 `serve_headless()`，`mayapy -m dcc_mcp_maya` 和仓库示例
+都使用它。它通过 Core dispatcher 统一管理主线程 pump、服务生命周期和清理。
 
 ## 编写 Standalone-Safe Skills
 
