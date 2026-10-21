@@ -163,7 +163,8 @@ class TestStandaloneSubmitAsync:
         executed = []
         completed = []
         result = self.dispatcher.submit_async_callable(
-            "req-s1", lambda: executed.append(True) or "ok", job_id="sjid-1", on_complete=completed.append)
+            "req-s1", lambda: executed.append(True) or "ok", job_id="sjid-1", on_complete=completed.append
+        )
         assert executed == []
         assert result["status"] == "pending"
         self.dispatcher.drain_queue(50)
@@ -174,8 +175,8 @@ class TestStandaloneSubmitAsync:
     def test_on_complete_follows_task_on_main_thread(self):
         call_order = []
         self.dispatcher.submit_async_callable(
-            "req-s2", lambda: call_order.append("task"),
-            on_complete=lambda outcome: call_order.append("callback"))
+            "req-s2", lambda: call_order.append("task"), on_complete=lambda outcome: call_order.append("callback")
+        )
         assert call_order == []
         self.dispatcher.drain_queue(50)
         assert call_order == ["task", "callback"]
@@ -183,6 +184,7 @@ class TestStandaloneSubmitAsync:
     def test_failed_task_has_failed_status(self):
         def bad_task():
             raise ValueError("oops")
+
         completed = []
         self.dispatcher.submit_async_callable("req-s3", bad_task, on_complete=completed.append)
         self.dispatcher.drain_queue(50)

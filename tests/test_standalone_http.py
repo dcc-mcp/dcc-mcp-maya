@@ -27,10 +27,17 @@ def test_standalone_http_scene_call_runs_on_main_thread(monkeypatch, tmp_path):
 
     def client():
         try:
-            payload = {"jsonrpc": "2.0", "id": 1, "method": "tools/call",
-                       "params": {"name": "maya_scene__get_session_info", "arguments": {}}}
-            request = urllib.request.Request(handle.mcp_url(), data=json.dumps(payload).encode(), headers={
-                "Content-Type": "application/json", "Accept": "application/json, text/event-stream"})
+            payload = {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "tools/call",
+                "params": {"name": "maya_scene__get_session_info", "arguments": {}},
+            }
+            request = urllib.request.Request(
+                handle.mcp_url(),
+                data=json.dumps(payload).encode(),
+                headers={"Content-Type": "application/json", "Accept": "application/json, text/event-stream"},
+            )
             with urllib.request.urlopen(request, timeout=5) as response:
                 outcomes.append(json.loads(response.read()))
         except Exception as exc:

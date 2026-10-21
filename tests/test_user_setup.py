@@ -394,8 +394,10 @@ def test_watchdog_keeps_failed_cancel_available_for_retry(monkeypatch, tmp_path,
 
 def test_watchdog_schedule_failure_preserves_primary_load(monkeypatch, tmp_path, watchdog_qt):
     from PySide6.QtCore import QTimer
+
     def fail_start(self, interval):
         raise RuntimeError("timer start failed")
+
     monkeypatch.setattr(QTimer, "start", fail_start)
     error_dir = _isolate_error_dir(monkeypatch, tmp_path)
     cmds = _stub_cmds_full()
@@ -409,6 +411,7 @@ def test_watchdog_schedule_failure_preserves_primary_load(monkeypatch, tmp_path,
 
 def test_watchdog_without_qt_application_is_tolerated(monkeypatch, tmp_path, watchdog_qt):
     from PySide6.QtCore import QCoreApplication
+
     monkeypatch.setattr(QCoreApplication, "instance", lambda: None)
     error_dir = _isolate_error_dir(monkeypatch, tmp_path)
     cmds = _stub_cmds_full()

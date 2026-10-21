@@ -429,8 +429,13 @@ class TestMayaStandaloneDispatcher:
         dispatcher = MayaStandaloneDispatcher()
         executed = []
         result = []
-        worker = threading.Thread(target=lambda: result.append(dispatcher.dispatch_callable(
-            lambda: executed.append(threading.get_ident()) or "scene", timeout_hint_secs=2)))
+        worker = threading.Thread(
+            target=lambda: result.append(
+                dispatcher.dispatch_callable(
+                    lambda: executed.append(threading.get_ident()) or "scene", timeout_hint_secs=2
+                )
+            )
+        )
         worker.start()
         try:
             deadline = time.monotonic() + 1
@@ -450,8 +455,9 @@ class TestMayaStandaloneDispatcher:
 
         dispatcher = MayaStandaloneDispatcher()
         executed = []
-        worker = threading.Thread(target=lambda: executed.append(
-            dispatcher.dispatch_callable(threading.get_ident, affinity="any")))
+        worker = threading.Thread(
+            target=lambda: executed.append(dispatcher.dispatch_callable(threading.get_ident, affinity="any"))
+        )
         worker.start()
         worker.join(timeout=2)
         assert executed == [worker.ident]
@@ -462,11 +468,13 @@ class TestMayaStandaloneDispatcher:
 
         dispatcher = MayaStandaloneDispatcher()
         errors = []
+
         def worker():
             try:
                 dispatcher.drain_queue(50)
             except RuntimeError as exc:
                 errors.append(str(exc))
+
         thread = threading.Thread(target=worker)
         thread.start()
         thread.join(timeout=2)
@@ -477,8 +485,13 @@ class TestMayaStandaloneDispatcher:
 
         dispatcher = MayaStandaloneDispatcher()
         results = []
-        worker = threading.Thread(target=lambda: results.append(dispatcher.submit_callable(
-            "scene", lambda: pytest.fail("executed after shutdown"), affinity="main", timeout_ms=2000)))
+        worker = threading.Thread(
+            target=lambda: results.append(
+                dispatcher.submit_callable(
+                    "scene", lambda: pytest.fail("executed after shutdown"), affinity="main", timeout_ms=2000
+                )
+            )
+        )
         worker.start()
         deadline = time.monotonic() + 1
         while not dispatcher.queue_size() and time.monotonic() < deadline:

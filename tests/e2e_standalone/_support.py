@@ -96,11 +96,13 @@ def _mcp_post(url, body, timeout=60):
         return _mcp_post_blocking(url, body, timeout)
     results = []
     errors = []
+
     def client():
         try:
             results.append(_mcp_post_blocking(url, body, timeout))
         except BaseException as exc:
             errors.append(exc)
+
     for dispatcher in tuple(_ACTIVE_DISPATCHERS.values()):
         dispatcher.drain_queue(8)
     worker = threading.Thread(target=client, daemon=True)

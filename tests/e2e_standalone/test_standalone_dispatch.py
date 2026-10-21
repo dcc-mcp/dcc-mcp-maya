@@ -29,9 +29,15 @@ def test_repeated_scene_requests_execute_on_maya_main_thread(monkeypatch):
         handle = server.start()
         assert server.readiness_report()["dcc"] is False
         for ident in range(3):
-            code, reply = _mcp_post(handle.mcp_url(), {
-                "jsonrpc": "2.0", "id": ident, "method": "tools/call",
-                "params": {"name": "maya_scene__get_session_info", "arguments": {}}})
+            code, reply = _mcp_post(
+                handle.mcp_url(),
+                {
+                    "jsonrpc": "2.0",
+                    "id": ident,
+                    "method": "tools/call",
+                    "params": {"name": "maya_scene__get_session_info", "arguments": {}},
+                },
+            )
             assert code == 200
             result = reply["result"]
             assert not result.get("isError"), result
@@ -67,15 +73,23 @@ def test_serve_headless_scene_request_and_clean_stop(monkeypatch):
     def announce(server):
         def client():
             try:
-                code, reply = _mcp_post_blocking(server.mcp_url, {
-                    "jsonrpc": "2.0", "id": 1, "method": "tools/call",
-                    "params": {"name": "maya_scene__get_session_info", "arguments": {}}}, 10)
+                code, reply = _mcp_post_blocking(
+                    server.mcp_url,
+                    {
+                        "jsonrpc": "2.0",
+                        "id": 1,
+                        "method": "tools/call",
+                        "params": {"name": "maya_scene__get_session_info", "arguments": {}},
+                    },
+                    10,
+                )
                 assert code == 200
                 replies.append(reply)
             except Exception as exc:
                 errors.append(exc)
             finally:
                 stop.set()
+
         worker = threading.Thread(target=client, daemon=True)
         workers.append(worker)
         worker.start()

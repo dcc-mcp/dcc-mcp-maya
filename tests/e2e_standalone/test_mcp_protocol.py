@@ -178,9 +178,15 @@ class TestMcpHttpConnectivity:
 
     def test_tools_call_create_sphere_via_http(self):
         """tools/call create_sphere returns success in JSON response."""
-        code, loaded = _mcp_post(self._mcp_url, {
-            "jsonrpc": "2.0", "id": 40, "method": "tools/call",
-            "params": {"name": "load_skill", "arguments": {"skill_name": "maya-primitives"}}})
+        code, loaded = _mcp_post(
+            self._mcp_url,
+            {
+                "jsonrpc": "2.0",
+                "id": 40,
+                "method": "tools/call",
+                "params": {"name": "load_skill", "arguments": {"skill_name": "maya-primitives"}},
+            },
+        )
         assert code == 200 and not loaded["result"].get("isError"), loaded
         code, body = _mcp_post(
             self._mcp_url,

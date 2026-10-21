@@ -530,7 +530,6 @@ class TestMayaMcpServerApi:
                 server.stop()
 
 
-
 # ── Issue #138: strict skill scan opt-in ──────────────────────────────────────
 
 
