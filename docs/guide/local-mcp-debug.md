@@ -88,7 +88,45 @@ The rest of `maya-dev` works without it, and `maya_dev__start_debugpy` reports `
 
 **Rust (`dcc_mcp_core`)** debugging inside Maya is heavier (native extension); use logging, or build a small `mayapy` repro that imports `dcc_mcp_core` outside Maya for faster native debug cycles.
 
-## 5. Quick checklist
+## 5. Distinguish startup, Home, and editor readiness
+
+MCP readiness proves that the dispatcher can service scene calls. It does not
+prove that the editor viewport is visible: Maya can serve tools while its Home
+window covers the editor. Report those two observations separately; do not
+change `/v1/readyz` to reject a working session just because Home is open.
+
+For application observations and input, use the project `dcc-cua` / DCC-MCP
+`ui-control` route. Report the runtime version and exact PID/HWND before the
+first observation. A supplied screenshot can suggest a state, but a live action
+requires a fresh observation bound to the actual process and window.
+
+| Observed surface | Evidence | Next step |
+|------------------|----------|-----------|
+| Startup splash | Maya splash with a current loading stage | Observe again after an interval and compare the stage, timestamps, and process activity. |
+| First-use Home | Home navigation plus the new/experienced-user choice | Complete the local welcome choice, then use the control that enters Maya. |
+| Home | Recent files/project navigation and an enter-editor control | Enter the existing editor without creating or replacing a scene. |
+| Editor | Visible viewport and editor controls, such as Outliner or Channel Box | Verify a typed scene query against the same instance. |
+| Blocking dialog or unknown | A modal prompt, ambiguous ownership, or insufficient evidence | Report the observed blocker; do not guess a click. |
+
+Match control roles, structure, ownership, and fresh pixels together, rather
+than relying only on English labels such as `Experienced` or `Go to Maya`.
+Floating overlays are not evidence of Maya's own state.
+
+An action acknowledgement or a focused button is not a completed transition.
+After entering the editor, rediscover the window: Home and the editor can have
+different HWNDs in the same process. Rebind DCC-CUA, take a fresh observation,
+and confirm the viewport before declaring GUI acceptance. If guarded input is
+refused because the target is not foreground, stop input and request the minimum
+manual focus/navigation step. Do not replace the route with generic computer
+automation or injected Maya UI code.
+
+A temporarily unresponsive splash is not sufficient evidence of a deadlock.
+Correlate repeated observations with the same process's bootstrap stages,
+sidecar registration, and read-only thread diagnostics. Record missing evidence
+explicitly: a plugin name on a splash screen alone does not identify the call
+that owns the elapsed startup time.
+
+## 6. Quick checklist
 
 | Check | Action |
 |-------|--------|
