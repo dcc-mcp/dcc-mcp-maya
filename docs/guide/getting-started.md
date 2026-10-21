@@ -121,7 +121,7 @@ handle = dcc_mcp_maya.start_server(host_dispatcher=dispatcher)
 print(handle.mcp_url())   # exact OS-assigned direct URL
 ```
 
-For `mayapy`, use [the standalone example](../../examples/standalone/README.md):
+For `mayapy`, follow [the standalone guide](./standalone.md):
 pass a `MayaStandaloneDispatcher` and call `dispatcher.drain_queue(8)` in the
 main loop. Headless Maya still requires scene commands on its initialization
 thread; blocking that thread prevents HTTP scene requests from completing.
