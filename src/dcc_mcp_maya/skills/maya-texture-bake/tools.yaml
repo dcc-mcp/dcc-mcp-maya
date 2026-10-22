@@ -66,7 +66,7 @@ tools:
   affinity: main
   timeout_hint_secs: 600
   group: shading-lighting
-  description: Bake texture maps in the current Maya scene.
+  description: Sample unlit material base color into UV textures with Maya convertSolidTx. Not Arnold RTT, lighting, normal, AO or UDIM baking.
   input_schema:
     type: object
     properties:
@@ -84,15 +84,20 @@ tools:
         default: 512
       bake_type:
         type: string
+        enum:
+        - diffuse
         default: diffuse
+        description: Unlit baseColor/color network sampling only; other bake passes are unsupported.
       renderer:
         type: string
         enum:
         - arnold
         default: arnold
+        description: Legacy renderer selection for compatibility; the backend is Maya convertSolidTx, not Arnold RTT.
       overscan:
         type: integer
         default: 3
+        description: Retained for compatibility; unused by convertSolidTx.
     required:
     - objects
     - file_path

@@ -1,4 +1,4 @@
-"""Bake lighting or texture to a UV map."""
+"""Sample unlit material base color into a UV texture."""
 
 # Import future modules
 from __future__ import annotations
@@ -16,6 +16,30 @@ from dcc_mcp_maya.api import batch_validate_nodes
 logger = logging.getLogger(__name__)
 
 
+def _diffuse_source(cmds, obj):
+    shapes = (
+        [obj]
+        if cmds.nodeType(obj) == "mesh"
+        else cmds.listRelatives(obj, shapes=True, noIntermediate=True, fullPath=True, type="mesh") or []
+    )
+    if len(shapes) != 1:
+        raise ValueError("Expected one mesh shape for '{}'".format(obj))
+    groups = sorted(set(cmds.listConnections(shapes[0], source=False, destination=True, type="shadingEngine") or []))
+    if len(groups) != 1:
+        raise ValueError("Expected one shading group for '{}'".format(obj))
+    materials = cmds.listConnections(groups[0] + ".surfaceShader", source=True, destination=False) or []
+    if len(materials) != 1:
+        raise ValueError("Expected one surface material for '{}'".format(obj))
+    for attr in ("baseColor", "color"):
+        if cmds.attributeQuery(attr, node=materials[0], exists=True):
+            plug = materials[0] + "." + attr
+            sources = cmds.listConnections(plug, source=True, destination=False, plugs=True) or []
+            if len(sources) > 1:
+                raise ValueError("Ambiguous diffuse input for '{}'".format(obj))
+            return sources[0] if sources else plug
+    raise ValueError("Material has no baseColor/color attribute for '{}'".format(obj))
+
+
 def bake_textures(
     objects: List[str],
     file_path: str,
@@ -24,18 +48,17 @@ def bake_textures(
     renderer: str = "arnold",
     overscan: int = 3,
 ) -> dict:
-    """Bake texture maps using the existing convertSolidTx backend, not Arnold RTT.
+    """Sample unlit material base color into UV textures using convertSolidTx.
 
     Args:
         objects: List of mesh objects to bake.
         file_path: Output texture file path (without extension).
         resolution: Output texture resolution in pixels.  Default: 512.
-        bake_type: Bake type — ``"diffuse"``, ``"full_render"``,
-            ``"normals"``, ``"ao"``.  Default: ``"diffuse"``.
-        renderer: Renderer to use for baking. Maya 2017 and later use
-            Arnold; the removed mentalRay renderer is rejected. Default:
-            ``"arnold"``.
-        overscan: Anti-alias overscan in pixels.  Default: 3.
+        bake_type: Only ``"diffuse"`` is supported: unlit baseColor/color
+            network sampling, not an Arnold diffuse lighting pass or RTT.
+        renderer: Legacy renderer selection, restored afterwards. ``"arnold"``
+            is accepted for compatibility; the backend remains convertSolidTx.
+        overscan: Retained for call compatibility; unused by convertSolidTx.
 
     Returns:
         Success only if every object produced non-empty files. Failures retain
@@ -43,11 +66,11 @@ def bake_textures(
         outputs. Renderer and selection are restored before returning.
     """
 
-    valid_types = ("diffuse", "full_render", "normals", "ao")
+    valid_types = ("diffuse",)
     if bake_type not in valid_types:
         return skill_error(
-            "Invalid bake_type: {}".format(bake_type),
-            "Use one of: {}".format(", ".join(valid_types)),
+            "Unsupported bake_type: {}".format(bake_type),
+            "Only unlit diffuse/base-color UV sampling is supported; Arnold RTT, normals and AO are not implemented.",
         )
 
     valid_renderers = ("arnold",)
@@ -85,33 +108,25 @@ def bake_textures(
                     "Maya reports the active renderer as {!r}.".format(active_renderer),
                 )
 
-            bake_type_map = {
-                "diffuse": "diffuse",
-                "full_render": "fullRender",
-                "normals": "normals",
-                "ao": "occlusion",
-            }
-            internal_type = bake_type_map[bake_type]
-
-            # shortcut: Legacy convertSolidTx flags remain; replace with verified Arnold RTT for full bake support.
+            os.makedirs(os.path.dirname(os.path.abspath(file_path)), exist_ok=True)
             cmds.select(objects, replace=True)
             baked_files = []
             baked_objects = []
             failed_objects = []
             for obj in objects:
-                out_path = "{}_{}".format(file_path, obj.replace("|", "_").replace(":", "_"))
+                out_path = "{}_{}.iff".format(file_path, obj.replace("|", "_").replace(":", "_"))
                 try:
                     file_nodes = cmds.convertSolidTx(
+                        _diffuse_source(cmds, obj),
                         obj,
                         fileImageName=out_path,
+                        fileFormat="iff",
                         resolutionX=resolution,
                         resolutionY=resolution,
                         antiAlias=True,
-                        bm=0,  # blend mode: normal
-                        fts=True,  # fill texture seams
-                        sp=False,  # do not show progress
-                        backgroundMode=0,
-                        renderSampler=internal_type,
+                        fillTextureSeams=True,
+                        samplePlane=False,
+                        backgroundMode="extend",
                     )
                     if isinstance(file_nodes, str):
                         file_nodes = [file_nodes]
@@ -142,6 +157,7 @@ def bake_textures(
                 "resolution": resolution,
                 "bake_type": bake_type,
                 "renderer": renderer,
+                "backend": "maya.convertSolidTx",
             }
             if failed_objects:
                 return skill_error(
