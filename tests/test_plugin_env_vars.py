@@ -87,6 +87,25 @@ class TestPluginStartupMode:
         plugin_module._start_async.assert_not_called()
 
 
+class TestQuietStartup:
+    @pytest.mark.parametrize("banner", ["_print_startup_info", "_print_sidecar_info"])
+    def test_startup_keeps_console_banner_without_viewport_popup(
+        self, banner, plugin_module, mock_maya_modules, monkeypatch, capsys
+    ):
+        import dcc_mcp_maya.server as server_module
+
+        monkeypatch.setattr(plugin_module, "_is_interactive", lambda: True)
+        monkeypatch.setattr(server_module, "_server_instance", None)
+        handle = MagicMock()
+        handle.mcp_url.return_value = "http://127.0.0.1:54321/mcp"
+        plugin_module._handle = handle
+
+        getattr(plugin_module, banner)({"gateway_port": 0} if banner == "_print_startup_info" else handle)
+
+        assert f"dcc-mcp-maya v{plugin_module.VERSION}" in capsys.readouterr().out
+        mock_maya_modules.cmds.inViewMessage.assert_not_called()
+
+
 class TestCrashReporterSuppression:
     def test_crash_reporter_suppression_is_opt_in(self, plugin_module, monkeypatch, mock_maya_modules):
         monkeypatch.delenv("DCC_MCP_MAYA_SUPPRESS_CRASH_REPORTER", raising=False)
