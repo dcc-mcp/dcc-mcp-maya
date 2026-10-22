@@ -1567,7 +1567,7 @@ def _install_transaction(ctx):
         raise
     else:
         cleanup_steps = []
-        for backup in backups:
+        for index, backup in enumerate(backups):
             if backup.exists():
                 try:
                     _remove_path(backup)
@@ -1575,7 +1575,7 @@ def _install_transaction(ctx):
                     # Publication is committed; a locked old backup must not imply rollback.
                     cleanup_steps.append(
                         {
-                            "id": "cleanup",
+                            "id": "cleanup_backup_%d" % index,
                             "status": "deferred",
                             "message": "Retained backup %s: %s. Remove it after its owning process exits."
                             % (backup, exc),

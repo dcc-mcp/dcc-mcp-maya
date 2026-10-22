@@ -372,7 +372,8 @@ def test_receipt_commit_failure_rolls_back_all_previous_artifacts(tmp_path, monk
 
 
 @pytest.mark.parametrize("ready", [False, True])
-def test_locked_backup_cleanup_preserves_committed_upgrade(ready, tmp_path, monkeypatch, capsys):
+@pytest.mark.parametrize("locked_count", [1, 2])
+def test_locked_backup_cleanup_preserves_committed_upgrade(ready, locked_count, tmp_path, monkeypatch, capsys):
     from dcc_mcp_maya import install
 
     maya_root, modules_dir, scripts_dir, receipt_path = _configure_fake_maya(install, tmp_path, monkeypatch)
@@ -385,7 +386,9 @@ def test_locked_backup_cleanup_preserves_committed_upgrade(ready, tmp_path, monk
     retained = []
 
     def locked_backup(path):
-        if path.name.startswith(".dcc-mcp-maya.backup-"):
+        if path.name.startswith(".dcc-mcp-maya.backup-") or (
+            locked_count == 2 and path.name.startswith(".dcc_mcp_maya.mod.backup-")
+        ):
             retained.append(path)
             raise PermissionError("old gateway still maps the backup executable")
         return real_remove(path)
@@ -395,11 +398,13 @@ def test_locked_backup_cleanup_preserves_committed_upgrade(ready, tmp_path, monk
     report = json.loads(capsys.readouterr().out)
     assert report["verify"]["directly_usable"] is ready
     assert {step["id"]: step["status"] for step in report["steps"]}["commit"] == "ok"
-    cleanup = next(step for step in report["steps"] if step["id"] == "cleanup")
-    assert cleanup["status"] == "deferred"
-    assert str(retained[0]) in cleanup["message"]
-    assert retained[0].is_dir()
-    assert list(tmp_path.rglob("*.backup-*")) == retained
+    cleanup = [step for step in report["steps"] if step["status"] == "deferred"]
+    assert len(cleanup) == locked_count
+    assert len({step["id"] for step in cleanup}) == locked_count
+    for step, backup in zip(cleanup, retained):
+        assert str(backup) in step["message"]
+        assert backup.exists()
+    assert set(tmp_path.rglob("*.backup-*")) == set(retained)
     assert not list(tmp_path.rglob("*.stage-*"))
     receipt = json.loads(receipt_path.read_text())
     assert {entry["kind"]: entry["sha256"] for entry in receipt["artifacts"]} == {
