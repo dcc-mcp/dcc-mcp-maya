@@ -117,6 +117,7 @@ def test_install_dry_run_emits_a_complete_non_mutating_plan(tmp_path, monkeypatc
     receipt = tmp_path / "receipts" / "maya.json"
     monkeypatch.setenv("DCC_MCP_MAYA_VERSION", "2025")
     monkeypatch.setenv("DCC_MCP_MAYA_MODULES_DIR", str(maya_modules))
+    monkeypatch.setenv("DCC_MCP_MAYA_SCRIPTS_DIR", str(tmp_path / "maya" / "scripts"))
     monkeypatch.setenv("DCC_MCP_MAYA_RECEIPT", str(receipt))
     monkeypatch.setattr(
         install,
@@ -368,6 +369,44 @@ def test_receipt_commit_failure_rolls_back_all_previous_artifacts(tmp_path, monk
     assert receipt_path.read_bytes() == before["receipt"]
     assert not list(tmp_path.rglob("*.stage-*"))
     assert not list(tmp_path.rglob("*.backup-*"))
+
+
+@pytest.mark.parametrize("ready", [False, True])
+def test_locked_backup_cleanup_preserves_committed_upgrade(ready, tmp_path, monkeypatch, capsys):
+    from dcc_mcp_maya import install
+
+    maya_root, modules_dir, scripts_dir, receipt_path = _configure_fake_maya(install, tmp_path, monkeypatch)
+    monkeypatch.setattr(install, "wait_for_sidecar_ready", lambda *_args, **_kwargs: {"success": ready})
+    common = ["--json", "--dcc-path", str(maya_root), "--python", sys.executable]
+    expected_exit = install.INSTALL_EXIT_OK if ready else install.INSTALL_EXIT_VERIFY
+    assert install.main(["install", "--yes", *common]) == expected_exit
+    capsys.readouterr()
+    real_remove = install._remove_path
+    retained = []
+
+    def locked_backup(path):
+        if path.name.startswith(".dcc-mcp-maya.backup-"):
+            retained.append(path)
+            raise PermissionError("old gateway still maps the backup executable")
+        return real_remove(path)
+
+    monkeypatch.setattr(install, "_remove_path", locked_backup)
+    assert install.main(["upgrade", "--yes", *common]) == expected_exit
+    report = json.loads(capsys.readouterr().out)
+    assert report["verify"]["directly_usable"] is ready
+    assert {step["id"]: step["status"] for step in report["steps"]}["commit"] == "ok"
+    cleanup = next(step for step in report["steps"] if step["id"] == "cleanup")
+    assert cleanup["status"] == "deferred"
+    assert str(retained[0]) in cleanup["message"]
+    assert retained[0].is_dir()
+    assert list(tmp_path.rglob("*.backup-*")) == retained
+    assert not list(tmp_path.rglob("*.stage-*"))
+    receipt = json.loads(receipt_path.read_text())
+    assert {entry["kind"]: entry["sha256"] for entry in receipt["artifacts"]} == {
+        "tree": install._tree_sha256(modules_dir / "dcc-mcp-maya"),
+        "file": install._sha256(modules_dir / "dcc_mcp_maya.mod"),
+        "user_setup": install._sha256(scripts_dir / "userSetup.py"),
+    }
 
 
 def test_install_commit_boundary_positive_control_matches_receipt(tmp_path, monkeypatch, capsys):
