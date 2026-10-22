@@ -37,15 +37,14 @@ Connect your MCP client (Claude Desktop, etc.) to the **single gateway endpoint*
 
     http://127.0.0.1:9765/mcp
 
-Newer sidecar binaries also expose the standalone gateway on the local network by
-default::
+The LAN listener is disabled by default. To opt in, set a positive
+``DCC_MCP_GATEWAY_REMOTE_PORT`` before loading the plugin::
 
-    http://<this-machine-lan-ip>:59765/mcp
+    http://<this-machine-lan-ip>:<configured-port>/mcp
 
 Remote listener election still follows the local gateway winner on
-``127.0.0.1:9765``. Set ``DCC_MCP_GATEWAY_REMOTE_PORT=0`` to disable the LAN
-listener, or ``DCC_MCP_GATEWAY_REMOTE_HOST`` / ``DCC_MCP_GATEWAY_REMOTE_PORT``
-to choose a different bind address.
+``127.0.0.1:9765``. Port ``0`` keeps the LAN listener disabled; set
+``DCC_MCP_GATEWAY_REMOTE_HOST`` to choose a different bind address.
 
 The gateway exposes a bounded dynamic surface (``search_tools`` / ``describe_tool`` /
 ``call_tool``) and MCP ``resources/read`` on ``gateway://instances`` for instance
@@ -71,7 +70,7 @@ Configuration
     ``dcc-mcp-gateway@<hostname>`` in sidecar mode.
 
 ``DCC_MCP_GATEWAY_REMOTE_PORT``
-    LAN gateway listener port. Default ``59765``. Set to ``0`` to disable.
+    LAN gateway listener port. Default ``0`` (disabled). Set a positive port to enable.
 
 ``DCC_MCP_GATEWAY_REMOTE_HOST``
     LAN gateway listener bind address. Default ``0.0.0.0``.
@@ -982,7 +981,7 @@ def _print_sidecar_info(handle) -> None:  # noqa: ANN001
 
             remote_host, remote_port = resolve_gateway_remote_options()
         except Exception:  # noqa: BLE001
-            remote_host, remote_port = "0.0.0.0", 59765
+            remote_host, remote_port = "0.0.0.0", 0
         if remote_port > 0:
             display_host = _gateway_remote_display_host(remote_host)
             gateway_lines.append(f"  Gateway LAN  : http://{display_host}:{remote_port}/mcp  (sidecar-managed)")

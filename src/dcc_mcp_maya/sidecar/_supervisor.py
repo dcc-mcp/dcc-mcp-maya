@@ -83,7 +83,7 @@ ENV_GATEWAY_NAME = "DCC_MCP_GATEWAY_NAME"
 ENV_GATEWAY_REMOTE_HOST = "DCC_MCP_GATEWAY_REMOTE_HOST"
 ENV_GATEWAY_REMOTE_PORT = "DCC_MCP_GATEWAY_REMOTE_PORT"
 DEFAULT_GATEWAY_REMOTE_HOST = "0.0.0.0"
-DEFAULT_GATEWAY_REMOTE_PORT = 59765
+DEFAULT_GATEWAY_REMOTE_PORT = 0
 _TRUTHY_VALUES = frozenset({"1", "true", "yes", "on"})
 _FALSEY_VALUES = frozenset({"0", "false", "no", "off"})
 
@@ -178,7 +178,8 @@ def resolve_gateway_remote_options(env: Optional[dict] = None) -> tuple[str, int
     The standalone gateway listens on the local loopback port
     (``DCC_MCP_GATEWAY_PORT``, default 9765). Newer ``dcc-mcp-server``
     sidecars ensure that process is running and can additionally ask it
-    to bind a LAN-facing listener for company network clients.
+    to bind a LAN-facing listener when explicitly enabled with a positive
+    ``DCC_MCP_GATEWAY_REMOTE_PORT``. Remote access is disabled by default.
     """
 
     source = os.environ if env is None else env

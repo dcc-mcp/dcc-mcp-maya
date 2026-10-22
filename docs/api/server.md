@@ -207,6 +207,6 @@ Returned by `server.start()` and `start_server()`.
 | `DCC_MCP_MAYA_SIDECAR` | `1` | Set `0` to disable the default `dcc-mcp-server sidecar` from the Maya plugin |
 | `DCC_MCP_GATEWAY_PORT` | `9765` in plugin mode | Standalone gateway port; `0` disables gateway mode |
 | `DCC_MCP_GATEWAY_NAME` | `dcc-mcp-gateway@<hostname>` in sidecar mode | Human-readable standalone gateway label surfaced in admin, health, and CLI diagnostics |
-| `DCC_MCP_GATEWAY_REMOTE_PORT` | `59765` in sidecar mode | LAN gateway listener port opened by the standalone gateway; `0` disables remote access |
+| `DCC_MCP_GATEWAY_REMOTE_PORT` | `0` | LAN listener disabled by default; set a positive port to opt in |
 | `DCC_MCP_GATEWAY_REMOTE_HOST` | `0.0.0.0` | Bind address for the LAN gateway listener |
 | `DCC_MCP_REGISTRY_DIR` | OS temp dir | Shared registry directory for service discovery |

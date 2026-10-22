@@ -468,7 +468,7 @@ tools:
 | `DCC_MCP_MAYA_AUTO_DISMISS_CRASH_DIALOG` | `0` | per-process | `1`=best-effort dismiss detected Maya Qt recovery dialogs after `affinity: main` tool calls and surface `maya_recovered` in result contexts / `scene://current`. |
 | `DCC_MCP_GATEWAY_PORT` | `9765` | per-host | Gateway election port. `0`=disable gateway mode. |
 | `DCC_MCP_GATEWAY_NAME` | `dcc-mcp-gateway@<hostname>` | per-host | Human-readable standalone gateway label surfaced in admin, health, and CLI diagnostics. |
-| `DCC_MCP_GATEWAY_REMOTE_PORT` | `59765` | per-host | LAN gateway listener port opened by the standalone gateway. `0`=disable remote listener; local gateway remains on `127.0.0.1:9765`. |
+| `DCC_MCP_GATEWAY_REMOTE_PORT` | `0` | per-host | LAN listener disabled by default; opt in with a positive port. Local gateway remains on `127.0.0.1:9765`. |
 | `DCC_MCP_GATEWAY_REMOTE_HOST` | `0.0.0.0` | per-host | LAN gateway listener bind address. Use a specific interface IP to narrow exposure. |
 | `DCC_MCP_REGISTRY_DIR` | OS temp dir | per-user | Shared FileRegistry directory. |
 | `DCC_MCP_PYTHON_EXECUTABLE` | `sys.executable` | per-process | Python interpreter for skill worker subprocesses. |
