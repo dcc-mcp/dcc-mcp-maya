@@ -364,3 +364,50 @@ def test_bake_textures_samples_constant_base_color_on_mesh_shape(tmp_path):
     assert result["success"] is True, result
     assert cmds.convertSolidTx.call_args.args == ("material.baseColor", "meshShape")
     assert result["context"]["baked_files"] == [str(output)]
+
+
+@pytest.mark.parametrize("cleanup_stage", ["renderer", "selection"])
+@pytest.mark.parametrize("partial_conversion", [False, True])
+@pytest.mark.parametrize("error_class", [RuntimeError, ImportError])
+def test_bake_textures_retains_outputs_and_actual_cleanup_error(
+    tmp_path, cleanup_stage, partial_conversion, error_class
+):
+    cmds, _, output = _bake_cmds(tmp_path)
+    convert = cmds.convertSolidTx.side_effect
+    set_attr = cmds.setAttr.side_effect
+    select = cmds.select.side_effect
+
+    def convert_object(source, obj, **kwargs):
+        if obj == "broken":
+            raise RuntimeError("conversion failed")
+        return convert(source, obj, **kwargs)
+
+    def restore_renderer(attr, value, **kwargs):
+        if cleanup_stage == "renderer" and value == "mayaSoftware":
+            raise error_class("renderer cleanup failed")
+        set_attr(attr, value, **kwargs)
+
+    def restore_selection(objects=None, **kwargs):
+        if cleanup_stage == "selection" and objects == ["|previous"]:
+            raise error_class("selection cleanup failed")
+        select(objects, **kwargs)
+
+    cmds.convertSolidTx.side_effect = convert_object
+    cmds.setAttr.side_effect = restore_renderer
+    cmds.select.side_effect = restore_selection
+    result = load_and_call(
+        "maya-texture-bake/scripts/bake_textures.py",
+        cmds,
+        "main",
+        objects=["mesh", "broken"] if partial_conversion else ["mesh"],
+        file_path=str(tmp_path / "bake"),
+    )
+    assert result["success"] is False
+    assert result["context"]["baked_files"] == [str(output)]
+    assert result["context"]["baked_objects"] == ["mesh"]
+    assert result["context"]["baked_count"] == 1
+    assert result["context"]["failed_objects"] == (
+        [{"object": "broken", "error": "conversion failed"}] if partial_conversion else []
+    )
+    assert result["_meta"]["dcc.error"]["message"] == cleanup_stage + " cleanup failed"
+    assert error_class.__name__ in result["context"]["traceback"]

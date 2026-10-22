@@ -91,7 +91,11 @@ def bake_textures(
 
     try:
         import maya.cmds as cmds  # noqa: PLC0415
+    except ImportError:
+        return skill_error("Maya not available", "maya.cmds could not be imported")
 
+    context = {}
+    try:
         err = batch_validate_nodes(cmds, list(objects))
         if err:
             return err
@@ -167,7 +171,7 @@ def bake_textures(
                 )
             return skill_success(
                 "Baked {} object(s) to '{}'".format(len(baked_objects), file_path),
-                prompt="Check the result with list_texture_bake or use related actions to continue.",
+                prompt="Use baked_files to inspect or publish the generated textures.",
                 **context,
             )
         finally:
@@ -178,10 +182,8 @@ def bake_textures(
                     cmds.select(original_selection, replace=True)
                 else:
                     cmds.select(clear=True)
-    except ImportError:
-        return skill_error("Maya not available", "maya.cmds could not be imported")
     except Exception as exc:
-        return skill_exception(exc, message="Failed to bake textures")
+        return skill_exception(exc, message="Failed to bake textures", **context)
 
 
 @skill_entry
