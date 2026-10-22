@@ -127,3 +127,35 @@ def test_render_frame_uses_maya_path_separators(tmp_path):
         "maya-render/scripts/render_frame.py", cmds, "main", output_dir=str(tmp_path), return_base64=False
     )
     assert result["success"], result
+
+
+def test_render_frame_refuses_unisolatable_camera_and_restores_preparation(tmp_path):
+    cmds = MagicMock()
+    _configure_render_cmds(cmds)
+    initial = {"otherShape.renderable": True, "lockedShape.renderable": True, "perspShape.renderable": False}
+    state = dict(initial)
+    get_attr, set_attr = cmds.getAttr.side_effect, cmds.setAttr.side_effect
+    cmds.ls.return_value = ["otherShape", "lockedShape", "perspShape"]
+    cmds.getAttr.side_effect = lambda attr: state[attr] if attr in state else get_attr(attr)
+
+    def update(attr, value, **kwargs):
+        if attr == "lockedShape.renderable":
+            raise RuntimeError("referenced camera is locked")
+        if attr in state:
+            state[attr] = value
+        else:
+            set_attr(attr, value, **kwargs)
+
+    cmds.setAttr.side_effect = update
+    result = load_and_call(
+        "maya-render/scripts/render_frame.py",
+        cmds,
+        "main",
+        camera="persp",
+        output_dir=str(tmp_path),
+        return_base64=False,
+    )
+    assert not result["success"]
+    assert result["context"]["error_code"] == "CAMERA_RENDERABLE_UPDATE_FAILED"
+    assert state == initial
+    cmds.render.assert_not_called()
