@@ -71,7 +71,7 @@ Configuration
     ``dcc-mcp-gateway@<hostname>`` in sidecar mode.
 
 ``DCC_MCP_GATEWAY_REMOTE_PORT``
-    LAN gateway listener port. Default ``59765``. Set to ``0`` to disable.
+    LAN gateway listener port. Default ``0`` (disabled). Set a positive port to enable.
 
 ``DCC_MCP_GATEWAY_REMOTE_HOST``
     LAN gateway listener bind address. Default ``0.0.0.0``.
@@ -982,7 +982,7 @@ def _print_sidecar_info(handle) -> None:  # noqa: ANN001
 
             remote_host, remote_port = resolve_gateway_remote_options()
         except Exception:  # noqa: BLE001
-            remote_host, remote_port = "0.0.0.0", 59765
+            remote_host, remote_port = "0.0.0.0", 0
         if remote_port > 0:
             display_host = _gateway_remote_display_host(remote_host)
             gateway_lines.append(f"  Gateway LAN  : http://{display_host}:{remote_port}/mcp  (sidecar-managed)")

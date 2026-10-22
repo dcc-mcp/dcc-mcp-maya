@@ -25,7 +25,7 @@ handle = dcc_mcp_maya.start_server()
 handle.shutdown()
 ```
 
-Plugin mode: copy `maya/plugin/dcc_mcp_maya_plugin.py` to `MAYA_PLUG_IN_PATH` and load it. Server auto-starts. Sidecar mode ensures the standalone gateway locally at `http://127.0.0.1:9765/mcp`; newer core sidecars also bind a LAN listener at `http://<this-machine-lan-ip>:59765/mcp` unless `DCC_MCP_GATEWAY_REMOTE_PORT=0`. The plugin forwards `--display-name`, `--instance-id`, and `--gateway-name` so admin/CLI diagnostics can tell Maya sessions and gateway ownership apart.
+Plugin mode: copy `maya/plugin/dcc_mcp_maya_plugin.py` to `MAYA_PLUG_IN_PATH` and load it. Server auto-starts. Sidecar mode ensures the standalone gateway locally at `http://127.0.0.1:9765/mcp`; LAN access is disabled by default; explicitly set a positive `DCC_MCP_GATEWAY_REMOTE_PORT` (for example `59765`) to enable it. The plugin forwards `--display-name`, `--instance-id`, and `--gateway-name` so admin/CLI diagnostics can tell Maya sessions and gateway ownership apart.
 
 ---
 

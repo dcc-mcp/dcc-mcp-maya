@@ -115,6 +115,8 @@ def test_start_sidecar_forwards_identity_flags(monkeypatch):
         },
     )
 
+    if sys.platform == "win32":
+        assert captured["kwargs"]["creationflags"] == 0x08000000
     assert handle.host_rpc_uri == "qtserver://127.0.0.1:45555"
     assert captured["cmd"] == handle.command
     assert captured["cmd"][:2] == ["dcc-mcp-server", "sidecar"]
@@ -128,12 +130,12 @@ def test_start_sidecar_forwards_identity_flags(monkeypatch):
     assert _flag_value(captured["cmd"], "--gateway-name") == "dcc-mcp-gateway@workstation-01"
     assert _flag_value(captured["cmd"], "--gateway-port") == "9765"
     assert _flag_value(captured["cmd"], "--gateway-remote-host") == "0.0.0.0"
-    assert _flag_value(captured["cmd"], "--gateway-remote-port") == "59765"
+    assert _flag_value(captured["cmd"], "--gateway-remote-port") == "0"
     assert _flag_value(captured["cmd"], "--registry-dir")
     assert captured["kwargs"]["env"]["DCC_MCP_REGISTRY_DIR"] == _flag_value(captured["cmd"], "--registry-dir")
     assert captured["kwargs"]["env"]["DCC_MCP_GATEWAY_PORT"] == "9765"
     assert captured["kwargs"]["env"]["DCC_MCP_GATEWAY_REMOTE_HOST"] == "0.0.0.0"
-    assert captured["kwargs"]["env"]["DCC_MCP_GATEWAY_REMOTE_PORT"] == "59765"
+    assert captured["kwargs"]["env"]["DCC_MCP_GATEWAY_REMOTE_PORT"] == "0"
     assert handle.launch_contract["role"] == "per-dcc-sidecar"
     assert handle.launch_contract["recommended_next_action"]
 

@@ -245,7 +245,7 @@ The default plugin path is:
 3. The sidecar calls back into Maya through the Qt event-loop dispatcher.
 4. `MayaMcpServer` routes work to typed skills, resources, project tools, readiness, metrics, and the Maya API.
 
-Set `DCC_MCP_MAYA_SIDECAR=0` before loading the plugin to use the legacy in-process gateway path. Newer sidecar binaries also expose the standalone gateway on the LAN at `http://<this-machine-lan-ip>:59765/mcp`; set `DCC_MCP_GATEWAY_REMOTE_PORT=0` to disable that listener. Maya passes explicit sidecar labels (`Maya <version> pid <pid>`), stable `instance_id`, and a machine-level gateway name (`DCC_MCP_GATEWAY_NAME` or `dcc-mcp-gateway@<hostname>`) so `/admin`, `/health`, and CLI `list` can separate gateway ownership from Maya sessions.
+Set `DCC_MCP_MAYA_SIDECAR=0` before loading the plugin to use the legacy in-process gateway path. The standalone gateway is loopback-only by default. To opt into LAN access, set a positive `DCC_MCP_GATEWAY_REMOTE_PORT` (for example `59765`) before loading the plugin. Maya passes explicit sidecar labels (`Maya <version> pid <pid>`), stable `instance_id`, and a machine-level gateway name (`DCC_MCP_GATEWAY_NAME` or `dcc-mcp-gateway@<hostname>`) so `/admin`, `/health`, and CLI `list` can separate gateway ownership from Maya sessions.
 
 ## Tool Surface
 
@@ -372,7 +372,7 @@ Useful plugin defaults:
 | `DCC_MCP_SERVER_BIN` | auto | Override the `dcc-mcp-server` binary path. |
 | `DCC_MCP_GATEWAY_PORT` | `9765` plugin | Local standalone gateway port; `0` disables gateway mode. |
 | `DCC_MCP_GATEWAY_NAME` | `dcc-mcp-gateway@<hostname>` sidecar | Human-readable gateway label shown in admin and CLI diagnostics. |
-| `DCC_MCP_GATEWAY_REMOTE_PORT` | `59765` sidecar | LAN gateway listener port; `0` disables remote access. |
+| `DCC_MCP_GATEWAY_REMOTE_PORT` | `0` | LAN gateway listener port; disabled by default. Set a positive port to opt in. |
 | `DCC_MCP_GATEWAY_REMOTE_HOST` | `0.0.0.0` | Bind address for the LAN gateway listener. |
 | `DCC_MCP_REGISTRY_DIR` | OS temp dir | Shared FileRegistry directory for service discovery. |
 | `DCC_MCP_MAYA_ENABLE_GATEWAY_FAILOVER` | `1` | Allow non-gateway instances to promote themselves on gateway loss. |
