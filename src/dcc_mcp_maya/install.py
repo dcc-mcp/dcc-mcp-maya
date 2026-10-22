@@ -783,6 +783,8 @@ def _capture_install_publication(path, kind):
                 _install_publication_mismatch()
             file_digest, fingerprint = _capture_install_file(item)
             records.append((relative, "file", fingerprint))
+            if item.suffix in {".pyc", ".pyo"}:
+                continue
             encoded = relative.encode("utf-8")
             digest.update(len(encoded).to_bytes(4, "big"))
             digest.update(encoded)

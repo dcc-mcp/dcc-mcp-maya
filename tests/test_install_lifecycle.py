@@ -228,7 +228,7 @@ def test_runtime_bytecode_does_not_invalidate_install(cache_path, tmp_path, monk
 
     maya_root, modules_dir, scripts_dir, receipt_path = _configure_fake_maya(install, tmp_path, monkeypatch)
     payload = tmp_path / "module.zip"
-    _write_provenanced_module_zip(install, payload)
+    _write_provenanced_module_zip(install, payload, extra_entries={cache_path: b"packaged bytecode"})
     monkeypatch.setattr(install, "wait_for_sidecar_ready", lambda *_args, **_kwargs: {"success": True})
     common = ["--json", "--dcc-path", str(maya_root), "--python", sys.executable]
     assert install.main(["install", "--yes", *common, "--module-zip", str(payload)]) == install.INSTALL_EXIT_OK
