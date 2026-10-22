@@ -209,7 +209,18 @@ def render_frame(
                 previous = _get_attr_or_none(cmds, attr)
                 enabled = attr == camera_renderable
                 if previous is not None and bool(previous) != enabled:
-                    cmds.setAttr(attr, enabled)
+                    try:
+                        cmds.setAttr(attr, enabled)
+                    except Exception as exc:
+                        # Continuing with another renderable camera can corrupt the output path.
+                        return skill_error(
+                            "Could not isolate the selected render camera",
+                            str(exc),
+                            error_code="CAMERA_RENDERABLE_UPDATE_FAILED",
+                            camera=camera_name,
+                            blocked_attribute=attr,
+                            possible_solutions=["Make camera renderability writable before rendering."],
+                        )
                     changed_cameras.append((attr, previous))
             cmds.currentTime(target_frame)
             cmds.setAttr("defaultResolution.width", target_width)
