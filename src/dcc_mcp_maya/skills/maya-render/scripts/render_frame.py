@@ -197,12 +197,20 @@ def render_frame(
         started_at = time.time()
         render_result = None
         camera_renderable = "{}.renderable".format(camera_shape) if camera_shape else None
-        previous_renderable = _get_attr_or_none(cmds, camera_renderable) if camera_renderable else None
+        camera_shapes = list(cmds.ls(type="camera") or [])
+        if camera_shape and camera_shape not in camera_shapes:
+            camera_shapes.append(camera_shape)
+        changed_cameras = []
 
         try:
-            # Maya skips even an explicitly named camera when its renderable flag is off.
-            if previous_renderable is not None:
-                cmds.setAttr(camera_renderable, True)
+            # Multiple renderable cameras add output subfolders even for an explicit camera.
+            for shape in camera_shapes:
+                attr = "{}.renderable".format(shape)
+                previous = _get_attr_or_none(cmds, attr)
+                enabled = attr == camera_renderable
+                if previous is not None and bool(previous) != enabled:
+                    cmds.setAttr(attr, enabled)
+                    changed_cameras.append((attr, previous))
             cmds.currentTime(target_frame)
             cmds.setAttr("defaultResolution.width", target_width)
             cmds.setAttr("defaultResolution.height", target_height)
@@ -254,8 +262,14 @@ def render_frame(
                 cmds.currentTime(previous_frame)
             except Exception:
                 pass
-            if previous_renderable is not None:
-                cmds.setAttr(camera_renderable, previous_renderable)
+            restore_error = None
+            for attr, previous in reversed(changed_cameras):
+                try:
+                    cmds.setAttr(attr, previous)
+                except Exception as exc:
+                    restore_error = exc
+            if restore_error is not None:
+                raise restore_error
 
         candidates = _candidate_paths(prefix, target_dir, render_result)
         output_path, empty_paths = _pick_nonempty_output(candidates, started_at)

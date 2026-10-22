@@ -71,21 +71,26 @@ def test_render_frame_temporarily_enables_selected_camera(tmp_path, initial_rend
     cmds = MagicMock()
     prefix = _configure_render_cmds(cmds)
     get_attr, set_attr = cmds.getAttr.side_effect, cmds.setAttr.side_effect
-    state = {"renderable": initial_renderable}
+    state = {"renderable": initial_renderable, "other": True}
+    cmds.ls.return_value = ["perspShape", "otherShape"]
     observed = []
 
     def get_value(attr):
+        if attr == "otherShape.renderable":
+            return state["other"]
         return state["renderable"] if attr == "perspShape.renderable" else get_attr(attr)
 
     def set_value(attr, value, **kwargs):
-        if attr == "perspShape.renderable":
+        if attr == "otherShape.renderable":
+            state["other"] = value
+        elif attr == "perspShape.renderable":
             state["renderable"] = value
         else:
             set_attr(attr, value, **kwargs)
 
     def render(*_args, **_kwargs):
-        observed.append(state["renderable"])
-        assert state["renderable"] is True
+        observed.append((state["renderable"], state["other"]))
+        assert state["renderable"] is True and state["other"] is False
         if render_fails:
             raise RuntimeError("native render failed")
         path = Path(prefix["prefix"] + ".png")
@@ -103,8 +108,8 @@ def test_render_frame_temporarily_enables_selected_camera(tmp_path, initial_rend
         return_base64=False,
     )
     assert result["success"] is not render_fails, result
-    assert observed == [True]
-    assert state["renderable"] is initial_renderable
+    assert observed == [(True, False)]
+    assert state == {"renderable": initial_renderable, "other": True}
 
 
 def test_render_frame_uses_maya_path_separators(tmp_path):
