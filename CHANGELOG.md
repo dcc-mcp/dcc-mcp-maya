@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.9.40](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.39...v0.9.40) (2026-10-22)
+
+
+### Bug Fixes
+
+* align install publication bytecode digest ([674ff7d](https://github.com/dcc-mcp/dcc-mcp-maya/commit/674ff7d4a4ced2ca4de80cad7e37a3ea2513a9ac))
+* make Maya lifecycle installs self-contained ([668d9fe](https://github.com/dcc-mcp/dcc-mcp-maya/commit/668d9feb68a55dcdc4fdf6be56463b78c2e0c49a))
+
+
+### Documentation
+
+* clarify Maya startup diagnostic safety ([a99fa26](https://github.com/dcc-mcp/dcc-mcp-maya/commit/a99fa260d579a24d9779d480a7019eeab310e50e))
+* clarify Maya startup diagnostic safety ([0a58a0e](https://github.com/dcc-mcp/dcc-mcp-maya/commit/0a58a0eac1ce365b31cbd647e13eedea5aef5626))
+
 ## [0.9.39](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.38...v0.9.39) (2026-10-21)
 
 
