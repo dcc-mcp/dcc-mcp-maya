@@ -196,8 +196,13 @@ def render_frame(
         prefix = os.path.join(target_dir, _safe_output_name(output_name))
         started_at = time.time()
         render_result = None
+        camera_renderable = "{}.renderable".format(camera_shape) if camera_shape else None
+        previous_renderable = _get_attr_or_none(cmds, camera_renderable) if camera_renderable else None
 
         try:
+            # Maya skips even an explicitly named camera when its renderable flag is off.
+            if previous_renderable is not None:
+                cmds.setAttr(camera_renderable, True)
             cmds.currentTime(target_frame)
             cmds.setAttr("defaultResolution.width", target_width)
             cmds.setAttr("defaultResolution.height", target_height)
@@ -249,6 +254,8 @@ def render_frame(
                 cmds.currentTime(previous_frame)
             except Exception:
                 pass
+            if previous_renderable is not None:
+                cmds.setAttr(camera_renderable, previous_renderable)
 
         candidates = _candidate_paths(prefix, target_dir, render_result)
         output_path, empty_paths = _pick_nonempty_output(candidates, started_at)
