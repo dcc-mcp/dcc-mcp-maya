@@ -48,7 +48,7 @@
   <text x="420" y="150" class="tiny">DEFAULT PLUGIN PATH</text>
   <text x="420" y="180" class="label">dcc-mcp-server sidecar</text>
   <text x="420" y="207" class="small">Streamable HTTP, REST gateway, local election</text>
-  <text x="420" y="231" class="code">127.0.0.1:9765  |  LAN :59765</text>
+  <text x="420" y="231" class="code">127.0.0.1:9765  |  LAN opt-in :59765</text>
 
   <rect x="820" y="126" width="236" height="118" class="box"/>
   <text x="844" y="160" class="tiny">DIRECT PYTHON MODE</text>

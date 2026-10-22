@@ -37,15 +37,14 @@ Connect your MCP client (Claude Desktop, etc.) to the **single gateway endpoint*
 
     http://127.0.0.1:9765/mcp
 
-Newer sidecar binaries also expose the standalone gateway on the local network by
-default::
+The LAN listener is disabled by default. To opt in, set a positive
+``DCC_MCP_GATEWAY_REMOTE_PORT`` before loading the plugin::
 
-    http://<this-machine-lan-ip>:59765/mcp
+    http://<this-machine-lan-ip>:<configured-port>/mcp
 
 Remote listener election still follows the local gateway winner on
-``127.0.0.1:9765``. Set ``DCC_MCP_GATEWAY_REMOTE_PORT=0`` to disable the LAN
-listener, or ``DCC_MCP_GATEWAY_REMOTE_HOST`` / ``DCC_MCP_GATEWAY_REMOTE_PORT``
-to choose a different bind address.
+``127.0.0.1:9765``. Port ``0`` keeps the LAN listener disabled; set
+``DCC_MCP_GATEWAY_REMOTE_HOST`` to choose a different bind address.
 
 The gateway exposes a bounded dynamic surface (``search_tools`` / ``describe_tool`` /
 ``call_tool``) and MCP ``resources/read`` on ``gateway://instances`` for instance
