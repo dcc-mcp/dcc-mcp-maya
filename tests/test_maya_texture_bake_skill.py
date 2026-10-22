@@ -362,7 +362,7 @@ def test_bake_textures_samples_constant_base_color_on_mesh_shape(tmp_path):
         file_path=str(tmp_path / "bake"),
     )
     assert result["success"] is True, result
-    assert cmds.convertSolidTx.call_args.args == ("material.baseColor", "meshShape")
+    assert cmds.convertSolidTx.call_args[0] == ("material.baseColor", "meshShape")
     assert result["context"]["baked_files"] == [str(output)]
 
 
@@ -409,5 +409,5 @@ def test_bake_textures_retains_outputs_and_actual_cleanup_error(
     assert result["context"]["failed_objects"] == (
         [{"object": "broken", "error": "conversion failed"}] if partial_conversion else []
     )
-    assert result["_meta"]["dcc.error"]["message"] == cleanup_stage + " cleanup failed"
-    assert error_class.__name__ in result["context"]["traceback"]
+    assert result["context"]["error_type"] == error_class.__name__
+    assert error_class.__name__ + ": " + cleanup_stage + " cleanup failed" in result["context"]["traceback"]
