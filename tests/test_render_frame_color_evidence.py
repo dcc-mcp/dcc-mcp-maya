@@ -3,6 +3,7 @@
 from pathlib import Path
 from unittest.mock import MagicMock
 
+import pytest
 from conftest import load_and_call
 from test_maya_render_skill import _configure_render_cmds
 
@@ -62,3 +63,45 @@ def test_render_frame_keeps_unavailable_arnold_as_a_render_failure(tmp_path):
     assert "MtoA is not loaded" in result["message"]
     cmds.colorManagementPrefs.assert_not_called()
     cmds.render.assert_not_called()
+
+
+@pytest.mark.parametrize("initial_renderable", [False, True])
+@pytest.mark.parametrize("render_fails", [False, True])
+def test_render_frame_temporarily_enables_selected_camera(tmp_path, initial_renderable, render_fails):
+    cmds = MagicMock()
+    prefix = _configure_render_cmds(cmds)
+    get_attr, set_attr = cmds.getAttr.side_effect, cmds.setAttr.side_effect
+    state = {"renderable": initial_renderable}
+    observed = []
+
+    def get_value(attr):
+        return state["renderable"] if attr == "perspShape.renderable" else get_attr(attr)
+
+    def set_value(attr, value, **kwargs):
+        if attr == "perspShape.renderable":
+            state["renderable"] = value
+        else:
+            set_attr(attr, value, **kwargs)
+
+    def render(*_args, **_kwargs):
+        observed.append(state["renderable"])
+        assert state["renderable"] is True
+        if render_fails:
+            raise RuntimeError("native render failed")
+        path = Path(prefix["prefix"] + ".png")
+        path.write_bytes(b"rendered-image")
+        return str(path)
+
+    cmds.getAttr.side_effect, cmds.setAttr.side_effect = get_value, set_value
+    cmds.render.side_effect = render
+    result = load_and_call(
+        "maya-render/scripts/render_frame.py",
+        cmds,
+        "main",
+        camera="persp",
+        output_dir=str(tmp_path),
+        return_base64=False,
+    )
+    assert result["success"] is not render_fails, result
+    assert observed == [True]
+    assert state["renderable"] is initial_renderable
