@@ -143,6 +143,9 @@ dcc-mcp-maya upgrade --json --yes --dcc-path "/absolute/path/to/Maya" --python "
 
 The upgrade uses the same staged transaction and rollback path as install. It
 preserves the original pre-install userSetup state across repeated upgrades.
+After publication succeeds, a locked old backup is reported as a `cleanup_backup_<index>` step
+with status `deferred`; it does not undo the upgrade or replace its verification
+result. Remove only the reported backup after the process holding it exits.
 
 ## Uninstall
 

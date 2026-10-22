@@ -1566,9 +1566,22 @@ def _install_transaction(ctx):
                     _remove_path(stage)
         raise
     else:
-        for backup in backups:
+        cleanup_steps = []
+        for index, backup in enumerate(backups):
             if backup.exists():
-                _remove_path(backup)
+                try:
+                    _remove_path(backup)
+                except OSError as exc:
+                    # Publication is committed; a locked old backup must not imply rollback.
+                    cleanup_steps.append(
+                        {
+                            "id": "cleanup_backup_%d" % index,
+                            "status": "deferred",
+                            "message": "Retained backup %s: %s. Remove it after its owning process exits."
+                            % (backup, exc),
+                        }
+                    )
+        return cleanup_steps
 
 
 def _readiness_next_steps(ctx):
@@ -1653,7 +1666,7 @@ def _verify(ctx, environ, timeout_secs):
 
 def _execute_install(ctx, environ, timeout_secs, command="install"):
     try:
-        _install_transaction(ctx)
+        cleanup_steps = _install_transaction(ctx)
     except LifecycleError:
         raise
     except OSError as exc:
@@ -1670,6 +1683,7 @@ def _execute_install(ctx, environ, timeout_secs, command="install"):
         {"id": "commit", "status": "ok"},
         {"id": "verify", "status": "ok" if usable else "failed"},
     ]
+    report["steps"].extend(cleanup_steps or [])
     report["next_steps"] = next_steps
     report["verify"] = verify
     return report, INSTALL_EXIT_OK if usable else INSTALL_EXIT_VERIFY
