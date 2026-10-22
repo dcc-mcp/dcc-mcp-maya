@@ -284,6 +284,12 @@ def render_frame(
             "output_prefix": prefix,
             "image_base64": image_base64,
         }
+        # This is a configured preference, not proof of a transform applied to output pixels.
+        try:
+            context["view_transform"] = cmds.colorManagementPrefs(query=True, viewTransformName=True)
+        except Exception as exc:
+            context["view_transform"] = None
+            context["color_management_error"] = str(exc)
         if render_result is not None:
             context["render_result"] = render_result
         return skill_success(
