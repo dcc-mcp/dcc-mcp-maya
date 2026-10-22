@@ -971,7 +971,7 @@ def _maybe_spawn_sidecar() -> bool:
 
 
 def _print_sidecar_info(handle) -> None:  # noqa: ANN001
-    """Append a sidecar banner to the script editor / viewport HUD."""
+    """Print a sidecar banner to the script editor / output window."""
     gateway_port = _resolve_gateway_port_for_display()
     gateway_lines = []
     if gateway_port > 0:
@@ -1006,17 +1006,6 @@ def _print_sidecar_info(handle) -> None:  # noqa: ANN001
     if stderr_path:
         lines.insert(-1, f"  stderr log   : {stderr_path}")
     print("\n".join(lines))  # noqa: T201 — intentional console output
-
-    if _is_interactive():
-        try:
-            cmds.inViewMessage(
-                amg=f"DCC MCP <b>sidecar</b> PID <b>{handle.proc.pid}</b> attached",
-                pos="topCenter",
-                fade=True,
-                fadeStayTime=4000,
-            )
-        except Exception:  # noqa: BLE001 — viewport HUD is cosmetic
-            pass
 
 
 def _probe_gateway_health_deferred(
@@ -1227,19 +1216,6 @@ def _print_startup_info(cfg: dict) -> None:
 
     # Print to Maya script editor / output window
     print(banner)  # noqa: T201 — intentional console output
-
-    # Also show in Maya viewport HUD (interactive mode only)
-    if _is_interactive() and _handle:
-        try:
-            if is_gw:
-                hud_msg = f"DCC MCP <b>[GATEWAY]</b> {gw_url}/mcp"
-            elif gateway_port > 0:
-                hud_msg = f"DCC MCP <b>[instance]</b> → gateway {gw_url}/mcp"
-            else:
-                hud_msg = f"DCC MCP ready: {instance_url}"
-            cmds.inViewMessage(amg=hud_msg, pos="topCenter", fade=True, fadeStayTime=4000)
-        except Exception:
-            pass  # viewport HUD is cosmetic, never block startup
 
 
 def _stop_sidecar_if_running() -> None:
