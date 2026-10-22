@@ -9,7 +9,7 @@ plugin_module = _plugin_fixtures.plugin_module
 def test_menu_omits_lifecycle_controls_and_preserves_other_entries(plugin_module, mock_maya_modules):
     plugin_module._add_menu()
 
-    items = [call.kwargs for call in mock_maya_modules.cmds.menuItem.call_args_list]
+    items = [call[1] for call in mock_maya_modules.cmds.menuItem.call_args_list]
     assert [item["label"] for item in items if "label" in item] == [
         "OpenAPI Docs",
         "Admin Panel",
