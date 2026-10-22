@@ -105,3 +105,20 @@ def test_render_frame_temporarily_enables_selected_camera(tmp_path, initial_rend
     assert result["success"] is not render_fails, result
     assert observed == [True]
     assert state["renderable"] is initial_renderable
+
+
+def test_render_frame_uses_maya_path_separators(tmp_path):
+    cmds = MagicMock()
+    prefix = _configure_render_cmds(cmds)
+
+    def render(*_args, **_kwargs):
+        assert "\\" not in prefix["prefix"]
+        path = Path(prefix["prefix"] + ".png")
+        path.write_bytes(b"rendered-image")
+        return str(path)
+
+    cmds.render.side_effect = render
+    result = load_and_call(
+        "maya-render/scripts/render_frame.py", cmds, "main", output_dir=str(tmp_path), return_base64=False
+    )
+    assert result["success"], result

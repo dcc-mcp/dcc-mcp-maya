@@ -193,7 +193,7 @@ def render_frame(
 
         target_dir = output_dir or _workspace_render_dir(cmds)
         os.makedirs(target_dir, exist_ok=True)
-        prefix = os.path.join(target_dir, _safe_output_name(output_name))
+        prefix = os.path.join(target_dir, _safe_output_name(output_name)).replace(os.sep, "/")
         started_at = time.time()
         render_result = None
         camera_renderable = "{}.renderable".format(camera_shape) if camera_shape else None
