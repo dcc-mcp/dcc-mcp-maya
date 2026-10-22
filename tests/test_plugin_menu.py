@@ -1,6 +1,9 @@
 """The user menu keeps discovery entries without server lifecycle controls."""
 
-pytest_plugins = ("test_plugin_env_vars",)
+import test_plugin_env_vars as _plugin_fixtures
+
+mock_maya_modules = _plugin_fixtures.mock_maya_modules
+plugin_module = _plugin_fixtures.plugin_module
 
 
 def test_menu_omits_lifecycle_controls_and_preserves_other_entries(plugin_module, mock_maya_modules):
