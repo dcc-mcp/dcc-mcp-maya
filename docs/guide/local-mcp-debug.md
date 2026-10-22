@@ -116,8 +116,12 @@ An action acknowledgement or a focused button is not a completed transition.
 After entering the editor, rediscover the window: Home and the editor can have
 different HWNDs in the same process. Rebind DCC-CUA, take a fresh observation,
 and confirm the viewport before declaring GUI acceptance. If guarded input is
-refused because the target is not foreground, stop input and request the minimum
-manual focus/navigation step. Do not replace the route with generic computer
+refused because the target is not foreground, stop input and use the project's
+scoped native activation/recovery path. A refused `restore_activate` can still
+leave the exact window restored: read fresh native state before considering the
+separate `activate` operation. Do not blindly repeat the refused operation or
+reuse consumed observations. Request manual focus only after the applicable
+project recovery paths fail. Do not replace the route with generic computer
 automation or injected Maya UI code.
 
 A temporarily unresponsive splash is not sufficient evidence of a deadlock.
@@ -125,6 +129,16 @@ Correlate repeated observations with the same process's bootstrap stages,
 sidecar registration, and read-only thread diagnostics. Record missing evidence
 explicitly: a plugin name on a splash screen alone does not identify the call
 that owns the elapsed startup time.
+
+Thread diagnostics can themselves change the failure. Avoid periodic
+`faulthandler.dump_traceback_later()` in Maya startup acceptance harnesses:
+CPython has a [confirmed crash while traversing invalid/freed frames](https://github.com/python/cpython/issues/140815).
+A Maya 2027.2/Python 3.13.9 diagnostic run hit an access violation on the
+traceback timer thread; it must not be counted as proof that plugin startup
+crashed. Keep ordinary crash logging enabled, preserve native crash dumps, and
+compare a standard startup without the diagnostic timer. Analyze the original
+exception thread using matching binaries/symbols before attributing a failure
+to the last tool call or the plugin named on the splash screen.
 
 ## 6. Quick checklist
 
