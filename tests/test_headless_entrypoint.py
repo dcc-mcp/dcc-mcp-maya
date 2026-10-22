@@ -188,3 +188,17 @@ def test_invalid_port_rejected_before_sdk_initialization(value):
     with pytest.raises(SystemExit) as error:
         main(["--port", value])
     assert error.value.code == 2
+
+
+@pytest.mark.parametrize("command", ["install", "status", "verify", "upgrade", "uninstall"])
+@pytest.mark.parametrize("explicit_args", [True, False])
+def test_module_cli_routes_lifecycle_without_initializing_maya(monkeypatch, command, explicit_args):
+    from dcc_mcp_maya import install
+
+    calls = []
+    args = [command, "--json", "--dry-run"]
+    monkeypatch.setattr(install, "main", lambda argv: calls.append(argv) or 40)
+    monkeypatch.setattr(sys, "argv", ["dcc_mcp_maya", *args])
+    monkeypatch.setitem(sys.modules, "maya", None)
+    assert main(args if explicit_args else None) == 40
+    assert calls == [args]

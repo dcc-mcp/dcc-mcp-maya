@@ -18,6 +18,11 @@ Install the Python package with the target interpreter first:
 mayapy -m pip install --upgrade dcc-mcp-maya
 ```
 
+If the console script is absent from `PATH`, use the selected interpreter:
+`mayapy -m dcc_mcp_maya install --json --dry-run`. The module entry point accepts
+`install`, `status`, `verify`, `upgrade`, and `uninstall`; without a lifecycle
+subcommand it still starts the standalone MCP service.
+
 The legacy repository setup helper remains available for source checkouts, but
 the standard lifecycle below is the agent-facing contract.
 
@@ -64,9 +69,15 @@ partial install is classified as a repair.
 ## Manual path
 
 The lifecycle command stages a complete Maya module tree before commit. It
-installs the adapter package, `dcc_mcp_maya_plugin.py`, the packaged
+installs the adapter package, the selected interpreter's Core and sidecar runtime,
+`dcc_mcp_maya_plugin.py`, the packaged
 `userSetup.py`, and an absolute `dcc_mcp_maya.mod` descriptor. It also writes a
 bounded managed block to the profile `scripts/userSetup.py`.
+
+The GUI imports these module-local dependencies even when Maya disables the
+interpreter's user site-packages. Installation does not change that user site.
+Generated `.pyc` and `.pyo` caches do not invalidate the install receipt; changes
+to source files and native binaries still do.
 
 To consume an immutable released module ZIP instead of assembling the module
 from the installed wheel, add `--module-zip /absolute/path/to/archive.zip` to
@@ -106,7 +117,7 @@ Verification fails closed through these boundaries:
 1. Receipt ownership and artifact hashes.
 2. Adapter, Core, and Maya imports in the exact target interpreter.
 3. Captured startup errors from `capture_bootstrap_errors`.
-4. Core `wait_for_sidecar_ready` followed by the typed `host.ping` probe.
+4. Core `wait_for_sidecar_ready` followed by the typed `maya_scene__get_session_info` probe.
 
 Only all four gates produce `directly_usable: true`. A healthy process or an
 HTTP listener alone is not Maya readiness. If Maya is not running, exit `40`

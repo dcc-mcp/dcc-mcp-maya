@@ -6,6 +6,7 @@ import hashlib
 import json
 import os
 import re
+import subprocess
 import sys
 import zipfile
 from pathlib import Path
@@ -91,6 +92,7 @@ def _configure_fake_maya(install, tmp_path, monkeypatch, version="2025"):
     monkeypatch.setenv("DCC_MCP_MAYA_MODULES_DIR", str(modules_dir))
     monkeypatch.setenv("DCC_MCP_MAYA_SCRIPTS_DIR", str(scripts_dir))
     monkeypatch.setenv("DCC_MCP_MAYA_RECEIPT", str(receipt))
+    monkeypatch.setattr(install, "_stage_runtime_dependencies", lambda *_args: None)
     monkeypatch.setattr(
         install,
         "_probe_target",
@@ -154,6 +156,7 @@ def test_install_dry_run_emits_a_complete_non_mutating_plan(tmp_path, monkeypatc
         "verify",
     ]
     assert "--yes" in report["next_steps"][0]["command"]
+    assert report["next_steps"][0]["command"][:3] == [str(mayapy.resolve()), "-m", "dcc_mcp_maya"]
     assert not maya_modules.exists()
     assert not receipt.exists()
 
@@ -189,7 +192,7 @@ def test_receipt_round_trip_owns_module_descriptor_and_usersetup(tmp_path, monke
     assert installed["verify"]["directly_usable"] is False
     assert installed["verify"]["failure_stage"] == "readiness"
     assert installed["verify"]["failure_reason"] == "sidecar_unavailable"
-    assert installed["verify"]["probe_tool"] == "host.ping"
+    assert installed["verify"]["probe_tool"] == "maya_scene__get_session_info"
     assert (module_root / "python" / "dcc_mcp_maya" / "__init__.py").is_file()
     assert (module_root / "plug-ins" / "dcc_mcp_maya_plugin.py").is_file()
     assert (module_root / "scripts" / "userSetup.py").is_file()
@@ -217,7 +220,97 @@ def test_receipt_round_trip_owns_module_descriptor_and_usersetup(tmp_path, monke
     assert json.loads(capsys.readouterr().out)["steps"][0]["status"] == "already_absent"
 
 
-def test_typed_host_ping_is_required_for_direct_usability(tmp_path, monkeypatch, capsys):
+@pytest.mark.parametrize(
+    "cache_path", ["__pycache__/startup.cpython-313.pyc", "python/startup.pyc", "python/startup.pyo"]
+)
+def test_runtime_bytecode_does_not_invalidate_install(cache_path, tmp_path, monkeypatch, capsys):
+    from dcc_mcp_maya import install
+
+    maya_root, modules_dir, scripts_dir, receipt_path = _configure_fake_maya(install, tmp_path, monkeypatch)
+    payload = tmp_path / "module.zip"
+    _write_provenanced_module_zip(install, payload, extra_entries={cache_path: b"packaged bytecode"})
+    monkeypatch.setattr(install, "wait_for_sidecar_ready", lambda *_args, **_kwargs: {"success": True})
+    common = ["--json", "--dcc-path", str(maya_root), "--python", sys.executable]
+    assert install.main(["install", "--yes", *common, "--module-zip", str(payload)]) == install.INSTALL_EXIT_OK
+    capsys.readouterr()
+    module_root = modules_dir / "dcc-mcp-maya"
+    cache = module_root / cache_path
+    cache.parent.mkdir(parents=True, exist_ok=True)
+    cache.write_bytes(b"runtime bytecode")
+    descriptor = modules_dir / "dcc_mcp_maya.mod"
+    user_setup = scripts_dir / "userSetup.py"
+
+    assert install._inspect_state(receipt_path, module_root, descriptor, user_setup) == ("current", "", "")
+    assert install.main(["verify", *common]) == install.INSTALL_EXIT_OK
+    assert json.loads(capsys.readouterr().out)["verify"]["directly_usable"] is True
+
+    (module_root / "scripts/userSetup.py").write_text("# modified startup\n", encoding="utf-8")
+    assert install._inspect_state(receipt_path, module_root, descriptor, user_setup) == (
+        "partial",
+        "artifact",
+        "tree_missing_or_modified",
+    )
+
+
+def test_pip_runtime_is_bundled_without_relying_on_user_site(tmp_path, monkeypatch):
+    from dcc_mcp_maya import install
+
+    user_site = tmp_path / "user-site"
+    for name in ("dcc_mcp_core", "dcc_mcp_server"):
+        package = user_site / name
+        package.mkdir(parents=True)
+        code = "__version__ = '0.20.46'\n"
+        if name == "dcc_mcp_server":
+            code += "from pathlib import Path\ndef binary_path(): return Path(__file__).with_name('server.bin')\n"
+            (package / "server.bin").write_bytes(b"target sidecar")
+        (package / "__init__.py").write_text(code, encoding="utf-8")
+        metadata = user_site / (name + "-0.20.46.dist-info")
+        metadata.mkdir()
+        (metadata / "METADATA").write_text("Name: %s\nVersion: 0.20.46\n" % name, encoding="utf-8")
+    monkeypatch.setenv("PYTHONPATH", str(user_site))
+    destination = tmp_path / "module" / "python"
+    destination.mkdir(parents=True)
+    install._stage_runtime_dependencies(sys.executable, destination)
+
+    monkeypatch.delenv("PYTHONPATH")
+    result = subprocess.run(
+        [sys.executable, "-S", "-c", "import dcc_mcp_core, dcc_mcp_server; print(dcc_mcp_core.__version__)"],
+        cwd=str(destination),
+        capture_output=True,
+        universal_newlines=True,
+    )
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip() == "0.20.46"
+    binary = destination / "scripts" / ("dcc-mcp-server.exe" if os.name == "nt" else "dcc-mcp-server")
+    assert binary.read_bytes() == b"target sidecar"
+    assert (destination / "dcc_mcp_core-0.20.46.dist-info/METADATA").is_file()
+
+
+def test_dependency_staging_failure_preserves_prior_install(tmp_path, monkeypatch, capsys):
+    from dcc_mcp_maya import install
+
+    maya_root, modules_dir, _scripts, receipt_path = _configure_fake_maya(install, tmp_path, monkeypatch)
+    monkeypatch.setattr(install, "wait_for_sidecar_ready", lambda *_args, **_kwargs: {"success": True})
+    common = ["--yes", "--json", "--dcc-path", str(maya_root), "--python", sys.executable]
+    assert install.main(["install", *common]) == install.INSTALL_EXIT_OK
+    capsys.readouterr()
+    prior_receipt = receipt_path.read_bytes()
+    prior_tree = install._tree_sha256(modules_dir / "dcc-mcp-maya")
+
+    def fail(*_args):
+        raise install.LifecycleError(
+            install.INSTALL_EXIT_ACQUIRE, "acquire", "runtime_dependency_stage_failed", "missing Core"
+        )
+
+    monkeypatch.setattr(install, "_stage_runtime_dependencies", fail)
+    assert install.main(["upgrade", *common]) == install.INSTALL_EXIT_ACQUIRE
+    assert json.loads(capsys.readouterr().out)["verify"]["failure_reason"] == "runtime_dependency_stage_failed"
+    assert receipt_path.read_bytes() == prior_receipt
+    assert install._tree_sha256(modules_dir / "dcc-mcp-maya") == prior_tree
+    assert not list(tmp_path.rglob("*.stage-*"))
+
+
+def test_typed_scene_probe_is_required_for_direct_usability(tmp_path, monkeypatch, capsys):
     from dcc_mcp_maya import install
 
     maya_root, _modules, _scripts, _receipt = _configure_fake_maya(install, tmp_path, monkeypatch)
@@ -225,7 +318,7 @@ def test_typed_host_ping_is_required_for_direct_usability(tmp_path, monkeypatch,
 
     def ready(registry_dir=None, **kwargs):
         probes.append((registry_dir, kwargs))
-        return {"success": True, "status": "ready", "instance_id": "maya-1"}
+        return {"success": True, "status": "ready", "entry": {"instance_id": "maya-1"}}
 
     monkeypatch.setattr(install, "wait_for_sidecar_ready", ready)
 
@@ -235,8 +328,9 @@ def test_typed_host_ping_is_required_for_direct_usability(tmp_path, monkeypatch,
     )
     report = json.loads(capsys.readouterr().out)
     assert report["verify"]["directly_usable"] is True
+    assert report["verify"]["instance_id"] == "maya-1"
     assert probes[0][1]["dcc_type"] == "maya"
-    assert probes[0][1]["probe_tool"] == "host.ping"
+    assert probes[0][1]["probe_tool"] == "maya_scene__get_session_info"
     assert probes[0][1]["timeout_secs"] == 10.0
 
 
@@ -659,7 +753,7 @@ def test_install_runbook_covers_the_complete_owning_repo_contract():
         "receipt",
         "rollback",
         "capture_bootstrap_errors",
-        "host.ping",
+        "maya_scene__get_session_info",
         "https://raw.githubusercontent.com/dcc-mcp/dcc-mcp-maya/main/install.md",
     ):
         assert term in guide
