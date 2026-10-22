@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.42](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.41...v0.9.42) (2026-10-22)
+
+
+### Bug Fixes
+
+* report locked install backups as deferred cleanup ([#590](https://github.com/dcc-mcp/dcc-mcp-maya/issues/590)) ([e5a4e03](https://github.com/dcc-mcp/dcc-mcp-maya/commit/e5a4e035ad0d332d29d2f64de062607c29fe75f3))
+
 ## [0.9.41](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.40...v0.9.41) (2026-10-22)
 
 
