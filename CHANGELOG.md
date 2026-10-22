@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.9.41](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.40...v0.9.41) (2026-10-22)
+
+
+### Bug Fixes
+
+* keep automatic Maya startup free of viewport popups ([#588](https://github.com/dcc-mcp/dcc-mcp-maya/issues/588)) ([173e071](https://github.com/dcc-mcp/dcc-mcp-maya/commit/173e07115f9d9757328b43e376fd8a6a6c9608f5))
+* keep Maya gateway loopback-only by default ([#587](https://github.com/dcc-mcp/dcc-mcp-maya/issues/587)) ([1b40efc](https://github.com/dcc-mcp/dcc-mcp-maya/commit/1b40efc668da291c03649c6aaed1a3d309b89a47))
+
 ## [0.9.40](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.39...v0.9.40) (2026-10-22)
 
 
