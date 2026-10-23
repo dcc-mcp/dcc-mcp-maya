@@ -39,9 +39,9 @@ def test_menu_callbacks_open_admin_and_version_information(plugin_module, mock_m
     plugin_module._add_menu()
 
     commands = {
-        call.kwargs["label"]: call.kwargs["command"]
+        call[1]["label"]: call[1]["command"]
         for call in mock_maya_modules.cmds.menuItem.call_args_list
-        if "label" in call.kwargs
+        if "label" in call[1]
     }
     commands["Admin Panel"](False)
     commands["About DCC MCP"](False)
