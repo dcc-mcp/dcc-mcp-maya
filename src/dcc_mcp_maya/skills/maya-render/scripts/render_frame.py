@@ -46,12 +46,12 @@ def _resolve_camera(cmds, camera: Optional[str]) -> Tuple[Optional[str], Optiona
     if camera:
         if not cmds.objExists(camera):
             return None, None, "missing"
+        matches = cmds.ls(camera, long=True) or []
+        if len(matches) != 1:
+            return None, None, "ambiguous"
+        camera = matches[0]
         node_type = cmds.nodeType(camera)
         if node_type == "camera":
-            matches = cmds.ls(camera, long=True) or []
-            if len(matches) != 1:
-                return None, None, "ambiguous"
-            camera = matches[0]
             parents = cmds.listRelatives(camera, parent=True, fullPath=True) or []
             return (_first_scalar(parents) or camera), camera, "explicit_shape"
         shapes = cmds.listRelatives(camera, shapes=True, type="camera", fullPath=True) or []
