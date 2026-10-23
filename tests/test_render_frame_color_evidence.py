@@ -142,6 +142,59 @@ def test_render_frame_uses_maya_path_separators(tmp_path):
     assert result["success"], result
 
 
+def test_render_frame_preserves_full_transform_with_duplicate_shape_names(tmp_path):
+    cmds = MagicMock()
+    prefix = _configure_render_cmds(cmds)
+    selected, other = "|shot|camera|sharedShape", "|other|camera|sharedShape"
+    cmds.objExists.side_effect = None
+    cmds.objExists.return_value = True
+    cmds.nodeType.return_value = "transform"
+    cmds.listRelatives.side_effect = lambda *args, **kwargs: [selected if kwargs.get("fullPath") else "sharedShape"]
+    cmds.ls.side_effect = lambda *args, **kwargs: [other, selected]
+    state = {selected + ".renderable": True, other + ".renderable": True}
+    get_attr, set_attr = cmds.getAttr.side_effect, cmds.setAttr.side_effect
+    cmds.getAttr.side_effect = lambda attr: state[attr] if attr in state else get_attr(attr)
+
+    def update(attr, value, **kwargs):
+        if attr in state:
+            state[attr] = value
+        else:
+            set_attr(attr, value, **kwargs)
+
+    def render(*args, **kwargs):
+        assert state == {selected + ".renderable": True, other + ".renderable": False}
+        path = Path(prefix["prefix"] + ".png")
+        path.write_bytes(b"rendered-image")
+        return str(path)
+
+    cmds.setAttr.side_effect, cmds.render.side_effect = update, render
+    result = load_and_call(
+        "maya-render/scripts/render_frame.py",
+        cmds,
+        "main",
+        camera="|shot|camera",
+        output_dir=str(tmp_path),
+        return_base64=False,
+    )
+    assert result["success"], result
+    assert state == {selected + ".renderable": True, other + ".renderable": True}
+
+
+def test_render_frame_rejects_ambiguous_camera_shape(tmp_path):
+    cmds = MagicMock()
+    _configure_render_cmds(cmds)
+    cmds.objExists.side_effect = None
+    cmds.objExists.return_value = True
+    cmds.nodeType.return_value = "camera"
+    cmds.ls.return_value = ["|shot|sharedShape", "|other|sharedShape"]
+    result = load_and_call(
+        "maya-render/scripts/render_frame.py", cmds, "main", camera="sharedShape", output_dir=str(tmp_path)
+    )
+    assert not result["success"]
+    assert result["context"]["camera_source"] == "ambiguous"
+    cmds.render.assert_not_called()
+
+
 def test_render_frame_refuses_unisolatable_camera_and_restores_preparation(tmp_path):
     cmds = MagicMock()
     _configure_render_cmds(cmds)
