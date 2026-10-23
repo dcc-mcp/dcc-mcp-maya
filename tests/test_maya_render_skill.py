@@ -57,7 +57,7 @@ def _configure_render_cmds(cmds, renderer="mayaSoftware", current_frame=1.0):
     cmds.setAttr.side_effect = _set_attr
     cmds.currentTime.side_effect = _current_time
     cmds.workspace.side_effect = _workspace
-    cmds.ls.return_value = []
+    cmds.ls.side_effect = lambda *args, **kwargs: list(args) if args else []
     cmds.objExists.side_effect = lambda node: node == "persp"
     cmds.listRelatives.return_value = ["perspShape"]
     return prefix_holder
