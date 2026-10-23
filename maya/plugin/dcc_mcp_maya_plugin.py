@@ -1439,13 +1439,7 @@ def _add_menu() -> None:
         if cmds.menu(_menu_name, exists=True):
             cmds.deleteUI(_menu_name)
         cmds.menu(_menu_name, label="DCC MCP", parent="MayaWindow", tearOff=False)
-        cmds.menuItem(label="OpenAPI Docs", command=lambda *_: _open_openapi_docs())
         cmds.menuItem(label="Admin Panel", command=lambda *_: _open_admin_panel())
-        cmds.menuItem(divider=True)
-        cmds.menuItem(label="Copy Instance ID", command=lambda *_: _copy_instance_id())
-        cmds.menuItem(label="Server Info", command=lambda *_: _show_server_info())
-        cmds.menuItem(divider=True)
-        cmds.menuItem(label="Enable/Disable Hot Reload", command=lambda *_: _toggle_hot_reload())
         cmds.menuItem(divider=True)
         cmds.menuItem(label="About DCC MCP", command=lambda *_: _show_about())
     except Exception as exc:
