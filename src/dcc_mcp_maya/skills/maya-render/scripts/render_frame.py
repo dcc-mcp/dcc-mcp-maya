@@ -196,8 +196,10 @@ def render_frame(
         prefix = os.path.join(target_dir, _safe_output_name(output_name)).replace(os.sep, "/")
         started_at = time.time()
         render_result = None
+        if camera_shape:
+            camera_shape = _first_scalar(cmds.ls(camera_shape, long=True)) or camera_shape
         camera_renderable = "{}.renderable".format(camera_shape) if camera_shape else None
-        camera_shapes = list(cmds.ls(type="camera") or [])
+        camera_shapes = list(cmds.ls(type="camera", long=True) or [])
         if camera_shape and camera_shape not in camera_shapes:
             camera_shapes.append(camera_shape)
         changed_cameras = []

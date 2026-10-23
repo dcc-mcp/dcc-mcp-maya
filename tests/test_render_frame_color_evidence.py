@@ -67,23 +67,36 @@ def test_render_frame_keeps_unavailable_arnold_as_a_render_failure(tmp_path):
 
 @pytest.mark.parametrize("initial_renderable", [False, True])
 @pytest.mark.parametrize("render_fails", [False, True])
-def test_render_frame_temporarily_enables_selected_camera(tmp_path, initial_renderable, render_fails):
+@pytest.mark.parametrize("full_camera_path", [False, True])
+def test_render_frame_temporarily_enables_selected_camera(tmp_path, initial_renderable, render_fails, full_camera_path):
     cmds = MagicMock()
     prefix = _configure_render_cmds(cmds)
     get_attr, set_attr = cmds.getAttr.side_effect, cmds.setAttr.side_effect
     state = {"renderable": initial_renderable, "other": True}
-    cmds.ls.return_value = ["perspShape", "otherShape"]
+    selected = "|rig|perspShape" if full_camera_path else "perspShape"
+    cmds.ls.side_effect = lambda *args, **kwargs: (
+        [selected] if args else [selected if kwargs.get("long") else "perspShape", "otherShape"]
+    )
+    if full_camera_path:
+        cmds.objExists.return_value = True
+        cmds.objExists.side_effect = None
+        cmds.nodeType.return_value = "camera"
+        cmds.listRelatives.return_value = ["|rig|persp"]
     observed = []
 
     def get_value(attr):
         if attr == "otherShape.renderable":
             return state["other"]
-        return state["renderable"] if attr == "perspShape.renderable" else get_attr(attr)
+        return (
+            state["renderable"] if attr in ("perspShape.renderable", "|rig|perspShape.renderable") else get_attr(attr)
+        )
 
     def set_value(attr, value, **kwargs):
         if attr == "otherShape.renderable":
             state["other"] = value
-        elif attr == "perspShape.renderable":
+        elif attr in ("perspShape.renderable", "|rig|perspShape.renderable"):
+            if full_camera_path and initial_renderable and not value:
+                raise RuntimeError("selected renderable camera is locked")
             state["renderable"] = value
         else:
             set_attr(attr, value, **kwargs)
@@ -103,7 +116,7 @@ def test_render_frame_temporarily_enables_selected_camera(tmp_path, initial_rend
         "maya-render/scripts/render_frame.py",
         cmds,
         "main",
-        camera="persp",
+        camera="|rig|perspShape" if full_camera_path else "persp",
         output_dir=str(tmp_path),
         return_base64=False,
     )
@@ -135,7 +148,7 @@ def test_render_frame_refuses_unisolatable_camera_and_restores_preparation(tmp_p
     initial = {"otherShape.renderable": True, "lockedShape.renderable": True, "perspShape.renderable": False}
     state = dict(initial)
     get_attr, set_attr = cmds.getAttr.side_effect, cmds.setAttr.side_effect
-    cmds.ls.return_value = ["otherShape", "lockedShape", "perspShape"]
+    cmds.ls.side_effect = lambda *args, **kwargs: list(args) if args else ["otherShape", "lockedShape", "perspShape"]
     cmds.getAttr.side_effect = lambda attr: state[attr] if attr in state else get_attr(attr)
 
     def update(attr, value, **kwargs):
