@@ -48,16 +48,20 @@ def _resolve_camera(cmds, camera: Optional[str]) -> Tuple[Optional[str], Optiona
             return None, None, "missing"
         node_type = cmds.nodeType(camera)
         if node_type == "camera":
-            parents = cmds.listRelatives(camera, parent=True, fullPath=False) or []
+            matches = cmds.ls(camera, long=True) or []
+            if len(matches) != 1:
+                return None, None, "ambiguous"
+            camera = matches[0]
+            parents = cmds.listRelatives(camera, parent=True, fullPath=True) or []
             return (_first_scalar(parents) or camera), camera, "explicit_shape"
-        shapes = cmds.listRelatives(camera, shapes=True, type="camera", fullPath=False) or []
+        shapes = cmds.listRelatives(camera, shapes=True, type="camera", fullPath=True) or []
         return camera, _first_scalar(shapes), "explicit_transform"
 
-    renderable_shapes = cmds.ls(type="camera") or []
+    renderable_shapes = cmds.ls(type="camera", long=True) or []
     for shape in renderable_shapes:
         try:
             if cmds.getAttr("{}.renderable".format(shape)):
-                parents = cmds.listRelatives(shape, parent=True, fullPath=False) or []
+                parents = cmds.listRelatives(shape, parent=True, fullPath=True) or []
                 parent = _first_scalar(parents)
                 if parent:
                     return parent, shape, "renderable_camera"
@@ -65,7 +69,7 @@ def _resolve_camera(cmds, camera: Optional[str]) -> Tuple[Optional[str], Optiona
             continue
 
     if cmds.objExists("persp"):
-        shapes = cmds.listRelatives("persp", shapes=True, type="camera", fullPath=False) or []
+        shapes = cmds.listRelatives("persp", shapes=True, type="camera", fullPath=True) or []
         return "persp", _first_scalar(shapes), "fallback_persp"
     return None, None, "none"
 
@@ -196,8 +200,6 @@ def render_frame(
         prefix = os.path.join(target_dir, _safe_output_name(output_name)).replace(os.sep, "/")
         started_at = time.time()
         render_result = None
-        if camera_shape:
-            camera_shape = _first_scalar(cmds.ls(camera_shape, long=True)) or camera_shape
         camera_renderable = "{}.renderable".format(camera_shape) if camera_shape else None
         camera_shapes = list(cmds.ls(type="camera", long=True) or [])
         if camera_shape and camera_shape not in camera_shapes:
