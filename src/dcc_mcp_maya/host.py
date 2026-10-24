@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 # Import built-in modules
-from importlib import import_module
 from typing import Any, Callable, Optional
 
 # Import third-party modules
@@ -55,17 +54,20 @@ class MayaHost(HostAdapter):
         if self._tick_timer is not None:
             return
         app = None
-        for binding in ("PySide6.QtCore", "PySide2.QtCore"):
+        for binding in ("PySide6", "PySide2"):
             try:
-                qt_core = import_module(binding)
+                if binding == "PySide6":
+                    from PySide6.QtCore import QCoreApplication, QTimer  # noqa: PLC0415
+                else:
+                    from PySide2.QtCore import QCoreApplication, QTimer  # noqa: PLC0415
             except ImportError:
                 continue
-            app = qt_core.QCoreApplication.instance()
+            app = QCoreApplication.instance()
             if app is not None:
                 break
         if app is None:
             raise RuntimeError("MayaHost requires a running Qt application")
-        timer = qt_core.QTimer(app)
+        timer = QTimer(app)
         timer.setSingleShot(True)
 
         @require_main_thread
