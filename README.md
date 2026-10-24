@@ -232,6 +232,13 @@ For an already initialized batch interpreter, call
 owns Maya initialization and the stop event; the function owns its server and
 dispatcher. GUI sessions use the plugin or `start_server()` with a UI dispatcher.
 
+On Windows, the programmatic stop event passed to `serve_headless(stop_event=...)`
+is the only supported graceful shutdown path for this standalone mode: console
+signals (Ctrl+C / Ctrl+Break) do not produce a clean shutdown, and force
+termination can leave a stale registry entry and an orphan lock file. See
+**Graceful Shutdown on Windows** in the
+[standalone guide](docs/guide/standalone.md).
+
 ## Architecture
 
 <p align="center">

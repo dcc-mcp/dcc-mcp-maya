@@ -90,6 +90,85 @@ For a long-lived service prefer `serve_headless()` (used by
 `mayapy -m dcc_mcp_maya` and the bundled example); it already owns the main-thread
 pump, server lifecycle and cleanup through Core's dispatcher.
 
+## Graceful Shutdown on Windows
+
+This section applies to the **Windows standalone** service mode
+(`serve_headless()` and `mayapy -m dcc_mcp_maya`). It was verified on Windows
+with **Maya 2022, 2024, and 2026**; it is not a statement about other platforms
+or about future Maya versions.
+
+The only verified graceful shutdown path for this mode is the programmatic stop
+event you pass to `serve_headless(stop_event=...)`. The ownership split
+stays the same as at startup: you own Maya initialization and the stop event,
+while `serve_headless()` owns its server, its dispatcher, and the
+owning-main-thread pump. Setting the event makes the pump loop return, after
+which `serve_headless()` runs its `finally` block (`server.stop()` and
+`host.stop()`). The process then exits with code 0, the port is released, and
+the instance is removed from `services.json` and `locks/`.
+
+Trigger the stop from your own thread or supervisor — for example a watchdog, a
+job-completion callback, or an idle timer — not from a console signal (see
+below).
+
+```python
+import threading
+
+import maya.standalone
+
+from dcc_mcp_maya import serve_headless
+
+maya.standalone.initialize(name="python")
+
+stop_event = threading.Event()
+try:
+    # Blocks this (main) thread and pumps Core's dispatcher until the event
+    # is set. Setting it from another thread ends the loop and runs cleanup:
+    #
+    #     stop_event.set()
+    #
+    serve_headless(stop_event=stop_event)
+finally:
+    maya.standalone.uninitialize()
+```
+
+A complete starting point is
+[`examples/standalone/run_maya_mcp.py`](https://github.com/dcc-mcp/dcc-mcp-maya/blob/main/examples/standalone/run_maya_mcp.py).
+
+### Console signals are not supported on Windows
+
+In the tested Windows standalone builds, the interactive console shortcuts do
+not produce a clean shutdown:
+
+- **Ctrl+C (`CTRL_C_EVENT`)** is ignored — the main thread is blocked inside
+  Maya's native dispatcher, so Python's `SIGINT` handler does not run and
+  `KeyboardInterrupt` is never raised.
+- **Ctrl+Break (`CTRL_BREAK_EVENT`)** terminates the process through Maya's Intel
+  Fortran runtime (`forrtl: error (200)`) rather than raising a Python
+  `KeyboardInterrupt`, so `try`/`except KeyboardInterrupt` and `finally` cleanup
+  in the entrypoint do not run.
+
+Because `python -m dcc_mcp_maya` serves until interrupted, do not rely on a
+console signal to stop it on Windows. Drive the lifecycle with the stop event
+instead.
+
+### Shutdown methods compared
+
+| Shutdown method | Clean exit | Port released | Registry (`services.json` / `locks/`) |
+|---|---|---|---|
+| `stop_event.set()` (programmatic) | Yes — rc 0 | Yes | Cleared |
+| Ctrl+C (`CTRL_C_EVENT`) | No — ignored; service keeps running | n/a | Unchanged |
+| Ctrl+Break (`CTRL_BREAK_EVENT`) | No — killed by the Maya runtime | Yes | Can leave a dead pid record and an orphan `.lock` file |
+| Force termination (`taskkill /F`) | No — killed | Yes | Can leave a dead pid record and an orphan `.lock` file |
+
+Force-terminating a standalone service is a known limitation: it can leave a
+stale `services.json` row and an orphan lock file behind. The residue is
+non-destructive — it does not touch scene data — and is recoverable: Core evicts
+dead registry entries automatically the next time it reads the registry, and a
+service stopped through the stop-event path leaves no such residue. Prefer the
+programmatic stop-event path for any service you need to stop cleanly, and treat
+force termination as a last resort rather than a routine workaround; do not make
+manual registry or lock-file cleanup part of normal operation.
+
 ## Writing Standalone-Safe Skills
 
 Most typed Maya skills work unchanged in `mayapy` when they follow the normal

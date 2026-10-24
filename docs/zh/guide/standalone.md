@@ -87,6 +87,74 @@ HTTP 客户端在其他线程或进程运行时，主线程必须调用 `drain_q
 长驻服务优先使用 `serve_headless()`，`mayapy -m dcc_mcp_maya` 和仓库示例
 都使用它。它通过 Core dispatcher 统一管理主线程 pump、服务生命周期和清理。
 
+## Windows 上的优雅关闭
+
+本节适用于 **Windows standalone** 服务模式（`serve_headless()` 与
+`mayapy -m dcc_mcp_maya`）。结论已在 **Windows + Maya 2022、2024、2026** 上验证，
+不代表其他平台或未来 Maya 版本。
+
+该模式唯一经过验证的优雅关闭路径，是你传给 `serve_headless(stop_event=...)`
+的程序化停止事件。所有权划分与启动时一致：你负责 Maya 初始化和停止事件，
+`serve_headless()` 负责它自己的 server、dispatcher 以及 owning-main-thread pump。
+设置该 event 后 pump 循环会返回，随后 `serve_headless()` 执行其 `finally` 块
+（`server.stop()` 与 `host.stop()`）。进程随后以退出码 0 退出、端口释放，
+实例会从 `services.json` 和 `locks/` 中移除。
+
+请从你自己的线程或管理程序触发停止——例如 watchdog、任务完成回调或空闲计时器——
+而不是依赖控制台信号（见下文）。
+
+```python
+import threading
+
+import maya.standalone
+
+from dcc_mcp_maya import serve_headless
+
+maya.standalone.initialize(name="python")
+
+stop_event = threading.Event()
+try:
+    # 阻塞当前（主）线程并泵送 Core dispatcher，直到 event 被设置。
+    # 从其他线程设置它即可结束循环并运行清理：
+    #
+    #     stop_event.set()
+    #
+    serve_headless(stop_event=stop_event)
+finally:
+    maya.standalone.uninitialize()
+```
+
+完整的起步示例见
+[`examples/standalone/run_maya_mcp.py`](https://github.com/dcc-mcp/dcc-mcp-maya/blob/main/examples/standalone/run_maya_mcp.py)。
+
+### Windows 上不支持控制台信号
+
+在受测的 Windows standalone 版本中，交互式控制台快捷键无法产生干净的关闭：
+
+- **Ctrl+C（`CTRL_C_EVENT`）** 被忽略——主线程阻塞在 Maya 的 native dispatcher
+  中，Python 的 `SIGINT` handler 不会执行，也不会抛出 `KeyboardInterrupt`。
+- **Ctrl+Break（`CTRL_BREAK_EVENT`）** 通过 Maya 的 Intel Fortran 运行时
+  （`forrtl: error (200)`）终止进程，而不是抛出 Python `KeyboardInterrupt`，
+  因此入口处的 `try`/`except KeyboardInterrupt` 与 `finally` 清理都不会执行。
+
+由于 `python -m dcc_mcp_maya` 会一直服务到被中断，在 Windows 上不要依赖控制台
+信号来停止它，而应使用该停止事件驱动生命周期。
+
+### 关闭方式对比
+
+| 关闭方式 | 干净退出 | 端口释放 | 注册表（`services.json` / `locks/`） |
+|---|---|---|---|
+| `stop_event.set()`（程序化） | 是 — rc 0 | 是 | 清空 |
+| Ctrl+C（`CTRL_C_EVENT`） | 否 — 被忽略；服务继续运行 | 不适用 | 不变 |
+| Ctrl+Break（`CTRL_BREAK_EVENT`） | 否 — 被 Maya 运行时杀死 | 是 | 可能残留死 pid 记录和孤儿 `.lock` 文件 |
+| 强制终止（`taskkill /F`） | 否 — 被杀死 | 是 | 可能残留死 pid 记录和孤儿 `.lock` 文件 |
+
+强制终止 standalone 服务是一个已知限制：它可能残留过期的 `services.json` 记录和
+孤儿锁文件。这些残留是非破坏性的——不会触及场景数据——且可恢复：Core 会在下次读取
+注册表时自动清除死 pid 记录，而通过停止事件路径关闭的服务不会留下任何残留。对于需要
+干净停止的服务，请优先使用程序化停止路径，并把强制终止当作最后手段而不是常规做法；
+不要将手动清理注册表或锁文件纳入常规操作。
+
 ## 编写 Standalone-Safe Skills
 
 遵守常规规则时，大多数 typed Maya skills 可以不改就跑在 `mayapy` 中：
