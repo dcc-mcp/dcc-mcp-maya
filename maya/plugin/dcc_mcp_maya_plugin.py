@@ -1388,7 +1388,7 @@ def _uninstall_shutdown_safety() -> None:
 
 
 def _stop_host_on_main_thread() -> None:
-    """Stop the Maya host idle tick (``detach_tick`` / ``scriptJob`` — main thread only)."""
+    """Stop the Maya host Qt tick (``detach_tick`` — main thread only)."""
     global _host, _host_dispatcher, _host_startup
     if _host is None and _host_startup is None:
         return
