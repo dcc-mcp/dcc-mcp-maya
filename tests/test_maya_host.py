@@ -150,6 +150,43 @@ def test_host_tick_rejects_worker_thread(host_qt):
     host.detach_tick()
 
 
+def test_instances_do_not_detach_each_other(host_qt):
+    from dcc_mcp_maya.host import MayaHost
+
+    first, second = MayaHost(_Dispatcher()), MayaHost(_Dispatcher())
+    first_tick, second_tick = MagicMock(return_value=0.5), MagicMock(return_value=0.5)
+    first.attach_tick(first_tick)
+    second.attach_tick(second_tick)
+    first.detach_tick()
+    host_qt[0].fire()
+    host_qt[1].fire()
+    first_tick.assert_not_called()
+    second_tick.assert_called_once_with()
+    assert host_qt[1].active
+    second.detach_tick()
+
+
+def test_reattach_during_tick_does_not_rearm_retired_timer(host_qt):
+    from dcc_mcp_maya.host import MayaHost
+
+    host = MayaHost(_Dispatcher())
+    replacement = MagicMock(return_value=0.5)
+
+    def replace():
+        host.detach_tick()
+        host.attach_tick(replacement)
+        return 0.5
+
+    host.attach_tick(replace)
+    host_qt[0].fire()
+    assert host_qt[0].deleted and not host_qt[0].active
+    host_qt[0].fire()
+    replacement.assert_not_called()
+    host_qt[1].fire()
+    replacement.assert_called_once_with()
+    host.detach_tick()
+
+
 def test_callable_dispatcher_forwards_core_metadata():
     from dcc_mcp_maya.host import MayaCallableDispatcher
 
