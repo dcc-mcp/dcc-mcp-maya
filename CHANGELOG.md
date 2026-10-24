@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.9.43](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.42...v0.9.43) (2026-10-24)
+
+
+### Bug Fixes
+
+* enable selected render camera temporarily ([0c1fa4f](https://github.com/dcc-mcp/dcc-mcp-maya/commit/0c1fa4f9436757855cad5e8773d49bd1c4fc43de))
+* isolate selected camera output and restore flags ([9d435e5](https://github.com/dcc-mcp/dcc-mcp-maya/commit/9d435e5b9b7077d02bae325a6238bd0cfb7ac2cf))
+* normalize render camera DAG paths ([19199c3](https://github.com/dcc-mcp/dcc-mcp-maya/commit/19199c376db5aa3c9ec3a8dc64685c3b1fc2be3a))
+* normalize render prefixes for Maya paths ([f78f3e5](https://github.com/dcc-mcp/dcc-mcp-maya/commit/f78f3e5c1077f19ecce15ca8a70601e11c5a5d76))
+* preserve unique camera DAG identity ([a1162a9](https://github.com/dcc-mcp/dcc-mcp-maya/commit/a1162a92f098a9f18a3499a8f2beee46e1805cda))
+* reject ambiguous cameras before type queries ([a23af12](https://github.com/dcc-mcp/dcc-mcp-maya/commit/a23af12b1200cb6e5617b9bfa943d39f22a6b41f))
+* remove server lifecycle controls from Maya menu ([af2a698](https://github.com/dcc-mcp/dcc-mcp-maya/commit/af2a698efa381308ff602fe71bc91bb3bc4dcc75))
+* report configured view transform in frame renders ([706124c](https://github.com/dcc-mcp/dcc-mcp-maya/commit/706124c35f25ad4cde97b7d6765f0056cfb8437a))
+* report unisolatable render cameras safely ([463fe2e](https://github.com/dcc-mcp/dcc-mcp-maya/commit/463fe2e4d663ce1c0a5ae9d5494d980a745a4d14))
+* respect Maya host tick intervals ([#597](https://github.com/dcc-mcp/dcc-mcp-maya/issues/597)) ([3d1d31e](https://github.com/dcc-mcp/dcc-mcp-maya/commit/3d1d31e4d2944648976c92fe5ab1d9c6d4c2b824))
+* retain bake results when cleanup fails ([df9b996](https://github.com/dcc-mcp/dcc-mcp-maya/commit/df9b99689ed496876c88d559fd34528c2aa8efab))
+* simplify Maya menu to admin and version information ([2e98588](https://github.com/dcc-mcp/dcc-mcp-maya/commit/2e98588f4e9b6805a91391ac72a0cd19736a9441))
+* simplify Maya menu to admin and version information ([397ecf0](https://github.com/dcc-mcp/dcc-mcp-maya/commit/397ecf0927d41e37a05fdefc048eaf7cc32f8717))
+* use supported diffuse texture sampling contract ([2a3ae26](https://github.com/dcc-mcp/dcc-mcp-maya/commit/2a3ae263bd820106fb625a9b606bca6bcba73d15))
+* validate bake outputs and restore scene state ([079efcf](https://github.com/dcc-mcp/dcc-mcp-maya/commit/079efcf42d3800a4c7919fb29b9c7e373eb54d93))
+
 ## [0.9.42](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.41...v0.9.42) (2026-10-22)
 
 
