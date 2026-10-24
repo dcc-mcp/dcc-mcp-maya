@@ -187,6 +187,38 @@ def test_reattach_during_tick_does_not_rearm_retired_timer(host_qt):
     host.detach_tick()
 
 
+def test_importable_qt6_without_app_uses_live_qt2(watchdog_qt, monkeypatch):
+    from types import ModuleType, SimpleNamespace
+
+    from dcc_mcp_maya.host import MayaHost
+
+    qt2 = sys.modules["PySide6.QtCore"]
+    qt6 = ModuleType("PySide6.QtCore")
+    qt6.QCoreApplication = SimpleNamespace(instance=lambda: None)
+    qt6.QTimer = MagicMock()
+    monkeypatch.setitem(sys.modules, "PySide6.QtCore", qt6)
+    monkeypatch.setitem(sys.modules, "PySide2", sys.modules["PySide6"])
+    monkeypatch.setitem(sys.modules, "PySide2.QtCore", qt2)
+    host = MayaHost(_Dispatcher())
+    host.attach_tick(MagicMock(return_value=0.5))
+    assert len(watchdog_qt) == 1
+    qt6.QTimer.assert_not_called()
+    host.detach_tick()
+
+
+def test_attach_without_live_qt_app_fails_without_timer(watchdog_qt, monkeypatch):
+    from dcc_mcp_maya.host import MayaHost
+
+    core = sys.modules["PySide6.QtCore"]
+    core.QCoreApplication.instance = lambda: None
+    monkeypatch.setitem(sys.modules, "PySide2", None)
+    monkeypatch.setitem(sys.modules, "PySide2.QtCore", None)
+    host = MayaHost(_Dispatcher())
+    with pytest.raises(RuntimeError, match="running Qt application"):
+        host.attach_tick(MagicMock())
+    assert host._tick_timer is None and not watchdog_qt
+
+
 def test_callable_dispatcher_forwards_core_metadata():
     from dcc_mcp_maya.host import MayaCallableDispatcher
 
