@@ -46,9 +46,9 @@ _FPS_BY_UNIT = {
 _INFINITY_BY_VALUE = {
     0: "constant",
     1: "linear",
-    2: "cycle",
-    3: "cycle_relative",
-    4: "oscillate",
+    3: "cycle",
+    4: "cycle_relative",
+    5: "oscillate",
 }
 
 

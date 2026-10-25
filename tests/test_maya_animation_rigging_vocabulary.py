@@ -3,10 +3,11 @@ import sys
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import pytest
 import yaml
 
 # Import local modules
-from conftest import load_and_call
+from conftest import load_and_call, load_skill_script
 
 # Import third-party modules
 from jsonschema import Draft202012Validator
@@ -462,7 +463,7 @@ def test_get_anim_curves_returns_values_tangents_and_infinity():
 
     cmds.keyframe.side_effect = _keyframe
     cmds.keyTangent.side_effect = _key_tangent
-    cmds.getAttr.side_effect = lambda plug: 0 if plug.endswith(".preInfinity") else 2
+    cmds.getAttr.side_effect = lambda plug: 0 if plug.endswith(".preInfinity") else 3
 
     result = load_and_call(
         "maya-animation/scripts/get_anim_curves.py",
@@ -805,3 +806,33 @@ def test_export_rig_state_reports_hierarchy_constraints_controls_and_skin_health
     assert state["constraints"]["nodes"][0]["targets"] == ["|rig|root_jnt"]
     assert state["controls"]["nodes"] == [{"name": "hand_ctrl", "shapes": ["hand_ctrlShape"]}]
     assert state["skins"][0]["unnormalized_vertices"] == 0
+
+
+@pytest.mark.parametrize(
+    "native_value, expected",
+    [
+        (0, "constant"),
+        (1, "linear"),
+        (3, "cycle"),
+        (4, "cycle_relative"),
+        (5, "oscillate"),
+    ],
+)
+def test_curve_infinity_readback_matches_maya_native_enum(native_value, expected):
+    reader = load_skill_script("maya-animation", "get_anim_curves")
+    writer = load_skill_script("maya-animation", "set_keyframes")
+    cmds = MagicMock()
+    cmds.getAttr.return_value = native_value
+    assert reader._infinity_name(native_value) == expected
+    assert writer._read_infinity(cmds, "curve1", "postInfinity") == expected
+
+
+def test_curve_infinity_readback_rejects_unused_native_enum():
+    reader = load_skill_script("maya-animation", "get_anim_curves")
+    writer = load_skill_script("maya-animation", "set_keyframes")
+    cmds = MagicMock()
+    cmds.getAttr.return_value = 2
+    with pytest.raises(ValueError, match="unknown infinity"):
+        reader._infinity_name(2)
+    with pytest.raises(RuntimeError, match="unknown postInfinity"):
+        writer._read_infinity(cmds, "curve1", "postInfinity")

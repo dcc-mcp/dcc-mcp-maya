@@ -77,3 +77,32 @@ def test_skin_weights_and_rig_state_round_trip_native_maya_state():
     assert state["context"]["joints"]["count"] == 2
     assert state["context"]["skins"][0]["unnormalized_vertices"] == 0
     assert state["context"]["controls"]["count"] == 1
+
+
+@pytest.mark.parametrize(
+    "mode, expected",
+    [
+        ("cycle", "cycle"),
+        ("cycleRelative", "cycle_relative"),
+        ("oscillate", "oscillate"),
+    ],
+)
+def test_native_infinity_modes_survive_typed_batch_and_readback(mode, expected):
+    _new_scene()
+    node = cmds.polyCube(name="loop_control")[0]
+    plug = node + ".rotateY"
+    cmds.setKeyframe(plug, time=1, value=0)
+    cmds.setInfinity(plug, preInfinite=mode, postInfinite=mode)
+    writer = _load_script("maya-animation", "set_keyframes")
+    reader = _load_script("maya-animation", "get_anim_curves")
+    written = writer.set_keyframes(
+        objects=[node],
+        attribute="rotateY",
+        keys=[{"time": 72.0, "value": 360.0}],
+    )
+    readback = reader.get_anim_curves(targets=[plug])
+    for result in (written, readback):
+        assert result["success"] is True, result
+        curve = result["context"]["curves"][0]
+        assert curve["pre_infinity"] == expected
+        assert curve["post_infinity"] == expected
