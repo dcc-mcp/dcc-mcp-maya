@@ -90,17 +90,23 @@ HTTP 客户端在其他线程或进程运行时，主线程必须调用 `drain_q
 ## Windows 上的优雅关闭
 
 本节适用于 **Windows standalone** 服务模式（`serve_headless()` 与
-`mayapy -m dcc_mcp_maya`）。结论已在 **Windows + Maya 2022、2024、2026** 上验证，
-不代表其他平台或未来 Maya 版本。
+`mayapy -m dcc_mcp_maya`）。这里说明已实现的协作式关闭 API 和平台约束，
+不构成特定版本的原生验收矩阵，也不保证 Maya 对控制台信号的具体处理方式。
 
-该模式唯一经过验证的优雅关闭路径，是你传给 `serve_headless(stop_event=...)`
-的程序化停止事件。所有权划分与启动时一致：你负责 Maya 初始化和停止事件，
+`serve_headless(stop_event=...)` 是 Python API。当前模块 CLI 不接受也不暴露停止事件，
+亦未提供外部关闭通道。需要可控生命周期的 Windows 服务应使用自有 wrapper，传入自己
+持有的 event，再由应用自己的线程或回调设置它，结构示例如下。
+
+使用传给 `serve_headless(stop_event=...)` 的程序化停止事件实现协作式关闭。
+所有权划分与启动时一致：你负责 Maya 初始化和停止事件，
 `serve_headless()` 负责它自己的 server、dispatcher 以及 owning-main-thread pump。
-设置该 event 后 pump 循环会返回，随后 `serve_headless()` 执行其 `finally` 块
-（`server.stop()` 与 `host.stop()`）。进程随后以退出码 0 退出、端口释放，
-实例会从 `services.json` 和 `locks/` 中移除。
+正在运行的主线程操作返回后，设置该 event 才会让 pump 循环结束，随后
+`serve_headless()` 执行其 `finally` 块（`server.stop()` 与 `host.stop()`）。
+该函数返回调用者，并不自行终止进程。wrapper 正常完成清理后，应核验退出码 0、
+该服务端口已释放，以及该实例的 `services.json` 记录和它拥有的锁文件已移除。
+其他实例及其锁文件必须保持不变。
 
-请从你自己的线程或管理程序触发停止——例如 watchdog、任务完成回调或空闲计时器——
+请从应用自己的线程或回调触发停止——例如 watchdog、任务完成回调或空闲计时器——
 而不是依赖控制台信号（见下文）。
 
 ```python
@@ -124,35 +130,40 @@ finally:
     maya.standalone.uninitialize()
 ```
 
-完整的起步示例见
-[`examples/standalone/run_maya_mcp.py`](https://github.com/dcc-mcp/dcc-mcp-maya/blob/main/examples/standalone/run_maya_mcp.py)。
+现有的
+[`examples/standalone/run_maya_mcp.py`](https://github.com/dcc-mcp/dcc-mcp-maya/blob/main/examples/standalone/run_maya_mcp.py)
+展示了所有权结构，但只由信号 handler 设置 stop event，而且会打印 Ctrl+C 提示。
+它**不是完整的 Windows 关闭示例**：依赖它实现 Windows 干净关闭前，必须先将这种
+仅靠信号的触发方式替换为自己实现的程序化触发方式。
 
-### Windows 上不支持控制台信号
+### 不要依赖控制台信号
 
-在受测的 Windows standalone 版本中，交互式控制台快捷键无法产生干净的关闭：
+Ctrl+C（`CTRL_C_EVENT`）和 Ctrl+Break（`CTRL_BREAK_EVENT`）是控制台控制事件，
+并不是 adapter 的关闭命令。Windows 应用可以改变控制台 Ctrl+C 的处理方式，参见
+[Microsoft 控制台信号文档](https://learn.microsoft.com/en-us/windows/console/ctrl-c-and-ctrl-break-signals)。
+Python 的信号 handler 在主解释器线程执行，长时间的 native 调用可能推迟它们的执行，
+参见 [Python 信号 handler 文档](https://docs.python.org/3/library/signal.html#execution-of-python-signal-handlers)。
+这些平台规则不能证明某个 Maya 版本的具体行为；不要假设任一种信号必然执行 adapter
+的 Python 清理流程。
 
-- **Ctrl+C（`CTRL_C_EVENT`）** 被忽略——主线程阻塞在 Maya 的 native dispatcher
-  中，Python 的 `SIGINT` handler 不会执行，也不会抛出 `KeyboardInterrupt`。
-- **Ctrl+Break（`CTRL_BREAK_EVENT`）** 通过 Maya 的 Intel Fortran 运行时
-  （`forrtl: error (200)`）终止进程，而不是抛出 Python `KeyboardInterrupt`，
-  因此入口处的 `try`/`except KeyboardInterrupt` 与 `finally` 清理都不会执行。
-
-由于 `python -m dcc_mcp_maya` 会一直服务到被中断，在 Windows 上不要依赖控制台
-信号来停止它，而应使用该停止事件驱动生命周期。
+在 Windows 上不要依赖控制台信号停止 `mayapy -m dcc_mcp_maya`。该入口不会注入
+停止事件；需要程序化控制生命周期时，应使用上面的自有 Python wrapper。本节不新增
+CLI 关闭参数，也不承诺自动优雅退出。
 
 ### 关闭方式对比
 
 | 关闭方式 | 干净退出 | 端口释放 | 注册表（`services.json` / `locks/`） |
 |---|---|---|---|
-| `stop_event.set()`（程序化） | 是 — rc 0 | 是 | 清空 |
-| Ctrl+C（`CTRL_C_EVENT`） | 否 — 被忽略；服务继续运行 | 不适用 | 不变 |
-| Ctrl+Break（`CTRL_BREAK_EVENT`） | 否 — 被 Maya 运行时杀死 | 是 | 可能残留死 pid 记录和孤儿 `.lock` 文件 |
-| 强制终止（`taskkill /F`） | 否 — 被杀死 | 是 | 可能残留死 pid 记录和孤儿 `.lock` 文件 |
+| `stop_event.set()`（自有 wrapper 正常清理） | 核验 rc 0 | 核验已释放 | 核验仅移除该实例记录及它拥有的锁 |
+| Ctrl+C（`CTRL_C_EVENT`） | 不保证，取决于宿主 | 检查进程实际状态 | 不保证清理 |
+| Ctrl+Break（`CTRL_BREAK_EVENT`） | 不保证，取决于宿主 | 检查进程实际状态 | 不保证清理 |
+| 强制终止（`taskkill /F`） | 不执行优雅清理 | 进程退出后释放 | 可能残留死 pid 记录和孤儿 `.lock` 文件 |
 
 强制终止 standalone 服务是一个已知限制：它可能残留过期的 `services.json` 记录和
-孤儿锁文件。这些残留是非破坏性的——不会触及场景数据——且可恢复：Core 会在下次读取
-注册表时自动清除死 pid 记录，而通过停止事件路径关闭的服务不会留下任何残留。对于需要
-干净停止的服务，请优先使用程序化停止路径，并把强制终止当作最后手段而不是常规做法；
+孤儿锁文件。残留本身是非破坏性的，不会触及场景数据，但强杀 Maya 仍可能丢失未保存
+的工作。Core 的存活性检查与 gateway 清理路径可以移除死实例；任意一次注册表读取
+并不保证执行清理。通过停止事件关闭后，应按上述方式核验本实例的清理，不要删除其他
+实例的记录或锁文件。对于需要干净停止的服务，请优先使用程序化停止路径，并把强制终止当作最后手段而不是常规做法；
 不要将手动清理注册表或锁文件纳入常规操作。
 
 ## 编写 Standalone-Safe Skills
