@@ -118,6 +118,11 @@ Trigger the stop from an application-owned thread or callback — for example a
 watchdog, a job-completion callback, or an idle timer — not from a console signal
 (see below).
 
+**Skeleton only: no stop trigger is installed below.** Before running this as a
+service, wire an application-owned thread or callback to `stop_event.set()`.
+Copying this block unchanged leaves the service running; the commented call is
+not an implemented shutdown trigger.
+
 ```python
 import threading
 
