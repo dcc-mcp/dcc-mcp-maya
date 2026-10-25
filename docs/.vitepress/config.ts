@@ -1,12 +1,15 @@
 import { defineConfig } from 'vitepress'
 
+// GitHub Pages serves this project beneath its repository name, not at '/'.
+const base = '/dcc-mcp-maya/'
+
 export default defineConfig({
   title: 'dcc-mcp-maya',
   description: 'AI-Powered Maya Automation via MCP Protocol',
-  base: '/',
+  base,
 
   head: [
-    ['link', { rel: 'icon', href: '/favicon.ico' }],
+    ['link', { rel: 'icon', type: 'image/svg+xml', href: `${base}logo.svg` }],
   ],
 
   locales: {

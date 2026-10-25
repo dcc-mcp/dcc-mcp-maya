@@ -16,7 +16,7 @@ URL；默认实例端口由操作系统分配。
 1. 打开 **Cursor 设置 → MCP**（或按你使用的 Cursor 版本编辑工作区 / 用户 MCP JSON）。
 2. 添加使用 **HTTP** / **Streamable HTTP** 传输、指向上述 Maya URL 的服务器。
 
-可将 [`examples/mcp/cursor-maya-streamable-http.json`](../../examples/mcp/cursor-maya-streamable-http.json) 中的 JSON 片段复制到 MCP 配置，或合并为：
+可将 [`examples/mcp/cursor-maya-streamable-http.json`](https://github.com/dcc-mcp/dcc-mcp-maya/blob/main/examples/mcp/cursor-maya-streamable-http.json) 中的 JSON 片段复制到 MCP 配置，或合并为：
 
 ```json
 {
