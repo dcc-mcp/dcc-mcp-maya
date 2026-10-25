@@ -16,7 +16,7 @@ For a deliberately direct Python server, use the exact URL returned by
 1. Open **Cursor Settings → MCP** (or edit the workspace / user MCP JSON, depending on your Cursor version).
 2. Add a server that uses the **HTTP** / **Streamable HTTP** transport to your Maya URL.
 
-Copy the JSON fragment from [`examples/mcp/cursor-maya-streamable-http.json`](../../examples/mcp/cursor-maya-streamable-http.json) into your MCP configuration, or merge:
+Copy the JSON fragment from [`examples/mcp/cursor-maya-streamable-http.json`](https://github.com/dcc-mcp/dcc-mcp-maya/blob/main/examples/mcp/cursor-maya-streamable-http.json) into your MCP configuration, or merge:
 
 ```json
 {

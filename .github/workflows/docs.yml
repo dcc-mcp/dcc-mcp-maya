@@ -6,12 +6,16 @@ on:
     paths:
       - "docs/**"
       - "examples/mcp/**"
+      - "tools/check_docs_pages.py"
+      - "tools/test_check_docs_pages.py"
       - ".github/workflows/docs.yml"
   pull_request:
     branches: [main]
     paths:
       - "docs/**"
       - "examples/mcp/**"
+      - "tools/check_docs_pages.py"
+      - "tools/test_check_docs_pages.py"
       - ".github/workflows/docs.yml"
   workflow_dispatch:
 
@@ -47,6 +51,12 @@ jobs:
       - name: Build VitePress site
         working-directory: docs
         run: npm run build
+
+      - name: Test documentation link checker
+        run: python -m unittest discover -s tools -p test_check_docs_pages.py
+
+      - name: Verify project-base links and assets
+        run: python tools/check_docs_pages.py
 
       - name: Upload artifact
         if: github.event_name != 'pull_request'
