@@ -888,7 +888,7 @@ def _asset_path(relative):
 def _platform_token():
     if os.name == "nt":
         return "win64"
-    return "macos" if sys.platform == "darwin" else "linux"
+    return "mac" if sys.platform == "darwin" else "linux"
 
 
 def _render_descriptor(module_root, has_python37=False):

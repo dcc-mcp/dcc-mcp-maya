@@ -923,8 +923,9 @@ def extract_server_wheel(wheel_path: Path, dest: Path) -> None:
 def generate_mod_file(version: str, platform: str, path: str = ".") -> str:
     """Generate .mod file content for the supported Maya versions."""
     lines = []
+    module_platform = "mac" if platform == "macos" else platform
     for maya_version in supported_maya_versions(platform):
-        lines.append(f"+ MAYAVERSION:{maya_version} PLATFORM:{platform} dcc_mcp_maya {version} {path}")
+        lines.append(f"+ MAYAVERSION:{maya_version} PLATFORM:{module_platform} dcc_mcp_maya {version} {path}")
         lines.append(f"PYTHONPATH+:={MAYA_PYTHONPATH_BY_VERSION[maya_version]}")
         lines.append("PLUG_IN_PATH+:=plug-ins")
 

@@ -8,6 +8,7 @@ import importlib.util as _ilu
 import json
 import os
 import re
+import shutil
 import socket
 import subprocess
 import sys
@@ -527,6 +528,8 @@ class TestGenerateModFile:
 
     def test_macos_versions(self):
         content = assemble_mod.generate_mod_file("0.2.2", "macos")
+        assert "PLATFORM:mac " in content
+        assert "PLATFORM:macos" not in content
         assert "MAYAVERSION:2022" not in content
         assert "MAYAVERSION:2023" in content
         assert "MAYAVERSION:2026" in content
@@ -572,6 +575,29 @@ class TestPackagingReadmes:
 
 
 class TestPackagingInstallers:
+    @pytest.mark.skipif(os.name == "nt" or not shutil.which("bash"), reason="requires POSIX bash installer")
+    @pytest.mark.parametrize(
+        "ostype, relative_modules, token",
+        [("darwin23", "Library/Preferences/Autodesk/maya/modules", "mac"), ("linux-gnu", "maya/modules", "linux")],
+    )
+    def test_shell_installer_emits_maya_platform_token(self, tmp_path, ostype, relative_modules, token):
+        module = tmp_path / "module"
+        module.mkdir()
+        shutil.copy2(PROJECT_ROOT / "packaging" / "install.sh", module / "install.sh")
+        (module / "dcc_mcp_maya.mod").write_text(
+            "+ MAYAVERSION:2024 PLATFORM:mac dcc_mcp_maya 0.9.43 .\n", encoding="utf-8"
+        )
+        (module / "scripts").mkdir()
+        (module / "scripts" / "userSetup.py").write_text("# dcc_mcp_maya test fixture\n", encoding="utf-8")
+        home = tmp_path / "home"
+        env = dict(os.environ, HOME=str(home), OSTYPE=ostype)
+        subprocess.run([shutil.which("bash"), str(module / "install.sh")], env=env, check=True, capture_output=True)
+        descriptor = (home / relative_modules / "dcc_mcp_maya.mod").read_text(encoding="utf-8")
+        headers = [line for line in descriptor.splitlines() if line.startswith("+")]
+        assert headers
+        assert all("PLATFORM:{} ".format(token) in line for line in headers)
+        assert "PLATFORM:macos" not in descriptor
+
     def test_windows_installer_reads_version_from_generated_mod_contract(self):
         installer = (PROJECT_ROOT / "packaging" / "install.bat").read_text(encoding="utf-8")
         token_match = re.search(r'for /f "tokens=(\d+)" %%v', installer)
