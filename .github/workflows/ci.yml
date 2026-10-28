@@ -18,11 +18,18 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-latest, windows-latest, macos-26]
         python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
 
     steps:
       - uses: actions/checkout@v6
+
+      - name: Verify macOS runner architecture
+        if: runner.os == 'macOS'
+        run: |
+          arch="$(uname -m)"
+          echo "macOS runner architecture: ${arch}"
+          test "${arch}" = arm64
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v6
