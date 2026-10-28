@@ -20,7 +20,7 @@ echo
 if [[ "$OSTYPE" == "darwin"* ]]; then
     MOD_DEST="$HOME/Library/Preferences/Autodesk/maya/modules"
     SCRIPTS_DEST="$HOME/Library/Preferences/Autodesk/maya/scripts"
-    PLATFORM="macos"
+    PLATFORM="mac"
     MAYA_VERSIONS="2023 2024 2025 2026"
 else
     MOD_DEST="$HOME/maya/modules"

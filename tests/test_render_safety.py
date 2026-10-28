@@ -51,5 +51,43 @@ def test_capture_rejects_returned_subdirectory_image(tmp_path):
     child.mkdir()
     image = child / "capture.png"
     image.write_bytes(b"not-direct-output")
-    with pytest.raises(RuntimeError, match="found 0"):
+    with pytest.raises(RuntimeError, match="invalid captured PNG path"):
         mod._capture_image_path(str(tmp_path), str(image))
+
+
+@pytest.mark.parametrize("kind", ["external", "symlink", "broken_symlink", "nested", "non_png", "directory"])
+def test_existing_invalid_return_never_falls_back_to_another_capture(tmp_path, kind):
+    mod = _load_render_script("capture_viewport")
+    capture = tmp_path / "private"
+    capture.mkdir()
+    (capture / "capture.0000.png").write_bytes(b"different-image")
+    outside = tmp_path / "outside.png"
+    outside.write_bytes(b"external-image")
+    if kind == "external":
+        returned = outside
+    elif kind in ("symlink", "broken_symlink"):
+        returned = capture / "returned.png"
+        try:
+            returned.symlink_to(outside if kind == "symlink" else tmp_path / "missing.png")
+        except (PermissionError, NotImplementedError) as exc:
+            pytest.skip("Filesystem cannot create the symlink fixture: {}".format(exc))
+    elif kind == "nested":
+        (capture / "nested").mkdir()
+        returned = capture / "nested" / "returned.png"
+        returned.write_bytes(b"nested-image")
+    elif kind == "non_png":
+        returned = capture / "returned.txt"
+        returned.write_bytes(b"text")
+    else:
+        returned = capture / "returned.png"
+        returned.mkdir()
+    with pytest.raises(RuntimeError, match="invalid captured PNG path"):
+        mod._capture_image_path(str(capture), str(returned))
+    assert outside.read_bytes() == b"external-image"
+
+
+def test_nonexistent_sequence_template_still_resolves_actual_image(tmp_path):
+    mod = _load_render_script("capture_viewport")
+    actual = tmp_path / "capture.0000.png"
+    actual.write_bytes(b"image")
+    assert mod._capture_image_path(str(tmp_path), str(tmp_path / "capture.####.png")) == str(actual)

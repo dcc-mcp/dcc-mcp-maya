@@ -47,7 +47,9 @@ def _capture_image_path(directory: str, returned_path) -> str:
             and os.path.isfile(path)
         )
 
-    if isinstance(returned_path, str) and owned_png(returned_path):
+    if isinstance(returned_path, str) and os.path.lexists(returned_path):
+        if not owned_png(returned_path):
+            raise RuntimeError("Maya returned an invalid captured PNG path")
         return returned_path
     candidates = [
         os.path.join(directory, name)
