@@ -5,10 +5,12 @@ from __future__ import annotations
 import importlib.util
 import os
 import sys
+import tempfile
 from pathlib import Path
 from types import ModuleType
 from unittest.mock import MagicMock, patch
 
+import pytest
 import yaml
 from conftest import load_and_call, load_and_call_with_mel
 
@@ -750,3 +752,89 @@ def test_debug_scene_snapshot_returns_summary_without_preview():
     assert summary["mesh_count"] == 1
     assert summary["truncated"] is True
     assert result["context"]["preview"] is None
+
+
+@pytest.mark.parametrize("suffix", [".0000.png", ".0001.png", ".0042.png", ".png"])
+@pytest.mark.parametrize("returned", ["actual", "template", "none"])
+def test_capture_uses_actual_output_and_cleans_directory(suffix, returned):
+    cmds = MagicMock()
+    cmds.currentTime.return_value = 42.0
+    _configure_model_panel(cmds)
+    paths = []
+
+    def playblast(**kwargs):
+        path = Path(kwargs["filename"] + suffix)
+        paths.append(path)
+        path.write_bytes(b"host-png")
+        return {"actual": str(path), "template": kwargs["filename"] + ".####.png", "none": None}[returned]
+
+    cmds.playblast.side_effect = playblast
+    result = load_and_call("maya-render/scripts/capture_viewport.py", cmds, "main")
+    assert result["success"] is True, result
+    assert result["context"]["image"] == "aG9zdC1wbmc="
+    assert not paths[0].parent.exists()
+
+
+@pytest.mark.parametrize("failure", ["empty", "missing", "raise", "ambiguous", "external", "symlink"])
+def test_capture_failure_cleanup_and_external_boundary(tmp_path, failure):
+    cmds = MagicMock()
+    cmds.currentTime.return_value = 1.0
+    _configure_model_panel(cmds)
+    outside = tmp_path / "outside.png"
+    outside.write_bytes(b"private-unrelated")
+    directories = []
+
+    def playblast(**kwargs):
+        path = Path(kwargs["filename"] + ".0000.png")
+        directories.append(path.parent)
+        if failure == "external":
+            return str(outside)
+        if failure == "symlink":
+            path.symlink_to(outside)
+            return str(path)
+        if failure != "missing":
+            path.write_bytes(b"" if failure == "empty" else b"png")
+        if failure == "raise":
+            raise RuntimeError("host failed after writing")
+        if failure == "ambiguous":
+            path.with_name("capture.0001.png").write_bytes(b"second")
+        return None
+
+    cmds.playblast.side_effect = playblast
+    result = load_and_call("maya-render/scripts/capture_viewport.py", cmds, "main")
+    assert result["success"] is False, result
+    if failure == "empty":
+        assert result["context"]["error_code"] == "EMPTY_PLAYBLAST"
+    assert not directories[0].exists()
+    assert outside.read_bytes() == b"private-unrelated"
+
+
+@pytest.mark.parametrize("outcome", ["success", "empty", "host_failure"])
+def test_capture_cleanup_failure_preserves_primary_result(outcome):
+    cmds = MagicMock()
+    cmds.currentTime.return_value = 1.0
+    _configure_model_panel(cmds)
+    directories = []
+    cleanup = tempfile.TemporaryDirectory.cleanup
+
+    def fail_cleanup(directory):
+        directories.append(directory)
+        raise PermissionError("output still locked")
+
+    if outcome == "host_failure":
+        cmds.playblast.side_effect = RuntimeError("original host failure")
+    else:
+        cmds.playblast.side_effect = _write_playblast_bytes(b"" if outcome == "empty" else b"png")
+    try:
+        with patch.object(tempfile.TemporaryDirectory, "cleanup", fail_cleanup):
+            result = load_and_call("maya-render/scripts/capture_viewport.py", cmds, "main")
+        assert result["success"] is (outcome == "success"), result
+        assert result["context"]["cleanup_status"] == "failed"
+        assert "output still locked" in result["context"]["cleanup_warning"]
+        if outcome == "empty":
+            assert result["context"]["error_code"] == "EMPTY_PLAYBLAST"
+        if outcome == "host_failure":
+            assert "original host failure" in str(result)
+    finally:
+        for directory in directories:
+            cleanup(directory)

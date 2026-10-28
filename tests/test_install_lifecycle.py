@@ -1547,3 +1547,16 @@ def test_ci_matrix_still_uploads_coverage():
 
     uploads = [step for step in steps if str(step.get("uses", "")).startswith("codecov/codecov-action")]
     assert uploads, "test job lost its Codecov upload step"
+
+
+@pytest.mark.parametrize("host_platform, token", [("darwin", "mac"), ("linux", "linux")])
+def test_descriptor_uses_maya_platform_tokens(tmp_path, monkeypatch, host_platform, token):
+    from dcc_mcp_maya import install
+
+    monkeypatch.setattr(install.sys, "platform", host_platform)
+    monkeypatch.setattr(install.os, "name", "posix")
+    descriptor = install._render_descriptor(tmp_path)
+    headers = [line for line in descriptor.splitlines() if line.startswith("+")]
+    assert headers
+    assert all("PLATFORM:{} ".format(token) in line for line in headers)
+    assert "PLATFORM:macos" not in descriptor

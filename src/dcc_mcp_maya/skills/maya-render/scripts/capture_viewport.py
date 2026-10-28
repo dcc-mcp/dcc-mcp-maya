@@ -29,12 +29,34 @@ def _playblast_frame_range(frame: float) -> Tuple[int, int]:
     return (fnum, fnum)
 
 
-def _unlink_if_exists(path: Optional[str]) -> None:
-    if path and os.path.exists(path):
-        try:
-            os.unlink(path)
-        except OSError:
-            pass
+def _capture_image_path(directory: str, returned_path) -> str:
+    """Resolve only real PNG files created inside this capture's private directory.
+
+    Maya may return a sequence template instead of an existing filename, and
+    image numbering may start at zero rather than the requested scene frame.
+    Never follow a returned external path or a symlink outside our directory.
+    """
+    root = os.path.realpath(directory)
+
+    def owned_png(path):
+        return (
+            isinstance(path, str)
+            and os.path.dirname(os.path.realpath(path)) == root
+            and not os.path.islink(path)
+            and path.lower().endswith(".png")
+            and os.path.isfile(path)
+        )
+
+    if isinstance(returned_path, str) and owned_png(returned_path):
+        return returned_path
+    candidates = [
+        os.path.join(directory, name)
+        for name in os.listdir(directory)
+        if name.startswith("capture.") and owned_png(os.path.join(directory, name))
+    ]
+    if len(candidates) != 1:
+        raise RuntimeError("Expected one captured PNG, found {}".format(len(candidates)))
+    return candidates[0]
 
 
 def _apply_view_fit(cmds) -> bool:
@@ -131,10 +153,9 @@ def capture_viewport(
     except ImportError:
         return skill_error("Maya not available", "maya.cmds could not be imported")
 
+    capture_dir = None
+    result = None
     try:
-        tmp_path: Optional[str] = None
-        img_path: Optional[str] = None
-        f0: Optional[int] = None
         preflight_error = viewport_capture_preflight(cmds)
         if preflight_error is not None:
             return preflight_error
@@ -158,12 +179,10 @@ def capture_viewport(
         if view_fit and not view_fit_applied:
             off_screen = True
 
-        # playblast writes  <prefix>.<frame_padded>.png
-        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
-            tmp_path = tmp.name
-
-        # Remove the .png suffix for playblast prefix
-        prefix = tmp_path[:-4]
+        # Own the entire output directory so success and failures clean up every
+        # host-produced file without guessing numbering or touching other files.
+        capture_dir = tempfile.TemporaryDirectory(prefix="dcc-mcp-maya-capture-")
+        prefix = os.path.join(capture_dir.name, "capture")
         playblast_kwargs = dict(
             frame=(f0, f1),
             format="image",
@@ -178,19 +197,12 @@ def capture_viewport(
         )
         if model_panel:
             playblast_kwargs["editorPanelName"] = model_panel
-        cmds.playblast(**playblast_kwargs)
-
-        # playblast appends .<frame>.png
-        padded = "{}.{}.png".format(prefix, str(f0).zfill(4))
-        img_path = padded if os.path.exists(padded) else prefix + ".png"
-
+        returned_path = cmds.playblast(**playblast_kwargs)
+        img_path = _capture_image_path(capture_dir.name, returned_path)
         img_bytes = _read_nonempty_png(img_path)
-        _unlink_if_exists(img_path)
-        if tmp_path != img_path:
-            _unlink_if_exists(tmp_path)
 
         encoded = base64.b64encode(img_bytes).decode("ascii")
-        return skill_success(
+        result = skill_success(
             "Viewport captured ({}x{} @ frame {})".format(width, height, frame),
             image=encoded,
             width=width,
@@ -205,16 +217,11 @@ def capture_viewport(
             visible_model_panels=visible_panels,
             prompt="Use capture_viewport with view_fit=True instead of execute_python viewFit(all=True).",
         )
+        return result
     except ValueError as exc:
         if str(exc) != "EMPTY_PLAYBLAST":
             raise
-        for candidate in (tmp_path, img_path):
-            try:
-                if candidate and os.path.exists(candidate):
-                    os.unlink(candidate)
-            except OSError:
-                pass
-        return skill_error(
+        result = skill_error(
             "Viewport capture produced an empty image",
             "Maya playblast wrote a 0-byte PNG",
             possible_solutions=[
@@ -234,15 +241,9 @@ def capture_viewport(
             viewport_renderer=viewport_renderer,
             visible_model_panels=visible_panels,
         )
+        return result
     except Exception as exc:
-        _unlink_if_exists(tmp_path)
-        if tmp_path is not None:
-            prefix = tmp_path[:-4]
-            _unlink_if_exists(prefix + ".png")
-            if f0 is not None:
-                _unlink_if_exists("{}.{}.png".format(prefix, str(f0).zfill(4)))
-                _unlink_if_exists("{}.{}.png".format(prefix, f0))
-        return skill_exception(
+        result = skill_exception(
             exc,
             message="Failed to capture viewport",
             possible_solutions=[
@@ -250,6 +251,20 @@ def capture_viewport(
                 "Verify a model panel exists (cmds.getPanel(visiblePanels=True)).",
             ],
         )
+        return result
+
+    finally:
+        if capture_dir is not None:
+            try:
+                capture_dir.cleanup()
+            except OSError as exc:
+                # A locked output must not erase the capture result or its
+                # original structured failure. Report cleanup separately.
+                if result is not None:
+                    result.setdefault("context", {}).update(
+                        cleanup_status="failed",
+                        cleanup_warning="Temporary viewport files could not be removed: {}".format(exc),
+                    )
 
 
 @skill_entry

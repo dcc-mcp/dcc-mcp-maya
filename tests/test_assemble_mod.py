@@ -527,6 +527,8 @@ class TestGenerateModFile:
 
     def test_macos_versions(self):
         content = assemble_mod.generate_mod_file("0.2.2", "macos")
+        assert "PLATFORM:mac " in content
+        assert "PLATFORM:macos" not in content
         assert "MAYAVERSION:2022" not in content
         assert "MAYAVERSION:2023" in content
         assert "MAYAVERSION:2026" in content

@@ -35,3 +35,21 @@ def test_nonempty_playblast_png_is_read(script_name: str, tmp_path: Path) -> Non
     png.write_bytes(b"not-really-a-png")
 
     assert mod._read_nonempty_png(str(png)) == b"not-really-a-png"
+
+
+def test_capture_prefers_exact_host_result_over_extra_candidates(tmp_path):
+    mod = _load_render_script("capture_viewport")
+    actual = tmp_path / "capture.0000.PNG"
+    actual.write_bytes(b"actual")
+    (tmp_path / "capture.0001.png").write_bytes(b"extra")
+    assert mod._capture_image_path(str(tmp_path), str(actual)) == str(actual)
+
+
+def test_capture_rejects_returned_subdirectory_image(tmp_path):
+    mod = _load_render_script("capture_viewport")
+    child = tmp_path / "nested"
+    child.mkdir()
+    image = child / "capture.png"
+    image.write_bytes(b"not-direct-output")
+    with pytest.raises(RuntimeError, match="found 0"):
+        mod._capture_image_path(str(tmp_path), str(image))
