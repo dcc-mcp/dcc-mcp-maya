@@ -37,7 +37,7 @@ HOST_MODULES = {"maya", "mtoa", "pxr", "PySide", "PySide2", "PySide6", "shiboken
 STDLIB_MODULES = set(
     "__future__ __main__ argparse ast atexit base64 binascii collections concurrent "
     "contextlib copy ctypes dataclasses datetime difflib email faulthandler functools "
-    "glob hashlib importlib inspect io json logging math numbers os pathlib queue re "
+    "glob hashlib importlib inspect io json keyword logging math numbers os pathlib queue re "
     "runpy shutil signal socket stat statistics subprocess sys tempfile threading "
     "time traceback types typing urllib uuid weakref webbrowser zipfile".split()
 )
@@ -258,7 +258,7 @@ class TestAdapterRuntimeDependencies(unittest.TestCase):
                 self.assertTrue(_import_violations(source, PACKAGE + "new_module.py"))
 
     def test_import_guard_allows_stdlib_first_party_host_and_relative_imports(self):
-        source = "import os, maya.cmds, PySide2, shiboken6, pxr, mtoa\nfrom dcc_mcp_core import skill\nfrom . import helper\n__import__('dcc_mcp_server')"
+        source = "import os, keyword, maya.cmds, PySide2, shiboken6, pxr, mtoa\nfrom dcc_mcp_core import skill\nfrom . import helper\n__import__('dcc_mcp_server')"
         self.assertEqual(_import_violations(source, PACKAGE + "new_module.py"), [])
 
     def test_optional_imports_must_remain_lazy_scoped_and_failure_tolerant(self):
