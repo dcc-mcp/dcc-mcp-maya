@@ -34,6 +34,121 @@ def test_maya_gui_launch_args_use_one_fixed_lowest_priority_bootstrap() -> None:
     assert "-script" not in args
 
 
+def test_default_bootstrap_command_is_byte_equivalent() -> None:
+    command = (
+        "import maya.cmds as cmds; "
+        "cmds.evalDeferred(lambda: __import__('dcc_mcp_maya.gui_bootstrap', "
+        "fromlist=['bootstrap_in_maya']).bootstrap_in_maya(), lowestPriority=True)"
+    )
+    expected = 'python("{}")'.format(command.replace("\\", "\\\\").replace('"', '\\"'))
+    assert build_maya_launch_args("maya.exe") == ["maya.exe", "-command", expected]
+    assert build_maya_launch_args("maya.exe", bootstrap_module=None) == ["maya.exe", "-command", expected]
+
+
+@pytest.mark.parametrize(
+    "module", ["", ".owner", "owner.", "owner..start", "a;b", "a()", "a:b", "a b", "for.a", "a.class"]
+)
+def test_invalid_bootstrap_module_rejected_before_launch(monkeypatch, module) -> None:
+    popen = MagicMock()
+    monkeypatch.setattr(gui_bootstrap.subprocess, "Popen", popen)
+    with pytest.raises(ValueError, match="dotted Python module"):
+        launch_maya_gui(maya_executable="missing-maya.exe", bootstrap_module=module)
+    popen.assert_not_called()
+
+
+def test_operator_bootstrap_module_uses_only_the_fixed_entry_point() -> None:
+    args = build_maya_launch_args("maya.exe", bootstrap_module="studio.maya_owner")
+    assert "__import__('studio.maya_owner', fromlist=['bootstrap_in_maya']).bootstrap_in_maya()" in args[2]
+    assert "lowestPriority=True" in args[2]
+
+
+def test_cli_passes_explicit_bootstrap_module_to_launcher(monkeypatch, capsys) -> None:
+    captured = {}
+
+    def launch(**kwargs):
+        captured.update(kwargs)
+        return {"ready": False}
+
+    monkeypatch.setitem(main.__globals__, "launch_maya_gui", launch)
+    assert main(["launch", "--maya-executable", "maya.exe", "--bootstrap-module", "studio.maya_owner"]) == 10
+    assert captured["bootstrap_module"] == "studio.maya_owner"
+    assert json.loads(capsys.readouterr().out)["ready"] is False
+
+
+def _configured_bootstrap_fixture(tmp_path, monkeypatch, *, already_loaded=False):
+    log_path = tmp_path / "bootstrap.jsonl"
+    plugin_dir = tmp_path / "plug-ins"
+    plugin_dir.mkdir()
+    (plugin_dir / "dcc_mcp_maya_plugin.py").write_text("# controlled plugin fixture", encoding="utf-8")
+    monkeypatch.setenv("DCC_MCP_MAYA_BOOTSTRAP_LOG", str(log_path))
+    monkeypatch.setenv("MAYA_PLUG_IN_PATH", str(plugin_dir))
+    maya_module = ModuleType("maya")
+    cmds_module = ModuleType("maya.cmds")
+    cmds_module.pluginInfo = MagicMock(return_value=already_loaded)
+    cmds_module.loadPlugin = MagicMock()
+    maya_module.cmds = cmds_module
+    monkeypatch.setitem(sys.modules, "maya", maya_module)
+    monkeypatch.setitem(sys.modules, "maya.cmds", cmds_module)
+    return log_path, cmds_module
+
+
+def test_trusted_options_configured_before_plugin_load(tmp_path, monkeypatch) -> None:
+    from dcc_mcp_maya import server
+
+    log_path, cmds = _configured_bootstrap_fixture(tmp_path, monkeypatch)
+    selected = object()
+    ordering = []
+    monkeypatch.setattr(
+        server, "configure_bootstrap", lambda **kwargs: ordering.append(("configure", kwargs["ui_control"]))
+    )
+    cmds.loadPlugin.side_effect = lambda *_args, **_kwargs: ordering.append(("load", None))
+
+    bootstrap_in_maya(ui_control=selected)
+
+    assert ordering == [("configure", selected), ("load", None)]
+    events = [json.loads(line) for line in log_path.read_text(encoding="utf-8").splitlines()]
+    assert {"stage": "ui_control_configuration", "status": "succeeded"}.items() <= events[-2].items()
+
+
+def test_default_bootstrap_does_not_configure_new_core_surface(tmp_path, monkeypatch) -> None:
+    from dcc_mcp_maya import server
+
+    _, cmds = _configured_bootstrap_fixture(tmp_path, monkeypatch)
+    configure = MagicMock(side_effect=AssertionError("default path must not configure"))
+    monkeypatch.setattr(server, "configure_bootstrap", configure)
+    bootstrap_in_maya()
+    configure.assert_not_called()
+    cmds.loadPlugin.assert_called_once()
+
+
+def test_trusted_options_reject_already_loaded_plugin(tmp_path, monkeypatch) -> None:
+    from dcc_mcp_maya import server
+
+    log_path, cmds = _configured_bootstrap_fixture(tmp_path, monkeypatch, already_loaded=True)
+    configure = MagicMock()
+    monkeypatch.setattr(server, "configure_bootstrap", configure)
+    with pytest.raises(server.BootstrapConfigurationError, match="unloaded"):
+        bootstrap_in_maya(ui_control=object())
+    configure.assert_not_called()
+    cmds.loadPlugin.assert_not_called()
+    events = [json.loads(line) for line in log_path.read_text(encoding="utf-8").splitlines()]
+    assert events[-1]["stage"] == "plugin_load"
+    assert events[-1]["status"] == "failed"
+
+
+def test_configuration_failure_stops_before_plugin_load(tmp_path, monkeypatch) -> None:
+    from dcc_mcp_maya import server
+
+    log_path, cmds = _configured_bootstrap_fixture(tmp_path, monkeypatch)
+    configure = MagicMock(side_effect=server.BootstrapConfigurationError("controlled startup already attempted"))
+    monkeypatch.setattr(server, "configure_bootstrap", configure)
+    with pytest.raises(server.BootstrapConfigurationError, match="already attempted"):
+        bootstrap_in_maya(ui_control=object())
+    cmds.loadPlugin.assert_not_called()
+    events = [json.loads(line) for line in log_path.read_text(encoding="utf-8").splitlines()]
+    assert events[-1]["error_type"] == "BootstrapConfigurationError"
+
+
 def test_in_maya_bootstrap_resolves_and_loads_the_plugin_without_changing_autoload(tmp_path, monkeypatch) -> None:
     log_path = tmp_path / "bootstrap.jsonl"
     plugin_dir = tmp_path / "plug-ins"
