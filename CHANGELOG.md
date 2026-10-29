@@ -1,5 +1,31 @@
 # Changelog
 
+## [0.9.44](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.43...v0.9.44) (2026-10-28)
+
+
+### Features
+
+* forward trusted UI runtime options ([b3f727d](https://github.com/dcc-mcp/dcc-mcp-maya/commit/b3f727da66a65e059a80e39bc7037bdc71a7a634))
+
+
+### Bug Fixes
+
+* audit keyword as a standard library module ([0fe375e](https://github.com/dcc-mcp/dcc-mcp-maya/commit/0fe375e5ba5ad1074dce3d2b841c66b8fc7b4e9b))
+* audit keyword as a standard library module ([be0df05](https://github.com/dcc-mcp/dcc-mcp-maya/commit/be0df055ece98857b3a55f5b1c63442990f30898))
+* correct macOS module tokens and viewport output discovery ([9413252](https://github.com/dcc-mcp/dcc-mcp-maya/commit/9413252e3ddf1c7cd8b16f014820c4e4b5a0708f))
+* **docs:** restore project Pages assets and navigation ([d08f46a](https://github.com/dcc-mcp/dcc-mcp-maya/commit/d08f46a64ff74756c465e67a9d3d5916eafa912b))
+* **docs:** restore project Pages assets and navigation ([7d4bd4e](https://github.com/dcc-mcp/dcc-mcp-maya/commit/7d4bd4e88bd1e180c922e3483c18cdec97fb5330))
+* preserve native animation infinity modes in readback ([2f7b177](https://github.com/dcc-mcp/dcc-mcp-maya/commit/2f7b177ce3db6d39e4fdd4f7f6146f475d7fb039))
+
+
+### Documentation
+
+* clarify cooperative Windows standalone shutdown boundaries ([102b51f](https://github.com/dcc-mcp/dcc-mcp-maya/commit/102b51f3da15b92ef69d787c7c1cd555f1e223e5))
+* label standalone wrapper as a shutdown skeleton ([22a64a5](https://github.com/dcc-mcp/dcc-mcp-maya/commit/22a64a53a515b33550f519dd367ecb4f16f027b3))
+* refresh the generated DCC-MCP host matrix pointer ([04f9140](https://github.com/dcc-mcp/dcc-mcp-maya/commit/04f91403b76c635161e15188d68e52d3299abf42))
+* **standalone:** document Windows graceful shutdown for headless mode ([f50abd9](https://github.com/dcc-mcp/dcc-mcp-maya/commit/f50abd98eb9cb7fe8941707efda82803d90449e3))
+* **standalone:** document Windows graceful shutdown for headless mode ([43a90a3](https://github.com/dcc-mcp/dcc-mcp-maya/commit/43a90a3cc4bea84989a9ce5519a4ea1f52e92b5d))
+
 ## [0.9.43](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.42...v0.9.43) (2026-10-24)
 
 
