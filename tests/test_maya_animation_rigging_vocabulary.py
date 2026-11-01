@@ -7,7 +7,7 @@ import pytest
 import yaml
 
 # Import local modules
-from conftest import load_and_call, load_skill_script
+from conftest import load_and_call, load_skill_script, wire_named_undo_queue
 
 # Import third-party modules
 from jsonschema import Draft202012Validator
@@ -708,7 +708,7 @@ def test_set_skin_weights_fails_closed_when_native_readback_differs():
     cmds.ls.return_value = ["bodySkin"]
     cmds.polyEvaluate.return_value = 1
     cmds.skinCluster.return_value = ["root_jnt", "tip_jnt"]
-    cmds.undoInfo.return_value = True
+    wire_named_undo_queue(cmds)
     state = [1.0, 0.0]
 
     def _skin_percent(_cluster, _component, **kwargs):
