@@ -13,6 +13,12 @@ from dcc_mcp_maya.plugins import load_plugin as _load_plugin
 
 def load_plugin(plugin: Optional[str] = None, autoload: bool = False) -> dict:
     """Load a plug-in and optionally remember it for future sessions."""
+    from dcc_mcp_maya._code_policy import arbitrary_script_refusal  # noqa: PLC0415
+
+    refusal = arbitrary_script_refusal("load_plugin")
+    if refusal is not None:
+        return refusal
+
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 

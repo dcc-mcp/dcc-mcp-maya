@@ -51,3 +51,14 @@ wants to restrict which local projects can be attached.
 - `ui_snapshot` / `ui_find` / `ui_action` — Inspect and operate Maya Qt UI controls, with optional action evidence artifacts
 - `make_node_ref` / `resolve_node_ref` — Build and resolve stable Maya node references
 - `run_check` — Reload, run an entrypoint, capture diagnostics/artifacts/session events, optionally grab UI
+
+## Restricted mode
+
+`maya-dev` is a separate policy surface. When
+`DCC_MCP_MAYA_DISABLE_ARBITRARY_SCRIPT=1` is set before Maya starts, the tools
+that actually execute or import project code — `run_script`, `run_entrypoint`,
+`run_check`, `reload_modules` and `start_debugpy` — return a structured
+operator-policy refusal before touching the host. `attach_project` only
+registers a trusted root (bounded by `DCC_MCP_MAYA_DEV_ROOTS`) and remains
+available, but no code from that root can be executed through a tool while the
+flag is set. This is an adapter-local tool policy, not a sandbox.

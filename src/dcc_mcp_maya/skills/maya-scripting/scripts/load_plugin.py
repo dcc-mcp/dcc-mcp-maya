@@ -45,6 +45,12 @@ def load_plugin(
     already_loaded_ok: bool = True,
 ) -> dict:
     """Load a Maya plug-in and optionally set its autoload preference."""
+    from dcc_mcp_maya._code_policy import arbitrary_script_refusal  # noqa: PLC0415
+
+    refusal = arbitrary_script_refusal("load_plugin")
+    if refusal is not None:
+        return refusal
+
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 

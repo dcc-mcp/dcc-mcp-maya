@@ -292,8 +292,12 @@ The canonical inventory lives in `dcc_mcp_maya._code_policy.CODE_BEARING_TOOLS` 
 | `introspect_eval` | `maya-scripting` (Python expression evaluator) |
 | `create_expression`, `edit_expression` | `maya-expressions` |
 | `get_script_node` (`action="create"` only) | `maya-scripting` (`scriptNode` body) |
+| `run_script`, `run_entrypoint`, `run_check`, `reload_modules`, `start_debugpy` | `maya-dev` (development code execution / import / debugger) |
+| `load_plugin` | `maya-scripting` / `maya-plugins` (loads new native code) |
 
-Read-only and typed tools stay available in restricted mode, including `list_expressions`, `delete_expression`, the `get` / `delete` actions of `get_script_node`, and the animation / rigging vocabulary. Tools that build a fixed MEL command from validated typed parameters (for example FBX export options) are typed tools, not code-bearing entry points.
+Development entry points are a separate policy surface, not an exception: `maya-dev` is `default_active: false` and gated by `DCC_MCP_MAYA_DEV_ROOTS`, but a caller can still `load_skill("maya-dev")`, so every tool that actually runs or imports code from an attached root is gated. `attach_project` (root registration only), `unload_plugin` and `list_plugins` remain available.
+
+Read-only and typed tools stay available in restricted mode, including `list_expressions`, `delete_expression`, the `get` / `delete` actions of `get_script_node`, and the animation / rigging vocabulary. Tools that build a fixed MEL command from validated typed parameters (for example FBX export options) are typed tools, not code-bearing entry points. A reverse contract test scans every shipped `tools.yaml` for code-evaluation primitives and fails if an entry is neither gated nor explicitly reviewed.
 
 **This is not a sandbox and not a cross-DCC guarantee.** It refuses the enumerated tool entry points before they reach the host; it does not restrict Python or MEL inside Maya.
 
@@ -426,7 +430,7 @@ Useful plugin defaults:
 | `DCC_MCP_MAYA_SAFE_SESSION` | `1` | `0` disables the modal-dialog firewall around MCP-dispatched jobs. |
 | `DCC_MCP_MAYA_DISABLE_EXECUTE_PYTHON` | `0` | Refuse `execute_python`. |
 | `DCC_MCP_MAYA_DISABLE_EXECUTE_MEL` | `0` | Refuse `execute_mel`. |
-| `DCC_MCP_MAYA_DISABLE_ARBITRARY_SCRIPT` | `0` | Refuse **all code-bearing tools** (expressions, script nodes, raw Python/MEL execution, runtime module injection, expression evaluator). Adapter-local policy, not a sandbox — see [Restricted mode](#restricted-mode-code-bearing-tools). |
+| `DCC_MCP_MAYA_DISABLE_ARBITRARY_SCRIPT` | `0` | Refuse **all code-bearing tools** (expressions, script nodes, raw Python/MEL, runtime module injection, expression evaluator, `maya-dev` run/import/debug entry points, `load_plugin`). Adapter-local policy, not a sandbox — see [Restricted mode](#restricted-mode-code-bearing-tools). |
 
 ### Studio Skill Paths and Rez
 
