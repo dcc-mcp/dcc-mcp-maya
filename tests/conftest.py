@@ -3,6 +3,7 @@
 Provides:
 - ``load_skill_script(skill_dir, script_name)`` — load a skill script by path
 - ``make_mock_maya(cmds_attrs, mel_attrs)`` — build a (mock_maya, mock_cmds, mock_mel) triple
+- ``wire_named_undo_queue(cmds)`` — give a mock a realistic named undo queue (issue #607)
 - ``mock_maya_modules`` — autouse fixture for server tests
 - ``load_and_call(rel_path, mock_cmds, func_name, **kwargs)`` — load + call with mock active
 - ``load_and_call_with_mel(rel_path, mock_cmds, mock_mel, **kwargs)`` — like load_and_call but also patches maya.mel
@@ -122,6 +123,46 @@ def make_mock_maya(
         for k, v in mel_attrs.items():
             setattr(mock_mel, k, v)
     return mock_maya, mock_cmds, mock_mel
+
+
+def wire_named_undo_queue(cmds, undo_enabled=True):
+    """Give a mock ``cmds`` a realistic, named Maya undo queue (issue #607).
+
+    ``MayaUndoChunk`` proves rollback ownership by reading the top undo item's
+    name (``undoInfo(query=True, undoName=True)``) and comparing it to the
+    unique chunk name it opened. A legacy double that only sets
+    ``undoInfo.return_value = True`` cannot exercise that path: a bool is never
+    accepted as ownership proof. This helper wires a small state machine onto
+    ``cmds.undoInfo`` — ``openChunk`` records the chunk name, ``closeChunk``
+    publishes it as the top undo item, and ``undoName`` queries report it back —
+    modelling a host where the tool's own, non-empty chunk is provably on the
+    undo stack.
+
+    Use it for tests that exercise a real rollback after undoable writes. For
+    empty-chunk, nested or interleaved-foreign-edit scenarios, use the fuller
+    ``FakeUndoQueue`` model in ``test_undo_chunk_ownership.py`` instead.
+
+    Returns the same mock, for convenient chaining.
+    """
+    state = {"open": None, "top": None}
+
+    def _undo_info(**kwargs):
+        if kwargs.get("query") and kwargs.get("state"):
+            return undo_enabled
+        if kwargs.get("query") and kwargs.get("undoName"):
+            return state["top"]
+        if kwargs.get("openChunk"):
+            state["open"] = kwargs.get("chunkName")
+            return None
+        if kwargs.get("closeChunk"):
+            if state["open"] is not None:
+                state["top"] = state["open"]
+                state["open"] = None
+            return None
+        return None
+
+    cmds.undoInfo.side_effect = _undo_info
+    return cmds
 
 
 _LOAD_COUNTER = [0]

@@ -8,7 +8,7 @@ from unittest.mock import MagicMock
 import pytest
 
 # Import local modules
-from conftest import load_and_call
+from conftest import load_and_call, wire_named_undo_queue
 
 
 @pytest.mark.parametrize("restore_on_undo", [True, False])
@@ -16,7 +16,7 @@ def test_set_keyframes_reports_verified_rollback_only_after_complete_readback(re
     cmds = MagicMock()
     cmds.objExists.return_value = True
     cmds.currentUnit.return_value = "film"
-    cmds.undoInfo.return_value = True
+    wire_named_undo_queue(cmds)
     state = {"rotorA.rotateY": {}, "rotorB.rotateY": {}}
     before = deepcopy(state)
 
@@ -62,7 +62,7 @@ def test_set_keyframes_does_not_verify_rollback_when_tangent_shape_state_survive
     cmds = MagicMock()
     cmds.objExists.return_value = True
     cmds.currentUnit.return_value = "film"
-    cmds.undoInfo.return_value = True
+    wire_named_undo_queue(cmds)
     original = {
         "value": 1.0,
         "in_type": "fixed",
@@ -159,7 +159,7 @@ def test_set_skin_weights_reports_verified_rollback_only_after_complete_readback
     cmds.ls.return_value = ["bodySkin"]
     cmds.polyEvaluate.return_value = 2
     cmds.skinCluster.return_value = ["root_jnt", "tip_jnt"]
-    cmds.undoInfo.return_value = True
+    wire_named_undo_queue(cmds)
     state = {
         "body_geo.vtx[0]": [1.0, 0.0],
         "body_geo.vtx[1]": [0.0, 1.0],

@@ -6,7 +6,7 @@ from pathlib import Path
 from unittest.mock import MagicMock
 
 import yaml
-from conftest import load_and_call
+from conftest import load_and_call, wire_named_undo_queue
 
 SKILL_ROOT = Path(__file__).parents[1] / "src" / "dcc_mcp_maya" / "skills" / "maya-mesh-ops"
 
@@ -222,7 +222,7 @@ def test_array_instances_rejects_unbounded_counts_before_maya_mutation():
 def test_array_instances_rejects_source_name_replay_and_rolls_back():
     cmds = MagicMock()
     cmds.objExists.return_value = True
-    cmds.undoInfo.return_value = True
+    wire_named_undo_queue(cmds)
     cmds.instance.return_value = ["blade"]
     cmds.xform.return_value = [0.0, 0.0, 0.0]
     cmds.listRelatives.return_value = ["bladeShape"]
@@ -258,7 +258,7 @@ def test_array_instances_rejects_source_name_replay_and_rolls_back():
 def test_loft_sections_rejects_preexisting_mesh_result_and_rolls_back():
     cmds = MagicMock()
     cmds.objExists.return_value = True
-    cmds.undoInfo.return_value = True
+    wire_named_undo_queue(cmds)
     cmds.objectType.side_effect = lambda node: "nurbsCurve" if "section" in node else "mesh"
     cmds.listRelatives.side_effect = lambda node, **kwargs: (
         ["{}Shape".format(node)] if str(node).startswith("section") else ["preExistingMeshShape"]
@@ -294,7 +294,7 @@ def test_loft_sections_rejects_preexisting_mesh_result_and_rolls_back():
 def test_lathe_profile_rejects_preexisting_mesh_result_and_rolls_back():
     cmds = MagicMock()
     cmds.objExists.return_value = True
-    cmds.undoInfo.return_value = True
+    wire_named_undo_queue(cmds)
     cmds.objectType.side_effect = lambda node: "nurbsCurve" if "profile" in node else "mesh"
     cmds.listRelatives.side_effect = lambda node, **kwargs: (
         ["profileShape"] if node == "profile" else ["preExistingMeshShape"]
@@ -377,7 +377,7 @@ def test_set_pivot_fails_closed_when_readback_does_not_match():
 def test_auto_uv_requires_positive_uv_readback():
     failed_cmds = MagicMock()
     failed_cmds.objExists.return_value = True
-    failed_cmds.undoInfo.return_value = True
+    wire_named_undo_queue(failed_cmds)
     failed_cmds.polyUVSet.return_value = ["map1"]
     failed_cmds.polyEvaluate.side_effect = [0, 0, 0]
     failed_cmds.polyEditUV.return_value = []
@@ -392,7 +392,7 @@ def test_auto_uv_requires_positive_uv_readback():
 
     succeeded_cmds = MagicMock()
     succeeded_cmds.objExists.return_value = True
-    succeeded_cmds.undoInfo.return_value = True
+    wire_named_undo_queue(succeeded_cmds)
     succeeded_cmds.polyUVSet.return_value = ["map1"]
     succeeded_cmds.polyEvaluate.side_effect = [0, 128]
     succeeded_cmds.polyEditUV.side_effect = [[], [float(index) / 255 for index in range(256)]]
@@ -414,7 +414,7 @@ def test_auto_uv_requires_positive_uv_readback():
 def test_auto_uv_rejects_positive_but_unchanged_uv_state_and_rolls_back():
     cmds = MagicMock()
     cmds.objExists.return_value = True
-    cmds.undoInfo.return_value = True
+    wire_named_undo_queue(cmds)
     cmds.polyUVSet.return_value = ["map1"]
     cmds.polyEvaluate.return_value = 2
     cmds.polyEditUV.return_value = [0.0, 0.0, 1.0, 1.0]
