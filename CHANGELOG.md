@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.9.45](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.44...v0.9.45) (2026-11-01)
+
+
+### Bug Fixes
+
+* enforce arbitrary-script policy across all code-bearing tools ([26ecf7e](https://github.com/dcc-mcp/dcc-mcp-maya/commit/26ecf7ef3aa7b7a0f9c060b41619f9da01f4de2b))
+* extend arbitrary-script policy to maya-dev and plugin loading ([007773d](https://github.com/dcc-mcp/dcc-mcp-maya/commit/007773d956b0c7b152f50da8da49952d4ea2e8c9))
+* prove undo chunk ownership before rolling back verified mutations ([3c6ab97](https://github.com/dcc-mcp/dcc-mcp-maya/commit/3c6ab9777920b7f2e49980e8cb62ab0bc88cf7d7))
+
 ## [0.9.44](https://github.com/dcc-mcp/dcc-mcp-maya/compare/v0.9.43...v0.9.44) (2026-10-28)
 
 
