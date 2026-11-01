@@ -276,9 +276,35 @@ search_skills / dcc_capability_manifest
   -> activate_group("extended") only when optional tools are needed
 ```
 
-`execute_python` and `execute_mel` remain available as escape hatches, while common plug-in lifecycle work should use `maya_scripting__list_plugins`, `maya_scripting__load_plugin`, and `maya_scripting__unload_plugin`. Production deployments can block arbitrary execution with `DCC_MCP_MAYA_DISABLE_EXECUTE_PYTHON=1`, `DCC_MCP_MAYA_DISABLE_EXECUTE_MEL=1`, or `DCC_MCP_MAYA_DISABLE_ARBITRARY_SCRIPT=1`.
+`execute_python` and `execute_mel` remain available as escape hatches, while common plug-in lifecycle work should use `maya_scripting__list_plugins`, `maya_scripting__load_plugin`, and `maya_scripting__unload_plugin`. Operators can refuse the named raw-execution tools with `DCC_MCP_MAYA_DISABLE_EXECUTE_PYTHON=1` / `DCC_MCP_MAYA_DISABLE_EXECUTE_MEL=1`, or refuse **all code-bearing tools** with `DCC_MCP_MAYA_DISABLE_ARBITRARY_SCRIPT=1` — see [Restricted mode](#restricted-mode-code-bearing-tools) below.
 
 See [`src/dcc_mcp_maya/skills/SKILLS_INDEX.md`](src/dcc_mcp_maya/skills/SKILLS_INDEX.md) for task-to-skill routing examples and [`docs/guide/mcp-tools.md`](docs/guide/mcp-tools.md) for a user-facing tool map.
+
+### Restricted mode (code-bearing tools)
+
+`DCC_MCP_MAYA_DISABLE_ARBITRARY_SCRIPT=1` means **"disallow arbitrary code evaluation across this adapter's code-bearing tool surface"**. A tool is code-bearing when a caller-supplied string is passed, unmodified, to a Maya code-evaluation API. A MEL expression can embed `python(...)`, so `create_expression` / `edit_expression` are code-bearing; string filtering is **not** a substitute for a policy check.
+
+The canonical inventory lives in `dcc_mcp_maya._code_policy.CODE_BEARING_TOOLS` and is pinned against the shipped `tools.yaml` catalog by `tests/test_arbitrary_script_policy.py`:
+
+| Code-bearing tool | Entry point |
+|---|---|
+| `execute_python`, `execute_mel`, `write_module` | `maya-scripting` |
+| `introspect_eval` | `maya-scripting` (Python expression evaluator) |
+| `create_expression`, `edit_expression` | `maya-expressions` |
+| `get_script_node` (`action="create"` only) | `maya-scripting` (`scriptNode` body) |
+
+Read-only and typed tools stay available in restricted mode, including `list_expressions`, `delete_expression`, the `get` / `delete` actions of `get_script_node`, and the animation / rigging vocabulary. Tools that build a fixed MEL command from validated typed parameters (for example FBX export options) are typed tools, not code-bearing entry points.
+
+**This is not a sandbox and not a cross-DCC guarantee.** It refuses the enumerated tool entry points before they reach the host; it does not restrict Python or MEL inside Maya.
+
+| Surface | Behaviour |
+|---|---|
+| `dcc-mcp-maya` tool calls | Code-bearing tools refused; typed / read-only tools still work. |
+| Other `dcc-mcp-*` adapters (Blender, 3ds Max, Houdini, Photoshop, …) | Unaffected. Each adapter owns its execution policy; do not assume this flag applies there. |
+| `dcc-mcp-core` / gateway dispatch | No global sandbox switch is added. No Core change is required for this adapter-local policy. |
+| Code already inside a session (scene-file script nodes, plug-ins, `userSetup.py`, scene callbacks, gateway-side calls) | Out of scope. The flag cannot retroactively audit or block it. |
+
+Set the flag before Maya starts. It is read per call, and the regression suite covers the SDK functions, the `main(**kwargs)` dispatch entry points, and a full MCP `tools/list` → `load_skill` → `tools/call` round trip with a harmless in-memory marker.
 
 ## Runtime Features
 
@@ -400,7 +426,7 @@ Useful plugin defaults:
 | `DCC_MCP_MAYA_SAFE_SESSION` | `1` | `0` disables the modal-dialog firewall around MCP-dispatched jobs. |
 | `DCC_MCP_MAYA_DISABLE_EXECUTE_PYTHON` | `0` | Refuse `execute_python`. |
 | `DCC_MCP_MAYA_DISABLE_EXECUTE_MEL` | `0` | Refuse `execute_mel`. |
-| `DCC_MCP_MAYA_DISABLE_ARBITRARY_SCRIPT` | `0` | Refuse both arbitrary Python and MEL execution. |
+| `DCC_MCP_MAYA_DISABLE_ARBITRARY_SCRIPT` | `0` | Refuse **all code-bearing tools** (expressions, script nodes, raw Python/MEL execution, runtime module injection, expression evaluator). Adapter-local policy, not a sandbox — see [Restricted mode](#restricted-mode-code-bearing-tools). |
 
 ### Studio Skill Paths and Rez
 

@@ -27,6 +27,13 @@ def edit_expression(
     Returns:
         ToolResult dict confirming the update.
     """
+    # Editing an expression re-evaluates arbitrary MEL/Python — issue #608.
+    from dcc_mcp_maya._code_policy import arbitrary_script_refusal  # noqa: PLC0415
+
+    refusal = arbitrary_script_refusal("edit_expression")
+    if refusal is not None:
+        return refusal
+
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 

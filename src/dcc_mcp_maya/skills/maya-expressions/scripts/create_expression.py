@@ -35,6 +35,13 @@ def create_expression(
         ToolResult dict with ``context.expression_name``, ``context.expression_str``,
         and optional ``context.object_name``.
     """
+    # An expression string is code (it may embed python(...)) — issue #608.
+    from dcc_mcp_maya._code_policy import arbitrary_script_refusal  # noqa: PLC0415
+
+    refusal = arbitrary_script_refusal("create_expression")
+    if refusal is not None:
+        return refusal
+
     if not expression or not expression.strip():
         return skill_error("Missing parameter", "'expression' string is required and must not be empty")
 
