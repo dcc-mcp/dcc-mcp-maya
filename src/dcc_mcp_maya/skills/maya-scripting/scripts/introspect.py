@@ -401,10 +401,13 @@ def search(module: str, query: str, max_results: int = 30) -> dict:
 
 
 def eval_expr(expression: str, timeout_secs: float = 2.0) -> dict:
-    """Evaluate a single Python *expression* inside Maya (read-only sandbox).
+    """Evaluate a single Python *expression* inside Maya.
 
     Only ``ast.Expression`` nodes are accepted — statements, assignments, and
-    imports are rejected to prevent accidental scene modification.
+    imports are rejected. This is **not a sandbox**: the expression still has
+    access to ``maya.cmds`` and therefore can mutate the scene. Operators can
+    refuse this code-bearing entry point with
+    ``DCC_MCP_MAYA_DISABLE_ARBITRARY_SCRIPT=1`` (issue #608).
 
     This tool has ``affinity: main`` because the expression may read DAG state.
 
@@ -415,6 +418,12 @@ def eval_expr(expression: str, timeout_secs: float = 2.0) -> dict:
     Returns:
         ToolResult with ``context.value`` (repr, truncated to 2 KB).
     """
+    from dcc_mcp_maya._code_policy import arbitrary_script_refusal  # noqa: PLC0415
+
+    refusal = arbitrary_script_refusal("introspect_eval")
+    if refusal is not None:
+        return refusal
+
     try:
         ast.parse(expression.strip(), mode="eval")
     except SyntaxError as exc:

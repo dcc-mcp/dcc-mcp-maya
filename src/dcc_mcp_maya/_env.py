@@ -44,8 +44,9 @@ ENV_ENABLE_GATEWAY_FAILOVER = "DCC_MCP_MAYA_ENABLE_GATEWAY_FAILOVER"
 #: When ``"1"`` / ``"true"`` / ``"yes"``, :func:`execute_python` returns a
 #: structured refusal so agents must use ``load_skill`` + typed tools.
 ENV_DISABLE_EXECUTE_PYTHON = "DCC_MCP_MAYA_DISABLE_EXECUTE_PYTHON"
-#: When set (same truthy tokens as above), both ``execute_python`` and
-#: ``execute_mel`` are refused — strictest pipeline / classroom mode.
+#: When set (same truthy tokens as above), every *code-bearing* tool is
+#: refused — not just ``execute_python`` / ``execute_mel`` (issue #608).
+#: Adapter-local policy, not a sandbox; see ``_code_policy.CODE_BEARING_TOOLS``.
 ENV_DISABLE_ARBITRARY_SCRIPT = "DCC_MCP_MAYA_DISABLE_ARBITRARY_SCRIPT"
 #: Optional per-tool opt-out for MEL when arbitrary script is otherwise allowed.
 ENV_DISABLE_EXECUTE_MEL = "DCC_MCP_MAYA_DISABLE_EXECUTE_MEL"
@@ -76,20 +77,32 @@ def _env_truthy(name: str) -> bool:
     return os.environ.get(name, "").strip().lower() in ("1", "true", "yes", "on")
 
 
+def resolve_arbitrary_script_disabled() -> bool:
+    """Return True when all code-bearing tools must refuse calls (issue #608).
+
+    This is an adapter-local operator policy, not a sandbox. It gates every
+    tool whose input is evaluated as code by Maya (expressions, scriptNodes,
+    ``execute_python`` / ``execute_mel``, runtime module injection and the
+    introspect expression evaluator). See :mod:`dcc_mcp_maya._code_policy`
+    for the canonical inventory and the documented scope limitations.
+    """
+    return _env_truthy(ENV_DISABLE_ARBITRARY_SCRIPT)
+
+
 def resolve_execute_python_disabled() -> bool:
     """Return True when ``execute_python`` must refuse all calls.
 
     ``DCC_MCP_MAYA_DISABLE_ARBITRARY_SCRIPT`` implies this flag.  Used by
     ``maya-scripting`` scripts so studios can enforce skills-first workflows.
     """
-    if _env_truthy(ENV_DISABLE_ARBITRARY_SCRIPT):
+    if resolve_arbitrary_script_disabled():
         return True
     return _env_truthy(ENV_DISABLE_EXECUTE_PYTHON)
 
 
 def resolve_execute_mel_disabled() -> bool:
     """Return True when ``execute_mel`` must refuse all calls."""
-    if _env_truthy(ENV_DISABLE_ARBITRARY_SCRIPT):
+    if resolve_arbitrary_script_disabled():
         return True
     return _env_truthy(ENV_DISABLE_EXECUTE_MEL)
 

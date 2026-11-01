@@ -33,6 +33,15 @@ def get_script_node(
     if not node_name:
         return skill_error("No scriptNode name provided", "Provide 'node_name' parameter.")
 
+    # Only ``create`` stores a caller-supplied script body that Maya executes;
+    # ``get`` / ``delete`` stay available in restricted mode (issue #608).
+    if action == "create":
+        from dcc_mcp_maya._code_policy import arbitrary_script_refusal  # noqa: PLC0415
+
+        refusal = arbitrary_script_refusal("get_script_node")
+        if refusal is not None:
+            return refusal
+
     try:
         import maya.cmds as cmds  # noqa: PLC0415
 

@@ -108,7 +108,7 @@ def create_sphere(radius: float = 1.0) -> dict:
 - **Upstream core reference** — https://github.com/dcc-mcp/dcc-mcp-core/blob/main/llms.txt (and the deeper [`llms-full.txt`](https://github.com/dcc-mcp/dcc-mcp-core/blob/main/llms-full.txt)) — exhaustive `dcc_mcp_core` API surface; use it whenever a tool/skill needs to leverage core primitives that are not surfaced in this repo's own `llms.txt`.
 - **Skill discovery workflow:**
   1. Prefer MCP `dcc_capability_manifest` with `{loaded_only: false}` for a **compact** index of actions (avoids paying full `inputSchema` cost for every skill up front).
-  2. Alternatively: `search_skills` / `search_tools` → **`load_skill`** → optional `activate_group("extended")` → invoke the **typed** tool (validated `inputSchema`, e.g. `maya_mesh_ops__bevel_edge`). Treat `maya_scripting__execute_python` / `execute_mel` as **last resort** when no skill covers the task (bulk in-Maya loops, OpenMaya gaps, one-off experiments). Studios can hard-block arbitrary execution with `DCC_MCP_MAYA_DISABLE_EXECUTE_PYTHON`, `DCC_MCP_MAYA_DISABLE_EXECUTE_MEL`, or `DCC_MCP_MAYA_DISABLE_ARBITRARY_SCRIPT` (see `README.md` / `llms.txt`).
+  2. Alternatively: `search_skills` / `search_tools` → **`load_skill`** → optional `activate_group("extended")` → invoke the **typed** tool (validated `inputSchema`, e.g. `maya_mesh_ops__bevel_edge`). Treat `maya_scripting__execute_python` / `execute_mel` as **last resort** when no skill covers the task (bulk in-Maya loops, OpenMaya gaps, one-off experiments). Studios can refuse the named raw-execution tools with `DCC_MCP_MAYA_DISABLE_EXECUTE_PYTHON` / `DCC_MCP_MAYA_DISABLE_EXECUTE_MEL`, or refuse every code-bearing tool with `DCC_MCP_MAYA_DISABLE_ARBITRARY_SCRIPT` (expressions, script nodes, `introspect_eval`, `write_module`, raw Python/MEL). This is an adapter-local tool policy, **not a sandbox**; see `README.md` "Restricted mode" and `src/dcc_mcp_maya/_code_policy.py`.
   3. When using the **gateway**, read **`resources/read` `uri=gateway://docs/agent-workflows`** for MCP + resources + efficiency guidance; for Maya-heavy examples see `examples/workflows/maya_bulk_rbd_fbx.md`.
   4. **cmds documentation:** `resources/read` on `maya-cmds://help/<command>` or `maya-cmds://flags/<command>` (use the exact URI from `resources/list`).
 - **Token hygiene:** Set `DCC_MCP_MAYA_EXCLUDE_STUBS_FROM_TOOLS_LIST=1` when your MCP host repeatedly syncs a large `tools/list`; discovery remains available via `dcc_capability_manifest` and gateway `/v1/search`.
@@ -483,7 +483,7 @@ All other skills appear as `__skill__<name>` stubs (default behavior). Call `loa
 | `DCC_MCP_MAYA_EXCLUDE_STUBS_FROM_TOOLS_LIST` | `0` | `1` = exclude ``__skill__*`` / ``__group__*`` stubs from ``tools/list`` (issue #174). Discovery still possible via capability manifest / ``/v1/search``. |
 | `DCC_MCP_MAYA_DISABLE_EXECUTE_PYTHON` | `0` | `1` / `true` / `yes` / `on` — refuse ``execute_python`` (skills-first policy). |
 | `DCC_MCP_MAYA_DISABLE_EXECUTE_MEL` | `0` | Same truthy tokens — refuse ``execute_mel`` only. |
-| `DCC_MCP_MAYA_DISABLE_ARBITRARY_SCRIPT` | `0` | Same truthy tokens — refuse **both** ``execute_python`` and ``execute_mel``. |
+| `DCC_MCP_MAYA_DISABLE_ARBITRARY_SCRIPT` | `0` | Same truthy tokens — refuse **all code-bearing tools** (``execute_python``, ``execute_mel``, ``write_module``, ``introspect_eval``, ``create_expression``, ``edit_expression``, ``get_script_node`` create). Typed/read-only tools stay available; adapter-local policy, not a sandbox. |
 | `DCC_MCP_MAYA_VERSION_CHECK` | `1` | `0` = skip the startup version self-check that compares the running module version with the installed distribution metadata (see [Version provenance](#version-provenance-single-source--drift-warning)). |
 
 ---
@@ -506,7 +506,7 @@ A: Prefer `mayapy -m dcc_mcp_maya`, which uses `serve_headless()` to own the mai
 A: `src/dcc_mcp_maya/skills/` (28 packages, 211 scripts, 212 MCP tools). Each package contains `SKILL.md`, `tools.yaml`, optional `groups.yaml`, and `scripts/*.py`.
 
 **Q: How do I force agents to stop using ``execute_python``?**  
-A: Set ``DCC_MCP_MAYA_DISABLE_EXECUTE_PYTHON=1`` (Python only) or ``DCC_MCP_MAYA_DISABLE_ARBITRARY_SCRIPT=1`` (Python + MEL). Callers get a structured error that points to ``load_skill`` + typed tools.
+A: Set ``DCC_MCP_MAYA_DISABLE_EXECUTE_PYTHON=1`` (Python only) or ``DCC_MCP_MAYA_DISABLE_ARBITRARY_SCRIPT=1`` (all code-bearing tools, including expressions and script nodes). Callers get a structured error that points to ``load_skill`` + typed tools; read-only and typed tools remain available. This is not a sandbox — it does not restrict code already running inside Maya.
 
 ## Gateway HTTP regression traces (VRS)
 
