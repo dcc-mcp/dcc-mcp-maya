@@ -464,6 +464,12 @@ def run_entrypoint(
 ) -> Dict[str, Any]:
     """Run a Python callable from an attached project inside Maya."""
 
+    from dcc_mcp_maya._code_policy import arbitrary_script_refusal  # noqa: PLC0415
+
+    refusal = arbitrary_script_refusal("run_entrypoint")
+    if refusal is not None:
+        return refusal
+
     project, error = _get_project(project_name)
     if error is not None:
         return error
@@ -534,6 +540,12 @@ def run_script(
     chdir_project: bool = True,
 ) -> Dict[str, Any]:
     """Run a Python script file below the attached project root."""
+
+    from dcc_mcp_maya._code_policy import arbitrary_script_refusal  # noqa: PLC0415
+
+    refusal = arbitrary_script_refusal("run_script")
+    if refusal is not None:
+        return refusal
 
     project, error = _get_project(project_name)
     if error is not None:
@@ -2044,6 +2056,12 @@ def run_check(
     event_correlation_id: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Reload project code, run an entrypoint, and optionally capture Maya UI."""
+
+    from dcc_mcp_maya._code_policy import arbitrary_script_refusal  # noqa: PLC0415
+
+    refusal = arbitrary_script_refusal("run_check")
+    if refusal is not None:
+        return refusal
 
     run_result = run_entrypoint(
         target=target,

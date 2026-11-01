@@ -18,6 +18,7 @@ from __future__ import annotations
 import builtins
 import importlib
 import os
+import re
 import sys
 import types
 from unittest.mock import MagicMock, patch
@@ -201,8 +202,70 @@ EXPECTED_CODE_BEARING_TOOLS = (
     "execute_python",
     "get_script_node",
     "introspect_eval",
+    "load_plugin",
+    "reload_modules",
+    "run_check",
+    "run_entrypoint",
+    "run_script",
+    "start_debugpy",
     "write_module",
 )
+
+# Reverse-scan classification. Every shipped tool whose script uses a
+# code-evaluation primitive must be either gated (CODE_BEARING_TOOLS) or
+# explicitly reviewed here with a reason. This is what catches a new
+# development/plugin entry point that silently bypasses the policy.
+REVIEWED_NON_CODE_BEARING = {
+    "maya-dev/attach_project": "registers a trusted root only; gated by DCC_MCP_MAYA_DEV_ROOTS, executes no code",
+    "maya-dev/capture_ui": "UI capture, no arbitrary code execution",
+    "maya-dev/ui_snapshot": "UI inspection, no arbitrary code execution",
+    "maya-dev/ui_find": "UI inspection, no arbitrary code execution",
+    "maya-dev/ui_action": "typed UI action, no arbitrary code execution",
+    "maya-dev/make_node_ref": "read-only node reference",
+    "maya-dev/resolve_node_ref": "read-only node reference",
+    "maya-expressions/list_expressions": "read-only cmds.expression(query=True) inspection",
+    "maya-geometry/export_fbx": "fixed FBX MEL templates from validated typed params",
+    "maya-geometry/import_file": "fixed plug-in name for import, not a caller-supplied path",
+    "maya-geometry/import_fbx": "fixed FBX MEL templates from validated typed params",
+    "maya-geometry/export_obj": "fixed OBJ exporter plug-in name",
+    "maya-geometry/export_alembic": "fixed Alembic exporter plug-in name",
+    "maya-import-to-scene/import_to_scene": "fixed FBX import templates from typed params",
+    "maya-pipeline/publish_asset": "fixed FBX export template from typed params",
+    "maya-plugins/unload_plugin": "removes code, does not introduce it",
+    "maya-plugins/list_plugins": "read-only plug-in inspection",
+    "maya-plugins/diagnose_plugin": "read-only plug-in diagnostics",
+    "maya-plugins/get_plugin_path": "read-only plug-in path lookup",
+    "maya-render/setup_hdr_arnold": "fixed mtoa plug-in name",
+    "maya-render/playblast_to_mp4": "fixed ffmpeg subprocess command, no caller code",
+    "maya-render/render_frame": "fixed render MEL templates from typed params",
+    "maya-render/render_scene": "fixed render MEL templates from typed params",
+    "maya-render-farm/get_render_job_status": "fixed Deadline CLI query, no caller code",
+    "maya-render-farm/submit_to_deadline": "fixed Deadline CLI submission, no caller code",
+    "maya-render-setup/list_render_layers": "fixed render-setup plug-in name",
+    "maya-rigging/detect_rig_frameworks": "fixed whatIs MEL probe from a plugin-name allowlist",
+    "maya-scene/save_scene": "cmds.file(rename=...) is a file operation, not code evaluation",
+    "maya-scripting/list_mel_procedures": "fixed globalProcs() MEL query",
+    "maya-scripting/introspect_list_module": "read-only module listing; no arbitrary expression evaluation",
+    "maya-scripting/introspect_signature": "read-only signature lookup",
+    "maya-scripting/introspect_search": "read-only symbol search",
+    "maya-shot-export/export_camera": "fixed FBX export templates from typed params",
+    "maya-shot-export/export_shot_alembic": "fixed Alembic exporter plug-in name",
+    "maya-shot-export/export_shot_fbx": "fixed FBX export templates from typed params",
+}
+
+CODE_EVAL_PRIMITIVES = re.compile(
+    r"runpy\.run_path|_dev_session\.run_|\bexec\(|\beval\(|cmds\.expression\(|"
+    r"cmds\.scriptNode\(|cmds\.loadPlugin\(|mel\.eval\(|importlib\.import_module|"
+    r"subprocess\.|\bdebugpy\b|start_debugpy\(|reload_modules\(|os\.system\("
+)
+
+# Tools whose tools.yaml name does not match the on-disk script stem.
+TOOL_SCRIPT_ALIASES = {
+    "maya-scripting/introspect_eval": "introspect.py",
+    "maya-scripting/introspect_list_module": "introspect.py",
+    "maya-scripting/introspect_signature": "introspect.py",
+    "maya-scripting/introspect_search": "introspect.py",
+}
 
 
 def test_code_bearing_inventory_is_pinned_and_matches_catalog():
@@ -278,3 +341,90 @@ def test_policy_is_adapter_local_and_never_claims_to_be_a_sandbox():
     ctx = refusal.get("context") or {}
     assert ctx.get("policy_scope") == policy.POLICY_SCOPE
     assert ctx.get("tool_name") == "create_expression"
+
+
+def test_reverse_catalog_scan_catches_ungated_code_surfaces():
+    """Reverse contract: no code-executing catalog tool may escape review.
+
+    The pinned-inventory test only checks that gated names exist; it cannot
+    detect an omitted entry. This test scans every shipped tool script for
+    code-evaluation primitives and requires each hit to be either gated or
+    explicitly reviewed above.
+    """
+    policy = _policy()
+    skills_dir = os.path.join(os.path.dirname(policy.__file__), "skills")
+    catalog = set()
+    hits = {}
+    for root, _dirs, files in os.walk(skills_dir):
+        if "tools.yaml" not in files:
+            continue
+        skill = os.path.basename(root)
+        with open(os.path.join(root, "tools.yaml"), "r", encoding="utf-8") as handle:
+            spec = yaml.safe_load(handle) or {}
+        for tool in spec.get("tools") or []:
+            name = tool.get("name")
+            if not name:
+                continue
+            key = "{}/{}".format(skill, name)
+            catalog.add(key)
+            script = os.path.join(root, "scripts", TOOL_SCRIPT_ALIASES.get(key, name + ".py"))
+            if not os.path.isfile(script):
+                continue
+            with open(script, "r", encoding="utf-8") as handle:
+                found = CODE_EVAL_PRIMITIVES.findall(handle.read())
+            if found:
+                hits[key] = sorted(set(found))
+
+    assert len(hits) >= 25, "reverse scan saw too few code primitives: {}".format(len(hits))
+    gated_without_hit = sorted(n for n in policy.CODE_BEARING_TOOLS if not any(k.split("/", 1)[1] == n for k in hits))
+    assert not gated_without_hit, "gated tools with no code primitive: {}".format(gated_without_hit)
+
+    stale = sorted(set(REVIEWED_NON_CODE_BEARING) - catalog)
+    assert not stale, "reviewed entries no longer in catalog: {}".format(stale)
+
+    ungated = {}
+    for key, primitives in hits.items():
+        name = key.split("/", 1)[1]
+        if name in policy.CODE_BEARING_TOOLS or key in REVIEWED_NON_CODE_BEARING:
+            continue
+        ungated[key] = primitives
+    assert not ungated, "code-evaluating tools neither gated nor reviewed: {}".format(ungated)
+
+
+@pytest.mark.parametrize("func", ["run_script", "run_entrypoint", "run_check"])
+def test_dev_session_run_surfaces_refuse_under_policy(func):
+    """P1 regression: maya-dev development entry points must be gated."""
+    from dcc_mcp_maya import _dev_session
+
+    with patch.dict(os.environ, {ENV_DISABLE_ARBITRARY_SCRIPT: "1"}):
+        if func == "run_script":
+            result = _dev_session.run_script("x.py")
+        else:
+            result = getattr(_dev_session, func)(target="x.y")
+    assert result.get("success") is False, result
+    assert "policy" in str(result.get("message", "")).lower(), result
+
+
+@pytest.mark.parametrize("script", ["reload_modules", "start_debugpy"])
+def test_dev_dispatch_wrappers_refuse_under_policy(script):
+    mod = load_skill_script("maya-dev", script)
+    with patch.dict(os.environ, {ENV_DISABLE_ARBITRARY_SCRIPT: "1"}):
+        result = mod.main()
+    assert result.get("success") is False, result
+    assert "policy" in str(result.get("message", "")).lower(), result
+
+
+@pytest.mark.parametrize("skill", ["maya-scripting", "maya-plugins"])
+def test_load_plugin_refuses_under_policy(skill):
+    """P2: loading new native code through a tool is gated."""
+    mod = load_skill_script(skill, "load_plugin")
+    with patch.dict(os.environ, {ENV_DISABLE_ARBITRARY_SCRIPT: "1"}):
+        result = mod.load_plugin(plugin="fbxmaya")
+    assert result.get("success") is False, result
+    assert "policy" in str(result.get("message", "")).lower(), result
+
+
+def test_plugin_removal_and_inspection_are_not_gated():
+    policy = _policy()
+    for tool in ("unload_plugin", "list_plugins", "diagnose_plugin", "attach_project"):
+        assert tool not in policy.CODE_BEARING_TOOLS

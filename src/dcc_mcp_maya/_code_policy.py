@@ -7,10 +7,20 @@ What this is
 evaluation across this adapter's code-bearing tool surface"**. A tool is
 code-bearing when a caller-supplied string is handed, unmodified, to a Maya
 code-evaluation API (``cmds.expression(string=...)``,
-``cmds.scriptNode(beforeScript=...)``, ``exec``/``eval``, or ``mel.eval`` of
-a whole user string). A MEL expression may embed ``python(...)`` and therefore
-executes Python in the host; filtering the string is not a substitute for a
-policy check at the tool boundary.
+``cmds.scriptNode(beforeScript=...)``, ``exec``/``eval``, ``runpy.run_path``,
+an arbitrary imported callable, ``cmds.loadPlugin``, or ``mel.eval`` of a whole
+user string). A MEL expression may embed ``python(...)`` and therefore executes
+Python in the host; filtering the string is not a substitute for a policy check
+at the tool boundary.
+
+The development entry points are a separate policy surface, not an exception:
+``maya-dev`` ``run_script`` / ``run_entrypoint`` / ``run_check`` /
+``reload_modules`` / ``start_debugpy`` execute or import project code inside
+Maya, so they are gated too. ``attach_project`` only registers a trusted root
+(controlled by ``DCC_MCP_MAYA_DEV_ROOTS``) and stays available, but every tool
+that actually runs code from that root is refused. ``load_plugin`` is gated
+because loading a plug-in introduces new native code; ``unload_plugin`` and
+``list_plugins`` remain available because they only remove or inspect code.
 
 What this is NOT
 ================
@@ -21,10 +31,11 @@ What this is NOT
   own execution policies; ``dcc-mcp-core`` exposes no global sandbox switch.
   This module is deliberately Maya-adapter-local and imports no host, network
   or gateway APIs.
-* **Not protection against code already inside a session.** Script nodes,
-  plug-ins, ``userSetup.py``, scene-file callbacks, gateway-side dispatch and
-  anything else that reaches Maya's interpreter outside these tool entry points
-  are out of scope.
+* **Not protection against code already inside a session.** Already-loaded
+  plug-ins, embedded scene-file script nodes, ``userSetup.py``, scene callbacks,
+  gateway-side dispatch and anything else that reaches Maya's interpreter
+  outside these tool entry points are out of scope. A *new* call through a
+  gated tool is in scope regardless of where its code came from.
 * **Not a replacement for typed tools.** Read-only and typed tools (including
   ``list_expressions`` and the animation/rigging vocabulary) stay available so
   normal work can continue in restricted mode.
@@ -67,6 +78,12 @@ CODE_BEARING_TOOLS = (
     "execute_python",
     "get_script_node",
     "introspect_eval",
+    "load_plugin",
+    "reload_modules",
+    "run_check",
+    "run_entrypoint",
+    "run_script",
+    "start_debugpy",
     "write_module",
 )
 

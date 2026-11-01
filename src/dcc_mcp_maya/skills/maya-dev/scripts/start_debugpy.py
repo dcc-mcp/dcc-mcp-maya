@@ -9,6 +9,11 @@ from dcc_mcp_maya import _dev_session
 
 @skill_entry
 def main(**kwargs) -> dict:
+    from dcc_mcp_maya._code_policy import arbitrary_script_refusal  # noqa: PLC0415
+
+    refusal = arbitrary_script_refusal("start_debugpy")
+    if refusal is not None:
+        return refusal
     return _dev_session.start_debugpy(**kwargs)
 
 
