@@ -2,7 +2,7 @@
 
 > Cross-skill navigation map. Read this before deciding which skill to load.
 
-The 33 bundled skills are organised into **five stages** that match the
+The 34 bundled skills are organised into **six stages** that match the
 mental model of a Maya pipeline. Each skill carries the stage in its
 SKILL.md frontmatter under `metadata.dcc-mcp.stage`.
 
@@ -13,6 +13,7 @@ SKILL.md frontmatter under `metadata.dcc-mcp.stage`.
 | `bootstrap` | Escape hatch; arbitrary code only when no typed skill fits, plus plug-in diagnosis. | yes | `maya-scripting`, `maya-plugins` |
 | `scene` | Scene file lifecycle, DAG navigation, attributes, node graph, viewport visibility. | partial (`maya-scene` only) | `maya-scene`, `maya-scene-assembly`, `maya-display`, `maya-attributes`, `maya-node-graph` |
 | `authoring` | Create / edit content: meshes, UVs, materials, rigs, animation, dynamics, particles, Bifrost graphs, light rigs. | no | `maya-primitives`, `maya-mesh-ops`, `maya-uv-ops`, `maya-materials`, `maya-material-library`, `maya-texture-bake`, `maya-rigging`, `maya-animation`, `maya-dynamics`, `maya-particles`, `maya-bifrost`, `maya-pose-library`, `maya-expressions`, `maya-light-rig` |
+| `validation` | Read back modeling state, bounded reference alignment, fixed-view review evidence, and operation postconditions. | no | `maya-modeling-validation` |
 | `interchange` | Move geometry / scenes across DCCs (FBX, OBJ, USD revisions, presets, save). | no | `maya-geometry`, `maya-asset-sync`, `maya-export-preset` |
 | `pipeline` | Production pipeline: project, publish, shot export, render, render farm, render setup and AOVs, compositing, asset import, development diagnostics. | no | `maya-dev`, `maya-pipeline`, `maya-shot-export`, `maya-render`, `maya-render-setup`, `maya-compositing`, `maya-render-farm`, `maya-asset-source`, `maya-import-to-scene` |
 
@@ -44,6 +45,7 @@ Full rationale: repo root `AGENTS.md` § *Bulk import, export, and naming*; exam
 | Task | Skill chain |
 |------|-------------|
 | Build a polygon asset without raw Python | `maya-primitives` for blockout → `maya-mesh-ops` (`loft_sections`, `lathe_profile`, `array_instances`, `set_pivot`, `mirror_mesh`) → `maya-uv-ops` (`auto_uv`) → `maya-materials` (`assign_material`) → `maya-scene` / `maya-node-graph` for verified freeze/history cleanup |
+| Validate a modeled asset | `maya-modeling-validation` (`export_model_state` → `verify_modeling_operation` → `align_reference` when needed → `capture_model_review`) → core `validate_scene_vs_spec` |
 | Create N spheres with random transforms, add gravity/rigid bodies, bake bounce animation, export FBX, import in another Maya | Prefer **`load_skill`** chain: `maya-primitives` → `maya-dynamics` → `maya-animation` → `maya-geometry` (`export_fbx` / `import_fbx`). Use **one** `execute_python` only when round-trip count would dominate latency and you accept weaker validation |
 | Simulate cloth over a collider, tune the solver, cache it | `maya-dynamics` (`create_ncloth` → `create_nrigid` → `create_nconstraint` → `set_nucleus_properties` → `create_ncache`) |
 | Emit particles, shape the look, instance geometry onto them | `maya-particles` (`create_particle_system` → `create_emitter` → `set_emitter_properties` → `set_particle_properties` → `create_particle_instancer`) |

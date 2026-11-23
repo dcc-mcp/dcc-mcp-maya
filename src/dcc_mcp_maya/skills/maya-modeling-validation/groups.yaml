@@ -1,0 +1,9 @@
+groups:
+  - name: validation
+    description: Cross-DCC modeling state and acceptance evidence
+    default_active: false
+    tools:
+      - export_model_state
+      - verify_modeling_operation
+      - align_reference
+      - capture_model_review
