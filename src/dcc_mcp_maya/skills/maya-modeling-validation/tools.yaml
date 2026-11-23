@@ -1,0 +1,221 @@
+tools:
+- name: export_model_state
+  description: Export normalized dcc-mcp/model-state@1 evidence for bounded Maya mesh
+    transforms. Includes hierarchy, topology, UV/material facts, bounds, transforms,
+    native history parameters, and explicit partial/unavailable markers when Maya cannot
+    report a check.
+  execution: sync
+  affinity: main
+  source_file: scripts/export_model_state.py
+  annotations:
+    read_only_hint: true
+    destructive_hint: false
+    idempotent_hint: true
+    open_world_hint: false
+  group: validation
+  read_only: true
+  destructive: false
+  idempotent: true
+  input_schema:
+    type: object
+    additionalProperties: false
+    properties:
+      object_names:
+        type: array
+        minItems: 1
+        maxItems: 128
+        items:
+          type: string
+          minLength: 1
+        description: Optional bounded transform or mesh scope. Defaults to all mesh
+          transforms.
+      max_objects:
+        type: integer
+        minimum: 1
+        maximum: 128
+        default: 64
+        description: Maximum number of mesh transforms discovered when object_names
+          is omitted.
+  output_schema:
+    type: object
+    additionalProperties: true
+    required:
+    - success
+    properties:
+      success:
+        type: boolean
+      message:
+        type: string
+      context:
+        type: object
+- name: verify_modeling_operation
+  description: Verify native Maya parameters and postconditions for loft, lathe, extrude,
+    bevel, array, mirror, pivot, cleanup, or UV operations. Returns pass, fail, or unknown
+    with the native history and readback evidence.
+  execution: sync
+  affinity: main
+  source_file: scripts/verify_modeling_operation.py
+  annotations:
+    read_only_hint: true
+    destructive_hint: false
+    idempotent_hint: true
+    open_world_hint: false
+  group: validation
+  read_only: true
+  destructive: false
+  idempotent: true
+  input_schema:
+    type: object
+    additionalProperties: false
+    required:
+    - object_name
+    - operation
+    properties:
+      object_name:
+        type: string
+        minLength: 1
+      operation:
+        type: string
+        enum:
+        - loft
+        - lathe
+        - extrude
+        - bevel
+        - array
+        - mirror
+        - pivot
+        - cleanup
+        - uv
+      expected:
+        type: object
+        additionalProperties: true
+        description: Optional native parameter or postcondition expectations.
+      instance_names:
+        type: array
+        maxItems: 128
+        items:
+          type: string
+          minLength: 1
+        description: Required instance names for an array verification.
+  output_schema:
+    type: object
+    additionalProperties: true
+    required:
+    - success
+    properties:
+      success:
+        type: boolean
+      message:
+        type: string
+      context:
+        type: object
+- name: align_reference
+  description: Propose or apply a bounded uniform scale and world-space center alignment
+    from a reference mesh to a modeled mesh. The proposal is read-only until apply=true
+    and returns before/after bounds for verification.
+  execution: sync
+  affinity: main
+  source_file: scripts/align_reference.py
+  annotations:
+    read_only_hint: false
+    destructive_hint: false
+    idempotent_hint: false
+    open_world_hint: false
+  group: validation
+  read_only: false
+  destructive: false
+  idempotent: false
+  input_schema:
+    type: object
+    additionalProperties: false
+    required:
+    - object_name
+    - reference_object
+    properties:
+      object_name:
+        type: string
+        minLength: 1
+      reference_object:
+        type: string
+        minLength: 1
+      apply:
+        type: boolean
+        default: false
+      max_scale_ratio:
+        type: number
+        exclusiveMinimum: 1
+        maximum: 100
+        default: 10
+      tolerance:
+        type: number
+        exclusiveMinimum: 0
+        maximum: 10
+        default: 0.001
+  output_schema:
+    type: object
+    additionalProperties: true
+    required:
+    - success
+    properties:
+      success:
+        type: boolean
+      message:
+        type: string
+      context:
+        type: object
+- name: capture_model_review
+  description: Capture repeatable fixed-camera and fixed-frame Maya review evidence
+    for a bounded modeling scope. Uses the existing render_frame path and returns camera,
+    frame, dimensions, output, and optional base64 image evidence.
+  execution: sync
+  affinity: main
+  source_file: scripts/capture_model_review.py
+  annotations:
+    read_only_hint: true
+    destructive_hint: false
+    idempotent_hint: true
+    open_world_hint: false
+  group: validation
+  read_only: true
+  destructive: false
+  idempotent: true
+  input_schema:
+    type: object
+    additionalProperties: false
+    properties:
+      camera:
+        type: string
+        minLength: 1
+      frame:
+        type: number
+      width:
+        type: integer
+        minimum: 1
+        maximum: 4096
+        default: 1024
+      height:
+        type: integer
+        minimum: 1
+        maximum: 4096
+        default: 1024
+      object_names:
+        type: array
+        maxItems: 128
+        items:
+          type: string
+          minLength: 1
+      return_base64:
+        type: boolean
+        default: true
+  output_schema:
+    type: object
+    additionalProperties: true
+    required:
+    - success
+    properties:
+      success:
+        type: boolean
+      message:
+        type: string
+      context:
+        type: object

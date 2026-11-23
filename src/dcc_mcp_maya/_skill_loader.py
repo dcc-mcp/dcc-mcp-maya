@@ -120,6 +120,7 @@ STAGES: Tuple[str, ...] = (
     "bootstrap",
     "scene",
     "authoring",
+    "validation",
     "interchange",
     "pipeline",
 )
