@@ -1,0 +1,18 @@
+name: VX + just toolchain
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: vx-just-\${{ github.workflow }}-\${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  toolchain:
+    uses: dcc-mcp/.github/.github/workflows/vx-just-toolchain.yml@ef8dd8d0b472caa6710836ca99b777aa62d45844

@@ -1,0 +1,9 @@
+[tools]
+just = "1.58"
+python = "3.12"
+ruff = "0.16"
+uv = "0.12"
+
+[settings]
+cache_duration = "7d"
+auto_install = true
