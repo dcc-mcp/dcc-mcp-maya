@@ -457,3 +457,8 @@ maya-dev: maya-link
     @echo "   Then verify with:"
     @echo "     just maya-status       # Unix/macOS"
     @echo "     just maya-status-win   # Windows"
+
+
+# Verify the pinned VX and just toolchain.
+toolchain-ci:
+    vx just@1.58 --version
